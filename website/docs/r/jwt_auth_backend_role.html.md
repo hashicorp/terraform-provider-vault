@@ -58,16 +58,27 @@ resource "vault_jwt_auth_backend_role" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `role_name` - (Required) The name of the role.
 
 * `role_type` - (Optional) Type of role, either "oidc" (default) or "jwt".
 
-* `bound_audiences` - (Required for roles of type `jwt`, optional for roles of
-  type `oidc`) List of `aud` claims to match against. Any match is sufficient.
+* `bound_audiences` - (For "jwt" roles, at least one of `bound_audiences`, `bound_subject`, `bound_claims`
+  or `token_bound_cidrs` is required. Optional for "oidc" roles.) List of `aud` claims to match against.
+  Any match is sufficient.
 
 * `user_claim` - (Required) The claim to use to uniquely identify
   the user; this will be used as the name for the Identity entity alias created
   due to a successful login.
+
+* `user_claim_json_pointer` - (Optional) Specifies if the `user_claim` value uses
+  [JSON pointer](https://www.vaultproject.io/docs/auth/jwt#claim-specifications-and-json-pointer) 
+  syntax for referencing claims. By default, the `user_claim` value will not use JSON pointer.
+  Requires Vault 1.11+.
 
 * `bound_subject` - (Optional) If set, requires that the `sub` claim matches
   this value.
@@ -113,6 +124,9 @@ The following arguments are supported:
   logging is active. Not recommended in production since sensitive information may be present
   in OIDC responses.
 
+* `max_age` - (Optional) Specifies the allowable elapsed time in seconds since the last time 
+  the user was actively authenticated with the OIDC provider.
+
 ### Common Token Arguments
 
 These arguments are common across several Authentication Token resources since Vault 1.2.
@@ -143,9 +157,8 @@ These arguments are common across several Authentication Token resources since V
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
-  if any, in number of seconds to set on the token.
+* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/jwt#token_num_uses)
+   of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
   `batch`, or `default` to use the mount's tuned default (which unless changed will be

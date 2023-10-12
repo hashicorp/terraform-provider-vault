@@ -1,7 +1,9 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,8 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -19,60 +22,55 @@ import (
 func TestAccIdentityGroupMemberEntityIdsExclusiveEmpty(t *testing.T) {
 	devEntity := acctest.RandomWithPrefix("dev-entity")
 
+	resourceName := "vault_identity_group_member_entity_ids.member_entity_ids"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigExclusiveEmpty(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityGroupMemberEntityIdsCheckAttrs("vault_identity_group_member_entity_ids.member_entity_ids"),
+					testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceName),
 				),
 			},
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigExclusive(devEntity),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityGroupMemberEntityIdsCheckAttrs("vault_identity_group_member_entity_ids.member_entity_ids"),
+					testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceName),
 				),
 			},
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigExclusiveEmpty(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityGroupMemberEntityIdsCheckAttrs("vault_identity_group_member_entity_ids.member_entity_ids"),
+					testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceName),
 				),
 			},
 		},
 	})
 }
 
-// TODO: disabling this test until we can fix it because this test fails very consistently with the following error:
-// testing.go:669: Step 1 error: Check failed: Check 3/3 error: vault_identity_group_member_entity_ids.member_entity_ids:
-// Attribute 'member_entity_ids.#' expected "1", got "2"
 func TestAccIdentityGroupMemberEntityIdsExclusive(t *testing.T) {
-	t.Skip(t)
-
 	devEntity := acctest.RandomWithPrefix("dev-entity")
 	testEntity := acctest.RandomWithPrefix("test-entity")
-	var devEntityTester memberEntityTester
+	resourceName := "vault_identity_group_member_entity_ids.member_entity_ids"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigExclusive(devEntity),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityGroupMemberEntityIdsCheckAttrs("vault_identity_group_member_entity_ids.member_entity_ids"),
-					devEntityTester.GetMemberEntity("vault_identity_group_member_entity_ids.member_entity_ids", 1),
+					testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "member_entity_ids.#", "1"),
 				),
 			},
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigExclusiveUpdate(devEntity, testEntity),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityGroupMemberEntityIdsCheckAttrs("vault_identity_group_member_entity_ids.member_entity_ids"),
-					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.member_entity_ids", "member_entity_ids.#", "2"),
-					devEntityTester.CheckMemberEntity("vault_identity_group_member_entity_ids.member_entity_ids"),
+					testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "member_entity_ids.#", "2"),
 				),
 			},
 		},
@@ -82,143 +80,240 @@ func TestAccIdentityGroupMemberEntityIdsExclusive(t *testing.T) {
 func TestAccIdentityGroupMemberEntityIdsNonExclusiveEmpty(t *testing.T) {
 	devEntity := acctest.RandomWithPrefix("dev-entity")
 	testEntity := acctest.RandomWithPrefix("test-entity")
-	var devEntityTester memberEntityTester
+	var devEntityTester group.GroupMemberTester
+	resourceNameDev := "vault_identity_group_member_entity_ids.dev"
+	resourceNameTest := "vault_identity_group_member_entity_ids.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusiveEmpty(devEntity),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.dev", "member_entity_ids.#", "1"),
-					devEntityTester.GetMemberEntity("vault_identity_group_member_entity_ids.dev", 1),
-					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.test", "member_entity_ids.#", "0"),
+					testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceNameDev),
+					testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceNameTest),
+					resource.TestCheckResourceAttr(resourceNameTest, "member_entity_ids.#", "0"),
+					resource.TestCheckResourceAttr(resourceNameDev, "member_entity_ids.#", "1"),
+					devEntityTester.SetMemberEntities(resourceNameDev),
 				),
 			},
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusive(devEntity, testEntity),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.dev", "member_entity_ids.#", "1"),
-					devEntityTester.CheckMemberEntity("vault_identity_group_member_entity_ids.dev"),
-					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.test", "member_entity_ids.#", "1"),
+					testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceNameDev),
+					testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceNameTest),
+					resource.TestCheckResourceAttr(resourceNameTest, "member_entity_ids.#", "1"),
+					resource.TestCheckResourceAttr(resourceNameDev, "member_entity_ids.#", "1"),
+					devEntityTester.CheckMemberEntities(resourceNameDev),
 				),
 			},
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusiveEmpty(devEntity),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.dev", "member_entity_ids.#", "1"),
-					devEntityTester.CheckMemberEntity("vault_identity_group_member_entity_ids.dev"),
-					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.test", "member_entity_ids.#", "0"),
+					testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceNameDev),
+					testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceNameTest),
+					resource.TestCheckResourceAttr(resourceNameTest, "member_entity_ids.#", "0"),
+					resource.TestCheckResourceAttr(resourceNameDev, "member_entity_ids.#", "1"),
+					devEntityTester.CheckMemberEntities(resourceNameDev),
 				),
 			},
 		},
 	})
 }
 
-// TODO: disabling this test until we can fix it because this test fails very consistently with the following error:
-// testing.go:669: Step 2 error: Check failed: unexpected member entity id 8e6a0c69-3b7b-d609-a62c-20a8ceac800b
-// in group 77065bec-940e-2d0d-ea34-60440e1a4a47
+type identityGMETest struct {
+	name        string
+	exclusive   bool
+	entityCount int
+}
+
 func TestAccIdentityGroupMemberEntityIdsNonExclusive(t *testing.T) {
-	t.Skip(t)
+	var tester1 group.GroupMemberTester
+	entity1 := acctest.RandomWithPrefix("entity")
 
-	devEntity := acctest.RandomWithPrefix("dev-entity")
-	testEntity := acctest.RandomWithPrefix("test-entity")
-	fooEntity := acctest.RandomWithPrefix("foo-entity")
-	var devEntityTester memberEntityTester
-	var testEntityTester memberEntityTester
-	var fooEntityTester memberEntityTester
+	entity2 := acctest.RandomWithPrefix("entity")
+	var tester2 group.GroupMemberTester
+
+	entity3 := acctest.RandomWithPrefix("entity")
+	var tester3 group.GroupMemberTester
+
+	resourceNameDev := "vault_identity_group_member_entity_ids.dev"
+	resourceNameTest := "vault_identity_group_member_entity_ids.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusive(devEntity, testEntity),
+				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusive(entity1, entity2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.dev", "member_entity_ids.#", "1"),
-					devEntityTester.GetMemberEntity("vault_identity_group_member_entity_ids.dev", 1),
-					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.test", "member_entity_ids.#", "1"),
-					testEntityTester.GetMemberEntity("vault_identity_group_member_entity_ids.test", 1),
+					resource.TestCheckResourceAttr(resourceNameDev, "member_entity_ids.#", "1"),
+					tester1.SetMemberEntities(resourceNameDev),
+					resource.TestCheckResourceAttr(resourceNameTest, "member_entity_ids.#", "1"),
+					tester2.SetMemberEntities(resourceNameTest),
 				),
 			},
 			{
-				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusiveUpdate(devEntity, fooEntity),
+				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusiveUpdate(entity1, entity3),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.dev", "member_entity_ids.#", "1"),
-					devEntityTester.CheckMemberEntity("vault_identity_group_member_entity_ids.dev"),
-					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.test", "member_entity_ids.#", "1"),
-					testEntityTester.CheckNoMemberEntity("vault_identity_group_member_entity_ids.test"),
-					fooEntityTester.GetMemberEntity("vault_identity_group_member_entity_ids.test", 1),
+					resource.TestCheckResourceAttr(resourceNameDev, "member_entity_ids.#", "1"),
+					tester1.CheckMemberEntities(resourceNameDev),
+					resource.TestCheckResourceAttr(resourceNameTest, "member_entity_ids.#", "1"),
+					tester2.SetMemberEntities(resourceNameTest),
+					tester3.SetMemberEntities(resourceNameTest),
 				),
 			},
 			{
-				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusiveUpdate(devEntity, fooEntity),
-				Check:  testAccIdentityGroupMemberEntityIdsCheckLogical("vault_identity_group.group", []*memberEntityTester{&devEntityTester, &fooEntityTester}),
+				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusiveUpdate(entity1, entity3),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameDev, "member_entity_ids.#", "1"),
+					tester1.CheckMemberEntities(resourceNameDev),
+					resource.TestCheckResourceAttr(resourceNameTest, "member_entity_ids.#", "1"),
+					tester2.CheckMemberEntities(resourceNameTest),
+					tester3.CheckMemberEntities(resourceNameTest),
+				),
 			},
 		},
 	})
 }
 
-type memberEntityTester struct {
-	EntityIDKey   string
-	EntityIDValue string
+func TestAccIdentityGroupMemberEntityIdsDynamic(t *testing.T) {
+	tests := []*identityGMETest{
+		{
+			name:        acctest.RandomWithPrefix("entity"),
+			exclusive:   false,
+			entityCount: 0,
+		},
+		{
+			name:        acctest.RandomWithPrefix("entity"),
+			exclusive:   false,
+			entityCount: 1,
+		},
+		{
+			name:        acctest.RandomWithPrefix("entity"),
+			exclusive:   false,
+			entityCount: 2,
+		},
+		{
+			name:        acctest.RandomWithPrefix("entity"),
+			exclusive:   false,
+			entityCount: 3,
+		},
+		{
+			name:        acctest.RandomWithPrefix("entity"),
+			exclusive:   false,
+			entityCount: 4,
+		},
+	}
+
+	groupName := acctest.RandomWithPrefix("group")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityGMEIDynamic(groupName, true, tests...),
+				Check:  testIdentityGMEIMembers(groupName, tests...),
+			},
+			{
+				// increment entities
+				PreConfig: func() {
+					for _, t := range tests {
+						t.entityCount++
+					}
+				},
+				Config: testAccIdentityGMEIDynamic(groupName, true, tests...),
+				Check:  testIdentityGMEIMembers(groupName, tests...),
+			},
+			{
+				// decrement entities
+				PreConfig: func() {
+					for _, t := range tests {
+						t.entityCount--
+					}
+				},
+				Config: testAccIdentityGMEIDynamic(groupName, true, tests...),
+				Check:  testIdentityGMEIMembers(groupName, tests...),
+			},
+			{
+				// decrement tests, simulates resource destruction
+				Config: testAccIdentityGMEIDynamic(groupName, true, tests[:len(tests)-1]...),
+				Check:  testIdentityGMEIMembers(groupName, tests[:len(tests)-1]...),
+			},
+			{
+				// alternate group_name to ensure that `vault_identity_group` doesn't wipe out our identities
+				Config: testAccIdentityGMEIDynamic(groupName+"-new", true, tests...),
+				Check:  testIdentityGMEIMembers(groupName+"-new", tests...),
+			},
+		},
+	})
 }
 
-func (tester *memberEntityTester) GetMemberEntity(resource string, index int) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources[resource]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		// TestCheckResourceAttr index starts at 1
-		count := 1
-		for key, element := range instanceState.Attributes {
-			if strings.HasPrefix(key, "member_entity_ids") {
-				if count == index {
-					tester.EntityIDKey = key
-					tester.EntityIDValue = element
-					return nil
-				}
-
-				count++
-			}
-		}
-
-		return fmt.Errorf("member entity index at %d  not found", index)
+func testIdentityGMEIMembers(groupName string, tests ...*identityGMETest) resource.TestCheckFunc {
+	var funcs []resource.TestCheckFunc
+	for _, t := range tests {
+		r := fmt.Sprintf("vault_identity_group_member_entity_ids.%s", t.name)
+		funcs = append(funcs,
+			resource.TestCheckResourceAttr(r, "member_entity_ids.#", strconv.Itoa(t.entityCount)),
+			resource.TestCheckResourceAttr(r, "exclusive", fmt.Sprintf("%t", t.exclusive)),
+			testAccIdentityGroupMemberEntityIdsCheckAttrs(r),
+		)
 	}
+	return resource.ComposeTestCheckFunc(funcs...)
 }
 
-func (tester *memberEntityTester) CheckMemberEntity(resourceString string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		f := resource.TestCheckResourceAttr(resourceString, tester.EntityIDKey, tester.EntityIDValue)
-		return f(s)
+func testAccIdentityGMEIDynamic(groupName string, externalGroup bool, tests ...*identityGMETest) string {
+	fragments := []string{
+		fmt.Sprintf(`
+resource "vault_identity_group" "group" {
+		external_member_entity_ids = %t
+		name                       = "%s"
 	}
+`, externalGroup, groupName),
+	}
+
+	for i, t := range tests {
+		fragments = append(
+			fragments, fmt.Sprintf(
+				`
+resource "vault_identity_entity" "entity_%d"{
+  count = %d
+  name  = "%s_${count.index}"
+  metadata = {
+    version = "2"
+  }
 }
 
-func (tester *memberEntityTester) CheckNoMemberEntity(resourceString string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		f := resource.TestCheckNoResourceAttr(resourceString, tester.EntityIDKey)
-		return f(s)
+resource "vault_identity_group_member_entity_ids" "%s" {
+  group_id          = vault_identity_group.group.id
+  exclusive         = %t
+  member_entity_ids = coalesce(vault_identity_entity.entity_%d.*.id)
+}
+	`, i, t.entityCount, t.name, t.name, t.exclusive, i),
+		)
 	}
+
+	config := strings.Join(fragments, "\n")
+
+	return config
 }
 
 func testAccCheckidentityGroupMemberEntityIdsDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_group_member_entity_ids" {
 			continue
 		}
 
-		if _, err := readIdentityGroup(client, rs.Primary.ID, false); err != nil {
-			if isIdentityNotFoundError(err) {
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		if _, err := group.ReadIdentityGroup(client, rs.Primary.ID, false); err != nil {
+			if group.IsIdentityNotFoundError(err) {
 				continue
 			}
 			return err
@@ -247,149 +342,44 @@ func testAccCheckidentityGroupMemberEntityIdsDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccIdentityGroupMemberEntityIdsCheckAttrs(resource string) resource.TestCheckFunc {
+func testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources[resource]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		id := instanceState.ID
-
-		path := identityGroupIDPath(id)
-		client := testProvider.Meta().(*api.Client)
-		resp, err := client.Logical().Read(path)
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
 		if err != nil {
-			return fmt.Errorf("%q doesn't exist", path)
+			return err
 		}
 
-		attrs := map[string]string{
-			"group_id":          "id",
-			"group_name":        "name",
-			"member_entity_ids": "member_entity_ids",
-		}
-		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
-				continue
-			}
-			var match bool
-			switch resp.Data[apiAttr].(type) {
-			case json.Number:
-				apiData, err := resp.Data[apiAttr].(json.Number).Int64()
-				if err != nil {
-					return fmt.Errorf("expected API field %s to be an int, was %q", apiAttr, resp.Data[apiAttr])
-				}
-				stateData, err := strconv.ParseInt(instanceState.Attributes[stateAttr], 10, 64)
-				if err != nil {
-					return fmt.Errorf("expected state field %s to be an int, was %q", stateAttr, instanceState.Attributes[stateAttr])
-				}
-				match = apiData == stateData
-			case bool:
-				if _, ok := resp.Data[apiAttr]; !ok && instanceState.Attributes[stateAttr] == "" {
-					match = true
-				} else {
-					stateData, err := strconv.ParseBool(instanceState.Attributes[stateAttr])
-					if err != nil {
-						return fmt.Errorf("expected state field %s to be a bool, was %q", stateAttr, instanceState.Attributes[stateAttr])
-					}
-					match = resp.Data[apiAttr] == stateData
-				}
-			case []interface{}:
-				apiData := resp.Data[apiAttr].([]interface{})
-				length := instanceState.Attributes[stateAttr+".#"]
-				if length == "" {
-					if len(resp.Data[apiAttr].([]interface{})) != 0 {
-						return fmt.Errorf("expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
-					}
-					match = true
-				} else {
-					count, err := strconv.Atoi(length)
-					if err != nil {
-						return fmt.Errorf("expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
-					}
-					if count != len(apiData) {
-						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
-					}
-
-					for i := 0; i < count; i++ {
-						found := false
-						for stateKey, stateValue := range instanceState.Attributes {
-							if strings.HasPrefix(stateKey, stateAttr) {
-								if apiData[i] == stateValue {
-									found = true
-								}
-							}
-						}
-						if !found {
-							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, apiAttr, stateAttr, apiData[i])
-						}
-					}
-					match = true
-				}
-			default:
-				match = resp.Data[apiAttr] == instanceState.Attributes[stateAttr]
-			}
-			if !match {
-				return fmt.Errorf("expected %s (%s in state) of %q to be %q, got %q", apiAttr, stateAttr, path, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
-			}
-		}
-		return nil
-	}
-}
-
-func testAccIdentityGroupMemberEntityIdsCheckLogical(resource string, member_entity_ids []*memberEntityTester) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources[resource]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		id := instanceState.ID
-
-		path := identityGroupIDPath(id)
-		client := testProvider.Meta().(*api.Client)
-		resp, err := client.Logical().Read(path)
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
 		if err != nil {
-			return fmt.Errorf("%q doesn't exist", path)
+			return err
 		}
 
-		if resp.Data["member_entity_ids"] == nil && member_entity_ids == nil {
-			return nil
-		}
-
-		apiMemberEntityIds := resp.Data["member_entity_ids"].([]interface{})
-
-		if len(apiMemberEntityIds) != len(member_entity_ids) {
-			return fmt.Errorf("expected group %s to have %d member_entity_ids, has %d", id, len(member_entity_ids), len(apiMemberEntityIds))
-		}
-
-		for _, apiMemberEntityIdI := range apiMemberEntityIds {
-			apiMemberEntityId := apiMemberEntityIdI.(string)
-
-			found := false
-			for _, memberEntityId := range member_entity_ids {
-				if apiMemberEntityId == memberEntityId.EntityIDValue {
-					found = true
-					break
-				}
+		var isSubset bool
+		if rs.Type == "vault_identity_group_member_entity_ids" {
+			v, err := strconv.ParseBool(rs.Primary.Attributes["exclusive"])
+			if err != nil {
+				return err
 			}
 
-			if !found {
-				return fmt.Errorf("unexpected member entity id %s in group %s", apiMemberEntityId, id)
-			}
+			isSubset = !v
 		}
 
-		return nil
+		id := rs.Primary.ID
+		path := group.IdentityGroupIDPath(id)
+		tAttrs := []*testutil.VaultStateTest{
+			{
+				ResourceName: resourceName,
+				StateAttr:    "group_id",
+				VaultAttr:    "id",
+			},
+			{
+				ResourceName: resourceName,
+				StateAttr:    "member_entity_ids",
+				VaultAttr:    "member_entity_ids",
+				IsSubset:     isSubset,
+			},
+		}
+		return testutil.AssertVaultState(client, s, path, tAttrs...)
 	}
 }
 

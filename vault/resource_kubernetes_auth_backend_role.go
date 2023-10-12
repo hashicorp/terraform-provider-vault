@@ -1,14 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -65,13 +70,12 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Create: kubernetesAuthBackendRoleCreate,
-		Read:   kubernetesAuthBackendRoleRead,
-		Update: kubernetesAuthBackendRoleUpdate,
-		Delete: kubernetesAuthBackendRoleDelete,
-		Exists: kubernetesAuthBackendRoleExists,
+		CreateContext: kubernetesAuthBackendRoleCreate,
+		ReadContext:   provider.ReadContextWrapper(kubernetesAuthBackendRoleRead),
+		UpdateContext: kubernetesAuthBackendRoleUpdate,
+		DeleteContext: kubernetesAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: fields,
@@ -129,8 +133,11 @@ func kubernetesAuthBackendRoleBackendFromPath(path string) (string, error) {
 	return res[1], nil
 }
 
-func kubernetesAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func kubernetesAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role_name").(string)
@@ -144,32 +151,35 @@ func kubernetesAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) e
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error writing Kubernetes auth backend role %q: %s", path, err)
+		return diag.Errorf("error writing Kubernetes auth backend role %q: %s", path, err)
 	}
 	d.SetId(path)
 	log.Printf("[DEBUG] Wrote Kubernetes auth backend role %q", path)
 
-	return kubernetesAuthBackendRoleRead(d, meta)
+	return kubernetesAuthBackendRoleRead(ctx, d, meta)
 }
 
-func kubernetesAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func kubernetesAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	backend, err := kubernetesAuthBackendRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for Kubernetes auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for Kubernetes auth backend role: %s", path, err)
 	}
 
 	role, err := kubernetesAuthBackendRoleNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for Kubernetes auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for Kubernetes auth backend role: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading Kubernetes auth backend role: %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading Kubernetes auth backend role %q: %s", path, err)
+		return diag.Errorf("error reading Kubernetes auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read Kubernetes auth backend role: %q", path)
 	if resp == nil {
@@ -178,29 +188,36 @@ func kubernetesAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 		return nil
 	}
 
-	readTokenFields(d, resp)
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
+	}
 
 	if err := d.Set("backend", backend); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if err := d.Set("role_name", role); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	params := []string{"bound_service_account_names", "bound_service_account_namespaces", "audience", "alias_name_source"}
 	for _, k := range params {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
-				return fmt.Errorf("error reading %s for Kubernetes Auth Backend Role %q: %q", k, path, err)
+				return diag.Errorf("error reading %s for Kubernetes Auth Backend Role %q: %q", k, path, err)
 			}
 		}
 	}
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func kubernetesAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func kubernetesAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating Kubernetes auth backend role %q", path)
@@ -210,7 +227,7 @@ func kubernetesAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) e
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating Kubernetes auth backend role %q: %s", path, err)
+		return diag.Errorf("error updating Kubernetes auth backend role %q: %s", path, err)
 	}
 
 	// NOTE: Only `SetId` after it's successfully written in Vault
@@ -218,17 +235,20 @@ func kubernetesAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[DEBUG] Updated Kubernetes auth backend role %q", path)
 
-	return kubernetesAuthBackendRoleRead(d, meta)
+	return kubernetesAuthBackendRoleRead(ctx, d, meta)
 }
 
-func kubernetesAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func kubernetesAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Kubernetes auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil && !util.Is404(err) {
-		return fmt.Errorf("error deleting Kubernetes auth backend role %q", path)
+		return diag.Errorf("error deleting Kubernetes auth backend role %q", path)
 	} else if err != nil {
 		log.Printf("[DEBUG] Kubernetes auth backend role %q not found, removing from state", path)
 		d.SetId("")
@@ -237,19 +257,4 @@ func kubernetesAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[DEBUG] Deleted Kubernetes auth backend role %q", path)
 
 	return nil
-}
-
-func kubernetesAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if Kubernetes auth backend role %q exists", path)
-
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if Kubernetes auth backend role %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if Kubernetes auth backend role %q exists", path)
-
-	return resp != nil, nil
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -8,7 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -22,7 +25,7 @@ func ldapAuthBackendGroupResource() *schema.Resource {
 
 		Create: ldapAuthBackendGroupResourceWrite,
 		Update: ldapAuthBackendGroupResourceWrite,
-		Read:   ldapAuthBackendGroupResourceRead,
+		Read:   provider.ReadWrapper(ldapAuthBackendGroupResourceRead),
 		Delete: ldapAuthBackendGroupResourceDelete,
 		Exists: ldapAuthBackendGroupResourceExists,
 		Importer: &schema.ResourceImporter{
@@ -61,7 +64,10 @@ func ldapAuthBackendGroupResourcePath(backend, groupname string) string {
 }
 
 func ldapAuthBackendGroupResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	groupname := d.Get("groupname").(string)
@@ -88,7 +94,11 @@ func ldapAuthBackendGroupResourceWrite(d *schema.ResourceData, meta interface{})
 }
 
 func ldapAuthBackendGroupResourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	backend, err := ldapAuthBackendGroupBackendFromPath(path)
@@ -122,11 +132,14 @@ func ldapAuthBackendGroupResourceRead(d *schema.ResourceData, meta interface{}) 
 	d.Set("groupname", groupname)
 
 	return nil
-
 }
 
 func ldapAuthBackendGroupResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting LDAP group %q", path)
@@ -140,7 +153,11 @@ func ldapAuthBackendGroupResourceDelete(d *schema.ResourceData, meta interface{}
 }
 
 func ldapAuthBackendGroupResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Checking if LDAP group %q exists", path)

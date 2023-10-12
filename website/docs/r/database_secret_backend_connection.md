@@ -41,13 +41,16 @@ resource "vault_database_secret_backend_connection" "postgres" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required) A unique name to give the database connection.
 
 * `backend` - (Required) The unique name of the Vault mount to configure.
 
-* `plugin_name` - (Optional) Specifies the name of the plugin to use. All values must be prefixed
- to match the corresponding database engine directive.
- For example the `plugin_name` for the `mysql_aurora` engine must begin with `mysql-aurora`. Note the hyphenation.
+* `plugin_name` - (Optional) Specifies the name of the plugin to use.
 
 * `verify_connection` - (Optional) Whether the connection should be verified on
   initial configuration or not.
@@ -88,6 +91,10 @@ The following arguments are supported:
 * `snowflake` - (Optional) A nested block containing configuration options for Snowflake connections.
 
 * `influxdb` - (Optional) A nested block containing configuration options for InfluxDB connections.
+
+* `redis` - (Optional) A nested block containing configuration options for Redis connections.
+
+* `redis_elasticache` - (Optional) A nested block containing configuration options for Redis ElastiCache connections.
 
 Exactly one of the nested blocks of configuration options must be supplied.
 
@@ -162,6 +169,34 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
 
+### Redis Configuration Options
+
+* `host` - (Required) The host to connect to.
+
+* `username` - (Required) The username to authenticate with.
+
+* `password` - (Required) The password to authenticate with.
+
+* `port` - (Required) The default port to connect to if no port is specified as
+  part of the host.
+
+* `tls` - (Optional) Whether to use TLS when connecting to Redis.
+
+* `insecure_tls` - (Optional) Whether to skip verification of the server
+  certificate when using TLS.
+
+* `ca_cert` - (Optional) The contents of a PEM-encoded CA cert file to use to verify the Redis server's identity.
+
+### Redis ElastiCache Configuration Options
+
+* `url` - (Required) The url to connect to including the port; e.g. master.my-cluster.xxxxxx.use1.cache.amazonaws.com:6379.
+
+* `username` - (Optional) The AWS access key id to authenticate with. If omitted Vault tries to infer from the credential provider chain instead.
+
+* `password` - (Optional) The AWS secret access key to authenticate with. If omitted Vault tries to infer from the credential provider chain instead.
+
+* `region` - (Optional) The region where the ElastiCache cluster is hosted. If omitted Vault tries to infer from the environment instead.
+
 ### MongoDB Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -205,6 +240,8 @@ See the [Vault
 
 * `password` - (Optional) The root credential password used in the connection URL.
 
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
+
 ### MSSQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -228,6 +265,8 @@ See the [Vault
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `contained_db` - (Optional bool: false) For Vault v1.9+. Set to true when the target is a
   Contained Database, e.g. AzureSQL.
@@ -253,6 +292,10 @@ See the [Vault
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+
+* `auth_type` - (Optional) Enable IAM authentication to a Google Cloud instance when set to `gcp_iam`
+
+* `service_account_json` - (Optional) JSON encoding of an IAM access key. Requires `auth_type` to be `gcp_iam`.
 
 * `tls_certificate_key` - (Optional) x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.
 
@@ -281,6 +324,12 @@ See the [Vault
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+
+* `auth_type` - (Optional) Enable IAM authentication to a Google Cloud instance when set to `gcp_iam`
+
+* `service_account_json` - (Optional) JSON encoding of an IAM access key. Requires `auth_type` to be `gcp_iam`.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
@@ -318,6 +367,20 @@ See the [Vault
 * `username` - (Required) The username to be used in the connection.
 
 * `password` - (Required) The password to be used in the connection.
+
+* `ca_cert` - (Optional) The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity.
+
+* `ca_path` - (Optional) The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity.
+
+* `client_cert` - (Optional) The path to the certificate for the Elasticsearch client to present for communication.
+
+* `client_key` - (Optional) The path to the key for the Elasticsearch client to use for communication.
+
+* `tls_server_name` - (Optional) This, if set, is used to set the SNI host when connecting via TLS.
+
+* `insecure` - (Optional) Whether to disable certificate verification.
+
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation. See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating) for more details.
 
 ### Snowflake Configuration Options
 
@@ -359,6 +422,8 @@ See the [Vault
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 

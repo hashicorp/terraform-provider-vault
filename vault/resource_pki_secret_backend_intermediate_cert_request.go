@@ -1,41 +1,53 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
+	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
+
+	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
+
+const keyTypeKMS = "kms"
 
 func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendIntermediateCertRequestCreate,
-		Read:   pkiSecretBackendIntermediateCertRequestRead,
-		Delete: pkiSecretBackendIntermediateCertRequestDelete,
+		CreateContext: pkiSecretBackendIntermediateCertRequestCreate,
+		ReadContext:   pkiSecretBackendIntermediateCertRequestRead,
+		DeleteContext: pkiSecretBackendIntermediateCertRequestDelete,
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
-			"type": {
+			consts.FieldType: {
 				Type:         schema.TypeString,
 				Required:     true,
-				Description:  "Type of intermediate to create. Must be either \"exported\" or \"internal\".",
+				Description:  "Type of intermediate to create. Must be either \"existing\", \"exported\", \"internal\" or \"kms\"",
 				ForceNew:     true,
-				ValidateFunc: validation.StringInSlice([]string{"exported", "internal"}, false),
+				ValidateFunc: validation.StringInSlice([]string{consts.FieldExisting, consts.FieldExported, consts.FieldInternal, keyTypeKMS}, false),
 			},
-			"common_name": {
+			consts.FieldCommonName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "CN of intermediate to create.",
 				ForceNew:    true,
 			},
-			"alt_names": {
+			consts.FieldAltNames: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative names.",
@@ -44,7 +56,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ip_sans": {
+			consts.FieldIPSans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative IPs.",
@@ -53,7 +65,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"uri_sans": {
+			consts.FieldURISans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative URIs.",
@@ -62,7 +74,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"other_sans": {
+			consts.FieldOtherSans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of other SANs.",
@@ -71,7 +83,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"format": {
+			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "The format of data.",
@@ -79,7 +91,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Default:      "pem",
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle"}, false),
 			},
-			"private_key_format": {
+			consts.FieldPrivateKeyFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "The private key format.",
@@ -87,7 +99,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Default:      "der",
 				ValidateFunc: validation.StringInSlice([]string{"der", "pkcs8"}, false),
 			},
-			"key_type": {
+			consts.FieldKeyType: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "The desired key type.",
@@ -95,171 +107,258 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Default:      "rsa",
 				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
 			},
-			"key_bits": {
+			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "The number of bits to use.",
 				ForceNew:    true,
 				Default:     2048,
 			},
-			"exclude_cn_from_sans": {
+			consts.FieldExcludeCNFromSans: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Flag to exclude CN from SANs.",
 				ForceNew:    true,
 			},
-			"ou": {
+			consts.FieldOu: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The organization unit.",
 				ForceNew:    true,
 			},
-			"organization": {
+			consts.FieldOrganization: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The organization.",
 				ForceNew:    true,
 			},
-			"country": {
+			consts.FieldCountry: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The country.",
 				ForceNew:    true,
 			},
-			"locality": {
+			consts.FieldLocality: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The locality.",
 				ForceNew:    true,
 			},
-			"province": {
+			consts.FieldProvince: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The province.",
 				ForceNew:    true,
 			},
-			"street_address": {
+			consts.FieldStreetAddress: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The street address.",
 				ForceNew:    true,
 			},
-			"postal_code": {
+			consts.FieldPostalCode: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The postal code.",
 				ForceNew:    true,
 			},
-			"csr": {
+			consts.FieldCSR: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The CSR.",
 			},
-			"private_key": {
+			consts.FieldPrivateKey: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The private key.",
 				Sensitive:   true,
 			},
-			"private_key_type": {
+			consts.FieldPrivateKeyType: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The private key type.",
+			},
+			consts.FieldManagedKeyName: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The name of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{consts.FieldManagedKeyID},
+			},
+			consts.FieldManagedKeyID: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The ID of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{consts.FieldManagedKeyName},
+			},
+			consts.FieldAddBasicConstraints: {
+				Type: schema.TypeBool,
+				Description: `Set 'CA: true' in a Basic Constraints extension. Only needed as
+a workaround in some compatibility scenarios with Active Directory Certificate Services.`,
+				ForceNew: true,
+				Default:  false,
+				Optional: true,
+			},
+			consts.FieldKeyName: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				Description: "When a new key is created with this request, optionally specifies " +
+					"the name for this.",
+				ForceNew: true,
+			},
+			consts.FieldKeyRef: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specifies the key to use for generating this request.",
+				ForceNew:    true,
+			},
+			consts.FieldKeyID: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The ID of the generated key.",
+				ForceNew:    true,
 			},
 		},
 	}
 }
 
-func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
-	backend := d.Get("backend").(string)
-	intermediateType := d.Get("type").(string)
-
-	path := pkiSecretBackendIntermediateGeneratePath(backend, intermediateType)
-
-	iAltNames := d.Get("alt_names").([]interface{})
-	altNames := make([]string, 0, len(iAltNames))
-	for _, iAltName := range iAltNames {
-		altNames = append(altNames, iAltName.(string))
+func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
 	}
 
-	iIPSans := d.Get("ip_sans").([]interface{})
-	ipSans := make([]string, 0, len(iIPSans))
-	for _, iIpSan := range iIPSans {
-		ipSans = append(ipSans, iIpSan.(string))
+	backend := d.Get(consts.FieldBackend).(string)
+	intermediateType := d.Get(consts.FieldType).(string)
+
+	path := pkiSecretBackendIntermediateGeneratePath(backend, intermediateType, provider.IsAPISupported(meta, provider.VaultVersion111))
+
+	intermediateCertAPIFields := []string{
+		consts.FieldCommonName,
+		consts.FieldFormat,
+		consts.FieldPrivateKeyFormat,
+		consts.FieldOu,
+		consts.FieldOrganization,
+		consts.FieldCountry,
+		consts.FieldLocality,
+		consts.FieldProvince,
+		consts.FieldStreetAddress,
+		consts.FieldPostalCode,
+		consts.FieldManagedKeyName,
+		consts.FieldManagedKeyID,
 	}
 
-	iURISans := d.Get("uri_sans").([]interface{})
-	uriSans := make([]string, 0, len(iURISans))
-	for _, iUriSan := range iURISans {
-		uriSans = append(uriSans, iUriSan.(string))
+	intermediateCertBooleanAPIFields := []string{
+		consts.FieldExcludeCNFromSans,
+		consts.FieldAddBasicConstraints,
 	}
 
-	iOtherSans := d.Get("other_sans").([]interface{})
-	otherSans := make([]string, 0, len(iOtherSans))
-	for _, iOtherSan := range iOtherSans {
-		otherSans = append(otherSans, iOtherSan.(string))
+	intermediateCertStringArrayFields := []string{
+		consts.FieldAltNames,
+		consts.FieldIPSans,
+		consts.FieldURISans,
+		consts.FieldOtherSans,
 	}
 
-	data := map[string]interface{}{
-		"common_name":          d.Get("common_name").(string),
-		"format":               d.Get("format").(string),
-		"private_key_format":   d.Get("private_key_format").(string),
-		"key_type":             d.Get("key_type").(string),
-		"key_bits":             d.Get("key_bits").(int),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
-		"ou":                   d.Get("ou").(string),
-		"organization":         d.Get("organization").(string),
-		"country":              d.Get("country").(string),
-		"locality":             d.Get("locality").(string),
-		"province":             d.Get("province").(string),
-		"street_address":       d.Get("street_address").(string),
-		"postal_code":          d.Get("postal_code").(string),
+	// add multi-issuer write API fields if supported
+	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+
+	// Fields only used when we are generating a key
+	if !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting) {
+		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
 	}
 
-	if len(altNames) > 0 {
-		data["alt_names"] = strings.Join(altNames, ",")
+	if isIssuerAPISupported {
+		// Note: CSR generation does not persist an issuer, just a key, so consts.FieldIssuerName is not supported
+		if intermediateType == consts.FieldExisting {
+			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyRef)
+		} else {
+			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyName)
+		}
 	}
 
-	if len(ipSans) > 0 {
-		data["ip_sans"] = strings.Join(ipSans, ",")
+	data := map[string]interface{}{}
+	for _, k := range intermediateCertAPIFields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
 
-	if len(uriSans) > 0 {
-		data["uri_sans"] = strings.Join(uriSans, ",")
+	// add boolean fields
+	for _, k := range intermediateCertBooleanAPIFields {
+		data[k] = d.Get(k)
 	}
 
-	if len(otherSans) > 0 {
-		data["other_sans"] = strings.Join(otherSans, ",")
+	// add comma separated string fields
+	for _, k := range intermediateCertStringArrayFields {
+		m := util.ToStringArray(d.Get(k).([]interface{}))
+		if len(m) > 0 {
+			data[k] = strings.Join(m, ",")
+		}
 	}
 
 	log.Printf("[DEBUG] Creating intermediate cert request on PKI secret backend %q", backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating intermediate cert request for PKI secret backend %q: %s", backend, err)
+		return diag.Errorf("error creating intermediate cert request for PKI secret backend %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Created intermediate cert request on PKI secret backend %q", backend)
 
-	d.Set("csr", resp.Data["csr"])
-
-	if d.Get("type") == "exported" {
-		d.Set("private_key", resp.Data["private_key"])
-		d.Set("private_key_type", resp.Data["private_key_type"])
+	if err := d.Set(consts.FieldCSR, resp.Data[consts.FieldCSR]); err != nil {
+		return diag.FromErr(err)
 	}
 
-	d.SetId(path)
-	return pkiSecretBackendIntermediateCertRequestRead(d, meta)
+	// multi-issuer API fields that are set to TF state
+	// after a read from Vault
+	multiIssuerAPIComputedFields := []string{
+		consts.FieldKeyID,
+	}
+
+	if isIssuerAPISupported {
+		for _, k := range multiIssuerAPIComputedFields {
+			if err := d.Set(k, resp.Data[k]); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
+	if d.Get(consts.FieldType) == consts.FieldExported {
+		if err := d.Set(consts.FieldPrivateKey, resp.Data[consts.FieldPrivateKey]); err != nil {
+			return diag.FromErr(err)
+		}
+
+		if err := d.Set(consts.FieldPrivateKeyType, resp.Data[consts.FieldPrivateKeyType]); err != nil {
+			return diag.FromErr(err)
+		}
+
+	}
+
+	id := path
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		// multiple CSRs can be generated
+		// ensure unique IDs
+		uniqueSuffix := uuid.New()
+		id = fmt.Sprintf("%s/%s", path, uniqueSuffix)
+	}
+
+	d.SetId(id)
+	return pkiSecretBackendIntermediateCertRequestRead(ctx, d, meta)
 }
 
-func pkiSecretBackendIntermediateCertRequestRead(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendIntermediateCertRequestRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 
-func pkiSecretBackendIntermediateCertRequestDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendIntermediateCertRequestDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 
-func pkiSecretBackendIntermediateGeneratePath(backend string, intermediateType string) string {
+func pkiSecretBackendIntermediateGeneratePath(backend, intermediateType string, isMultiIssuerSupported bool) string {
+	if isMultiIssuerSupported {
+		return strings.Trim(backend, "/") + "/issuers/generate/intermediate/" + strings.Trim(intermediateType, "/")
+	}
 	return strings.Trim(backend, "/") + "/intermediate/generate/" + strings.Trim(intermediateType, "/")
 }

@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -9,34 +13,81 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestResourceAuth(t *testing.T) {
 	path := "github-" + acctest.RandString(10)
+
+	resourceName := "vault_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
+			{
+				Config: testResourceAuth_initialConfig(path + consts.PathDelim),
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`value "%s" for %q contains leading/trailing %q`,
+						path+consts.PathDelim, "path", consts.PathDelim),
+				),
+			},
+			{
+				Config: testResourceAuth_initialConfig(consts.PathDelim + path),
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`value "%s" for %q contains leading/trailing %q`,
+						consts.PathDelim+path, "path", consts.PathDelim),
+				),
+			},
 			{
 				Config: testResourceAuth_initialConfig(path),
 				Check:  testResourceAuth_initialCheck(path),
 			},
 			{
-				Config: testResourceAuth_updateConfig,
-				Check:  testResourceAuth_updateCheck,
+				Config: testResourceAuth_updatedConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", "Test auth backend updated"),
+					resource.TestCheckResourceAttr(resourceName, "type", "github"),
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+				),
 			},
 		},
 	})
 }
 
-func testAccCheckAuthBackendDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+func TestAuthBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-auth")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-updated")
 
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return err
-	}
+	resourceName := "vault_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceAuth_initialConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test auth backend"),
+					resource.TestCheckResourceAttr(resourceName, "type", "github"),
+				),
+			},
+			{
+				Config: testResourceAuth_initialConfig(updatedPath),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test auth backend"),
+					resource.TestCheckResourceAttr(resourceName, "type", "github"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "disable_remount"),
+		},
+	})
+}
+
+func testAccCheckAuthBackendDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_auth_backend" {
 			continue
@@ -44,6 +95,16 @@ func testAccCheckAuthBackendDestroy(s *terraform.State) error {
 		instanceState := rs.Primary
 		if instanceState == nil {
 			return fmt.Errorf("resource not found in state")
+		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		auths, err := client.Sys().ListAuth()
+		if err != nil {
+			return err
 		}
 
 		if _, ok := auths[instanceState.ID]; ok {
@@ -59,7 +120,17 @@ resource "vault_auth_backend" "test" {
 	description = "Test auth backend"
 	type 		= "github"
 	path 		= "%s"
-	local = true
+	local 		= true
+}`, path)
+}
+
+func testResourceAuth_updatedConfig(path string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "test" {
+	description = "Test auth backend updated"
+	type 		= "github"
+	path 		= "%s"
+	local 		= true
 }`, path)
 }
 
@@ -97,7 +168,11 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 			return fmt.Errorf("unexpected auth local")
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		auths, err := client.Sys().ListAuth()
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)
@@ -128,66 +203,13 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 	}
 }
 
-var testResourceAuth_updateConfig = `
-
-resource "vault_auth_backend" "test" {
-	type = "ldap"
-}
-
-`
-
-func testResourceAuth_updateCheck(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["vault_auth_backend.test"]
-	if resourceState == nil {
-		return fmt.Errorf("resource not found in state")
-	}
-
-	instanceState := resourceState.Primary
-	if instanceState == nil {
-		return fmt.Errorf("resource has no primary instance")
-	}
-
-	name := instanceState.ID
-
-	if name != instanceState.Attributes["type"] {
-		return fmt.Errorf("id doesn't match name")
-	}
-
-	if name != "ldap" {
-		return fmt.Errorf("unexpected auth name")
-	}
-
-	client := testProvider.Meta().(*api.Client)
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return fmt.Errorf("error reading back auth: %s", err)
-	}
-
-	found := false
-	for _, auth := range auths {
-		if auth.Type == name {
-			found = true
-			if wanted := instanceState.Attributes["accessor"]; auth.Accessor != wanted {
-				return fmt.Errorf("accessor is %v; wanted %v", auth.Accessor, wanted)
-			}
-			break
-		}
-	}
-
-	if !found {
-		return fmt.Errorf("could not find auth backend %s in %+v", name, auths)
-	}
-
-	return nil
-}
-
 func TestResourceAuthTune(t *testing.T) {
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_auth_backend.test"
 	var resAuthFirst api.AuthMount
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuthTune_initialConfig(backend),
@@ -251,7 +273,7 @@ resource "vault_auth_backend" "test" {
 
 func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 		auths, err := client.Sys().ListAuth()
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)

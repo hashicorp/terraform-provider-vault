@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package generated
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/generated/datasources/transform/decode"
 	"github.com/hashicorp/terraform-provider-vault/generated/datasources/transform/encode"
 	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/alphabet"

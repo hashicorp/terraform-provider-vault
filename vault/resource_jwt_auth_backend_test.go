@@ -1,126 +1,243 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccJWTAuthBackend(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("jwt")
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testJWTAuthBackend_Destroyed(path),
-		Steps: []resource.TestStep{
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".jwt"
+
+	getSteps := func(path, ns string) []resource.TestStep {
+		var commonChecks []resource.TestCheckFunc
+		if ns != "" {
+			commonChecks = append(commonChecks,
+				resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ns),
+			)
+		}
+
+		steps := []resource.TestStep{
 			{
-				Config: testAccJWTAuthBackendConfig(path),
+				Config: testAccJWTAuthBackendConfig(path, ns, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "description", "JWT backend"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "path", path),
-					resource.TestCheckResourceAttrSet("vault_jwt_auth_backend.jwt", "accessor"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", ""),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "local", "false"),
+					append(commonChecks,
+						resource.TestCheckResourceAttr(resourceName, "description", "JWT backend"),
+						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, "path", path),
+						resource.TestCheckResourceAttrSet(resourceName, "accessor"),
+						resource.TestCheckResourceAttr(resourceName, "bound_issuer", ""),
+						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+						resource.TestCheckResourceAttr(resourceName, "local", "false"),
+					)...,
 				),
 			},
 			{
-				Config: testAccJWTAuthLocalBackendConfig(path),
+				Config: testAccJWTAuthBackendConfig(path, ns, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "description", "JWT backend"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "path", path),
-					resource.TestCheckResourceAttrSet("vault_jwt_auth_backend.jwt", "accessor"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", ""),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "local", "true"),
+					append(commonChecks,
+						resource.TestCheckResourceAttr(resourceName, "description", "JWT backend"),
+						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, "path", path),
+						resource.TestCheckResourceAttrSet(resourceName, "accessor"),
+						resource.TestCheckResourceAttr(resourceName, "bound_issuer", ""),
+						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+						resource.TestCheckResourceAttr(resourceName, "local", "true"),
+					)...,
 				),
 			},
 			{
-				Config: testAccJWTAuthBackendConfigFullOIDC(path, "https://myco.auth0.com/", "api://default", "\"RS512\""),
+				Config: testAccJWTAuthBackendConfigFullOIDC(path, "https://myco.auth0.com/", "api://default", "\"RS512\"", ns),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "jwt_supported_algs.#", "1"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
+					append(commonChecks,
+						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, "bound_issuer", "api://default"),
+						resource.TestCheckResourceAttr(resourceName, "jwt_supported_algs.#", "1"),
+						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+					)...,
 				),
 			},
 			{
-				Config: testAccJWTAuthBackendConfigFullOIDC(path, "https://myco.auth0.com/", "api://default", "\"RS256\",\"RS512\""),
+				Config: testAccJWTAuthBackendConfigFullOIDC(path, "https://myco.auth0.com/", "api://default", "\"RS256\",\"RS512\"", ns),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "jwt_supported_algs.#", "2"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
+					append(commonChecks,
+						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, "bound_issuer", "api://default"),
+						resource.TestCheckResourceAttr(resourceName, "jwt_supported_algs.#", "2"),
+						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+					)...,
 				),
 			},
-		},
-	})
+		}
+
+		return steps
+	}
+
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+		resource.Test(t, resource.TestCase{
+			PreCheck:          func() { testutil.TestAccPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ""),
+		})
+	},
+	)
+
+	t.Run("ns", func(t *testing.T) {
+		t.Parallel()
+		ns := acctest.RandomWithPrefix("ns")
+		path := acctest.RandomWithPrefix("jwt")
+		resource.Test(t, resource.TestCase{
+			PreCheck:          func() { testutil.TestEntPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ns),
+		})
+	},
+	)
 }
 
 func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("oidc")
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testJWTAuthBackend_Destroyed(path),
-		Steps: []resource.TestStep{
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".oidc"
+	getSteps := func(path, ns string) []resource.TestStep {
+		var commonChecks []resource.TestCheckFunc
+		if ns != "" {
+			commonChecks = append(commonChecks,
+				resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ns),
+			)
+		}
+		steps := []resource.TestStep{
 			{
-				Config: testAccJWTAuthBackendProviderConfig(path),
+				Config: testAccJWTAuthBackendProviderConfig(path, ns),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_discovery_url", "https://myco.auth0.com/"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "type", "oidc"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "provider_config.provider", "azure"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "provider_config.groups_recurse_max_depth", "1"),
+					append(commonChecks,
+						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, "type", "oidc"),
+						resource.TestCheckResourceAttr(resourceName, "provider_config.provider", "azure"),
+						resource.TestCheckResourceAttr(resourceName, "provider_config.groups_recurse_max_depth", "1"),
+					)...,
 				),
 			},
-		},
-	})
+		}
+
+		return steps
+	}
+
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+		resource.Test(t, resource.TestCase{
+			PreCheck:          func() { testutil.TestAccPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ""),
+		})
+	},
+	)
+
+	t.Run("ns", func(t *testing.T) {
+		t.Parallel()
+		ns := acctest.RandomWithPrefix("ns")
+		path := acctest.RandomWithPrefix("jwt")
+		resource.Test(t, resource.TestCase{
+			PreCheck:          func() { testutil.TestEntPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ns),
+		})
+	},
+	)
 }
 
 func TestAccJWTAuthBackend_OIDC(t *testing.T) {
-	path := acctest.RandomWithPrefix("oidc")
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testJWTAuthBackend_Destroyed(path),
-		Steps: []resource.TestStep{
+	t.Parallel()
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".oidc"
+	getSteps := func(path, ns string) []resource.TestStep {
+		var commonChecks []resource.TestCheckFunc
+		if ns != "" {
+			commonChecks = append(commonChecks,
+				resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ns),
+			)
+		}
+		steps := []resource.TestStep{
 			{
-				Config: testAccJWTAuthBackendConfigOIDC(path),
+				Config: testAccJWTAuthBackendConfigOIDC(path, ns),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_discovery_url", "https://myco.auth0.com/"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "bound_issuer", "api://default"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_client_id", "client"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_client_secret", "secret"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_response_mode", "query"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_response_types.#", "1"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_response_types.0", "code"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "type", "oidc"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "default_role", "api"),
+					append(commonChecks,
+						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, "bound_issuer", "api://default"),
+						resource.TestCheckResourceAttr(resourceName, "oidc_client_id", "client"),
+						resource.TestCheckResourceAttr(resourceName, "oidc_client_secret", "secret"),
+						resource.TestCheckResourceAttr(resourceName, "oidc_response_mode", "query"),
+						resource.TestCheckResourceAttr(resourceName, "oidc_response_types.#", "1"),
+						resource.TestCheckResourceAttr(resourceName, "oidc_response_types.0", "code"),
+						resource.TestCheckResourceAttr(resourceName, "type", "oidc"),
+						resource.TestCheckResourceAttr(resourceName, "default_role", "api"),
+					)...,
 				),
 			},
-		},
-	})
+		}
+
+		return steps
+	}
+
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+		path := acctest.RandomWithPrefix("oidc")
+		resource.Test(t, resource.TestCase{
+			PreCheck:          func() { testutil.TestAccPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ""),
+		})
+	},
+	)
+
+	t.Run("ns", func(t *testing.T) {
+		t.Parallel()
+		ns := acctest.RandomWithPrefix("ns")
+		path := acctest.RandomWithPrefix("oidc")
+		resource.Test(t, resource.TestCase{
+			PreCheck:          func() { testutil.TestAccPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ns),
+		})
+	},
+	)
 }
 
 func TestAccJWTAuthBackend_invalid(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("jwt")
+	invalidPath := path + consts.PathDelim
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccJWTAuthBackendConfig(path + "/"),
-				Destroy:     false,
-				ExpectError: regexp.MustCompile("Error: cannot write to a path ending in '/'"),
+				Config:  testAccJWTAuthBackendConfig(invalidPath, "", false),
+				Destroy: false,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`value "%s" for "path" contains leading/trailing "%s"`,
+						invalidPath, consts.PathDelim)),
 			},
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "jwt" {
@@ -138,117 +255,168 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 	})
 }
 
-func testAccJWTAuthBackendConfig(path string) string {
-	return fmt.Sprintf(`
-resource "vault_jwt_auth_backend" "jwt" {
-  description = "JWT backend"
-  oidc_discovery_url = "https://myco.auth0.com/"
-  path = "%s"
-}
-`, path)
+func TestJWTAuthBackend_remount(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-auth-jwt")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-jwt-updated")
+
+	resourceName := "vault_jwt_auth_backend.jwt"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendConfig(path, "", false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "JWT backend"),
+					resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttrSet(resourceName, "accessor"),
+					resource.TestCheckResourceAttr(resourceName, "bound_issuer", ""),
+					resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+					resource.TestCheckResourceAttr(resourceName, "local", "false"),
+				),
+			},
+			{
+				Config: testAccJWTAuthBackendConfig(updatedPath, "", false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					resource.TestCheckResourceAttr(resourceName, "description", "JWT backend"),
+					resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttrSet(resourceName, "accessor"),
+					resource.TestCheckResourceAttr(resourceName, "bound_issuer", ""),
+					resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+					resource.TestCheckResourceAttr(resourceName, "local", "false"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "description", "disable_remount"),
+		},
+	})
 }
 
-func testAccJWTAuthLocalBackendConfig(path string) string {
-	return fmt.Sprintf(`
+func testAccJWTAuthBackendConfig(path, ns string, local bool) string {
+	c := fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "jwt" {
-  description = "JWT backend"
+  description        = "JWT backend"
   oidc_discovery_url = "https://myco.auth0.com/"
+  path               = "%s"
+  local              = %t
+`, path, local)
+
+	var fragments []string
+	if ns != "" {
+		fragments = []string{
+			fmt.Sprintf(`
+resource "vault_namespace" "test" {
   path = "%s"
-  local = true
 }
-`, path)
+`, ns),
+		}
+		c += `
+  namespace = vault_namespace.test.path
+`
+	}
+
+	config := strings.Join(append(fragments, c, "}"), "\n")
+	return config
 }
 
-func testAccJWTAuthBackendConfigFullOIDC(path string, oidcDiscoveryUrl string, boundIssuer string, supportedAlgs string) string {
-	return fmt.Sprintf(`
+func testAccJWTAuthBackendConfigFullOIDC(path string, oidcDiscoveryUrl string, boundIssuer string, supportedAlgs string, ns string) string {
+	config := fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "jwt" {
-  description = "JWT backend"
+  description        = "JWT backend"
   oidc_discovery_url = "%s"
-  bound_issuer = "%s"
+  bound_issuer       = "%s"
   jwt_supported_algs = [%s]
-  path = "%s"
-}
+  path               = "%s"
 `, oidcDiscoveryUrl, boundIssuer, supportedAlgs, path)
-}
 
-func testAccJWTAuthBackendConfigPubKeys(path string, validationPublicKeys string, boundIssuer string, supportedAlgs string) string {
-	return fmt.Sprintf(`
-resource "vault_jwt_auth_backend" "jwt" {
-  description = "JWT backend"
-  jwt_validation_pubkeys = [%s]
-  bound_issuer = "%s"
-  jwt_supported_algs = [%s]
+	var fragments []string
+	if ns != "" {
+		fragments = []string{
+			fmt.Sprintf(`
+resource "vault_namespace" "test" {
   path = "%s"
 }
-`, validationPublicKeys, boundIssuer, supportedAlgs, path)
+`, ns),
+		}
+		config += `
+  namespace = vault_namespace.test.path
+`
+	}
+
+	return strings.Join(append(fragments, config, "}"), "\n")
 }
 
-func testAccJWTAuthBackendConfigJWKS(path string, jwks string, boundIssuer string, supportedAlgs string) string {
-	return fmt.Sprintf(`
-resource "vault_jwt_auth_backend" "jwt" {
-  description = "JWT backend"
-  jwks_url = "%s"
-  bound_issuer = "%s"
-  jwt_supported_algs = [%s]
-  path = "%s"
-}
-`, jwks, boundIssuer, supportedAlgs, path)
-}
-
-func testAccJWTAuthBackendConfigOIDC(path string) string {
-	return fmt.Sprintf(`
+func testAccJWTAuthBackendConfigOIDC(path string, ns string) string {
+	config := fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "oidc" {
-  description = "OIDC backend"
-  oidc_discovery_url = "https://myco.auth0.com/"
-  oidc_client_id = "client"
-  oidc_client_secret = "secret"
-  bound_issuer = "api://default"
-  path = "%s"
-  type = "oidc"
-  default_role = "api"
+  description         = "OIDC backend"
+  oidc_discovery_url  = "https://myco.auth0.com/"
+  oidc_client_id      = "client"
+  oidc_client_secret  = "secret"
+  bound_issuer        = "api://default"
+  path                = "%s"
+  type                = "oidc"
+  default_role        = "api"
   oidc_response_mode  = "query"
   oidc_response_types = ["code"]
-}
 `, path)
-}
 
-func testAccJWTAuthBackendProviderConfig(path string) string {
-	return fmt.Sprintf(`
-resource "vault_jwt_auth_backend" "oidc" {
-  description = "OIDC backend"
-  oidc_discovery_url = "https://myco.auth0.com/"
+	var fragments []string
+	if ns != "" {
+		fragments = []string{
+			fmt.Sprintf(`
+resource "vault_namespace" "test" {
   path = "%s"
-  type = "oidc"
-  provider_config = {
-	provider = "azure"
-	groups_recurse_max_depth = "1"
-  }
 }
-`, path)
-}
-
-func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
-
-		authMounts, err := client.Sys().ListAuth()
-		if err != nil {
-			return err
+`, ns),
 		}
-
-		if _, ok := authMounts[fmt.Sprintf("%s/", path)]; ok {
-			return fmt.Errorf("auth mount not destroyed")
-		}
-
-		return nil
+		config += `
+  namespace = vault_namespace.test.path
+`
 	}
+
+	return strings.Join(append(fragments, config, "}"), "\n")
+}
+
+func testAccJWTAuthBackendProviderConfig(path string, ns string) string {
+	config := fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "oidc" {
+  description        = "OIDC backend"
+  oidc_discovery_url = "https://myco.auth0.com/"
+  path               = "%s"
+  type               = "oidc"
+  provider_config = {
+    provider                 = "azure"
+    groups_recurse_max_depth = "1"
+  }
+`, path)
+
+	var fragments []string
+	if ns != "" {
+		fragments = []string{
+			fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+`, ns),
+		}
+		config += `
+  namespace = vault_namespace.test.path
+`
+	}
+
+	return strings.Join(append(fragments, config, "}"), "\n")
 }
 
 func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("jwt")
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
@@ -298,6 +466,7 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendProviderConfigConversionBool(t *testing.T) {
+	t.Parallel()
 	type test struct {
 		name  string
 		value string
@@ -337,6 +506,7 @@ func TestAccJWTAuthBackendProviderConfigConversionBool(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
+	t.Parallel()
 	type test struct {
 		name  string
 		value string
@@ -379,8 +549,8 @@ func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
 func TestAccJWTAuthBackendProviderConfig_negative(t *testing.T) {
 	t.Skip(true)
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "oidc" {

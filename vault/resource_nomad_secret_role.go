@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,8 +10,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -56,7 +60,7 @@ func nomadSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createNomadRoleResource,
 		Update: updateNomadRoleResource,
-		Read:   readNomadRoleResource,
+		Read:   provider.ReadWrapper(readNomadRoleResource),
 		Delete: deleteNomadRoleResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
@@ -66,7 +70,11 @@ func nomadSecretBackendRoleResource() *schema.Resource {
 }
 
 func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
 	roleType := d.Get("type").(string)
@@ -113,7 +121,11 @@ func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Reading %q", rolePath)
 
@@ -163,7 +175,11 @@ func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	roleType := d.Get("type").(string)
 	if roleType == "" {
@@ -201,7 +217,11 @@ func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Deleting %q", rolePath)
 

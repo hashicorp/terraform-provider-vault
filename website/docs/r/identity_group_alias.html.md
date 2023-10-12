@@ -37,6 +37,11 @@ resource "vault_identity_group_alias" "group-alias" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required, Forces new resource) Name of the group alias to create.
 
 * `mount_accessor` - (Required) Mount accessor of the authentication backend to which this alias belongs to.

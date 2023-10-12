@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -8,20 +11,21 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 // This is light on testing as most of the code is covered by `resource_okta_auth_backend_test.go`
 func TestAccOktaAuthBackendUser(t *testing.T) {
+	t.Parallel()
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
 	organization := "dummy"
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccOktaAuthBackendUser_Destroyed(path, "user_test"),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccOktaAuthBackendUser_Destroyed(path, "user_test"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthUserConfig(path, organization),
@@ -66,7 +70,7 @@ func testAccOktaAuthBackendUser_InitialCheck(s *terraform.State) error {
 
 func testAccOktaAuthBackendUser_Destroyed(path, userName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 		group, err := client.Logical().Read(fmt.Sprintf("/auth/%s/users/%s", path, userName))
 		if err != nil {

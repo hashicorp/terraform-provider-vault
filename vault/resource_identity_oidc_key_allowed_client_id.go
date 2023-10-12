@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,14 +8,15 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func identityOidcKeyAllowedClientId() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOidcKeyAllowedClientIdWrite,
-		Read:   identityOidcKeyAllowedClientIdRead,
+		Read:   provider.ReadWrapper(identityOidcKeyAllowedClientIdRead),
 		Delete: identityOidcKeyAllowedClientIdDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -34,13 +38,17 @@ func identityOidcKeyAllowedClientId() *schema.Resource {
 }
 
 func identityOidcKeyAllowedClientIdWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Get("key_name").(string)
 	path := identityOidcKeyPath(name)
 	clientID := d.Get("allowed_client_id").(string)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data, err := identityOidcKeyApiRead(name, client)
 	if err != nil {
@@ -66,7 +74,11 @@ func identityOidcKeyAllowedClientIdWrite(d *schema.ResourceData, meta interface{
 }
 
 func identityOidcKeyAllowedClientIdRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Get("key_name").(string)
 	clientID := d.Get("allowed_client_id").(string)
 
@@ -91,13 +103,17 @@ func identityOidcKeyAllowedClientIdRead(d *schema.ResourceData, meta interface{}
 }
 
 func identityOidcKeyAllowedClientIdDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Get("key_name").(string)
 	path := identityOidcKeyPath(name)
 	clientID := d.Get("allowed_client_id").(string)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data, err := identityOidcKeyApiRead(name, client)
 	if err != nil {

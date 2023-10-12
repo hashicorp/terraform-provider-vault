@@ -24,10 +24,21 @@ resource "vault_github_auth_backend" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `path` - (Optional) Path where the auth backend is mounted. Defaults to `auth/github`
   if not specified.
 
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
+
 * `organization` - (Required) The organization configured users must be part of.
+
+* `organization_id` (Optional) The ID of the organization users must be part of.
+  Vault will attempt to fetch and set this value if it is not provided. (Vault 1.10+)
 
 * `base_url` - (Optional) The API endpoint to use. Useful if you
   are running GitHub Enterprise or an API-compatible authentication server.
@@ -101,12 +112,8 @@ These arguments are common across several Authentication Token resources since V
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The number of times issued tokens can be used.
-  A value of 0 means unlimited uses.
-
-* `token_num_uses` - (Optional) The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
-  if any, in number of seconds to set on the token.
+* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/github#token_num_uses)
+   of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
   `batch`, or `default` to use the mount's tuned default (which unless changed will be

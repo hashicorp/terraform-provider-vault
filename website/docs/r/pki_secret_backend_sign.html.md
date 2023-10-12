@@ -61,6 +61,11 @@ EOT
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Required) The PKI secret backend the resource belongs to.
 
 * `name` - (Required) Name of the role to create the certificate against
@@ -75,7 +80,7 @@ The following arguments are supported:
 
 * `ip_sans` - (Optional) List of alternative IPs
 
-* `uri_sans` - (Optional) List of alterative URIs
+* `uri_sans` - (Optional) List of alternative URIs
 
 * `ttl` - (Optional) Time to live
 
@@ -87,6 +92,11 @@ The following arguments are supported:
 
 * `auto_renew` - (Optional) If set to `true`, certs will be renewed if the expiration is within `min_seconds_remaining`. Default `false`
 
+* `issuer_ref` - (Optional) Specifies the default issuer of this request. Can
+  be the value `default`, a name, or an issuer ID. Use ACLs to prevent access to
+  the `/pki/issuer/:issuer_ref/{issue,sign}/:name` paths to prevent users
+  overriding the role's `issuer_ref` value.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
@@ -97,6 +107,12 @@ In addition to the fields above, the following attributes are exported:
 
 * `ca_chain` - The CA chain
 
-* `serial` - The serial
+* `serial_number` - The certificate's serial number, hex formatted.
 
 * `expiration` - The expiration date of the certificate in unix epoch format
+
+* `renew_pending` - `true` if the current time (during refresh) is after the start of the early renewal window declared by `min_seconds_remaining`, and `false` otherwise; if `auto_renew` is set to `true` then the provider will plan to replace the certificate once renewal is pending.
+
+## Deprecations
+
+* `serial` - Use `serial_number` instead.

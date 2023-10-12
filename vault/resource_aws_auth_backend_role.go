@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,8 +10,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -100,6 +105,11 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Optional:    true,
 			Description: "The key of the tag on EC2 instance to use for role tags.",
 		},
+		"role_id": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "The Vault generated role ID.",
+		},
 		"bound_iam_principal_arns": {
 			Type:        schema.TypeSet,
 			Optional:    true,
@@ -153,13 +163,12 @@ func awsAuthBackendRoleResource() *schema.Resource {
 
 	return &schema.Resource{
 		CustomizeDiff: resourceVaultAwsAuthBackendRoleCustomizeDiff,
-		Create:        awsAuthBackendRoleCreate,
-		Read:          awsAuthBackendRoleRead,
-		Update:        awsAuthBackendRoleUpdate,
-		Delete:        awsAuthBackendRoleDelete,
-		Exists:        awsAuthBackendRoleExists,
+		CreateContext: awsAuthBackendRoleCreate,
+		ReadContext:   provider.ReadContextWrapper(awsAuthBackendRoleRead),
+		UpdateContext: awsAuthBackendRoleUpdate,
+		DeleteContext: awsAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: fields,
 	}
@@ -190,8 +199,11 @@ func setSlice(d *schema.ResourceData, tfFieldName, vaultFieldName string, data m
 	}
 }
 
-func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func awsAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -287,31 +299,34 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(path)
 	if _, err := client.Logical().Write(path, data); err != nil {
 		d.SetId("")
-		return fmt.Errorf("error writing AWS auth backend role %q: %s", path, err)
+		return diag.Errorf("error writing AWS auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote AWS auth backend role %q", path)
 
-	return awsAuthBackendRoleRead(d, meta)
+	return awsAuthBackendRoleRead(ctx, d, meta)
 }
 
-func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func awsAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	backend, err := awsAuthBackendRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for AWS auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for AWS auth backend role: %s", path, err)
 	}
 
 	role, err := awsAuthBackendRoleNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for AWS auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for AWS auth backend role: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading AWS auth backend role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading AWS auth backend role %q: %s", path, err)
+		return diag.Errorf("error reading AWS auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read AWS auth backend role %q", path)
 	if resp == nil {
@@ -320,7 +335,9 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	readTokenFields(d, resp)
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
+	}
 
 	d.Set("backend", backend)
 	d.Set("role", role)
@@ -381,17 +398,24 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("role_tag", resp.Data["role_tag"])
+	d.Set("role_id", resp.Data["role_id"])
 	d.Set("inferred_entity_type", resp.Data["inferred_entity_type"])
 	d.Set("inferred_aws_region", resp.Data["inferred_aws_region"])
 	d.Set("resolve_aws_unique_ids", resp.Data["resolve_aws_unique_ids"])
 	d.Set("allow_instance_migration", resp.Data["allow_instance_migration"])
 	d.Set("disallow_reauthentication", resp.Data["disallow_reauthentication"])
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func awsAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating AWS auth backend role %q", path)
@@ -484,11 +508,11 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating AWS auth backend role %q: %s", path, err)
+		return diag.Errorf("error updating AWS auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated AWS auth backend role %q", path)
 
-	return awsAuthBackendRoleRead(d, meta)
+	return awsAuthBackendRoleRead(ctx, d, meta)
 }
 
 func isEc2(authType, inferred string) bool {
@@ -496,33 +520,21 @@ func isEc2(authType, inferred string) bool {
 	return authType == "ec2" || isEc2InstanceWithIam
 }
 
-func awsAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func awsAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting AWS auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error deleting AWS auth backend role %q", path)
+		return diag.Errorf("error deleting AWS auth backend role %q", path)
 	}
 	log.Printf("[DEBUG] Deleted AWS auth backend role %q", path)
 
 	return nil
-}
-
-func awsAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if AWS auth backend role %q exists", path)
-
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if AWS auth backend role %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if AWS auth backend role %q exists", path)
-
-	return resp != nil, nil
 }
 
 func awsAuthBackendRolePath(backend, role string) string {

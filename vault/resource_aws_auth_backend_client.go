@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,13 +10,18 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+)
+
+const (
+	useSTSRegionFromClient = "use_sts_region_from_client"
 )
 
 func awsAuthBackendClientResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendWrite,
-		Read:   awsAuthBackendRead,
+		Read:   provider.ReadWrapper(awsAuthBackendRead),
 		Update: awsAuthBackendWrite,
 		Delete: awsAuthBackendDelete,
 		Exists: awsAuthBackendExists,
@@ -65,6 +73,12 @@ func awsAuthBackendClientResource() *schema.Resource {
 				Optional:    true,
 				Description: "Region to override the default region for making AWS STS API calls.",
 			},
+			useSTSRegionFromClient: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "If set, will override sts_region and use the region from the client request's header",
+			},
 			"iam_server_id_header_value": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -75,7 +89,10 @@ func awsAuthBackendClientResource() *schema.Resource {
 }
 
 func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	// if backend comes from the config, it won't have the StateFunc
 	// applied yet, so we need to apply it again.
@@ -84,6 +101,7 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
 	stsRegion := d.Get("sts_region").(string)
+	stsRegionFromClient := d.Get("use_sts_region_from_client").(bool)
 
 	iamServerIDHeaderValue := d.Get("iam_server_id_header_value").(string)
 
@@ -101,6 +119,10 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
 		data["access_key"] = d.Get("access_key").(string)
 		data["secret_key"] = d.Get("secret_key").(string)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		data[useSTSRegionFromClient] = stsRegionFromClient
 	}
 
 	// sts_endpoint and sts_region are required to be set together
@@ -121,7 +143,10 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	log.Printf("[DEBUG] Reading AWS auth backend client config")
 	secret, err := client.Logical().Read(d.Id())
@@ -149,11 +174,18 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("sts_endpoint", secret.Data["sts_endpoint"])
 	d.Set("sts_region", secret.Data["sts_region"])
 	d.Set("iam_server_id_header_value", secret.Data["iam_server_id_header_value"])
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		d.Set(useSTSRegionFromClient, secret.Data[useSTSRegionFromClient])
+	}
+
 	return nil
 }
 
 func awsAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	log.Printf("[DEBUG] Deleting AWS auth backend client config from %q", d.Id())
 	_, err := client.Logical().Delete(d.Id())
@@ -166,7 +198,10 @@ func awsAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	log.Printf("[DEBUG] Checking if AWS auth backend client is configured at %q", d.Id())
 	secret, err := client.Logical().Read(d.Id())

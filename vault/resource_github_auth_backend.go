@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,16 +10,19 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func githubAuthBackendResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		"path": {
+		consts.FieldPath: {
 			Type:        schema.TypeString,
 			Optional:    true,
-			ForceNew:    true,
 			Description: "Path where the auth backend is mounted",
-			Default:     "github",
+			Default:     consts.MountTypeGitHub,
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
@@ -25,6 +31,13 @@ func githubAuthBackendResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The organization users must be part of.",
+		},
+		"organization_id": {
+			Type:     schema.TypeInt,
+			Optional: true,
+			Computed: true,
+			Description: "The ID of the organization users must be part of. " +
+				"Vault will attempt to fetch and set this value if it is not provided (vault-1.10+)",
 		},
 		"base_url": {
 			Type:        schema.TypeString,
@@ -47,23 +60,27 @@ func githubAuthBackendResource() *schema.Resource {
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: githubAuthBackendCreate,
-		Read:   githubAuthBackendRead,
+		Read:   provider.ReadWrapper(githubAuthBackendRead),
 		Update: githubAuthBackendUpdate,
 		Delete: githubAuthBackendDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		Schema: fields,
-	}
+		Schema:        fields,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
+	}, false)
 }
 
 func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	var description string
 
-	client := meta.(*api.Client)
-	path := strings.Trim(d.Get("path").(string), "/")
+	path := strings.Trim(d.Get(consts.FieldPath).(string), "/")
 
 	if v, ok := d.GetOk("description"); ok {
 		description = v.(string)
@@ -71,7 +88,7 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Enabling github auth backend at '%s'", path)
 	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
-		Type:        "github",
+		Type:        consts.MountTypeGitHub,
 		Description: description,
 	})
 	if err != nil {
@@ -86,15 +103,30 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
+
+	if !d.IsNewResource() {
+		mount, err := util.Remount(d, client, consts.FieldPath, true)
+		if err != nil {
+			return err
+		}
+
+		path = "auth/" + mount
+		configPath = path + "/config"
+	}
 
 	data := map[string]interface{}{}
 
 	if v, ok := d.GetOk("organization"); ok {
 		data["organization"] = v.(string)
+	}
+	if v, ok := d.GetOk("organization_id"); ok {
+		data["organization_id"] = v.(int)
 	}
 	if v, ok := d.GetOk("base_url"); ok {
 		data["base_url"] = v.(string)
@@ -139,25 +171,29 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
 
 	log.Printf("[DEBUG] Reading github auth mount from '%q'", path)
 	mount, err := authMountInfoGet(client, d.Id())
 	if err != nil {
-		return fmt.Errorf("error reading github auth mount from '%q': %s", path, err)
+		return fmt.Errorf("error reading github auth mount from '%q': %w", path, err)
 	}
 	log.Printf("[INFO] Read github auth mount from '%q'", path)
 
 	log.Printf("[DEBUG] Reading github auth config from '%q'", configPath)
-	dt, err := client.Logical().Read(configPath)
+	resp, err := client.Logical().Read(configPath)
 	if err != nil {
-		return fmt.Errorf("error reading github auth config from '%q': %s", configPath, err)
+		return fmt.Errorf("error reading github auth config from '%q': %w", configPath, err)
 	}
 	log.Printf("[INFO] Read github auth config from '%q'", configPath)
 
-	if dt == nil {
+	if resp == nil {
 		log.Printf("[WARN] Github auth config from '%q' not found, removing from state", configPath)
 		d.SetId("")
 		return nil
@@ -166,25 +202,32 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading github auth tune from '%q/tune'", path)
 	rawTune, err := authMountTuneGet(client, path)
 	if err != nil {
-		return fmt.Errorf("error reading tune information from Vault: %s", err)
+		return fmt.Errorf("error reading tune information from Vault: %w", err)
 	}
 
-	if err := d.Set("tune", []map[string]interface{}{rawTune}); err != nil {
-		log.Printf("[ERROR] Error when setting tune config from path '%q/tune' to state: %s", path, err)
+	data := getCommonTokenFieldMap(resp)
+	data["path"] = d.Id()
+	data["organization"] = resp.Data["organization"]
+	data["base_url"] = resp.Data["base_url"]
+	data["description"] = mount.Description
+	data["accessor"] = mount.Accessor
+	data["tune"] = []map[string]interface{}{rawTune}
+
+	if orgID, ok := resp.Data["organization_id"]; ok {
+		data["organization_id"] = orgID
+	}
+
+	if err := util.SetResourceData(d, data); err != nil {
 		return err
 	}
-
-	readTokenFields(d, dt)
-
-	d.Set("path", d.Id())
-	d.Set("organization", dt.Data["organization"])
-	d.Set("base_url", dt.Data["base_url"])
-	d.Set("description", mount.Description)
-	d.Set("accessor", mount.Accessor)
 
 	return nil
 }
 
 func githubAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	return authMountDisable(meta.(*api.Client), d.Id())
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+	return authMountDisable(client, d.Id())
 }

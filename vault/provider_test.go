@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,15 +8,19 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
 	"github.com/mitchellh/go-homedir"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -43,6 +50,10 @@ import (
 // each run. In case of weird behavior, restart the Vault dev server to
 // start over with a fresh Vault. (Remember to reset VAULT_TOKEN.)
 
+const providerName = "vault"
+
+var testInitOnce = sync.Once{}
+
 func TestProvider(t *testing.T) {
 	if err := Provider().InternalValidate(); err != nil {
 		t.Fatalf("err: %s", err)
@@ -55,10 +66,41 @@ var (
 )
 
 func init() {
-	testProvider = Provider()
-	testProviders = map[string]*schema.Provider{
-		"vault": testProvider,
-	}
+	initTestProvider()
+}
+
+func initTestProvider() {
+	testInitOnce.Do(
+		func() {
+			// only required when running acceptance tests
+			if os.Getenv(resource.EnvTfAcc) == "" {
+				return
+			}
+
+			if testProvider == nil {
+				testProvider = Provider()
+				testProviders = map[string]*schema.Provider{
+					providerName: testProvider,
+				}
+				rs := &schema.Resource{
+					Schema: testProvider.Schema,
+				}
+
+				m, err := testProvider.ConfigureFunc(rs.TestResourceData())
+				if err != nil {
+					panic(err)
+				}
+				testProvider.SetMeta(m)
+			}
+		},
+	)
+}
+
+var providerFactories = map[string]func() (*schema.Provider, error){
+	providerName: func() (*schema.Provider, error) {
+		initTestProvider()
+		return testProvider, nil
+	},
 }
 
 // A basic token helper script.
@@ -85,7 +127,7 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 	})
 
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := providerConfigure(rootProviderData); err != nil {
+	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -97,8 +139,8 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 		Schema: rootProvider.Schema,
 	}
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testHeaderConfig("auth", "123"),
@@ -108,38 +150,37 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 	})
 
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := providerConfigure(rootProviderData); err != nil {
+	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestAccNamespaceProviderConfigure(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
+	testutil.SkipTestAcc(t)
 
 	rootProvider := Provider()
 	rootProviderResource := &schema.Resource{
 		Schema: rootProvider.Schema,
 	}
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := providerConfigure(rootProviderData); err != nil {
+	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
-	// Create a test namespace and make sure it stays there
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() { testutil.TestAccPreCheck(t) },
-		Providers: map[string]*schema.Provider{
-			"vault": rootProvider,
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testNamespaceConfig(namespacePath),
-				Check:  testNamespaceCheckAttrs(),
-			},
-		},
+	t.Cleanup(func() {
+		if _, err := client.Logical().Delete(consts.SysNamespaceRoot + namespacePath); err != nil {
+			t.Errorf("failed to delete parent namespace %q, err=%s", namespacePath, err)
+		}
 	})
+
+	// create the namespace for the provider
+	if _, err := client.Logical().Write(consts.SysNamespaceRoot+namespacePath, nil); err != nil {
+		t.Fatal(err)
+	}
 
 	nsProvider := Provider()
 	nsProviderResource := &schema.Resource{
@@ -147,8 +188,8 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	}
 	nsProviderData := nsProviderResource.TestResourceData()
 	nsProviderData.Set("namespace", namespacePath)
-	nsProviderData.Set("token", os.Getenv("VAULT_TOKEN"))
-	if _, err := providerConfigure(nsProviderData); err != nil {
+	nsProviderData.Set("token", os.Getenv(api.EnvVaultToken))
+	if _, err := provider.NewProviderMeta(nsProviderData); err != nil {
 		t.Fatal(err)
 	}
 
@@ -233,8 +274,8 @@ func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
 			Schema: approleProvider.Schema,
 		}
 		approleProviderData := approleProviderResource.TestResourceData()
-		approleProviderData.Set("auth_login", authLoginData)
-		_, err := providerConfigure(approleProviderData)
+		approleProviderData.Set(consts.FieldAuthLoginGeneric, authLoginData)
+		_, err := provider.NewProviderMeta(approleProviderData)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -291,7 +332,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 		ns2ProviderData := ns2ProviderResource.TestResourceData()
 		ns2ProviderData.Set("namespace", namespacePath)
 		ns2ProviderData.Set("token", vaultToken)
-		if _, err := providerConfigure(ns2ProviderData); err != nil {
+		if _, err := provider.NewProviderMeta(ns2ProviderData); err != nil {
 			t.Fatal(err)
 		}
 
@@ -354,9 +395,9 @@ func TestAccProviderToken(t *testing.T) {
 	}
 
 	// Create a "resource" we can use for constructing ResourceData.
-	provider := Provider()
+	p := Provider()
 	providerResource := &schema.Resource{
-		Schema: provider.Schema,
+		Schema: p.Schema,
 	}
 
 	type testcase struct {
@@ -373,7 +414,7 @@ func TestAccProviderToken(t *testing.T) {
 			expectedToken: "",
 		},
 		{
-			// The provider will read the token file "~/.vault-token".
+			// The p will read the token file "~/.vault-token".
 			name:          "File",
 			fileToken:     true,
 			expectedToken: "file-token",
@@ -423,8 +464,8 @@ func TestAccProviderToken(t *testing.T) {
 				d.Set("token", "schema-token")
 			}
 
-			// Get and check the provider token.
-			token, err := providerToken(d)
+			// Get and check the p token.
+			token, err := provider.GetToken(d)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -489,34 +530,36 @@ func TestAccTokenName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		resource.Test(t, resource.TestCase{
-			Providers: testProviders,
-			PreCheck:  func() { testutil.TestAccPreCheck(t) },
-			Steps: []resource.TestStep{
-				{
-					PreConfig: func() {
-						if test.UseTokenNameEnv {
-							err := os.Setenv("VAULT_TOKEN_NAME", test.TokenNameEnv)
-							if err != nil {
-								t.Fatal(err)
+		t.Run(test.WantTokenName, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				ProviderFactories: providerFactories,
+				PreCheck:          func() { testutil.TestAccPreCheck(t) },
+				Steps: []resource.TestStep{
+					{
+						PreConfig: func() {
+							if test.UseTokenNameEnv {
+								err := os.Setenv("VAULT_TOKEN_NAME", test.TokenNameEnv)
+								if err != nil {
+									t.Fatal(err)
+								}
+							} else {
+								err := os.Unsetenv("VAULT_TOKEN_NAME")
+								if err != nil {
+									t.Fatal(err)
+								}
 							}
-						} else {
-							err := os.Unsetenv("VAULT_TOKEN_NAME")
-							if err != nil {
-								t.Fatal(err)
-							}
-						}
+						},
+						Config: testProviderConfig(test.UseTokenNameSchema, `token_name = "`+test.TokenNameSchema+`"`),
+						Check:  checkSelfToken("display_name", test.WantTokenName),
 					},
-					Config: testProviderConfig(test.UseTokenNameSchema, `token_name = "`+test.TokenNameSchema+`"`),
-					Check:  checkSelfToken("display_name", test.WantTokenName),
 				},
-			},
+			})
 		})
 	}
 }
 
 func TestAccChildToken(t *testing.T) {
-	defer os.Unsetenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN")
+	defer os.Unsetenv(consts.EnvVarSkipChildToken)
 
 	checkTokenUsed := func(expectChildToken bool) resource.TestCheckFunc {
 		if expectChildToken {
@@ -526,55 +569,55 @@ func TestAccChildToken(t *testing.T) {
 		} else {
 			// If the child token setting was disabled, the used token
 			// should match the user-provided VAULT_TOKEN
-			return checkSelfToken("id", os.Getenv("VAULT_TOKEN"))
+			return checkSelfToken("id", os.Getenv(api.EnvVaultToken))
 		}
 	}
 
-	tests := []struct {
+	tests := map[string]struct {
 		skipChildTokenEnv    string
 		useChildTokenEnv     bool
 		skipChildTokenSchema string
 		useChildTokenSchema  bool
 		expectChildToken     bool
 	}{
-		{
+		"tc1": {
 			useChildTokenSchema: false,
 			useChildTokenEnv:    false,
 			expectChildToken:    true,
 		},
-		{
+		"tc2": {
 			skipChildTokenEnv: "",
 			useChildTokenEnv:  true,
 			expectChildToken:  true,
 		},
-		{
+		"tc3": {
 			skipChildTokenEnv: "true",
 			useChildTokenEnv:  true,
 			expectChildToken:  false,
 		},
-		{
+		"tc4": {
 			skipChildTokenEnv: "false",
 			useChildTokenEnv:  true,
 			expectChildToken:  true,
 		},
-		{
+		"tc5": {
 			skipChildTokenSchema: "true",
 			useChildTokenSchema:  true,
 			expectChildToken:     false,
 		},
-		{
+		"tc6": {
 			skipChildTokenSchema: "false",
 			useChildTokenSchema:  true,
 			expectChildToken:     true,
 		},
-		{
+		"tc7": {
 			skipChildTokenEnv:    "true",
 			useChildTokenEnv:     true,
 			skipChildTokenSchema: "false",
 			useChildTokenSchema:  true,
 			expectChildToken:     true,
 		},
-		{
+		"tc8": {
 			skipChildTokenEnv:    "false",
 			useChildTokenEnv:     true,
 			skipChildTokenSchema: "true",
@@ -583,29 +626,33 @@ func TestAccChildToken(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		resource.Test(t, resource.TestCase{
-			Providers: testProviders,
-			PreCheck:  func() { testutil.TestAccPreCheck(t) },
-			Steps: []resource.TestStep{
-				{
-					PreConfig: func() {
-						if test.useChildTokenEnv {
-							err := os.Setenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN", test.skipChildTokenEnv)
-							if err != nil {
-								t.Fatal(err)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				ProviderFactories: providerFactories,
+				PreCheck:          func() { testutil.TestAccPreCheck(t) },
+				Steps: []resource.TestStep{
+					{
+						PreConfig: func() {
+							if test.useChildTokenEnv {
+								err := os.Setenv(consts.EnvVarSkipChildToken, test.skipChildTokenEnv)
+								if err != nil {
+									t.Fatal(err)
+								}
+							} else {
+								err := os.Unsetenv(consts.EnvVarSkipChildToken)
+								if err != nil {
+									t.Fatal(err)
+								}
 							}
-						} else {
-							err := os.Unsetenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN")
-							if err != nil {
-								t.Fatal(err)
-							}
-						}
+						},
+						Config: testProviderConfig(test.useChildTokenSchema,
+							consts.FieldSkipChildToken+` = `+test.skipChildTokenSchema,
+						),
+						Check: checkTokenUsed(test.expectChildToken),
 					},
-					Config: testProviderConfig(test.useChildTokenSchema, `skip_child_token = `+test.skipChildTokenSchema),
-					Check:  checkTokenUsed(test.expectChildToken),
 				},
-			},
+			})
 		})
 	}
 }
@@ -731,7 +778,7 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.vaultAddrEnv != "" {
-				unset, err := tempSetenv("VAULT_ADDR", tc.vaultAddrEnv)
+				unset, err := tempSetenv(api.EnvVaultAddress, tc.vaultAddrEnv)
 				defer failIfErr(t, unset)
 				if err != nil {
 					t.Fatal(err)
@@ -747,7 +794,7 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 			}
 
 			// Get and check the provider token.
-			token, err := providerToken(d)
+			token, err := provider.GetToken(d)
 			if err != nil {
 				t.Fatal(err)
 			}

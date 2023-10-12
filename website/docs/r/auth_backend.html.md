@@ -26,11 +26,19 @@ resource "vault_auth_backend" "example" {
 
 The following arguments are supported:
 
-* `type` - (Required) The name of the auth method type
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
 
-* `path` - (Optional) The path to mount the auth method — this defaults to the name of the type
+* `type` - (Required) The name of the auth method type.
 
-* `description` - (Optional) A description of the auth method
+* `path` - (Optional) The path to mount the auth method — this defaults to the name of the type.
+
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
+
+* `description` - (Optional) A description of the auth method.
 
 * `local` - (Optional) Specifies if the auth method is local only.
 
@@ -77,3 +85,11 @@ Auth methods can be imported using the `path`, e.g.
 ```
 $ terraform import vault_auth_backend.example github
 ```
+
+## Tutorials 
+
+Refer to the following tutorials for additional usage examples:
+
+- [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise)
+
+- [Codify Management of Vault Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-oss)

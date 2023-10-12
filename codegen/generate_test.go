@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package codegen
 
 import (
@@ -5,7 +8,7 @@ import (
 )
 
 func TestCodeFilePath(t *testing.T) {
-	homeDirPath, err := pathToHomeDir()
+	repoRoot, err := getRepoRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,21 +48,21 @@ func TestCodeFilePath(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if actualDataSourceFilePath != homeDirPath+testCase.expectedDataSourceFilePath {
-			t.Fatalf("expected %q but received %q", homeDirPath+testCase.expectedDataSourceFilePath, actualDataSourceFilePath)
+		if actualDataSourceFilePath != repoRoot+testCase.expectedDataSourceFilePath {
+			t.Fatalf("expected %q but received %q", repoRoot+testCase.expectedDataSourceFilePath, actualDataSourceFilePath)
 		}
 		actualResourceFilePath, err := codeFilePath(tfTypeResource, testCase.input)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if actualResourceFilePath != homeDirPath+testCase.expectedResourceFilePath {
-			t.Fatalf("expected %q but received %q", homeDirPath+testCase.expectedResourceFilePath, actualResourceFilePath)
+		if actualResourceFilePath != repoRoot+testCase.expectedResourceFilePath {
+			t.Fatalf("expected %q but received %q", repoRoot+testCase.expectedResourceFilePath, actualResourceFilePath)
 		}
 	}
 }
 
 func TestDocFilePath(t *testing.T) {
-	homeDirPath, err := pathToHomeDir()
+	repoRoot, err := getRepoRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,15 +98,15 @@ func TestDocFilePath(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if actualDataSourceDocPath != homeDirPath+testCase.expectedDataSourceFilePath {
-			t.Fatalf("expected %q but received %q", homeDirPath+testCase.expectedDataSourceFilePath, actualDataSourceDocPath)
+		if actualDataSourceDocPath != repoRoot+testCase.expectedDataSourceFilePath {
+			t.Fatalf("expected %q but received %q", repoRoot+testCase.expectedDataSourceFilePath, actualDataSourceDocPath)
 		}
 		actualResourceDocPath, err := docFilePath(tfTypeResource, testCase.input)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if actualResourceDocPath != homeDirPath+testCase.expectedResourceFilePath {
-			t.Fatalf("expected %q but received %q", homeDirPath+testCase.expectedResourceFilePath, actualResourceDocPath)
+		if actualResourceDocPath != repoRoot+testCase.expectedResourceFilePath {
+			t.Fatalf("expected %q but received %q", repoRoot+testCase.expectedResourceFilePath, actualResourceDocPath)
 		}
 	}
 }

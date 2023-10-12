@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,17 +10,16 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-var (
-	awsAuthBackendRoleTagBlacklistBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/config/tidy/roletag-blacklist$")
-)
+var awsAuthBackendRoleTagBlacklistBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/config/tidy/roletag-blacklist$")
 
 func awsAuthBackendRoleTagBlacklistResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendRoleTagBlacklistWrite,
-		Read:   awsAuthBackendRoleTagBlacklistRead,
+		Read:   provider.ReadWrapper(awsAuthBackendRoleTagBlacklistRead),
 		Update: awsAuthBackendRoleTagBlacklistWrite,
 		Delete: awsAuthBackendRoleTagBlacklistDelete,
 		Exists: awsAuthBackendRoleTagBlacklistExists,
@@ -53,7 +55,10 @@ func awsAuthBackendRoleTagBlacklistResource() *schema.Resource {
 }
 
 func awsAuthBackendRoleTagBlacklistWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	data := map[string]interface{}{
@@ -65,7 +70,6 @@ func awsAuthBackendRoleTagBlacklistWrite(d *schema.ResourceData, meta interface{
 
 	log.Printf("[DEBUG] Configuring AWS auth backend roletag blacklist %q", path)
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("Error configuring AWS auth backend roletag blacklist %q: %s", path, err)
@@ -78,7 +82,10 @@ func awsAuthBackendRoleTagBlacklistWrite(d *schema.ResourceData, meta interface{
 }
 
 func awsAuthBackendRoleTagBlacklistRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -109,7 +116,11 @@ func awsAuthBackendRoleTagBlacklistRead(d *schema.ResourceData, meta interface{}
 }
 
 func awsAuthBackendRoleTagBlacklistDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing roletag blacklist %q from AWS auth backend", path)
@@ -123,7 +134,10 @@ func awsAuthBackendRoleTagBlacklistDelete(d *schema.ResourceData, meta interface
 }
 
 func awsAuthBackendRoleTagBlacklistExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 

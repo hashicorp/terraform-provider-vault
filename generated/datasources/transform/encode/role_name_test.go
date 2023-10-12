@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package encode
 
 import (
@@ -17,9 +20,9 @@ import (
 
 var roleNameTestProvider = func() *schema.Provider {
 	p := schema.NewProvider(vault.Provider())
-	p.RegisterResource("vault_mount", vault.MountResource())
-	p.RegisterResource("vault_transform_transformation_name", transformation.NameResource())
-	p.RegisterResource("vault_transform_role_name", role.NameResource())
+	p.RegisterResource("vault_mount", vault.UpdateSchemaResource(vault.MountResource()))
+	p.RegisterResource("vault_transform_transformation_name", vault.UpdateSchemaResource(transformation.NameResource()))
+	p.RegisterResource("vault_transform_role_name", vault.UpdateSchemaResource(role.NameResource()))
 	p.RegisterDataSource("vault_transform_encode_role_name", RoleNameDataSource())
 	return p
 }()
@@ -48,23 +51,27 @@ resource "vault_mount" "transform" {
   path = "%s"
   type = "transform"
 }
+
 resource "vault_transform_transformation_name" "ccn-fpe" {
-  path = vault_mount.transform.path
-  name = "ccn-fpe"
-  type = "fpe"
-  template = "builtin/creditcardnumber"
-  tweak_source = "internal"
-  allowed_roles = ["payments"]
+  path             = vault_mount.transform.path
+  name             = "ccn-fpe"
+  type             = "fpe"
+  template         = "builtin/creditcardnumber"
+  tweak_source     = "internal"
+  allowed_roles    = ["payments"]
+  deletion_allowed = true
 }
+
 resource "vault_transform_role_name" "payments" {
-  path = vault_transform_transformation_name.ccn-fpe.path
-  name = "payments"
-  transformations = ["ccn-fpe"]
+  path            = vault_transform_transformation_name.ccn-fpe.path
+  name            = "payments"
+  transformations = [vault_transform_transformation_name.ccn-fpe.name]
 }
+
 data "vault_transform_encode_role_name" "test" {
-    path      = vault_transform_role_name.payments.path
-    role_name = "payments"
-    value     = "1111-2222-3333-4444"
+  path      = vault_transform_role_name.payments.path
+  role_name = "payments"
+  value     = "1111-2222-3333-4444"
 }
 `, path)
 }
@@ -94,23 +101,27 @@ resource "vault_mount" "transform" {
   path = "%s"
   type = "transform"
 }
+
 resource "vault_transform_transformation_name" "ccn-fpe" {
-  path = vault_mount.transform.path
-  name = "ccn-fpe"
-  type = "fpe"
-  template = "builtin/creditcardnumber"
-  tweak_source = "internal"
-  allowed_roles = ["payments"]
+  path             = vault_mount.transform.path
+  name             = "ccn-fpe"
+  type             = "fpe"
+  template         = "builtin/creditcardnumber"
+  tweak_source     = "internal"
+  allowed_roles    = ["payments"]
+  deletion_allowed = true
 }
+
 resource "vault_transform_role_name" "payments" {
-  path = vault_transform_transformation_name.ccn-fpe.path
-  name = "payments"
-  transformations = ["ccn-fpe"]
+  path            = vault_transform_transformation_name.ccn-fpe.path
+  name            = "payments"
+  transformations = [vault_transform_transformation_name.ccn-fpe.name]
 }
+
 data "vault_transform_encode_role_name" "test" {
-    path      = vault_transform_role_name.payments.path
-    role_name = "payments"
-    batch_input = [{"value":"1111-2222-3333-4444"}]
+  path        = vault_transform_role_name.payments.path
+  role_name   = "payments"
+  batch_input = [{ "value" : "1111-2222-3333-4444" }]
 }
 `, path)
 }

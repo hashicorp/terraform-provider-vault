@@ -8,6 +8,9 @@ description: |-
 
 # vault\_ad\_secret\_role
 
+~> **Note** This resource is replaced by "vault_ldap_secret_backend_static_role"
+and will be removed in the next major release.
+
 Creates a role on an Active Directory Secret Backend for Vault. Roles are
 used to map credentials to existing Active Directory service accounts.
 
@@ -41,6 +44,11 @@ resource "vault_ad_secret_role" "role" {
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path the AD secret backend is mounted at,
   with no leading or trailing `/`s.

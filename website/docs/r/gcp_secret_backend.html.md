@@ -30,6 +30,11 @@ resource "vault_gcp_secret_backend" "gcp" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `credentials` - (Optional) The GCP service account credentials in JSON format.
 
 ~> **Important** Because Vault does not support reading the configured
@@ -39,6 +44,9 @@ previously stored values.
 
 * `path` - (Optional) The unique path this backend should be mounted at. Must
 not begin or end with a `/`. Defaults to `gcp`.
+
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
 * `description` - (Optional) A human-friendly description for this backend.
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,17 +10,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccEndpointGoverningPolicy(t *testing.T) {
 	policyName := acctest.RandomWithPrefix("test-policy")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccEndpointGoverningPolicyCheckDestroy,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccEndpointGoverningPolicyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccEndpointGoverningPolicy(policyName, "test/*", "soft-mandatory"),
@@ -42,11 +45,16 @@ func TestAccEndpointGoverningPolicy(t *testing.T) {
 }
 
 func testAccEndpointGoverningPolicyCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_egp_policy" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		name := rs.Primary.Attributes["name"]
 		data, err := client.Logical().Read(fmt.Sprintf("sys/policies/egp/%s", name))
 		if err != nil {

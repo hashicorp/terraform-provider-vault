@@ -29,11 +29,19 @@ resource "vault_ldap_auth_backend" "ldap" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `url` - (Required) The URL of the LDAP server
 
 * `starttls` - (Optional) Control use of TLS when conecting to LDAP
 
 * `case_sensitive_names` - (Optional) Control case senstivity of objects fetched from LDAP, this is used for object matching in vault
+
+* `max_page_size` - (Optional) Sets the max page size for LDAP lookups, by default it's set to -1.
+   *Available only for Vault 1.11.11+, 1.12.7+, and 1.13.3+*.
 
 * `tls_min_version` - (Optional) Minimum acceptable version of TLS
 
@@ -51,6 +59,8 @@ The following arguments are supported:
 
 * `userattr` - (Optional) Attribute on user object matching username passed in
 
+* `userfilter` - (Optional) LDAP user search filter
+
 * `upndomain` - (Optional) The userPrincipalDomain used to construct UPN string
 
 * `discoverdn`: (Optional) Use anonymous bind to discover the bind DN of a user.
@@ -65,9 +75,14 @@ The following arguments are supported:
 
 * `groupattr` - (Optional) LDAP attribute to follow on objects returned by groupfilter
 
+* `username_as_alias` - (Optional) Force the auth method to use the username passed by the user as the alias name.
+
 * `use_token_groups` - (Optional) Use the Active Directory tokenGroups constructed attribute of the user to find the group memberships
 
 * `path` - (Optional) Path to mount the LDAP auth backend under
+
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
 * `description` - (Optional) Description for the LDAP auth backend mount
 
@@ -103,12 +118,8 @@ These arguments are common across several Authentication Token resources since V
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The number of times issued tokens can be used.
-  A value of 0 means unlimited uses.
-
-* `token_num_uses` - (Optional) The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
-  if any, in number of seconds to set on the token.
+* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/ldap#token_num_uses)
+   of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
   `batch`, or `default` to use the mount's tuned default (which unless changed will be

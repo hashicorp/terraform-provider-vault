@@ -28,6 +28,11 @@ resource "vault_pki_secret_backend_root_sign_intermediate" "root" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Required) The PKI secret backend the resource belongs to.
 
 * `csr` - (Required) The CSR
@@ -45,12 +50,6 @@ The following arguments are supported:
 * `ttl` - (Optional) Time to live
 
 * `format` - (Optional) The format of data
-
-* `private_key_format` - (Optional) The private key format
-
-* `key_type` - (Optional) The desired key type
-
-* `key_bits` - (Optional) The number of bits to use
 
 * `max_path_length` - (Optional) The maximum path length to encode in the generated certificate
 
@@ -74,6 +73,13 @@ The following arguments are supported:
 
 * `postal_code` - (Optional) The postal code
 
+* `revoke` - If set to `true`, the certificate will be revoked on resource destruction.
+
+* `issuer_ref` - (Optional) Specifies the default issuer of this request. May
+  be the value `default`, a name, or an issuer ID. Use ACLs to prevent access to
+  the `/pki/issuer/:issuer_ref/{issue,sign}/:name` paths to prevent users
+  overriding the role's `issuer_ref` value.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
@@ -86,5 +92,9 @@ In addition to the fields above, the following attributes are exported:
 
 * `certificate_bundle` - The concatenation of the intermediate CA and the issuing CA certificates (PEM encoded). 
   Requires the `format` to be set to any of: pem, pem_bundle. The value will be empty for all other formats.
+ 
+* `serial_number` - The certificate's serial number, hex formatted.
 
-* `serial` - The serial
+## Deprecations
+
+* `serial` - Use `serial_number` instead.

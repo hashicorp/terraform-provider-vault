@@ -44,8 +44,8 @@ data "vault_azure_access_credentials" "creds" {
   role                        = "my-role"
   validate_creds              = true
   num_sequential_successes    = 8
-  num_seconds_between_tests   = 7
-  max_cred_validation_seconds = 1200 // 20 minutes
+  num_seconds_between_tests   = 1
+  max_cred_validation_seconds = 300 
 }
 
 provider "azure" {
@@ -54,9 +54,20 @@ provider "azure" {
 }
 ```
 
+## Caveats
+
+The `validate_creds` option requires read-access to the `backend` config endpoint.
+If the effective Vault role does not have the required permissions then valid values 
+are required to be set for: `subscription_id`, `tenant_id`, `environment`.
+
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path to the Azure secret backend to
 read credentials from, with no leading or trailing `/`s.
@@ -75,11 +86,24 @@ credentials. Defaults to 8.
 
 * `num_seconds_between_tests` - (Optional) If 'validate_creds' is true, 
 the number of seconds to wait between each test of generated credentials.
-Defaults to 7.
+Defaults to 1.
 
 * `max_cred_validation_seconds` - (Optional) If 'validate_creds' is true, 
 the number of seconds after which to give up validating credentials. Defaults
-to 1,200 (20 minutes).
+to 300.
+
+* `subscription_id` - (Optional) The subscription ID to use during credential
+  validation. Defaults to the subscription ID configured in the Vault `backend`.  
+  *See the [caveats](#caveats) section for more information on this field.*
+
+* `tenant_id` - (Optional) The tenant ID to use during credential validation.
+  Defaults to the tenant ID configured in the Vault `backend`.  
+  *See the [caveats](#caveats) section for more information on this field.*
+
+* `environment` - (Optional) The Azure environment to use during credential validation.
+  Defaults to the environment configured in the Vault backend.
+  Some possible values: `AzurePublicCloud`, `AzureGovernmentCloud`  
+  *See the [caveats](#caveats) section for more information on this field.*
 
 ## Attributes Reference
 

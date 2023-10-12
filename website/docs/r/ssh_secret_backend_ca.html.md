@@ -27,6 +27,11 @@ resource "vault_ssh_secret_backend_ca" "foo" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Optional) The path where the SSH secret backend is mounted. Defaults to 'ssh'
 
 * `generate_signing_key` - (Optional) Whether Vault should generate the signing key pair internally. Defaults to true
@@ -42,3 +47,11 @@ and correct drift on `private_key`. Changing the values, however, _will_ overwri
 ## Attributes Reference
 
 No additional attributes are exposed by this resource.
+
+## Import
+
+SSH secret backend CAs can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_ssh_secret_backend_ca.foo ssh
+```

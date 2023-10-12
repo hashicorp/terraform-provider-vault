@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -9,7 +12,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -20,7 +24,7 @@ var (
 func awsAuthBackendCertResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendCertCreate,
-		Read:   awsAuthBackendCertRead,
+		Read:   provider.ReadWrapper(awsAuthBackendCertRead),
 		Delete: awsAuthBackendCertDelete,
 		Exists: awsAuthBackendCertExists,
 		Importer: &schema.ResourceImporter{
@@ -64,7 +68,10 @@ func awsAuthBackendCertResource() *schema.Resource {
 }
 
 func awsAuthBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	certType := d.Get("type").(string)
@@ -91,7 +98,10 @@ func awsAuthBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -130,7 +140,11 @@ func awsAuthBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing cert %q from AWS auth backend", path)
@@ -144,7 +158,10 @@ func awsAuthBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 

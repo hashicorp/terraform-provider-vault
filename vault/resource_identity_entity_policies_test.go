@@ -1,17 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -19,9 +22,9 @@ import (
 func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityEntityPoliciesDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityPoliciesConfigExclusive(entity),
@@ -43,9 +46,9 @@ func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityEntityPoliciesDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityPoliciesConfigNonExclusive(entity),
@@ -66,20 +69,33 @@ func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.0", "foo"),
 				),
 			},
+			{
+				Config: testAccIdentityEntityPoliciesConfigNonExclusiveUpdateEntity(entity),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityEntityPoliciesCheckLogical("vault_identity_entity.entity", []string{"dev", "foo"}),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.0", "foo"),
+				),
+			},
 		},
 	})
 }
 
 func testAccCheckidentityEntityPoliciesDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_entity_policies" {
 			continue
 		}
 
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		if _, err := readIdentityEntity(client, rs.Primary.ID, false); err != nil {
-			if isIdentityNotFoundError(err) {
+			if group.IsIdentityNotFoundError(err) {
 				continue
 			}
 			return err
@@ -108,98 +124,38 @@ func testAccCheckidentityEntityPoliciesDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccIdentityEntityPoliciesCheckAttrs(resource string) resource.TestCheckFunc {
+func testAccIdentityEntityPoliciesCheckAttrs(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources[resource]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		id := instanceState.ID
-
-		path := identityEntityIDPath(id)
-		client := testProvider.Meta().(*api.Client)
-		resp, err := client.Logical().Read(path)
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
 		if err != nil {
-			return fmt.Errorf("%q doesn't exist", path)
+			return err
 		}
+
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
+		}
+
+		path := entity.JoinEntityID(rs.Primary.ID)
 
 		attrs := map[string]string{
 			"entity_id":   "id",
 			"entity_name": "name",
 			"policies":    "policies",
 		}
-		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
-				continue
-			}
-			var match bool
-			switch resp.Data[apiAttr].(type) {
-			case json.Number:
-				apiData, err := resp.Data[apiAttr].(json.Number).Int64()
-				if err != nil {
-					return fmt.Errorf("expected API field %s to be an int, was %q", apiAttr, resp.Data[apiAttr])
-				}
-				stateData, err := strconv.ParseInt(instanceState.Attributes[stateAttr], 10, 64)
-				if err != nil {
-					return fmt.Errorf("expected state field %s to be an int, was %q", stateAttr, instanceState.Attributes[stateAttr])
-				}
-				match = apiData == stateData
-			case bool:
-				if _, ok := resp.Data[apiAttr]; !ok && instanceState.Attributes[stateAttr] == "" {
-					match = true
-				} else {
-					stateData, err := strconv.ParseBool(instanceState.Attributes[stateAttr])
-					if err != nil {
-						return fmt.Errorf("expected state field %s to be a bool, was %q", stateAttr, instanceState.Attributes[stateAttr])
-					}
-					match = resp.Data[apiAttr] == stateData
-				}
-			case []interface{}:
-				apiData := resp.Data[apiAttr].([]interface{})
-				length := instanceState.Attributes[stateAttr+".#"]
-				if length == "" {
-					if len(resp.Data[apiAttr].([]interface{})) != 0 {
-						return fmt.Errorf("expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
-					}
-					match = true
-				} else {
-					count, err := strconv.Atoi(length)
-					if err != nil {
-						return fmt.Errorf("expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
-					}
-					if count != len(apiData) {
-						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
-					}
 
-					for i := 0; i < count; i++ {
-						found := false
-						for stateKey, stateValue := range instanceState.Attributes {
-							if strings.HasPrefix(stateKey, stateAttr) {
-								if apiData[i] == stateValue {
-									found = true
-								}
-							}
-						}
-						if !found {
-							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, apiAttr, stateAttr, apiData[i])
-						}
-					}
-					match = true
-				}
-			default:
-				match = resp.Data[apiAttr] == instanceState.Attributes[stateAttr]
+		tAttrs := []*testutil.VaultStateTest{}
+		for k, v := range attrs {
+			ta := &testutil.VaultStateTest{
+				ResourceName: resourceName,
+				StateAttr:    k,
+				VaultAttr:    v,
 			}
-			if !match {
-				return fmt.Errorf("expected %s (%s in state) of %q to be %q, got %q", apiAttr, stateAttr, path, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
-			}
+
+			tAttrs = append(tAttrs, ta)
 		}
-		return nil
+
+		return testutil.AssertVaultState(client, s, path, tAttrs...)
 	}
 }
 
@@ -217,8 +173,12 @@ func testAccIdentityEntityPoliciesCheckLogical(resource string, policies []strin
 
 		id := instanceState.ID
 
-		path := identityEntityIDPath(id)
-		client := testProvider.Meta().(*api.Client)
+		path := entity.JoinEntityID(id)
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		resp, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", path)
@@ -307,6 +267,31 @@ func testAccIdentityEntityPoliciesConfigNonExclusiveUpdate(entity string) string
 resource "vault_identity_entity" "entity" {
   name = "%s"
   external_policies = true
+}
+
+resource "vault_identity_entity_policies" "dev" {
+	entity_id = vault_identity_entity.entity.id
+  exclusive = false
+  policies = ["dev"]
+}
+
+
+resource "vault_identity_entity_policies" "test" {
+  entity_id = vault_identity_entity.entity.id
+  exclusive = false
+  policies = ["foo"]
+}
+`, entity)
+}
+
+func testAccIdentityEntityPoliciesConfigNonExclusiveUpdateEntity(entity string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "entity" {
+  name = "%s"
+  external_policies = true
+  metadata = {
+    version = "1"
+  }
 }
 
 resource "vault_identity_entity_policies" "dev" {

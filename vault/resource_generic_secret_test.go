@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -9,47 +13,119 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestResourceGenericSecret(t *testing.T) {
-	path := acctest.RandomWithPrefix("secretsv1/test")
+	mount := acctest.RandomWithPrefix("secretsv1")
+	name := acctest.RandomWithPrefix("test")
+	path := fmt.Sprintf("%s/%s", mount, name)
+	resourceName := "vault_generic_secret.test"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(path),
+				Config: testResourceGenericSecret_initialConfig(mount, name),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
-				Config: testResourceGenericSecret_updateConfig,
+				Config: testResourceGenericSecret_updateConfig(mount, name),
 				Check:  testResourceGenericSecret_updateCheck,
+			},
+			{
+				ImportState:  true,
+				ResourceName: resourceName,
+			},
+		},
+	})
+}
+
+func TestResourceGenericSecretNS(t *testing.T) {
+	ns := acctest.RandomWithPrefix("ns")
+	mount := acctest.RandomWithPrefix("secretsv1")
+	name := acctest.RandomWithPrefix("test")
+	path := fmt.Sprintf("%s/%s", mount, name)
+	resourceName := "vault_generic_secret.test"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceGenericSecret_initialConfigNS(ns, mount, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
+					testResourceGenericSecret_initialCheck(path),
+				),
+			},
+			{
+				// unfortunately two steps are needed when testing import,
+				// since the tf-plugin-sdk does not allow for specifying environment variables :(
+				// neither does have any support for generic post-step functions.
+				// It is possible that this will cause issues if we ever want to support parallel tests.
+				// We would have to update the SDK to suport specifying extra env vars by step.
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, ns)
+				},
+				ImportState:      true,
+				ResourceName:     resourceName,
+				ImportStateCheck: testutil.GetNamespaceImportStateCheck(ns),
+			},
+			{
+				// needed for the import step above :(
+				Config: testResourceGenericSecret_initialConfigNS(ns, mount, name),
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
+				PlanOnly: true,
+			},
+			{
+				Config: testResourceGenericSecret_updateConfig(mount, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(resourceName, "namespace"),
+					testResourceGenericSecret_updateCheck,
+				),
 			},
 		},
 	})
 }
 
 func TestResourceGenericSecret_deleted(t *testing.T) {
-	path := acctest.RandomWithPrefix("secretsv1/test")
+	resourceName := "vault_generic_secret.test"
+
+	mount := acctest.RandomWithPrefix("secretsv1")
+	name := acctest.RandomWithPrefix("test")
+	path := fmt.Sprintf("%s/%s", mount, name)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(path),
+				Config: testResourceGenericSecret_initialConfig(mount, name),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
+				ImportState:  true,
+				ResourceName: resourceName,
+			},
+			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
 					_, err := client.Logical().Delete(path)
 					if err != nil {
 						t.Fatalf("unable to manually delete the secret via the SDK: %s", err)
 					}
 				},
-				Config: testResourceGenericSecret_initialConfig(path),
+				Config: testResourceGenericSecret_initialConfig(mount, name),
 				Check:  testResourceGenericSecret_initialCheck(path),
+			},
+			{
+				ImportState:  true,
+				ResourceName: resourceName,
 			},
 		},
 	})
@@ -57,27 +133,37 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 
 func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	path := acctest.RandomWithPrefix("secretsv2/test")
+	resourceName := "vault_generic_secret.test"
+
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAllVersionDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAllVersionDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig_v2(path, false),
 				Check:  testResourceGenericSecret_initialCheck_v2(path, "zap", 1),
 			},
 			{
+				ImportState:  true,
+				ResourceName: resourceName,
+			},
+			{
 				Config: testResourceGenericSecret_initialConfig_v2(path, true),
 				Check:  testResourceGenericSecret_initialCheck_v2(path, "zoop", 2),
+			},
+			{
+				ImportState:  true,
+				ResourceName: resourceName,
 			},
 		},
 	})
 }
 
-func testResourceGenericSecret_initialConfig(path string) string {
+func testResourceGenericSecret_initialConfig(mount, name string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "v1" {
-	path = "secretsv1"
+	path = "%s"
 	type = "kv"
 	options = {
 		version = "1"
@@ -85,14 +171,62 @@ resource "vault_mount" "v1" {
 }
 
 resource "vault_generic_secret" "test" {
-    depends_on = ["vault_mount.v1"]
-    path = "%s"
+    path = "${vault_mount.v1.path}/%s"
     data_json = <<EOT
 {
     "zip": "zap"
 }
 EOT
-}`, path)
+}`, mount, name)
+}
+
+func testResourceGenericSecret_updateConfig(mount, name string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "v1" {
+	path = "%s"
+	type = "kv"
+	options = {
+		version = "1"
+	}
+}
+
+resource "vault_generic_secret" "test" {
+    path = "${vault_mount.v1.path}/%s"
+    data_json = <<EOT
+{
+    "zip": "zoop"
+}
+EOT
+}
+`, mount, name)
+}
+
+func testResourceGenericSecret_initialConfigNS(ns, mount, name string) string {
+	result := fmt.Sprintf(`
+resource "vault_namespace" "ns1" {
+    path = "%s"
+}
+
+resource "vault_mount" "v1" {
+    namespace = vault_namespace.ns1.path
+	path = "%s"
+	type = "kv"
+	options = {
+		version = "1"
+	}
+}
+
+resource "vault_generic_secret" "test" {
+    namespace = vault_mount.v1.namespace
+    path = "${vault_mount.v1.path}/%s"
+    data_json = <<EOT
+{
+    "zip": "zap"
+}
+EOT
+}`, ns, mount, name)
+
+	return result
 }
 
 func testResourceGenericSecret_initialConfig_v2(path string, isUpdate bool) string {
@@ -142,21 +276,24 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 			return fmt.Errorf("resource not found in state")
 		}
 
-		instanceState := resourceState.Primary
-		if instanceState == nil {
+		state := resourceState.Primary
+		if state == nil {
 			return fmt.Errorf("resource has no primary instance")
 		}
 
-		path := instanceState.ID
+		path := state.ID
 
-		if path != instanceState.Attributes["path"] {
+		if path != state.Attributes["path"] {
 			return fmt.Errorf("id doesn't match path")
 		}
 		if path != expectedPath {
 			return fmt.Errorf("unexpected secret path")
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client, err := provider.GetClient(state, testProvider.Meta())
+		if err != nil {
+			return err
+		}
 
 		secret, err := client.Logical().Read(path)
 		if err != nil {
@@ -170,7 +307,7 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 		}
 
 		// Test the map
-		if got, want := instanceState.Attributes["data.zip"], "zap"; got != want {
+		if got, want := state.Attributes["data.zip"], "zap"; got != want {
 			return fmt.Errorf("data[\"zip\"] contains %s; want %s", got, want)
 		}
 
@@ -199,7 +336,10 @@ func testResourceGenericSecret_initialCheck_v2(expectedPath string, wantValue st
 			return fmt.Errorf("unexpected secret path")
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
 
 		// Checking KV-V2 Secrets
 		resp, err := client.Logical().List("secretsv2/metadata")
@@ -253,12 +393,16 @@ func testResourceGenericSecret_checkVersions(client *api.Client, keyName string,
 }
 
 func testAllVersionDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_generic_secret" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("error checking for generic secret %q: %s", rs.Primary.ID, err)
@@ -270,35 +414,17 @@ func testAllVersionDestroy(s *terraform.State) error {
 	return nil
 }
 
-var testResourceGenericSecret_updateConfig = `
-
-resource "vault_mount" "v1" {
-	path = "secretsv1"
-	type = "kv"
-	options = {
-		version = "1"
-	}
-}
-
-resource "vault_generic_secret" "test" {
-    path = "${vault_mount.v1.path}/foo"
-    disable_read = false
-    data_json = <<EOT
-{
-    "zip": "zoop"
-}
-EOT
-}
-
-`
-
 func testResourceGenericSecret_updateCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_generic_secret.test"]
-	instanceState := resourceState.Primary
+	state := resourceState.Primary
 
-	path := instanceState.ID
+	path := state.ID
 
-	client := testProvider.Meta().(*api.Client)
+	client, err := provider.GetClient(state, testProvider.Meta())
+	if err != nil {
+		return err
+	}
+
 	secret, err := client.Logical().Read(path)
 	if err != nil {
 		return fmt.Errorf("error reading back secret: %s", err)

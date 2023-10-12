@@ -23,7 +23,7 @@ resource "vault_token_auth_backend_role" "example" {
   orphan                 = true
   token_period           = "86400"
   renewable              = true
-  explicit_max_ttl       = "115200"
+  token_explicit_max_ttl = "115200"
   path_suffix            = "path-suffix"
 }
 ```
@@ -31,6 +31,11 @@ resource "vault_token_auth_backend_role" "example" {
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
 
 * `role_name` - (Required) The name of the role.
 
@@ -79,9 +84,8 @@ These arguments are common across several Authentication Token resources since V
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
-  if any, in number of seconds to set on the token.
+* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/token#token_num_uses)
+   of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
   `batch`, or `default` to use the mount's tuned default (which unless changed will be

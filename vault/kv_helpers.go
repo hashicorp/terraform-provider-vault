@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
 	"io"
+	"log"
 	"path"
 	"strings"
 
@@ -31,7 +35,6 @@ func versionedSecret(requestedVersion int, path string, client *api.Client) (*ap
 	}
 
 	secret, err := kvReadRequest(client, path, versionParam)
-
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +79,29 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 	}
 
 	return api.ParseSecret(resp.Body)
+}
+
+func kvListRequest(client *api.Client, path string) ([]interface{}, error) {
+	log.Printf("[DEBUG] Listing secrets at %s from Vault", path)
+	resp, err := client.Logical().List(path)
+	if err != nil {
+		return nil, fmt.Errorf("error listing from Vault at path %q, err=%s", path, err)
+	}
+
+	if resp == nil {
+		return nil, fmt.Errorf("no secrets found at %q", path)
+	}
+
+	// Return key names if they are present in response
+	if keyNameList, ok := resp.Data["keys"]; ok && keyNameList != nil {
+		keyNames, ok := keyNameList.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("keys are incorrectly formatted in response from Vault")
+		}
+		return keyNames, nil
+	}
+
+	return nil, fmt.Errorf("no keys present in response from Vault")
 }
 
 func kvPreflightVersionRequest(client *api.Client, path string) (string, int, error) {

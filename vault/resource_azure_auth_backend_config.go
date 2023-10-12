@@ -1,18 +1,25 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
+
+var azureAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$")
 
 func azureAuthBackendConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: azureAuthBackendWrite,
-		Read:   azureAuthBackendRead,
+		Read:   provider.ReadWrapper(azureAuthBackendRead),
 		Update: azureAuthBackendWrite,
 		Delete: azureAuthBackendDelete,
 		Exists: azureAuthBackendExists,
@@ -65,7 +72,10 @@ func azureAuthBackendConfigResource() *schema.Resource {
 }
 
 func azureAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(*api.Client)
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	// if backend comes from the config, it won't have the StateFunc
 	// applied yet, so we need to apply it again.
@@ -98,26 +108,41 @@ func azureAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	return azureAuthBackendRead(d, meta)
 }
 
-func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(*api.Client)
+func azureAuthBackendConfigBackendFromPath(path string) (string, error) {
+	if !azureAuthBackendConfigFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
+	}
+	res := azureAuthBackendConfigFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
+}
 
+func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+	path := d.Id()
 	log.Printf("[DEBUG] Reading Azure auth backend config")
-	secret, err := config.Logical().Read(d.Id())
+	secret, err := config.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading Azure auth backend config from %q: %s", d.Id(), err)
+		return fmt.Errorf("error reading Azure auth backend config from %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read Azure auth backend config")
 
 	if secret == nil {
-		log.Printf("[WARN] No info found at %q; removing from state.", d.Id())
+		log.Printf("[WARN] No info found at %q; removing from state.", path)
 		d.SetId("")
 		return nil
 	}
-	idPieces := strings.Split(d.Id(), "/")
-	if len(idPieces) != 3 {
-		return fmt.Errorf("expected %q to have 4 pieces, has %d", d.Id(), len(idPieces))
+	backend, err := azureAuthBackendConfigBackendFromPath(path)
+	if err != nil {
+		return fmt.Errorf("invalid path %q for azure auth backend config: %s", path, err)
 	}
-	d.Set("backend", idPieces[1])
+
+	d.Set("backend", backend)
 	d.Set("tenant_id", secret.Data["tenant_id"])
 	d.Set("client_id", secret.Data["client_id"])
 	if v, ok := secret.Data["client_secret"]; ok {
@@ -129,8 +154,10 @@ func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(*api.Client)
-
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	log.Printf("[DEBUG] Deleting Azure auth backend config from %q", d.Id())
 	_, err := config.Logical().Delete(d.Id())
 	if err != nil {
@@ -142,8 +169,10 @@ func azureAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	config := meta.(*api.Client)
-
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 	log.Printf("[DEBUG] Checking if Azure auth backend is configured at %q", d.Id())
 	secret, err := config.Logical().Read(d.Id())
 	if err != nil {

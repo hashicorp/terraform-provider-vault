@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package role
 
 import (
@@ -8,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	sdk_schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/schema"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/vault"
@@ -17,8 +20,8 @@ import (
 
 var nameTestProvider = func() *schema.Provider {
 	p := schema.NewProvider(vault.Provider())
-	p.RegisterResource("vault_mount", vault.MountResource())
-	p.RegisterResource("vault_transform_role_name", NameResource())
+	p.RegisterResource("vault_mount", vault.UpdateSchemaResource(vault.MountResource()))
+	p.RegisterResource("vault_transform_role_name", vault.UpdateSchemaResource(NameResource()))
 	return p
 }()
 
@@ -61,7 +64,7 @@ func TestRoleName(t *testing.T) {
 }
 
 func destroy(s *terraform.State) error {
-	client := nameTestProvider.SchemaProvider().Meta().(*api.Client)
+	client := nameTestProvider.SchemaProvider().Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_transform_role_name" {

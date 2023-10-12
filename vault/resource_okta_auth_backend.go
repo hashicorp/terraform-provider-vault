@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -12,26 +15,27 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var oktaAuthType = "okta"
 
 func oktaAuthBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: oktaAuthBackendWrite,
 		Delete: oktaAuthBackendDelete,
-		Read:   oktaAuthBackendRead,
+		Read:   provider.ReadWrapper(oktaAuthBackendRead),
 		Update: oktaAuthBackendUpdate,
-		Exists: oktaAuthBackendExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "path to mount the backend",
 				Default:     oktaAuthType,
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -46,7 +50,6 @@ func oktaAuthBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Required:    false,
-				ForceNew:    true,
 				Optional:    true,
 				Description: "The description of the auth backend",
 			},
@@ -154,7 +157,7 @@ func oktaAuthBackendResource() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"groups": {
 							Type:        schema.TypeSet,
-							Required:    true,
+							Optional:    true,
 							Description: "Groups within the Okta auth backend to associate with this user",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
@@ -212,7 +215,7 @@ func oktaAuthBackendResource() *schema.Resource {
 				Description: "The mount accessor related to the auth mount.",
 			},
 		},
-	}
+	}, false)
 }
 
 func normalizeOktaTTL(i interface{}) string {
@@ -244,11 +247,14 @@ func parseDurationSeconds(i interface{}) (string, error) {
 }
 
 func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	authType := oktaAuthType
 	desc := d.Get("description").(string)
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
@@ -256,7 +262,6 @@ func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		Type:        authType,
 		Description: desc,
 	})
-
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -267,14 +272,16 @@ func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
 
 	err := client.Sys().DisableAuth(path)
-
 	if err != nil {
 		return fmt.Errorf("error disabling auth from Vault: %s", err)
 	}
@@ -282,18 +289,16 @@ func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func oktaAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	return isOktaAuthBackendPresent(meta.(*api.Client), d.Id())
-}
-
 func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
 
 	present, err := isOktaAuthBackendPresent(client, path)
-
 	if err != nil {
 		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
 	}
@@ -304,7 +309,7 @@ func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	if err := d.Set("path", path); err != nil {
+	if err := d.Set(consts.FieldPath, path); err != nil {
 		return err
 	}
 
@@ -385,9 +390,20 @@ func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData)
 }
 
 func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
+
+	if !d.IsNewResource() {
+		path, e = util.Remount(d, client, consts.FieldPath, true)
+		if e != nil {
+			return e
+		}
+	}
+
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
 	configuration := map[string]interface{}{
@@ -494,7 +510,6 @@ func oktaReadAllUsers(client *api.Client, path string) (*schema.Set, error) {
 }
 
 func oktaAuthUpdateGroups(d *schema.ResourceData, client *api.Client, path string, oldValue, newValue interface{}) error {
-
 	groupsToDelete := oldValue.(*schema.Set).Difference(newValue.(*schema.Set))
 	newGroups := newValue.(*schema.Set).Difference(oldValue.(*schema.Set))
 

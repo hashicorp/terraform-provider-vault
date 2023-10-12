@@ -1,13 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -87,20 +93,22 @@ func azureAuthBackendRoleResource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Create: azureAuthBackendRoleCreate,
-		Read:   azureAuthBackendRoleRead,
-		Update: azureAuthBackendRoleUpdate,
-		Delete: azureAuthBackendRoleDelete,
-		Exists: azureAuthBackendRoleExists,
+		CreateContext: azureAuthBackendRoleCreate,
+		ReadContext:   provider.ReadContextWrapper(azureAuthBackendRoleRead),
+		UpdateContext: azureAuthBackendRoleUpdate,
+		DeleteContext: azureAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: fields,
 	}
 }
 
-func azureAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func azureAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -169,31 +177,34 @@ func azureAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 	d.SetId(path)
 	if _, err := client.Logical().Write(path, data); err != nil {
 		d.SetId("")
-		return fmt.Errorf("error writing Azure auth backend role %q: %s", path, err)
+		return diag.Errorf("error writing Azure auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote Azure auth backend role %q", path)
 
-	return azureAuthBackendRoleRead(d, meta)
+	return azureAuthBackendRoleRead(ctx, d, meta)
 }
 
-func azureAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func azureAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	backend, err := azureAuthBackendRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for Azure auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for Azure auth backend role: %s", path, err)
 	}
 
 	role, err := azureAuthBackendRoleNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for Azure auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for Azure auth backend role: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading Azure auth backend role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading Azure auth backend role %q: %s", path, err)
+		return diag.Errorf("error reading Azure auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read Azure auth backend role %q", path)
 	if resp == nil {
@@ -202,40 +213,29 @@ func azureAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	readTokenFields(d, resp)
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
+	}
 
 	d.Set("backend", backend)
 	d.Set("role", role)
+	d.Set("bound_service_principal_ids", resp.Data["bound_service_principal_ids"])
+	d.Set("bound_group_ids", resp.Data["bound_group_ids"])
+	d.Set("bound_locations", resp.Data["bound_locations"])
+	d.Set("bound_subscription_ids", resp.Data["bound_subscription_ids"])
+	d.Set("bound_resource_groups", resp.Data["bound_resource_groups"])
+	d.Set("bound_scale_sets", resp.Data["bound_scale_sets"])
 
-	if _, ok := d.GetOk("bound_service_principal_ids"); ok {
-		d.Set("bound_service_principal_ids", resp.Data["bound_service_principal_ids"])
-	}
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
 
-	if _, ok := d.GetOk("bound_group_ids"); ok {
-		d.Set("bound_group_ids", resp.Data["bound_group_ids"])
-	}
-
-	if _, ok := d.GetOk("bound_locations"); ok {
-		d.Set("bound_locations", resp.Data["bound_locations"])
-	}
-
-	if _, ok := d.GetOk("bound_subscription_ids"); ok {
-		d.Set("bound_subscription_ids", resp.Data["bound_subscription_ids"])
-	}
-
-	if _, ok := d.GetOk("bound_resource_groups"); ok {
-		d.Set("bound_resource_groups", resp.Data["bound_resource_groups"])
-	}
-
-	if _, ok := d.GetOk("bound_scale_sets"); ok {
-		d.Set("bound_scale_sets", resp.Data["bound_scale_sets"])
-	}
-
-	return nil
+	return diags
 }
 
-func azureAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func azureAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating Azure auth backend role %q", path)
@@ -294,40 +294,28 @@ func azureAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Updating role %q in Azure auth backend", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating Azure auth role %q: %s", path, err)
+		return diag.Errorf("Error updating Azure auth role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated role %q to Azure auth backend", path)
 
-	return azureAuthBackendRoleRead(d, meta)
+	return azureAuthBackendRoleRead(ctx, d, meta)
 }
 
-func azureAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func azureAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Azure auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error deleting Azure auth backend role %q", path)
+		return diag.Errorf("error deleting Azure auth backend role %q", path)
 	}
 	log.Printf("[DEBUG] Deleted Azure auth backend role %q", path)
 
 	return nil
-}
-
-func azureAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if Azure auth backend role %q exists", path)
-
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if Azure auth backend role %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if Azure auth backend role %q exists", path)
-
-	return resp != nil, nil
 }
 
 func azureAuthBackendRolePath(backend, role string) string {

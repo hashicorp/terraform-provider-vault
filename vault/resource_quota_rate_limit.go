@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,7 +9,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func quotaRateLimitPath(name string) string {
@@ -16,7 +21,7 @@ func quotaRateLimitPath(name string) string {
 func quotaRateLimitResource() *schema.Resource {
 	return &schema.Resource{
 		Create: quotaRateLimitCreate,
-		Read:   quotaRateLimitRead,
+		Read:   provider.ReadWrapper(quotaRateLimitRead),
 		Update: quotaRateLimitUpdate,
 		Delete: quotaRateLimitDelete,
 		Exists: quotaRateLimitExists,
@@ -43,12 +48,33 @@ func quotaRateLimitResource() *schema.Resource {
 				Description:  "The maximum number of requests at any given second to be allowed by the quota rule. The rate must be positive.",
 				ValidateFunc: validation.FloatAtLeast(0.0),
 			},
+			"interval": {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "The duration in seconds to enforce rate limiting for.",
+				ValidateFunc: validation.IntAtLeast(1),
+				Computed:     true,
+			},
+			"block_interval": {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "If set, when a client reaches a rate limit threshold, the client will be prohibited from any further requests until after the 'block_interval' in seconds has elapsed.",
+				ValidateFunc: validation.IntAtLeast(0),
+			},
+			consts.FieldRole: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "If set on a quota where path is set to an auth mount with a concept of roles (such as /auth/approle/), this will make the quota restrict login requests to that mount that are made with the specified role.",
+			},
 		},
 	}
 }
 
 func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 	path := quotaRateLimitPath(name)
@@ -59,6 +85,20 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
 	data["rate"] = d.Get("rate").(float64)
+
+	if v, ok := d.GetOk("interval"); ok {
+		data["interval"] = v
+	}
+
+	if v, ok := d.GetOk("block_interval"); ok {
+		data["block_interval"] = v
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := d.GetOk(consts.FieldRole); ok {
+			data[consts.FieldRole] = v
+		}
+	}
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -71,7 +111,10 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 	path := quotaRateLimitPath(name)
@@ -88,7 +131,12 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"path", "rate"} {
+	fields := []string{"path", "rate", "interval", "block_interval", "name"}
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		fields = append(fields, consts.FieldRole)
+	}
+
+	for _, k := range fields {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
@@ -101,7 +149,10 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 	path := quotaRateLimitPath(name)
@@ -111,6 +162,20 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
 	data["rate"] = d.Get("rate").(float64)
+
+	if v, ok := d.GetOk("interval"); ok {
+		data["interval"] = v
+	}
+
+	if v, ok := d.GetOk("block_interval"); ok {
+		data["block_interval"] = v
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := d.GetOk(consts.FieldRole); ok {
+			data[consts.FieldRole] = v
+		}
+	}
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -123,7 +188,10 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 	path := quotaRateLimitPath(name)
@@ -139,7 +207,10 @@ func quotaRateLimitDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	name := d.Id()
 	path := quotaRateLimitPath(name)

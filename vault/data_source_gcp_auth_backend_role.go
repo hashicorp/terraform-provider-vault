@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,21 +9,20 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-var (
-	gcpRoleFields = []string{
-		"role_id",
-		"type",
-		"bound_service_accounts",
-		"bound_projects",
-		"bound_zones",
-		"bound_regions",
-		"bound_instance_groups",
-		"token_policies",
-	}
-)
+var gcpRoleFields = []string{
+	"role_id",
+	"type",
+	"bound_service_accounts",
+	"bound_projects",
+	"bound_zones",
+	"bound_regions",
+	"bound_instance_groups",
+	"token_policies",
+}
 
 func gcpAuthBackendRoleDataSource() *schema.Resource {
 	fields := map[string]*schema.Schema{
@@ -104,13 +106,16 @@ func gcpAuthBackendRoleDataSource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Read:   gcpAuthBackendRoleRead,
+		Read:   provider.ReadWrapper(gcpAuthBackendRoleRead),
 		Schema: fields,
 	}
 }
 
 func gcpAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := gcpRoleResourcePath(d.Get("backend").(string), d.Get("role_name").(string))
 

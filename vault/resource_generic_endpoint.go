@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,7 +9,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func genericEndpointResource(name string) *schema.Resource {
@@ -16,7 +21,7 @@ func genericEndpointResource(name string) *schema.Resource {
 		Create: genericEndpointResourceWrite,
 		Update: genericEndpointResourceWrite,
 		Delete: genericEndpointResourceDelete,
-		Read:   genericEndpointResourceRead,
+		Read:   provider.ReadWrapper(genericEndpointResourceRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -31,7 +36,7 @@ func genericEndpointResource(name string) *schema.Resource {
 
 			// Data is passed as JSON so that an arbitrary structure is
 			// possible, rather than forcing e.g. all values to be strings.
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "JSON-encoded data to write.",
@@ -88,12 +93,15 @@ func genericEndpointResource(name string) *schema.Resource {
 }
 
 func genericEndpointResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	var data map[string]interface{}
-	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
+	err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &data)
 	if err != nil {
-		return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+		return fmt.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 	}
 
 	path := d.Get("path").(string)
@@ -151,7 +159,10 @@ func genericEndpointResourceDelete(d *schema.ResourceData, meta interface{}) err
 	shouldDelete := !d.Get("disable_delete").(bool)
 
 	if shouldDelete {
-		client := meta.(*api.Client)
+		client, e := provider.GetClient(d, meta)
+		if e != nil {
+			return e
+		}
 
 		path := d.Id()
 
@@ -172,7 +183,10 @@ func genericEndpointResourceRead(d *schema.ResourceData, meta interface{}) error
 	ignore_absent_fields := d.Get("ignore_absent_fields").(bool)
 
 	if shouldRead {
-		client := meta.(*api.Client)
+		client, e := provider.GetClient(d, meta)
+		if e != nil {
+			return e
+		}
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
 		data, err := client.Logical().Read(path)
@@ -190,9 +204,9 @@ func genericEndpointResourceRead(d *schema.ResourceData, meta interface{}) error
 		var relevantData map[string]interface{}
 		if ignore_absent_fields {
 			var suppliedData map[string]interface{}
-			err = json.Unmarshal([]byte(d.Get("data_json").(string)), &suppliedData)
+			err = json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &suppliedData)
 			if err != nil {
-				return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+				return fmt.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 			}
 			relevantData = suppliedData
 			for k, v := range data.Data {
@@ -208,7 +222,7 @@ func genericEndpointResourceRead(d *schema.ResourceData, meta interface{}) error
 		if err != nil {
 			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
-		d.Set("data_json", string(jsonData))
+		d.Set(consts.FieldDataJSON, string(jsonData))
 		d.Set("path", path)
 	} else {
 		log.Printf("[WARN] endpoint does not refresh when disable_read is set to true")

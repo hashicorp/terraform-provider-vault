@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -8,8 +11,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -18,7 +22,7 @@ var approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::r
 func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: approleAuthBackendRoleSecretIDCreate,
-		Read:   approleAuthBackendRoleSecretIDRead,
+		Read:   provider.ReadWrapper(approleAuthBackendRoleSecretIDRead),
 		Delete: approleAuthBackendRoleSecretIDDelete,
 		Exists: approleAuthBackendRoleSecretIDExists,
 
@@ -49,7 +53,7 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 				ForceNew: true,
 			},
 
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "JSON-encoded secret data to write.",
@@ -77,6 +81,13 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 				StateFunc: func(v interface{}) string {
 					return strings.Trim(v.(string), "/")
 				},
+			},
+
+			"with_wrapped_accessor": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Use the wrapped secret-id accessor as the id of this resource. If false, a fresh secret-id will be regenerated whenever the wrapping token is expired or invalidated through unwrapping.",
+				ForceNew:    true,
 			},
 
 			"accessor": {
@@ -110,7 +121,10 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 }
 
 func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role_name").(string)
@@ -135,7 +149,7 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	if len(cidrs) > 0 {
 		data["cidr_list"] = strings.Join(cidrs, ",")
 	}
-	if v, ok := d.GetOk("metadata"); ok {
+	if v, ok := d.GetOk(consts.FieldMetadata); ok {
 		name := "vault_approle_auth_backend_role_secret_id"
 		result, err := normalizeDataJSON(v.(string))
 		if err != nil {
@@ -147,6 +161,7 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	} else {
 		data["metadata"] = ""
 	}
+	withWrappedAccessor := d.Get("with_wrapped_accessor").(bool)
 
 	wrappingTTL, wrapped := d.GetOk("wrapping_ttl")
 
@@ -170,7 +185,11 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	var accessor string
 
 	if wrapped {
-		accessor = resp.WrapInfo.Accessor
+		if withWrappedAccessor {
+			accessor = resp.WrapInfo.WrappedAccessor
+		} else {
+			accessor = resp.WrapInfo.Accessor
+		}
 		d.Set("wrapping_token", resp.WrapInfo.Token)
 		d.Set("wrapping_accessor", accessor)
 	} else {
@@ -179,13 +198,17 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 		d.Set("accessor", accessor)
 	}
 
-	d.SetId(approleAuthBackendRoleSecretIDID(backend, role, accessor, wrapped))
+	d.SetId(approleAuthBackendRoleSecretIDID(backend, role, accessor, wrapped, withWrappedAccessor))
 
 	return approleAuthBackendRoleSecretIDRead(d, meta)
 }
 
 func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
@@ -194,8 +217,10 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	}
 
 	// If the ID is wrapped, there is no information available other than whether
-	// the wrapping token is still valid.
-	if wrapped {
+	// the wrapping token is still valid, unless we are planning to re-use it.
+	withWrappedAccessor := d.Get("with_wrapped_accessor").(bool)
+
+	if wrapped && !withWrappedAccessor {
 		valid, err := approleAuthBackendRoleSecretIDExists(d, meta)
 		if err != nil {
 			return err
@@ -255,14 +280,18 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return fmt.Errorf("error setting cidr_list in state: %s", err)
 	}
-	d.Set("metadata", string(metadata))
+	d.Set(consts.FieldMetadata, string(metadata))
 	d.Set("accessor", accessor)
 
 	return nil
 }
 
 func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
@@ -292,7 +321,11 @@ func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface
 }
 
 func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	id := d.Id()
 
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
@@ -330,8 +363,8 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 	return resp != nil, nil
 }
 
-func approleAuthBackendRoleSecretIDID(backend, role, accessor string, wrapped bool) string {
-	if wrapped {
+func approleAuthBackendRoleSecretIDID(backend, role, accessor string, wrapped bool, withWrappedAccessor bool) string {
+	if wrapped && !withWrappedAccessor {
 		accessor = "wrapped-" + accessor
 	}
 	return fmt.Sprintf("backend=%s::role=%s::accessor=%s", strings.Trim(backend, "/"), strings.Trim(role, "/"), accessor)

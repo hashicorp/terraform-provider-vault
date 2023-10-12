@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,7 +8,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const identityGroupAliasPath = "/identity/group-alias"
@@ -14,7 +19,7 @@ func identityGroupAliasResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityGroupAliasCreate,
 		Update: identityGroupAliasUpdate,
-		Read:   identityGroupAliasRead,
+		Read:   provider.ReadWrapper(identityGroupAliasRead),
 		Delete: identityGroupAliasDelete,
 		Exists: identityGroupAliasExists,
 		Importer: &schema.ResourceImporter{
@@ -28,7 +33,7 @@ func identityGroupAliasResource() *schema.Resource {
 				Description: "Name of the group alias.",
 			},
 
-			"mount_accessor": {
+			consts.FieldMountAccessor: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Mount accessor to which this alias belongs to.",
@@ -44,22 +49,24 @@ func identityGroupAliasResource() *schema.Resource {
 }
 
 func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
-	mountAccessor := d.Get("mount_accessor").(string)
+	mountAccessor := d.Get(consts.FieldMountAccessor).(string)
 	canonicalID := d.Get("canonical_id").(string)
 
 	path := identityGroupAliasPath
 
 	data := map[string]interface{}{
-		"name":           name,
-		"mount_accessor": mountAccessor,
-		"canonical_id":   canonicalID,
+		"name":                    name,
+		consts.FieldMountAccessor: mountAccessor,
+		"canonical_id":            canonicalID,
 	}
 
 	resp, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing IdentityGroupAlias to %q: %s", name, err)
 	}
@@ -70,7 +77,11 @@ func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroupAlias %q", id)
@@ -82,16 +93,16 @@ func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	data := map[string]interface{}{
-		"name":           resp.Data["name"],
-		"mount_accessor": resp.Data["mount_accessor"],
-		"canonical_id":   resp.Data["canonical_id"],
+		"name":                    resp.Data["name"],
+		consts.FieldMountAccessor: resp.Data[consts.FieldMountAccessor],
+		"canonical_id":            resp.Data["canonical_id"],
 	}
 
 	if name, ok := d.GetOk("name"); ok {
 		data["name"] = name
 	}
-	if mountAccessor, ok := d.GetOk("mount_accessor"); ok {
-		data["mount_accessor"] = mountAccessor
+	if mountAccessor, ok := d.GetOk(consts.FieldMountAccessor); ok {
+		data[consts.FieldMountAccessor] = mountAccessor
 	}
 	if canonicalID, ok := d.GetOk("canonical_id"); ok {
 		data["canonical_id"] = canonicalID
@@ -108,7 +119,11 @@ func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)
@@ -126,7 +141,7 @@ func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.SetId(resp.Data["id"].(string))
-	for _, k := range []string{"name", "mount_accessor", "canonical_id"} {
+	for _, k := range []string{"name", consts.FieldMountAccessor, "canonical_id"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error setting state key \"%s\" on IdentityGroupAlias %q: %s", k, id, err)
 		}
@@ -135,7 +150,11 @@ func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)
@@ -151,7 +170,11 @@ func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)

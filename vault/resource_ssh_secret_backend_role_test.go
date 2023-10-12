@@ -1,78 +1,171 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccSSHSecretBackendRole_basic(t *testing.T) {
+func TestAccSSHSecretBackendRole(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
-		Steps: []resource.TestStep{
+
+	resourceName := "vault_ssh_secret_backend_role.test_role"
+
+	commonCheckFuncs := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "name", name),
+		resource.TestCheckResourceAttr(resourceName, "backend", backend),
+	}
+
+	initialCheckFuncs := append(commonCheckFuncs,
+		resource.TestCheckResourceAttr(resourceName, "allow_bare_domains", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allow_host_certificates", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allow_user_certificates", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allow_user_key_ids", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_critical_options", ""),
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains", ""),
+		resource.TestCheckResourceAttr(resourceName, "allowed_extensions", ""),
+		resource.TestCheckResourceAttr(resourceName, "default_extensions.%", "0"),
+		resource.TestCheckResourceAttr(resourceName, "default_critical_options.%", "0"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_users_template", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_users", ""),
+		resource.TestCheckResourceAttr(resourceName, "default_user", ""),
+		resource.TestCheckResourceAttr(resourceName, "key_id_format", ""),
+		resource.TestCheckResourceAttr(resourceName, "key_type", "ca"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config_lengths.%", "0"),
+		resource.TestCheckResourceAttr(resourceName, "algorithm_signer", "default"),
+		resource.TestCheckResourceAttr(resourceName, "max_ttl", "0"),
+		resource.TestCheckResourceAttr(resourceName, "ttl", "0"),
+		// 30s is the default value vault uese.
+		// https://developer.hashicorp.com/vault/api-docs/secret/ssh#not_before_duration
+		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "30"),
+	)
+
+	updateCheckFuncs := append(commonCheckFuncs,
+		resource.TestCheckResourceAttr(resourceName, "allow_bare_domains", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allow_host_certificates", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allow_user_certificates", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allow_user_key_ids", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_critical_options", "foo,bar"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains", "example.com,foo.com"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_extensions", "ext1,ext2"),
+		resource.TestCheckResourceAttr(resourceName, "default_extensions.ext1", ""),
+		resource.TestCheckResourceAttr(resourceName, "default_critical_options.opt1", ""),
+		resource.TestCheckResourceAttr(resourceName, "allowed_users_template", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_users", "usr1,usr2"),
+		resource.TestCheckResourceAttr(resourceName, "default_user", "usr"),
+		resource.TestCheckResourceAttr(resourceName, "key_id_format", "{{role_name}}-test"),
+		resource.TestCheckResourceAttr(resourceName, "key_type", "ca"),
+		resource.TestCheckResourceAttr(resourceName, "algorithm_signer", "rsa-sha2-256"),
+		resource.TestCheckResourceAttr(resourceName, "max_ttl", "86400"),
+		resource.TestCheckResourceAttr(resourceName, "ttl", "43200"),
+		// 50m (3000 seconds)
+		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "3000"),
+	)
+
+	getCheckFuncs := func(isUpdate bool) resource.TestCheckFunc {
+		return func(state *terraform.State) error {
+			var checks []resource.TestCheckFunc
+			if isUpdate {
+				checks = append(checks, updateCheckFuncs...)
+			} else {
+				checks = append(checks, initialCheckFuncs...)
+			}
+
+			meta := testProvider.Meta().(*provider.ProviderMeta)
+			isVaultVersion112 := meta.IsAPISupported(provider.VaultVersion112)
+			if isVaultVersion112 {
+				if isUpdate {
+					checks = append(checks,
+						resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
+					)
+				} else {
+					checks = append(checks,
+						resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "false"),
+					)
+				}
+			}
+			return resource.ComposeAggregateTestCheckFunc(checks...)(state)
+		}
+	}
+
+	getSteps := func(extraFields string) []resource.TestStep {
+		return []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendRoleConfig_basic(name, backend),
+				Check:  getCheckFuncs(false),
+			},
+			{
+				Config: testAccSSHSecretBackendRoleConfig_updated(name, backend, false, true, extraFields),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "name", name),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "backend", backend),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_bare_domains", "false"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_host_certificates", "false"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_subdomains", "false"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_user_certificates", "true"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_user_key_ids", "false"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_critical_options", ""),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_domains", ""),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_extensions", ""),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_extensions.%", "0"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_critical_options.%", "0"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users_template", "false"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users", ""),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", ""),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", ""),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_type", "ca"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_user_key_lengths.%", "0"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "algorithm_signer", ""),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "max_ttl", "0"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "ttl", "0"),
+					getCheckFuncs(true),
+					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_lengths.rsa", "2048"),
 				),
 			},
 			{
-				Config: testAccSSHSecretBackendRoleConfig_updated(name, backend),
+				Config: testAccSSHSecretBackendRoleConfig_updated(
+					name, backend, true, true, extraFields),
+				ExpectError: regexp.MustCompile(`"allowed_user_key_config": conflicts with allowed_user_key_lengths`),
+				Destroy:     false,
+			},
+			{
+				Config: testAccSSHSecretBackendRoleConfig_updated(
+					name, backend, true, false, extraFields),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "name", name),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "backend", backend),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_bare_domains", "true"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_host_certificates", "true"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_subdomains", "true"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_user_certificates", "false"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_user_key_ids", "true"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_critical_options", "foo,bar"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_domains", "example.com,foo.com"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_extensions", "ext1,ext2"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_extensions.ext1", ""),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_critical_options.opt1", ""),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users_template", "true"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users", "usr1,usr2"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", "usr"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", "{{role_name}}-test"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_type", "ca"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_user_key_lengths.rsa", "1"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "algorithm_signer", "rsa-sha2-256"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "max_ttl", "86400"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "ttl", "43200"),
+					getCheckFuncs(true),
+					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.type", "rsa"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.lengths.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.lengths.0", "2048"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.lengths.1", "3072"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.lengths.2", "4096"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.1.type", "ec"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.1.lengths.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.1.lengths.0", "256"),
 				),
 			},
-		},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		}
+	}
+
+	t.Run("vault-1.11-and-below", func(t *testing.T) {
+		resource.Test(t, resource.TestCase{
+			ProviderFactories: providerFactories,
+			PreCheck: func() {
+				testutil.TestAccPreCheck(t)
+				SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion112)
+			},
+			CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
+			Steps:        getSteps(""),
+		})
+	})
+	t.Run("vault-1.12-and-up", func(t *testing.T) {
+		resource.Test(t, resource.TestCase{
+			ProviderFactories: providerFactories,
+			PreCheck: func() {
+				testutil.TestAccPreCheck(t)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+			},
+			CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
+			Steps:        getSteps("allowed_domains_template = true"),
+		})
 	})
 }
 
@@ -80,9 +173,9 @@ func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccSSHSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendRoleOTPConfig_basic(name, backend),
@@ -98,56 +191,44 @@ func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
 	})
 }
 
-func TestAccSSHSecretBackendRole_import(t *testing.T) {
+func TestAccSSHSecretBackendRole_template(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
+	resourceName := "vault_ssh_secret_backend_role.test_role"
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
 		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccSSHSecretBackendRoleConfig_updated(name, backend),
+				Config: testAccSSHSecretBackendRoleConfig_template(name, backend),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "name", name),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "backend", backend),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_bare_domains", "true"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_host_certificates", "true"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_subdomains", "true"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_user_certificates", "false"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_user_key_ids", "true"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_critical_options", "foo,bar"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_domains", "example.com,foo.com"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_extensions", "ext1,ext2"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_extensions.ext1", ""),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_critical_options.opt1", ""),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users_template", "true"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users", "usr1,usr2"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", "usr"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", "{{role_name}}-test"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_type", "ca"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_user_key_lengths.rsa", "1"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "algorithm_signer", "rsa-sha2-256"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "max_ttl", "86400"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "ttl", "43200"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "default_user", "ssh-{{identity.entity.id}}-user"),
+					resource.TestCheckResourceAttr(resourceName, "default_user_template", "true"),
 				),
 			},
-			{
-				ResourceName:      "vault_ssh_secret_backend_role.test_role",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
 
 func testAccSSHSecretBackendRoleCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ssh_secret_backend_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		role, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return err
@@ -160,53 +241,99 @@ func testAccSSHSecretBackendRoleCheckDestroy(s *terraform.State) error {
 }
 
 func testAccSSHSecretBackendRoleConfig_basic(name, path string) string {
-	return fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "vault_mount" "example" {
   path = "%s"
   type = "ssh"
 }
 
 resource "vault_ssh_secret_backend_role" "test_role" {
-	name                    = "%s"
-	backend                 = vault_mount.example.path
-	key_type                = "ca"
-	allow_user_certificates = true
+  name                    = "%s"
+  backend                 = vault_mount.example.path
+  key_type                = "ca"
+  allow_user_certificates = true
 }
 
 `, path, name)
+
+	return config
 }
 
-func testAccSSHSecretBackendRoleConfig_updated(name, path string) string {
-	return fmt.Sprintf(`
+func testAccSSHSecretBackendRoleConfig_updated(name, path string, withAllowedUserKeys,
+	withAllowedUserKeyLen bool, extraFields string,
+) string {
+	fragments := []string{
+		fmt.Sprintf(`
 resource "vault_mount" "example" {
   path = "%s"
   type = "ssh"
-}
+}`, path),
+	}
 
+	if withAllowedUserKeys {
+		fragments = append(fragments, `
+  locals {
+    allowed_user_keys = [
+      {
+        type    = "rsa"
+        lengths = [2048, 3072, 4096]
+      },
+      {
+        type    = "ec"
+        lengths = [256]
+      },
+    ]
+  }
+`)
+	}
+	fragments = append(fragments, fmt.Sprintf(`
 resource "vault_ssh_secret_backend_role" "test_role" {
-	name                     = "%s"
-	backend                  = vault_mount.example.path
-	allow_bare_domains       = true
-	allow_host_certificates  = true
-	allow_subdomains         = true
-	allow_user_certificates  = false
-	allow_user_key_ids       = true
-	allowed_critical_options = "foo,bar"
-	allowed_domains          = "example.com,foo.com"
-	allowed_extensions       = "ext1,ext2"
-	default_extensions       = { "ext1" = "" }
-	default_critical_options = { "opt1" = "" }
-        allowed_users_template   = true
-        allowed_users            = "usr1,usr2"
-	default_user             = "usr"
-	key_id_format            = "{{role_name}}-test"
-	key_type                 = "ca"
-	allowed_user_key_lengths = { "rsa" = 1 }
-	algorithm_signer         = "rsa-sha2-256"
-	max_ttl                  = "86400"
-	ttl                      = "43200"
-}
-`, path, name)
+  name                     = "%s"
+  backend                  = vault_mount.example.path
+  allow_bare_domains       = true
+  allow_host_certificates  = true
+  allow_subdomains         = true
+  allow_user_certificates  = false
+  allow_user_key_ids       = true
+  allowed_critical_options = "foo,bar"
+  allowed_domains          = "example.com,foo.com"
+  allowed_extensions       = "ext1,ext2"
+  default_extensions       = { "ext1" = "" }
+  default_critical_options = { "opt1" = "" }
+  allowed_users_template   = true
+  allowed_users            = "usr1,usr2"
+  default_user             = "usr"
+  key_id_format            = "{{role_name}}-test"
+  key_type                 = "ca"
+  algorithm_signer         = "rsa-sha2-256"
+  max_ttl                  = "86400"
+  ttl                      = "43200"
+  not_before_duration      = "3000"
+  %s
+`, name, extraFields))
+
+	if withAllowedUserKeys {
+		fragments = append(fragments, `dynamic "allowed_user_key_config" {
+			for_each = local.allowed_user_keys
+			content {
+				type    = allowed_user_key_config.value["type"]
+				lengths = allowed_user_key_config.value["lengths"]
+			}
+		}
+`)
+	}
+
+	if withAllowedUserKeyLen {
+		fragments = append(fragments, `
+  allowed_user_key_lengths = {
+    "rsa" = 2048
+  }
+`)
+	}
+
+	config := strings.Join(fragments, "\n") + "}\n"
+
+	return config
 }
 
 func testAccSSHSecretBackendRoleOTPConfig_basic(name, path string) string {
@@ -225,4 +352,25 @@ resource "vault_ssh_secret_backend_role" "test_role" {
 	cidr_list                = "0.0.0.0/0"
 }
 `, path, name)
+}
+
+func testAccSSHSecretBackendRoleConfig_template(name, path string) string {
+	config := fmt.Sprintf(`
+resource "vault_mount" "example" {
+  path = "%s"
+  type = "ssh"
+}
+
+resource "vault_ssh_secret_backend_role" "test_role" {
+  name                    = "%s"
+  backend                 = vault_mount.example.path
+  default_user_template   = true
+  default_user            = "ssh-{{identity.entity.id}}-user"
+  key_type                = "ca"
+  allow_user_certificates = true
+}
+
+`, path, name)
+
+	return config
 }

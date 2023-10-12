@@ -85,6 +85,11 @@ output "u1_id" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `path` - (Required) The full logical path at which to write the given
   data. Consult each backend's documentation to see which endpoints
   support the `PUT` methods and to determine whether they also support
@@ -136,8 +141,8 @@ In addition to the fields above, the following attributes are exported:
 
 Use of this resource requires the `create` or `update` capability
 (depending on whether the resource already exists) on the given path. If
-`disable_delete` is false, the `delete` capbility is also required. If
-`disable_delete` is false, the `read` capbility is required.
+`disable_delete` is false, the `delete` capability is also required. If
+`disable_read` is false, the `read` capability is required.
 
 ## Import
 

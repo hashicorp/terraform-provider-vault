@@ -1,16 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -18,23 +18,24 @@ func TestAccIdentityOidc(t *testing.T) {
 	issuer := "https://www.acme.com"
 	issuerNew := "https://www.acme-two.com"
 
+	const resourceName = "vault_identity_oidc.server"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityOidcDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityOidcDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcConfig(issuer),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityOidcCheckAttrs(),
-					resource.TestCheckResourceAttr("vault_identity_oidc.server", "issuer", issuer),
+					resource.TestCheckResourceAttr(resourceName, "issuer", issuer),
+					testAccIdentityOidcCheckAttrs(resourceName),
 				),
 			},
 			{
 				Config: testAccIdentityOidcConfig(issuerNew),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityOidcCheckAttrs(),
-					resource.TestCheckResourceAttr("vault_identity_oidc.server", "issuer", issuerNew),
+					testAccIdentityOidcCheckAttrs(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "issuer", issuerNew),
 				),
 			},
 		},
@@ -42,7 +43,7 @@ func TestAccIdentityOidc(t *testing.T) {
 }
 
 func testAccCheckIdentityOidcDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 	path := identityOidcPathTemplate
 
 	resp, err := client.Logical().Read(path)
@@ -60,95 +61,36 @@ func testAccCheckIdentityOidcDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccIdentityOidcCheckAttrs() resource.TestCheckFunc {
+func testAccIdentityOidcCheckAttrs(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_identity_oidc.server"]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
 		}
 
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource not found in state")
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
 		}
 
 		path := identityOidcPathTemplate
-		client := testProvider.Meta().(*api.Client)
-		resp, err := client.Logical().Read(path)
-		if err != nil {
-			return fmt.Errorf("%q doesn't exist", path)
-		}
 
 		attrs := map[string]string{
 			"issuer": "issuer",
 		}
-		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
-				continue
-			}
-			var match bool
-			switch resp.Data[apiAttr].(type) {
-			case json.Number:
-				apiData, err := resp.Data[apiAttr].(json.Number).Int64()
-				if err != nil {
-					return fmt.Errorf("expected API field %s to be an int, was %q", apiAttr, resp.Data[apiAttr])
-				}
-				stateData, err := strconv.ParseInt(instanceState.Attributes[stateAttr], 10, 64)
-				if err != nil {
-					return fmt.Errorf("expected state field %s to be an int, was %q", stateAttr, instanceState.Attributes[stateAttr])
-				}
-				match = apiData == stateData
-			case bool:
-				if _, ok := resp.Data[apiAttr]; !ok && instanceState.Attributes[stateAttr] == "" {
-					match = true
-				} else {
-					stateData, err := strconv.ParseBool(instanceState.Attributes[stateAttr])
-					if err != nil {
-						return fmt.Errorf("expected state field %s to be a bool, was %q", stateAttr, instanceState.Attributes[stateAttr])
-					}
-					match = resp.Data[apiAttr] == stateData
-				}
-			case []interface{}:
-				apiData := resp.Data[apiAttr].([]interface{})
-				length := instanceState.Attributes[stateAttr+".#"]
-				if length == "" {
-					if len(resp.Data[apiAttr].([]interface{})) != 0 {
-						return fmt.Errorf("expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
-					}
-					match = true
-				} else {
-					count, err := strconv.Atoi(length)
-					if err != nil {
-						return fmt.Errorf("expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
-					}
-					if count != len(apiData) {
-						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
-					}
 
-					for i := 0; i < count; i++ {
-						found := false
-						for stateKey, stateValue := range instanceState.Attributes {
-							if strings.HasPrefix(stateKey, stateAttr) {
-								if apiData[i] == stateValue {
-									found = true
-									break
-								}
-							}
-						}
-						if !found {
-							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, apiAttr, stateAttr, apiData[i])
-						}
-					}
-					match = true
-				}
-			default:
-				match = resp.Data[apiAttr] == instanceState.Attributes[stateAttr]
+		tAttrs := []*testutil.VaultStateTest{}
+		for k, v := range attrs {
+			ta := &testutil.VaultStateTest{
+				ResourceName: resourceName,
+				StateAttr:    k,
+				VaultAttr:    v,
 			}
-			if !match {
-				return fmt.Errorf("expected %s (%s in state) of %q to be %q, got %q", apiAttr, stateAttr, path, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
-			}
+
+			tAttrs = append(tAttrs, ta)
 		}
-		return nil
+
+		return testutil.AssertVaultState(client, s, path, tAttrs...)
 	}
 }
 

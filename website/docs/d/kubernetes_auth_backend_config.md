@@ -28,6 +28,11 @@ output "token_reviewer_jwt" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  *Available only for Vault Enterprise*.
+
 * `backend` - (Optional) The unique name for the Kubernetes backend the config to
   retrieve Role attributes for resides in. Defaults to "kubernetes".
 

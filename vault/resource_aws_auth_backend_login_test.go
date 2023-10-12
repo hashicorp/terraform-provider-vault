@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -46,8 +49,8 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	reqHeaders := base64.StdEncoding.EncodeToString(loginDataHeaders)
 	reqBody := base64.StdEncoding.EncodeToString(loginDataBody)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_iamIdentity(mountPath, accessKey, secretKey, reqMethod, reqURL, reqHeaders, reqBody, roleName, *testIdentity.Arn),
@@ -96,8 +99,8 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	pkcs7 = strings.Replace(pkcs7, "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_pkcs7(mountPath, accessKey, secretKey, roleName, ami, account, arn, pkcs7),
@@ -152,8 +155,8 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	sig = strings.Replace(sig, "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_ec2Identity(mountPath, accessKey, secretKey, roleName, ami, account, arn, identity, sig),
@@ -183,7 +186,6 @@ resource "vault_aws_auth_backend_role" "test" {
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["%s"]
-  policies = ["default"]
   depends_on = ["vault_aws_auth_backend_client.test"]
 }
 
@@ -215,7 +217,6 @@ resource "vault_aws_auth_backend_role" "test" {
   backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
-  policies = ["default"]
   bound_ami_ids = ["%s"]
   bound_account_ids = ["%s"]
   bound_iam_instance_profile_arns = ["%s"]
@@ -249,7 +250,6 @@ resource "vault_aws_auth_backend_role" "test" {
   backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
-  policies = ["default"]
   bound_ami_ids = ["%s"]
   bound_account_ids = ["%s"]
   bound_iam_instance_profile_arns = ["%s"]

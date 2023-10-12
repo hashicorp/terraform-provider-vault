@@ -1,15 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"encoding/base64"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func transitDecryptDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: transitDecryptDataSourceRead,
+		Read: provider.ReadWrapper(transitDecryptDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"key": {
@@ -43,7 +48,10 @@ func transitDecryptDataSource() *schema.Resource {
 }
 
 func transitDecryptDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	key := d.Get("key").(string)

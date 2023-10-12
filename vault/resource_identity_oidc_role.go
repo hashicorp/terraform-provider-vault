@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,7 +8,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const identityOidcRolePathTemplate = "identity/oidc/role/%s"
@@ -14,7 +18,7 @@ func identityOidcRole() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOidcRoleCreate,
 		Update: identityOidcRoleUpdate,
-		Read:   identityOidcRoleRead,
+		Read:   provider.ReadWrapper(identityOidcRoleRead),
 		Delete: identityOidcRoleDelete,
 		Exists: identityOidcRoleExists,
 		Importer: &schema.ResourceImporter{
@@ -67,7 +71,10 @@ func identityOidcRoleUpdateFields(d *schema.ResourceData, data map[string]interf
 }
 
 func identityOidcRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 
@@ -78,7 +85,6 @@ func identityOidcRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	identityOidcRoleUpdateFields(d, data)
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing IdentityOidcRole %s: %s", path, err)
 	}
@@ -90,7 +96,11 @@ func identityOidcRoleCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Id()
 	path := identityOidcRolePath(name)
 	log.Printf("[DEBUG] Updating IdentityOidcRole %s at %s", name, path)
@@ -100,7 +110,6 @@ func identityOidcRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	identityOidcRoleUpdateFields(d, data)
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error updating IdentityOidcRole %s: %s", name, err)
 	}
@@ -110,7 +119,11 @@ func identityOidcRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Id()
 	path := identityOidcRolePath(name)
 
@@ -136,7 +149,11 @@ func identityOidcRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Id()
 	path := identityOidcRolePath(name)
 
@@ -151,7 +168,11 @@ func identityOidcRoleDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	name := d.Id()
 	path := identityOidcRolePath(name)
 

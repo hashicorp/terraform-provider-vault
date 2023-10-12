@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -9,7 +12,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -20,7 +24,7 @@ var (
 func gcpSecretRolesetResource() *schema.Resource {
 	return &schema.Resource{
 		Create: gcpSecretRolesetCreate,
-		Read:   gcpSecretRolesetRead,
+		Read:   provider.ReadWrapper(gcpSecretRolesetRead),
 		Update: gcpSecretRolesetUpdate,
 		Delete: gcpSecretRolesetDelete,
 		Exists: gcpSecretRolesetExists,
@@ -109,7 +113,10 @@ func gcpSecretRolesetResource() *schema.Resource {
 }
 
 func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	roleset := d.Get("roleset").(string)
@@ -132,7 +139,11 @@ func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	backend, err := gcpSecretRolesetBackendFromPath(path)
@@ -192,7 +203,11 @@ func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretRolesetUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -210,7 +225,11 @@ func gcpSecretRolesetUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretRolesetDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting GCP secrets backend roleset %q", path)
@@ -244,7 +263,11 @@ func gcpSecretRolesetUpdateFields(d *schema.ResourceData, data map[string]interf
 }
 
 func gcpSecretRolesetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)
 	secret, err := client.Logical().Read(path)

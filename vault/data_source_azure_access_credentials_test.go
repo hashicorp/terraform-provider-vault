@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -21,11 +24,11 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
 	conf := testutil.GetTestAzureConf(t)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 2, 20),
+				Config: testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 20),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "client_id"),
 					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "client_secret"),
@@ -33,14 +36,14 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 				),
 			},
 			{
-				Config:      testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 1000, 5),
+				Config:      testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 5),
 				ExpectError: regexp.MustCompile(`despite trying for 5 seconds, 1 seconds apart, we were never able to get 1000 successes in a row`),
 			},
 		},
 	})
 }
 
-func testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath string, conf *testutil.AzureTestConf, numSuccesses, maxSecs int) string {
+func testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath string, conf *testutil.AzureTestConf, maxSecs int) string {
 	template := `
 resource "vault_azure_secret_backend" "test" {
 	path = "{{mountPath}}"
@@ -65,7 +68,6 @@ data "vault_azure_access_credentials" "test" {
     backend = vault_azure_secret_backend.test.path
     role = vault_azure_secret_backend_role.test.role
     validate_creds = true
-	num_sequential_successes = {{numSequentialSuccesses}}
 	num_seconds_between_tests = 1
 	max_cred_validation_seconds = {{maxCredValidationSeconds}}
 }`
@@ -76,7 +78,6 @@ data "vault_azure_access_credentials" "test" {
 	parsed = strings.Replace(parsed, "{{clientID}}", conf.ClientID, -1)
 	parsed = strings.Replace(parsed, "{{clientSecret}}", conf.ClientSecret, -1)
 	parsed = strings.Replace(parsed, "{{scope}}", conf.Scope, -1)
-	parsed = strings.Replace(parsed, "{{numSequentialSuccesses}}", strconv.Itoa(numSuccesses), -1)
 	parsed = strings.Replace(parsed, "{{maxCredValidationSeconds}}", strconv.Itoa(maxSecs), -1)
 	return parsed
 }

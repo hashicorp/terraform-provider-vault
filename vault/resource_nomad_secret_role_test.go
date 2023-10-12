@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -17,9 +20,9 @@ func TestAccNomadSecretBackendRoleClientBasic(t *testing.T) {
 	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccNomadSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccNomadSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testNomadSecretBackendRoleClientConfig(backend, address, token, "bob", "readonly", true),
@@ -40,9 +43,9 @@ func TestAccNomadSecretBackendRoleManagementBasic(t *testing.T) {
 	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccNomadSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccNomadSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testNomadSecretBackendRoleManagementConfig(backend, address, token, "bob", false),
@@ -62,9 +65,9 @@ func TestAccNomadSecretBackendRoleImport(t *testing.T) {
 	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccADSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccADSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testNomadSecretBackendRoleClientConfig(backend, address, token, "bob", "readonly", true),
@@ -86,12 +89,16 @@ func TestAccNomadSecretBackendRoleImport(t *testing.T) {
 }
 
 func testAccNomadSecretBackendRoleCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_nomad_secret_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return err

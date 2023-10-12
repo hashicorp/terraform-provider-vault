@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,12 +8,13 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func nomadAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: readNomadCredsResource,
+		Read: provider.ReadWrapper(readNomadCredsResource),
 		Schema: map[string]*schema.Schema{
 			"backend": {
 				Type:        schema.TypeString,
@@ -32,13 +36,18 @@ func nomadAccessCredentialsDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Used to make requests to Nomad and should be kept private.",
+				Sensitive:   true,
 			},
 		},
 	}
 }
 
 func readNomadCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
 	path := fmt.Sprintf("%s/creds/%s", backend, role)

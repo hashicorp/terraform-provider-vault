@@ -1,17 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -19,8 +20,8 @@ func TestDataSourceIdentityGroupName(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityGroup_configName(group),
@@ -36,11 +37,12 @@ func TestDataSourceIdentityGroupName(t *testing.T) {
 }
 
 func TestDataSourceIdentityGroupAlias(t *testing.T) {
+	t.Parallel()
 	group := acctest.RandomWithPrefix("test-group")
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityGroup_configAlias(group),
@@ -56,113 +58,42 @@ func TestDataSourceIdentityGroupAlias(t *testing.T) {
 	})
 }
 
-func testDataSourceIdentityGroup_check(resource string) resource.TestCheckFunc {
+func testDataSourceIdentityGroup_check(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources[resource]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		id := instanceState.ID
-		client := testProvider.Meta().(*api.Client)
-
-		resp, err := identityGroupLookup(client, map[string]interface{}{"id": id})
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
 		if err != nil {
 			return err
 		}
 
-		attrs := map[string]string{
-			"id":         "id",
-			"group_id":   "id",
-			"group_name": "name",
-		}
-		for _, k := range identityGroupFields {
-			attrs[k] = k
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
 		}
 
-		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
-				continue
-			}
-			var match bool
-			switch resp.Data[apiAttr].(type) {
-			case json.Number:
-				apiData, err := resp.Data[apiAttr].(json.Number).Int64()
-				if err != nil {
-					return fmt.Errorf("expected API field %s to be an int, was %q", apiAttr, resp.Data[apiAttr])
-				}
-				stateData, err := strconv.ParseInt(instanceState.Attributes[stateAttr], 10, 64)
-				if err != nil {
-					return fmt.Errorf("expected state field %s to be an int, was %q", stateAttr, instanceState.Attributes[stateAttr])
-				}
-				match = apiData == stateData
-			case bool:
-				if _, ok := resp.Data[apiAttr]; !ok && instanceState.Attributes[stateAttr] == "" {
-					match = true
-				} else {
-					stateData, err := strconv.ParseBool(instanceState.Attributes[stateAttr])
-					if err != nil {
-						return fmt.Errorf("expected state field %s to be a bool, was %q", stateAttr, instanceState.Attributes[stateAttr])
-					}
-					match = resp.Data[apiAttr] == stateData
-				}
-			case map[string]interface{}:
-				apiData := resp.Data[apiAttr].(map[string]interface{})
-				for k, v := range apiData {
-					stateKey := stateAttr + "." + k
-					stateData := instanceState.Attributes[stateKey]
-					if stateData != v {
-						return fmt.Errorf("Expected %s of %s (%s in state) to be %s, but got %s", k, apiAttr, stateKey, v, stateData)
-					}
-				}
-				match = true
-
-			case []interface{}:
-				apiData := resp.Data[apiAttr].([]interface{})
-				length := instanceState.Attributes[stateAttr+".#"]
-				if length == "" {
-					if len(resp.Data[apiAttr].([]interface{})) != 0 {
-						return fmt.Errorf("expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
-					}
-					match = true
-				} else {
-					count, err := strconv.Atoi(length)
-					if err != nil {
-						return fmt.Errorf("expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
-					}
-					if count != len(apiData) {
-						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
-					}
-
-					for i := 0; i < count; i++ {
-						found := false
-						for stateKey, stateValue := range instanceState.Attributes {
-							if strings.HasPrefix(stateKey, stateAttr) {
-								if apiData[i] == stateValue {
-									found = true
-									break
-								}
-							}
-						}
-						if !found {
-							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, apiAttr, stateAttr, apiData[i])
-						}
-					}
-					match = true
-				}
-			default:
-				match = resp.Data[apiAttr] == instanceState.Attributes[stateAttr]
-			}
-			if !match {
-				return fmt.Errorf("expected %s (%s in state) to be %q, got %q", apiAttr, stateAttr, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
-			}
+		resp, err := identityGroupLookup(client, map[string]interface{}{"id": rs.Primary.ID})
+		if err != nil {
+			return err
 		}
-		return nil
+
+		tAttrs := []*testutil.VaultStateTest{
+			{
+				ResourceName: resourceName,
+				StateAttr:    "id",
+				VaultAttr:    "id",
+			},
+			{
+				ResourceName: resourceName,
+				StateAttr:    "group_id",
+				VaultAttr:    "id",
+			},
+			{
+				ResourceName: resourceName,
+				StateAttr:    "group_name",
+				VaultAttr:    "name",
+			},
+		}
+
+		return testutil.AssertVaultStateFromResp(resp, s, group.LookupPath, tAttrs...)
 	}
 }
 

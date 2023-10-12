@@ -54,16 +54,23 @@ resource "vault_azure_secret_backend_role" "existing_object_id" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  *Available only for Vault Enterprise*.
+
 * `role` - (Required) Name of the Azure role
-* `backend` - Path to the mounted Azure auth backend
-* `azure_groups` - List of Azure groups to be assigned to the generated service principal.
-* `azure_roles` - List of Azure roles to be assigned to the generated service principal.
-* `application_object_id` - Application Object ID for an existing service principal that will
-   be used instead of creating dynamic service principals. If present, `azure_roles` will be ignored.
+* `backend` - (Optional) Path to the mounted Azure auth backend
+* `azure_groups` - (Optional) List of Azure groups to be assigned to the generated service principal.
+* `azure_roles` - (Optional) List of Azure roles to be assigned to the generated service principal.
+* `application_object_id` - (Optional) Application Object ID for an existing service principal that will
+  be used instead of creating dynamic service principals. If present, `azure_roles` and `permanently_delete` will be ignored.
+* `permanently_delete` - (Optional) Indicates whether the applications and service principals created by Vault will be permanently
+  deleted when the corresponding leases expire. Defaults to `false`. For Vault v1.12+.
 * `ttl` – (Optional) Specifies the default TTL for service principals generated using this role.
-   Accepts time suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine default TTL time.
+  Accepts time suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine default TTL time.
 * `max_ttl` – (Optional) Specifies the maximum TTL for service principals generated using this role. Accepts time
-   suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine max TTL time.
+  suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine max TTL time.
 
 ## Attributes Reference
 

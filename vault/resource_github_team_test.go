@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -10,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -20,9 +23,9 @@ func TestAccGithubTeam_basic(t *testing.T) {
 	resName := "vault_github_team.team"
 	team := "my-team-slugified"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccGithubTeamCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "security"}),
@@ -52,9 +55,9 @@ func TestAccGithubTeam_teamConfigError(t *testing.T) {
 	backend := acctest.RandomWithPrefix("github")
 	team := "Team With Spaces"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccGithubTeamCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccGithubTeamConfig_basic(backend, team, []string{}),
@@ -69,8 +72,8 @@ func TestAccGithubTeam_importBasic(t *testing.T) {
 	resName := "vault_github_team.team"
 	team := "import-team"
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "developer"}),
@@ -100,14 +103,18 @@ func TestGithubTeamBackEndPath(t *testing.T) {
 }
 
 func testAccGithubTeamCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-	for _, r := range s.RootModule().Resources {
-		if r.Type != "vault_github_team" {
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_github_team" {
 			continue
 		}
 
-		resp, err := client.RawRequest(client.NewRequest("GET", "/v1/"+r.Primary.ID))
-		log.Printf("[DEBUG] Checking if resource '%s' is destroyed, statusCode: %d, error: %s", r.Primary.ID, resp.StatusCode, err)
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		resp, err := client.RawRequest(client.NewRequest("GET", "/v1/"+rs.Primary.ID))
+		log.Printf("[DEBUG] Checking if resource '%s' is destroyed, statusCode: %d, error: %s", rs.Primary.ID, resp.StatusCode, err)
 		if resp.StatusCode == 404 {
 			return nil
 		}
@@ -120,7 +127,7 @@ func testAccGithubTeamConfig_basic(backend string, team string, policies []strin
 	return fmt.Sprintf(`
 resource "vault_github_auth_backend" "gh" {
 	path = "%s"
-  	organization = "vault"
+	organization = "hashicorp"
 }
 
 resource "vault_github_team" "team" {

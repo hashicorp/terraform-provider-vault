@@ -84,6 +84,11 @@ resource "vault_identity_group_member_entity_ids" "others" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `member_entity_ids` - (Required) List of member entities that belong to the group
 
 * `group_id` - (Required) Group ID to assign member entities to.
@@ -98,4 +103,6 @@ The following arguments are supported:
 
 In addition to all arguments above, the following attributes are exported:
 
-* `group_name` - The name of the group that are assigned the member entities.
+* `group_name` - The name of the group that are assigned the member entities.  
+  *Deprecated: The value for group_name may not always be accurate*
+  *use* `data.vault_identity_group.*.group_name`, *or* `vault_identity_group.*.group_name` *instead.*

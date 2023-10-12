@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,6 +10,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -17,7 +24,7 @@ var (
 		"member_group_ids",
 		"metadata",
 		"modify_index",
-		"namespace_id",
+		consts.FieldNamespaceID,
 		"parent_group_ids",
 		"policies",
 		"type",
@@ -30,7 +37,7 @@ var (
 		"last_update_time",
 		"merged_from_canonical_ids",
 		"metadata",
-		"mount_accessor",
+		consts.FieldMountAccessor,
 		"mount_path",
 		"mount_type",
 		"name",
@@ -39,7 +46,7 @@ var (
 
 func identityGroupDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: identityGroupDataSourceRead,
+		Read: provider.ReadWrapper(identityGroupDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"group_name": {
@@ -73,7 +80,7 @@ func identityGroupDataSource() *schema.Resource {
 				Description: "Accessor of the mount to which the alias belongs to. This should be supplied in conjunction with `alias_name`.",
 			},
 
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Group data from Vault in JSON String form",
@@ -109,7 +116,7 @@ func identityGroupDataSource() *schema.Resource {
 				Type:     schema.TypeInt,
 				Computed: true,
 			},
-			"namespace_id": {
+			consts.FieldNamespaceID: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -169,8 +176,7 @@ func identityGroupDataSource() *schema.Resource {
 
 func identityGroupLookup(client *api.Client, data map[string]interface{}) (*api.Secret, error) {
 	log.Print("[DEBUG] Looking up IdentityGroup")
-	resp, err := client.Logical().Write("identity/lookup/group", data)
-
+	resp, err := client.Logical().Write(group.LookupPath, data)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading Identity Group '%v': %s", data, err)
 	}
@@ -188,7 +194,10 @@ func identityGroupLookup(client *api.Client, data map[string]interface{}) (*api.
 }
 
 func identityGroupDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	data := map[string]interface{}{}
 
@@ -210,7 +219,6 @@ func identityGroupDataSourceRead(d *schema.ResourceData, meta interface{}) error
 
 	log.Print("[DEBUG] Reading IdentityGroup")
 	resp, err := identityGroupLookup(client, data)
-
 	if err != nil {
 		return err
 	}
@@ -246,7 +254,7 @@ func identityGroupDataSourceRead(d *schema.ResourceData, meta interface{}) error
 	// Ignoring error because this value came from JSON in the
 	// first place so no reason why it should fail to re-encode.
 	jsonDataBytes, _ := json.Marshal(resp.Data)
-	d.Set("data_json", string(jsonDataBytes))
+	d.Set(consts.FieldDataJSON, string(jsonDataBytes))
 
 	return nil
 }

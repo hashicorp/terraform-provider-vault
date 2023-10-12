@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,18 +8,21 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-var autopilotPath = "sys/storage/raft/autopilot/configuration"
-var autopilotDefaults = map[string]interface{}{
-	"cleanup_dead_servers":               false,
-	"dead_server_last_contact_threshold": "24h0m0s",
-	"last_contact_threshold":             "10s",
-	"max_trailing_logs":                  1000,
-	"min_quorum":                         3,
-	"server_stabilization_time":          "10s",
-}
+var (
+	autopilotPath     = "sys/storage/raft/autopilot/configuration"
+	autopilotDefaults = map[string]interface{}{
+		"cleanup_dead_servers":               false,
+		"dead_server_last_contact_threshold": "24h0m0s",
+		"last_contact_threshold":             "10s",
+		"max_trailing_logs":                  1000,
+		"min_quorum":                         3,
+		"server_stabilization_time":          "10s",
+	}
+)
 
 func raftAutopilotConfigResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
@@ -56,26 +62,57 @@ func raftAutopilotConfigResource() *schema.Resource {
 			Default:     autopilotDefaults["server_stabilization_time"],
 			Optional:    true,
 		},
+		"disable_upgrade_migration": {
+			Type:        schema.TypeBool,
+			Description: "Disables automatically upgrading Vault using autopilot. (Enterprise-only)",
+			Optional:    true,
+		},
 	}
 	return &schema.Resource{
 		Create: createOrUpdateAutopilotConfigResource,
 		Update: createOrUpdateAutopilotConfigResource,
-		Read:   readAutopilotConfigResource,
+		Read:   provider.ReadWrapper(readAutopilotConfigResource),
 		Delete: deleteAutopilotConfigResource,
 		Schema: fields,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 	}
 }
 
 func createOrUpdateAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
-	c := map[string]interface{}{
-		"cleanup_dead_servers":               d.Get("cleanup_dead_servers").(bool),
-		"last_contact_threshold":             d.Get("last_contact_threshold").(string),
-		"dead_server_last_contact_threshold": d.Get("dead_server_last_contact_threshold").(string),
-		"max_trailing_logs":                  d.Get("max_trailing_logs").(int),
-		"min_quorum":                         d.Get("min_quorum").(int),
-		"server_stabilization_time":          d.Get("server_stabilization_time").(string),
+	fields := []string{
+		"cleanup_dead_servers",
+		"last_contact_threshold",
+		"dead_server_last_contact_threshold",
+		"max_trailing_logs",
+		"min_quorum",
+		"server_stabilization_time",
+	}
+
+	c := map[string]interface{}{}
+
+	for _, k := range fields {
+		if v, ok := d.GetOk(k); ok {
+			c[k] = v
+		}
+	}
+
+	isEnterprise := provider.IsEnterpriseSupported(meta)
+	isAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+	enterpriseAPIField := "disable_upgrade_migration"
+	val, ok := d.GetOk(enterpriseAPIField)
+
+	if (!isAPISupported || !isEnterprise) && ok {
+		return fmt.Errorf("%s is not supported by "+
+			"this version of vault", enterpriseAPIField)
+	} else if (isAPISupported && isEnterprise) && ok {
+		c[enterpriseAPIField] = val
 	}
 
 	log.Print("[DEBUG] Configuring autopilot")
@@ -89,13 +126,21 @@ func createOrUpdateAutopilotConfigResource(d *schema.ResourceData, meta interfac
 }
 
 func readAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	log.Printf("[DEBUG] Reading %q", autopilotPath)
 
 	resp, err := client.Logical().Read(autopilotPath)
 	if err != nil {
 		return fmt.Errorf("error reading %q: %s", autopilotPath, err)
+	}
+	if resp == nil {
+		log.Printf("[WARN] Autopilot configuration %q not found, removing it from state", autopilotPath)
+		d.SetId("")
+		return nil
 	}
 
 	if val, ok := resp.Data["cleanup_dead_servers"]; ok {
@@ -134,11 +179,20 @@ func readAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error
 		}
 	}
 
+	if val, ok := resp.Data["disable_upgrade_migration"]; ok {
+		if err := d.Set("disable_upgrade_migration", val); err != nil {
+			return fmt.Errorf("error setting state key 'disable_upgrade_migration': %s", err)
+		}
+	}
+
 	return nil
 }
 
 func deleteAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	log.Print("[DEBUG] Resetting raft autopilot config")
 

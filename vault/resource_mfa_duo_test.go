@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -13,21 +16,27 @@ import (
 func TestMFADuoBasic(t *testing.T) {
 	mfaDuoPath := acctest.RandomWithPrefix("mfa-duo")
 
+	resourceName := "vault_mfa_duo.test"
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestEntPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testMFADuoConfig(mfaDuoPath),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_mfa_duo.test", "name", mfaDuoPath),
-					resource.TestCheckResourceAttr("vault_mfa_duo.test", "secret_key", "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"),
-					resource.TestCheckResourceAttr("vault_mfa_duo.test", "integration_key", "BIACEUEAXI20BNWTEYXT"),
-					resource.TestCheckResourceAttr("vault_mfa_duo.test", "api_hostname", "api-2b5c39f5.duosecurity.com"),
-					resource.TestCheckResourceAttr("vault_mfa_duo.test", "username_format", "user@example.com"),
-					resource.TestCheckResourceAttr("vault_mfa_duo.test", "push_info", "from=loginortal&domain=example.com"),
+					resource.TestCheckResourceAttr(resourceName, "name", mfaDuoPath),
+					resource.TestCheckResourceAttr(resourceName, "secret_key", "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"),
+					resource.TestCheckResourceAttr(resourceName, "integration_key", "BIACEUEAXI20BNWTEYXT"),
+					resource.TestCheckResourceAttr(resourceName, "api_hostname", "api-2b5c39f5.duosecurity.com"),
+					resource.TestCheckResourceAttr(resourceName, "username_format", "user@example.com"),
+					resource.TestCheckResourceAttr(resourceName, "push_info", "from=loginortal&domain=example.com"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"name",
+				"secret_key",
+				"integration_key"),
 		},
 	})
 }

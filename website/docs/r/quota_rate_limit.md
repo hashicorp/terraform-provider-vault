@@ -29,6 +29,11 @@ resource "vault_quota_rate_limit" "global" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required) Name of the rate limit quota
 
 * `path` - (Optional) Path of the mount or namespace to apply the quota. A blank path configures a
@@ -40,6 +45,13 @@ The following arguments are supported:
 
 * `rate` - (Required) The maximum number of requests at any given second to be allowed by the quota
   rule. The `rate` must be positive.
+
+* `interval` - (Optional) The duration in seconds to enforce rate limiting for.
+
+* `block_interval` - (Optional) If set, when a client reaches a rate limit threshold, the client will
+  be prohibited from any further requests until after the 'block_interval' in seconds has elapsed.
+
+* `role` - (Optional) If set on a quota where `path` is set to an auth mount with a concept of roles (such as /auth/approle/), this will make the quota restrict login requests to that mount that are made with the specified role.
 
 ## Attributes Reference
 

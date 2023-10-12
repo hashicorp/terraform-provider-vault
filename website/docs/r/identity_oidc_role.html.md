@@ -78,6 +78,11 @@ resource "vault_identity_oidc_key_allowed_client_id" "role" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required; Forces new resource) Name of the OIDC Role to create.
 
 * `key` - (Required; Forces new resource) A configured named key, the key must already exist

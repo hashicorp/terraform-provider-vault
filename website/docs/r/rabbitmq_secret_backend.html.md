@@ -32,6 +32,11 @@ resource "vault_rabbitmq_secret_backend" "rabbitmq" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `connection_uri` - (Required)  Specifies the RabbitMQ connection URI.
 
 * `username` - (Required) Specifies the RabbitMQ management administrator username.
@@ -41,14 +46,20 @@ The following arguments are supported:
 * `verify_connection` - (Optional) Specifies whether to verify connection URI, username, and password.
 Defaults to `true`.
 
+* `password_policy` - (Optional) Specifies a password policy to use when creating dynamic credentials. Defaults to generating an alphanumeric password if not set.
+
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
 
 ~> **Important** Because Vault does not support reading the configured
 credentials back from the API, Terraform cannot detect and correct drift
-on `connection_uri`, `username`, `password` or `verify_connection`. Changing the values, however, _will_
+on `connection_uri`, `username`, `password`, `verify_connection`, `username_template`, and `password_policy`. Changing the values, however, _will_
 overwrite the previously stored values.
 
 * `path` - (Optional) The unique path this backend should be mounted at. Must
 not begin or end with a `/`. Defaults to `rabbitmq`.
+
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
 * `description` - (Optional) A human-friendly description for this backend.
 

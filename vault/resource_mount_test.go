@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -11,21 +14,23 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-type mountConfig struct {
-	path      string
-	mountType string
-	version   string
-	seal_wrap bool
+type testMountConfig struct {
+	path        string
+	mountType   string
+	version     string
+	sealWrap    bool
+	description string
 }
 
 func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
 	path := acctest.RandomWithPrefix("example")
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`
@@ -50,18 +55,30 @@ func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
 
 func TestResourceMount(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
-	cfg := mountConfig{
-		path:      path,
-		mountType: "kv",
-		version:   "1",
+	cfg := testMountConfig{
+		path:        path,
+		mountType:   "kv",
+		version:     "1",
+		description: "initial",
+	}
+
+	cfg2 := testMountConfig{
+		path:        path,
+		mountType:   "kv",
+		version:     "1",
+		description: "updated",
 	}
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_initialConfig(cfg),
 				Check:  testResourceMount_initialCheck(cfg),
+			},
+			{
+				Config: testResourceMount_initialConfig(cfg2),
+				Check:  testResourceMount_initialCheck(cfg2),
 			},
 			{
 				Config: testResourceMount_updateConfig,
@@ -76,8 +93,8 @@ func TestResourceMount(t *testing.T) {
 func TestResourceMount_Local(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_InitialConfigLocalMount(path),
@@ -96,8 +113,8 @@ func TestResourceMount_Local(t *testing.T) {
 func TestResourceMount_SealWrap(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_InitialConfigSealWrap(path),
@@ -121,8 +138,8 @@ func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
 	expectReqKeysUpdate := []string{"test3request", "test4request"}
 	expectRespKeysUpdate := []string{"test3response", "test4response"}
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_AuditNonHMACRequestKeysConfig(path, expectReqKeysNew, expectRespKeysNew),
@@ -164,20 +181,22 @@ func TestResourceMount_KVV2(t *testing.T) {
 				default_lease_ttl_seconds = 3600
 				max_lease_ttl_seconds = 36000
 			}`, path)
-	resource.Test(t, resource.TestCase{
 
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+	config := testMountConfig{
+		path:        path,
+		mountType:   "kv",
+		version:     "2",
+		description: "Example mount for testing",
+	}
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: kvv2Cfg,
 
 				// Vault will store this and report it back as "kv", version 2
-				Check: testResourceMount_initialCheck(mountConfig{
-					path:      path,
-					mountType: "kv",
-					version:   "2",
-				}),
+				Check: testResourceMount_initialCheck(config),
 			},
 			{
 				PlanOnly: true,
@@ -190,8 +209,8 @@ func TestResourceMount_KVV2(t *testing.T) {
 func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 	path := acctest.RandomWithPrefix("example")
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_InitialConfigExternalEntropyAccess(path),
@@ -217,22 +236,116 @@ func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 	})
 }
 
-func testResourceMount_initialConfig(cfg mountConfig) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-	path = "%s"
-	type = "%s"
-	description = "Example mount for testing"
-	default_lease_ttl_seconds = 3600
-	max_lease_ttl_seconds = 36000
-	options = {
-		version = "1"
-	}
-}
-`, cfg.path, cfg.mountType)
+func TestResourceMountMangedKeys(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-pki")
+	keyName := acctest.RandomWithPrefix("kms-key")
+
+	resourceName := "vault_mount.test"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceMount_managedKeysConfig(keyName, path, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "pki"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Example mount for testing managed keys"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "36000"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.0", keyName),
+				),
+			},
+			{
+				Config: testResourceMount_managedKeysConfig(keyName, path, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "pki"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Updated desc - Example mount for testing managed keys"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.0", keyName),
+					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.1", fmt.Sprintf("%s-2", keyName)),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
 }
 
-func testResourceMount_initialCheck(cfg mountConfig) resource.TestCheckFunc {
+func testResourceMount_managedKeysConfig(name, path string, isUpdate bool) string {
+	ret := fmt.Sprintf(`
+resource "vault_managed_keys" "keys" {
+  aws {
+    name       = "%s"
+    access_key = "ASIAKBASDADA09090"
+    secret_key = "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"
+    key_bits   = "2048"
+    key_type   = "RSA"
+    kms_key    = "alias/test_identifier_string"
+  }
+
+  aws {
+    name       = "%s-2"
+    access_key = "ASIAKBASDADA09090"
+    secret_key = "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"
+    key_bits   = "2048"
+    key_type   = "RSA"
+    kms_key    = "alias/test_identifier_string"
+  }
+}
+`, name, name)
+
+	if !isUpdate {
+		ret += fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "Example mount for testing managed keys"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds     = 36000
+  allowed_managed_keys      = [tolist(vault_managed_keys.keys.aws)[0].name]
+}
+`, path)
+	} else {
+		ret += fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "Updated desc - Example mount for testing managed keys"
+  default_lease_ttl_seconds = 7200
+  max_lease_ttl_seconds     = 86400
+  allowed_managed_keys      = vault_managed_keys.keys.aws[*].name
+}
+`, path)
+	}
+
+	return ret
+}
+
+func testResourceMount_initialConfig(cfg testMountConfig) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "%s"
+  description               = "%s"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds     = 36000
+  options = {
+    version = "1"
+  }
+}
+`, cfg.path, cfg.mountType, cfg.description)
+}
+
+func testResourceMount_initialCheck(cfg testMountConfig) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_mount.test"]
 		if resourceState == nil {
@@ -259,7 +372,7 @@ func testResourceMount_initialCheck(cfg mountConfig) resource.TestCheckFunc {
 			return fmt.Errorf("error reading back mount %q: %s", path, err)
 		}
 
-		if wanted := "Example mount for testing"; mount.Description != wanted {
+		if wanted := cfg.description; mount.Description != wanted {
 			return fmt.Errorf("description is %v; wanted %v", mount.Description, wanted)
 		}
 
@@ -485,19 +598,17 @@ func testResourceMount_InitialCheckSealWrap(expectedPath string) resource.TestCh
 }
 
 var testResourceMount_UpdateConfigSealWrap = `
-
 resource "vault_mount" "test" {
-	path = "remountingExample"
-	type = "kv"
-	description = "Example mount for testing"
-	default_lease_ttl_seconds = 7200
-	max_lease_ttl_seconds = 72000
-	options = {
-		version = "1"
-	}
-	seal_wrap = false
+  path                      = "remountingExample"
+  type                      = "kv"
+  description               = "Example mount for testing"
+  default_lease_ttl_seconds = 7200
+  max_lease_ttl_seconds     = 72000
+  options = {
+    version = "1"
+  }
+  seal_wrap = false
 }
-
 `
 
 func testResourceMount_UpdateCheckSealWrap(s *terraform.State) error {
@@ -664,7 +775,7 @@ resource "vault_mount" "test" {
 }
 
 func findMount(path string) (*api.MountOutput, error) {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	path = path + "/"
 

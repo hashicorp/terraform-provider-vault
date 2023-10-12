@@ -1,13 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func certAuthBackendRoleResource() *schema.Resource {
@@ -67,8 +71,18 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-			Optional: true,
-			Computed: true,
+			Optional:      true,
+			Computed:      true,
+			Deprecated:    "Use allowed_organizational_units",
+			ConflictsWith: []string{"allowed_organizational_units"},
+		},
+		"allowed_organizational_units": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Optional:      true,
+			ConflictsWith: []string{"allowed_organization_units"},
 		},
 		"required_extensions": {
 			Type: schema.TypeSet,
@@ -99,12 +113,11 @@ func certAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
 
-		Create: certAuthResourceWrite,
-		Update: certAuthResourceUpdate,
-		Read:   certAuthResourceRead,
-		Delete: certAuthResourceDelete,
-
-		Schema: fields,
+		CreateContext: certAuthResourceWrite,
+		UpdateContext: certAuthResourceUpdate,
+		ReadContext:   provider.ReadContextWrapper(certAuthResourceRead),
+		DeleteContext: certAuthResourceDelete,
+		Schema:        fields,
 	}
 }
 
@@ -112,8 +125,11 @@ func certCertResourcePath(backend, name string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/certs/" + strings.Trim(name, "/")
 }
 
-func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -137,12 +153,16 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 		data["allowed_dns_sans"] = v.(*schema.Set).List()
 	}
 
+	if v, ok := d.GetOk("allowed_email_sans"); ok {
+		data["allowed_email_sans"] = v.(*schema.Set).List()
+	}
+
 	if v, ok := d.GetOk("allowed_uri_sans"); ok {
 		data["allowed_uri_sans"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("allowed_organization_units"); ok {
-		data["allowed_organization_units"] = v.(*schema.Set).List()
+	if v, ok := d.GetOk("allowed_organizational_units"); ok {
+		data["allowed_organizational_units"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("required_extensions"); ok {
@@ -158,15 +178,18 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing %q to cert auth backendq: %s", path, err)
+		return diag.Errorf("Error writing %q to cert auth backend: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote %q to cert auth backend", path)
 
-	return certAuthResourceRead(d, meta)
+	return certAuthResourceRead(ctx, d, meta)
 }
 
-func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -186,12 +209,16 @@ func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["allowed_dns_sans"] = v.(*schema.Set).List()
 	}
 
+	if v, ok := d.GetOk("allowed_email_sans"); ok {
+		data["allowed_email_sans"] = v.(*schema.Set).List()
+	}
+
 	if v, ok := d.GetOk("allowed_uri_sans"); ok {
 		data["allowed_uri_sans"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("allowed_organization_units"); ok {
-		data["allowed_organization_units"] = v.(*schema.Set).List()
+	if d.HasChange("allowed_organizational_units") {
+		data["allowed_organizational_units"] = d.Get("allowed_organizational_units").(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("required_extensions"); ok {
@@ -205,21 +232,24 @@ func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating %q in cert auth backend", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating %q in cert auth backend: %s", path, err)
+		return diag.Errorf("Error updating %q in cert auth backend: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated %q in cert auth backend", path)
 
-	return certAuthResourceRead(d, meta)
+	return certAuthResourceRead(ctx, d, meta)
 }
 
-func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading cert %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading cert %q: %s", path, err)
+		return diag.Errorf("Error reading cert %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read cert %q", path)
 
@@ -229,7 +259,9 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	readTokenFields(d, resp)
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
+	}
 
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("display_name", resp.Data["display_name"])
@@ -279,17 +311,6 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Vault sometimes returns these as null instead of an empty list.
-	if resp.Data["allowed_organization_units"] != nil {
-		d.Set("allowed_organization_units",
-			schema.NewSet(
-				schema.HashString, resp.Data["allowed_organization_units"].([]interface{})))
-	} else {
-		d.Set("allowed_organization_units",
-			schema.NewSet(
-				schema.HashString, []interface{}{}))
-	}
-
-	// Vault sometimes returns these as null instead of an empty list.
 	if resp.Data["required_extensions"] != nil {
 		d.Set("required_extensions",
 			schema.NewSet(
@@ -300,17 +321,26 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 				schema.HashString, []interface{}{}))
 	}
 
-	return nil
+	if err := d.Set("allowed_organizational_units", resp.Data["allowed_organizational_units"]); err != nil {
+		return diag.FromErr(err)
+	}
+
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func certAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func certAuthResourceDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting cert %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting cert %q", path)
+		return diag.Errorf("Error deleting cert %q", path)
 	}
 	log.Printf("[DEBUG] Deleted cert %q", path)
 

@@ -42,8 +42,12 @@ resource "vault_nomad_secret_role" "test" {
 
 The following arguments are supported:
 
-* `backend` - (Optional) The unique path this backend should be mounted at. Must
-not begin or end with a `/`. Defaults to `nomad`.
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
+* `backend` - (Required) The unique path this backend should be mounted at.
 
 * `role` - (Required) The name to identify this role within the backend.
 Must be unique within the backend.

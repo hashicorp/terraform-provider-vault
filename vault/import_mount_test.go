@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -11,14 +14,14 @@ import (
 
 func TestAccMount_importBasic(t *testing.T) {
 	path := "test-" + acctest.RandString(10)
-	cfg := mountConfig{
+	cfg := testMountConfig{
 		path:      path,
 		mountType: "kv",
 		version:   "1",
 	}
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_initialConfig(cfg),

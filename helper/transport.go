@@ -1,16 +1,22 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package helper
 
 // Customized copy of github.com/hashicorp/terraform-plugin-sdk/helper/logging/transport.go (v2)
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -26,7 +32,7 @@ const (
 	EnvLogResponseBody = "TERRAFORM_VAULT_LOG_RESPONSE_BODY"
 )
 
-// TransportOptions for transport.
+// TransportOptions for TransportWrapper.
 type TransportOptions struct {
 	// HMACRequestHeaders ensure that any configured header's value is
 	// never revealed during logging operations.
@@ -39,7 +45,7 @@ type TransportOptions struct {
 	LogResponseBody bool
 }
 
-// DefaultTransportOptions for setting up the HTTP transport wrapper.
+// DefaultTransportOptions for setting up the HTTP TransportWrapper wrapper.
 func DefaultTransportOptions() *TransportOptions {
 	opts := &TransportOptions{
 		HMACRequestHeaders: []string{
@@ -62,13 +68,27 @@ func DefaultTransportOptions() *TransportOptions {
 	return opts
 }
 
-type transport struct {
+type TransportWrapper struct {
 	name      string
 	transport http.RoundTripper
 	options   *TransportOptions
+	m         sync.RWMutex
 }
 
-func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t *TransportWrapper) SetTLSConfig(c *tls.Config) error {
+	t.m.Lock()
+	defer t.m.Unlock()
+	transport, ok := t.transport.(*http.Transport)
+	if !ok {
+		return fmt.Errorf("type assertion failed for %T", t.transport)
+	}
+
+	transport.TLSClientConfig = c
+
+	return nil
+}
+
+func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) {
 	if logging.IsDebugOrHigher() {
 		var origHeaders http.Header
 		if len(t.options.HMACRequestHeaders) > 0 && len(req.Header) > 0 {
@@ -115,8 +135,8 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func NewTransport(name string, t http.RoundTripper, opts *TransportOptions) *transport {
-	return &transport{
+func NewTransport(name string, t http.RoundTripper, opts *TransportOptions) *TransportWrapper {
+	return &TransportWrapper{
 		name:      name,
 		transport: t,
 		options:   opts,

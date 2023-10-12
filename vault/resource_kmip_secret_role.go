@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,7 +8,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const (
@@ -48,7 +53,7 @@ var kmipRoleAPIBooleanFields = []string{
 func kmipSecretRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: kmipSecretRoleCreate,
-		Read:   kmipSecretRoleRead,
+		Read:   provider.ReadWrapper(kmipSecretRoleRead),
 		Update: kmipSecretRoleUpdate,
 		Delete: kmipSecretRoleDelete,
 		Importer: &schema.ResourceImporter{
@@ -56,11 +61,11 @@ func kmipSecretRoleResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path where KMIP backend is mounted",
-				ValidateFunc: validateNoTrailingLeadingSlashes,
+				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
 			"scope": {
 				Type:        schema.TypeString,
@@ -178,7 +183,10 @@ func kmipSecretRoleResource() *schema.Resource {
 }
 
 func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	scope := d.Get("scope").(string)
 	role := d.Get("role").(string)
 
@@ -204,7 +212,10 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	rolePath := d.Id()
 	if rolePath == "" {
 		return fmt.Errorf("expected a path as ID, got empty string")
@@ -238,7 +249,10 @@ func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	rolePath := d.Id()
 
 	if d.HasChange("path") {
@@ -269,7 +283,10 @@ func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	rolePath := d.Id()
 
 	log.Printf("[DEBUG] Deleting KMIP role %s", rolePath)

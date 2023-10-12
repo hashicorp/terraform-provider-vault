@@ -1,8 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
+	"net"
+	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
@@ -276,12 +282,81 @@ func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, crea
 }
 
 func readTokenFields(d *schema.ResourceData, resp *api.Secret) error {
-	for k, v := range getCommonTokenFieldMap(resp) {
+	handlers := map[string]fieldHandlerFunc{
+		TokenFieldBoundCIDRs: handleCIDRField,
+	}
+
+	return readTokenFieldsWithHandlers(d, resp, handlers)
+}
+
+type fieldHandlerFunc func(d *schema.ResourceData, k string, resp *api.Secret) (interface{}, error)
+
+func readTokenFieldsWithHandlers(d *schema.ResourceData, resp *api.Secret, handlers map[string]fieldHandlerFunc) error {
+	return setValueWithHandlers(d, getCommonTokenFieldMap(resp), resp, handlers)
+}
+
+func setValueWithHandlers(d *schema.ResourceData, fieldMap map[string]interface{}, resp *api.Secret,
+	handlers map[string]fieldHandlerFunc,
+) error {
+	for k, v := range fieldMap {
+		var err error
+		if f, ok := handlers[k]; ok {
+			v, err = f(d, k, resp)
+			if err != nil {
+				return err
+			}
+		}
 		if err := d.Set(k, v); err != nil {
 			return fmt.Errorf("error setting state key %q: %w", k, err)
 		}
 	}
 	return nil
+}
+
+func handleCIDRField(d *schema.ResourceData, k string, resp *api.Secret) (interface{}, error) {
+	var s *schema.Set
+	switch t := d.Get(k).(type) {
+	case *schema.Set:
+		s = t
+	default:
+		return nil, fmt.Errorf("unsupported type %T", t)
+	}
+
+	var addrs []string
+
+	if v, ok := resp.Data[k]; ok && v != nil {
+		for _, val := range v.([]interface{}) {
+			// Vault strips the CIDR prefix from IPv4 /32, IPv6 /128 host addresses
+			// we want to normalize these addresses unless they are otherwise explicitly
+			// configured in the Terraform config.
+			addr := val.(string)
+			if s != nil && s.Contains(val) {
+				addrs = append(addrs, addr)
+				continue
+			}
+
+			if _, _, err := net.ParseCIDR(addr); err != nil {
+				ip := net.ParseIP(addr)
+				if ip == nil {
+					// should never happen
+					return nil, fmt.Errorf("invalid address %q in response", addr)
+				}
+
+				var bits int
+				if m := ip.DefaultMask(); m != nil {
+					// IPv4
+					_, bits = m.Size()
+				} else {
+					// IPv6
+					bits = 128
+				}
+				addr = fmt.Sprintf("%s/%d", addr, bits)
+			}
+			addrs = append(addrs, addr)
+		}
+	}
+
+	return addrs, nil
 }
 
 func getCommonTokenFieldMap(resp *api.Secret) map[string]interface{} {
@@ -290,4 +365,40 @@ func getCommonTokenFieldMap(resp *api.Secret) map[string]interface{} {
 		m[k] = resp.Data[k]
 	}
 	return m
+}
+
+func checkCIDRs(d *schema.ResourceData, k string) diag.Diagnostics {
+	diags := diag.Diagnostics{}
+
+	var cidrs []interface{}
+	if i, ok := d.GetOk(k); ok {
+		switch t := i.(type) {
+		case *schema.Set:
+			cidrs = t.List()
+		case []interface{}:
+			cidrs = t
+		default:
+			return diag.Errorf("could not check CIDRs, unsupported type %T", t)
+		}
+
+		var invalid []string
+		for _, v := range cidrs {
+			addr := v.(string)
+			if _, _, err := net.ParseCIDR(addr); err != nil {
+				invalid = append(invalid, addr)
+			}
+		}
+
+		count := len(invalid)
+		if count > 0 {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary: fmt.Sprintf("found %d invalid CIDR block(s) for %q, values=%s", count, k,
+					strings.Join(invalid, ",")),
+				Detail: `Please ensure all values are configured in CIDR notation. 
+This check will be enforced in future releases of the provider, and will result in an error`,
+			})
+		}
+	}
+	return diags
 }

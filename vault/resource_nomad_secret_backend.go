@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,6 +8,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -16,7 +21,6 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 		"backend": {
 			Type:        schema.TypeString,
 			Default:     "nomad",
-			ForceNew:    true,
 			Optional:    true,
 			Description: "The mount path for the Nomad backend.",
 			StateFunc: func(v interface{}) string {
@@ -93,20 +97,25 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 			Description: "Maximum possible lease duration for secrets in seconds.",
 		},
 	}
-	return &schema.Resource{
-		Create: createNomadAccessConfigResource,
-		Update: updateNomadAccessConfigResource,
-		Read:   readNomadAccessConfigResource,
-		Delete: deleteNomadAccessConfigResource,
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		Create:        createNomadAccessConfigResource,
+		Update:        updateNomadAccessConfigResource,
+		Read:          provider.ReadWrapper(readNomadAccessConfigResource),
+		Delete:        deleteNomadAccessConfigResource,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: fields,
-	}
+	}, false)
 }
 
 func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	backend := d.Get("backend").(string)
 	description := d.Get("description").(string)
 	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
@@ -115,7 +124,7 @@ func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[DEBUG] Mounting Nomad backend at %q", backend)
 	err := client.Sys().Mount(backend, &api.MountInput{
-		Type:        "nomad",
+		Type:        consts.MountTypeNomad,
 		Description: description,
 		Local:       local,
 		Config: api.MountConfigInput{
@@ -181,7 +190,10 @@ func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 }
 
 func readNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading %q", path)
@@ -275,9 +287,18 @@ func readNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) err
 func updateNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
 	backend := d.Id()
 
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	tune := api.MountConfigInput{}
 	data := map[string]interface{}{}
+
+	backend, err := util.Remount(d, client, consts.FieldBackend, false)
+	if err != nil {
+		return err
+	}
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		tune.DefaultLeaseTTL = fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds"))
@@ -345,7 +366,11 @@ func updateNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 }
 
 func deleteNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Unmounting Nomad backend %q", vaultPath)
 

@@ -1,113 +1,133 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestLDAPAuthBackend_import(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-ldap-path")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
-			},
-			{
-				ResourceName:            "vault_ldap_auth_backend.test",
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"bindpass"},
-			},
-		},
-	})
-}
-
 func TestLDAPAuthBackend_basic(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
 
+	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "false", "true"),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
 		},
 	})
 }
 
 func TestLDAPAuthBackend_tls(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-tls-path")
 
+	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
 				Config: testLDAPAuthBackendConfig_tls(path, "false", "true"),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
 				Config: testLDAPAuthBackendConfig_tls(path, "false", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass",
+				"client_tls_cert", "client_tls_key", "disable_remount"),
+		},
+	})
+}
+
+func TestLDAPAuthBackend_remount(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-auth-ldap")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-ldap-updated")
+
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
 		},
 	})
 }
 
 func testLDAPAuthBackendDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ldap_auth_backend" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("error checking for ldap auth backend %q: %s", rs.Primary.ID, err)
@@ -119,45 +139,49 @@ func testLDAPAuthBackendDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
+func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_ldap_auth_backend.test"]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
 		}
 
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource has no primary instance")
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
 		}
 
-		endpoint := strings.Trim(path, "/")
-		if endpoint != instanceState.ID {
-			return fmt.Errorf("expected ID to be %q, got %q instead", endpoint, instanceState.ID)
+		path := rs.Primary.ID
+
+		endpoint := strings.Trim(name, "/")
+		if endpoint != path {
+			return fmt.Errorf("expected ID to be %q, got %q instead", endpoint, path)
 		}
 
-		client := testProvider.Meta().(*api.Client)
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {
 			return err
 		}
-		authMount := authMounts[strings.Trim(path, "/")+"/"]
+		authMount := authMounts[strings.Trim(name, "/")+"/"]
 
 		if authMount == nil {
-			return fmt.Errorf("auth mount %s not present", path)
+			return fmt.Errorf("auth mount %s not present", name)
 		}
 
 		if "ldap" != authMount.Type {
 			return fmt.Errorf("incorrect mount type: %s", authMount.Type)
 		}
 
-		if instanceState.Attributes["accessor"] != authMount.Accessor {
-			return fmt.Errorf("accessor in state %s does not match accessor returned from vault %s", instanceState.Attributes["accessor"], authMount.Accessor)
+		if rs.Primary.Attributes["accessor"] != authMount.Accessor {
+			return fmt.Errorf("accessor in state %s does not match accessor returned from vault %s",
+				rs.Primary.Attributes["accessor"],
+				authMount.Accessor)
 		}
 
-		l := instanceState.Attributes["local"] == "true"
+		l := rs.Primary.Attributes["local"] == "true"
 		if l != authMount.Local {
-			return fmt.Errorf("local bool in state for %s does not match value returned from vault: State: %t, Vault: %t", path, l, authMount.Local)
+			return fmt.Errorf("local bool in state for %s does not match value returned from vault: State: %t, Vault: %t",
+				name, l, authMount.Local)
 		}
 
 		configPath := "auth/" + endpoint + "/config"
@@ -167,18 +191,22 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			return err
 		}
 
+		// TODO: this does not belong here, should be done a !TestCheckAttrSet...
 		// Check that `bindpass`, if present in the state, is not returned by the API
-		if instanceState.Attributes["bindpass"] != "" && resp.Data["bindpass"] != nil {
+		if rs.Primary.Attributes["bindpass"] != "" && resp.Data["bindpass"] != nil {
 			return fmt.Errorf("expected api field bindpass to not be returned, but was %q", resp.Data["bindpass"])
 		}
 
+		// TODO: this does not belong here, should be done a !TestCheckAttrSet...
 		// Check that `client_tls_crt`, if present in the state, is not returned by the API
-		if instanceState.Attributes["client_tls_crt"] != "" && resp.Data["client_tls_crt"] != nil {
+		if rs.Primary.Attributes["client_tls_crt"] != "" && resp.Data["client_tls_crt"] != nil {
 			return fmt.Errorf("expected api field client_tls_crt to not be returned, but was %q", resp.Data["client_tls_crt"])
 		}
 
+		// TODO: this does not belong here, should be done a !TestCheckAttrSet... ,
+		// the part should be handled in vault tests.
 		// Check that `client_tls_key`, if present in the state, is not returned by the API
-		if instanceState.Attributes["client_tls_key"] != "" && resp.Data["client_tls_key"] != nil {
+		if rs.Primary.Attributes["client_tls_key"] != "" && resp.Data["client_tls_key"] != nil {
 			return fmt.Errorf("expected api field client_tls_key to not be returned, but was %q", resp.Data["client_tls_key"])
 		}
 
@@ -186,6 +214,7 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			"url":                  "url",
 			"starttls":             "starttls",
 			"case_sensitive_names": "case_sensitive_names",
+			"max_page_size":        "max_page_size",
 			"tls_min_version":      "tls_min_version",
 			"tls_max_version":      "tls_max_version",
 			"insecure_tls":         "insecure_tls",
@@ -193,77 +222,37 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			"binddn":               "binddn",
 			"userdn":               "userdn",
 			"userattr":             "userattr",
+			"userfilter":           "userfilter",
 			"discoverdn":           "discoverdn",
 			"deny_null_bind":       "deny_null_bind",
 			"upndomain":            "upndomain",
 			"groupfilter":          "groupfilter",
+			"username_as_alias":    "username_as_alias",
 			"groupdn":              "groupdn",
 			"groupattr":            "groupattr",
 			"use_token_groups":     "use_token_groups",
 		}
 
-		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
-				continue
-			}
-			var match bool
-			switch resp.Data[apiAttr].(type) {
-			case json.Number:
-				apiData, err := resp.Data[apiAttr].(json.Number).Int64()
-				if err != nil {
-					return fmt.Errorf("expected api field %s to be an int, was %q", apiAttr, resp.Data[apiAttr])
-				}
-				stateData, err := strconv.ParseInt(instanceState.Attributes[stateAttr], 10, 64)
-				if err != nil {
-					return fmt.Errorf("expected state field %s to be an int, was %q", stateAttr, instanceState.Attributes[stateAttr])
-				}
-				match = apiData == stateData
-			case bool:
-				if _, ok := resp.Data[apiAttr]; !ok && instanceState.Attributes[stateAttr] == "" {
-					match = true
-				} else {
-					stateData, err := strconv.ParseBool(instanceState.Attributes[stateAttr])
-					if err != nil {
-						return fmt.Errorf("expected state field %s to be a bool, was %q", stateAttr, instanceState.Attributes[stateAttr])
-					}
-					match = resp.Data[apiAttr] == stateData
-				}
-
-			case []interface{}:
-				apiData := resp.Data[apiAttr].([]interface{})
-				length := instanceState.Attributes[stateAttr+".#"]
-				if length == "" {
-					if len(resp.Data[apiAttr].([]interface{})) != 0 {
-						return fmt.Errorf("expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
-					}
-					match = true
-				} else {
-					count, err := strconv.Atoi(length)
-					if err != nil {
-						return fmt.Errorf("expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
-					}
-					if count != len(apiData) {
-						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
-					}
-					for i := 0; i < count; i++ {
-						stateData := instanceState.Attributes[stateAttr+"."+strconv.Itoa(i)]
-						if stateData != apiData[i] {
-							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be %q, got %q", i, apiAttr, stateAttr, endpoint, stateData, apiData[i])
-						}
-					}
-					match = true
-				}
-			default:
-				match = resp.Data[apiAttr] == instanceState.Attributes[stateAttr]
-
-			}
-			if !match {
-				return fmt.Errorf("expected %s (%s in state) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
-			}
-
+		for _, v := range commonTokenFields {
+			attrs[v] = v
 		}
 
-		return nil
+		tAttrs := []*testutil.VaultStateTest{}
+		for k, v := range attrs {
+			ta := &testutil.VaultStateTest{
+				ResourceName: resourceName,
+				StateAttr:    k,
+				VaultAttr:    v,
+			}
+			switch k {
+			case TokenFieldPolicies:
+				ta.AsSet = true
+			}
+
+			tAttrs = append(tAttrs, ta)
+		}
+
+		return testutil.AssertVaultState(client, s, configPath, tAttrs...)
 	}
 }
 
@@ -275,6 +264,7 @@ resource "vault_ldap_auth_backend" "test" {
     url                    = "ldaps://example.org"
     starttls               = true
     case_sensitive_names   = false
+	max_page_size          = -1
     tls_min_version        = "tls11"
     tls_max_version        = "tls12"
     insecure_tls           = false
@@ -283,7 +273,8 @@ resource "vault_ldap_auth_backend" "test" {
     discoverdn             = false
     deny_null_bind         = true
     description            = "example"
-
+    userfilter             = "({{.UserAttr}}={{.Username}})"
+    username_as_alias      = true
     use_token_groups = %s
 }
 `, path, local, use_token_groups)

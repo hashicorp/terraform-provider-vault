@@ -42,6 +42,11 @@ resource "vault_aws_auth_backend_client" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Optional) The path the AWS auth backend being configured was
 	mounted at.  Defaults to `aws`.
 
@@ -62,6 +67,12 @@ The following arguments are supported:
 
 * `sts_region` - (Optional) Override the default region when making STS API 
     calls. The `sts_endpoint` argument must be set when using `sts_region`.
+
+* `use_sts_region_from_client` - (Optional) Available in Vault v1.15+. If set, 
+    overrides both `sts_endpoint` and `sts_region` to instead use the region
+    specified in the client request headers for IAM-based authentication.
+    This can be useful when you have client requests coming from different 
+    regions and want flexibility in which regional STS API is used.
 
 * `iam_server_id_header_value` - (Optional) The value to require in the
 	`X-Vault-AWS-IAM-Server-ID` header as part of `GetCallerIdentity` requests

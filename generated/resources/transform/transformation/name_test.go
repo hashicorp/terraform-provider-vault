@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transformation
 
 import (
@@ -8,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	sdk_schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/schema"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/vault"
@@ -17,14 +20,15 @@ import (
 
 var nameTestProvider = func() *schema.Provider {
 	p := schema.NewProvider(vault.Provider())
-	p.RegisterResource("vault_mount", vault.MountResource())
-	p.RegisterResource("vault_transform_transformation_name", NameResource())
+	p.RegisterResource("vault_mount", vault.UpdateSchemaResource(vault.MountResource()))
+	p.RegisterResource("vault_transform_transformation_name", vault.UpdateSchemaResource(NameResource()))
 	return p
 }()
 
 func TestTransformationName(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 
+	resourceName := "vault_transform_transformation_name.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testutil.TestEntPreCheck(t) },
 		Providers: map[string]*sdk_schema.Provider{
@@ -35,26 +39,26 @@ func TestTransformationName(t *testing.T) {
 			{
 				Config: basicConfig(path, "ccn-fpe", "fpe", "ccn", "internal", "payments", "*"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "path", path),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "name", "ccn-fpe"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "type", "fpe"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "template", "ccn"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "tweak_source", "internal"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "allowed_roles.0", "payments"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "allowed_roles.#", "1"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "masking_character", "*"),
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "name", "ccn-fpe"),
+					resource.TestCheckResourceAttr(resourceName, "type", "fpe"),
+					resource.TestCheckResourceAttr(resourceName, "template", "ccn"),
+					resource.TestCheckResourceAttr(resourceName, "tweak_source", "internal"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_roles.0", "payments"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "masking_character", "*"),
 				),
 			},
 			{
-				ResourceName: "vault_transform_transformation_name.test",
+				ResourceName: resourceName,
 				ImportState:  true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
 					if len(states) != 1 {
 						return fmt.Errorf("expected 1 state but received %+v", states)
 					}
 					state := states[0]
-					if state.Attributes["%"] != "9" {
-						t.Fatalf("expected 9 attributes but received %d", len(state.Attributes))
+					if state.Attributes["%"] != "11" {
+						t.Fatalf("expected 11 attributes but received %s", state.Attributes["%"])
 					}
 					if state.Attributes["templates.#"] != "1" {
 						t.Fatalf("expected %q, received %q", "1", state.Attributes["templates.#"])
@@ -83,28 +87,39 @@ func TestTransformationName(t *testing.T) {
 					if state.Attributes["name"] != "ccn-fpe" {
 						t.Fatalf("expected %q, received %q", "ccn-fpw", state.Attributes["name"])
 					}
+					var expectDeletionAllowed string
+					if provider.IsAPISupported(nameTestProvider.SchemaProvider().Meta(), provider.VaultVersion112) {
+						expectDeletionAllowed = "true"
+					}
+					if state.Attributes["deletion_allowed"] != expectDeletionAllowed {
+						t.Fatalf("expected %q, received %q", expectDeletionAllowed, state.Attributes["deletion_allowed"])
+					}
 					return nil
 				},
 			},
 			{
 				Config: basicConfig(path, "ccn-fpe", "fpe", "ccn-1", "generated", "payments-1", "-"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "path", path),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "name", "ccn-fpe"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "type", "fpe"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "template", "ccn-1"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "tweak_source", "generated"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "allowed_roles.0", "payments-1"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "allowed_roles.#", "1"),
-					resource.TestCheckResourceAttr("vault_transform_transformation_name.test", "masking_character", "-"),
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "name", "ccn-fpe"),
+					resource.TestCheckResourceAttr(resourceName, "type", "fpe"),
+					resource.TestCheckResourceAttr(resourceName, "template", "ccn-1"),
+					resource.TestCheckResourceAttr(resourceName, "tweak_source", "generated"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_roles.0", "payments-1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "masking_character", "-"),
 				),
+			},
+			{
+				Config:   basicConfig(path, "ccn-fpe", "fpe", "ccn-1", "generated", "payments-1", "-"),
+				PlanOnly: true,
 			},
 		},
 	})
 }
 
 func destroy(s *terraform.State) error {
-	client := nameTestProvider.SchemaProvider().Meta().(*api.Client)
+	client := nameTestProvider.SchemaProvider().Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_transform_transformation_name" {
@@ -127,14 +142,16 @@ resource "vault_mount" "mount_transform" {
   path = "%s"
   type = "transform"
 }
+
 resource "vault_transform_transformation_name" "test" {
-  path = vault_mount.mount_transform.path
-  name = "%s"
-  type = "%s"
-  template = "%s"
-  tweak_source = "%s"
-  allowed_roles = ["%s"]
+  path              = vault_mount.mount_transform.path
+  name              = "%s"
+  type              = "%s"
+  template          = "%s"
+  tweak_source      = "%s"
+  allowed_roles     = ["%s"]
   masking_character = "%s"
+  deletion_allowed  = true
 }
 `, path, name, tp, template, tweakSource, allowedRoles, maskingChar)
 }

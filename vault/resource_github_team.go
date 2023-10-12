@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,13 +9,14 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func githubTeamResource() *schema.Resource {
 	return &schema.Resource{
 		Create: githubTeamCreate,
-		Read:   githubTeamRead,
+		Read:   provider.ReadWrapper(githubTeamRead),
 		Update: githubTeamUpdate,
 		Delete: githubTeamDelete,
 		Importer: &schema.ResourceImporter{
@@ -23,7 +27,7 @@ func githubTeamResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Auth backend to which team mapping will be congigured.",
+				Description: "Auth backend to which team mapping will be configured.",
 				ForceNew:    true,
 				Default:     "github",
 				// standardise on no beginning or trailing slashes
@@ -42,7 +46,7 @@ func githubTeamResource() *schema.Resource {
 				Required:     true,
 				ForceNew:     true,
 				Description:  "GitHub team name in \"slugified\" format.",
-				ValidateFunc: validateStringSlug,
+				ValidateFunc: provider.ValidateStringSlug,
 			},
 		},
 	}
@@ -58,7 +62,11 @@ func githubTeamCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -80,7 +88,11 @@ func githubTeamUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	dt, err := client.Logical().Read(path)
@@ -108,7 +120,10 @@ func githubTeamRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	_, err := client.Logical().Delete(d.Id())
 	if err != nil {

@@ -17,6 +17,10 @@ artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
+~> **Important** Multi-Issuer Functionality is enabled on this version
+of the Provider. If migrating from an older version of Vault or the Provider,
+please refer to the [PKI Multi-Issuer Upgrade Guide](../guides/pki_multi_issuer_upgrade.html.markdown)
+
 ## Example Usage
 
 ```hcl
@@ -32,9 +36,15 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Required) The PKI secret backend the resource belongs to.
 
 * `type` - (Required) Type of intermediate to create. Must be either \"exported\" or \"internal\"
+  or \"kms\"
 
 * `common_name` - (Required) CN of intermediate to create
 
@@ -70,6 +80,22 @@ The following arguments are supported:
 
 * `postal_code` - (Optional) The postal code
 
+* `managed_key_name` - (Optional) The name of the previously configured managed key. This field is
+  required if `type` is `kms`  and it conflicts with `managed_key_id`
+
+* `managed_key_id` - (Optional) The ID of the previously configured managed key. This field is
+  required if `type` is `kms` and it conflicts with `managed_key_name`
+
+* `add_basic_constraints` - (Optional) Adds a Basic Constraints extension with 'CA: true'.
+  Only needed as a workaround in some compatibility scenarios with Active Directory
+  Certificate Services
+
+* `key_name` - (Optional) When a new key is created with this request, optionally specifies
+  the name for this. The global ref `default` may not be used as a name.
+
+* `key_ref` - (Optional) Specifies the key (either default, by name, or by identifier) to use
+  for generating this request. Only suitable for `type=existing` requests.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
@@ -81,3 +107,5 @@ In addition to the fields above, the following attributes are exported:
 * `private_key_type` - The private key type
 
 * `serial_number` - The serial number
+
+* `key_id` - The ID of the generated key.

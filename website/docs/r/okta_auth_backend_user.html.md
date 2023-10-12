@@ -30,9 +30,14 @@ resource "vault_okta_auth_backend_user" "foo" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `path` - (Required) The path where the Okta auth backend is mounted
 
-* `username` - (Required Optional) Name of the user within Okta
+* `username` - (Required) Name of the user within Okta
 
 * `groups` - (Optional) List of Okta groups to associate with this user
 

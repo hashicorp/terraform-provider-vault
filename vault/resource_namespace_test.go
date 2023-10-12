@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -8,32 +11,87 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestNamespace_basic(t *testing.T) {
-	namespacePath := acctest.RandomWithPrefix("test-namespace")
-	childPath := acctest.RandomWithPrefix("child-namespace")
+func TestAccNamespace(t *testing.T) {
+	namespacePath := acctest.RandomWithPrefix("parent-ns")
+	resourceNameParent := "vault_namespace.parent"
+	resourceNameChild := "vault_namespace.child"
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceNameParent, consts.FieldPath, namespacePath),
+	}
+	getNestedChecks := func(count int) []resource.TestCheckFunc {
+		var checks []resource.TestCheckFunc
+		for i := 0; i < count; i++ {
+			rsc := fmt.Sprintf("%s.%d", resourceNameChild, i)
+			checks = append(checks,
+				resource.TestCheckResourceAttr(
+					rsc, consts.FieldPath,
+					fmt.Sprintf("child_%d", i)),
+			)
+			checks = append(checks,
+				resource.TestCheckResourceAttr(
+					rsc, consts.FieldPathFQ,
+					fmt.Sprintf("%s/child_%d", namespacePath, i)),
+			)
+		}
+		return checks
+	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testNamespaceDestroy(namespacePath),
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testNamespaceDestroy(namespacePath),
 		Steps: []resource.TestStep{
 			{
-				Config: testNamespaceConfig(namespacePath),
-				Check:  testNamespaceCheckAttrs(),
+				Config: testNestedNamespaces(namespacePath, 3),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					append(checks, getNestedChecks(3)...)...,
+				),
 			},
 			{
-				Config:      testNamespaceConfig(namespacePath + "/"),
-				Destroy:     false,
-				ExpectError: regexp.MustCompile("Error: cannot write to a path ending in '/'"),
+				Config:  testNestedNamespaces(namespacePath+"/", 3),
+				Destroy: false,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`value "%s/" for "path" contains leading/trailing "%s"`,
+						namespacePath, consts.PathDelim)),
 			},
 			{
-				Config: testNestedNamespaceConfig(namespacePath, childPath),
-				Check:  testNestedNamespaceCheckAttrs(childPath),
+				Config:  testNestedNamespaces("/"+namespacePath, 3),
+				Destroy: false,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`value "/%s" for "path" contains leading/trailing "%s"`,
+						namespacePath, consts.PathDelim)),
+			},
+			{
+				Config:  testNestedNamespaces("/"+namespacePath+"/", 3),
+				Destroy: false,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`value "/%s/" for "path" contains leading/trailing "%s"`,
+						namespacePath, consts.PathDelim)),
+			},
+			{
+				Config: testNestedNamespaces(namespacePath, 2),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					append(checks, getNestedChecks(2)...)...,
+				),
+			},
+			{
+				Config: testNestedNamespaces(namespacePath, 0),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					append(checks, getNestedChecks(0)...)...,
+				),
+			},
+			{
+				Config: testNestedNamespaces(namespacePath+"-foo", 0),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameParent, consts.FieldPath, namespacePath+"-foo"),
+					testNamespaceDestroy(namespacePath)),
 			},
 		},
 	})
@@ -57,9 +115,9 @@ func testNamespaceCheckAttrs() resource.TestCheckFunc {
 
 func testNamespaceDestroy(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
-		namespaceRef, err := client.Logical().Read(fmt.Sprintf("/sys/namespaces/%s", path))
+		namespaceRef, err := client.Logical().Read(fmt.Sprintf("%s/%s", consts.SysNamespaceRoot, path))
 		if err != nil {
 			return fmt.Errorf("error reading back configuration: %s", err)
 		}
@@ -79,35 +137,26 @@ resource "vault_namespace" "test" {
 `, path)
 }
 
-func testNestedNamespaceConfig(parentPath, childPath string) string {
-	return fmt.Sprintf(`
-provider "vault" {
-	namespace = %q
+func testNestedNamespaces(ns string, count int) string {
+	config := fmt.Sprintf(`
+variable "child_prefix" {
+  default = "child_"
 }
 
-resource "vault_namespace" "test_child" {
-	path = %q
-}
-`, parentPath, childPath)
+variable "child_count" {
+  default = %d
 }
 
-func testNestedNamespaceCheckAttrs(expectedPath string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_namespace.test_child"]
-		if resourceState == nil {
-			return fmt.Errorf("child namespace resource not found in state")
-		}
+resource "vault_namespace" "parent" {
+  path = "%s"
+}
 
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("child namespace resource has no primary instance")
-		}
+resource "vault_namespace" "child" {
+  namespace = vault_namespace.parent.path
+  count     = var.child_count
+  path      = "${var.child_prefix}${count.index}"
+}
+`, count, ns)
 
-		actualPath := instanceState.Attributes["path"]
-		if actualPath != expectedPath {
-			return fmt.Errorf("expected path to be %s, got %s", expectedPath, actualPath)
-		}
-
-		return nil
-	}
+	return config
 }

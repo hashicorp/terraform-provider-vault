@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,22 +10,24 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccOktaAuthBackend_basic(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-basic-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthConfig_basic(path, organization),
@@ -44,13 +49,14 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_import(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-import-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthConfig_basic(path, organization),
@@ -66,6 +72,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"token",
+					"disable_remount",
 				},
 			},
 			{
@@ -81,6 +88,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"token",
+					"disable_remount",
 				},
 			},
 		},
@@ -88,13 +96,14 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-invalid-ttl-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccOktaAuthConfig_invalid_ttl(path, organization),
@@ -105,18 +114,70 @@ func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-invalid_max_ttl-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccOktaAuthConfig_invalid_max_ttl(path, organization),
 				ExpectError: regexp.MustCompile(`Error: invalid value for "max_ttl", could not parse "invalid_max_ttl"`),
 			},
+		},
+	})
+}
+
+func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
+	t.Parallel()
+	organization := "example"
+	path := resource.PrefixedUniqueId("okta-group-optional")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccOktaAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOktaAuthConfig_groups_optional(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					testAccOktaAuthBackend_UsersCheck(path, "bar", []string{}, []string{"eng", "default"}),
+				),
+			},
+		},
+	})
+}
+
+func TestAccOktaAuthBackend_remount(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-auth-okta")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-okta-updated")
+
+	organization := "example"
+	resourceName := "vault_okta_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOktaAuthConfig_basic(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					testAccOktaAuthBackend_InitialCheck,
+				),
+			},
+			{
+				Config: testAccOktaAuthConfig_basic(updatedPath, organization),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					testAccOktaAuthBackend_InitialCheck,
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "disable_remount"),
 		},
 	})
 }
@@ -186,6 +247,21 @@ resource "vault_okta_auth_backend" "test" {
 `, path, organization)
 }
 
+func testAccOktaAuthConfig_groups_optional(path string, organization string) string {
+	return fmt.Sprintf(`
+resource "vault_okta_auth_backend" "test" {
+    description = "Testing the Terraform okta auth backend"
+    path = "%s"
+    organization = "%s"
+    token = "this must be kept secret"
+    user {
+        username = "bar"
+        policies   = ["eng", "default"]
+    }
+}
+`, path, organization)
+}
+
 func testAccOktaAuthBackend_InitialCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_okta_auth_backend.test"]
 	if resourceState == nil {
@@ -203,7 +279,10 @@ func testAccOktaAuthBackend_InitialCheck(s *terraform.State) error {
 		return fmt.Errorf("id doesn't match path")
 	}
 
-	client := testProvider.Meta().(*api.Client)
+	client, e := provider.GetClient(instanceState, testProvider.Meta())
+	if e != nil {
+		return e
+	}
 
 	authMounts, err := client.Sys().ListAuth()
 	if err != nil {
@@ -251,7 +330,7 @@ func testAccOktaAuthBackend_InitialCheck(s *terraform.State) error {
 
 func testAccOktaAuthBackend_GroupsCheck(path, groupName string, expectedPolicies []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 		groupList, err := client.Logical().List(fmt.Sprintf("/auth/%s/groups", path))
 		if err != nil {
@@ -291,7 +370,7 @@ func testAccOktaAuthBackend_GroupsCheck(path, groupName string, expectedPolicies
 
 func testAccOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, expectedPolicies []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 		userList, err := client.Logical().List(fmt.Sprintf("/auth/%s/users", path))
 		if err != nil {
@@ -354,7 +433,7 @@ func testAccOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, ex
 
 func testAccOktaAuthBackend_Destroyed(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {

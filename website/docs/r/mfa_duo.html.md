@@ -6,7 +6,7 @@ description: |-
   Managing the MFA Duo method configuration
 ---
 
-# vault\_mfa-duo
+# vault\_mfa\_duo
 
 Provides a resource to manage [Duo MFA](https://www.vaultproject.io/docs/enterprise/mfa/mfa-duo.html).
 
@@ -33,6 +33,11 @@ resource "vault_mfa_duo" "my_duo" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 - `name` `(string: <required>)` – Name of the MFA method.
 
 - `mount_accessor` `(string: <required>)` - The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.
@@ -58,4 +63,3 @@ Mounts can be imported using the `path`, e.g.
 ```
 $ terraform import vault_mfa_duo.my_duo my_duo
 ```
-

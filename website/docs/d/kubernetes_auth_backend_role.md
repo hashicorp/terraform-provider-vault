@@ -29,6 +29,11 @@ output "policies" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  *Available only for Vault Enterprise*.
+
 * `role_name` - (Required) The name of the role to retrieve the Role attributes for.
 
 * `backend` - (Optional) The unique name for the Kubernetes backend the role to

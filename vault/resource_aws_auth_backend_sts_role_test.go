@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -8,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -18,9 +21,9 @@ func TestAccAWSAuthBackendSTSRole_import(t *testing.T) {
 	accountID := strconv.Itoa(acctest.RandInt())
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendSTSRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn),
@@ -41,9 +44,9 @@ func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
 	updatedArn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendSTSRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn),
@@ -58,12 +61,16 @@ func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
 }
 
 func testAccCheckAWSAuthBackendSTSRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_sts_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Error checking for AWS auth backend STS role %q: %s", rs.Primary.ID, err)
@@ -93,7 +100,11 @@ func testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, stsRole string)
 			return fmt.Errorf("expected ID to be %q, got %q instead", "auth/"+backend+"/config/sts/"+accountID, endpoint)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back sts role from %q: %s", endpoint, err)

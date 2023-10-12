@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,13 +10,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func awsAuthBackendRoleTagResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendRoleTagResourceCreate,
-		Read:   awsAuthBackendRoleTagResourceRead,
+		Read:   provider.ReadWrapper(awsAuthBackendRoleTagResourceRead),
 		Delete: awsAuthBackendRoleTagResourceDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -76,7 +79,10 @@ func awsAuthBackendRoleTagResource() *schema.Resource {
 }
 
 func awsAuthBackendRoleTagResourceCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)

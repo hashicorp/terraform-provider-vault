@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,7 +9,10 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const latestSecretVersion = -1
@@ -18,14 +24,14 @@ func genericSecretResource(name string) *schema.Resource {
 		Create: genericSecretResourceWrite,
 		Update: genericSecretResourceWrite,
 		Delete: genericSecretResourceDelete,
-		Read:   genericSecretResourceRead,
+		Read:   provider.ReadWrapper(genericSecretResourceRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 		MigrateState: resourceGenericSecretMigrateState,
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
@@ -34,7 +40,7 @@ func genericSecretResource(name string) *schema.Resource {
 
 			// Data is passed as JSON so that an arbitrary structure is
 			// possible, rather than forcing e.g. all values to be strings.
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "JSON-encoded secret data to write.",
@@ -118,15 +124,16 @@ func normalizeDataJSON(data string) (string, error) {
 }
 
 func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	var data map[string]interface{}
-	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
-	if err != nil {
-		return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+	if err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &data); err != nil {
+		return fmt.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 	originalPath := path // if the path belongs to a v2 endpoint, it will be modified
 	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
@@ -142,10 +149,8 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 
 	}
 
-	log.Printf("[DEBUG] Writing generic Vault secret to %s", path)
-	_, err = client.Logical().Write(path, data)
-	if err != nil {
-		return fmt.Errorf("error writing to Vault: %s", err)
+	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
+		return err
 	}
 
 	d.SetId(originalPath)
@@ -154,8 +159,10 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 }
 
 func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	mountPath, v2, err := isKVv2(path, client)
@@ -167,7 +174,7 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 		base := "data"
 		deleteAllVersions := d.Get("delete_all_versions").(bool)
 		if deleteAllVersions {
-			base = "metadata"
+			base = consts.FieldMetadata
 		}
 		path = addPrefixToVKVPath(path, mountPath, base)
 	}
@@ -182,14 +189,16 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	var data map[string]interface{}
 	shouldRead := !d.Get("disable_read").(bool)
 
 	path := d.Id()
 
 	if shouldRead {
-		client := meta.(*api.Client)
-
 		log.Printf("[DEBUG] Reading %s from Vault", path)
 		secret, err := versionedSecret(latestSecretVersion, path, client)
 		if err != nil {
@@ -201,26 +210,44 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 			return nil
 		}
 
-		log.Printf("[DEBUG] secret: %#v", secret)
-
 		data = secret.Data
 		jsonData, err := json.Marshal(secret.Data)
 		if err != nil {
 			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
 
-		d.Set("data_json", string(jsonData))
-		d.Set("path", path)
+		if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
+			return err
+		}
+		if err := d.Set(consts.FieldPath, path); err != nil {
+			return err
+		}
 	} else {
 		// Populate data from data_json from state
-		err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
+		err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &data)
 		if err != nil {
-			return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+			return fmt.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 		}
 		log.Printf("[WARN] vault_generic_secret does not refresh when disable_read is set to true")
 	}
-	d.Set("disable_read", !shouldRead)
 
+	if err := d.Set("disable_read", !shouldRead); err != nil {
+		return err
+	}
+
+	dataMap := serializeDataMapToString(data)
+	if err := d.Set("data", dataMap); err != nil {
+		return err
+	}
+
+	if err := d.Set("delete_all_versions", d.Get("delete_all_versions")); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func serializeDataMapToString(data map[string]interface{}) map[string]string {
 	// Since our "data" map can only contain string values, we
 	// will take strings from Data and write them in as-is,
 	// and write everything else in as a JSON serialization of
@@ -239,6 +266,5 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 			dataMap[k] = string(vBytes)
 		}
 	}
-	d.Set("data", dataMap)
-	return nil
+	return dataMap
 }

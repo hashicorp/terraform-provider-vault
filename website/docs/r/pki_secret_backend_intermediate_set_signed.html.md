@@ -17,18 +17,79 @@ artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
+~> **Important** Multi-Issuer Functionality is enabled on this version
+of the Provider. If migrating from an older version of Vault or the Provider,
+please refer to the [PKI Multi-Issuer Upgrade Guide](../guides/pki_multi_issuer_upgrade.html.markdown)
+
 ## Example Usage
 
 ```hcl
-resource "vault_pki_secret_backend_intermediate_set_signed" "intermediate" { 
+resource "vault_mount" "root" {
+  path                      = "pki-root"
+  type                      = "pki"
+  description               = "root"
+  default_lease_ttl_seconds = 8640000
+  max_lease_ttl_seconds     = 8640000
+}
+
+resource "vault_mount" "intermediate" {
+  path                      = "pki-int"
+  type                      = vault_mount.root.type
+  description               = "intermediate"
+  default_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
+}
+
+resource "vault_pki_secret_backend_root_cert" "example" {
+  backend              = vault_mount.root.path
+  type                 = "internal"
+  common_name          = "RootOrg Root CA"
+  ttl                  = 86400
+  format               = "pem"
+  private_key_format   = "der"
+  key_type             = "rsa"
+  key_bits             = 4096
+  exclude_cn_from_sans = true
+  ou                   = "Organizational Unit"
+  organization         = "RootOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "example" {
   backend     = vault_mount.intermediate.path
-  certificate = "<...>"
+  type        = vault_pki_secret_backend_root_cert.example.type
+  common_name = "SubOrg Intermediate CA"
+}
+
+resource "vault_pki_secret_backend_root_sign_intermediate" "example" {
+  backend              = vault_mount.root.path
+  csr                  = vault_pki_secret_backend_intermediate_cert_request.example.csr
+  common_name          = "SubOrg Intermediate CA"
+  exclude_cn_from_sans = true
+  ou                   = "SubUnit"
+  organization         = "SubOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
+  revoke               = true
+}
+
+resource "vault_pki_secret_backend_intermediate_set_signed" "example" {
+  backend     = vault_mount.intermediate.path
+  certificate = vault_pki_secret_backend_root_sign_intermediate.example.certificate
 }
 ```
 
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The PKI secret backend the resource belongs to.
 
@@ -38,4 +99,9 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+In addition to the arguments above, the following attributes are exported:
+
+* `imported_issuers` - The imported issuers indicating which issuers were created as part of
+  this request.
+
+* `imported_keys` - The imported keys indicating which keys were created as part of this request.

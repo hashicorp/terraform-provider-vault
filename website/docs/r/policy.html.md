@@ -27,6 +27,11 @@ EOT
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required) The name of the policy
 
 * `policy` - (Required) String containing a Vault policy
@@ -42,3 +47,11 @@ Policies can be imported using the `name`, e.g.
 ```
 $ terraform import vault_policy.example dev-team
 ```
+
+## Tutorials 
+
+Refer to the following tutorials for additional usage examples:
+
+- [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise)
+
+- [Codify Management of Vault Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-oss)

@@ -1,9 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -23,11 +29,12 @@ var kmipAPIFields = []string{
 }
 
 func kmipSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
-		Create: kmipSecretBackendCreate,
-		Read:   kmipSecretBackendRead,
-		Update: kmipSecretBackendUpdate,
-		Delete: kmipSecretBackendDelete,
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		Create:        kmipSecretBackendCreate,
+		Read:          provider.ReadWrapper(kmipSecretBackendRead),
+		Update:        kmipSecretBackendUpdate,
+		Delete:        kmipSecretBackendDelete,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -37,7 +44,7 @@ func kmipSecretBackendResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path where KMIP secret backend will be mounted",
-				ValidateFunc: validateNoTrailingLeadingSlashes,
+				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -103,17 +110,20 @@ func kmipSecretBackendResource() *schema.Resource {
 				Description: "Client certificate TTL in seconds",
 			},
 		},
-	}
+	}, false)
 }
 
 func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Get("path").(string)
 	defaultTLSClientTTL := fmt.Sprintf("%ds", d.Get("default_tls_client_ttl").(int))
 
 	log.Printf("[DEBUG] Mounting KMIP backend at %q", path)
 	if err := client.Sys().Mount(path, &api.MountInput{
-		Type:        "kmip",
+		Type:        consts.MountTypeKMIP,
 		Description: d.Get("description").(string),
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: defaultTLSClientTTL,
@@ -129,21 +139,46 @@ func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	if !d.IsNewResource() && d.HasChange("path") {
-		newPath := d.Get("path").(string)
+		src := path
+		dest := d.Get("path").(string)
 
-		log.Printf("[DEBUG] Remount %s to %s in Vault", path, newPath)
+		log.Printf("[DEBUG] Remount %s to %s in Vault", src, dest)
 
-		err := client.Sys().Remount(path, newPath)
+		err := client.Sys().Remount(src, dest)
 		if err != nil {
 			return fmt.Errorf("error remounting in Vault: %s", err)
 		}
 
-		d.SetId(newPath)
-		path = newPath
+		// There is something similar in resource_mount.go, but in the call to TuneMount().
+		var tries int
+		for {
+			if tries > 10 {
+				return fmt.Errorf(
+					"mount %q did did not become available after %d tries, interval=1s", dest, tries)
+			}
+
+			enabled, err := util.CheckMountEnabled(client, dest)
+			if err != nil {
+				return err
+			}
+			if !enabled {
+				tries++
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			break
+		}
+
+		path = dest
+		d.SetId(path)
 	}
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)
@@ -189,7 +224,10 @@ func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading KMIP config at %s/config", path)
@@ -215,7 +253,10 @@ func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 	log.Printf("[DEBUG] Unmounting KMIP backend %q", path)
 

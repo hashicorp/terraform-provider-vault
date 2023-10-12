@@ -25,6 +25,8 @@ for more details.
 
 ## Example Usage
 
+### Generic secret
+
 ```hcl
 data "vault_generic_secret" "rundeck_auth" {
   path = "secret/rundeck_auth"
@@ -40,9 +42,32 @@ provider "rundeck" {
 }
 ```
 
+### KV 
+
+For this example, consider `example` as a path for a KV engine.
+
+```hcl
+data "vault_generic_secret" "example_creds" {
+  path = "example/creds"
+}
+
+data "template_file" "example_template" {
+  template = file("./example.tmpl")
+  vars = {
+    username = data.vault_generic_secret.example_creds.data["username"]
+    password = data.vault_generic_secret.example_creds.data["password"]
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  *Available only for Vault Enterprise*.
 
 * `path` - (Required) The full logical path from which to request data.
 To read data from the "generic" secret backend mounted in Vault by
@@ -53,6 +78,10 @@ to see which endpoints support the `GET` method.
 * `version` - The version of the secret to read. This is used by the
 Vault KV secrets engine - version 2 to indicate which version of the secret
 to read.
+
+* `with_lease_start_time` - If set to true, stores `lease_start_time` in the TF state.
+ Note that storing the `lease_start_time` in the TF state will cause a persistent drift
+ on every `terraform plan` and will require a `terraform apply`.
 
 ## Required Vault Capabilities
 

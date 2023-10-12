@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,17 +10,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAzureAuthBackendConfig_import(t *testing.T) {
-	backend := acctest.RandomWithPrefix("azure")
+	backend := acctest.RandomWithPrefix("azure/foo/bar")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAzureAuthBackendConfigDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAzureAuthBackendConfig_basic(backend),
@@ -36,9 +39,9 @@ func TestAccAzureAuthBackendConfig_import(t *testing.T) {
 func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("azure")
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckAzureAuthBackendConfigDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAzureAuthBackendConfig_basic(backend),
@@ -53,7 +56,7 @@ func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 }
 
 func testAccCheckAzureAuthBackendConfigDestroy(s *terraform.State) error {
-	config := testProvider.Meta().(*api.Client)
+	config := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_azure_auth_backend_config" {
@@ -106,7 +109,7 @@ func testAccAzureAuthBackendConfigCheck_attrs(backend string) resource.TestCheck
 			return fmt.Errorf("expected ID to be %q, got %q", "auth/"+backend+"/config", endpoint)
 		}
 
-		config := testProvider.Meta().(*api.Client)
+		config := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 		resp, err := config.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back Azure auth config from %q: %s", endpoint, err)

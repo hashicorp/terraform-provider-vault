@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -10,29 +13,31 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func jwtAuthBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 		Create: jwtAuthBackendWrite,
 		Delete: jwtAuthBackendDelete,
-		Read:   jwtAuthBackendRead,
+		Read:   provider.ReadWrapper(jwtAuthBackendRead),
 		Update: jwtAuthBackendUpdate,
 
 		CustomizeDiff: jwtCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
-
-			"path": {
+			consts.FieldPath: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ForceNew:     true,
 				Description:  "path to mount the backend",
 				Default:      "jwt",
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: provider.ValidateNoTrailingSlash,
 			},
 
 			"type": {
@@ -47,7 +52,6 @@ func jwtAuthBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Required:    false,
-				ForceNew:    true,
 				Optional:    true,
 				Description: "The description of the auth backend",
 			},
@@ -163,10 +167,10 @@ func jwtAuthBackendResource() *schema.Resource {
 
 			"tune": authMountTuneSchema(),
 		},
-	}
+	}, false)
 }
 
-func jwtCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	attributes := []string{
 		"oidc_discovery_url",
 		"jwks_url",
@@ -174,41 +178,45 @@ func jwtCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{
 		"provider_config",
 	}
 
+	// to check whether mount migration is required
+	f := getMountCustomizeDiffFunc(consts.FieldPath)
+
 	for _, attr := range attributes {
 		if !d.NewValueKnown(attr) {
-			return nil
+			return f(ctx, d, meta)
 		}
 
 		if _, ok := d.GetOk(attr); ok {
-			return nil
+			return f(ctx, d, meta)
 		}
 	}
 
 	return errors.New("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided")
 }
 
-var (
-	// TODO: build this from the Resource Schema?
-	matchingJwtMountConfigOptions = []string{
-		"oidc_discovery_url",
-		"oidc_discovery_ca_pem",
-		"oidc_client_id",
-		"oidc_client_secret",
-		"oidc_response_mode",
-		"oidc_response_types",
-		"jwks_url",
-		"jwks_ca_pem",
-		"jwt_validation_pubkeys",
-		"bound_issuer",
-		"jwt_supported_algs",
-		"default_role",
-		"provider_config",
-		"namespace_in_state",
-	}
-)
+// TODO: build this from the Resource Schema?
+var matchingJwtMountConfigOptions = []string{
+	"oidc_discovery_url",
+	"oidc_discovery_ca_pem",
+	"oidc_client_id",
+	"oidc_client_secret",
+	"oidc_response_mode",
+	"oidc_response_types",
+	"jwks_url",
+	"jwks_ca_pem",
+	"jwt_validation_pubkeys",
+	"bound_issuer",
+	"jwt_supported_algs",
+	"default_role",
+	"provider_config",
+	"namespace_in_state",
+}
 
 func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	authType := d.Get("type").(string)
 	path := getJwtPath(d)
@@ -221,7 +229,6 @@ func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
 	err := client.Sys().EnableAuthWithOptions(path, options)
-
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -232,14 +239,16 @@ func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func jwtAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := getJwtPath(d)
 
 	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
 
 	err := client.Sys().DisableAuth(path)
-
 	if err != nil {
 		return fmt.Errorf("error disabling auth from Vault: %s", err)
 	}
@@ -248,7 +257,10 @@ func jwtAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
@@ -263,7 +275,6 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("path", path)
 
 	mount, err := getAuthMountIfPresent(client, path)
-
 	if err != nil {
 		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
 	}
@@ -275,7 +286,6 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	config, err := client.Logical().Read(jwtConfigEndpoint(path))
-
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
@@ -317,7 +327,6 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
-
 }
 
 func convertProviderConfigValues(input map[string]interface{}) (map[string]interface{}, error) {
@@ -345,10 +354,20 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 }
 
 func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
+
+	if !d.IsNewResource() {
+		path, e = util.Remount(d, client, consts.FieldPath, true)
+		if e != nil {
+			return e
+		}
+	}
 
 	configuration := map[string]interface{}{}
 	for _, configOption := range matchingJwtMountConfigOptions {

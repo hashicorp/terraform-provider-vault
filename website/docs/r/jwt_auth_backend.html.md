@@ -63,7 +63,15 @@ resource "vault_jwt_auth_backend" "gsuite" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `path` - (Required) Path to mount the JWT/OIDC auth backend
+
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
 * `type` - (Optional) Type of auth backend. Should be one of `jwt` or `oidc`. Default - `jwt`
 
@@ -137,7 +145,7 @@ In addition to the fields above, the following attributes are exported:
 
 ## Import
 
-JWT auth backend can be imported using the `type`, e.g.
+JWT auth backend can be imported using the `path`, e.g.
 
 ```
 $ terraform import vault_jwt_auth_backend.oidc oidc

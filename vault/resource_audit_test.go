@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -9,14 +12,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestResourceAudit(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAudit_initialConfig(path),
@@ -42,12 +46,11 @@ resource "vault_audit" "test" {
 
 func testResourceAudit_initialCheck(expectedPath string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_audit.test"]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
+		rs, err := testutil.GetResourceFromRootModule(s, "vault_audit.test")
+		if err != nil {
+			return err
 		}
-
-		instanceState := resourceState.Primary
+		instanceState := rs.Primary
 		if instanceState == nil {
 			return fmt.Errorf("resource has no primary instance")
 		}
@@ -62,7 +65,12 @@ func testResourceAudit_initialCheck(expectedPath string) resource.TestCheckFunc 
 			return fmt.Errorf("unexpected path %q, expected %q", path, expectedPath)
 		}
 
-		audit, err := findAudit(path)
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		audit, err := findAudit(client, path)
 		if err != nil {
 			return fmt.Errorf("error reading back mount %q: %s", path, err)
 		}
@@ -87,9 +95,7 @@ func testResourceAudit_initialCheck(expectedPath string) resource.TestCheckFunc 
 	}
 }
 
-func findAudit(path string) (*api.Audit, error) {
-	client := testProvider.Meta().(*api.Client)
-
+func findAudit(client *api.Client, path string) (*api.Audit, error) {
 	path = path + "/"
 
 	audits, err := client.Sys().ListAudit()

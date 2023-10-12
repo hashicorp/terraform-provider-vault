@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -8,17 +11,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAWSAuthBackendClient_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -36,10 +39,10 @@ func TestAccAWSAuthBackendClient_import(t *testing.T) {
 
 func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+	resource.ParallelTest(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -55,10 +58,10 @@ func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 
 func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws") + "/nested"
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+	resource.ParallelTest(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -74,10 +77,10 @@ func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 
 func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+	resource.ParallelTest(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basicWithoutSecretKey(backend),
@@ -101,10 +104,10 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 
 func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccAWSAuthBackendClientConfigSTSRegionNoEndpoint(backend),
@@ -114,13 +117,46 @@ func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 	})
 }
 
-func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+		},
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend, false),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAWSAuthBackendClientCheck_attrs(backend),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", useSTSRegionFromClient, "false"),
+				),
+			},
+			{
+				Config: testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend, true),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAWSAuthBackendClientCheck_attrs(backend),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", useSTSRegionFromClient, "true"),
+				),
+			},
+			testutil.GetImportTestStep("vault_aws_auth_backend_client.client", false, nil),
+		},
+	})
+}
 
+func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_client" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("error checking for AWS auth backend %q client config: %s", rs.Primary.ID, err)
@@ -150,7 +186,11 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			return fmt.Errorf("expected ID to be %q, got %q", "auth/"+backend+"/config/client", endpoint)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back AWS auth client config from %q: %s", endpoint, err)
@@ -274,4 +314,19 @@ resource "vault_aws_auth_backend_client" "client" {
   sts_region = "vault-test"
   iam_server_id_header_value = "vault.test"
 }`, backend)
+}
+
+func testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend string, useSTSRegionFromClient bool) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  access_key = "AWSACCESSKEY"
+  use_sts_region_from_client = %v
+}`, backend, useSTSRegionFromClient)
 }

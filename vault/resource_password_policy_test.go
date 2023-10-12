@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,17 +10,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccPasswordPolicy(t *testing.T) {
 	policyName := acctest.RandomWithPrefix("test-policy")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccPasswordPolicyCheckDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccPasswordPolicyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPasswordPolicy(policyName, "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"),
@@ -41,9 +44,9 @@ func TestAccPasswordPolicy_import(t *testing.T) {
 	policyName := acctest.RandomWithPrefix("test-policy")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccPasswordPolicyCheckDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccPasswordPolicyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPasswordPolicy(policyName, "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"),
@@ -62,11 +65,16 @@ func TestAccPasswordPolicy_import(t *testing.T) {
 }
 
 func testAccPasswordPolicyCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_password_policy" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		name := rs.Primary.Attributes["name"]
 		data, err := client.Logical().Read(fmt.Sprintf("sys/policies/password/%s", name))
 		if err != nil {

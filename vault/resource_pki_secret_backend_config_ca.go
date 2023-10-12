@@ -1,28 +1,34 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func pkiSecretBackendConfigCAResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendConfigCACreate,
-		Read:   pkiSecretBackendConfigCARead,
-		Delete: pkiSecretBackendConfigCADelete,
+		CreateContext: pkiSecretBackendConfigCACreate,
+		ReadContext:   pkiSecretBackendConfigCARead,
+		DeleteContext: pkiSecretBackendConfigCADelete,
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
-			"pem_bundle": {
+			consts.FieldPemBundle: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The key and certificate PEM bundle.",
@@ -33,33 +39,37 @@ func pkiSecretBackendConfigCAResource() *schema.Resource {
 	}
 }
 
-func pkiSecretBackendConfigCACreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func pkiSecretBackendConfigCACreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
-	backend := d.Get("backend").(string)
+	backend := d.Get(consts.FieldBackend).(string)
 
 	path := pkiSecretBackendConfigCAPath(backend)
 
 	data := map[string]interface{}{
-		"pem_bundle": d.Get("pem_bundle").(string),
+		consts.FieldPemBundle: d.Get(consts.FieldPemBundle).(string),
 	}
 
 	log.Printf("[DEBUG] Creating CA config on PKI secret backend %q", backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating CA config for PKI secret backend %q: %s", backend, err)
+		return diag.Errorf("error creating CA config for PKI secret backend %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Created CA config on PKI secret backend %q", backend)
 
 	d.SetId(backend)
-	return pkiSecretBackendConfigCARead(d, meta)
+
+	return pkiSecretBackendConfigCARead(ctx, d, meta)
 }
 
-func pkiSecretBackendConfigCARead(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendConfigCARead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 
-func pkiSecretBackendConfigCADelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendConfigCADelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 

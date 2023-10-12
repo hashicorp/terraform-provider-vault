@@ -77,6 +77,11 @@ resource "vault_identity_group" "Internal" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required, Forces new resource) Name of the identity group to create.
 
 * `type` - (Optional, Forces new resource) Type of the group, internal or external. Defaults to `internal`.
@@ -89,9 +94,19 @@ The following arguments are supported:
 
 * `member_entity_ids` - (Optional) A list of Entity IDs to be assigned as group members. Not allowed on `external` groups.
 
-* `external_policies` - (Optional) `false` by default. If set to `true`, this resource will ignore any policies returned from Vault or specified in the resource. You can use [`vault_identity_group_policies`](identity_group_policies.html) to manage policies for this group in a decoupled manner.
+* `external_policies` - (Optional) `false` by default. If set to `true`, this resource will ignore any policies returned from
+  Vault or specified in the resource. You can use [`vault_identity_group_policies`](identity_group_policies.html) to manage
+  policies for this group in a decoupled manner.
 
-* `external_member_entity_ids` - (Optional) `false` by default. If set to `true`, this resource will ignore any Entity IDs returned from Vault or specified in the resource. You can use [`vault_identity_group_member_entity_ids`](identity_group_member_entity_ids.html) to manage Entity IDs for this group in a decoupled manner.
+* `external_member_entity_ids` - (Optional) `false` by default. If set to `true`, this resource will ignore any Entity IDs
+  returned from Vault or specified in the resource. You can use
+  [`vault_identity_group_member_entity_ids`](identity_group_member_entity_ids.html) to manage Entity IDs for this group in a
+  decoupled manner.
+
+* `external_member_group_ids` - (Optional) `false` by default. If set to `true`, this resource will ignore any Group IDs
+  returned from Vault or specified in the resource. You can use
+  [`vault_identity_group_member_group_ids`](identity_group_member_group_ids.html) to manage Group IDs for this group in a
+  decoupled manner.
 
 ## Attributes Reference
 

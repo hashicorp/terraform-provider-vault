@@ -1,6 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -8,20 +12,33 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const identityGroupPath = "/identity/group"
+const (
+	fieldExternalMemberGroupIDs = "external_member_group_ids"
+)
 
 func identityGroupResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityGroupCreate,
 		Update: identityGroupUpdate,
-		Read:   identityGroupRead,
+		Read:   provider.ReadWrapper(identityGroupRead),
 		Delete: identityGroupDelete,
-		Exists: identityGroupExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
+		},
+
+		SchemaVersion: 1,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    identityGroupExternalGroupIDsResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: identityGroupExternalGroupIDsUpgradeV0,
+			},
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -31,7 +48,6 @@ func identityGroupResource() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 			},
-
 			"type": {
 				Type:        schema.TypeString,
 				Description: "Type of the group, internal or external. Defaults to internal.",
@@ -39,8 +55,7 @@ func identityGroupResource() *schema.Resource {
 				Optional:    true,
 				Default:     "internal",
 			},
-
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "Metadata to be associated with the group.",
@@ -48,7 +63,6 @@ func identityGroupResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-
 			"policies": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -60,14 +74,12 @@ func identityGroupResource() *schema.Resource {
 					return d.Get("external_policies").(bool)
 				},
 			},
-
 			"external_policies": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
 				Description: "Manage policies externally through `vault_identity_group_policies`, allows using group ID in assigned policies.",
 			},
-
 			"member_group_ids": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -78,13 +90,12 @@ func identityGroupResource() *schema.Resource {
 				// Suppress the diff if group type is "external" because we cannot manage
 				// group members
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					if d.Get("type").(string) == "external" {
+					if d.Get("type").(string) == "external" || d.Get(fieldExternalMemberGroupIDs).(bool) == true {
 						return true
 					}
 					return false
 				},
 			},
-
 			"member_entity_ids": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -106,14 +117,21 @@ func identityGroupResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Manage member entities externally through `vault_identity_group_policies_member_entity_ids`",
+				Description: "Manage member entities externally through `vault_identity_group_member_entity_ids`",
+			},
+
+			fieldExternalMemberGroupIDs: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Manage member groups externally through `vault_identity_group_member_group_ids`",
 			},
 		},
 	}
 }
 
-func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface{}, create bool) error {
-	if create {
+func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface{}) error {
+	if d.IsNewResource() {
 		if name, ok := d.GetOk("name"); ok {
 			data["name"] = name
 		}
@@ -124,36 +142,40 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 
 		// Member groups and entities can't be set for external groups
 		if d.Get("type").(string) == "internal" {
-			data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
-
 			if externalMemberEntityIds, ok := d.GetOk("external_member_entity_ids"); !(ok && externalMemberEntityIds.(bool)) {
 				data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
 			}
+
+			externalMemberGroupIds := d.Get(fieldExternalMemberGroupIDs)
+			if !externalMemberGroupIds.(bool) {
+				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
+			}
 		}
 
-		if metadata, ok := d.GetOk("metadata"); ok {
+		if metadata, ok := d.GetOk(consts.FieldMetadata); ok {
 			data["metadata"] = metadata
 		}
 	} else {
 		if d.HasChanges("name", "external_policies", "policies", "metadata", "member_entity_ids", "member_group_ids") {
 			data["name"] = d.Get("name")
-			data["metadata"] = d.Get("metadata")
+			data["metadata"] = d.Get(consts.FieldMetadata)
 			data["policies"] = d.Get("policies").(*schema.Set).List()
 			// Member groups and entities can't be set for external groups
 			if d.Get("type").(string) == "internal" {
-				data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
-				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
+				if !d.Get("external_member_entity_ids").(bool) {
+					data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
+				}
+
+				if !d.Get(fieldExternalMemberGroupIDs).(bool) {
+					data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
+				}
 			}
+
 			// Edge case where if external_policies is true, no policies
 			// should be configured on the entity.
 			data["external_policies"] = d.Get("external_policies").(bool)
 			if data["external_policies"].(bool) {
 				data["policies"] = nil
-			}
-			// if external_member_entity_ids is true, member_entity_ids will be nil
-			data["external_member_entity_ids"] = d.Get("external_member_entity_ids").(bool)
-			if data["external_member_entity_ids"].(bool) {
-				data["member_entity_ids"] = nil
 			}
 		}
 	}
@@ -162,18 +184,21 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 }
 
 func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 	typeValue := d.Get("type").(string)
 
-	path := identityGroupPath
+	path := group.IdentityGroupPath
 
 	data := map[string]interface{}{
 		"type": typeValue,
 	}
 
-	if err := identityGroupUpdateFields(d, data, true); err != nil {
+	if err := identityGroupUpdateFields(d, data); err != nil {
 		return fmt.Errorf("error writing IdentityGroup to %q: %s", name, err)
 	}
 
@@ -202,18 +227,22 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroup %q", id)
-	path := identityGroupIDPath(id)
+	path := group.IdentityGroupIDPath(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := map[string]interface{}{}
 
-	if err := identityGroupUpdateFields(d, data, false); err != nil {
+	if err := identityGroupUpdateFields(d, data); err != nil {
 		return fmt.Errorf("error updating IdentityGroup %q: %s", id, err)
 	}
 
@@ -227,22 +256,27 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
-	resp, err := readIdentityGroup(client, id, d.IsNewResource())
+	log.Printf("[DEBUG] Read IdentityGroup %s", id)
+	resp, err := group.ReadIdentityGroup(client, id, d.IsNewResource())
 	if err != nil {
 		// We need to check if the secret_id has expired
 		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
+
+		if group.IsIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityGroup %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
 		return fmt.Errorf("error reading IdentityGroup %q: %s", id, err)
-	}
-	log.Printf("[DEBUG] Read IdentityGroup %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityGroup %q not found, removing from state", id)
-		d.SetId("")
-		return nil
 	}
 
 	readFields := []string{"name", "type", "metadata", "member_entity_ids", "member_group_ids", "policies"}
@@ -256,13 +290,17 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
-	path := identityGroupIDPath(id)
+	path := group.IdentityGroupIDPath(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	log.Printf("[DEBUG] Deleting IdentityGroup %q", id)
 	_, err := client.Logical().Delete(path)
@@ -274,36 +312,12 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func identityGroupExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-	id := d.Id()
-	key := id
-
-	if len(id) == 0 {
-		return false, nil
-	} else {
-		key = d.Get("name").(string)
-	}
-
-	log.Printf("[DEBUG] Checking if IdentityGroup %q exists", key)
-	resp, err := readIdentityGroup(client, id, true)
-	if err != nil {
-		return true, fmt.Errorf("error checking if IdentityGroup %q exists: %s", key, err)
-	}
-	log.Printf("[DEBUG] Checked if IdentityGroup %q exists", key)
-	return resp != nil, nil
-}
-
 func identityGroupNamePath(name string) string {
-	return fmt.Sprintf("%s/name/%s", identityGroupPath, name)
-}
-
-func identityGroupIDPath(id string) string {
-	return fmt.Sprintf("%s/id/%s", identityGroupPath, id)
+	return fmt.Sprintf("%s/name/%s", group.IdentityGroupPath, name)
 }
 
 func readIdentityGroupPolicies(client *api.Client, groupID string, retry bool) ([]interface{}, error) {
-	resp, err := readIdentityGroup(client, groupID, retry)
+	resp, err := group.ReadIdentityGroup(client, groupID, retry)
 	if err != nil {
 		return nil, err
 	}
@@ -315,12 +329,9 @@ func readIdentityGroupPolicies(client *api.Client, groupID string, retry bool) (
 }
 
 func readIdentityGroupMemberEntityIds(client *api.Client, groupID string, retry bool) ([]interface{}, error) {
-	resp, err := readIdentityGroup(client, groupID, retry)
+	resp, err := group.ReadIdentityGroup(client, groupID, retry)
 	if err != nil {
 		return nil, err
-	}
-	if resp == nil {
-		return nil, fmt.Errorf("error IdentityGroup %s does not exist", groupID)
 	}
 
 	if v, ok := resp.Data["member_entity_ids"]; ok && v != nil {
@@ -329,10 +340,25 @@ func readIdentityGroupMemberEntityIds(client *api.Client, groupID string, retry 
 	return make([]interface{}, 0), nil
 }
 
-// This function may return `nil` for the IdentityGroup if it does not exist
-func readIdentityGroup(client *api.Client, groupID string, retry bool) (*api.Secret, error) {
-	path := identityGroupIDPath(groupID)
-	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", groupID, path)
+func identityGroupExternalGroupIDsResourceV0() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			fieldExternalMemberGroupIDs: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Manage member groups externally through `vault_identity_group_member_group_ids`",
+			},
+		},
+	}
+}
 
-	return readEntity(client, path, retry)
+func identityGroupExternalGroupIDsUpgradeV0(
+	_ context.Context, rawState map[string]interface{}, _ interface{},
+) (map[string]interface{}, error) {
+	if rawState[fieldExternalMemberGroupIDs] == nil {
+		rawState[fieldExternalMemberGroupIDs] = false
+	}
+
+	return rawState, nil
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,7 +9,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func quotaLeaseCountPath(name string) string {
@@ -16,7 +21,7 @@ func quotaLeaseCountPath(name string) string {
 func quotaLeaseCountResource() *schema.Resource {
 	return &schema.Resource{
 		Create: quotaLeaseCountCreate,
-		Read:   quotaLeaseCountRead,
+		Read:   provider.ReadWrapper(quotaLeaseCountRead),
 		Update: quotaLeaseCountUpdate,
 		Delete: quotaLeaseCountDelete,
 		Exists: quotaLeaseCountExists,
@@ -31,7 +36,7 @@ func quotaLeaseCountResource() *schema.Resource {
 				Description: "The name of the quota.",
 				ForceNew:    true,
 			},
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    false,
@@ -44,12 +49,20 @@ func quotaLeaseCountResource() *schema.Resource {
 				Description:  "The maximum number of leases to be allowed by the quota rule. The max_leases must be positive.",
 				ValidateFunc: validation.IntAtLeast(0),
 			},
+			consts.FieldRole: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "If set on a quota where path is set to an auth mount with a concept of roles (such as /auth/approle/), this will make the quota restrict login requests to that mount that are made with the specified role.",
+			},
 		},
 	}
 }
 
 func quotaLeaseCountCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 	path := quotaLeaseCountPath(name)
@@ -60,6 +73,12 @@ func quotaLeaseCountCreate(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
 	data["max_leases"] = d.Get("max_leases").(int)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := d.GetOk(consts.FieldRole); ok {
+			data[consts.FieldRole] = v
+		}
+	}
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -72,7 +91,10 @@ func quotaLeaseCountCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 	path := quotaLeaseCountPath(name)
@@ -89,7 +111,12 @@ func quotaLeaseCountRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"path", "max_leases"} {
+	fields := []string{"path", "max_leases", "name"}
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		fields = append(fields, consts.FieldRole)
+	}
+
+	for _, k := range fields {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
@@ -102,7 +129,10 @@ func quotaLeaseCountRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 	path := quotaLeaseCountPath(name)
@@ -110,8 +140,14 @@ func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating Resource Lease Count Quota %s", name)
 
 	data := map[string]interface{}{}
-	data["path"] = d.Get("path").(string)
+	data["path"] = d.Get(consts.FieldPath).(string)
 	data["max_leases"] = d.Get("max_leases").(int)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := d.GetOk(consts.FieldRole); ok {
+			data[consts.FieldRole] = v
+		}
+	}
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -124,7 +160,10 @@ func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 	path := quotaLeaseCountPath(name)
@@ -140,7 +179,10 @@ func quotaLeaseCountDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	name := d.Id()
 	path := quotaLeaseCountPath(name)

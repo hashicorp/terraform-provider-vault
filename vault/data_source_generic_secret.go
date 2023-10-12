@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -8,48 +11,57 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func genericSecretDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: genericSecretDataSourceRead,
+		Read: provider.ReadWrapper(genericSecretDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Full path from which a secret will be read.",
 			},
 
-			"version": {
+			consts.FieldVersion: {
 				Type:     schema.TypeInt,
 				Required: false,
 				Optional: true,
 				Default:  latestSecretVersion,
 			},
 
-			"data_json": {
+			"with_lease_start_time": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+				Description: "If set to true, stores 'lease_start_time' " +
+					"in the TF state.",
+			},
+
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "JSON-encoded secret data read from Vault.",
 				Sensitive:   true,
 			},
 
-			"data": {
+			consts.FieldData: {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "Map of strings read from Vault.",
 				Sensitive:   true,
 			},
 
-			"lease_id": {
+			consts.FieldLeaseID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Lease identifier assigned by vault.",
 			},
 
-			"lease_duration": {
+			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Lease duration in seconds relative to the time in lease_start_time.",
@@ -61,7 +73,7 @@ func genericSecretDataSource() *schema.Resource {
 				Description: "Time at which the lease was read, using the clock of the system where Terraform was running",
 			},
 
-			"lease_renewable": {
+			consts.FieldLeaseRenewable: {
 				Type:        schema.TypeBool,
 				Computed:    true,
 				Description: "True if the duration of this lease can be extended through renewal.",
@@ -71,7 +83,10 @@ func genericSecretDataSource() *schema.Resource {
 }
 
 func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 
@@ -91,7 +106,9 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 	// Ignoring error because this value came from JSON in the
 	// first place so no reason why it should fail to re-encode.
 	jsonDataBytes, _ := json.Marshal(secret.Data)
-	d.Set("data_json", string(jsonDataBytes))
+	if err := d.Set(consts.FieldDataJSON, string(jsonDataBytes)); err != nil {
+		return err
+	}
 
 	// Since our "data" map can only contain string values, we
 	// will take strings from Data and write them in as-is,
@@ -109,12 +126,28 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 			dataMap[k] = string(vBytes)
 		}
 	}
-	d.Set("data", dataMap)
+	if err := d.Set("data", dataMap); err != nil {
+		return err
+	}
 
-	d.Set("lease_id", secret.LeaseID)
-	d.Set("lease_duration", secret.LeaseDuration)
-	d.Set("lease_start_time", time.Now().UTC().Format(time.RFC3339))
-	d.Set("lease_renewable", secret.Renewable)
+	if err := d.Set(consts.FieldLeaseID, secret.LeaseID); err != nil {
+		return err
+	}
 
+	if err := d.Set(consts.FieldLeaseDuration, secret.LeaseDuration); err != nil {
+		return err
+	}
+
+	if err := d.Set(consts.FieldLeaseRenewable, secret.Renewable); err != nil {
+		return err
+	}
+
+	if v, ok := d.GetOkExists("with_lease_start_time"); ok {
+		if v.(bool) {
+			if err := d.Set("lease_start_time", time.Now().UTC().Format(time.RFC3339)); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }

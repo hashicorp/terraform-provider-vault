@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,8 +8,10 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -14,7 +19,7 @@ func identityEntityPoliciesResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityEntityPoliciesUpdate,
 		Update: identityEntityPoliciesUpdate,
-		Read:   identityEntityPoliciesRead,
+		Read:   provider.ReadWrapper(identityEntityPoliciesRead),
 		Delete: identityEntityPoliciesDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -50,14 +55,18 @@ func identityEntityPoliciesResource() *schema.Resource {
 }
 
 func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("entity_id").(string)
 
 	log.Printf("[DEBUG] Updating IdentityEntityPolicies %q", id)
-	path := identityEntityIDPath(id)
+	path := entity.JoinEntityID(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 	policies := d.Get("policies").(*schema.Set).List()
@@ -94,18 +103,22 @@ func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
+	log.Printf("[DEBUG] Read IdentityEntityPolicies %s", id)
 	resp, err := readIdentityEntity(client, id, d.IsNewResource())
 	if err != nil {
+		if group.IsIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityEntityPolicies %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
 		return err
-	}
-	log.Printf("[DEBUG] Read IdentityEntityPolicies %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityEntityPolicies %q not found, removing from state", id)
-		d.SetId("")
-		return nil
 	}
 
 	d.Set("entity_id", id)
@@ -133,14 +146,18 @@ func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("entity_id").(string)
 
 	log.Printf("[DEBUG] Deleting IdentityEntityPolicies %q", id)
-	path := identityEntityIDPath(id)
+	path := entity.JoinEntityID(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 
@@ -149,6 +166,9 @@ func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) erro
 	} else {
 		apiPolicies, err := readIdentityEntityPolicies(client, id)
 		if err != nil {
+			if group.IsIdentityNotFoundError(err) {
+				return nil
+			}
 			return err
 		}
 		for _, policy := range d.Get("policies").(*schema.Set).List() {

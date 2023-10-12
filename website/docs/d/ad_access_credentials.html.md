@@ -8,6 +8,9 @@ description: |-
 
 # vault\_ad\_access\_credentials
 
+~> **Note** This data source is replaced by "vault_ldap_static_credentials" and
+will be removed in the next major release.
+
 Reads Active Directory credentials from an AD secret backend in Vault.
 
 ~> **Important** All data retrieved from Vault will be
@@ -47,6 +50,11 @@ data "vault_ad_access_credentials" "creds" {
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path to the AD secret backend to
 read credentials from, with no leading or trailing `/`s.

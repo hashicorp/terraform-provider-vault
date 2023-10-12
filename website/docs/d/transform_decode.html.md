@@ -43,6 +43,11 @@ data "vault_transform_decode_role" "test" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  *Available only for Vault Enterprise*.
+
 * `path` - (Required) Path to where the back-end is mounted within Vault.
 * `batch_input` - (Optional) Specifies a list of items to be decoded in a single batch. If this parameter is set, the top-level parameters 'value', 'transformation' and 'tweak' will be ignored. Each batch item within the list can specify these parameters instead.
 * `batch_results` - (Optional) The result of decoding a batch.

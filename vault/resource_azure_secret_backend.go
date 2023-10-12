@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,23 +10,27 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func azureSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: azureSecretBackendCreate,
-		Read:   azureSecretBackendRead,
+		Read:   provider.ReadWrapper(azureSecretBackendRead),
 		Update: azureSecretBackendUpdate,
 		Delete: azureSecretBackendDelete,
 		Exists: azureSecretBackendExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "azure",
 				Description: "Path to mount the backend at.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -80,11 +87,14 @@ func azureSecretBackendResource() *schema.Resource {
 				Description: "The Azure cloud environment. Valid values: AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud, AzureGermanCloud.",
 			},
 		},
-	}
+	}, false)
 }
 
 func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
@@ -105,7 +115,7 @@ func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(path)
 
 	log.Printf("[DEBUG] Writing Azure configuration to %q", configPath)
-	data := azureSecretBackendRequestData(d)
+	data := azureSecretBackendRequestData(d, meta)
 	if _, err := client.Logical().Write(configPath, data); err != nil {
 		return fmt.Errorf("error writing Azure configuration for %q: %s", path, err)
 	}
@@ -116,7 +126,10 @@ func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -142,9 +155,19 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	for _, k := range []string{"client_id", "subscription_id", "tenant_id", "use_microsoft_graph_api"} {
+	for _, k := range []string{"client_id", "subscription_id", "tenant_id"} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
+				return err
+			}
+		}
+	}
+
+	skipMSGraphAPI := provider.IsAPISupported(meta, provider.VaultVersion112)
+
+	if !skipMSGraphAPI {
+		if v, ok := resp.Data["use_microsoft_graph_api"]; ok {
+			if err := d.Set("use_microsoft_graph_api", v); err != nil {
 				return err
 			}
 		}
@@ -172,11 +195,19 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
-	data := azureSecretBackendRequestData(d)
+	path, err := util.Remount(d, client, consts.FieldPath, false)
+	if err != nil {
+		return err
+	}
+
+	data := azureSecretBackendRequestData(d, meta)
 	if len(data) > 0 {
 		_, err := client.Logical().Write(azureSecretBackendPath(path), data)
 		if err != nil {
@@ -189,7 +220,10 @@ func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -203,7 +237,11 @@ func azureSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if Azure backend exists at %q", path)
 	mounts, err := client.Sys().ListMounts()
@@ -219,14 +257,25 @@ func azureSecretBackendPath(path string) string {
 	return strings.Trim(path, "/") + "/config"
 }
 
-func azureSecretBackendRequestData(d *schema.ResourceData) map[string]interface{} {
+func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map[string]interface{} {
 	fields := []string{
 		"client_id",
 		"environment",
 		"tenant_id",
 		"client_secret",
-		"use_microsoft_graph_api",
 		"subscription_id",
+	}
+
+	skipMSGraphAPI := provider.IsAPISupported(meta, provider.VaultVersion112)
+
+	if _, ok := d.GetOk("use_microsoft_graph_api"); ok {
+		if skipMSGraphAPI {
+			log.Printf("ignoring this field because Vault version is greater than 1.12")
+		}
+	}
+
+	if !skipMSGraphAPI {
+		fields = append(fields, "use_microsoft_graph_api")
 	}
 
 	data := make(map[string]interface{})

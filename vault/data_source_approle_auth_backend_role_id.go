@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,12 +9,13 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func approleAuthBackendRoleIDDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: approleAuthBackendRoleIDRead,
+		Read: provider.ReadWrapper(approleAuthBackendRoleIDRead),
 
 		Schema: map[string]*schema.Schema{
 			"role_name": {
@@ -41,7 +45,10 @@ func approleAuthBackendRoleIDDataSource() *schema.Resource {
 }
 
 func approleAuthBackendRoleIDRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := approleAuthBackendRolePath(d.Get("backend").(string), d.Get("role_name").(string))
 

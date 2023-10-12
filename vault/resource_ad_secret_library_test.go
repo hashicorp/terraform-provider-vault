@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -17,9 +20,9 @@ func TestAccADSecretBackendLibrary_basic(t *testing.T) {
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccADSecretBackendLibraryCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccADSecretBackendLibraryCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testADSecretBackendLibraryConfig(backend, bindDN, bindPass, url, "qa", `"Bob","Mary"`, 60, 120, false),
@@ -51,9 +54,9 @@ func TestAccADSecretBackendLibrary_import(t *testing.T) {
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccADSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccADSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testADSecretBackendLibraryConfig(backend, bindDN, bindPass, url, "qa", `"Bob","Mary"`, 60, 120, false),
@@ -76,12 +79,16 @@ func TestAccADSecretBackendLibrary_import(t *testing.T) {
 }
 
 func testAccADSecretBackendLibraryCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ad_secret_library" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return err

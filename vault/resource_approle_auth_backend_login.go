@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,14 +10,17 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func approleAuthBackendLoginResource() *schema.Resource {
 	return &schema.Resource{
 		Create: approleAuthBackendLoginCreate,
-		Read:   approleAuthBackendLoginRead,
+		Read:   provider.ReadWrapper(approleAuthBackendLoginRead),
 		Delete: approleAuthBackendLoginDelete,
 		Exists: approleAuthBackendLoginExists,
 
@@ -30,6 +36,7 @@ func approleAuthBackendLoginResource() *schema.Resource {
 				Optional:    true,
 				Description: "The SecretID to log in with.",
 				ForceNew:    true,
+				Sensitive:   true,
 			},
 			"policies": {
 				Type:     schema.TypeList,
@@ -44,7 +51,7 @@ func approleAuthBackendLoginResource() *schema.Resource {
 				Computed:    true,
 				Description: "Whether the token is renewable or not.",
 			},
-			"lease_duration": {
+			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "How long the token is valid for.",
@@ -63,8 +70,9 @@ func approleAuthBackendLoginResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The token.",
+				Sensitive:   true,
 			},
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "Metadata associated with the token.",
@@ -88,7 +96,10 @@ func approleAuthBackendLoginResource() *schema.Resource {
 }
 
 func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 
@@ -116,7 +127,10 @@ func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) err
 }
 
 func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	log.Printf("[DEBUG] Reading token %q", d.Id())
 	resp, err := client.Auth().Token().LookupAccessor(d.Id())
@@ -135,7 +149,7 @@ func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[DEBUG] Read token %q", d.Id())
 	if leaseExpiringSoon(d, client) {
 		log.Printf("[DEBUG] Lease for %q expiring soon, renewing", d.Id())
-		renewed, err := client.Auth().Token().Renew(d.Get("client_token").(string), d.Get("lease_duration").(int))
+		renewed, err := client.Auth().Token().Renew(d.Get("client_token").(string), d.Get(consts.FieldLeaseDuration).(int))
 		if err != nil {
 			log.Printf("[DEBUG] Error renewing token %q, bailing", d.Id())
 		} else {
@@ -148,14 +162,18 @@ func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error
 
 	d.Set("policies", resp.Data["policies"])
 	d.Set("renewable", resp.Data["renewable"])
-	d.Set("lease_duration", resp.Data["lease_duration"])
-	d.Set("metadata", resp.Data["metadata"])
+	d.Set(consts.FieldLeaseDuration, resp.Data["lease_duration"])
+	d.Set(consts.FieldMetadata, resp.Data["metadata"])
 	d.Set("accessor", resp.Data["accessor"])
 	return nil
 }
 
 func approleAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Revoking token %q", accessor)
@@ -169,7 +187,11 @@ func approleAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func approleAuthBackendLoginExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Checking if token %q exists", accessor)
@@ -190,7 +212,7 @@ func approleAuthBackendLoginPath(backend string) string {
 
 func leaseExpiringSoon(d *schema.ResourceData, client *api.Client) bool {
 	startedStr := d.Get("lease_started").(string)
-	duration := d.Get("lease_duration").(int)
+	duration := d.Get(consts.FieldLeaseDuration).(int)
 	if startedStr == "" {
 		return false
 	}

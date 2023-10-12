@@ -1,32 +1,31 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccResourceTerraformCloudSecretCredsOrganizationBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
-	token := os.Getenv("TEST_TF_TOKEN")
-	organization := os.Getenv("TEST_TF_ORGANIZATION")
+	vals := testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN", "TEST_TF_ORGANIZATION")
+	token, organization := vals[0], vals[1]
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			if token == "" || organization == "" {
-				t.Skipf("TEST_TF_TOKEN and TEST_TF_ORGANIZATION must be set. Are currently %s and %s respectively", token, organization)
-			}
 		},
 		CheckDestroy: testAccResourceTerraformCloudSecretCredsCheckDestroy,
 		Steps: []resource.TestStep{
@@ -45,22 +44,18 @@ func TestAccResourceTerraformCloudSecretCredsOrganizationBasic(t *testing.T) {
 func TestAccResourceTerraformCloudSecretCredsTeamBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
-	token := os.Getenv("TEST_TF_TOKEN")
-	organization := os.Getenv("TEST_TF_ORGANIZATION")
-	teamId := os.Getenv("TEST_TF_TEAM_ID")
+	vals := testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN", "TEST_TF_ORGANIZATION", "TEST_TF_TEAM_ID")
+	token, organization, teamID := vals[0], vals[1], vals[2]
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			if token == "" || organization == "" || teamId == "" {
-				t.Skipf("TEST_TF_TOKEN, TEST_TF_ORGANIZATION, and TEST_TF_TEAM_ID must be set. Are currently %s, %s and %s respectively", token, organization, teamId)
-			}
 		},
 		CheckDestroy: testAccResourceTerraformCloudSecretCredsCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceTerraformCloudSecretCredsTeamConfig(backend, token, name, organization, teamId),
+				Config: testAccResourceTerraformCloudSecretCredsTeamConfig(backend, token, name, organization, teamID),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "token"),
 					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "token_id"),
@@ -75,21 +70,18 @@ func TestAccResourceTerraformCloudSecretCredsTeamBasic(t *testing.T) {
 func TestAccResourceTerraformCloudSecretCredsUserBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
-	token := os.Getenv("TEST_TF_TOKEN")
-	userId := os.Getenv("TEST_TF_USER_ID")
+	vals := testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN", "TEST_TF_USER_ID")
+	token, userID := vals[0], vals[1]
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			if token == "" || userId == "" {
-				t.Skipf("TEST_TF_TOKEN and TEST_TF_USER_ID must be set. Are currently %s and %s respectively", token, userId)
-			}
 		},
 		CheckDestroy: testAccResourceTerraformCloudSecretCredsCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceTerraformCloudSecretCredsUserConfig(backend, token, name, userId),
+				Config: testAccResourceTerraformCloudSecretCredsUserConfig(backend, token, name, userID),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "token"),
 					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "token_id"),
@@ -164,12 +156,16 @@ resource "vault_terraform_cloud_secret_creds" "token" {
 }
 
 func testAccResourceTerraformCloudSecretCredsCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_terraform_cloud_secret_creds" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return err

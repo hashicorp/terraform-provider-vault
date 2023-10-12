@@ -38,6 +38,11 @@ resource "vault_aws_auth_backend_sts_role" "role" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `account_id` - (Optional) The AWS account ID to configure the STS role for.
 
 * `sts_role` - (Optional) The STS role to assume when verifying requests made

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package codegen
 
 import (
@@ -35,7 +38,7 @@ var (
 )
 
 func newTemplateHandler(logger hclog.Logger) (*templateHandler, error) {
-	homeDirPath, err := pathToHomeDir()
+	repoRoot, err := getRepoRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +47,7 @@ func newTemplateHandler(logger hclog.Logger) (*templateHandler, error) {
 	// cache them to be used repeatedly.
 	templates := make(map[templateType]*template.Template, len(templateRegistry))
 	for tmplType, pathFromHomeDir := range templateRegistry {
-		pathToFile := filepath.Join(homeDirPath, pathFromHomeDir)
+		pathToFile := filepath.Join(repoRoot, pathFromHomeDir)
 		templateBytes, err := ioutil.ReadFile(pathToFile)
 		if err != nil {
 			return nil, errwrap.Wrapf("error reading "+pathToFile+": {{err}}", err)

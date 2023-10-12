@@ -1,37 +1,35 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestTerraformCloudSecretRole(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-backend")
 	name := acctest.RandomWithPrefix("tf-test-name")
-	token := os.Getenv("TEST_TF_TOKEN")
-	teamId := os.Getenv("TEST_TF_TEAM_ID")
-	userId := os.Getenv("TEST_TF_USER_ID")
 	organization := "hashicorp-vault-testing"
+	vals := testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN", "TEST_TF_TEAM_ID", "TEST_TF_USER_ID")
+	token, teamID, userID := vals[0], vals[1], vals[2]
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			if token == "" || teamId == "" || userId == "" {
-				t.Skip("TEST_TF_TOKEN, TEST_TF_TEAM_ID and TEST_TF_USER_ID must be set.")
-			}
 		},
 		CheckDestroy: testAccTerraformCloudSecretRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testTerraformCloudSecretRole_initialConfig(backend, token, name, organization, teamId, userId),
+				Config: testTerraformCloudSecretRole_initialConfig(backend, token, name, organization, teamID, userID),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_org", "name", name),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_org", "organization", organization),
@@ -40,18 +38,18 @@ func TestTerraformCloudSecretRole(t *testing.T) {
 
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "name", name+"_team_id"),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "organization", organization),
-					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "team_id", teamId),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "team_id", teamID),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "ttl", "0"),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "max_ttl", "0"),
 
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "name", name+"_user_id"),
-					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "user_id", userId),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "user_id", userID),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "ttl", "0"),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "max_ttl", "0"),
 				),
 			},
 			{
-				Config: testTerraformCloudSecretRole_updateConfig(backend, token, name, organization, teamId, userId),
+				Config: testTerraformCloudSecretRole_updateConfig(backend, token, name, organization, teamID, userID),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_org", "name", name),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_org", "organization", organization),
@@ -60,12 +58,12 @@ func TestTerraformCloudSecretRole(t *testing.T) {
 
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "name", name+"_team_id"),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "organization", organization),
-					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "team_id", teamId),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "team_id", teamID),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "ttl", "120"),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "max_ttl", "0"),
 
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "name", name+"_user_id"),
-					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "user_id", userId),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "user_id", userID),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "ttl", "120"),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "max_ttl", "0"),
 				),
@@ -75,12 +73,16 @@ func TestTerraformCloudSecretRole(t *testing.T) {
 }
 
 func testAccTerraformCloudSecretRoleCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_terraform_cloud_secret_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return err

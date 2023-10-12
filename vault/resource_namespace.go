@@ -1,49 +1,67 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func namespaceResource() *schema.Resource {
 	return &schema.Resource{
-		Create: namespaceWrite,
-		Update: namespaceWrite,
+		Create: namespaceCreate,
+		Update: namespaceCreate,
 		Delete: namespaceDelete,
-		Read:   namespaceRead,
+		Read:   provider.ReadWrapper(namespaceRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:         schema.TypeString,
 				Required:     true,
-				Description:  "Path of the namespace.",
-				ValidateFunc: validateNoTrailingSlash,
+				ForceNew:     true,
+				Description:  "Namespace path.",
+				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
-
-			"namespace_id": {
+			consts.FieldNamespaceID: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the namepsace.",
+				Description: "Namespace ID.",
+			},
+			consts.FieldPathFQ: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "The fully qualified namespace path.",
 			},
 		},
 	}
 }
 
-func namespaceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func namespaceCreate(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Creating namespace %s in Vault", path)
-	_, err := client.Logical().Write("sys/namespaces/"+path, nil)
-
+	_, err := client.Logical().Write(consts.SysNamespaceRoot+path, nil)
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -52,30 +70,65 @@ func namespaceWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Deleting namespace %s from Vault", path)
 
-	_, err := client.Logical().Delete("sys/namespaces/" + path)
+	deleteNS := func() error {
+		if _, err := client.Logical().Delete(consts.SysNamespaceRoot + path); err != nil {
+			// child namespaces exist under path "test-namespace-2161440981046539760/", cannot remove
+			if respErr, ok := err.(*api.ResponseError); ok && (respErr.StatusCode == http.StatusBadRequest) {
+				return err
+			} else {
+				return backoff.Permanent(err)
+			}
+		}
 
-	if err != nil {
+		return nil
+	}
+
+	// on vault-1.10+ the deletion of namespaces seems to be asynchronous which can lead to errors like:
+	// child namespaces exist under path "test-namespace-2161440981046539760/", cannot remove'
+	// we can retry the deletion in this case
+	bo := backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Millisecond*500), 10)
+	if err := backoff.RetryNotify(deleteNS, bo, func(err error, duration time.Duration) {
+		log.Printf("[WARN] Deleting namespace %q failed, retrying in %s", path, duration)
+	}); err != nil {
 		return fmt.Errorf("error deleting from Vault: %s", err)
 	}
 
-	return nil
+	// wait for the namespace to be gone...
+	return backoff.RetryNotify(func() error {
+		if resp, _ := client.Logical().Read(consts.SysNamespaceRoot + path); resp != nil {
+			return fmt.Errorf("namespace %q still exists", path)
+		}
+		return nil
+	},
+		bo,
+		func(err error, duration time.Duration) {
+			log.Printf(
+				"[WARN] Waiting for Vault to garbage collect the %q namespace, retrying in %s",
+				path, duration)
+		},
+	)
 }
 
 func namespaceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	upgradeNonPathdNamespaceID(d)
 
 	path := d.Id()
 
-	resp, err := client.Logical().Read("sys/namespaces/" + path)
-
+	resp, err := client.Logical().Read(consts.SysNamespaceRoot + path)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
@@ -86,11 +139,22 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	d.SetId(resp.Data["path"].(string))
-	d.Set("namespace_id", resp.Data["id"])
+	d.SetId(resp.Data[consts.FieldPath].(string))
 
-	noTrailingSlashPath := strings.TrimSuffix(path, "/")
-	d.Set("path", noTrailingSlashPath)
+	toSet := map[string]interface{}{
+		consts.FieldNamespaceID: resp.Data["id"],
+		consts.FieldPath:        util.TrimSlashes(path),
+	}
+
+	pathFQ := path
+	if parent, ok := d.GetOk(consts.FieldNamespace); ok {
+		pathFQ = strings.Join([]string{parent.(string), path}, "/")
+	}
+	toSet[consts.FieldPathFQ] = pathFQ
+
+	if err := util.SetResourceData(d, toSet); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -99,11 +163,11 @@ func upgradeNonPathdNamespaceID(d *schema.ResourceData) {
 	// Upgrade ID to path
 	id := d.Id()
 	oldID := d.Id()
-	path, ok := d.GetOk("path")
+	path, ok := d.GetOk(consts.FieldPath)
 	if id != path && ok {
 		log.Printf("[DEBUG] Upgrading old ID to path - %s to %s", id, path)
 		d.SetId(path.(string))
 		log.Printf("[DEBUG] Setting namespace_id to old ID - %s", oldID)
-		d.Set("namespace_id", oldID)
+		d.Set(consts.FieldNamespaceID, oldID)
 	}
 }

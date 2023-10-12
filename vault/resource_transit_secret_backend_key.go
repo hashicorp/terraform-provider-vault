@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -11,7 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -22,7 +26,7 @@ var (
 func transitSecretBackendKeyResource() *schema.Resource {
 	return &schema.Resource{
 		Create: transitSecretBackendKeyCreate,
-		Read:   transitSecretBackendKeyRead,
+		Read:   provider.ReadWrapper(transitSecretBackendKeyRead),
 		Update: transitSecretBackendKeyUpdate,
 		Delete: transitSecretBackendKeyDelete,
 		Exists: transitSecretBackendKeyExists,
@@ -74,13 +78,28 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Description: "If set, enables taking backup of named key in the plaintext format. Once set, this cannot be disabled.",
 				Default:     false,
 			},
+			"auto_rotate_interval": {
+				Type:          schema.TypeInt,
+				Optional:      true,
+				Computed:      true,
+				Deprecated:    "Use auto_rotate_period instead",
+				Description:   "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
+				ConflictsWith: []string{"auto_rotate_period"},
+			},
+			"auto_rotate_period": {
+				Type:          schema.TypeInt,
+				Optional:      true,
+				Computed:      true,
+				Description:   "Amount of seconds the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
+				ConflictsWith: []string{"auto_rotate_interval"},
+			},
 			"type": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Description:  "Specifies the type of key to create. The currently-supported types are: aes128-gcm96, aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, ecdsa-p384, ecdsa-p521, rsa-2048, rsa-3072, rsa-4096",
+				Description:  "Specifies the type of key to create. The currently-supported types are: aes128-gcm96, aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, ecdsa-p384, ecdsa-p521, hmac, rsa-2048, rsa-3072, rsa-4096",
 				ForceNew:     true,
 				Default:      "aes256-gcm96",
-				ValidateFunc: validation.StringInSlice([]string{"aes128-gcm96", "aes256-gcm96", "chacha20-poly1305", "ed25519", "ecdsa-p256", "ecdsa-p384", "ecdsa-p521", "rsa-2048", "rsa-3072", "rsa-4096"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"aes128-gcm96", "aes256-gcm96", "chacha20-poly1305", "ed25519", "ecdsa-p256", "ecdsa-p384", "ecdsa-p521", "hmac", "rsa-2048", "rsa-3072", "rsa-4096"}, false),
 			},
 			"keys": {
 				Type:        schema.TypeList,
@@ -90,6 +109,12 @@ func transitSecretBackendKeyResource() *schema.Resource {
 					Type: schema.TypeMap,
 					Elem: schema.TypeString,
 				},
+			},
+			"key_size": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The key size in bytes for algorithms that allow variable key sizes. Currently only applicable to HMAC; this value must be between 32 and 512.",
+				Default:     0,
 			},
 			"latest_version": {
 				Type:        schema.TypeInt,
@@ -177,31 +202,41 @@ func transitSecretBackendKeyResource() *schema.Resource {
 }
 
 func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
 
 	path := transitSecretBackendKeyPath(backend, name)
 
+	autoRotatePeriod := getTransitAutoRotatePeriod(d)
 	configData := map[string]interface{}{
 		"min_decryption_version": d.Get("min_decryption_version").(int),
 		"min_encryption_versoin": d.Get("min_encryption_version").(int),
 		"deletion_allowed":       d.Get("deletion_allowed").(bool),
 		"exportable":             d.Get("exportable").(bool),
 		"allow_plaintext_backup": d.Get("allow_plaintext_backup").(bool),
+		"auto_rotate_period":     autoRotatePeriod,
 	}
 
 	data := map[string]interface{}{
 		"convergent_encryption": d.Get("convergent_encryption").(bool),
 		"derived":               d.Get("derived").(bool),
 		"type":                  d.Get("type").(string),
+		"auto_rotate_period":    autoRotatePeriod,
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		data["key_size"] = d.Get("key_size").(int)
 	}
 
 	log.Printf("[DEBUG] Creating encryption key %s on transit secret backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating encryption key %s for transit secret backend %q: %s", name, backend, err)
+		return fmt.Errorf("error creating encryption key %s for transit secret backend %q: %s with key size %d", name, backend, err, d.Get("key_size").(int))
 	}
 	log.Printf("[DEBUG] Setting configuration for encryption key %s on transit secret backend %q", name, backend)
 	_, conferr := client.Logical().Write(path+"/config", configData)
@@ -214,8 +249,27 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 	return transitSecretBackendKeyRead(d, meta)
 }
 
+func getTransitAutoRotatePeriod(d *schema.ResourceData) int {
+	var autoRotatePeriod int
+	v, ok := d.GetOkExists("auto_rotate_period")
+	if !ok {
+		if v, ok := d.GetOkExists("auto_rotate_interval"); ok {
+			log.Printf("[WARN] Using auto_rotate_internal to set auto_rotate_period, " +
+				"please use auto_rotate_period instead")
+			autoRotatePeriod = v.(int)
+		}
+	} else {
+		autoRotatePeriod = v.(int)
+	}
+
+	return autoRotatePeriod
+}
+
 func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	backend, err := transitSecretBackendKeyBackendFromPath(path)
@@ -273,44 +327,106 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("expected min_encryption_version %q to be a number, and it isn't", secret.Data["min_encryption_version"])
 	}
 
-	ikeys := secret.Data["keys"].(map[string]interface{})
+	ikeys := secret.Data["keys"]
 	keys := []interface{}{}
-	for _, v := range ikeys {
-		// Data structure of "keys" differs depending on encryption key type. Sometimes it's a single integer hash,
-		// and other times it's a full map of values describing the key version's creation date, name, and public key.
+	if ikeys != nil || secret.Data["type"] != "hmac" { // hmac type does not return keys
+		ikeys := secret.Data["keys"].(map[string]interface{})
+		for _, v := range ikeys {
+			// Data structure of "keys" differs depending on encryption key type. Sometimes it's a single integer hash,
+			// and other times it's a full map of values describing the key version's creation date, name, and public key.
+			if sv, ok := v.(map[string]interface{}); ok { // for key types of rsa-2048, rsa-3072, rsa-4096, ed25519, ecdsa-p256, ecdsa-p384 or ecdsa-p521
+				keys = append(keys, sv)
+			} else if sv, ok := v.(json.Number); ok { // for key types of aes128-gcm96, aes256-gcm96 or chacha20-poly1305
+				m := make(map[string]interface{})
+				m["id"] = sv
+				keys = append(keys, m)
+			}
+		}
 
-		if sv, ok := v.(map[string]interface{}); ok { // for key types of rsa-2048, rsa-3072, rsa-4096, ed25519, ecdsa-p256, ecdsa-p384 or ecdsa-p521
-			keys = append(keys, sv)
-		} else if sv, ok := v.(json.Number); ok { // for key types of aes128-gcm96, aes256-gcm96 or chacha20-poly1305
-			m := make(map[string]interface{})
-			m["id"] = sv
-			keys = append(keys, m)
+	}
+
+	if err := d.Set("keys", keys); err != nil {
+		return err
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		// On read, key_size will be nil if the encryption key type is not HMAC. Choosing not to set it in those cases.
+		keySize := secret.Data["key_size"]
+		if keySize != nil || secret.Data["type"] == "hmac" {
+			keySize, err := secret.Data["key_size"].(json.Number).Int64()
+			if err != nil {
+				return fmt.Errorf("expected key_size %q to be a number, and it isn't", secret.Data["key_size"])
+			}
+			if err := d.Set("key_size", keySize); err != nil {
+				return err
+			}
 		}
 	}
 
-	d.Set("keys", keys)
-	d.Set("backend", backend)
-	d.Set("name", name)
-	d.Set("allow_plaintext_backup", secret.Data["allow_plaintext_backup"].(bool))
-	d.Set("convergent_encryption", convergentEncryption)
-	d.Set("deletion_allowed", secret.Data["deletion_allowed"].(bool))
-	d.Set("derived", secret.Data["derived"].(bool))
-	d.Set("exportable", secret.Data["exportable"].(bool))
-	d.Set("latest_version", latestVersion)
-	d.Set("min_available_version", minAvailableVersion)
-	d.Set("min_decryption_version", minDecryptionVersion)
-	d.Set("min_encryption_version", minEncryptionVersion)
-	d.Set("supports_decryption", secret.Data["supports_decryption"].(bool))
-	d.Set("supports_derivation", secret.Data["supports_derivation"].(bool))
-	d.Set("supports_encryption", secret.Data["supports_encryption"].(bool))
-	d.Set("supports_signing", secret.Data["supports_signing"].(bool))
-	d.Set("type", secret.Data["type"].(string))
+	if err := d.Set("backend", backend); err != nil {
+		return err
+	}
+	if err := d.Set("name", name); err != nil {
+		return err
+	}
+	if err := d.Set("latest_version", latestVersion); err != nil {
+		return err
+	}
+	if err := d.Set("min_available_version", minAvailableVersion); err != nil {
+		return err
+	}
+	if err := d.Set("min_decryption_version", minDecryptionVersion); err != nil {
+		return err
+	}
+	if err := d.Set("min_encryption_version", minEncryptionVersion); err != nil {
+		return err
+	}
+	if err := d.Set("convergent_encryption", convergentEncryption); err != nil {
+		return err
+	}
+
+	fields := []string{
+		"allow_plaintext_backup",
+		"deletion_allowed", "derived", "exportable",
+		"supports_decryption", "supports_derivation",
+		"supports_encryption", "supports_signing", "type",
+	}
+
+	set := func(f, k string) error {
+		v, ok := secret.Data[k]
+		if !ok {
+			log.Printf("[WARN] Expected key %q not found in response, path=%q", k, path)
+		}
+		if err := d.Set(f, v); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	for _, f := range fields {
+		if err := set(f, f); err != nil {
+			return err
+		}
+	}
+
+	autoRotatePeriodField := "auto_rotate_period"
+	if _, ok := d.GetOkExists("auto_rotate_interval"); ok {
+		autoRotatePeriodField = "auto_rotate_interval"
+	}
+
+	if err := set(autoRotatePeriodField, "auto_rotate_period"); err != nil {
+		return nil
+	}
 
 	return nil
 }
 
 func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating transit secret backend key %q", path)
@@ -321,6 +437,7 @@ func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) err
 		"deletion_allowed":       d.Get("deletion_allowed"),
 		"exportable":             d.Get("exportable"),
 		"allow_plaintext_backup": d.Get("allow_plaintext_backup"),
+		"auto_rotate_period":     getTransitAutoRotatePeriod(d),
 	}
 
 	_, err := client.Logical().Write(path+"/config", data)
@@ -333,7 +450,10 @@ func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) err
 }
 
 func transitSecretBackendKeyDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting key %q", path)
@@ -346,7 +466,10 @@ func transitSecretBackendKeyDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func transitSecretBackendKeyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if key %q exists", path)

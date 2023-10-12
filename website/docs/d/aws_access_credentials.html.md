@@ -18,6 +18,12 @@ Protect these artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
+~> **Note**
+When using the outputs of this data source to authenticate with the [Terraform Provider for AWS](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) or
+the [Terraform Provider for AWS Cloud Control](https://registry.terraform.io/providers/hashicorp/awscc/latest/docs),
+the credentials leased from Vault cannnot be renewed.
+Ensure that the lease is long enough for Terraform to complete.
+
 ## Example Usage
 
 ```hcl
@@ -60,6 +66,11 @@ provider "aws" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  *Available only for Vault Enterprise*.
+
 * `backend` - (Required) The path to the AWS secret backend to
 read credentials from, with no leading or trailing `/`s.
 
@@ -77,10 +88,11 @@ not need to be specified.
 
 * `role_session_name` - (Optional) The role session name to attach to the assumed role ARN. role_session_name is limited to 64 characters; if exceeded, the `role_session_name` in the assumed role ARN will be truncated to 64 characters. If `role_session_name` is not provided, then it will be generated dynamically by the Vault server itself.
 
+* `region` - (Required when reading from AWS GovCloud) The region the read credentials belong to.
 
 * `ttl` - (Optional) Specifies the TTL for the use of the STS token. This
 is specified as a string with a duration suffix. Valid only when
-`credential_type` is `assumed_role` or `federation_token`
+`credential_type` of the connected `vault_aws_secret_backend_role` resource is `assumed_role` or `federation_token`
 
 ## Attributes Reference
 

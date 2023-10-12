@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,7 +9,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func kubernetesAuthBackendRoleDataSource() *schema.Resource {
@@ -57,13 +61,16 @@ func kubernetesAuthBackendRoleDataSource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Read:   kubernetesAuthBackendRoleDataSourceRead,
+		Read:   provider.ReadWrapper(kubernetesAuthBackendRoleDataSourceRead),
 		Schema: fields,
 	}
 }
 
 func kubernetesAuthBackendRoleDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role_name").(string)

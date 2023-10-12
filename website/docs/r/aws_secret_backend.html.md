@@ -31,6 +31,11 @@ resource "vault_aws_secret_backend" "aws" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `access_key` - (Optional) The AWS Access Key ID this backend should use to
 issue new credentials. Vault uses the official AWS SDK to authenticate, and thus can also use standard AWS environment credentials, shared file credentials or IAM role/ECS task credentials.
 
@@ -55,6 +60,9 @@ while newer versions of Vault will.
 * `path` - (Optional) The unique path this backend should be mounted at. Must
 not begin or end with a `/`. Defaults to `aws`.
 
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
+
 * `description` - (Optional) A human-friendly description for this backend.
 
 * `default_lease_ttl_seconds` - (Optional) The default TTL for credentials
@@ -68,6 +76,8 @@ for credentials issued by this backend.
 * `sts_endpoint` - (Optional) Specifies a custom HTTP STS endpoint to use.
 
 * `username_template` - (Optional)  Template describing how dynamic usernames are generated. The username template is used to generate both IAM usernames (capped at 64 characters) and STS usernames (capped at 32 characters). If no template is provided the field defaults to the template:
+
+* `local` - (Optional) Specifies whether the secrets mount will be marked as local. Local mounts are not replicated to performance replicas.
 
 ```
 {{ if (eq .Type "STS") }}
@@ -89,3 +99,7 @@ AWS secret backends can be imported using the `path`, e.g.
 ```
 $ terraform import vault_aws_secret_backend.aws aws
 ```
+
+## Tutorials
+
+Refer to the [Inject Secrets into Terraform Using the Vault Provider](https://learn.hashicorp.com/tutorials/terraform/secrets-vault) tutorial for a step-by-step usage example.

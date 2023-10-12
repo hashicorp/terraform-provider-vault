@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,24 +10,24 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const identityOidcKeyPathTemplate = "identity/oidc/key/%s"
 
-var (
-	identityOidcKeyFields = []string{
-		"rotation_period",
-		"verification_ttl",
-		"algorithm",
-		"allowed_client_ids",
-	}
-)
+var identityOidcKeyFields = []string{
+	"rotation_period",
+	"verification_ttl",
+	"algorithm",
+	"allowed_client_ids",
+}
 
 func identityOidcKey() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOidcKeyCreate,
 		Update: identityOidcKeyUpdate,
-		Read:   identityOidcKeyRead,
+		Read:   provider.ReadWrapper(identityOidcKeyRead),
 		Delete: identityOidcKeyDelete,
 		Exists: identityOidcKeyExists,
 		Importer: &schema.ResourceImporter{
@@ -82,13 +85,16 @@ func identityOidcKeyUpdateFields(d *schema.ResourceData, data map[string]interfa
 }
 
 func identityOidcKeyCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 	path := identityOidcKeyPath(name)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 
@@ -103,12 +109,16 @@ func identityOidcKeyCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Id()
 	path := identityOidcKeyPath(name)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	log.Printf("[DEBUG] Updating IdentityOidcKey %s at %s", name, path)
 
@@ -123,7 +133,11 @@ func identityOidcKeyUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Id()
 
 	resp, err := identityOidcKeyApiRead(name, client)
@@ -147,12 +161,16 @@ func identityOidcKeyRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Id()
 	path := identityOidcKeyPath(name)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	log.Printf("[DEBUG] Deleting IdentityOidcKey %q", name)
 	_, err := client.Logical().Delete(path)
@@ -165,12 +183,15 @@ func identityOidcKeyDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	name := d.Id()
 
 	log.Printf("[DEBUG] Checking if IdentityOidcKey %s exists", name)
 	key, err := identityOidcKeyApiRead(name, client)
-
 	if err != nil {
 		return true, fmt.Errorf("error checking if IdentityOidcKey %s exists: %q", name, err)
 	}

@@ -14,22 +14,31 @@ Provides a resource to create a role in an [GCP auth backend within Vault](https
 
 ```hcl
 resource "vault_auth_backend" "gcp" {
-    path = "gcp"
-    type = "gcp"
+  path = "gcp"
+  type = "gcp"
 }
 
-resource "vault_gcp_auth_backend_role" "gcp" {
-    backend                = vault_auth_backend.gcp.path
-    project_id             = "foo-bar-baz"
-    bound_service_accounts = ["database-server@foo-bar-baz.iam.gserviceaccount.com"]
-    token_policies         = ["database-server"]
-
+resource "vault_gcp_auth_backend_role" "test" {
+  backend                = vault_auth_backend.gcp.path
+  role                   = "test"
+  type                   = "iam"
+  bound_service_accounts = ["test"]
+  bound_projects         = ["test"]
+  token_ttl              = 300
+  token_max_ttl          = 600
+  token_policies         = ["policy_a", "policy_b"]
+  add_group_aliases      = true
 }
 ```
 
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
 
 * `role` - (Required) Name of the GCP role
 
@@ -93,9 +102,8 @@ These arguments are common across several Authentication Token resources since V
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
-  if any, in number of seconds to set on the token.
+* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/gcp#token_num_uses)
+   of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
   `batch`, or `default` to use the mount's tuned default (which unless changed will be

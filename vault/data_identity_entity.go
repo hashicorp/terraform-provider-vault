@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,6 +10,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -19,7 +26,7 @@ var (
 		"last_update_time",
 		"merged_entity_ids",
 		"metadata",
-		"namespace_id",
+		consts.FieldNamespaceID,
 		"policies",
 	}
 
@@ -30,7 +37,7 @@ var (
 		"last_update_time",
 		"merged_from_canonical_ids",
 		"metadata",
-		"mount_accessor",
+		consts.FieldMountAccessor,
 		"mount_path",
 		"mount_type",
 		"name",
@@ -60,11 +67,11 @@ var (
 			},
 			Computed: true,
 		},
-		"metadata": {
+		consts.FieldMetadata: {
 			Type:     schema.TypeMap,
 			Computed: true,
 		},
-		"mount_accessor": {
+		consts.FieldMountAccessor: {
 			Type:     schema.TypeString,
 			Computed: true,
 		},
@@ -85,7 +92,7 @@ var (
 
 func identityEntityDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: identityEntityDataSourceRead,
+		Read: provider.ReadWrapper(identityEntityDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"entity_name": {
@@ -119,7 +126,7 @@ func identityEntityDataSource() *schema.Resource {
 				Description: "Accessor of the mount to which the alias belongs to. This should be supplied in conjunction with `alias_name`.",
 			},
 
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Entity data from Vault in JSON String form",
@@ -165,11 +172,11 @@ func identityEntityDataSource() *schema.Resource {
 				},
 				Computed: true,
 			},
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Computed: true,
 			},
-			"namespace_id": {
+			consts.FieldNamespaceID: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -194,10 +201,9 @@ func identityEntityDataSource() *schema.Resource {
 
 func identityEntityLookup(client *api.Client, data map[string]interface{}) (*api.Secret, error) {
 	log.Print("[DEBUG] Looking up IdentityEntity")
-	resp, err := client.Logical().Write("identity/lookup/entity", data)
-
+	resp, err := client.Logical().Write(entity.LookupPath, data)
 	if err != nil {
-		return nil, fmt.Errorf("Error reading Identity Entity '%v': %s", data, err)
+		return nil, fmt.Errorf("Error reading Identity Entity '%v': %w", data, err)
 	}
 
 	if resp == nil {
@@ -213,10 +219,12 @@ func identityEntityLookup(client *api.Client, data map[string]interface{}) (*api
 }
 
 func identityEntityDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	data := map[string]interface{}{}
-
 	if v, ok := d.GetOk("entity_name"); ok {
 		data["name"] = v.(string)
 	}
@@ -235,7 +243,6 @@ func identityEntityDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 
 	log.Print("[DEBUG] Reading IdentityEntity")
 	resp, err := identityEntityLookup(client, data)
-
 	if err != nil {
 		return err
 	}
@@ -273,7 +280,7 @@ func identityEntityDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 	// Ignoring error because this value came from JSON in the
 	// first place so no reason why it should fail to re-encode.
 	jsonDataBytes, _ := json.Marshal(resp.Data)
-	d.Set("data_json", string(jsonDataBytes))
+	d.Set(consts.FieldDataJSON, string(jsonDataBytes))
 
 	return nil
 }

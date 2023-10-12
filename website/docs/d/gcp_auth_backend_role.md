@@ -27,6 +27,11 @@ output "role-id" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  *Available only for Vault Enterprise*.
+
 * `role_name` - (Required) The name of the role to retrieve the Role ID for.
 
 * `backend` - (Optional) The unique name for the GCP backend from which to fetch the role. Defaults to "gcp".

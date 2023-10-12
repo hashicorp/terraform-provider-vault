@@ -32,6 +32,11 @@ resource "vault_terraform_cloud_secret_role" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Optional) The unique name of an existing Terraform Cloud secrets backend mount. Must not begin or end with a `/`.
 
 * `name` - (Required) The name of the Terraform Cloud secrets engine role to create.

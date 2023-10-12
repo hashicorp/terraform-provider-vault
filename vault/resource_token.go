@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -8,12 +11,16 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func tokenResource() *schema.Resource {
 	return &schema.Resource{
 		Create: tokenCreate,
-		Read:   tokenRead,
+		Read:   provider.ReadWrapper(tokenRead),
 		Update: tokenUpdate,
 		Delete: tokenDelete,
 		Exists: tokenExists,
@@ -22,14 +29,14 @@ func tokenResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"role_name": {
+			consts.FieldRoleName: {
 				Type:        schema.TypeString,
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "The token role name.",
 			},
-			"policies": {
+			consts.FieldPolicies: {
 				Type:     schema.TypeSet,
 				Required: false,
 				Optional: true,
@@ -39,7 +46,7 @@ func tokenResource() *schema.Resource {
 				},
 				Description: "List of policies.",
 			},
-			"no_parent": {
+			consts.FieldNoParent: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
@@ -47,159 +54,176 @@ func tokenResource() *schema.Resource {
 				Computed:    true,
 				Description: "Flag to create a token without parent.",
 			},
-			"no_default_policy": {
+			consts.FieldNoDefaultPolicy: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "Flag to disable the default policy.",
 			},
-			"renewable": {
+			consts.FieldRenewable: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				ForceNew:    true,
 				Computed:    true,
 				Description: "Flag to allow the token to be renewed",
 			},
-			"ttl": {
+			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "The TTL period of the token.",
 			},
-			"explicit_max_ttl": {
+			consts.FieldExplicitMaxTTL: {
 				Type:        schema.TypeString,
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "The explicit max TTL of the token.",
 			},
-			"wrapping_ttl": {
+			consts.FieldWrappingTTL: {
 				Type:        schema.TypeString,
 				Required:    false,
 				Optional:    true,
 				Description: "The TTL period of the wrapped token.",
 			},
-			"display_name": {
+			consts.FieldDisplayName: {
 				Type:        schema.TypeString,
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
-				Default:     "token",
+				Default:     consts.FieldToken,
 				Description: "The display name of the token.",
 			},
-			"num_uses": {
+			consts.FieldNumUses: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				ForceNew:    true,
 				Computed:    true,
 				Description: "The number of allowed uses of the token.",
 			},
-			"period": {
+			consts.FieldPeriod: {
 				Type:        schema.TypeString,
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "The period of the token.",
 			},
-			"renew_min_lease": {
+			consts.FieldRenewMinLease: {
 				Type:        schema.TypeInt,
 				Required:    false,
 				Optional:    true,
 				Description: "The minimum lease to renew token.",
 			},
-			"renew_increment": {
+			consts.FieldRenewIncrement: {
 				Type:        schema.TypeInt,
 				Required:    false,
 				Optional:    true,
 				Description: "The renew increment.",
 			},
-			"lease_duration": {
+			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "The token lease duration.",
 			},
-			"lease_started": {
+			consts.FieldLeaseStarted: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The token lease started on.",
 			},
-			"client_token": {
+			consts.FieldClientToken: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The client token.",
 				Sensitive:   true,
 			},
-			"wrapped_token": {
+			consts.FieldWrappedToken: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The client wrapped token.",
 				Sensitive:   true,
 			},
-			"wrapping_accessor": {
+			consts.FieldWrappingAccessor: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The client wrapping accessor.",
 				Sensitive:   true,
+			},
+			consts.FieldMetadata: {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Metadata to be associated with the token.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 		},
 	}
 }
 
 func tokenCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	var err error
 	var wrapped bool
 
-	role := d.Get("role_name").(string)
-
-	iPolicies := d.Get("policies").(*schema.Set).List()
-	policies := make([]string, 0, len(iPolicies))
-	for _, iPolicy := range iPolicies {
-		policies = append(policies, iPolicy.(string))
-	}
+	role := d.Get(consts.FieldRoleName).(string)
 
 	createRequest := &api.TokenCreateRequest{}
-
-	if len(policies) > 0 {
-		createRequest.Policies = policies
+	if v, ok := d.GetOk(consts.FieldPolicies); ok && v != nil {
+		createRequest.Policies = util.TerraformSetToStringArray(v)
 	}
 
-	if v, ok := d.GetOk("ttl"); ok {
+	if v, ok := d.GetOk(consts.FieldTTL); ok {
 		createRequest.TTL = v.(string)
 	}
 
-	if v, ok := d.GetOk("explicit_max_ttl"); ok {
+	if v, ok := d.GetOk(consts.FieldExplicitMaxTTL); ok {
 		createRequest.ExplicitMaxTTL = v.(string)
 	}
 
-	if v, ok := d.GetOk("period"); ok {
+	if v, ok := d.GetOk(consts.FieldPeriod); ok {
 		createRequest.Period = v.(string)
 	}
 
-	if v, ok := d.GetOk("no_parent"); ok {
+	if v, ok := d.GetOk(consts.FieldNoParent); ok {
 		createRequest.NoParent = v.(bool)
 	}
 
-	if v, ok := d.GetOk("no_default_policy"); ok {
+	if v, ok := d.GetOk(consts.FieldNoDefaultPolicy); ok {
 		createRequest.NoDefaultPolicy = v.(bool)
 	}
 
-	if v, ok := d.GetOk("display_name"); ok {
+	if v, ok := d.GetOk(consts.FieldDisplayName); ok {
 		createRequest.DisplayName = v.(string)
 	}
 
-	if v, ok := d.GetOk("num_uses"); ok {
+	if v, ok := d.GetOk(consts.FieldNumUses); ok {
 		createRequest.NumUses = v.(int)
 	}
 
-	if v, ok := d.GetOk("renewable"); ok {
-		renewable := v.(bool)
+	if v, ok := d.GetOkExists(consts.FieldRenewable); ok {
+		renewable, ok := v.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for %q", d.Get(consts.FieldRenewable), consts.FieldRenewable)
+		}
 		createRequest.Renewable = &renewable
 	}
 
-	if v, ok := d.GetOk("wrapping_ttl"); ok {
+	if v, ok := d.GetOk(consts.FieldMetadata); ok {
+		d := make(map[string]string)
+		for k, val := range v.(map[string]interface{}) {
+			d[k] = val.(string)
+		}
+		createRequest.Metadata = d
+	}
+
+	if v, ok := d.GetOk(consts.FieldWrappingTTL); ok {
 		wrappingTTL := v.(string)
 
 		client, err = client.Clone()
@@ -243,14 +267,15 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		} else {
 			accessor = resp.Auth.Accessor
 		}
+
 		log.Printf("[DEBUG] Created token accessor %q", accessor)
 	}
 
 	if wrapped {
-		d.Set("wrapped_token", resp.WrapInfo.Token)
-		d.Set("wrapping_accessor", resp.WrapInfo.Accessor)
+		d.Set(consts.FieldWrappedToken, resp.WrapInfo.Token)
+		d.Set(consts.FieldWrappingAccessor, resp.WrapInfo.Accessor)
 	} else {
-		d.Set("client_token", resp.Auth.ClientToken)
+		d.Set(consts.FieldClientToken, resp.Auth.ClientToken)
 	}
 
 	d.SetId(accessor)
@@ -259,9 +284,12 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
-	id := d.Get("client_token").(string)
+	id := d.Get(consts.FieldClientToken).(string)
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Reading token accessor %q", accessor)
@@ -274,7 +302,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Read token accessor %q", accessor)
 
-	iPolicies := resp.Data["policies"].([]interface{})
+	iPolicies := resp.Data[consts.FieldPolicies].([]interface{})
 	policies := make([]string, 0, len(iPolicies))
 	for _, iPolicy := range iPolicies {
 		if iPolicy == "default" {
@@ -284,11 +312,11 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 		policies = append(policies, iPolicy.(string))
 	}
 
-	d.Set("policies", policies)
-	d.Set("no_parent", resp.Data["orphan"])
-	d.Set("renewable", resp.Data["renewable"])
-	d.Set("display_name", strings.TrimPrefix(resp.Data["display_name"].(string), "token-"))
-	d.Set("num_uses", resp.Data["num_uses"])
+	d.Set(consts.FieldPolicies, policies)
+	d.Set(consts.FieldNoParent, resp.Data[consts.FieldOrphan])
+	d.Set(consts.FieldRenewable, resp.Data[consts.FieldRenewable])
+	d.Set(consts.FieldDisplayName, strings.TrimPrefix(resp.Data[consts.FieldDisplayName].(string), "token-"))
+	d.Set(consts.FieldNumUses, resp.Data[consts.FieldNumUses])
 
 	issueTimeStr, ok := resp.Data["issue_time"].(string)
 	if !ok {
@@ -299,7 +327,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error parsing issue_time: %s, please format string like '2006-01-02T15:04:05.999999999Z07:00'", err)
 	}
-	d.Set("lease_started", issueTime.Format(time.RFC3339))
+	d.Set(consts.FieldLeaseStarted, issueTime.Format(time.RFC3339))
 
 	expireTimeStr, ok := resp.Data["expire_time"].(string)
 	if !ok {
@@ -310,9 +338,11 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error parsing expire_time: %s", err)
 	}
-	d.Set("lease_duration", int(expireTime.Sub(issueTime).Seconds()))
+	d.Set(consts.FieldLeaseDuration, int(expireTime.Sub(issueTime).Seconds()))
 
-	if d.Get("renewable").(bool) && tokenCheckLease(d) {
+	d.Set(consts.FieldMetadata, resp.Data["meta"])
+
+	if d.Get(consts.FieldRenewable).(bool) && tokenCheckLease(d) {
 		if id == "" {
 			log.Printf("[DEBUG] Lease for token access %q cannot be renewed as it's been encrypted.", accessor)
 			return nil
@@ -320,9 +350,9 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] Lease for token accessor %q expiring soon, renewing", accessor)
 
-		increment := d.Get("lease_duration").(int)
+		increment := d.Get(consts.FieldLeaseDuration).(int)
 
-		if v, ok := d.GetOk("renew_increment"); ok {
+		if v, ok := d.GetOk(consts.FieldRenewIncrement); ok {
 			increment = v.(int)
 		}
 
@@ -335,9 +365,9 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] Lease for token accessor %q renewed, new lease duration %d", id, renewed.Auth.LeaseDuration)
 
-		d.Set("lease_duration", renewed.Data["lease_duration"])
-		d.Set("lease_started", time.Now().Format(time.RFC3339))
-		d.Set("client_token", renewed.Auth.ClientToken)
+		d.Set(consts.FieldLeaseDuration, renewed.Data[consts.FieldLeaseDuration])
+		d.Set(consts.FieldLeaseStarted, time.Now().Format(time.RFC3339))
+		d.Set(consts.FieldClientToken, renewed.Auth.ClientToken)
 
 		d.SetId(renewed.Auth.Accessor)
 	}
@@ -350,7 +380,10 @@ func tokenUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	token := d.Id()
 
@@ -365,7 +398,11 @@ func tokenDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Checking if token accessor %q exists", accessor)
@@ -380,7 +417,7 @@ func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 func tokenCheckLease(d *schema.ResourceData) bool {
 	accessor := d.Id()
 
-	startedStr := d.Get("lease_started").(string)
+	startedStr := d.Get(consts.FieldLeaseStarted).(string)
 	if startedStr == "" {
 		return false
 	}
@@ -393,7 +430,7 @@ func tokenCheckLease(d *schema.ResourceData) bool {
 		return false
 	}
 
-	leaseDuration := d.Get("lease_duration").(int)
+	leaseDuration := d.Get(consts.FieldLeaseDuration).(int)
 
 	expireTime := started.Add(time.Second * time.Duration(leaseDuration))
 	if expireTime.Before(time.Now()) {
@@ -403,7 +440,7 @@ func tokenCheckLease(d *schema.ResourceData) bool {
 		return false
 	}
 
-	if v, ok := d.GetOk("renew_min_lease"); ok {
+	if v, ok := d.GetOk(consts.FieldRenewMinLease); ok {
 		renewMinLease := v.(int)
 		if renewMinLease <= 0 {
 			return false

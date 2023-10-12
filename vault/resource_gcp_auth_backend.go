@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -8,6 +11,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const (
@@ -16,16 +23,16 @@ const (
 )
 
 func gcpAuthBackendResource() *schema.Resource {
-	return &schema.Resource{
-
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: gcpAuthBackendWrite,
 		Update: gcpAuthBackendUpdate,
-		Read:   gcpAuthBackendRead,
+		Read:   provider.ReadWrapper(gcpAuthBackendRead),
 		Delete: gcpAuthBackendDelete,
 		Exists: gcpAuthBackendExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema: map[string]*schema.Schema{
 			"credentials": {
 				Type:         schema.TypeString,
@@ -61,7 +68,6 @@ func gcpAuthBackendResource() *schema.Resource {
 			"path": {
 				Type:     schema.TypeString,
 				Optional: true,
-				ForceNew: true,
 				Default:  gcpAuthDefaultPath,
 				StateFunc: func(v interface{}) string {
 					return strings.Trim(v.(string), "/")
@@ -73,6 +79,49 @@ func gcpAuthBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies if the auth method is local only",
 			},
+			"custom_endpoint": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "Specifies overrides to service endpoints used when making API requests to GCP.",
+				Elem: &schema.Resource{
+					Schema: gcpAuthCustomEndpointSchema(),
+				},
+			},
+			"accessor": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The accessor of the auth backend",
+			},
+		},
+	}, false)
+}
+
+func gcpAuthCustomEndpointSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"api": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to https://www.googleapis.com.",
+		},
+		"iam": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to `https://iam.googleapis.com`.",
+		},
+		"crm": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to `https://cloudresourcemanager.googleapis.com`.",
+		},
+		"compute": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to `https://compute.googleapis.com`.",
 		},
 	}
 }
@@ -113,7 +162,10 @@ func gcpAuthBackendConfigPath(path string) string {
 }
 
 func gcpAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	authType := gcpAuthType
 	path := d.Get("path").(string)
@@ -137,18 +189,42 @@ func gcpAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := gcpAuthBackendConfigPath(d.Id())
+
+	if !d.IsNewResource() {
+		newMount, err := util.Remount(d, client, consts.FieldPath, true)
+		if err != nil {
+			return err
+		}
+
+		path = gcpAuthBackendConfigPath(newMount)
+	}
+
 	data := map[string]interface{}{}
 
 	if v, ok := d.GetOk("credentials"); ok {
-		data["credentials"] = v.(string)
+		data["credentials"] = v
+	}
+
+	epField := "custom_endpoint"
+	if d.HasChange(epField) {
+		endpoints := make(map[string]interface{})
+		for epKey := range gcpAuthCustomEndpointSchema() {
+			key := fmt.Sprintf("%s.%d.%s", epField, 0, epKey)
+			if d.HasChange(key) {
+				endpoints[epKey] = d.Get(key)
+			}
+		}
+		data["custom_endpoint"] = endpoints
 	}
 
 	log.Printf("[DEBUG] Writing gcp config %q", path)
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("error writing gcp config %q: %s", path, err)
@@ -159,7 +235,11 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := gcpAuthBackendConfigPath(d.Id())
 
 	log.Printf("[DEBUG] Reading gcp auth backend config %q", path)
@@ -189,6 +269,28 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
+	if endpointsRaw, ok := resp.Data["custom_endpoint"]; ok {
+		endpoints, ok := endpointsRaw.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("custom_endpoint has unexpected type %T, path=%q", endpointsRaw, path)
+		}
+		if err := d.Set("custom_endpoint", []map[string]interface{}{endpoints}); err != nil {
+			return err
+		}
+	}
+	// fetch AuthMount in order to set accessor attribute
+	mount, err := getAuthMountIfPresent(client, d.Id())
+	if err != nil {
+		return err
+	}
+	if mount == nil {
+		d.SetId("")
+		return nil
+	}
+	if err := d.Set("accessor", mount.Accessor); err != nil {
+		return err
+	}
+
 	// set the auth backend's path
 	if err := d.Set("path", d.Id()); err != nil {
 		return err
@@ -198,7 +300,11 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting gcp auth backend %q", path)
@@ -212,7 +318,11 @@ func gcpAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := gcpAuthBackendConfigPath(d.Id())
 
 	log.Printf("[DEBUG] Checking if gcp auth backend %q exists", path)

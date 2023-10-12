@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -9,15 +12,24 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestResourceGenericEndpoint(t *testing.T) {
 	path := acctest.RandomWithPrefix("userpass")
+	resourceNames := []string{
+		"vault_generic_endpoint.up1",
+		"vault_generic_endpoint.up2",
+		"vault_generic_endpoint.u1",
+		"vault_generic_endpoint.u1_token",
+		"vault_generic_endpoint.u1_entity",
+	}
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testResourceGenericEndpoint_destroyCheck(path),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testResourceGenericEndpoint_destroyCheck(resourceNames, path),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericEndpoint_initialConfig(path),
@@ -171,15 +183,35 @@ func testResourceGenericEndpoint_initialCheck(s *terraform.State) error {
 	return nil
 }
 
-func testResourceGenericEndpoint_destroyCheck(path string) resource.TestCheckFunc {
+func testResourceGenericEndpoint_destroyCheck(resourceNames []string, path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
-
-		for _, rs := range s.RootModule().Resources {
-			if rs.Type != "vault_generic_endpoint" {
-				continue
+		var ns string
+		var client *api.Client
+		for _, name := range resourceNames {
+			rs, err := testutil.GetResourceFromRootModule(s, name)
+			if err != nil {
+				return err
 			}
+
 			instanceState := rs.Primary
+
+			if client == nil {
+				c, err := provider.GetClient(instanceState, testProvider.Meta())
+				if err != nil {
+					return err
+				}
+
+				client = c
+			}
+
+			if n, ok := instanceState.Attributes[consts.FieldNamespace]; ok {
+				if ns != n {
+					return fmt.Errorf("all test resources must be in the same namepace")
+				}
+
+				ns = n
+			}
+
 			// Check to make sure resources that we can read are no longer
 			// there.
 			if instanceState.Attributes["disable_read"] != "true" {

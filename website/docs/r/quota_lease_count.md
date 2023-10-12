@@ -31,6 +31,11 @@ resource "vault_quota_lease_count" "global" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required) Name of the rate limit quota
 
 * `path` - (Optional) Path of the mount or namespace to apply the quota. A blank path configures a
@@ -42,6 +47,8 @@ The following arguments are supported:
 
 * `max_leases` - (Required) The maximum number of leases to be allowed by the quota
   rule. The `max_leases` must be positive.
+
+* `role` - (Optional) If set on a quota where `path` is set to an auth mount with a concept of roles (such as /auth/approle/), this will make the quota restrict login requests to that mount that are made with the specified role.
 
 ## Attributes Reference
 

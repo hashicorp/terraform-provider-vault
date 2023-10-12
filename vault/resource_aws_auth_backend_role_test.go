@@ -1,34 +1,36 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAWSAuthBackendRole_importInferred(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
+
+	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleConfig_inferred(backend, role),
-				Check:  testAccAWSAuthBackendRoleCheck_attrs(backend, role),
+				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 			{
-				ResourceName:      "vault_aws_auth_backend_role.role",
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
@@ -45,17 +47,19 @@ func TestAccAWSAuthBackendRole_importInferred(t *testing.T) {
 func TestAccAWSAuthBackendRole_importEC2(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
+
+	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleConfig_ec2(backend, role),
-				Check:  testAccAWSAuthBackendRoleCheck_attrs(backend, role),
+				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 			{
-				ResourceName:      "vault_aws_auth_backend_role.role",
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -66,17 +70,19 @@ func TestAccAWSAuthBackendRole_importEC2(t *testing.T) {
 func TestAccAWSAuthBackendRole_importIAM(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
+
+	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleConfig_iam(backend, role),
-				Check:  testAccAWSAuthBackendRoleCheck_attrs(backend, role),
+				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 			{
-				ResourceName:      "vault_aws_auth_backend_role.role",
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -88,14 +94,15 @@ func TestAccAWSAuthBackendRole_inferred(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
+	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleConfig_inferred(backend, role),
-				Check:  testAccAWSAuthBackendRoleCheck_attrs(backend, role),
+				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 		},
 	})
@@ -105,14 +112,15 @@ func TestAccAWSAuthBackendRole_ec2(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
+	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleConfig_ec2(backend, role),
-				Check:  testAccAWSAuthBackendRoleCheck_attrs(backend, role),
+				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 		},
 	})
@@ -122,14 +130,15 @@ func TestAccAWSAuthBackendRole_iam(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
+	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleConfig_iam(backend, role),
-				Check:  testAccAWSAuthBackendRoleCheck_attrs(backend, role),
+				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 		},
 	})
@@ -139,14 +148,15 @@ func TestAccAWSAuthBackendRole_iam_resolve_aws_unique_ids(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
+	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleConfig_iam_resolve_aws_unique_ids(backend, role),
-				Check:  testAccAWSAuthBackendRoleCheck_attrs(backend, role),
+				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 		},
 	})
@@ -156,53 +166,43 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
+	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleConfig_iam(backend, role),
-				Check:  testAccAWSAuthBackendRoleCheck_attrs(backend, role),
+				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 			{
 				Config: testAccAWSAuthBackendRoleConfig_iamUpdate(backend, role),
 				Check: resource.ComposeTestCheckFunc(
-					testAccAWSAuthBackendRoleCheck_attrs(backend, role),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"bound_iam_principal_arns.#", "1"),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"bound_iam_principal_arns.0", "arn:aws:iam::123456789012:role/MyRole/*"),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_ttl", "30"),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_max_ttl", "60"),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_policies.0", "default"),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_policies.1", "dev"),
+					testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
+					resource.TestCheckResourceAttr(resourceName, "bound_iam_principal_arns.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "bound_iam_principal_arns.0", "arn:aws:iam::123456789012:role/MyRole/*"),
+					resource.TestCheckResourceAttr(resourceName, "token_ttl", "30"),
+					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "60"),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.0", "default"),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.1", "dev"),
 				),
 			},
 			{
 				Config: testAccAWSAuthBackendRoleConfig_DeletePolicies(backend, role),
 				Check: resource.ComposeTestCheckFunc(
-					testAccAWSAuthBackendRoleCheck_attrs(backend, role),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_policies.#", "0"),
+					testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "0"),
 				),
 			},
 			{
 				Config: testAccAWSAuthBackendRoleConfig_Unset(backend, role),
 				Check: resource.ComposeTestCheckFunc(
-					testAccAWSAuthBackendRoleCheck_attrs(backend, role),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_policies.#", "0"),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_ttl", "0"),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_max_ttl", "0"),
+					testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "token_ttl", "0"),
+					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "0"),
 				),
 			},
 		},
@@ -210,12 +210,16 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 }
 
 func testAccCheckAWSAuthBackendRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("error checking for AWS auth backend role %q: %s", rs.Primary.ID, err)
@@ -227,141 +231,65 @@ func testAccCheckAWSAuthBackendRoleDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestCheckFunc {
+func testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_aws_auth_backend_role.role"]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		endpoint := instanceState.ID
-
-		if endpoint != "auth/"+backend+"/role/"+role {
-			return fmt.Errorf("expected ID to be %q, got %q instead", "auth/"+backend+"/role/"+role, endpoint)
-		}
-
-		client := testProvider.Meta().(*api.Client)
-		resp, err := client.Logical().Read(endpoint)
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
 		if err != nil {
-			return fmt.Errorf("%q doesn't exist", endpoint)
+			return err
 		}
 
-		attrs := []*fieldNames{
-			{NameInVault: "auth_type", NameInProvider: "auth_type"},
-			{NameInVault: "bound_ami_id", NameInProvider: "bound_ami_ids", PreviousNameInProvider: "bound_ami_id"},
-			{NameInVault: "bound_account_id", NameInProvider: "bound_account_ids", PreviousNameInProvider: "bound_account_id"},
-			{NameInVault: "bound_region", NameInProvider: "bound_regions", PreviousNameInProvider: "bound_region"},
-			{NameInVault: "bound_vpc_id", NameInProvider: "bound_vpc_ids", PreviousNameInProvider: "bound_vpc_id"},
-			{NameInVault: "bound_subnet_id", NameInProvider: "bound_subnet_ids", PreviousNameInProvider: "bound_subnet_id"},
-			{NameInVault: "bound_iam_role_arn", NameInProvider: "bound_iam_role_arns", PreviousNameInProvider: "bound_iam_role_arn"},
-			{NameInVault: "bound_iam_instance_profile_arn", NameInProvider: "bound_iam_instance_profile_arns", PreviousNameInProvider: "bound_iam_instance_profile_arn"},
-			{NameInVault: "bound_ec2_instance_id", NameInProvider: "bound_ec2_instance_ids", PreviousNameInProvider: "bound_ec2_instance_id"},
-			{NameInVault: "role_tag", NameInProvider: "role_tag"},
-			{NameInVault: "bound_iam_principal_arn", NameInProvider: "bound_iam_principal_arns", PreviousNameInProvider: "bound_iam_principal_arn"},
-			{NameInVault: "inferred_entity_type", NameInProvider: "inferred_entity_type"},
-			{NameInVault: "inferred_aws_region", NameInProvider: "inferred_aws_region"},
-			{NameInVault: "resolve_aws_unique_ids", NameInProvider: "resolve_aws_unique_ids"},
-			{NameInVault: "token_ttl", NameInProvider: "token_ttl"},
-			{NameInVault: "token_max_ttl", NameInProvider: "token_max_ttl"},
-			{NameInVault: "token_period", NameInProvider: "token_period"},
-			{NameInVault: "token_policies", NameInProvider: "token_policies"},
-			{NameInVault: "allow_instance_migration", NameInProvider: "allow_instance_migration"},
-			{NameInVault: "disallow_reauthentication", NameInProvider: "disallow_reauthentication"},
-		}
-		for _, attr := range attrs {
+		path := rs.Primary.ID
 
-			providerValIsArray := true
-			stateAttr := ""
-			if _, ok := instanceState.Attributes[attr.NameInProvider]; ok {
-				providerValIsArray = false
-				stateAttr = attr.NameInProvider
-			} else if _, ok := instanceState.Attributes[attr.PreviousNameInProvider]; ok {
-				providerValIsArray = false
-				stateAttr = attr.PreviousNameInProvider
-			} else if _, ok := instanceState.Attributes[attr.NameInProvider+".#"]; ok {
-				stateAttr = attr.NameInProvider
-			} else if _, ok := instanceState.Attributes[attr.PreviousNameInProvider+".#"]; ok {
-				stateAttr = attr.PreviousNameInProvider
-			}
-			stateAttrVal := instanceState.Attributes[stateAttr]
-
-			if resp.Data[attr.NameInVault] == nil && stateAttrVal == "" {
-				continue
-			}
-			var match bool
-			switch vaultRespVal := resp.Data[attr.NameInVault].(type) {
-			case json.Number:
-				apiData, err := vaultRespVal.Int64()
-				if err != nil {
-					return fmt.Errorf("expected API field %s to be an int, was %q", attr.NameInVault, resp.Data[attr.NameInVault])
-				}
-				stateData, err := strconv.ParseInt(stateAttrVal, 10, 64)
-				if err != nil {
-					return fmt.Errorf("expected state field %s to be an int, was %q", stateAttr, stateAttrVal)
-				}
-				match = apiData == stateData
-			case bool:
-				if _, ok := resp.Data[attr.NameInVault]; !ok && stateAttrVal == "" {
-					match = true
-				} else {
-					stateData, err := strconv.ParseBool(stateAttrVal)
-					if err != nil {
-						return fmt.Errorf("expected state field %s to be a bool, was %q", stateAttr, stateAttrVal)
-					}
-					match = vaultRespVal == stateData
-				}
-			case []interface{}:
-				length := instanceState.Attributes[stateAttr+".#"]
-				if !providerValIsArray {
-					if len(vaultRespVal) != 1 {
-						return fmt.Errorf("expected one response value but received %s", vaultRespVal)
-					}
-					if vaultRespVal[0] != stateAttrVal {
-						return fmt.Errorf("expected %s but received %s", stateAttrVal, vaultRespVal[0])
-					}
-					match = true
-				} else if length == "" {
-					if len(vaultRespVal) != 0 {
-						return fmt.Errorf("expected state field %s to have %d entries, had 0", stateAttr, len(vaultRespVal))
-					}
-					match = true
-				} else {
-					count, err := strconv.Atoi(length)
-					if err != nil {
-						return fmt.Errorf("expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
-					}
-					if count != len(vaultRespVal) {
-						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(vaultRespVal), count)
-					}
-					for i := 0; i < count; i++ {
-						found := false
-						for stateKey, stateValue := range instanceState.Attributes {
-							if strings.HasPrefix(stateKey, stateAttr) {
-								if vaultRespVal[i] == stateValue {
-									found = true
-									break
-								}
-							}
-						}
-						if !found {
-							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, attr.NameInVault, stateAttr, vaultRespVal[i])
-						}
-					}
-					match = true
-				}
-			default:
-				match = resp.Data[attr.NameInVault] == stateAttrVal
-			}
-			if !match {
-				return fmt.Errorf("expected %s (%s in state) of %q to be %q, got %q", attr.NameInVault, stateAttr, endpoint, stateAttrVal, resp.Data[attr.NameInVault])
-			}
+		expectedPath := "auth/" + backend + "/role/" + role
+		if path != expectedPath {
+			return fmt.Errorf("expected ID to be %q, got %q instead", expectedPath, path)
 		}
-		return nil
+
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
+		}
+
+		attrs := map[string]string{
+			"auth_type":                       "auth_type",
+			"bound_ami_ids":                   "bound_ami_id",
+			"bound_account_ids":               "bound_account_id",
+			"bound_regions":                   "bound_region",
+			"bound_vpc_ids":                   "bound_vpc_id",
+			"bound_subnet_ids":                "bound_subnet_id",
+			"bound_iam_role_arns":             "bound_iam_role_arn",
+			"bound_iam_instance_profile_arns": "bound_iam_instance_profile_arn",
+			"bound_ec2_instance_ids":          "bound_ec2_instance_id",
+			"role_tag":                        "role_tag",
+			"role_id":                         "role_id",
+			"bound_iam_principal_arns":        "bound_iam_principal_arn",
+			"inferred_entity_type":            "inferred_entity_type",
+			"inferred_aws_region":             "inferred_aws_region",
+			"resolve_aws_unique_ids":          "resolve_aws_unique_ids",
+			"token_ttl":                       "token_ttl",
+			"token_max_ttl":                   "token_max_ttl",
+			"token_period":                    "token_period",
+			"token_policies":                  "token_policies",
+			"allow_instance_migration":        "allow_instance_migration",
+			"disallow_reauthentication":       "disallow_reauthentication",
+		}
+
+		tAttrs := []*testutil.VaultStateTest{}
+		for k, v := range attrs {
+			ta := &testutil.VaultStateTest{
+				ResourceName: resourceName,
+				StateAttr:    k,
+				VaultAttr:    v,
+			}
+			switch k {
+			case "token_policies":
+				ta.AsSet = true
+			}
+
+			tAttrs = append(tAttrs, ta)
+		}
+
+		return testutil.AssertVaultState(client, s, path, tAttrs...)
 	}
 }
 

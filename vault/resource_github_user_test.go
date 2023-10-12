@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -9,8 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -19,9 +22,9 @@ func TestAccGithubUser_basic(t *testing.T) {
 	resName := "vault_github_user.user"
 	user := "john_doe"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccGithubUserCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccGithubUserCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubUserConfig_basic(backend, user, []string{"admin", "security"}),
@@ -52,8 +55,8 @@ func TestAccGithubUser_importBasic(t *testing.T) {
 	resName := "vault_github_user.user"
 	user := "import"
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubUserConfig_basic(backend, user, []string{"security", "admin"}),
@@ -83,14 +86,18 @@ func TestGithubUserBackEndPath(t *testing.T) {
 }
 
 func testAccGithubUserCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-	for _, r := range s.RootModule().Resources {
-		if r.Type != "vault_github_user" {
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_github_user" {
 			continue
 		}
 
-		resp, err := client.RawRequest(client.NewRequest("GET", "/v1/"+r.Primary.ID))
-		log.Printf("[DEBUG] Checking if resource '%s' is destroyed, statusCode: %d, error: %s", r.Primary.ID, resp.StatusCode, err)
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		resp, err := client.RawRequest(client.NewRequest("GET", "/v1/"+rs.Primary.ID))
+		log.Printf("[DEBUG] Checking if resource '%s' is destroyed, statusCode: %d, error: %s", rs.Primary.ID, resp.StatusCode, err)
 		if resp.StatusCode == 404 {
 			return nil
 		}
@@ -103,7 +110,7 @@ func testAccGithubUserConfig_basic(backend string, user string, policies []strin
 	return fmt.Sprintf(`
 resource "vault_github_auth_backend" "gh" {
 	path = "%s"
-  	organization = "vault"
+	organization = "hashicorp"
 }
 
 resource "vault_github_user" "user" {

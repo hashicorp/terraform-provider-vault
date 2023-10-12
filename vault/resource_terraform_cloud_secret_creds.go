@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,13 +9,15 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func terraformCloudSecretCredsResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createTerraformCloudSecretCredsResource,
-		Read:   readTerraformCloudSecretCredsResource,
+		Read:   provider.ReadWrapper(readTerraformCloudSecretCredsResource),
 		Update: updateTerraformCloudSecretCredsResource,
 		Delete: deleteTerraformCloudSecretCredsResource,
 		Schema: map[string]*schema.Schema{
@@ -27,7 +32,7 @@ func terraformCloudSecretCredsResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Name of the role.",
 			},
-			"lease_id": {
+			consts.FieldLeaseID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Sensitive:   true,
@@ -59,7 +64,11 @@ func terraformCloudSecretCredsResource() *schema.Resource {
 }
 
 func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
 	path := fmt.Sprintf("%s/creds/%s", backend, role)
@@ -86,9 +95,9 @@ func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 	d.SetId(tokenId)
 
 	if secret.LeaseID != "" {
-		d.Set("lease_id", secret.LeaseID)
+		d.Set(consts.FieldLeaseID, secret.LeaseID)
 	} else {
-		d.Set("lease_id", "")
+		d.Set(consts.FieldLeaseID, "")
 	}
 
 	d.Set("token", token)
@@ -100,8 +109,12 @@ func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 }
 
 func deleteTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-	leaseId := d.Get("lease_id").(string)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	leaseId := d.Get(consts.FieldLeaseID).(string)
 
 	if leaseId != "" {
 		err := client.Sys().Revoke(leaseId)
@@ -126,8 +139,12 @@ func updateTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 }
 
 func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-	leaseId := d.Get("lease_id")
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	leaseId := d.Get(consts.FieldLeaseID)
 
 	if leaseId != "" {
 		data := map[string]interface{}{

@@ -1,22 +1,28 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
+			testutil.TestEntPreCheck(t)
+		},
 		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -95,9 +101,12 @@ func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
+		PreCheck: func() {
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
+			testutil.TestEntPreCheck(t)
+		},
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRaftSnapshotAgentConfig_basic(name),
@@ -121,12 +130,16 @@ func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 }
 
 func testAccRaftSnapshotAgentConfigCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_raft_snapshot_agent_config" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		snapshot, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return err

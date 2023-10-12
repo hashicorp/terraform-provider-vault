@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,14 +10,15 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func oktaAuthBackendUserResource() *schema.Resource {
 	return &schema.Resource{
 		Create: oktaAuthBackendUserWrite,
-		Read:   oktaAuthBackendUserRead,
+		Read:   provider.ReadWrapper(oktaAuthBackendUserRead),
 		Update: oktaAuthBackendUserWrite,
 		Delete: oktaAuthBackendUserDelete,
 
@@ -75,7 +79,10 @@ func oktaAuthBackendUserResource() *schema.Resource {
 }
 
 func oktaAuthBackendUserWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	username := d.Get("username").(string)
 	path := d.Get("path").(string)
@@ -111,7 +118,10 @@ func oktaAuthBackendUserWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendUserRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 	username := d.Get("username").(string)
@@ -119,7 +129,6 @@ func oktaAuthBackendUserRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading user %s from Okta auth backend %s", username, path)
 
 	present, err := isOktaUserPresent(client, path, username)
-
 	if err != nil {
 		return fmt.Errorf("unable to read user %s in Vault: %s", username, err)
 	}
@@ -142,7 +151,10 @@ func oktaAuthBackendUserRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendUserDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 	username := d.Get("username").(string)
