@@ -697,6 +697,10 @@ var (
 			Resource:      UpdateSchemaResource(managedKeysResource()),
 			PathInventory: []string{"/sys/managed-keys/{type}/{name}"},
 		},
+		"vault_saml_auth_backend": {
+			Resource:      UpdateSchemaResource(samlAuthBackendResource()),
+			PathInventory: []string{"/auth/saml/config"},
+		},
 	}
 )
 

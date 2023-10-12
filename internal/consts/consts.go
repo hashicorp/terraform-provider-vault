@@ -421,6 +421,7 @@ const (
 	MountTypeConsul       = "consul"
 	MountTypeTerraform    = "terraform"
 	MountTypeNone         = "none"
+	MountTypeSAML         = "saml"
 
 	/*
 		Vault version constants
