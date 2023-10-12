@@ -21,7 +21,7 @@ func AuthBackendResource() *schema.Resource {
 
 		Create: authBackendWrite,
 		Delete: authBackendDelete,
-		Read:   ReadWrapper(authBackendRead),
+		Read:   provider.ReadWrapper(authBackendRead),
 		Update: authBackendUpdate,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
@@ -69,7 +69,7 @@ func AuthBackendResource() *schema.Resource {
 
 			"tune": authMountTuneSchema(),
 		},
-	})
+	}, false)
 }
 
 func authBackendWrite(d *schema.ResourceData, meta interface{}) error {

@@ -6,13 +6,16 @@ TF_ACC_TERRAFORM_VERSION ?= 1.2.2
 TESTARGS ?= -test.v
 TEST_PATH ?= ./...
 
+go-version-check: ## Check go version
+	@sh -c $(CURDIR)/scripts/goversioncheck.sh
+
 default: build
 
-build: fmtcheck
+build: go-version-check fmtcheck
 	go install
 
-test: fmtcheck
-	TF_ACC= go test $(TESTARGS) -timeout 10m -parallel=4 $(TEST_PATH)
+test: go-version-check fmtcheck
+	TF_ACC= VAULT_TOKEN= go test $(TESTARGS) -timeout 10m $(TEST_PATH)
 
 testacc: fmtcheck
 	TF_ACC=1 go test $(TESTARGS) -timeout 30m $(TEST_PATH)
@@ -20,18 +23,13 @@ testacc: fmtcheck
 testacc-ent:
 	make testacc TF_ACC_ENTERPRISE=1
 
-dev: fmtcheck
+dev: go-version-check fmtcheck
 	go build -o terraform-provider-vault
 	mv terraform-provider-vault ~/.terraform.d/plugins/
 
-debug: fmtcheck
+debug: go-version-check fmtcheck
 	go build -gcflags "all=-N -l" -o terraform-provider-vault
 	mv terraform-provider-vault ~/.terraform.d/plugins/
-
-generate:
-	result=$(cd generated && find . -type f -not -name '*_test.go' | grep -v 'registry.go' | xargs rm && cd - )
-	go run cmd/generate/main.go -openapi-doc=testdata/openapi.json
-	make fmt
 
 vet:
 	@echo "go vet ."
@@ -45,7 +43,7 @@ vet:
 fmt:
 	gofmt -s -w $(GOFMT_FILES)
 
-fmtcheck:
+fmtcheck: go-version-check
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 errcheck:
@@ -73,4 +71,4 @@ ifeq (,$(wildcard $(GOPATH)/src/$(WEBSITE_REPO)))
 endif
 	@$(MAKE) -C $(GOPATH)/src/$(WEBSITE_REPO) website-provider-test PROVIDER_PATH=$(shell pwd) PROVIDER_NAME=$(PKG_NAME)
 
-.PHONY: build test testacc testacc-ent vet fmt fmtcheck errcheck test-compile website website-test
+.PHONY: build test testacc testacc-ent vet fmt fmtcheck errcheck test-compile website website-test go-version-check

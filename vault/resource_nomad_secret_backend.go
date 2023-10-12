@@ -100,14 +100,14 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create:        createNomadAccessConfigResource,
 		Update:        updateNomadAccessConfigResource,
-		Read:          ReadWrapper(readNomadAccessConfigResource),
+		Read:          provider.ReadWrapper(readNomadAccessConfigResource),
 		Delete:        deleteNomadAccessConfigResource,
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: fields,
-	})
+	}, false)
 }
 
 func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {

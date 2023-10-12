@@ -4,15 +4,18 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/pki"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -22,50 +25,103 @@ var (
 	pkiSecretBackendRoleNameFromPathRegex    = regexp.MustCompile("^.+/roles/(.+)$")
 )
 
+// Any new fields should probably not be added to these lists. Instead handle
+// them separately within a provider.IsAPISupported guard
+var pkiSecretFields = []string{
+	consts.FieldAllowedDomainsTemplate,
+	consts.FieldAllowedOtherSans,
+	consts.FieldAllowedURISans,
+	consts.FieldCountry,
+	consts.FieldKeyBits,
+	consts.FieldKeyType,
+	consts.FieldLocality,
+	consts.FieldMaxTTL,
+	consts.FieldNotBeforeDuration,
+	consts.FieldOU,
+	consts.FieldOrganization,
+	consts.FieldPostalCode,
+	consts.FieldProvince,
+	consts.FieldStreetAddress,
+	consts.FieldTTL,
+}
+
+var pkiSecretListFields = []string{
+	consts.FieldAllowedDomains,
+	consts.FieldAllowedSerialNumbers,
+	consts.FieldExtKeyUsage,
+}
+
+var pkiSecretBooleanFields = []string{
+	consts.FieldAllowAnyName,
+	consts.FieldAllowBareDomains,
+	consts.FieldAllowGlobDomains,
+	consts.FieldAllowIPSans,
+	consts.FieldAllowLocalhost,
+	consts.FieldAllowSubdomains,
+	consts.FieldAllowWildcardCertificates,
+	consts.FieldAllowedURISansTemplate,
+	consts.FieldBasicConstraintsValidForNonCA,
+	consts.FieldClientFlag,
+	consts.FieldCodeSigningFlag,
+	consts.FieldEmailProtectionFlag,
+	consts.FieldEnforceHostnames,
+	consts.FieldGenerateLease,
+	consts.FieldNoStore,
+	consts.FieldRequireCN,
+	consts.FieldServerFlag,
+	consts.FieldUseCSRCommonName,
+	consts.FieldUseCSRSans,
+}
+
 func pkiSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendRoleCreate,
-		Read:   ReadWrapper(pkiSecretBackendRoleRead),
-		Update: pkiSecretBackendRoleUpdate,
-		Delete: pkiSecretBackendRoleDelete,
-		Exists: pkiSecretBackendRoleExists,
+		CreateContext: pkiSecretBackendRoleCreate,
+		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendRoleRead),
+		UpdateContext: pkiSecretBackendRoleUpdate,
+		DeleteContext: pkiSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "The path of the PKI secret backend the resource belongs to.",
 			},
-			"name": {
+			consts.FieldName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Unique name for the role.",
 			},
-			"ttl": {
+			consts.FieldIssuerRef: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specifies the default issuer of this request.",
+			},
+			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
 				Description: "The TTL.",
 			},
-			"max_ttl": {
+			consts.FieldMaxTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
 				Description: "The maximum TTL.",
 			},
-			"allow_localhost": {
+			consts.FieldAllowLocalhost: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to allow certificates for localhost.",
 				Default:     true,
 			},
-			"allowed_domains": {
+			consts.FieldAllowedDomains: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
@@ -74,56 +130,56 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"allowed_domains_template": {
+			consts.FieldAllowedDomainsTemplate: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to indicate that `allowed_domains` specifies a template expression (e.g. {{identity.entity.aliases.<mount accessor>.name}})",
 				Default:     false,
 			},
-			"allow_bare_domains": {
+			consts.FieldAllowBareDomains: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to allow certificates matching the actual domain.",
 				Default:     false,
 			},
-			"allow_subdomains": {
+			consts.FieldAllowSubdomains: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to allow certificates matching subdomains.",
 				Default:     false,
 			},
-			"allow_glob_domains": {
+			consts.FieldAllowGlobDomains: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to allow names containing glob patterns.",
 				Default:     false,
 			},
-			"allow_any_name": {
+			consts.FieldAllowAnyName: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to allow any name",
 				Default:     false,
 			},
-			"enforce_hostnames": {
+			consts.FieldEnforceHostnames: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to allow only valid host names",
 				Default:     true,
 			},
-			"allow_ip_sans": {
+			consts.FieldAllowIPSans: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to allow IP SANs",
 				Default:     true,
 			},
-			"allowed_uri_sans": {
+			consts.FieldAllowedURISans: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
@@ -132,7 +188,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"allowed_other_sans": {
+			consts.FieldAllowedOtherSans: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
@@ -141,35 +197,48 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"server_flag": {
+			consts.FieldAllowedURISansTemplate: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Flag to indicate that `allowed_uri_sans` specifies a template expression (e.g. {{identity.entity.aliases.<mount accessor>.name}})",
+			},
+			consts.FieldAllowWildcardCertificates: {
+				Type:        schema.TypeBool,
+				Required:    false,
+				Optional:    true,
+				Description: "Flag to allow wildcard certificates",
+				Default:     true,
+			},
+			consts.FieldServerFlag: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to specify certificates for server use.",
 				Default:     true,
 			},
-			"client_flag": {
+			consts.FieldClientFlag: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to specify certificates for client use.",
 				Default:     true,
 			},
-			"code_signing_flag": {
+			consts.FieldCodeSigningFlag: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to specify certificates for code signing use.",
 				Default:     false,
 			},
-			"email_protection_flag": {
+			consts.FieldEmailProtectionFlag: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to specify certificates for email protection use.",
 				Default:     false,
 			},
-			"key_type": {
+			consts.FieldKeyType: {
 				Type:         schema.TypeString,
 				Required:     false,
 				Optional:     true,
@@ -177,14 +246,14 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519", "any"}, false),
 				Default:      "rsa",
 			},
-			"key_bits": {
+			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,
 				Required:    false,
 				Optional:    true,
 				Description: "The number of bits of generated keys.",
 				Default:     2048,
 			},
-			"key_usage": {
+			consts.FieldKeyUsage: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Computed:    true,
@@ -193,7 +262,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ext_key_usage": {
+			consts.FieldExtKeyUsage: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
@@ -202,120 +271,120 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"use_csr_common_name": {
+			consts.FieldUseCSRCommonName: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to use the CN in the CSR.",
 				Default:     true,
 			},
-			"use_csr_sans": {
+			consts.FieldUseCSRSans: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to use the SANs in the CSR.",
 				Default:     true,
 			},
-			"ou": {
+			consts.FieldOU: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
 				Description: "The organization unit of generated certificates.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"organization": {
+			consts.FieldOrganization: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
 				Description: "The organization of generated certificates.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"country": {
+			consts.FieldCountry: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
 				Description: "The country of generated certificates.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"locality": {
+			consts.FieldLocality: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
 				Description: "The locality of generated certificates.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"province": {
+			consts.FieldProvince: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
 				Description: "The province of generated certificates.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"street_address": {
+			consts.FieldStreetAddress: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
 				Description: "The street address of generated certificates.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"postal_code": {
+			consts.FieldPostalCode: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
 				Description: "The postal code of generated certificates.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"generate_lease": {
+			consts.FieldGenerateLease: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to generate leases with certificates.",
 				Default:     false,
 			},
-			"no_store": {
+			consts.FieldNoStore: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to not store certificates in the storage backend.",
 				Default:     false,
 			},
-			"require_cn": {
+			consts.FieldRequireCN: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to force CN usage.",
 				Default:     true,
 			},
-			"policy_identifiers": {
+			consts.FieldPolicyIdentifiers: {
 				Type:          schema.TypeList,
 				Required:      false,
 				Optional:      true,
 				Description:   "Specify the list of allowed policies OIDs.",
-				ConflictsWith: []string{"policy_identifier"},
+				ConflictsWith: []string{consts.FieldPolicyIdentifier},
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"policy_identifier": {
+			consts.FieldPolicyIdentifier: {
 				Type:          schema.TypeSet,
 				Optional:      true,
 				Description:   "Policy identifier block; can only be used with Vault 1.11+",
-				ConflictsWith: []string{"policy_identifiers"},
+				ConflictsWith: []string{consts.FieldPolicyIdentifiers},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"oid": {
+						consts.FieldOID: {
 							Type:        schema.TypeString,
 							Required:    true,
 							Optional:    false,
 							Description: "OID",
 						},
-						"cps": {
+						consts.FieldCPS: {
 							Type:        schema.TypeString,
 							Required:    false,
 							Optional:    true,
 							Description: "Optional CPS URL",
 						},
-						"notice": {
+						consts.FieldNotice: {
 							Type:        schema.TypeString,
 							Required:    false,
 							Optional:    true,
@@ -324,14 +393,14 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					},
 				},
 			},
-			"basic_constraints_valid_for_non_ca": {
+			consts.FieldBasicConstraintsValidForNonCA: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
 				Description: "Flag to mark basic constraints valid when issuing non-CA certificates.",
 				Default:     false,
 			},
-			"not_before_duration": {
+			consts.FieldNotBeforeDuration: {
 				Type:         schema.TypeString,
 				Required:     false,
 				Optional:     true,
@@ -339,7 +408,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Description:  "Specifies the duration by which to backdate the NotBefore property.",
 				ValidateFunc: provider.ValidateDuration,
 			},
-			"allowed_serial_numbers": {
+			consts.FieldAllowedSerialNumbers: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Optional:    true,
@@ -348,123 +417,112 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldAllowedUserIds: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "The allowed User ID's.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
 
-func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
-	name := d.Get("name").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	name := d.Get(consts.FieldName).(string)
 
 	path := pkiSecretBackendRolePath(backend, name)
 
 	log.Printf("[DEBUG] Writing PKI secret backend role %q", path)
 
-	// TODO: selectively configure the engine by replacing all of the d.Get()
-	// calls with d.GetOk()
-	// The current approach is inconsistent with the majority of the other resources.
-	// It also sets a bad precedent for contributors.
-	iAllowedDomains := d.Get("allowed_domains").([]interface{})
-	allowedDomains := make([]string, 0, len(iAllowedDomains))
-	for _, iAllowedDomain := range iAllowedDomains {
-		allowedDomains = append(allowedDomains, iAllowedDomain.(string))
+	data := map[string]interface{}{}
+
+	// handle TypeList
+	for _, k := range pkiSecretListFields {
+		if v, ok := d.GetOk(k); ok {
+			list := expandStringSlice(v.([]interface{}))
+
+			if len(list) > 0 {
+				data[k] = list
+			}
+		}
+	}
+	// special handling for key_usage because an empty array or array with
+	// empty string means we do not want to specify key usage constraints
+	if v, ok := d.GetOk(consts.FieldKeyUsage); ok {
+		data[consts.FieldKeyUsage] = expandStringSlice(v.([]interface{}))
+	} else {
+		// check if we are an empty array or null (not set in config)
+		val, _ := d.GetRawConfig().AsValueMap()[consts.FieldKeyUsage]
+		if !val.IsNull() {
+			// value was set as empty array in config
+			data[consts.FieldKeyUsage] = make([]string, 0)
+		}
 	}
 
-	iKeyUsage := d.Get("key_usage").([]interface{})
-	keyUsage := make([]string, 0, len(iKeyUsage))
-	for _, iUsage := range iKeyUsage {
-		keyUsage = append(keyUsage, iUsage.(string))
+	// handle TypeBool
+	for _, k := range pkiSecretBooleanFields {
+		// use d.Get for booleans
+		// see: https://discuss.hashicorp.com/t/terraform-sdk-usage-which-out-of-get-getok-getokexists-with-boolean/41815
+		data[k] = d.Get(k)
 	}
 
-	iExtKeyUsage := d.Get("ext_key_usage").([]interface{})
-	extKeyUsage := make([]string, 0, len(iExtKeyUsage))
-	for _, iUsage := range iExtKeyUsage {
-		extKeyUsage = append(extKeyUsage, iUsage.(string))
+	// handle all other types
+	for _, k := range pkiSecretFields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
 
-	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
-	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
-	for _, iSerialNumber := range iAllowedSerialNumbers {
-		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
+	// handle any other special cases
+	if policyIdentifiers, ok := d.GetOk(consts.FieldPolicyIdentifiers); ok {
+		data[consts.FieldPolicyIdentifiers] = policyIdentifiers
+	} else if policyIdentifierBlocksRaw, ok := d.GetOk(consts.FieldPolicyIdentifier); ok {
+		data[consts.FieldPolicyIdentifiers] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
 	}
 
-	data := map[string]interface{}{
-		"ttl":                                d.Get("ttl"),
-		"max_ttl":                            d.Get("max_ttl"),
-		"allow_localhost":                    d.Get("allow_localhost"),
-		"allow_bare_domains":                 d.Get("allow_bare_domains"),
-		"allow_subdomains":                   d.Get("allow_subdomains"),
-		"allowed_domains_template":           d.Get("allowed_domains_template"),
-		"allow_glob_domains":                 d.Get("allow_glob_domains"),
-		"allow_any_name":                     d.Get("allow_any_name"),
-		"enforce_hostnames":                  d.Get("enforce_hostnames"),
-		"allow_ip_sans":                      d.Get("allow_ip_sans"),
-		"allowed_uri_sans":                   d.Get("allowed_uri_sans"),
-		"allowed_other_sans":                 d.Get("allowed_other_sans"),
-		"server_flag":                        d.Get("server_flag"),
-		"client_flag":                        d.Get("client_flag"),
-		"code_signing_flag":                  d.Get("code_signing_flag"),
-		"email_protection_flag":              d.Get("email_protection_flag"),
-		"key_type":                           d.Get("key_type"),
-		"key_bits":                           d.Get("key_bits"),
-		"use_csr_common_name":                d.Get("use_csr_common_name"),
-		"use_csr_sans":                       d.Get("use_csr_sans"),
-		"ou":                                 d.Get("ou"),
-		"organization":                       d.Get("organization"),
-		"country":                            d.Get("country"),
-		"locality":                           d.Get("locality"),
-		"province":                           d.Get("province"),
-		"street_address":                     d.Get("street_address"),
-		"postal_code":                        d.Get("postal_code"),
-		"generate_lease":                     d.Get("generate_lease"),
-		"no_store":                           d.Get("no_store"),
-		"require_cn":                         d.Get("require_cn"),
-		"basic_constraints_valid_for_non_ca": d.Get("basic_constraints_valid_for_non_ca"),
-		"not_before_duration":                d.Get("not_before_duration"),
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if issuerRef, ok := d.GetOk(consts.FieldIssuerRef); ok {
+			data[consts.FieldIssuerRef] = issuerRef
+		}
 	}
 
-	if len(allowedDomains) > 0 {
-		data["allowed_domains"] = allowedDomains
-	}
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		if allowedUserIds, ok := d.GetOk(consts.FieldAllowedUserIds); ok {
+			ifcList := allowedUserIds.([]interface{})
+			list := make([]string, 0, len(ifcList))
+			for _, ifc := range ifcList {
+				list = append(list, ifc.(string))
+			}
 
-	if len(keyUsage) > 0 {
-		data["key_usage"] = keyUsage
-	}
-
-	if len(extKeyUsage) > 0 {
-		data["ext_key_usage"] = extKeyUsage
-	}
-
-	if policyIdentifiers, ok := d.GetOk("policy_identifiers"); ok {
-		data["policy_identifiers"] = policyIdentifiers
-	} else if policyIdentifierBlocksRaw, ok := d.GetOk("policy_identifier"); ok {
-		data["policy_identifiers"] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
-	}
-
-	if len(allowedSerialNumbers) > 0 {
-		data["allowed_serial_numbers"] = allowedSerialNumbers
+			if len(list) > 0 {
+				data[consts.FieldAllowedUserIds] = list
+			}
+		}
 	}
 
 	log.Printf("[DEBUG] Creating role %s on PKI secret backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating role %s for backend %q: %s", name, backend, err)
+		return diag.Errorf("error creating role %s for backend %q: %s", name, backend, err)
 	}
 	log.Printf("[DEBUG] Created role %s on PKI backend %q", name, backend)
 
 	d.SetId(path)
-	return pkiSecretBackendRoleRead(d, meta)
+	return pkiSecretBackendRoleRead(ctx, d, meta)
 }
 
-func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -472,20 +530,20 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		log.Printf("[WARN] Removing role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("invalid role ID %q: %s", path, err)
+		return diag.Errorf("invalid role ID %q: %s", path, err)
 	}
 
 	name, err := pkiSecretBackendRoleNameFromPath(path)
 	if err != nil {
 		log.Printf("[WARN] Removing role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("invalid role ID %q: %s", path, err)
+		return diag.Errorf("invalid role ID %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading role from %q", path)
 	secret, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading role %q: %s", path, err)
+		return diag.Errorf("error reading role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read role from %q", path)
 	if secret == nil {
@@ -494,225 +552,170 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	iAllowedDomains := secret.Data["allowed_domains"].([]interface{})
-	allowedDomains := make([]string, 0, len(iAllowedDomains))
-	for _, iAllowedDomain := range iAllowedDomains {
-		allowedDomains = append(allowedDomains, iAllowedDomain.(string))
+	d.Set(consts.FieldBackend, backend)
+	d.Set(consts.FieldName, name)
+
+	listFields := append(pkiSecretListFields, consts.FieldKeyUsage)
+	// handle TypeList
+	for _, k := range listFields {
+		list := expandStringSlice(secret.Data[k].([]interface{}))
+
+		if len(list) > 0 {
+			d.Set(k, list)
+		}
 	}
 
-	keyBits, err := secret.Data["key_bits"].(json.Number).Int64()
-	if err != nil {
-		return fmt.Errorf("expected key_bits %q to be a number, isn't", secret.Data["key_bits"])
+	// handle TypeBool
+	for _, k := range pkiSecretBooleanFields {
+		d.Set(k, secret.Data[k])
 	}
 
-	iKeyUsage := secret.Data["key_usage"].([]interface{})
-	keyUsage := make([]string, 0, len(iKeyUsage))
-	for _, iUsage := range iKeyUsage {
-		keyUsage = append(keyUsage, iUsage.(string))
+	// handle all other types
+	for _, k := range pkiSecretFields {
+		// handle any special cases
+		switch {
+		case k == consts.FieldNotBeforeDuration:
+			d.Set(k, flattenVaultDuration(secret.Data[k]))
+		case k == consts.FieldKeyBits:
+			keyBits, err := secret.Data[consts.FieldKeyBits].(json.Number).Int64()
+			if err != nil {
+				return diag.Errorf("expected key_bits %q to be a number", secret.Data[consts.FieldKeyBits])
+			}
+			d.Set(consts.FieldKeyBits, keyBits)
+		default:
+			d.Set(k, secret.Data[k])
+		}
 	}
 
-	iExtKeyUsage := secret.Data["ext_key_usage"].([]interface{})
-	extKeyUsage := make([]string, 0, len(iExtKeyUsage))
-	for _, iUsage := range iExtKeyUsage {
-		extKeyUsage = append(extKeyUsage, iUsage.(string))
-	}
-
+	// handle any other special cases
 	var legacyPolicyIdentifiers []string = nil
 	var newPolicyIdentifiers *schema.Set = nil
-	if policyIdentifiersRaw, ok := secret.Data["policy_identifiers"]; ok {
+	if policyIdentifiersRaw, ok := secret.Data[consts.FieldPolicyIdentifiers]; ok {
 		if policyIdentifiersRawList, ok := policyIdentifiersRaw.([]interface{}); ok {
 			var err error
 			legacyPolicyIdentifiers, newPolicyIdentifiers, err = pki.MakePkiPolicyIdentifiersListOrSet(policyIdentifiersRawList)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
 
-	notBeforeDuration := flattenVaultDuration(secret.Data["not_before_duration"])
-
-	iAllowedSerialNumbers := secret.Data["allowed_serial_numbers"].([]interface{})
-	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
-	for _, iSerialNumber := range iAllowedSerialNumbers {
-		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
-	}
-
-	d.Set("backend", backend)
-	d.Set("name", name)
-	d.Set("ttl", secret.Data["ttl"])
-	d.Set("max_ttl", secret.Data["max_ttl"])
-	d.Set("allow_localhost", secret.Data["allow_localhost"])
-	d.Set("allowed_domains", allowedDomains)
-	d.Set("allowed_domains_template", secret.Data["allowed_domains_template"])
-	d.Set("allow_bare_domains", secret.Data["allow_bare_domains"])
-	d.Set("allow_subdomains", secret.Data["allow_subdomains"])
-	d.Set("allow_glob_domains", secret.Data["allow_glob_domains"])
-	d.Set("allow_any_name", secret.Data["allow_any_name"])
-	d.Set("enforce_hostnames", secret.Data["enforce_hostnames"])
-	d.Set("allow_ip_sans", secret.Data["allow_ip_sans"])
-	d.Set("allowed_uri_sans", secret.Data["allowed_uri_sans"])
-	d.Set("allowed_other_sans", secret.Data["allowed_other_sans"])
-	d.Set("server_flag", secret.Data["server_flag"])
-	d.Set("client_flag", secret.Data["client_flag"])
-	d.Set("code_signing_flag", secret.Data["code_signing_flag"])
-	d.Set("email_protection_flag", secret.Data["email_protection_flag"])
-	d.Set("key_type", secret.Data["key_type"])
-	d.Set("key_bits", keyBits)
-	d.Set("key_usage", keyUsage)
-	d.Set("ext_key_usage", extKeyUsage)
-	d.Set("use_csr_common_name", secret.Data["use_csr_common_name"])
-	d.Set("use_csr_sans", secret.Data["use_csr_sans"])
-	d.Set("ou", secret.Data["ou"])
-	d.Set("organization", secret.Data["organization"])
-	d.Set("country", secret.Data["country"])
-	d.Set("locality", secret.Data["locality"])
-	d.Set("province", secret.Data["province"])
-	d.Set("street_address", secret.Data["street_address"])
-	d.Set("postal_code", secret.Data["postal_code"])
-	d.Set("generate_lease", secret.Data["generate_lease"])
-	d.Set("no_store", secret.Data["no_store"])
-	d.Set("require_cn", secret.Data["require_cn"])
 	if len(legacyPolicyIdentifiers) > 0 {
-		d.Set("policy_identifiers", legacyPolicyIdentifiers)
+		d.Set(consts.FieldPolicyIdentifiers, legacyPolicyIdentifiers)
 	} else {
-		d.Set("policy_identifier", newPolicyIdentifiers)
+		d.Set(consts.FieldPolicyIdentifier, newPolicyIdentifiers)
 	}
-	d.Set("basic_constraints_valid_for_non_ca", secret.Data["basic_constraints_valid_for_non_ca"])
-	d.Set("not_before_duration", notBeforeDuration)
-	d.Set("allowed_serial_numbers", allowedSerialNumbers)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if issuerRef, ok := secret.Data[consts.FieldIssuerRef]; ok {
+			d.Set(consts.FieldIssuerRef, issuerRef)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		if allowedUserIds, ok := secret.Data[consts.FieldAllowedUserIds]; ok {
+			d.Set(consts.FieldAllowedUserIds, allowedUserIds)
+		}
+	}
 
 	return nil
 }
 
-func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Updating PKI secret backend role %q", path)
 
-	iAllowedDomains := d.Get("allowed_domains").([]interface{})
-	allowedDomains := make([]string, 0, len(iAllowedDomains))
-	for _, iAllowedDomain := range iAllowedDomains {
-		allowedDomains = append(allowedDomains, iAllowedDomain.(string))
+	// handle TypeList
+	data := map[string]interface{}{}
+	for _, k := range pkiSecretListFields {
+		if v, ok := d.GetOk(k); ok {
+			list := expandStringSlice(v.([]interface{}))
+
+			if len(list) > 0 {
+				data[k] = list
+			}
+		}
+	}
+	// special handling for key_usage because an empty array or array with
+	// empty string means we do not want to specify key usage constraints
+	if v, ok := d.GetOk(consts.FieldKeyUsage); ok {
+		data[consts.FieldKeyUsage] = expandStringSlice(v.([]interface{}))
+	} else {
+		// check if we are an empty array or null (not set in config)
+		val, _ := d.GetRawConfig().AsValueMap()[consts.FieldKeyUsage]
+		if !val.IsNull() {
+			// value was set as empty array in config
+			data[consts.FieldKeyUsage] = make([]string, 0)
+		}
 	}
 
-	iKeyUsage := d.Get("key_usage").([]interface{})
-	keyUsage := make([]string, 0, len(iKeyUsage))
-	for _, iUsage := range iKeyUsage {
-		keyUsage = append(keyUsage, iUsage.(string))
+	// handle TypeBool
+	for _, k := range pkiSecretBooleanFields {
+		data[k] = d.Get(k)
 	}
 
-	iExtKeyUsage := d.Get("ext_key_usage").([]interface{})
-	extKeyUsage := make([]string, 0, len(iExtKeyUsage))
-	for _, iUsage := range iExtKeyUsage {
-		extKeyUsage = append(extKeyUsage, iUsage.(string))
+	// handle all other types
+	for _, k := range pkiSecretFields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
 
-	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
-	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
-	for _, iSerialNumber := range iAllowedSerialNumbers {
-		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
+	// handle any special cases
+	if policyIdentifiers, ok := d.GetOk(consts.FieldPolicyIdentifiers); ok {
+		data[consts.FieldPolicyIdentifiers] = policyIdentifiers
+	} else if policyIdentifierBlocksRaw, ok := d.GetOk(consts.FieldPolicyIdentifier); ok {
+		data[consts.FieldPolicyIdentifiers] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
 	}
 
-	data := map[string]interface{}{
-		"ttl":                                d.Get("ttl"),
-		"max_ttl":                            d.Get("max_ttl"),
-		"allow_localhost":                    d.Get("allow_localhost"),
-		"allow_bare_domains":                 d.Get("allow_bare_domains"),
-		"allowed_domains_template":           d.Get("allowed_domains_template"),
-		"allow_subdomains":                   d.Get("allow_subdomains"),
-		"allow_glob_domains":                 d.Get("allow_glob_domains"),
-		"allow_any_name":                     d.Get("allow_any_name"),
-		"enforce_hostnames":                  d.Get("enforce_hostnames"),
-		"allow_ip_sans":                      d.Get("allow_ip_sans"),
-		"allowed_uri_sans":                   d.Get("allowed_uri_sans"),
-		"allowed_other_sans":                 d.Get("allowed_other_sans"),
-		"server_flag":                        d.Get("server_flag"),
-		"client_flag":                        d.Get("client_flag"),
-		"code_signing_flag":                  d.Get("code_signing_flag"),
-		"email_protection_flag":              d.Get("email_protection_flag"),
-		"key_type":                           d.Get("key_type"),
-		"key_bits":                           d.Get("key_bits"),
-		"use_csr_common_name":                d.Get("use_csr_common_name"),
-		"use_csr_sans":                       d.Get("use_csr_sans"),
-		"ou":                                 d.Get("ou"),
-		"organization":                       d.Get("organization"),
-		"country":                            d.Get("country"),
-		"locality":                           d.Get("locality"),
-		"province":                           d.Get("province"),
-		"street_address":                     d.Get("street_address"),
-		"postal_code":                        d.Get("postal_code"),
-		"generate_lease":                     d.Get("generate_lease"),
-		"no_store":                           d.Get("no_store"),
-		"require_cn":                         d.Get("require_cn"),
-		"basic_constraints_valid_for_non_ca": d.Get("basic_constraints_valid_for_non_ca"),
-		"not_before_duration":                d.Get("not_before_duration"),
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if issuerRef, ok := d.GetOk(consts.FieldIssuerRef); ok {
+			data[consts.FieldIssuerRef] = issuerRef
+		}
 	}
 
-	if len(allowedDomains) > 0 {
-		data["allowed_domains"] = allowedDomains
-	}
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		if allowedUserIds, ok := d.GetOk(consts.FieldAllowedUserIds); ok {
+			ifcList := allowedUserIds.([]interface{})
+			list := make([]string, 0, len(ifcList))
+			for _, ifc := range ifcList {
+				list = append(list, ifc.(string))
+			}
 
-	if len(keyUsage) > 0 {
-		data["key_usage"] = keyUsage
-	}
-
-	if len(extKeyUsage) > 0 {
-		data["ext_key_usage"] = extKeyUsage
-	}
-
-	if policyIdentifiers, ok := d.GetOk("policy_identifiers"); ok {
-		data["policy_identifiers"] = policyIdentifiers
-	} else if policyIdentifierBlocksRaw, ok := d.GetOk("policy_identifier"); ok {
-		data["policy_identifiers"] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
-	}
-
-	if len(allowedSerialNumbers) > 0 {
-		data["allowed_serial_numbers"] = allowedSerialNumbers
+			if len(list) > 0 {
+				data[consts.FieldAllowedUserIds] = list
+			}
+		}
 	}
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating PKI secret backend role %q: %s", path, err)
+		return diag.Errorf("error updating PKI secret backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated PKI secret backend role %q", path)
 
-	return pkiSecretBackendRoleRead(d, meta)
+	return pkiSecretBackendRoleRead(ctx, d, meta)
 }
 
-func pkiSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error deleting role %q: %s", path, err)
+		return diag.Errorf("error deleting role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Deleted role %q", path)
 	return nil
-}
-
-func pkiSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if role %q exists", path)
-	secret, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if role %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if role %q exists", path)
-	return secret != nil, nil
 }
 
 func pkiSecretBackendRolePath(backend string, name string) string {

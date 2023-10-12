@@ -20,7 +20,7 @@ import (
 func awsSecretBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: awsSecretBackendCreate,
-		Read:   ReadWrapper(awsSecretBackendRead),
+		Read:   provider.ReadWrapper(awsSecretBackendRead),
 		Update: awsSecretBackendUpdate,
 		Delete: awsSecretBackendDelete,
 		Exists: awsSecretBackendExists,
@@ -98,8 +98,15 @@ func awsSecretBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "Template describing how dynamic usernames are generated.",
 			},
+			"local": {
+				Type:        schema.TypeBool,
+				ForceNew:    true,
+				Optional:    true,
+				Default:     false,
+				Description: "Specifies if the secret backend is local only",
+			},
 		},
-	})
+	}, false)
 }
 
 func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
@@ -143,12 +150,14 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
 	usernameTemplate := d.Get("username_template").(string)
+	local := d.Get("local").(bool)
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting AWS backend at %q", path)
 	err := client.Sys().Mount(path, &api.MountInput{
 		Type:        consts.MountTypeAWS,
 		Description: description,
+		Local:       local,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
@@ -259,6 +268,7 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
+	d.Set("local", mount.Local)
 
 	return nil
 }

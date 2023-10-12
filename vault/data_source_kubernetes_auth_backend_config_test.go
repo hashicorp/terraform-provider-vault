@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -19,9 +20,9 @@ func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
 	jwt := kubernetesJWT
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt, kubernetesCAcert),
@@ -29,9 +30,9 @@ func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"kubernetes_host", "http://example.com:443"),
+						consts.FieldKubernetesHost, "http://example.com:443"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"kubernetes_ca_cert", kubernetesCAcert),
+						consts.FieldKubernetesCACert, kubernetesCAcert),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"token_reviewer_jwt", jwt),
 				),
@@ -44,9 +45,9 @@ func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
 					resource.TestCheckNoResourceAttr("data.vault_kubernetes_auth_backend_config.config",
 						"token_reviewer_jwt"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
-						"kubernetes_host", "http://example.com:443"),
+						consts.FieldKubernetesHost, "http://example.com:443"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
-						"kubernetes_ca_cert", kubernetesCAcert),
+						consts.FieldKubernetesCACert, kubernetesCAcert),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
 						"pem_keys.#", "0"),
 				),
@@ -63,19 +64,20 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 	disableLocalCaJwt := true
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation, disableLocalCaJwt),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, jwt, issuer,
+					disableIssValidation, disableLocalCaJwt, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"kubernetes_host", "http://example.com:443"),
+						consts.FieldKubernetesHost, "http://example.com:443"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"kubernetes_ca_cert", kubernetesCAcert),
+						consts.FieldKubernetesCACert, kubernetesCAcert),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"token_reviewer_jwt", jwt),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
@@ -83,11 +85,11 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"pem_keys.0", kubernetesPEMfile),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"issuer", issuer),
+						consts.FieldIssuer, issuer),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"disable_iss_validation", strconv.FormatBool(disableIssValidation)),
+						consts.FieldDisableISSValidation, strconv.FormatBool(disableIssValidation)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"disable_local_ca_jwt", strconv.FormatBool(disableLocalCaJwt)),
+						consts.FieldDisableLocalCAJWT, strconv.FormatBool(disableLocalCaJwt)),
 				),
 			},
 			{
@@ -98,19 +100,19 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 					resource.TestCheckNoResourceAttr("data.vault_kubernetes_auth_backend_config.config",
 						"token_reviewer_jwt"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
-						"kubernetes_host", "http://example.com:443"),
+						consts.FieldKubernetesHost, "http://example.com:443"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
-						"kubernetes_ca_cert", kubernetesCAcert),
+						consts.FieldKubernetesCACert, kubernetesCAcert),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
 						"pem_keys.#", "1"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
 						"pem_keys.0", kubernetesPEMfile),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"issuer", issuer),
+						consts.FieldIssuer, issuer),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"disable_iss_validation", strconv.FormatBool(disableIssValidation)),
+						consts.FieldDisableISSValidation, strconv.FormatBool(disableIssValidation)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"disable_local_ca_jwt", strconv.FormatBool(disableLocalCaJwt)),
+						consts.FieldDisableLocalCAJWT, strconv.FormatBool(disableLocalCaJwt)),
 				),
 			},
 		},
@@ -132,5 +134,6 @@ func testAccKubernetesAuthBackendConfigDataSourceConfig_full(backend, jwt string
 
 data "vault_kubernetes_auth_backend_config" "config" {
   backend = "%s"
-}`, testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation, disableLocalCaJwt), backend)
+}`, testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, jwt, issuer,
+		disableIssValidation, disableLocalCaJwt, false), backend)
 }

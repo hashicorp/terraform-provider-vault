@@ -44,9 +44,9 @@ func TestAccNamespace(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testNamespaceDestroy(namespacePath),
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testNamespaceDestroy(namespacePath),
 		Steps: []resource.TestStep{
 			{
 				Config: testNestedNamespaces(namespacePath, 3),
@@ -117,7 +117,7 @@ func testNamespaceDestroy(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
-		namespaceRef, err := client.Logical().Read(fmt.Sprintf("%s/%s", SysNamespaceRoot, path))
+		namespaceRef, err := client.Logical().Read(fmt.Sprintf("%s/%s", consts.SysNamespaceRoot, path))
 		if err != nil {
 			return fmt.Errorf("error reading back configuration: %s", err)
 		}

@@ -20,7 +20,7 @@ import (
 func tokenResource() *schema.Resource {
 	return &schema.Resource{
 		Create: tokenCreate,
-		Read:   ReadWrapper(tokenRead),
+		Read:   provider.ReadWrapper(tokenRead),
 		Update: tokenUpdate,
 		Delete: tokenDelete,
 		Exists: tokenExists,

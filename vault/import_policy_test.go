@@ -15,8 +15,8 @@ import (
 func TestAccPolicy_importBasic(t *testing.T) {
 	name := "test-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testResourcePolicy_initialConfig(name),

@@ -5,9 +5,9 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -20,14 +20,7 @@ import (
 const envVarTFAccOCIAuth = "TF_ACC_OCI_AUTH"
 
 func TestAuthLoginOCI_Init(t *testing.T) {
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name:      "basic",
 			authField: consts.FieldAuthLoginOCI,
@@ -77,25 +70,7 @@ func TestAuthLoginOCI_Init(t *testing.T) {
 			s := map[string]*schema.Schema{
 				tt.authField: GetOCILoginSchema(tt.authField),
 			}
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginOCI{}
-			err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if err != nil {
-				if tt.expectErr != nil {
-					if !reflect.DeepEqual(tt.expectErr, err) {
-						t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-					}
-				}
-			} else {
-				if !reflect.DeepEqual(tt.expectParams, l.params) {
-					t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-				}
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginOCI{})
 		})
 	}
 }
@@ -214,6 +189,25 @@ func TestAuthLoginOCI_Login(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginOCI{
+				AuthLoginCommon: AuthLoginCommon{
+					authField: consts.FieldAuthLoginOCI,
+					params: map[string]interface{}{
+						consts.FieldRole:     "alice",
+						consts.FieldAuthType: ociAuthTypeAPIKeys,
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
+		{
 			name: "error-uninitialized",
 			authLogin: &AuthLoginOCI{
 				AuthLoginCommon: AuthLoginCommon{
@@ -231,6 +225,7 @@ func TestAuthLoginOCI_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

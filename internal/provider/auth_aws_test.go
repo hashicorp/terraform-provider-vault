@@ -5,6 +5,7 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -19,14 +20,7 @@ import (
 )
 
 func TestAuthLoginAWS_Init(t *testing.T) {
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name:      "basic",
 			authField: consts.FieldAuthLoginAWS,
@@ -96,25 +90,7 @@ func TestAuthLoginAWS_Init(t *testing.T) {
 			s := map[string]*schema.Schema{
 				tt.authField: GetAWSLoginSchema(tt.authField),
 			}
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginAWS{}
-			err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if err != nil {
-				if tt.expectErr != nil {
-					if !reflect.DeepEqual(tt.expectErr, err) {
-						t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-					}
-				}
-			} else {
-				if !reflect.DeepEqual(tt.expectParams, l.params) {
-					t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-				}
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginAWS{})
 		})
 	}
 }
@@ -311,9 +287,29 @@ func TestAuthLoginAWS_Login(t *testing.T) {
 			wantErr:   true,
 			expectErr: authLoginInitCheckError,
 		},
+		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginAWS{
+				AuthLoginCommon{
+					authField: "baz",
+					mount:     "foo",
+					params: map[string]interface{}{
+						consts.FieldRole: "bob",
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

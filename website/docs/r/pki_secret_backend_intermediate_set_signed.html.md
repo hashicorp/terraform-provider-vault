@@ -17,6 +17,10 @@ artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
+~> **Important** Multi-Issuer Functionality is enabled on this version
+of the Provider. If migrating from an older version of Vault or the Provider,
+please refer to the [PKI Multi-Issuer Upgrade Guide](../guides/pki_multi_issuer_upgrade.html.markdown)
+
 ## Example Usage
 
 ```hcl
@@ -95,4 +99,9 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+In addition to the arguments above, the following attributes are exported:
+
+* `imported_issuers` - The imported issuers indicating which issuers were created as part of
+  this request.
+
+* `imported_keys` - The imported keys indicating which keys were created as part of this request.

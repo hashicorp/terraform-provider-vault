@@ -61,6 +61,7 @@ resource "%s" "test" {
   integration_key = "int-key-2"
   api_hostname    = "foo.baz"
   push_info       = "push-info-2"
+  username_format = ""
 }
 `, mfa.ResourceNameDuo),
 				Check: resource.ComposeAggregateTestCheckFunc(

@@ -71,7 +71,7 @@ func raftAutopilotConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createOrUpdateAutopilotConfigResource,
 		Update: createOrUpdateAutopilotConfigResource,
-		Read:   ReadWrapper(readAutopilotConfigResource),
+		Read:   provider.ReadWrapper(readAutopilotConfigResource),
 		Delete: deleteAutopilotConfigResource,
 		Schema: fields,
 		Importer: &schema.ResourceImporter{
@@ -136,6 +136,11 @@ func readAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error
 	resp, err := client.Logical().Read(autopilotPath)
 	if err != nil {
 		return fmt.Errorf("error reading %q: %s", autopilotPath, err)
+	}
+	if resp == nil {
+		log.Printf("[WARN] Autopilot configuration %q not found, removing it from state", autopilotPath)
+		d.SetId("")
+		return nil
 	}
 
 	if val, ok := resp.Data["cleanup_dead_servers"]; ok {

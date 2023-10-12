@@ -15,8 +15,8 @@ import (
 
 func TestDataSourceTransitDecrypt(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceTransitDecrypt_config,

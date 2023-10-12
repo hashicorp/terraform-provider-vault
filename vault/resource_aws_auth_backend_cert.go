@@ -24,7 +24,7 @@ var (
 func awsAuthBackendCertResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendCertCreate,
-		Read:   ReadWrapper(awsAuthBackendCertRead),
+		Read:   provider.ReadWrapper(awsAuthBackendCertRead),
 		Delete: awsAuthBackendCertDelete,
 		Exists: awsAuthBackendCertExists,
 		Importer: &schema.ResourceImporter{

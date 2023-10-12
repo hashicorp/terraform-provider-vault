@@ -4,15 +4,18 @@
 package entity
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
+	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const (
@@ -162,8 +165,19 @@ func LookupEntityAlias(client *api.Client, params *FindAliasParams) (*Alias, err
 
 	return nil, nil
 }
+func WithMinRetryWait(d time.Duration) func(client *api.Client) {
+	return func(client *api.Client) {
+		client.SetMinRetryWait(d)
+	}
+}
 
-func ReadEntity(client *api.Client, path string, retry bool) (*api.Secret, error) {
+func WithMaxRetryWait(d time.Duration) func(client *api.Client) {
+	return func(client *api.Client) {
+		client.SetMaxRetryWait(d)
+	}
+}
+
+func ReadEntity(client *api.Client, path string, retry bool, options ...func(client *api.Client)) (*api.Secret, error) {
 	log.Printf("[DEBUG] Reading Entity from %q", path)
 
 	var err error
@@ -172,7 +186,8 @@ func ReadEntity(client *api.Client, path string, retry bool) (*api.Secret, error
 		if err != nil {
 			return nil, fmt.Errorf("error cloning client: %w", err)
 		}
-		util.SetupCCCRetryClient(client, provider.MaxHTTPRetriesCCC)
+
+		setupCCCRetryClient(client, provider.MaxHTTPRetriesCCC, options...)
 	}
 
 	resp, err := client.Logical().Read(path)
@@ -185,4 +200,55 @@ func ReadEntity(client *api.Client, path string, retry bool) (*api.Secret, error
 	}
 
 	return resp, nil
+}
+
+// setupCCCRetryClient for handling Client Controlled Consistency related
+// requests.
+func setupCCCRetryClient(client *api.Client, maxRetry int, options ...func(client *api.Client)) {
+	client.SetReadYourWrites(true)
+	client.SetMaxRetries(maxRetry)
+	client.SetCheckRetry(statusCheckRetry(http.StatusNotFound))
+
+	for _, option := range options {
+		option(client)
+	}
+
+	// ensure that the clone has the reasonable backoff min/max durations set.
+	if client.MinRetryWait() == 0 {
+		client.SetMinRetryWait(time.Millisecond * 1000)
+	}
+	if client.MaxRetryWait() == 0 {
+		client.SetMaxRetryWait(time.Millisecond * 1500)
+	}
+	if client.MaxRetryWait() < client.MinRetryWait() {
+		client.SetMaxRetryWait(client.MinRetryWait())
+	}
+
+	bo := retryablehttp.LinearJitterBackoff
+	client.SetBackoff(bo)
+
+	to := time.Duration(0)
+	for i := 0; i < client.MaxRetries(); i++ {
+		to += bo(client.MaxRetryWait(), client.MaxRetryWait(), i, nil)
+	}
+	client.SetClientTimeout(to + time.Second*30)
+}
+
+// statusCheckRetry for any response having a status code in statusCode.
+func statusCheckRetry(statusCodes ...int) retryablehttp.CheckRetry {
+	return func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		// ensure that the client controlled consistency policy is honoured.
+		if retry, err := api.DefaultRetryPolicy(ctx, resp, err); err != nil || retry {
+			return retry, err
+		}
+
+		if resp != nil {
+			for _, code := range statusCodes {
+				if code == resp.StatusCode {
+					return true, nil
+				}
+			}
+		}
+		return false, nil
+	}
 }

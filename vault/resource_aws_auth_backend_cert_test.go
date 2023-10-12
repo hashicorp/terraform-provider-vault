@@ -24,9 +24,9 @@ func TestAccAWSAuthBackendCert_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	name := acctest.RandomWithPrefix("test-cert")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendCertDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendCertDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendCertConfig_basic(backend, name),
@@ -45,9 +45,9 @@ func TestAccAWSAuthBackendCert_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	name := acctest.RandomWithPrefix("test-cert")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendCertDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendCertDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendCertConfig_basic(backend, name),

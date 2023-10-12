@@ -12,6 +12,18 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+func init() {
+	field := consts.FieldAuthLoginGeneric
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginGeneric{}
+			return a.Init(r, field)
+		},
+		GetGenericLoginSchema); err != nil {
+		panic(err)
+	}
+}
+
 func GetGenericLoginSchema(authField string) *schema.Schema {
 	return getLoginSchema(
 		authField,
@@ -46,6 +58,8 @@ func GetGenericLoginSchemaResource(_ string) *schema.Resource {
 	}
 }
 
+var _ AuthLogin = (*AuthLoginGeneric)(nil)
+
 // AuthLoginGeneric provides a raw interface for authenticating to most
 // authentication engines.
 // Requires configuration provided by SchemaLoginGeneric.
@@ -60,12 +74,12 @@ func (l *AuthLoginGeneric) Namespace() string {
 	return l.namespace
 }
 
-func (l *AuthLoginGeneric) Init(d *schema.ResourceData, authField string) error {
+func (l *AuthLoginGeneric) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
 	l.authField = authField
 
 	path, params, err := l.init(d)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	l.path = path
@@ -79,7 +93,7 @@ func (l *AuthLoginGeneric) Init(d *schema.ResourceData, authField string) error 
 		l.method = v.(string)
 	}
 
-	return nil
+	return l, nil
 }
 
 func (l *AuthLoginGeneric) LoginPath() string {

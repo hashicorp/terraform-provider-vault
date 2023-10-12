@@ -115,7 +115,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 
 		CreateContext: certAuthResourceWrite,
 		UpdateContext: certAuthResourceUpdate,
-		ReadContext:   ReadContextWrapper(certAuthResourceRead),
+		ReadContext:   provider.ReadContextWrapper(certAuthResourceRead),
 		DeleteContext: certAuthResourceDelete,
 		Schema:        fields,
 	}
@@ -151,6 +151,10 @@ func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta int
 
 	if v, ok := d.GetOk("allowed_dns_sans"); ok {
 		data["allowed_dns_sans"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("allowed_email_sans"); ok {
+		data["allowed_email_sans"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("allowed_uri_sans"); ok {
@@ -203,6 +207,10 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 	if v, ok := d.GetOk("allowed_dns_sans"); ok {
 		data["allowed_dns_sans"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("allowed_email_sans"); ok {
+		data["allowed_email_sans"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("allowed_uri_sans"); ok {

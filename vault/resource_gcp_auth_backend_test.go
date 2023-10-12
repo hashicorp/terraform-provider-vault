@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -33,11 +34,12 @@ const gcpJSONCredentials string = `
 func TestGCPAuthBackend_basic(t *testing.T) {
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
+	var resAuthFirst api.AuthMount
 	path := resource.PrefixedUniqueId("gcp-basic-")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testGCPAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
@@ -46,6 +48,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 			{
 				Config: testGCPAuthBackendConfig_update(path, gcpJSONCredentials),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckAuthMountExists("vault_gcp_auth_backend.test", &resAuthFirst),
 					testGCPAuthBackendCheck_attrs(),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.#", "1"),
@@ -59,11 +62,13 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "cloudresourcemanager.googleapis.com"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.0.compute", "compute.googleapis.com"),
+					resource.TestCheckResourceAttrPtr("vault_gcp_auth_backend.test", "accessor", &resAuthFirst.Accessor),
 				),
 			},
 			{
 				Config: testGCPAuthBackendConfig_update_partial(path, gcpJSONCredentials),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckAuthMountExists("vault_gcp_auth_backend.test", &resAuthFirst),
 					testGCPAuthBackendCheck_attrs(),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.#", "1"),
@@ -77,6 +82,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "example.com:9200"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.0.compute", "compute.example.com"),
+					resource.TestCheckResourceAttrPtr("vault_gcp_auth_backend.test", "accessor", &resAuthFirst.Accessor),
 				),
 			},
 			{
@@ -111,9 +117,9 @@ func TestGCPAuthBackend_import(t *testing.T) {
 	path := resource.PrefixedUniqueId("gcp-import-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testGCPAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
@@ -139,8 +145,8 @@ func TestGCPAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_gcp_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),

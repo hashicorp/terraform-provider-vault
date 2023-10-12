@@ -12,6 +12,17 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+func init() {
+	field := consts.FieldAuthLoginJWT
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginJWT{}
+			return a.Init(r, field)
+		}, GetJWTLoginSchema); err != nil {
+		panic(err)
+	}
+}
+
 // GetJWTLoginSchema for the jwt authentication engine.
 func GetJWTLoginSchema(authField string) *schema.Schema {
 	return getLoginSchema(
@@ -40,6 +51,8 @@ func GetJWTLoginSchemaResource(_ string) *schema.Resource {
 	}, consts.MountTypeJWT)
 }
 
+var _ AuthLogin = (*AuthLoginJWT)(nil)
+
 type AuthLoginJWT struct {
 	AuthLoginCommon
 }
@@ -57,16 +70,16 @@ func (l *AuthLoginJWT) LoginPath() string {
 	return fmt.Sprintf("auth/%s/login", l.MountPath())
 }
 
-func (l *AuthLoginJWT) Init(d *schema.ResourceData, authField string) error {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return err
+func (l *AuthLoginJWT) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			return l.checkRequiredFields(d, consts.FieldRole, consts.FieldJWT)
+		},
+	); err != nil {
+		return nil, err
 	}
 
-	if err := l.checkRequiredFields(d, consts.FieldRole, consts.FieldJWT); err != nil {
-		return err
-	}
-
-	return nil
+	return l, nil
 }
 
 // Method name for the jwt authentication engine.

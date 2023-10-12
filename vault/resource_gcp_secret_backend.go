@@ -19,7 +19,7 @@ import (
 func gcpSecretBackendResource(name string) *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create:        gcpSecretBackendCreate,
-		Read:          ReadWrapper(gcpSecretBackendRead),
+		Read:          provider.ReadWrapper(gcpSecretBackendRead),
 		Update:        gcpSecretBackendUpdate,
 		Delete:        gcpSecretBackendDelete,
 		Exists:        gcpSecretBackendExists,
@@ -83,7 +83,7 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 				Description: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
 			},
 		},
-	})
+	}, false)
 }
 
 func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {

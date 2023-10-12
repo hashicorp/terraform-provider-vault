@@ -100,7 +100,7 @@ func raftAutopilotStateDataSource() *schema.Resource {
 		},
 	}
 	return &schema.Resource{
-		Read:   ReadWrapper(raftAutopilotStateDataSourceRead),
+		Read:   provider.ReadWrapper(raftAutopilotStateDataSourceRead),
 		Schema: fields,
 	}
 }

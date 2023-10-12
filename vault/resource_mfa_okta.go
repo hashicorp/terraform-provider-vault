@@ -19,7 +19,7 @@ func mfaOktaResource() *schema.Resource {
 		Create: mfaOktaWrite,
 		Update: mfaOktaUpdate,
 		Delete: mfaOktaDelete,
-		Read:   ReadWrapper(mfaOktaRead),
+		Read:   provider.ReadWrapper(mfaOktaRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

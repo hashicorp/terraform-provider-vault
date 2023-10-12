@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
+	"regexp"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -17,13 +17,32 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-var kvMetadataFields = map[string]string{
-	consts.FieldMaxVersions:        consts.FieldMaxVersions,
-	consts.FieldCASRequired:        consts.FieldCASRequired,
-	consts.FieldDeleteVersionAfter: consts.FieldDeleteVersionAfter,
-	consts.FieldCustomMetadata:     consts.FieldData,
+var (
+	kvV2SecretMountFromPathRegex = regexp.MustCompile("^(.+)/data/.+$")
+	kvV2SecretNameFromPathRegex  = regexp.MustCompile("^.+/data/(.+)$")
+
+	kvMetadataFields = map[string]string{
+		consts.FieldMaxVersions:        consts.FieldMaxVersions,
+		consts.FieldCASRequired:        consts.FieldCASRequired,
+		consts.FieldDeleteVersionAfter: consts.FieldDeleteVersionAfter,
+		consts.FieldCustomMetadata:     consts.FieldData,
+	}
+)
+
+func kvSecretV2DisableReadDiff(ctx context.Context, diff *schema.ResourceDiff, m interface{}) error {
+	if diff.Get(consts.FieldDisableRead).(bool) && diff.Id() != "" {
+		// When disable_read is true we need to remove the computed data keys
+		// from the diff. Otherwise, we will report drift because they were
+		// never set but the provider expects them to be because they are
+		// computed fields.
+		log.Printf("[DEBUG] %q is set, clearing %q and %q", consts.FieldDisableRead, consts.FieldData, consts.FieldMetadata)
+		diff.Clear(consts.FieldData)
+		diff.Clear(consts.FieldMetadata)
+	}
+	return nil
 }
 
 func kvSecretV2Resource(name string) *schema.Resource {
@@ -31,10 +50,11 @@ func kvSecretV2Resource(name string) *schema.Resource {
 		CreateContext: kvSecretV2Write,
 		UpdateContext: kvSecretV2Write,
 		DeleteContext: kvSecretV2Delete,
-		ReadContext:   ReadContextWrapper(kvSecretV2Read),
+		ReadContext:   provider.ReadContextWrapper(kvSecretV2Read),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: kvSecretV2DisableReadDiff,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldMount: {
@@ -71,7 +91,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 				Description: "An object that holds option settings.",
 			},
 
-			"disable_read": {
+			consts.FieldDisableRead: {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
@@ -196,8 +216,8 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 		data[k] = d.Get(k)
 	}
 
-	if _, err := client.Logical().Write(path, data); err != nil {
-		return diag.Errorf("error writing secret data to %s, err=%s", path, err)
+	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.SetId(path)
@@ -217,7 +237,7 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 }
 
 func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	shouldRead := !d.Get("disable_read").(bool)
+	shouldRead := !d.Get(consts.FieldDisableRead).(bool)
 
 	path := d.Id()
 	if path == "" {
@@ -228,18 +248,16 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 		return diag.FromErr(err)
 	}
 
-	// id should be of the form "mount/data/name"
-	// limit substrings to 3 in case name has '/'
-	// in it or if it's a nested secret
-	parsedPath := strings.SplitN(path, "/", 3)
-	if len(parsedPath) != 3 {
-		return diag.Errorf("invalid format for KV secret path %s", path)
+	mount, err := getKVV2SecretMountFromPath(path)
+	if err != nil {
+		return diag.Errorf("unable to read mount from ID %s, err=%s", path, err)
 	}
 
-	mount := parsedPath[0]
-	name := parsedPath[2]
+	name, err := getKVV2SecretNameFromPath(path)
+	if err != nil {
+		return diag.Errorf("unable to read name from ID %s, err=%s", path, err)
+	}
 
-	// Set mount and name fields
 	if err := d.Set(consts.FieldMount, mount); err != nil {
 		return diag.FromErr(err)
 	}
@@ -285,8 +303,7 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 				// Read & Set custom metadata
 				if _, ok := v[consts.FieldCustomMetadata]; ok {
 					// construct metadata path
-					parsedPath[1] = "metadata"
-					metadataPath := strings.Join(parsedPath, "/")
+					metadataPath := getKVV2Path(mount, name, consts.FieldMetadata)
 					cm, err := readKVV2Metadata(client, metadataPath)
 					if err != nil {
 						return diag.FromErr(err)
@@ -363,4 +380,26 @@ func kvSecretV2Delete(_ context.Context, d *schema.ResourceData, meta interface{
 	}
 
 	return nil
+}
+
+func getKVV2SecretNameFromPath(path string) (string, error) {
+	if !kvV2SecretNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no name found")
+	}
+	res := kvV2SecretNameFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for name", len(res))
+	}
+	return res[1], nil
+}
+
+func getKVV2SecretMountFromPath(path string) (string, error) {
+	if !kvV2SecretMountFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no mount found")
+	}
+	res := kvV2SecretMountFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for mount", len(res))
+	}
+	return res[1], nil
 }

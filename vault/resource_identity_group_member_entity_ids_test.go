@@ -24,9 +24,9 @@ func TestAccIdentityGroupMemberEntityIdsExclusiveEmpty(t *testing.T) {
 
 	resourceName := "vault_identity_group_member_entity_ids.member_entity_ids"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigExclusiveEmpty(),
@@ -55,9 +55,9 @@ func TestAccIdentityGroupMemberEntityIdsExclusive(t *testing.T) {
 	testEntity := acctest.RandomWithPrefix("test-entity")
 	resourceName := "vault_identity_group_member_entity_ids.member_entity_ids"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigExclusive(devEntity),
@@ -84,9 +84,9 @@ func TestAccIdentityGroupMemberEntityIdsNonExclusiveEmpty(t *testing.T) {
 	resourceNameDev := "vault_identity_group_member_entity_ids.dev"
 	resourceNameTest := "vault_identity_group_member_entity_ids.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusiveEmpty(devEntity),
@@ -141,9 +141,9 @@ func TestAccIdentityGroupMemberEntityIdsNonExclusive(t *testing.T) {
 	resourceNameDev := "vault_identity_group_member_entity_ids.dev"
 	resourceNameTest := "vault_identity_group_member_entity_ids.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusive(entity1, entity2),
@@ -210,9 +210,9 @@ func TestAccIdentityGroupMemberEntityIdsDynamic(t *testing.T) {
 	groupName := acctest.RandomWithPrefix("group")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGMEIDynamic(groupName, true, tests...),

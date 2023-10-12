@@ -14,7 +14,7 @@ import (
 
 func transitDecryptDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(transitDecryptDataSourceRead),
+		Read: provider.ReadWrapper(transitDecryptDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"key": {

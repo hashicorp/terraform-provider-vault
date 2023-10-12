@@ -14,7 +14,7 @@ import (
 
 func authBackendDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(authBackendDataSourceRead),
+		Read: provider.ReadWrapper(authBackendDataSourceRead),
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,

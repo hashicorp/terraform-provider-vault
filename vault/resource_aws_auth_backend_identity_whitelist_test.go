@@ -20,9 +20,9 @@ import (
 func TestAccAWSAuthBackendIdentityWhitelist_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendIdentityWhitelistDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendIdentityWhitelistDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendIdentityWhitelistConfig_basic(backend),
@@ -40,9 +40,9 @@ func TestAccAWSAuthBackendIdentityWhitelist_import(t *testing.T) {
 func TestAccAWSAuthBackendIdentityWhitelist_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendIdentityWhitelistDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendIdentityWhitelistDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendIdentityWhitelistConfig_basic(backend),

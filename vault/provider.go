@@ -4,18 +4,8 @@
 package vault
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"os"
-
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/mfa"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -35,20 +25,10 @@ const (
 
 	// DefaultMaxHTTPRetriesCCC is used for configuring the api.Client's MaxRetries
 	// for Client Controlled Consistency related operations.
-	DefaultMaxHTTPRetriesCCC = 10
+	DefaultMaxHTTPRetriesCCC = provider.DefaultMaxHTTPRetriesCCC
 )
 
 func Provider() *schema.Provider {
-	dataSourcesMap, err := parse(DataSourceRegistry)
-	if err != nil {
-		panic(err)
-	}
-
-	resourcesMap, err := parse(ResourceRegistry)
-	if err != nil {
-		panic(err)
-	}
-
 	// TODO: add support path inventory, probably means
 	// reworking the registry init entirely.
 	mfaResources, err := mfa.GetResources()
@@ -56,185 +36,11 @@ func Provider() *schema.Provider {
 		panic(err)
 	}
 
-	provider.MustAddSchemaResource(mfaResources, resourcesMap, nil)
-
-	r := &schema.Provider{
-		Schema: map[string]*schema.Schema{
-			consts.FieldAddress: {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultAddress, nil),
-				Description: "URL of the root of the target Vault server.",
-			},
-			"add_address_to_env": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     false,
-				Description: "If true, adds the value of the `address` argument to the Terraform process environment.",
-			},
-			"token": {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultToken, ""),
-				Description: "Token to use to authenticate to Vault.",
-			},
-			"token_name": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN_NAME", ""),
-				Description: "Token name to use for creating the Vault child token.",
-			},
-			"skip_child_token": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_SKIP_CHILD_TOKEN", false),
-
-				// Setting to true will cause max_lease_ttl_seconds and token_name to be ignored (not used).
-				// Note that this is strongly discouraged due to the potential of exposing sensitive secret data.
-				Description: "Set this to true to prevent the creation of ephemeral child token used by this provider.",
-			},
-			consts.FieldCACertFile: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCACert, ""),
-				Description: "Path to a CA certificate file to validate the server's certificate.",
-			},
-			consts.FieldCACertDir: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCAPath, ""),
-				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
-			},
-			consts.FieldClientAuth: {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Client authentication credentials.",
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						consts.FieldCertFile: {
-							Type:        schema.TypeString,
-							Required:    true,
-							DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientCert, ""),
-							Description: "Path to a file containing the client certificate.",
-						},
-						consts.FieldKeyFile: {
-							Type:        schema.TypeString,
-							Required:    true,
-							DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientKey, ""),
-							Description: "Path to a file containing the private key that the certificate was issued for.",
-						},
-					},
-				},
-			},
-			consts.FieldSkipTLSVerify: {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", false),
-				Description: "Set this to true only if the target Vault server is an insecure development instance.",
-			},
-			consts.FieldTLSServerName: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultTLSServerName, ""),
-				Description: "Name to use as the SNI host when connecting via TLS.",
-			},
-			"max_lease_ttl_seconds": {
-				Type:     schema.TypeInt,
-				Optional: true,
-
-				// Default is 20min, which is intended to be enough time for
-				// a reasonable Terraform run can complete but not
-				// significantly longer, so that any leases are revoked shortly
-				// after Terraform has finished running.
-				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_MAX_TTL", 1200),
-				Description: "Maximum TTL for secret leases requested by this provider.",
-			},
-			"max_retries": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", provider.DefaultMaxHTTPRetries),
-				Description: "Maximum number of retries when a 5xx error code is encountered.",
-			},
-			"max_retries_ccc": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES_CCC", DefaultMaxHTTPRetriesCCC),
-				Description: "Maximum number of retries for Client Controlled Consistency related operations",
-			},
-			consts.FieldNamespace: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
-				Description: "The namespace to use. Available only for Vault Enterprise.",
-			},
-			"headers": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Sensitive:   true,
-				Description: "The headers to send with each Vault request.",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The header name",
-						},
-						"value": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The header value",
-						},
-					},
-				},
-			},
-			consts.FieldSkipGetVaultVersion: {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "Skip the dynamic fetching of the Vault server version.",
-			},
-			consts.FieldVaultVersionOverride: {
-				Type:     schema.TypeString,
-				Optional: true,
-				Description: "Override the Vault server version, " +
-					"which is normally determined dynamically from the target Vault server",
-				ValidateDiagFunc: provider.ValidateDiagSemVer,
-			},
-		},
-		ConfigureFunc:  provider.NewProviderMeta,
-		DataSourcesMap: dataSourcesMap,
-		ResourcesMap:   resourcesMap,
-	}
-
-	provider.MustAddAuthLoginSchema(r.Schema)
-
-	return r
-}
-
-// Description is essentially a DataSource or Resource with some additional metadata
-// that helps with maintaining the Terraform Vault Provider.
-type Description struct {
-	// PathInventory is used for taking an inventory of the supported endpoints in the
-	// Terraform Vault Provider and comparing them to the endpoints noted as available in
-	// Vault's OpenAPI description. A list of Vault's endpoints can be obtained by,
-	// from Vault's home directory, running "$ ./scripts/gen_openapi.sh", and then by
-	// drilling into the paths with "$ cat openapi.json | jq ".paths" | jq 'keys[]'".
-	// Here's a short example of how paths and their path variables should be represented:
-	//		"/transit/keys/{name}/config"
-	//		"/transit/random"
-	//		"/transit/random/{urlbytes}"
-	//		"/transit/sign/{name}/{urlalgorithm}"
-	PathInventory []string
-
-	// EnterpriseOnly defaults to false, but should be marked true if a resource is enterprise only.
-	EnterpriseOnly bool
-
-	Resource *schema.Resource
+	return provider.NewProvider(DataSourceRegistry, ResourceRegistry, mfaResources)
 }
 
 var (
-	DataSourceRegistry = map[string]*Description{
+	DataSourceRegistry = map[string]*provider.Description{
 		"vault_approle_auth_backend_role_id": {
 			Resource:      UpdateSchemaResource(approleAuthBackendRoleIDDataSource()),
 			PathInventory: []string{"/auth/approle/role/{role_name}/role-id"},
@@ -255,6 +61,14 @@ var (
 			Resource:      UpdateSchemaResource(kubernetesAuthBackendRoleDataSource()),
 			PathInventory: []string{"/auth/kubernetes/role/{name}"},
 		},
+		"vault_ldap_static_credentials": {
+			Resource:      UpdateSchemaResource(ldapStaticCredDataSource()),
+			PathInventory: []string{"/ldap/static-cred/{role}"},
+		},
+		"vault_ldap_dynamic_credentials": {
+			Resource:      UpdateSchemaResource(ldapDynamicCredDataSource()),
+			PathInventory: []string{"/ldap/creds/{role}"},
+		},
 		"vault_namespace": {
 			Resource:       UpdateSchemaResource(namespaceDataSource()),
 			PathInventory:  []string{"/sys/namespaces/{path}"},
@@ -271,6 +85,10 @@ var (
 		"vault_aws_access_credentials": {
 			Resource:      UpdateSchemaResource(awsAccessCredentialsDataSource()),
 			PathInventory: []string{"/aws/creds"},
+		},
+		"vault_aws_static_access_credentials": {
+			Resource:      UpdateSchemaResource(awsStaticCredDataSource()),
+			PathInventory: []string{"/aws/static-creds/{name}"},
 		},
 		"vault_azure_access_credentials": {
 			Resource:      UpdateSchemaResource(azureAccessCredentialsDataSource()),
@@ -290,6 +108,10 @@ var (
 		},
 		"vault_auth_backend": {
 			Resource:      UpdateSchemaResource(authBackendDataSource()),
+			PathInventory: []string{"/sys/auth"},
+		},
+		"vault_auth_backends": {
+			Resource:      UpdateSchemaResource(authBackendsDataSource()),
 			PathInventory: []string{"/sys/auth"},
 		},
 		"vault_transit_encrypt": {
@@ -340,9 +162,25 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_issuer": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
+			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
+		},
+		"vault_pki_secret_backend_issuers": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendIssuersDataSource()),
+			PathInventory: []string{"/pki/issuers"},
+		},
+		"vault_pki_secret_backend_key": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendKeyDataSource()),
+			PathInventory: []string{"/pki/key/{key_ref}"},
+		},
+		"vault_pki_secret_backend_keys": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
+			PathInventory: []string{"/pki/keys"},
+		},
 	}
 
-	ResourceRegistry = map[string]*Description{
+	ResourceRegistry = map[string]*provider.Description{
 		"vault_alicloud_auth_backend_role": {
 			Resource:      UpdateSchemaResource(alicloudAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/alicloud/role/{name}"},
@@ -399,7 +237,7 @@ var (
 			PathInventory: []string{"/auth/aws/config/client"},
 		},
 		"vault_aws_auth_backend_config_identity": {
-			Resource:      awsAuthBackendConfigIdentityResource(),
+			Resource:      UpdateSchemaResource(awsAuthBackendConfigIdentityResource()),
 			PathInventory: []string{"/auth/aws/config/identity"},
 		},
 		"vault_aws_auth_backend_identity_whitelist": {
@@ -433,6 +271,10 @@ var (
 		"vault_aws_secret_backend_role": {
 			Resource:      UpdateSchemaResource(awsSecretBackendRoleResource("vault_aws_secret_backend_role")),
 			PathInventory: []string{"/aws/roles/{name}"},
+		},
+		"vault_aws_secret_backend_static_role": {
+			Resource:      UpdateSchemaResource(awsSecretBackendStaticRoleResource()),
+			PathInventory: []string{"/aws/static-roles/{name}"},
 		},
 		"vault_azure_secret_backend": {
 			Resource:      UpdateSchemaResource(azureSecretBackendResource()),
@@ -498,6 +340,10 @@ var (
 			Resource:      UpdateSchemaResource(gcpSecretBackendResource("vault_gcp_secret_backend")),
 			PathInventory: []string{"/gcp/config"},
 		},
+		"vault_gcp_secret_impersonated_account": {
+			Resource:      UpdateSchemaResource(gcpSecretImpersonatedAccountResource()),
+			PathInventory: []string{"/gcp/impersonated-account/{name}"},
+		},
 		"vault_gcp_secret_roleset": {
 			Resource:      UpdateSchemaResource(gcpSecretRolesetResource()),
 			PathInventory: []string{"/gcp/roleset/{name}"},
@@ -558,6 +404,22 @@ var (
 			Resource:      UpdateSchemaResource(ldapAuthBackendGroupResource()),
 			PathInventory: []string{"/auth/ldap/groups/{name}"},
 		},
+		"vault_ldap_secret_backend": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendResource()),
+			PathInventory: []string{"/ldap/config"},
+		},
+		"vault_ldap_secret_backend_static_role": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendStaticRoleResource()),
+			PathInventory: []string{"/ldap/static-role/{name}"},
+		},
+		"vault_ldap_secret_backend_dynamic_role": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendDynamicRoleResource()),
+			PathInventory: []string{"/ldap/role/{name}"},
+		},
+		"vault_ldap_secret_backend_library_set": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendLibrarySetResource()),
+			PathInventory: []string{"/ldap/library/{name}"},
+		},
 		"vault_nomad_secret_backend": {
 			Resource: UpdateSchemaResource(nomadSecretAccessBackendResource()),
 			PathInventory: []string{
@@ -616,6 +478,10 @@ var (
 		"vault_audit": {
 			Resource:      UpdateSchemaResource(auditResource()),
 			PathInventory: []string{"/sys/audit/{path}"},
+		},
+		"vault_audit_request_header": {
+			Resource:      UpdateSchemaResource(auditRequestHeaderResource()),
+			PathInventory: []string{"/sys/config/auditing/request-headers/{path}"},
 		},
 		"vault_ssh_secret_backend_ca": {
 			Resource:      UpdateSchemaResource(sshSecretBackendCAResource()),
@@ -728,6 +594,18 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendSignResource()),
 			PathInventory: []string{"/pki/sign/{role}"},
 		},
+		"vault_pki_secret_backend_key": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendKeyResource()),
+			PathInventory: []string{"/pki/key/{key_id}"},
+		},
+		"vault_pki_secret_backend_issuer": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerResource()),
+			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
+		},
+		"vault_pki_secret_backend_config_issuers": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigIssuers()),
+			PathInventory: []string{"/pki/config/issuers"},
+		},
 		"vault_quota_lease_count": {
 			Resource:      UpdateSchemaResource(quotaLeaseCountResource()),
 			PathInventory: []string{"/sys/quotas/lease-count/{name}"},
@@ -776,6 +654,14 @@ var (
 			Resource:      UpdateSchemaResource(kmipSecretRoleResource()),
 			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
 		},
+		"vault_mongodbatlas_secret_backend": {
+			Resource:      UpdateSchemaResource(mongodbAtlasSecretBackendResource()),
+			PathInventory: []string{"/mongodbatlas/config"},
+		},
+		"vault_mongodbatlas_secret_role": {
+			Resource:      UpdateSchemaResource(mongodbAtlasSecretRoleResource()),
+			PathInventory: []string{"/mongodbatlas/roles/{name}"},
+		},
 		"vault_identity_oidc_scope": {
 			Resource:      UpdateSchemaResource(identityOIDCScopeResource()),
 			PathInventory: []string{"/identity/oidc/scope/{scope}"},
@@ -819,73 +705,8 @@ var (
 	}
 )
 
-func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
-	var errs error
-	resourceMap := make(map[string]*schema.Resource)
-	for k, desc := range descs {
-		resourceMap[k] = desc.Resource
-		if len(desc.PathInventory) == 0 {
-			errs = multierror.Append(errs, fmt.Errorf("%q needs its paths inventoried", k))
-		}
-	}
-	return resourceMap, errs
-}
-
 func UpdateSchemaResource(r *schema.Resource) *schema.Resource {
 	provider.MustAddSchema(r, provider.GetNamespaceSchema())
 
 	return r
-}
-
-// ReadWrapper provides common read operations to the wrapped schema.ReadFunc.
-func ReadWrapper(f schema.ReadFunc) schema.ReadFunc {
-	return func(d *schema.ResourceData, i interface{}) error {
-		if err := importNamespace(d); err != nil {
-			return err
-		}
-
-		return f(d, i)
-	}
-}
-
-// ReadContextWrapper provides common read operations to the wrapped schema.ReadContextFunc.
-func ReadContextWrapper(f schema.ReadContextFunc) schema.ReadContextFunc {
-	return func(ctx context.Context, d *schema.ResourceData, i interface{}) diag.Diagnostics {
-		if err := importNamespace(d); err != nil {
-			return diag.FromErr(err)
-		}
-		return f(ctx, d, i)
-	}
-}
-
-// MountCreateContextWrapper performs a minimum version requirement check prior to the
-// wrapped schema.CreateContextFunc.
-func MountCreateContextWrapper(f schema.CreateContextFunc, minVersion *version.Version) schema.CreateContextFunc {
-	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-		currentVersion := meta.(*provider.ProviderMeta).GetVaultVersion()
-
-		if !provider.IsAPISupported(meta, minVersion) {
-			return diag.Errorf("feature not enabled on current Vault version. min version required=%s; "+
-				"current vault version=%s", minVersion, currentVersion)
-		}
-
-		return f(ctx, d, meta)
-	}
-}
-
-func importNamespace(d *schema.ResourceData) error {
-	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
-		s := d.State()
-		if _, ok := s.Attributes[consts.FieldNamespace]; !ok {
-			log.Printf(`[INFO] Environment variable %s set, `+
-				`attempting TF state import "%s=%s"`,
-				consts.EnvVarVaultNamespaceImport, consts.FieldNamespace, ns)
-			if err := d.Set(consts.FieldNamespace, ns); err != nil {
-				return fmt.Errorf("failed to import %q, err=%w",
-					consts.EnvVarVaultNamespaceImport, err)
-			}
-		}
-	}
-
-	return nil
 }

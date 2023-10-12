@@ -26,7 +26,7 @@ func gcpAuthBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: gcpAuthBackendWrite,
 		Update: gcpAuthBackendUpdate,
-		Read:   ReadWrapper(gcpAuthBackendRead),
+		Read:   provider.ReadWrapper(gcpAuthBackendRead),
 		Delete: gcpAuthBackendDelete,
 		Exists: gcpAuthBackendExists,
 		Importer: &schema.ResourceImporter{
@@ -88,8 +88,13 @@ func gcpAuthBackendResource() *schema.Resource {
 					Schema: gcpAuthCustomEndpointSchema(),
 				},
 			},
+			"accessor": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The accessor of the auth backend",
+			},
 		},
-	})
+	}, false)
 }
 
 func gcpAuthCustomEndpointSchema() map[string]*schema.Schema {
@@ -272,6 +277,18 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		if err := d.Set("custom_endpoint", []map[string]interface{}{endpoints}); err != nil {
 			return err
 		}
+	}
+	// fetch AuthMount in order to set accessor attribute
+	mount, err := getAuthMountIfPresent(client, d.Id())
+	if err != nil {
+		return err
+	}
+	if mount == nil {
+		d.SetId("")
+		return nil
+	}
+	if err := d.Set("accessor", mount.Accessor); err != nil {
+		return err
 	}
 
 	// set the auth backend's path

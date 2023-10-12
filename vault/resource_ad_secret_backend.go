@@ -213,16 +213,17 @@ func adSecretBackendResource() *schema.Resource {
 		},
 	}
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
-		Create: createConfigResource,
-		Update: updateConfigResource,
-		Read:   ReadWrapper(readConfigResource),
-		Delete: deleteConfigResource,
+		DeprecationMessage: `This resource is replaced by "vault_ldap_secret_backend" and will be removed in the next major release.`,
+		Create:             createConfigResource,
+		Update:             updateConfigResource,
+		Read:               provider.ReadWrapper(readConfigResource),
+		Delete:             deleteConfigResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Schema:        fields,
-	})
+	}, false)
 }
 
 func createConfigResource(d *schema.ResourceData, meta interface{}) error {

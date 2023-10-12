@@ -27,7 +27,7 @@ func identityOidcKey() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOidcKeyCreate,
 		Update: identityOidcKeyUpdate,
-		Read:   ReadWrapper(identityOidcKeyRead),
+		Read:   provider.ReadWrapper(identityOidcKeyRead),
 		Delete: identityOidcKeyDelete,
 		Exists: identityOidcKeyExists,
 		Importer: &schema.ResourceImporter{
