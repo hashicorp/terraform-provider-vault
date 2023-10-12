@@ -19,13 +19,14 @@ import (
 )
 
 func TestAccKVSecret(t *testing.T) {
+	t.Parallel()
 	resourceName := "vault_kv_secret.test"
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	name := acctest.RandomWithPrefix("tf-secret")
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKVSecretConfig_basic(mount, name),

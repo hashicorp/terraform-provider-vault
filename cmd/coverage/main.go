@@ -12,8 +12,10 @@ import (
 	"os"
 	"sort"
 
-	"github.com/hashicorp/terraform-provider-vault/vault"
 	"github.com/hashicorp/vault/sdk/framework"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 var pathToOpenAPIDoc = flag.String("openapi-doc", "", "path/to/openapi.json")
@@ -89,7 +91,7 @@ func main() {
 	}
 }
 
-func checkRegistry(registryType string, registry map[string]*vault.Description, vaultPaths map[string]map[string]bool) {
+func checkRegistry(registryType string, registry map[string]*provider.Description, vaultPaths map[string]map[string]bool) {
 	for _, desc := range registry {
 		for _, path := range desc.PathInventory {
 			if path == vault.GenericPath || path == vault.UnknownPath {

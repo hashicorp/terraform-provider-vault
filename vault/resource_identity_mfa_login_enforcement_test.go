@@ -24,6 +24,8 @@ func TestIdentityMFALoginEnforcement(t *testing.T) {
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldUUID),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldNamespaceID, "root"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAuthMethodTypes+".#", "1"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAuthMethodTypes+".0", "token"),
 	}
 
 	importTestStep := testutil.GetImportTestStep(resourceName, false, nil, consts.FieldIntegrationKey, consts.FieldSecretKey)
@@ -34,7 +36,7 @@ func TestIdentityMFALoginEnforcement(t *testing.T) {
 			{
 				Config: getTestMFAEnforcementConfig(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					append(checksCommon)...,
+					checksCommon...,
 				),
 			},
 			importTestStep,
@@ -56,6 +58,9 @@ resource "vault_identity_mfa_login_enforcement" "test" {
   name = "%s"
   mfa_method_ids = [
     vault_identity_mfa_duo.test.method_id,
+  ]
+  auth_method_types = [
+    "token"
   ]
 }
 `, name)

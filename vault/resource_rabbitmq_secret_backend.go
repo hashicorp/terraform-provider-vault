@@ -19,7 +19,7 @@ import (
 func rabbitMQSecretBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create:        rabbitMQSecretBackendCreate,
-		Read:          ReadWrapper(rabbitMQSecretBackendRead),
+		Read:          provider.ReadWrapper(rabbitMQSecretBackendRead),
 		Update:        rabbitMQSecretBackendUpdate,
 		Delete:        rabbitMQSecretBackendDelete,
 		Exists:        rabbitMQSecretBackendExists,
@@ -91,7 +91,7 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Description: "Template describing how dynamic usernames are generated.",
 			},
 		},
-	})
+	}, false)
 }
 
 func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {

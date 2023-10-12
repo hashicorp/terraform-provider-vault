@@ -5,6 +5,7 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -18,14 +19,7 @@ import (
 )
 
 func TestAuthLoginOIDC_Init(t *testing.T) {
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name:      "basic",
 			authField: consts.FieldAuthLoginOIDC,
@@ -73,25 +67,7 @@ func TestAuthLoginOIDC_Init(t *testing.T) {
 			s := map[string]*schema.Schema{
 				tt.authField: GetOIDCLoginSchema(tt.authField),
 			}
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginOIDC{}
-			err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if err != nil {
-				if tt.expectErr != nil {
-					if !reflect.DeepEqual(tt.expectErr, err) {
-						t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-					}
-				}
-			} else {
-				if !reflect.DeepEqual(tt.expectParams, l.params) {
-					t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-				}
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginOIDC{})
 		})
 	}
 }
@@ -255,6 +231,25 @@ func TestAuthLoginOIDC_Login(t *testing.T) {
 
 	tests := []authLoginTest{
 		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginOIDC{
+				AuthLoginCommon{
+					authField: "baz",
+					mount:     "foo",
+					params: map[string]interface{}{
+						consts.FieldRole: "bob",
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
+		{
 			name: "error-uninitialized",
 			authLogin: &AuthLoginOIDC{
 				AuthLoginCommon{
@@ -271,6 +266,7 @@ func TestAuthLoginOIDC_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

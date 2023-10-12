@@ -4,11 +4,15 @@
 package vault
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -20,121 +24,132 @@ var (
 	databaseSecretBackendRoleNameFromPathRegex    = regexp.MustCompile("^.+/roles/(.+$)")
 )
 
+var roleAPIFields = []string{
+	consts.FieldDefaultTTL,
+	consts.FieldMaxTTL,
+	consts.FieldCreationStatements,
+	consts.FieldRevocationStatements,
+	consts.FieldRollbackStatements,
+	consts.FieldRenewStatements,
+	consts.FieldCredentialConfig,
+	consts.FieldCredentialType,
+}
+
 func databaseSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: databaseSecretBackendRoleWrite,
-		Read:   ReadWrapper(databaseSecretBackendRoleRead),
-		Update: databaseSecretBackendRoleWrite,
-		Delete: databaseSecretBackendRoleDelete,
-		Exists: databaseSecretBackendRoleExists,
+		CreateContext: databaseSecretBackendRoleWrite,
+		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendRoleRead),
+		UpdateContext: databaseSecretBackendRoleWrite,
+		DeleteContext: databaseSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"name": {
+			consts.FieldName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Unique name for the role.",
 			},
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "The path of the Database Secret Backend the role belongs to.",
 			},
-			"db_name": {
+			consts.FieldDBName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Database connection to use for this role.",
 			},
-			"default_ttl": {
+			consts.FieldDefaultTTL: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Default TTL for leases associated with this role, in seconds.",
 			},
-			"max_ttl": {
+			consts.FieldMaxTTL: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Maximum TTL for leases associated with this role, in seconds.",
 			},
-			"creation_statements": {
+			consts.FieldCreationStatements: {
 				Type:        schema.TypeList,
 				Required:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to create and configure a user.",
 			},
-			"revocation_statements": {
+			consts.FieldRevocationStatements: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to revoke a user.",
 			},
-			"rollback_statements": {
+			consts.FieldRollbackStatements: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to rollback a create operation in the event of an error.",
 			},
-			"renew_statements": {
+			consts.FieldRenewStatements: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to renew a user.",
 			},
+			consts.FieldCredentialType: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specifies the type of credential that will be generated for the role.",
+			},
+			consts.FieldCredentialConfig: {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Specifies the configuration for the given credential_type.",
+			},
 		},
 	}
 }
 
-func databaseSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
-	name := d.Get("name").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	name := d.Get(consts.FieldName).(string)
 
 	path := databaseSecretBackendRolePath(backend, name)
 
 	data := map[string]interface{}{
-		"db_name":             d.Get("db_name"),
-		"creation_statements": d.Get("creation_statements"),
+		"db_name":             d.Get(consts.FieldDBName),
+		"creation_statements": d.Get(consts.FieldCreationStatements),
 	}
 
-	if v, ok := d.GetOkExists("default_ttl"); ok {
-		data["default_ttl"] = v
-	}
-	if v, ok := d.GetOkExists("max_ttl"); ok {
-		data["max_ttl"] = v
-	}
-	if v, ok := d.GetOkExists("revocation_statements"); ok && v != "" {
-		data["revocation_statements"] = v
-	}
-	if v, ok := d.GetOkExists("rollback_statements"); ok && v != "" {
-		data["rollback_statements"] = v
-	}
-	if v, ok := d.GetOkExists("renew_statements"); ok && v != "" {
-		data["renew_statements"] = v
+	for _, k := range roleAPIFields {
+		if d.HasChange(k) {
+			data[k] = d.Get(k)
+		}
 	}
 
 	log.Printf("[DEBUG] Creating role %q on database backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating role %q for backend %q: %s", name, backend, err)
+		return diag.Errorf("error creating role %q for backend %q: %s", name, backend, err)
 	}
 	log.Printf("[DEBUG] Created role %q on AWS backend %q", name, backend)
 
 	d.SetId(path)
-	return databaseSecretBackendRoleRead(d, meta)
+	return databaseSecretBackendRoleRead(ctx, d, meta)
 }
 
-func databaseSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -143,20 +158,20 @@ func databaseSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 	if err != nil {
 		log.Printf("[WARN] Removing database role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("invalid role ID %q: %s", path, err)
+		return diag.Errorf("invalid role ID %q: %s", path, err)
 	}
 
 	backend, err := databaseSecretBackendRoleBackendFromPath(path)
 	if err != nil {
 		log.Printf("[WARN] Removing database role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("invalid role ID %q: %s", path, err)
+		return diag.Errorf("invalid role ID %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading role from %q", path)
 	secret, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading role %q: %s", path, err)
+		return diag.Errorf("error reading role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read role from %q", path)
 	if secret == nil {
@@ -164,93 +179,43 @@ func databaseSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 		d.SetId("")
 		return nil
 	}
-	d.Set("backend", backend)
-	d.Set("name", name)
-	d.Set("db_name", secret.Data["db_name"])
-	var creation []string
-	if creationStr, ok := secret.Data["creation_statements"].(string); ok {
-		creation = append(creation, creationStr)
-	} else if creations, ok := secret.Data["creation_statements"].([]interface{}); ok {
-		for _, cr := range creations {
-			creation = append(creation, cr.(string))
-		}
-	}
-	d.Set("creation_statements", creation)
-	var revocation []string
-	if revocationStr, ok := secret.Data["revocation_statements"].(string); ok {
-		revocation = append(revocation, revocationStr)
-	} else if revocations, ok := secret.Data["revocation_statements"].([]interface{}); ok {
-		for _, rev := range revocations {
-			revocation = append(revocation, rev.(string))
-		}
-	}
-	d.Set("revocation_statements", revocation)
-	var rollback []string
-	if rollbackStr, ok := secret.Data["rollback_statements"].(string); ok {
-		rollback = append(rollback, rollbackStr)
-	} else if rollbacks, ok := secret.Data["rollback_statements"].([]interface{}); ok {
-		for _, rb := range rollbacks {
-			rollback = append(rollback, rb.(string))
-		}
-	}
-	d.Set("rollback_statements", rollback)
-	var renew []string
-	if renewStr, ok := secret.Data["renew_statements"].(string); ok {
-		renew = append(renew, renewStr)
-	} else if renews, ok := secret.Data["renew_statements"].([]interface{}); ok {
-		for _, ren := range renews {
-			renew = append(renew, ren.(string))
-		}
-	}
-	d.Set("renew_statements", renew)
 
-	if v, ok := secret.Data["default_ttl"]; ok {
-		n, err := v.(json.Number).Int64()
-		if err != nil {
-			return fmt.Errorf("unexpected value %q for default_ttl of %q", v, path)
-		}
-		d.Set("default_ttl", n)
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		return diag.FromErr(err)
 	}
-	if v, ok := secret.Data["max_ttl"]; ok {
-		n, err := v.(json.Number).Int64()
-		if err != nil {
-			return fmt.Errorf("unexpected value %q for max_ttl of %q", v, path)
+
+	if err := d.Set(consts.FieldName, name); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldDBName, secret.Data[consts.FieldDBName]); err != nil {
+		return diag.FromErr(err)
+	}
+
+	for _, k := range roleAPIFields {
+		if v, ok := secret.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		d.Set("max_ttl", n)
 	}
 	return nil
 }
 
-func databaseSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error deleting role %q: %s", path, err)
+		return diag.Errorf("error deleting role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Deleted role %q", path)
 	return nil
-}
-
-func databaseSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if %q exists", path)
-	secret, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if %q exists", path)
-	return secret != nil, nil
 }
 
 func databaseSecretBackendRolePath(backend, name string) string {

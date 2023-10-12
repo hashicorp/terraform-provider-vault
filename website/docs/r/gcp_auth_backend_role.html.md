@@ -14,16 +14,20 @@ Provides a resource to create a role in an [GCP auth backend within Vault](https
 
 ```hcl
 resource "vault_auth_backend" "gcp" {
-    path = "gcp"
-    type = "gcp"
+  path = "gcp"
+  type = "gcp"
 }
 
-resource "vault_gcp_auth_backend_role" "gcp" {
-    backend                = vault_auth_backend.gcp.path
-    project_id             = "foo-bar-baz"
-    bound_service_accounts = ["database-server@foo-bar-baz.iam.gserviceaccount.com"]
-    token_policies         = ["database-server"]
-
+resource "vault_gcp_auth_backend_role" "test" {
+  backend                = vault_auth_backend.gcp.path
+  role                   = "test"
+  type                   = "iam"
+  bound_service_accounts = ["test"]
+  bound_projects         = ["test"]
+  token_ttl              = 300
+  token_max_ttl          = 600
+  token_policies         = ["policy_a", "policy_b"]
+  add_group_aliases      = true
 }
 ```
 

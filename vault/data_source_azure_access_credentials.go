@@ -24,7 +24,7 @@ import (
 
 func azureAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(azureAccessCredentialsDataSourceRead),
+		Read: provider.ReadWrapper(azureAccessCredentialsDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"backend": {

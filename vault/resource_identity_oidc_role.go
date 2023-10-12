@@ -18,7 +18,7 @@ func identityOidcRole() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOidcRoleCreate,
 		Update: identityOidcRoleUpdate,
-		Read:   ReadWrapper(identityOidcRoleRead),
+		Read:   provider.ReadWrapper(identityOidcRoleRead),
 		Delete: identityOidcRoleDelete,
 		Exists: identityOidcRoleExists,
 		Importer: &schema.ResourceImporter{

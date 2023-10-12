@@ -293,6 +293,10 @@ See the [Vault
 
 * `password` - (Optional) The root credential password used in the connection URL.
 
+* `auth_type` - (Optional) Enable IAM authentication to a Google Cloud instance when set to `gcp_iam`
+
+* `service_account_json` - (Optional) JSON encoding of an IAM access key. Requires `auth_type` to be `gcp_iam`.
+
 * `tls_certificate_key` - (Optional) x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.
 
 * `tls_ca` - (Optional) x509 CA file for validating the certificate presented by the MySQL server. Must be PEM encoded.
@@ -320,6 +324,10 @@ See the [Vault
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+
+* `auth_type` - (Optional) Enable IAM authentication to a Google Cloud instance when set to `gcp_iam`
+
+* `service_account_json` - (Optional) JSON encoding of an IAM access key. Requires `auth_type` to be `gcp_iam`.
 
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
 

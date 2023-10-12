@@ -20,9 +20,9 @@ import (
 func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
 	resourceName := "vault_identity_group_policies.policies"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupPoliciesConfigExclusive(),
@@ -46,9 +46,9 @@ func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
 	resourceNameTest := "vault_identity_group_policies.test"
 	resourceNameGroup := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupPoliciesConfigNonExclusive(),

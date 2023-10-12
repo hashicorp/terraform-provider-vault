@@ -19,7 +19,7 @@ import (
 func terraformCloudSecretBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create:        terraformCloudSecretBackendCreate,
-		Read:          ReadWrapper(terraformCloudSecretBackendRead),
+		Read:          provider.ReadWrapper(terraformCloudSecretBackendRead),
 		Update:        terraformCloudSecretBackendUpdate,
 		Delete:        terraformCloudSecretBackendDelete,
 		Exists:        terraformCloudSecretBackendExists,
@@ -77,7 +77,7 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 				Description: "Maximum possible lease duration for secrets in seconds",
 			},
 		},
-	})
+	}, false)
 }
 
 func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {

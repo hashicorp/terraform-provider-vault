@@ -40,7 +40,7 @@ The following arguments are supported:
 
 * `name` - (Required) The name to identify this key within the backend. Must be unique within the backend.
 
-* `type` - (Optional) Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `rsa-2048`, `rsa-3072` and `rsa-4096`. 
+* `type` - (Optional) Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `hmac`, `rsa-2048`, `rsa-3072` and `rsa-4096`.
     * Refer to the Vault documentation on transit key types for more information: [Key Types](https://www.vaultproject.io/docs/secrets/transit#key-types)
 
 * `deletion_allowed` - (Optional) Specifies if the keyring is allowed to be deleted. Must be set to 'true' before terraform will be able to destroy keys.
@@ -53,13 +53,15 @@ The following arguments are supported:
 
 * `allow_plaintext_backup` - (Optional) Enables taking backup of entire keyring in the plaintext format. Once set, this cannot be disabled.
     * Refer to Vault API documentation on key backups for more information: [Backup Key](https://www.vaultproject.io/api-docs/secret/transit#backup-key)
-    
+
 * `min_decryption_version` - (Optional) Minimum key version to use for decryption.
 
 * `min_encryption_version` - (Optional) Minimum key version to use for encryption
 
-* `auto_rotate_period` - (Optional) Amount of time the key should live before being automatically rotated.
+* `auto_rotate_period` - (Optional) Amount of seconds the key should live before being automatically rotated.
   A value of 0 disables automatic rotation for the key.
+
+* `key_size` - (Optional) The key size in bytes for algorithms that allow variable key sizes. Currently only applicable to HMAC, where it must be between 32 and 512 bytes.
 
 ## Attributes Reference
 
@@ -69,7 +71,7 @@ The following arguments are supported:
         * `name` - Name of keychain
         * `creation_time` - ISO 8601 format timestamp indicating when the key version was created
         * `public_key` - This is the base64-encoded public key for use outside of Vault.
-        
+
 * `latest_version` - Latest key version available. This value is 1-indexed, so if `latest_version` is `1`, then the key's information can be referenced from `keys` by selecting element `0`
 
 * `min_available_version` - Minimum key version available for use. If keys have been archived by increasing `min_decryption_version`, this attribute will reflect that change.

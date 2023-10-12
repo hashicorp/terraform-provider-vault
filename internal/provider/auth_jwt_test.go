@@ -5,9 +5,9 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -17,14 +17,7 @@ import (
 )
 
 func TestAuthLoginJWT_Init(t *testing.T) {
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name:      "basic",
 			authField: consts.FieldAuthLoginJWT,
@@ -74,25 +67,7 @@ func TestAuthLoginJWT_Init(t *testing.T) {
 			s := map[string]*schema.Schema{
 				tt.authField: GetJWTLoginSchema(tt.authField),
 			}
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginJWT{}
-			err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if err != nil {
-				if tt.expectErr != nil {
-					if !reflect.DeepEqual(tt.expectErr, err) {
-						t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-					}
-				}
-			} else {
-				if !reflect.DeepEqual(tt.expectParams, l.params) {
-					t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-				}
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginJWT{})
 		})
 	}
 }
@@ -134,7 +109,11 @@ func TestAuthLoginJWT_LoginPath(t *testing.T) {
 func TestAuthLoginJWT_Login(t *testing.T) {
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		m, err := json.Marshal(
-			&api.Secret{},
+			&api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "jwt",
+				},
+			},
 		)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -172,8 +151,31 @@ func TestAuthLoginJWT_Login(t *testing.T) {
 					consts.FieldJWT:  "jwt1",
 				},
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "jwt",
+				},
+			},
 			wantErr: false,
+		},
+		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginJWT{
+				AuthLoginCommon: AuthLoginCommon{
+					authField: consts.FieldAuthLoginJWT,
+					params: map[string]interface{}{
+						consts.FieldRole: "alice",
+						consts.FieldJWT:  "jwt1",
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
 		},
 		{
 			name: "error-uninitialized",
@@ -193,6 +195,7 @@ func TestAuthLoginJWT_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

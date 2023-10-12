@@ -19,8 +19,8 @@ func TestAccAppRoleAuthBackendLogin_basic(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendLoginConfig_basic(backend, role),

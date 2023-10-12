@@ -15,7 +15,6 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 const nameEndpoint = "/transform/role/{name}"
@@ -47,7 +46,7 @@ func NameResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createNameResource,
 		Update: updateNameResource,
-		Read:   vault.ReadWrapper(readNameResource),
+		Read:   provider.ReadWrapper(readNameResource),
 		Exists: resourceNameExists,
 		Delete: deleteNameResource,
 		Importer: &schema.ResourceImporter{

@@ -20,9 +20,9 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 	resourceName := resourceType + ".test"
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey),
@@ -36,6 +36,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "region", "us-east-1"),
 					resource.TestCheckResourceAttr(resourceName, "iam_endpoint", ""),
 					resource.TestCheckResourceAttr(resourceName, "sts_endpoint", ""),
+					resource.TestCheckResourceAttr(resourceName, "local", "false"),
 					resource.TestCheckResourceAttrSet(resourceName, "username_template"),
 				),
 			},
@@ -52,6 +53,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "region", "us-west-1"),
 					resource.TestCheckResourceAttr(resourceName, "iam_endpoint", "https://iam.amazonaws.com"),
 					resource.TestCheckResourceAttr(resourceName, "sts_endpoint", "https://sts.us-west-1.amazonaws.com"),
+					resource.TestCheckResourceAttr(resourceName, "local", "false"),
 				),
 			},
 			{
@@ -66,6 +68,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "region", "us-west-1"),
 					resource.TestCheckResourceAttr(resourceName, "iam_endpoint", ""),
 					resource.TestCheckResourceAttr(resourceName, "sts_endpoint", ""),
+					resource.TestCheckResourceAttr(resourceName, "local", "false"),
 				),
 			},
 		},
@@ -79,9 +82,9 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	templ := fmt.Sprintf(`{{ printf "vault-%%s-%%s-%%s" (printf "%%s-%%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}`)
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendConfig_userTemplate(path, accessKey, secretKey, templ),
@@ -101,8 +104,8 @@ func TestAccAWSSecretBackend_remount(t *testing.T) {
 	resourceName := "vault_aws_secret_backend.test"
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey),

@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -22,7 +23,7 @@ const (
 
 func kubernetesServiceAccountTokenDataSource() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: ReadContextWrapper(readKubernetesServiceAccountToken),
+		ReadContext: provider.ReadContextWrapper(readKubernetesServiceAccountToken),
 		Schema: map[string]*schema.Schema{
 			consts.FieldBackend: {
 				Type: schema.TypeString,

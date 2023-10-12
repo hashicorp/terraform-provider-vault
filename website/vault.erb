@@ -18,6 +18,10 @@
                     <a href="/docs/providers/vault/guides/version_3_upgrade.html">3.0.0 Upgrade Guide</a>
                 </li>
 
+                <li<%= sidebar_current("docs-vault-pki-multi-issuer-upgrade") %>>
+                    <a href="/docs/providers/vault/guides/pki_multi_issuer_upgrade.html">PKI Multi-Issuer Upgrade Guide</a>
+                </li>
+
                 <li<%= sidebar_current("docs-vault-datasource") %>>
                 <a href="#">Data Sources</a>
                     <ul class="nav nav-visible">
@@ -36,6 +40,10 @@
                         <li<%= sidebar_current("docs-vault-datasource-aws-access-credentials") %>>
                             <a href="/docs/providers/vault/d/aws_access_credentials.html">vault_aws_access_credentials</a>
                         </li>
+
+                         <li<%= sidebar_current("docs-vault-datasource-aws-static-credentials") %>>
+                            <a href="/docs/providers/vault/d/aws_static_credentials.html">vault_aws_static_credentials</a>
+                         </li>
 
                         <li<%= sidebar_current("docs-vault-datasource-azure-access-credentials") %>>
                             <a href="/docs/providers/vault/d/azure_access_credentials.html">vault_azure_access_credentials</a>
@@ -101,8 +109,32 @@
                             <a href="/docs/providers/vault/d/kubernetes_auth_backend_role.html">vault_kubernetes_auth_backend_role</a>
                         </li>
 
+                        <li<%= sidebar_current("docs-vault-datasource-ldap-dynamic-credentials") %>>
+                            <a href="/docs/providers/vault/d/vault_ldap_dynamic_credentials.html">vault_ldap_dynamic_credentials</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-datasource-ldap-static-credentials") %>>
+                            <a href="/docs/providers/vault/d/vault_ldap_static_credentials.html">vault_ldap_static_credentials</a>
+                        </li>
+
                         <li<%= sidebar_current("docs-vault-datasource-policy-document") %>>
                             <a href="/docs/providers/vault/d/policy_document.html">vault_policy_document</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-datasource-pki-secret-backend-issuer") %>>
+                            <a href="/docs/providers/vault/d/pki_secret_backend_issuer.html">pki_secret_backend_issuer</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-datasource-pki-secret-backend-issuers") %>>
+                            <a href="/docs/providers/vault/d/pki_secret_backend_issuers.html">pki_secret_backend_issuers</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-datasource-pki-secret-backend-key") %>>
+                            <a href="/docs/providers/vault/d/pki_secret_backend_key.html">pki_secret_backend_key</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-datasource-pki-secret-backend-keys") %>>
+                            <a href="/docs/providers/vault/d/pki_secret_backend_keys.html">pki_secret_backend_keys</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-datasource-namespaces") %>>
@@ -132,6 +164,10 @@
 
                         <li<%= sidebar_current("docs-vault-audit") %>>
                             <a href="/docs/providers/vault/r/audit.html">vault_audit</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-audit-request-header") %>>
+                            <a href="/docs/providers/vault/r/audit_request_header.html">vault_audit_request_header</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-auth-backend") %>>
@@ -191,6 +227,10 @@
 
                         <li<%= sidebar_current("docs-vault-resource-aws-secret-backend-role") %>>
                             <a href="/docs/providers/vault/r/aws_secret_backend_role.html">vault_aws_secret_backend_role</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-aws-secret-backend-static-role") %>>
+                            <a href="/docs/providers/vault/r/aws_secret_backend_static_role.html">vault_aws_secret_backend_static_role</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-azure-auth-backend-config") %>>
@@ -421,6 +461,30 @@
                             <a href="/docs/providers/vault/r/ldap_auth_backend_group.html">vault_ldap_auth_backend_group</a>
                         </li>
 
+                        <li<%= sidebar_current("docs-vault-resource-ldap-secret-backend") %>>
+                            <a href="/docs/providers/vault/r/ldap-secret-backend.html">vault_ldap_secret_backend</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-ldap-secret-backend-static-role") %>>
+                            <a href="/docs/providers/vault/r/ldap_secret_backend_static_role.html">vault_ldap_secret_backend_static_role</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-ldap-secret-backend-dynamic-role") %>>
+                            <a href="/docs/providers/vault/r/ldap_secret_backend_dynamic_role.html">vault_ldap_secret_backend_static_role</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-ldap-secret-backend-library-set") %>>
+                            <a href="/docs/providers/vault/r/ldap_secret_backend_library_set.html">vault_ldap_secret_backend_library_set</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-mongodbatlas-secret-backend") %>>
+                            <a href="/docs/providers/vault/r/mongodbatlas_secret_backend.html">vault_mongodbatlas_secret_backend</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-mongodbatlas-secret-role") %>>
+                            <a href="/docs/providers/vault/r/mongodbatlas_secret_role.html">vault_mongodbatlas_secret_role</a>
+                        </li>
+
                         <li<%= sidebar_current("docs-vault-resource-mfa-duo") %>>
                             <a href="/docs/providers/vault/r/mfa_duo.html">vault_mfa_duo</a>
                         </li>
@@ -499,6 +563,14 @@
 
                         <li<%= sidebar_current("docs-vault-resource-pki-secret-backend-sign") %>>
                             <a href="/docs/providers/vault/r/pki_secret_backend_sign.html">vault_pki_secret_backend_sign</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-pki-secret-backend-key") %>>
+                            <a href="/docs/providers/vault/r/pki_secret_backend_key.html">vault_pki_secret_backend_key</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-pki-secret-backend-issuer") %>>
+                            <a href="/docs/providers/vault/r/pki_secret_backend_issuer.html">vault_pki_secret_backend_issuer</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-policy") %>>

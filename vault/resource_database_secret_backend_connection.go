@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -27,6 +28,7 @@ type connectionStringConfig struct {
 	excludeUsernameTemplate bool
 	includeUserPass         bool
 	includeDisableEscaping  bool
+	isCloud                 bool
 }
 
 const (
@@ -93,6 +95,7 @@ var (
 	dbEngineOracle = &dbEngine{
 		name:              "oracle",
 		defaultPluginName: "oracle" + dbPluginSuffix,
+		pluginAliases:     []string{"vault-plugin-database-oracle"},
 	}
 	dbEngineSnowflake = &dbEngine{
 		name:              "snowflake",
@@ -136,6 +139,7 @@ var (
 type dbEngine struct {
 	name              string
 	defaultPluginName string
+	pluginAliases     []string
 }
 
 // GetPluginName from the schema.ResourceData if it is configured,
@@ -179,6 +183,17 @@ func (i *dbEngine) PluginPrefix() (string, error) {
 	}
 
 	return prefix, nil
+}
+
+// PluginPrefixes returns a slice of "plugin-name" prefixes that this engine is
+// compatible with.
+func (i *dbEngine) PluginPrefixes() ([]string, error) {
+	defaultPrefix, err := i.PluginPrefix()
+	if err != nil {
+		return nil, err
+	}
+
+	return append([]string{defaultPrefix}, i.pluginAliases...), nil
 }
 
 func getDatabaseSchema(typ schema.ValueType) schemaMap {
@@ -555,6 +570,7 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Elem: connectionStringResource(&connectionStringConfig{
 				includeUserPass:        true,
 				includeDisableEscaping: true,
+				isCloud:                true,
 			}),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
@@ -700,7 +716,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 
 	return &schema.Resource{
 		Create: databaseSecretBackendConnectionCreateOrUpdate,
-		Read:   ReadWrapper(databaseSecretBackendConnectionRead),
+		Read:   provider.ReadWrapper(databaseSecretBackendConnectionRead),
 		Update: databaseSecretBackendConnectionCreateOrUpdate,
 		Delete: databaseSecretBackendConnectionDelete,
 		Exists: databaseSecretBackendConnectionExists,
@@ -751,6 +767,20 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 		}
 	}
 
+	if config.isCloud {
+		res.Schema["auth_type"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Specify alternative authorization type. (Only 'gcp_iam' is valid currently)",
+		}
+		res.Schema["service_account_json"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "A JSON encoded credential for use with IAM authorization",
+			Sensitive:   true,
+		}
+	}
+
 	if !config.excludeUsernameTemplate {
 		res.Schema["username_template"] = &schema.Schema{
 			Type:        schema.TypeString,
@@ -773,6 +803,7 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 func mysqlConnectionStringResource() *schema.Resource {
 	r := connectionStringResource(&connectionStringConfig{
 		includeUserPass: true,
+		isCloud:         true,
 	})
 	r.Schema["tls_certificate_key"] = &schema.Schema{
 		Type:        schema.TypeString,
@@ -825,20 +856,23 @@ func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) 
 	var last int
 	var engine *dbEngine
 	for _, e := range engines {
-		prefix, err := e.PluginPrefix()
+		prefixes, err := e.PluginPrefixes()
 		if err != nil {
 			return nil, err
 		}
-		if prefix != "" && strings.HasPrefix(pluginName.(string), prefix) {
-			l := len(prefix)
-			if last == 0 {
+
+		for _, prefix := range prefixes {
+			if prefix != "" && strings.HasPrefix(pluginName.(string), prefix) {
+				l := len(prefix)
+				if last == 0 {
+					last = l
+				}
+
+				if l >= last {
+					engine = e
+				}
 				last = l
 			}
-
-			if l >= last {
-				engine = e
-			}
-			last = l
 		}
 	}
 
@@ -849,7 +883,7 @@ func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) 
 	return nil, fmt.Errorf("no supported database engines found for plugin %q", pluginName)
 }
 
-func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData) (map[string]interface{}, error) {
+func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData, meta interface{}) (map[string]interface{}, error) {
 	prefix := engine.ResourcePrefix(idx)
 	data := map[string]interface{}{}
 
@@ -862,44 +896,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 
 	switch engine {
 	case dbEngineCassandra:
-		if v, ok := d.GetOk(prefix + "hosts"); ok {
-			log.Printf("[DEBUG] Cassandra hosts: %v", v.([]interface{}))
-			var hosts []string
-			for _, host := range v.([]interface{}) {
-				if v == nil {
-					continue
-				}
-				hosts = append(hosts, host.(string))
-			}
-			data["hosts"] = strings.Join(hosts, ",")
-		}
-		if v, ok := d.GetOkExists(prefix + "port"); ok {
-			data["port"] = v.(int)
-		}
-		if v, ok := d.GetOk(prefix + "username"); ok {
-			data["username"] = v.(string)
-		}
-		if v, ok := d.GetOk("cassandra.0.password"); ok {
-			data["password"] = v.(string)
-		}
-		if v, ok := d.GetOkExists(prefix + "tls"); ok {
-			data["tls"] = v.(bool)
-		}
-		if v, ok := d.GetOkExists("cassandra.0.insecure_tls"); ok {
-			data["insecure_tls"] = v.(bool)
-		}
-		if v, ok := d.GetOkExists("cassandra.0.pem_bundle"); ok {
-			data["pem_bundle"] = v.(string)
-		}
-		if v, ok := d.GetOkExists(prefix + "pem_json"); ok {
-			data["pem_json"] = v.(string)
-		}
-		if v, ok := d.GetOkExists(prefix + "protocol_version"); ok {
-			data["protocol_version"] = v.(int)
-		}
-		if v, ok := d.GetOkExists(prefix + "connect_timeout"); ok {
-			data["connect_timeout"] = v.(int)
-		}
+		setCassandraDatabaseConnectionData(d, prefix, data)
 	case dbEngineCouchbase:
 		setCouchbaseDatabaseConnectionData(d, prefix, data)
 	case dbEngineInfluxDB:
@@ -909,19 +906,11 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineMongoDB:
 		setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	case dbEngineMongoDBAtlas:
-		if v, ok := d.GetOk(prefix + "public_key"); ok {
-			data["public_key"] = v.(string)
-		}
-		if v, ok := d.GetOk(prefix + "private_key"); ok {
-			data["private_key"] = v.(string)
-		}
-		if v, ok := d.GetOk(prefix + "project_id"); ok {
-			data["project_id"] = v.(string)
-		}
+		setMongoDBAtlasDatabaseConnectionData(d, prefix, data)
 	case dbEngineMSSQL:
 		setMSSQLDatabaseConnectionData(d, prefix, data)
 	case dbEngineMySQL:
-		setMySQLDatabaseConnectionData(d, prefix, data)
+		setMySQLDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineMySQLRDS:
 		setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	case dbEngineMySQLAurora:
@@ -931,7 +920,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineOracle:
 		setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	case dbEnginePostgres:
-		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
+		setPostgresDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, prefix, data)
 	case dbEngineRedis:
@@ -947,6 +936,64 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	}
 
 	return data, nil
+}
+
+func setMongoDBAtlasDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOk(prefix + "public_key"); ok {
+		data["public_key"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "private_key"); ok {
+		data["private_key"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "project_id"); ok {
+		data["project_id"] = v.(string)
+	}
+}
+
+func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOk(prefix + "hosts"); ok {
+		log.Printf("[DEBUG] Cassandra hosts: %v", v.([]interface{}))
+		var hosts []string
+		for _, host := range v.([]interface{}) {
+			if v == nil {
+				continue
+			}
+			hosts = append(hosts, host.(string))
+		}
+		data["hosts"] = strings.Join(hosts, ",")
+	}
+	if v, ok := d.GetOkExists(prefix + "port"); ok {
+		data["port"] = v.(int)
+	}
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+
+	passwordKey := prefix + consts.FieldPassword
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			data[consts.FieldPassword] = v.(string)
+		}
+	}
+
+	if v, ok := d.GetOkExists(prefix + "tls"); ok {
+		data["tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists("cassandra.0.insecure_tls"); ok {
+		data["insecure_tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists("cassandra.0.pem_bundle"); ok {
+		data["pem_bundle"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "pem_json"); ok {
+		data["pem_json"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "protocol_version"); ok {
+		data["protocol_version"] = v.(int)
+	}
+	if v, ok := d.GetOkExists(prefix + "connect_timeout"); ok {
+		data["connect_timeout"] = v.(int)
+	}
 }
 
 func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
@@ -996,6 +1043,7 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 			result["username_template"] = v.(string)
 		}
 	}
+
 	return result
 }
 
@@ -1017,6 +1065,31 @@ func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 	return result, nil
 }
 
+func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret, meta interface{}) map[string]interface{} {
+	result := getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	// cloud specific
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		if v, ok := data["auth_type"]; ok {
+			result["auth_type"] = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + "service_account_json"); ok {
+			result["service_account_json"] = v.(string)
+		} else {
+			if v, ok := data["service_account_json"]; ok {
+				result["service_account_json"] = v.(string)
+			}
+		}
+	}
+
+	return result
+}
+
 func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
 	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	if result == nil {
@@ -1031,7 +1104,7 @@ func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData,
 	return result
 }
 
-func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret, meta interface{}) map[string]interface{} {
 	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
@@ -1052,6 +1125,21 @@ func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 			result["tls_ca"] = v.(string)
 		}
 	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		// cloud specific
+		if v, ok := data["auth_type"]; ok {
+			result["auth_type"] = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + "service_account_json"); ok {
+			result["service_account_json"] = v.(string)
+		} else {
+			if v, ok := data["service_account_json"]; ok {
+				result["service_account_json"] = v.(string)
+			}
+		}
+	}
+
 	return result
 }
 
@@ -1335,6 +1423,18 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 }
 
+func setCloudDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
+	if !provider.IsAPISupported(meta, provider.VaultVersion115) {
+		return
+	}
+	if v, ok := d.GetOk(prefix + "auth_type"); ok {
+		data["auth_type"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "service_account_json"); ok {
+		data["service_account_json"] = v.(string)
+	}
+}
+
 func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "contained_db"); ok {
@@ -1346,14 +1446,20 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	}
 }
 
-func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
 	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+	setCloudDatabaseConnectionData(d, prefix, data, meta)
 	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		data["tls_certificate_key"] = v.(string)
 	}
 	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
 		data["tls_ca"] = v.(string)
 	}
+}
+
+func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
+	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
+	setCloudDatabaseConnectionData(d, prefix, data, meta)
 }
 
 func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
@@ -1366,9 +1472,14 @@ func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v.(string)
 	}
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
+
+	passwordKey := prefix + consts.FieldPassword
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			data[consts.FieldPassword] = v.(string)
+		}
 	}
+
 	if v, ok := d.GetOk(prefix + "tls"); ok {
 		data["tls"] = v.(bool)
 	}
@@ -1407,8 +1518,11 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 		data["username"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
+	passwordKey := prefix + consts.FieldPassword
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			data[consts.FieldPassword] = v.(string)
+		}
 	}
 
 	if v, ok := d.GetOk(prefix + "ca_cert"); ok {
@@ -1451,9 +1565,14 @@ func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v
 	}
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v
+
+	passwordKey := prefix + consts.FieldPassword
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			data[consts.FieldPassword] = v.(string)
+		}
 	}
+
 	if v, ok := d.GetOkExists(prefix + "tls"); ok {
 		data["tls"] = v.(bool)
 	}
@@ -1482,9 +1601,14 @@ func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v.(string)
 	}
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
+
+	passwordKey := prefix + consts.FieldPassword
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			data[consts.FieldPassword] = v.(string)
+		}
 	}
+
 	if v, ok := d.GetOkExists(prefix + "tls"); ok {
 		data["tls"] = v.(bool)
 	}
@@ -1510,8 +1634,14 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 
 	data["username"] = d.Get(prefix + "username")
 
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
+	// Vault does not return the password in the API. If the root credentials have been rotated, sending
+	// the old password in the update request would break the connection config. Thus we only send it,
+	// if it actually changed to still support updating it for non-rotated cases.
+	passwordKey := prefix + consts.FieldPassword
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			data[consts.FieldPassword] = v.(string)
+		}
 	}
 }
 
@@ -1537,7 +1667,7 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 	path := databaseSecretBackendConnectionPath(
 		d.Get("backend").(string), d.Get("name").(string))
 	if err := writeDatabaseSecretConfig(
-		d, client, engine, 0, false, path); err != nil {
+		d, client, engine, 0, false, path, meta); err != nil {
 		return err
 	}
 
@@ -1548,9 +1678,9 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 }
 
 func writeDatabaseSecretConfig(d *schema.ResourceData, client *api.Client,
-	engine *dbEngine, idx int, unifiedSchema bool, path string,
+	engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{},
 ) error {
-	data, err := getDatabaseAPIDataForEngine(engine, idx, d)
+	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta)
 	if err != nil {
 		return err
 	}
@@ -1619,11 +1749,11 @@ func validateDBPluginName(s string) error {
 func getSortedPluginPrefixes() ([]string, error) {
 	var pluginPrefixes []string
 	for _, d := range dbEngines {
-		prefix, err := d.PluginPrefix()
+		prefixes, err := d.PluginPrefixes()
 		if err != nil {
 			return nil, err
 		}
-		pluginPrefixes = append(pluginPrefixes, prefix)
+		pluginPrefixes = append(pluginPrefixes, prefixes...)
 	}
 	// sorted by max length
 	sort.Slice(pluginPrefixes, func(i, j int) bool {
@@ -1673,7 +1803,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		return err
 	}
 
-	result, err := getDBConnectionConfig(d, engine, 0, resp)
+	result, err := getDBConnectionConfig(d, engine, 0, resp, meta)
 	if err != nil {
 		return err
 	}
@@ -1729,7 +1859,7 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret,
 }
 
 func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
-	resp *api.Secret,
+	resp *api.Secret, meta interface{},
 ) (map[string]interface{}, error) {
 	var result map[string]interface{}
 
@@ -1758,7 +1888,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 		}
 		result = values
 	case dbEngineMySQL:
-		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp)
+		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineMySQLRDS:
 		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	case dbEngineMySQLAurora:
@@ -1768,7 +1898,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineOracle:
 		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	case dbEnginePostgres:
-		result = getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+		result = getPostgresConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineElasticSearch:
 		result = getElasticsearchConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineSnowflake:

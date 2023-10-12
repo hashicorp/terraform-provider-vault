@@ -47,8 +47,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
    *Available only for Vault Enterprise*.
 
-* `backend` - (Optional) The unique path this backend should be mounted at. Must
-not begin or end with a `/`. Defaults to `nomad`.
+* `backend` - (Required) The unique path this backend should be mounted at.
 
 * `role` - (Required) The name to identify this role within the backend.
 Must be unique within the backend.

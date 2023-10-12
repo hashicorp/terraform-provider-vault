@@ -18,7 +18,7 @@ import (
 func oktaAuthBackendUserResource() *schema.Resource {
 	return &schema.Resource{
 		Create: oktaAuthBackendUserWrite,
-		Read:   ReadWrapper(oktaAuthBackendUserRead),
+		Read:   provider.ReadWrapper(oktaAuthBackendUserRead),
 		Update: oktaAuthBackendUserWrite,
 		Delete: oktaAuthBackendUserDelete,
 

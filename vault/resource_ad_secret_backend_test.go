@@ -22,7 +22,7 @@ func TestADSecretBackend(t *testing.T) {
 	resourceType := "vault_ad_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		Providers:                 testProviders,
+		ProviderFactories:         providerFactories,
 		PreCheck:                  func() { testutil.TestAccPreCheck(t) },
 		PreventPostDestroyRefresh: true,
 		CheckDestroy:              testCheckMountDestroyed(resourceType, consts.MountTypeAD, consts.FieldBackend),
@@ -84,8 +84,8 @@ func TestADSecretBackend_remount(t *testing.T) {
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testADSecretBackend_initialConfig(backend, bindDN, bindPass, url),

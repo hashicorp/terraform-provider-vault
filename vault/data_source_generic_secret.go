@@ -17,7 +17,7 @@ import (
 
 func genericSecretDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(genericSecretDataSourceRead),
+		Read: provider.ReadWrapper(genericSecretDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {

@@ -42,7 +42,7 @@ The following arguments are supported:
 
 * `certificate` - (Required) CA certificate used to validate client certificates
 
-* `allowed_names` - (Optional) Allowed subject names for authenticated client certificates
+* `allowed_names` - (Optional) DEPRECATED: Please use the individual `allowed_X_sans` parameters instead. Allowed subject names for authenticated client certificates
 
 * `allowed_common_names` - (Optional) Allowed the common names for authenticated client certificates
 

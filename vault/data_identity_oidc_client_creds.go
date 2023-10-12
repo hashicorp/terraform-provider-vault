@@ -14,7 +14,7 @@ import (
 
 func identityOIDCClientCredsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(readOIDCClientCredsResource),
+		Read: provider.ReadWrapper(readOIDCClientCredsResource),
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -56,14 +56,21 @@ func readOIDCClientCredsResource(d *schema.ResourceData, meta interface{}) error
 	}
 
 	clientId := creds.Data["client_id"].(string)
-
 	if clientId == "" {
 		return fmt.Errorf("client_id is not set in response")
 	}
 
-	clientSecret := creds.Data["client_secret"].(string)
-	if clientSecret == "" {
-		return fmt.Errorf("client_secret is not set in response")
+	clientType := creds.Data["client_type"].(string)
+	if clientType == "" {
+		return fmt.Errorf("client_type is not set in response")
+	}
+
+	clientSecret := ""
+	if clientType != "public" {
+		clientSecret = creds.Data["client_secret"].(string)
+		if clientSecret == "" {
+			return fmt.Errorf("client_secret is not set in response")
+		}
 	}
 
 	d.SetId(path)

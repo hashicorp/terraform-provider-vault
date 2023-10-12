@@ -18,6 +18,7 @@ import (
 )
 
 func TestLDAPAuthBackendUser_basic(t *testing.T) {
+	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	username := acctest.RandomWithPrefix("tf-test-ldap-user")
 
@@ -33,9 +34,9 @@ func TestLDAPAuthBackendUser_basic(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend_user.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendUserDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendUserConfig_basic(backend, username, policies, groups),
@@ -53,6 +54,7 @@ func TestLDAPAuthBackendUser_basic(t *testing.T) {
 }
 
 func TestLDAPAuthBackendUser_noGroups(t *testing.T) {
+	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	username := acctest.RandomWithPrefix("tf-test-ldap-user")
 
@@ -61,9 +63,9 @@ func TestLDAPAuthBackendUser_noGroups(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend_user.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendUserDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendUserConfig_basic(backend, username, policies, groups),
@@ -81,6 +83,7 @@ func TestLDAPAuthBackendUser_noGroups(t *testing.T) {
 }
 
 func TestLDAPAuthBackendUser_oneGroup(t *testing.T) {
+	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	username := acctest.RandomWithPrefix("tf-test-ldap-user")
 
@@ -91,9 +94,9 @@ func TestLDAPAuthBackendUser_oneGroup(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend_user.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendUserDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendUserConfig_basic(backend, username, policies, groups),

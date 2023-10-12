@@ -25,7 +25,7 @@ func ldapAuthBackendGroupResource() *schema.Resource {
 
 		Create: ldapAuthBackendGroupResourceWrite,
 		Update: ldapAuthBackendGroupResourceWrite,
-		Read:   ReadWrapper(ldapAuthBackendGroupResourceRead),
+		Read:   provider.ReadWrapper(ldapAuthBackendGroupResourceRead),
 		Delete: ldapAuthBackendGroupResourceDelete,
 		Exists: ldapAuthBackendGroupResourceExists,
 		Importer: &schema.ResourceImporter{

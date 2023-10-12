@@ -21,7 +21,7 @@ func identityEntityResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityEntityCreate,
 		Update: identityEntityUpdate,
-		Read:   ReadWrapper(identityEntityRead),
+		Read:   provider.ReadWrapper(identityEntityRead),
 		Delete: identityEntityDelete,
 		Exists: identityEntityExists,
 		Importer: &schema.ResourceImporter{
@@ -103,7 +103,7 @@ func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interfac
 			// should be configured on the entity.
 			data["external_policies"] = d.Get("external_policies").(bool)
 			if data["external_policies"].(bool) {
-				data["policies"] = nil
+				delete(data, "policies")
 			}
 		}
 	}

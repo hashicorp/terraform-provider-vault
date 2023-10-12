@@ -18,7 +18,7 @@ import (
 func pkiSecretBackendConfigUrlsResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendConfigUrlsCreateUpdate,
-		Read:   ReadWrapper(pkiSecretBackendConfigUrlsRead),
+		Read:   provider.ReadWrapper(pkiSecretBackendConfigUrlsRead),
 		Update: pkiSecretBackendConfigUrlsCreateUpdate,
 		Delete: pkiSecretBackendConfigUrlsDelete,
 		Importer: &schema.ResourceImporter{

@@ -21,14 +21,14 @@ func TestPkiSecretBackendConfigCA_basic(t *testing.T) {
 	resourceName := "vault_pki_secret_backend_config_ca.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendConfigCAConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 				),
 			},
 		},

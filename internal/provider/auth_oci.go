@@ -15,6 +15,17 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+func init() {
+	field := consts.FieldAuthLoginOCI
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginOCI{}
+			return a.Init(r, field)
+		}, GetOCILoginSchema); err != nil {
+		panic(err)
+	}
+}
+
 const (
 	ociAuthTypeInstance = "instance"
 	ociAuthTypeAPIKeys  = "apikey"
@@ -52,6 +63,8 @@ func GetOCILoginSchemaResource(_ string) *schema.Resource {
 	}, consts.MountTypeOCI)
 }
 
+var _ AuthLogin = (*AuthLoginOCI)(nil)
+
 // AuthLoginOCI handler for authenticating to OCI auth engine.
 type AuthLoginOCI struct {
 	AuthLoginCommon
@@ -70,16 +83,16 @@ func (l *AuthLoginOCI) LoginPath() string {
 	return fmt.Sprintf("auth/%s/login/%s", l.MountPath(), l.params[consts.FieldRole])
 }
 
-func (l *AuthLoginOCI) Init(d *schema.ResourceData, authField string) error {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return err
+func (l *AuthLoginOCI) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			return l.checkRequiredFields(d, consts.FieldRole, consts.FieldAuthType)
+		},
+	); err != nil {
+		return nil, err
 	}
 
-	if err := l.checkRequiredFields(d, consts.FieldRole, consts.FieldAuthType); err != nil {
-		return err
-	}
-
-	return nil
+	return l, nil
 }
 
 // Method name for the OCI authentication engine.

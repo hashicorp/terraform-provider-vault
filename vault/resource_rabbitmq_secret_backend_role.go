@@ -17,7 +17,7 @@ import (
 func rabbitMQSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: rabbitMQSecretBackendRoleWrite,
-		Read:   ReadWrapper(rabbitMQSecretBackendRoleRead),
+		Read:   provider.ReadWrapper(rabbitMQSecretBackendRoleRead),
 		Update: rabbitMQSecretBackendRoleWrite,
 		Delete: rabbitMQSecretBackendRoleDelete,
 		Exists: rabbitMQSecretBackendRoleExists,

@@ -17,13 +17,14 @@ import (
 )
 
 func TestLDAPAuthBackend_basic(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
@@ -51,13 +52,14 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 }
 
 func TestLDAPAuthBackend_tls(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-tls-path")
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
@@ -86,14 +88,15 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 }
 
 func TestLDAPAuthBackend_remount(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-ldap")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-ldap-updated")
 
 	resourceName := "vault_ldap_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
@@ -211,6 +214,7 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 			"url":                  "url",
 			"starttls":             "starttls",
 			"case_sensitive_names": "case_sensitive_names",
+			"max_page_size":        "max_page_size",
 			"tls_min_version":      "tls_min_version",
 			"tls_max_version":      "tls_max_version",
 			"insecure_tls":         "insecure_tls",
@@ -260,6 +264,7 @@ resource "vault_ldap_auth_backend" "test" {
     url                    = "ldaps://example.org"
     starttls               = true
     case_sensitive_names   = false
+	max_page_size          = -1
     tls_min_version        = "tls11"
     tls_max_version        = "tls12"
     insecure_tls           = false

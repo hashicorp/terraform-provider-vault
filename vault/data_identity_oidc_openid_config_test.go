@@ -20,6 +20,7 @@ import (
 func TestDataSourceIdentityOIDCOpenIDConfig(t *testing.T) {
 	testutil.SkipTestAcc(t)
 	testutil.TestAccPreCheck(t)
+	t.Parallel()
 
 	providerName := acctest.RandomWithPrefix("test-provider")
 	keyName := acctest.RandomWithPrefix("test-key")
@@ -64,7 +65,7 @@ func TestDataSourceIdentityOIDCOpenIDConfig(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityOIDCOpenIDConfig_config(keyName, clientName, providerName, u.Host),

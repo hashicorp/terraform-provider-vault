@@ -49,8 +49,8 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	reqHeaders := base64.StdEncoding.EncodeToString(loginDataHeaders)
 	reqBody := base64.StdEncoding.EncodeToString(loginDataBody)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_iamIdentity(mountPath, accessKey, secretKey, reqMethod, reqURL, reqHeaders, reqBody, roleName, *testIdentity.Arn),
@@ -99,8 +99,8 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	pkcs7 = strings.Replace(pkcs7, "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_pkcs7(mountPath, accessKey, secretKey, roleName, ami, account, arn, pkcs7),
@@ -155,8 +155,8 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	sig = strings.Replace(sig, "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_ec2Identity(mountPath, accessKey, secretKey, roleName, ami, account, arn, identity, sig),

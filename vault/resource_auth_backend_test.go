@@ -23,8 +23,8 @@ func TestResourceAuth(t *testing.T) {
 
 	resourceName := "vault_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuth_initialConfig(path + consts.PathDelim),
@@ -63,8 +63,8 @@ func TestAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuth_initialConfig(path),
@@ -208,8 +208,8 @@ func TestResourceAuthTune(t *testing.T) {
 	resName := "vault_auth_backend.test"
 	var resAuthFirst api.AuthMount
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuthTune_initialConfig(backend),

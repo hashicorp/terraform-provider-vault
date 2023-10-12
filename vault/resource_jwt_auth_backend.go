@@ -26,7 +26,7 @@ func jwtAuthBackendResource() *schema.Resource {
 		},
 		Create: jwtAuthBackendWrite,
 		Delete: jwtAuthBackendDelete,
-		Read:   ReadWrapper(jwtAuthBackendRead),
+		Read:   provider.ReadWrapper(jwtAuthBackendRead),
 		Update: jwtAuthBackendUpdate,
 
 		CustomizeDiff: jwtCustomizeDiff,
@@ -167,7 +167,7 @@ func jwtAuthBackendResource() *schema.Resource {
 
 			"tune": authMountTuneSchema(),
 		},
-	})
+	}, false)
 }
 
 func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {

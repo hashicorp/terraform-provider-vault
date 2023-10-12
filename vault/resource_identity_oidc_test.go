@@ -20,9 +20,9 @@ func TestAccIdentityOidc(t *testing.T) {
 
 	const resourceName = "vault_identity_oidc.server"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityOidcDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityOidcDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcConfig(issuer),

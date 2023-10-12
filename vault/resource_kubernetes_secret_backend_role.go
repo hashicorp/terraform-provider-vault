@@ -34,8 +34,8 @@ const (
 
 func kubernetesSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: MountCreateContextWrapper(kubernetesSecretBackendRoleCreateUpdate, provider.VaultVersion111),
-		ReadContext:   ReadContextWrapper(kubernetesSecretBackendRoleRead),
+		CreateContext: provider.MountCreateContextWrapper(kubernetesSecretBackendRoleCreateUpdate, provider.VaultVersion111),
+		ReadContext:   provider.ReadContextWrapper(kubernetesSecretBackendRoleRead),
 		UpdateContext: kubernetesSecretBackendRoleCreateUpdate,
 		DeleteContext: kubernetesSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

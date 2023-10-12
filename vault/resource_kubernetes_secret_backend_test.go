@@ -21,9 +21,9 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 	resourceType := "vault_kubernetes_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeKubernetes, ""),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeKubernetes, ""),
 		Steps: []resource.TestStep{
 			{
 				Config: testKubernetesSecretBackend_initialConfig(path),
@@ -37,9 +37,9 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAuditNonHMACResponseKeys+".#", "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSealWrap, "false"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalEntropyAccess, "false"),
-					resource.TestCheckResourceAttr(resourceName, fieldKubernetesHost, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldKubernetesCACert, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldDisableLocalCAJWT, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesHost, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesCACert, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableLocalCAJWT, "false"),
 				),
 			},
 			{
@@ -54,9 +54,9 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAuditNonHMACResponseKeys+".0", "test_res"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSealWrap, "true"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalEntropyAccess, "true"),
-					resource.TestCheckResourceAttr(resourceName, fieldKubernetesHost, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldKubernetesCACert, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldDisableLocalCAJWT, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesHost, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesCACert, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableLocalCAJWT, "false"),
 				),
 			},
 			{
@@ -71,16 +71,16 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAuditNonHMACResponseKeys+".#", "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSealWrap, "false"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalEntropyAccess, "false"),
-					resource.TestCheckResourceAttr(resourceName, fieldKubernetesHost, "https://127.0.0.1:63247"),
-					resource.TestCheckResourceAttr(resourceName, fieldKubernetesCACert, "test_ca_cert"),
-					resource.TestCheckResourceAttr(resourceName, fieldDisableLocalCAJWT, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesHost, "https://127.0.0.1:63247"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesCACert, "test_ca_cert"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableLocalCAJWT, "true"),
 				),
 			},
 			{
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{fieldServiceAccountJWT},
+				ImportStateVerifyIgnore: []string{consts.FieldServiceAccountJWT},
 			},
 		},
 	})
