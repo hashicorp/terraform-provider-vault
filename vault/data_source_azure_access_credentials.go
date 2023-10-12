@@ -7,13 +7,13 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
@@ -21,6 +21,29 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
+
+// https://learn.microsoft.com/en-us/graph/sdks/national-clouds
+const (
+	azurePublicCloudEnvName = "AZUREPUBLICCLOUD"
+	azureChinaCloudEnvName  = "AZURECHINACLOUD"
+	azureUSGovCloudEnvName  = "AZUREUSGOVERNMENTCLOUD"
+)
+
+func cloudConfigFromName(name string) (cloud.Configuration, error) {
+	configs := map[string]cloud.Configuration{
+		azureChinaCloudEnvName:  cloud.AzureChina,
+		azurePublicCloudEnvName: cloud.AzurePublic,
+		azureUSGovCloudEnvName:  cloud.AzureGovernment,
+	}
+
+	name = strings.ToUpper(name)
+	c, ok := configs[name]
+	if !ok {
+		return c, fmt.Errorf("err: no cloud configuration matching the name %q", name)
+	}
+
+	return c, nil
+}
 
 func azureAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
@@ -227,28 +250,13 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 		}
 	}
 
-	if environment != "" {
-		env, err := azure.EnvironmentFromName(environment)
-		if err != nil {
-			return err
-		}
+	cloudConfig, err := cloudConfigFromName(environment)
+	clientOptions.Cloud = cloudConfig
 
-		switch env.Name {
-		case "AzurePublicCloud":
-			clientOptions.Endpoint = arm.AzurePublicCloud
-		case "AzureChinaCloud":
-			clientOptions.Endpoint = arm.AzureChina
-		case "AzureUSGovernmentCloud":
-			clientOptions.Endpoint = arm.AzureGovernment
-		case "AzureGermanCloud":
-			// AzureGermanCloud appears to have been removed,
-			// keeping this here to handle the case where the secret engine has
-			// been configured with this environment.
-			clientOptions.Endpoint = arm.Endpoint(env.ResourceManagerEndpoint)
-		}
+	providerClient, err := armresources.NewProvidersClient(subscriptionID, creds, clientOptions)
+	if err != nil {
+		return fmt.Errorf("failed to create providers client: %w", err)
 	}
-
-	providerClient := armresources.NewProvidersClient(subscriptionID, creds, clientOptions)
 	ctx := context.Background()
 	delay := time.Duration(d.Get("num_seconds_between_tests").(int)) * time.Second
 	endTime := time.Now().Add(
@@ -256,32 +264,33 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	wantSuccessCount := d.Get("num_sequential_successes").(int)
 	var successCount int
 	for {
-		pager := providerClient.List(&armresources.ProvidersClientListOptions{
+		pager := providerClient.NewListPager(&armresources.ProvidersClientListOptions{
 			Expand: pointerutil.StringPtr("metadata"),
 		})
 
-		for pager.NextPage(ctx) {
-			pr := pager.PageResponse()
-			if pr.RawResponse.StatusCode == http.StatusUnauthorized {
-				return fmt.Errorf("validation failed, unauthorized credentials from Vault, err=%w", pager.Err())
+		// TODO(JM): is `providerClient.ProviderPermissions(ctx, "", nil)` sufficient?
+		for pager.More() {
+			nextResult, err := pager.NextPage(ctx)
+			if err != nil {
+				// don't fail the whole auth, but note that a page failed to load
+				log.Printf("[WARN] failed to load next page: %w", err)
+				if time.Now().After(endTime) {
+					return fmt.Errorf("validation failed, giving up err=%w", err)
+				}
+
+				log.Printf("[WARN] Credential validation failed with %v, retrying in %s", err, delay)
+				successCount = 0
 			}
-			log.Printf("[DEBUG] Provider Client List response %+v", pr.RawResponse)
+			if nextResult.Value != nil {
+				log.Printf("[DEBUG] Provider Client List response %+v", nextResult.Value)
+				successCount++
+				log.Printf("[DEBUG] Credential validation succeeded try %d/%d", successCount, wantSuccessCount)
+				if successCount >= wantSuccessCount {
+					break
+				}
+			}
 		}
 
-		if pager.Err() == nil {
-			successCount++
-			log.Printf("[DEBUG] Credential validation succeeded try %d/%d", successCount, wantSuccessCount)
-			if successCount >= wantSuccessCount {
-				break
-			}
-		} else {
-			if time.Now().After(endTime) {
-				return fmt.Errorf("validation failed, giving up err=%w", pager.Err())
-			}
-
-			log.Printf("[WARN] Credential validation failed with %v, retrying in %s", pager.Err(), delay)
-			successCount = 0
-		}
 		time.Sleep(delay)
 	}
 
