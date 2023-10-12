@@ -44,8 +44,8 @@ func TestDataSourceIdentityOIDCClientCreds_PublicClient(t *testing.T) {
 			{
 				Config: testDataSourceIdentityOIDCClientCreds_config(keyName, name, `client_type = "public"`),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_identity_oidc_client_creds.creds", "name", name),
-					resource.TestCheckResourceAttr("data.vault_identity_oidc_client_creds.creds", "client_secret", ""),
+					resource.TestCheckResourceAttr("data.vault_identity_oidc_client_creds.creds_public", "name", name),
+					resource.TestCheckResourceAttr("data.vault_identity_oidc_client_creds.creds_public", "client_secret", ""),
 				),
 			},
 		},
