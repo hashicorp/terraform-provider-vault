@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/iam v1.1.2
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.8.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.4.0
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v0.3.1
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.1.1
 	github.com/Azure/go-autorest/autorest v0.11.29
 	github.com/aws/aws-sdk-go v1.45.24
 	github.com/cenkalti/backoff/v4 v4.2.1
