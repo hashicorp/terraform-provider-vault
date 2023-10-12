@@ -52,6 +52,7 @@ type ProviderMeta struct {
 	resourceData *schema.ResourceData
 	clientCache  map[string]*api.Client
 	m            sync.RWMutex
+	mv           sync.RWMutex
 	vaultVersion *version.Version
 }
 
@@ -180,6 +181,9 @@ func (p *ProviderMeta) getVaultVersion() (*version.Version, error) {
 // GetVaultVersion returns the providerMeta
 // vaultVersion attribute.
 func (p *ProviderMeta) GetVaultVersion() *version.Version {
+	p.mv.Lock()
+	defer p.mv.Unlock()
+
 	ver, err := p.getVaultVersion()
 	if err != nil {
 		return nil
