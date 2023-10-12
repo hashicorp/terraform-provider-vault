@@ -40,13 +40,6 @@ func TestProviderMeta_GetNSClient(t *testing.T) {
 		expectErr    error
 		calls        int
 	}{
-		//{
-		//	name:         "no-client",
-		//	client:       nil,
-		//	resourceData: &schema.ResourceData{},
-		//	wantErr:      true,
-		//	expectErr:    errors.New("root api.Client not set, init with NewProviderMeta()"),
-		//},
 		{
 			name:         "no-resource-data",
 			client:       &api.Client{},

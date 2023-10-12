@@ -51,14 +51,14 @@ type ProviderMeta struct {
 	client       *api.Client
 	resourceData *schema.ResourceData
 	clientCache  map[string]*api.Client
-	m            sync.RWMutex
 	vaultVersion *version.Version
+	mu           sync.RWMutex
 }
 
 // GetClient returns the providers default Vault client.
 func (p *ProviderMeta) GetClient() (*api.Client, error) {
-	p.m.Lock()
-	defer p.m.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	return p.getClient()
 }
@@ -77,8 +77,8 @@ func (p *ProviderMeta) MustGetClient() *api.Client {
 // The provided namespace will always be set relative to the default client's
 // namespace.
 func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
-	p.m.Lock()
-	defer p.m.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	client, err := p.getClient()
 	if err != nil {
@@ -144,51 +144,18 @@ func (p *ProviderMeta) IsEnterpriseSupported() bool {
 	return strings.Contains(ver.Metadata(), enterpriseMetadata)
 }
 
-func (p *ProviderMeta) getVaultVersion() (*version.Version, error) {
-	if p.vaultVersion != nil {
-		return p.vaultVersion, nil
-	}
-
-	d := p.resourceData
-	var vaultVersion *version.Version
-	if v, ok := d.GetOk(consts.FieldVaultVersionOverride); ok {
-		ver, err := version.NewVersion(v.(string))
-		if err != nil {
-			return nil, fmt.Errorf("invalid value for %q, err=%w",
-				consts.FieldVaultVersionOverride, err)
-		}
-		vaultVersion = ver
-	} else if !d.Get(consts.FieldSkipGetVaultVersion).(bool) {
-		// Set the Vault version to *ProviderMeta object
-		client, err := p.getClient()
-		if err != nil {
-			return nil, err
-		}
-
-		ver, err := getVaultVersion(client)
-		if err != nil {
-			return nil, err
-		}
-		vaultVersion = ver
-	}
-
-	p.vaultVersion = vaultVersion
-
-	return p.vaultVersion, nil
-}
-
 // GetVaultVersion returns the providerMeta
 // vaultVersion attribute.
 func (p *ProviderMeta) GetVaultVersion() *version.Version {
-	p.m.Lock()
-	defer p.m.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
-	ver, err := p.getVaultVersion()
+	err := p.setVaultVersion()
 	if err != nil {
 		return nil
 	}
 
-	return ver
+	return p.vaultVersion
 }
 
 func (p *ProviderMeta) validate() error {
@@ -393,6 +360,40 @@ func (p *ProviderMeta) setClient() error {
 	return nil
 }
 
+func (p *ProviderMeta) setVaultVersion() error {
+	if p.vaultVersion != nil {
+		return nil
+	}
+
+	d := p.resourceData
+	var vaultVersion *version.Version
+	if v, ok := d.GetOk(consts.FieldVaultVersionOverride); ok {
+		ver, err := version.NewVersion(v.(string))
+		if err != nil {
+			return fmt.Errorf("invalid value for %q, err=%w",
+				consts.FieldVaultVersionOverride, err)
+		}
+		vaultVersion = ver
+	} else if !d.Get(consts.FieldSkipGetVaultVersion).(bool) {
+		// Set the Vault version to *ProviderMeta object
+		client, err := p.getClient()
+		if err != nil {
+			return err
+		}
+
+		ver, err := getVaultVersion(client)
+		if err != nil {
+			return err
+		}
+		vaultVersion = ver
+	}
+
+	p.vaultVersion = vaultVersion
+
+	return nil
+}
+
+// getClient returns the provider's default Vault client. Must be called with ProviderMeta.mu
 func (p *ProviderMeta) getClient() (*api.Client, error) {
 	if err := p.setClient(); err != nil {
 		return nil, err
