@@ -1,8 +1,12 @@
 ## Unreleased
 
+FEATURES:
+* Add support for `custom_metadata` on `vault_namespace`: ([#2033](https://github.com/hashicorp/terraform-provider-vault/pull/2033))
+
 BUGS:
 * Fix panic when readnig client_secret from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
 * Fix API request missing `roles` field for `mongodbatlas_secret_role` resource ([#2047](https://github.com/hashicorp/terraform-provider-vault/pull/2047))
+
 IMPROVEMENTS:
 * Updated dependencies: ([#2038](https://github.com/hashicorp/terraform-provider-vault/pull/2038))
    * `github.com/aws/aws-sdk-go` v1.44.106 -> v1.45.24
