@@ -34,7 +34,7 @@ func TestGCPSecretImpersonatedAccount(t *testing.T) {
 
 	resourceName := "vault_gcp_secret_impersonated_account.test"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)

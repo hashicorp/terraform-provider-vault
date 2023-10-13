@@ -44,9 +44,9 @@ func TestAccNamespace(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testNamespaceDestroy(namespacePath),
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testNamespaceDestroy(namespacePath),
 		Steps: []resource.TestStep{
 			{
 				Config: testNestedNamespaces(namespacePath, 3),

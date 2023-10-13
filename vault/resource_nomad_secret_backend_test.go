@@ -22,7 +22,7 @@ func TestAccNomadSecretBackend(t *testing.T) {
 	resourceType := "vault_nomad_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		Providers:                 testProviders,
+		ProviderFactories:         providerFactories,
 		PreCheck:                  func() { testutil.TestAccPreCheck(t) },
 		PreventPostDestroyRefresh: true,
 		CheckDestroy:              testCheckMountDestroyed(resourceType, consts.MountTypeNomad, consts.FieldBackend),
@@ -75,8 +75,8 @@ func TestNomadSecretBackend_remount(t *testing.T) {
 	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testNomadSecretBackendConfig(backend, address, token, 60, 30, 3600, 7200),

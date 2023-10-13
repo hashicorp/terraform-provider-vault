@@ -17,8 +17,8 @@ import (
 func TestDataSourceAuthBackend(t *testing.T) {
 	path := acctest.RandomWithPrefix("foo")
 	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testDataSourceAuthBackendBasic_config,

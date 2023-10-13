@@ -137,10 +137,10 @@ func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...str
 		testutil.GetImportTestStep(resourceName, false, nil, ignoreImportFields...),
 	}
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     preCheck,
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
-		Steps:        steps,
+		ProviderFactories: providerFactories,
+		PreCheck:          preCheck,
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps:             steps,
 	})
 }
 

@@ -94,7 +94,7 @@ func gcpAuthBackendResource() *schema.Resource {
 				Description: "The accessor of the auth backend",
 			},
 		},
-	})
+	}, false)
 }
 
 func gcpAuthCustomEndpointSchema() map[string]*schema.Schema {

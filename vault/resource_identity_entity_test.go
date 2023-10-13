@@ -27,9 +27,9 @@ func TestAccIdentityEntity(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -44,9 +44,9 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -73,9 +73,9 @@ func TestAccIdentityEntityUpdateRemoveValues(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -103,9 +103,9 @@ func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),

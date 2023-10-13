@@ -23,8 +23,8 @@ func TestDataSourceKVSecretList(t *testing.T) {
 	datasourceName := "data.vault_kv_secrets_list.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceKVSecretListConfig(mount, s1, s2, false),

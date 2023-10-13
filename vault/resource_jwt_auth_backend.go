@@ -167,7 +167,7 @@ func jwtAuthBackendResource() *schema.Resource {
 
 			"tune": authMountTuneSchema(),
 		},
-	})
+	}, false)
 }
 
 func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {

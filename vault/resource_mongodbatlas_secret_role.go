@@ -124,8 +124,8 @@ func mongodbAtlasSecretRoleCreateUpdate(ctx context.Context, d *schema.ResourceD
 		consts.FieldMaxTTL,
 	}
 	for _, k := range fields {
-		if d.HasChange(k) {
-			data[k] = d.Get(k)
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
 		}
 	}
 

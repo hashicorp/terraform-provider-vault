@@ -20,8 +20,8 @@ func TestDataSourceIdentityOIDCPublicKeys(t *testing.T) {
 	providerName := acctest.RandomWithPrefix("test-provider")
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityOIDCPublicKeys_config(keyName, clientName, providerName),

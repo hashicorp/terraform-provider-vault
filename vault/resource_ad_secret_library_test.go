@@ -20,9 +20,9 @@ func TestAccADSecretBackendLibrary_basic(t *testing.T) {
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccADSecretBackendLibraryCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccADSecretBackendLibraryCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testADSecretBackendLibraryConfig(backend, bindDN, bindPass, url, "qa", `"Bob","Mary"`, 60, 120, false),
@@ -54,9 +54,9 @@ func TestAccADSecretBackendLibrary_import(t *testing.T) {
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccADSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccADSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testADSecretBackendLibraryConfig(backend, bindDN, bindPass, url, "qa", `"Bob","Mary"`, 60, 120, false),

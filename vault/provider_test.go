@@ -139,8 +139,8 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 		Schema: rootProvider.Schema,
 	}
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testHeaderConfig("auth", "123"),
@@ -532,8 +532,8 @@ func TestAccTokenName(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.WantTokenName, func(t *testing.T) {
 			resource.Test(t, resource.TestCase{
-				Providers: testProviders,
-				PreCheck:  func() { testutil.TestAccPreCheck(t) },
+				ProviderFactories: providerFactories,
+				PreCheck:          func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
 						PreConfig: func() {
@@ -629,8 +629,8 @@ func TestAccChildToken(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			resource.Test(t, resource.TestCase{
-				Providers: testProviders,
-				PreCheck:  func() { testutil.TestAccPreCheck(t) },
+				ProviderFactories: providerFactories,
+				PreCheck:          func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
 						PreConfig: func() {

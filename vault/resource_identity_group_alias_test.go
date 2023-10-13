@@ -24,9 +24,9 @@ func TestAccIdentityGroupAlias(t *testing.T) {
 	nameGithubA := "vault_auth_backend.githubA"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityGroupAliasDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityGroupAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupAliasConfig(group),
@@ -52,9 +52,9 @@ func TestAccIdentityGroupAliasUpdate(t *testing.T) {
 	aliasB := acctest.RandomWithPrefix("B-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityGroupAliasDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityGroupAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupAliasConfigUpdate(suffix, aliasA, nameGithubA, nameGroupA),
