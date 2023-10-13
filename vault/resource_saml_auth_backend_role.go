@@ -67,10 +67,7 @@ func samlAuthBackendRoleResource() *schema.Resource {
 			Description: "The type of matching assertion to perform on bound_subjects.",
 		},
 		fieldBoundAttributes: {
-			Type: schema.TypeMap,
-			//Elem: &schema.Schema{
-			//	Type: schema.TypeString,
-			//},
+			Type:        schema.TypeMap,
 			Optional:    true,
 			Description: "Mapping of attribute names to values that are expected to exist in the SAML assertion",
 		},
@@ -119,14 +116,6 @@ func samlAuthBackendRoleWrite(ctx context.Context, d *schema.ResourceData, meta 
 			data[k] = v
 		}
 	}
-
-	// handle bound_attributes field
-	// vault expects a comma separated string
-	//if v, ok := d.GetOk(fieldBoundAttributes); ok {
-	//	if val, ok := v.([]string); ok {
-	//		data[fieldBoundAttributes] = strings.Join(val, ",")
-	//	}
-	//}
 
 	// add common token fields
 	updateTokenFields(d, data, true)
@@ -188,6 +177,7 @@ func samlAuthBackendRoleRead(ctx context.Context, d *schema.ResourceData, meta i
 	for _, k := range samlRoleAPIFields {
 		if v, ok := resp.Data[k]; ok {
 			// flatten map into TypeMap that was sent to Vault
+			// TF expects map[string]string; vault returns map[string]interface{}
 			if k == fieldBoundAttributes {
 				if val, ok := v.(map[string]interface{}); ok {
 					v = samlAuthRoleFlattenBoundAttributesMap(val)
@@ -251,6 +241,7 @@ func samlAuthRoleFlattenBoundAttributesMap(attr map[string]interface{}) map[stri
 	newAttrs := map[string]string{}
 	for key, val := range attr {
 		if v, ok := val.([]interface{}); ok {
+			// make new list of strings
 			el := []string{}
 			for _, k := range v {
 				el = append(el, k.(string))
