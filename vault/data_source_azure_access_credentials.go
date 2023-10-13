@@ -7,13 +7,16 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
@@ -24,7 +27,7 @@ import (
 
 func azureAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: provider.ReadWrapper(azureAccessCredentialsDataSourceRead),
+		ReadContext: provider.ReadContextWrapper(azureAccessCredentialsDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -115,10 +118,10 @@ Some possible values: AzurePublicCloud, AzureUSGovernmentCloud`,
 	}
 }
 
-func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
+func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -128,12 +131,12 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 
 	secret, err := client.Logical().Read(credsPath)
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return diag.Errorf("error reading from Vault: %s", err)
 	}
 	log.Printf("[DEBUG] Read %q from Vault", credsPath)
 
 	if secret == nil {
-		return fmt.Errorf("no role found at credsPath %q", credsPath)
+		return diag.Errorf("no role found at credsPath %q", credsPath)
 	}
 
 	clientID := secret.Data["client_id"].(string)
@@ -179,7 +182,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	} else {
 		data, err := getConfigData()
 		if err != nil {
-			return err
+			return diag.FromErr(e)
 		}
 		if v, ok := data["subscription_id"]; ok {
 			subscriptionID = v.(string)
@@ -187,7 +190,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	}
 
 	if subscriptionID == "" {
-		return fmt.Errorf("subscription_id cannot be empty when validate_creds is true")
+		return diag.Errorf("subscription_id cannot be empty when validate_creds is true")
 	}
 
 	tenantID := ""
@@ -196,7 +199,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	} else {
 		data, err := getConfigData()
 		if err != nil {
-			return err
+			return diag.FromErr(e)
 		}
 		if v, ok := data["tenant_id"]; ok {
 			tenantID = v.(string)
@@ -204,13 +207,13 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	}
 
 	if tenantID == "" {
-		return fmt.Errorf("tenant_id cannot be empty when validate_creds is true")
+		return diag.Errorf("tenant_id cannot be empty when validate_creds is true")
 	}
 
 	creds, err := azidentity.NewClientSecretCredential(
 		tenantID, clientID, clientSecret, &azidentity.ClientSecretCredentialOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(e)
 	}
 
 	clientOptions := &arm.ClientOptions{}
@@ -220,7 +223,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	} else {
 		data, err := getConfigData()
 		if err != nil {
-			return err
+			return diag.FromErr(e)
 		}
 		if v, ok := data["environment"]; ok && v.(string) != "" {
 			environment = v.(string)
@@ -232,9 +235,8 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 
 	providerClient, err := armresources.NewProvidersClient(subscriptionID, creds, clientOptions)
 	if err != nil {
-		return fmt.Errorf("failed to create providers client: %w", err)
+		return diag.Errorf("failed to create providers client: %s", err)
 	}
-	ctx := context.Background()
 	delay := time.Duration(d.Get("num_seconds_between_tests").(int)) * time.Second
 	endTime := time.Now().Add(
 		time.Duration(d.Get("max_cred_validation_seconds").(int)) * time.Second)
@@ -245,25 +247,37 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 			Expand: pointerutil.StringPtr("metadata"),
 		})
 
-		// TODO(JM): is `providerClient.ProviderPermissions(ctx, "", nil)` sufficient?
+		var providers []*armresources.Provider
 		for pager.More() {
-			nextResult, err := pager.NextPage(ctx)
+
+			// capture raw response so we can get the status code
+			var rawResponse *http.Response
+			ctxWithResp := runtime.WithCaptureResponse(ctx, &rawResponse)
+
+			nextResult, err := pager.NextPage(ctxWithResp)
 			if err != nil {
 				if time.Now().After(endTime) {
-					return fmt.Errorf("validation failed, giving up err=%w", err)
+					return diag.Errorf("validation failed, giving up err=%s", err)
 				}
 
+				if rawResponse.StatusCode == http.StatusUnauthorized {
+					return diag.Errorf("validation failed, unauthorized credentials from Vault, err=%v", err)
+				}
+
+				log.Printf("[DEBUG] Provider Client List response %+v", rawResponse)
+
+			}
+			if nextResult.Value != nil {
+				successCount++
+				log.Printf("[DEBUG] Credential validation succeeded try %d/%d", successCount, wantSuccessCount)
+				providers = append(providers, nextResult.Value...)
+			} else {
 				log.Printf("[WARN] Credential validation failed with %v, retrying in %s", err, delay)
 				successCount = 0
 			}
-			if nextResult.Value != nil {
-				log.Printf("[DEBUG] Provider Client List response %+v", nextResult.Value)
-				successCount++
-				log.Printf("[DEBUG] Credential validation succeeded try %d/%d", successCount, wantSuccessCount)
-				if successCount >= wantSuccessCount {
-					break
-				}
-			}
+		}
+		if successCount >= wantSuccessCount {
+			break
 		}
 
 		time.Sleep(delay)
