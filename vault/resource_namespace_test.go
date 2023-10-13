@@ -95,8 +95,7 @@ func TestAccNamespace(t *testing.T) {
 			},
 			{
 				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !meta.IsAPISupported(provider.VaultVersion112), nil
+					return !testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion112), nil
 				},
 				Config: testNamespaceCustomMetadata(namespacePath + "-cm"),
 				Check: resource.ComposeTestCheckFunc(

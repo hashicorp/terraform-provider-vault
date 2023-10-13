@@ -54,8 +54,8 @@ func namespaceResource() *schema.Resource {
 				Type:     schema.TypeMap,
 				Computed: true,
 				Optional: true,
-				Description: "Custom metadata describing this namespace. Value type is map[string]string." +
-					"metadata meant to describe the namespace.",
+				Description: "Custom metadata describing this namespace. Value type " +
+					"is map[string]string.",
 			},
 		},
 	}
@@ -112,8 +112,7 @@ func namespaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface
 	}
 
 	log.Printf("[DEBUG] Creating namespace %s in Vault", path)
-	_, err := client.Logical().JSONMergePatch(ctx, consts.SysNamespaceRoot+path, data)
-	if err != nil {
+	if _, err := client.Logical().JSONMergePatch(ctx, consts.SysNamespaceRoot+path, data); err != nil {
 		return diag.Errorf("error writing to Vault: %s", err)
 	}
 
@@ -195,15 +194,14 @@ func namespaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}
 	toSet := map[string]interface{}{
 		consts.FieldNamespaceID: resp.Data[consts.FieldID],
 		consts.FieldPath:        util.TrimSlashes(path),
+		// set computed parameter to nil for vault versions <= 1.11
+		// prevents 'known after apply' drift in TF state since field
+		// would never be set otherwise
+		consts.FieldCustomMetadata: nil,
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		toSet[consts.FieldCustomMetadata] = resp.Data[consts.FieldCustomMetadata]
-	} else {
-		// set computed parameter to nil for vault versions <= 1.11
-		// prevents 'known after apply' drift in TF state since field
-		// would never be set otherwise
-		toSet[consts.FieldCustomMetadata] = nil
 	}
 
 	pathFQ := path
