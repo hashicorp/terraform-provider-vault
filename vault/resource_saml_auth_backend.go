@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"log"
-	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -30,8 +29,6 @@ const (
 )
 
 var (
-	samlAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$")
-
 	samlAPIFields = []string{
 		fieldIDPMetadataURL,
 		fieldIDPSSOURL,
@@ -183,7 +180,7 @@ func samlAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	if err != nil {
 		return diag.Errorf("error writing to %q: %s", configPath, err)
 	}
-	log.Printf("[DEBUG] Wrote saml auth backend config to %q", path)
+	log.Printf("[DEBUG] Wrote saml auth backend config to %q", configPath)
 
 	// set ID to where engine is mounted
 	d.SetId(path)
@@ -198,21 +195,17 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 	id := d.Id()
 	log.Printf("[DEBUG] Reading saml auth backend config")
-	secret, err := client.Logical().Read(samlAuthBackendConfigPath(id))
+	resp, err := client.Logical().Read(samlAuthBackendConfigPath(id))
 	if err != nil {
 		return diag.Errorf("error reading saml auth backend config from %q: %s", id, err)
 	}
 	log.Printf("[DEBUG] Read saml auth backend config")
 
-	if secret == nil {
+	if resp == nil {
 		log.Printf("[WARN] No info found at %q; removing from state.", id)
 		d.SetId("")
 		return nil
 	}
-	//path, err := samlAuthBackendPathFromID(id)
-	//if err != nil {
-	//	return diag.Errorf("invalid path %q for saml auth backend config: %s", id, err)
-	//}
 
 	if err := d.Set(consts.FieldPath, id); err != nil {
 		return diag.FromErr(err)
@@ -221,7 +214,7 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	// set all API fields to TF state
 	fields := append(samlAPIFields, samlBooleanAPIFields...)
 	for _, k := range fields {
-		if v, ok := secret.Data[k]; ok {
+		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return diag.Errorf("error setting state key %q: err=%s", k, err)
 			}
@@ -230,17 +223,6 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 
 	return nil
 }
-
-//func samlAuthBackendPathFromID(path string) (string, error) {
-//	if !samlAuthBackendConfigFromPathRegex.MatchString(path) {
-//		return "", fmt.Errorf("no path found")
-//	}
-//	res := samlAuthBackendConfigFromPathRegex.FindStringSubmatch(path)
-//	if len(res) != 2 {
-//		return "", fmt.Errorf("unexpected number of matches (%d) for path", len(res))
-//	}
-//	return res[1], nil
-//}
 
 func samlAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
