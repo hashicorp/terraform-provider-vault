@@ -22,29 +22,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-// https://learn.microsoft.com/en-us/graph/sdks/national-clouds
-const (
-	azurePublicCloudEnvName = "AZUREPUBLICCLOUD"
-	azureChinaCloudEnvName  = "AZURECHINACLOUD"
-	azureUSGovCloudEnvName  = "AZUREUSGOVERNMENTCLOUD"
-)
-
-func cloudConfigFromName(name string) (cloud.Configuration, error) {
-	configs := map[string]cloud.Configuration{
-		azureChinaCloudEnvName:  cloud.AzureChina,
-		azurePublicCloudEnvName: cloud.AzurePublic,
-		azureUSGovCloudEnvName:  cloud.AzureGovernment,
-	}
-
-	name = strings.ToUpper(name)
-	c, ok := configs[name]
-	if !ok {
-		return c, fmt.Errorf("err: no cloud configuration matching the name %q", name)
-	}
-
-	return c, nil
-}
-
 func azureAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
 		Read: provider.ReadWrapper(azureAccessCredentialsDataSourceRead),
@@ -293,4 +270,27 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	}
 
 	return nil
+}
+
+// https://learn.microsoft.com/en-us/graph/sdks/national-clouds
+const (
+	azurePublicCloudEnvName = "AZUREPUBLICCLOUD"
+	azureChinaCloudEnvName  = "AZURECHINACLOUD"
+	azureUSGovCloudEnvName  = "AZUREUSGOVERNMENTCLOUD"
+)
+
+func cloudConfigFromName(name string) (cloud.Configuration, error) {
+	configs := map[string]cloud.Configuration{
+		azureChinaCloudEnvName:  cloud.AzureChina,
+		azurePublicCloudEnvName: cloud.AzurePublic,
+		azureUSGovCloudEnvName:  cloud.AzureGovernment,
+	}
+
+	name = strings.ToUpper(name)
+	c, ok := configs[name]
+	if !ok {
+		return c, fmt.Errorf("err: no cloud configuration matching the name %q", name)
+	}
+
+	return c, nil
 }
