@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add support for configuring SAML Auth resources ([#2053](https://github.com/hashicorp/terraform-provider-vault/pull/2053))
+
 ## 3.21.0 (Oct 9, 2023)
 
 FEATURES:
