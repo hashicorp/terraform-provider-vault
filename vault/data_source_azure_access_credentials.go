@@ -247,7 +247,6 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 			Expand: pointerutil.StringPtr("metadata"),
 		})
 
-		var providers []*armresources.Provider
 		for pager.More() {
 
 			// capture raw response so we can get the status code
@@ -270,7 +269,6 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 			if nextResult.Value != nil {
 				successCount++
 				log.Printf("[DEBUG] Credential validation succeeded try %d/%d", successCount, wantSuccessCount)
-				providers = append(providers, nextResult.Value...)
 			} else {
 				log.Printf("[WARN] Credential validation failed with %v, retrying in %s", err, delay)
 				successCount = 0
