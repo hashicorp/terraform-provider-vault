@@ -54,7 +54,7 @@ func namespaceResource() *schema.Resource {
 				Type:     schema.TypeMap,
 				Computed: true,
 				Optional: true,
-				Description: "A map of arbitrary string to string valued user-provided " +
+				Description: "Custom metadata describing this namespace. Value type is map[string]string." +
 					"metadata meant to describe the namespace.",
 			},
 		},
