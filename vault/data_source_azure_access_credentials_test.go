@@ -27,7 +27,7 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 10),
+				Config: testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 20),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "client_id"),
 					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "client_secret"),

@@ -247,35 +247,40 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 			Expand: pointerutil.StringPtr("metadata"),
 		})
 
+		var providers []*armresources.Provider
 		for pager.More() {
-
 			// capture raw response so we can get the status code
 			var rawResponse *http.Response
 			ctxWithResp := runtime.WithCaptureResponse(ctx, &rawResponse)
 
 			nextResult, err := pager.NextPage(ctxWithResp)
 			if err != nil {
-				if time.Now().After(endTime) {
-					return diag.Errorf("validation failed, giving up err=%s", err)
-				}
-
-				if rawResponse.StatusCode == http.StatusUnauthorized {
-					return diag.Errorf("validation failed, unauthorized credentials from Vault, err=%v", err)
-				}
-
-				log.Printf("[DEBUG] Provider Client List response %+v", rawResponse)
-
+				log.Printf("[WARN] Provider Client List request failed err=%s", err)
 			}
+			if rawResponse.StatusCode == http.StatusUnauthorized {
+				return diag.Errorf("validation failed, unauthorized credentials from Vault, err=%v", err)
+			}
+
+			log.Printf("[DEBUG] Provider Client List response %+v", rawResponse)
+
 			if nextResult.Value != nil {
-				successCount++
-				log.Printf("[DEBUG] Credential validation succeeded try %d/%d", successCount, wantSuccessCount)
-			} else {
-				log.Printf("[WARN] Credential validation failed with %v, retrying in %s", err, delay)
-				successCount = 0
+				providers = append(providers, nextResult.Value...)
 			}
 		}
-		if successCount >= wantSuccessCount {
-			break
+
+		if len(providers) != 0 {
+			successCount++
+			log.Printf("[DEBUG] Credential validation succeeded on try %d/%d", successCount, wantSuccessCount)
+			if successCount >= wantSuccessCount {
+				break
+			}
+		} else {
+			log.Printf("[WARN] Credential validation failed with %v, retrying in %s", err, delay)
+			successCount = 0
+		}
+
+		if time.Now().After(endTime) {
+			return diag.Errorf("validation failed after max_cred_validation_seconds, giving up; now=%s, endTime=%s", time.Now().String(), endTime.String())
 		}
 
 		time.Sleep(delay)
