@@ -258,7 +258,7 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 				log.Printf("[WARN] Provider Client List request failed err=%s", err)
 			}
 			if rawResponse.StatusCode == http.StatusUnauthorized {
-				return diag.Errorf("validation failed, unauthorized credentials from Vault, err=%v", err)
+				return diag.Errorf("validation failed, unauthorized credentials from Vault, err=%s", err)
 			}
 
 			log.Printf("[DEBUG] Provider Client List response %+v", rawResponse)
@@ -275,7 +275,7 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 				break
 			}
 		} else {
-			log.Printf("[WARN] Credential validation failed with %v, retrying in %s", err, delay)
+			log.Printf("[WARN] Credential validation failed with %s, retrying in %s", err, delay)
 			successCount = 0
 		}
 
