@@ -54,6 +54,15 @@ var (
 		fieldOCSPFailOpen,
 		fieldOCSPQueryAllServers,
 	}
+
+	// the following require Vault Server Version 1.13+
+	certAuthVault113Fields = map[string]bool{
+		fieldOCSPCACertificates:  true,
+		fieldOCSPEnabled:         true,
+		fieldOCSPFailOpen:        true,
+		fieldOCSPQueryAllServers: true,
+		fieldOCSPServersOverride: true,
+	}
 )
 
 func certAuthBackendRoleResource() *schema.Resource {
@@ -220,18 +229,27 @@ func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta int
 	updateTokenFields(d, data, true)
 
 	for _, k := range certAuthStringFields {
+		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
+			continue
+		}
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v
 		}
 	}
 
 	for _, k := range certAuthListFields {
+		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
+			continue
+		}
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v.(*schema.Set).List()
 		}
 	}
 
 	for _, k := range certAuthBoolFields {
+		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
+			continue
+		}
 		data[k] = d.Get(k)
 	}
 
@@ -258,12 +276,18 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	updateTokenFields(d, data, false)
 
 	for _, k := range certAuthStringFields {
+		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
+			continue
+		}
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v
 		}
 	}
 
 	for _, k := range certAuthListFields {
+		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
+			continue
+		}
 		// special handling for allowed_organizational_units since unsetting
 		// this in Vault has special meaning (allow all OUs)
 		if k == fieldAllowedOrganizationalUnits {
@@ -276,6 +300,9 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	}
 
 	for _, k := range certAuthBoolFields {
+		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
+			continue
+		}
 		data[k] = d.Get(k)
 	}
 
@@ -375,16 +402,18 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 		return diag.FromErr(err)
 	}
 
-	ocspFields := []string{
-		fieldOCSPCACertificates,
-		fieldOCSPEnabled,
-		fieldOCSPFailOpen,
-		fieldOCSPQueryAllServers,
-		fieldOCSPServersOverride,
-	}
-	for _, f := range ocspFields {
-		if err := d.Set(f, resp.Data[f]); err != nil {
-			return diag.FromErr(err)
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		ocspFields := []string{
+			fieldOCSPCACertificates,
+			fieldOCSPEnabled,
+			fieldOCSPFailOpen,
+			fieldOCSPQueryAllServers,
+			fieldOCSPServersOverride,
+		}
+		for _, f := range ocspFields {
+			if err := d.Set(f, resp.Data[f]); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 

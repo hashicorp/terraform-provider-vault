@@ -126,7 +126,10 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 
 	resourceName := "vault_cert_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
+		},
 		ProviderFactories: providerFactories,
 		CheckDestroy:      testCertAuthBackendDestroy,
 		Steps: []resource.TestStep{
