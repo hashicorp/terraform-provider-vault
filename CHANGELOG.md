@@ -5,11 +5,20 @@ FEATURES:
 
 * BUGS:
 * Fix panic when reading `client_secret` from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
+* Add support for `custom_metadata` on `vault_namespace`: ([#2033](https://github.com/hashicorp/terraform-provider-vault/pull/2033))
+
+BUGS:
+* Fix panic when reading `client_secret` from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
 * Fix API request missing `roles` field for `mongodbatlas_secret_role` resource ([#2047](https://github.com/hashicorp/terraform-provider-vault/pull/2047))
 
 IMPROVEMENTS:
 * Updated dependencies: ([#2038](https://github.com/hashicorp/terraform-provider-vault/pull/2038))
    * `github.com/aws/aws-sdk-go` v1.44.106 -> v1.45.24
+* Updated dependencies: ([#2050](https://github.com/hashicorp/terraform-provider-vault/pull/2050))
+   * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v0.22.0 -> v1.8.0
+   * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v0.13.2 -> v1.4.0
+   * `github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources` v0.3.1 -> v1.1.1
+   * `github.com/Azure/go-autorest/autorest` v0.11.29 removed
 
 ## 3.21.0 (Oct 9, 2023)
 
