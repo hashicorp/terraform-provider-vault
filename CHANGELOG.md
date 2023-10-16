@@ -2,6 +2,7 @@
 
 FEATURES:
 * Add support for `custom_metadata` on `vault_namespace`: ([#2033](https://github.com/hashicorp/terraform-provider-vault/pull/2033))
+* Add support for `OCSP*` role fields for the cert auth resource: ([#2056](https://github.com/hashicorp/terraform-provider-vault/pull/2056))
 
 BUGS:
 * Fix panic when readnig client_secret from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
