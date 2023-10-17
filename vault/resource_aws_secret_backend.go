@@ -287,8 +287,10 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
+	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") || d.HasChange("description") {
+		description := d.Get("description").(string)
 		config := api.MountConfigInput{
+			Description:     &description,
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
 		}
