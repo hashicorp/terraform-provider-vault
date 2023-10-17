@@ -6,6 +6,7 @@ FEATURES:
 BUGS:
 * Fix panic when readnig client_secret from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
 * Fix API request missing `roles` field for `mongodbatlas_secret_role` resource ([#2047](https://github.com/hashicorp/terraform-provider-vault/pull/2047))
+* Fix ignored `description` updates for `aws_secret_backend` resource ([#2057](https://github.com/hashicorp/terraform-provider-vault/pull/2057))
 
 IMPROVEMENTS:
 * Updated dependencies: ([#2038](https://github.com/hashicorp/terraform-provider-vault/pull/2038))
