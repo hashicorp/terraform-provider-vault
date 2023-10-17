@@ -62,22 +62,27 @@ The following arguments are supported:
 
 * `display_name` - (Optional string: "") The name to display on tokens issued under this role.
 
-* `ocsp_enabled` (Optional bool: false) - If enabled, validate certificates' revocation status using OCSP.
+* `ocsp_enabled` (Optional bool: false) - If enabled, validate certificates'
+  revocation status using OCSP. Requires Vault version 1.13+.
 
 * `ocsp_ca_certificates` (Optional string: "") Any additional CA certificates
   needed to verify OCSP responses. Provided as base64 encoded PEM data.
+  Requires Vault version 1.13+.
 
 * `ocsp_servers_override` (Optional array: []): A comma-separated list of OCSP
   server addresses. If unset, the OCSP server is determined from the
   AuthorityInformationAccess extension on the certificate being inspected.
+  Requires Vault version 1.13+.
 
 * `ocsp_fail_open` (Optional bool: false) - If true and an OCSP response cannot
   be fetched or is of an unknown status, the login will proceed as if the
   certificate has not been revoked.
+  Requires Vault version 1.13+.
 
 * `ocsp_query_all_servers` (Optional bool: false) - If set to true, rather than
   accepting the first successful OCSP response, query all servers and consider
   the certificate valid only if all servers agree.
+  Requires Vault version 1.13+.
 
 ### Common Token Arguments
 
