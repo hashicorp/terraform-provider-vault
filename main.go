@@ -8,9 +8,11 @@ import (
 	"flag"
 	"log"
 
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
 	"github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider/fwprovider"
 	"github.com/hashicorp/terraform-provider-vault/schema"
 	"github.com/hashicorp/terraform-provider-vault/vault"
 )
@@ -21,7 +23,7 @@ func main() {
 	sdkv2Provider := schema.NewProvider(vault.Provider())
 
 	providers := []func() tfprotov5.ProviderServer{
-		// providerserver.NewProtocol5(provider.New()), // Example terraform-plugin-framework provider
+		providerserver.NewProtocol5(fwprovider.New()), // terraform-plugin-framework provider
 		sdkv2Provider.GRPCProvider,
 	}
 
