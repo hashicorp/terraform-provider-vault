@@ -4,6 +4,7 @@
 package schema
 
 import (
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -27,4 +28,8 @@ func (p *Provider) RegisterResource(name string, resource *schema.Resource) {
 
 func (p *Provider) SchemaProvider() *schema.Provider {
 	return p.provider
+}
+
+func (p *Provider) GRPCProvider() tfprotov5.ProviderServer {
+	return p.provider.GRPCProvider()
 }
