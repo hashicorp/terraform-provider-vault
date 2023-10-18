@@ -11,8 +11,6 @@ description: |-
 ~> **Note** This data source is replaced by "vault_ldap_static_credentials" and
 will be removed in the next major release.
 
-TESTING!!!
-
 Reads Active Directory credentials from an AD secret backend in Vault.
 
 ~> **Important** All data retrieved from Vault will be
