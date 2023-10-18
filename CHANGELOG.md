@@ -1,7 +1,5 @@
 ## Unreleased
 
-TESTING foooo
-
 FEATURES:
 * Add support for `custom_metadata` on `vault_namespace`: ([#2033](https://github.com/hashicorp/terraform-provider-vault/pull/2033))
 
