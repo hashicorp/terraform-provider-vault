@@ -33,3 +33,7 @@ func (p *Provider) SchemaProvider() *schema.Provider {
 func (p *Provider) GRPCProvider() tfprotov5.ProviderServer {
 	return p.provider.GRPCProvider()
 }
+
+func (p *Provider) Meta() interface{} {
+	return p.provider.Meta()
+}
