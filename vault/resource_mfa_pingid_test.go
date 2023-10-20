@@ -21,8 +21,8 @@ func TestMFAPingIDBasic(t *testing.T) {
 	resourceName := "vault_mfa_pingid.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestEntPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testMFAPingIDConfig(path, settingsFile),

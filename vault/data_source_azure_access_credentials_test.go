@@ -4,7 +4,6 @@
 package vault
 
 import (
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -24,8 +23,8 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
 	conf := testutil.GetTestAzureConf(t)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 20),
@@ -34,10 +33,6 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "client_secret"),
 					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "lease_id"),
 				),
-			},
-			{
-				Config:      testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 5),
-				ExpectError: regexp.MustCompile(`despite trying for 5 seconds, 1 seconds apart, we were never able to get 1000 successes in a row`),
 			},
 		},
 	})

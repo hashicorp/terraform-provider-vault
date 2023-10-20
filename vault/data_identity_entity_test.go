@@ -22,8 +22,8 @@ func TestDataSourceIdentityEntityName(t *testing.T) {
 
 	resourceName := "data.vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityEntity_configName(entity),
@@ -44,8 +44,8 @@ func TestDataSourceIdentityEntityAlias(t *testing.T) {
 
 	resourceName := "data.vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityEntity_configAlias(entity),

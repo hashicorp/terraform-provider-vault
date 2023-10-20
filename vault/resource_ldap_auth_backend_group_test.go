@@ -29,9 +29,9 @@ func TestLDAPAuthBackendGroup_import(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend_group.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendGroupDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testLDAPAuthBackendGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendGroupConfig_basic(backend, groupname, policies),
@@ -58,9 +58,9 @@ func TestLDAPAuthBackendGroup_basic(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend_group.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendGroupDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testLDAPAuthBackendGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendGroupConfig_basic(backend, groupname, policies),

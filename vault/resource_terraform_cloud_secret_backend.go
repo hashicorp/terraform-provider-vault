@@ -77,7 +77,7 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 				Description: "Maximum possible lease duration for secrets in seconds",
 			},
 		},
-	})
+	}, false)
 }
 
 func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {

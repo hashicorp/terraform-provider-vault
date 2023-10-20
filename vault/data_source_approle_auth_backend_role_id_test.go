@@ -18,9 +18,9 @@ func TestAccAppRoleAuthBackendRoleID_basic(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role),
@@ -54,9 +54,9 @@ func TestAccAppRoleAuthBackendRoleID_customID(t *testing.T) {
 	roleID := acctest.RandomWithPrefix("test-role-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_full(backend, role, roleID),

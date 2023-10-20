@@ -82,9 +82,9 @@ func TestCertAuthBackend(t *testing.T) {
 
 	resourceName := "vault_cert_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testCertAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testCertAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, allowedNames, allowedOrgUnits),

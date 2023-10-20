@@ -22,7 +22,7 @@ func TestAccKubernetesSecretCredentialsDataSource(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-role")
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},

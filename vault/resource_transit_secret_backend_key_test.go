@@ -21,9 +21,9 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testTransitSecretBackendKeyConfig_basic(name, backend),
@@ -97,9 +97,9 @@ func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testTransitSecretBackendKeyConfig_rsa4096(name, backend),
@@ -158,7 +158,7 @@ func TestTransitSecretBackendKey_hmac(t *testing.T) {
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)

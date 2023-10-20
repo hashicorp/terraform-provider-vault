@@ -23,9 +23,9 @@ func TestAccOktaAuthBackendUser(t *testing.T) {
 	organization := "dummy"
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccOktaAuthBackendUser_Destroyed(path, "user_test"),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccOktaAuthBackendUser_Destroyed(path, "user_test"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthUserConfig(path, organization),

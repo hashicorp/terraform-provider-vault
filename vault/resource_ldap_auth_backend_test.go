@@ -22,9 +22,9 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
@@ -57,9 +57,9 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
@@ -95,8 +95,8 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),

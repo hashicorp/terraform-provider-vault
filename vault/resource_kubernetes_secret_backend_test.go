@@ -21,9 +21,9 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 	resourceType := "vault_kubernetes_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeKubernetes, ""),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeKubernetes, ""),
 		Steps: []resource.TestStep{
 			{
 				Config: testKubernetesSecretBackend_initialConfig(path),

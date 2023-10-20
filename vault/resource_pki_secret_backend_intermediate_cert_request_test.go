@@ -29,9 +29,9 @@ func TestPkiSecretBackendIntermediateCertRequest_basic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_basic(path, false),
@@ -55,9 +55,9 @@ func TestPkiSecretBackendIntermediateCertRequest_managedKeys(t *testing.T) {
 
 	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_managedKeys(path, keyName, accessKey, secretKey),

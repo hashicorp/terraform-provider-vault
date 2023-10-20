@@ -24,8 +24,8 @@ func TestResourceGenericSecret(t *testing.T) {
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resourceName := "vault_generic_secret.test"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(mount, name),
@@ -51,8 +51,8 @@ func TestResourceGenericSecretNS(t *testing.T) {
 	resourceName := "vault_generic_secret.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfigNS(ns, mount, name),
@@ -100,8 +100,8 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(mount, name),
@@ -136,9 +136,9 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	resourceName := "vault_generic_secret.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAllVersionDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAllVersionDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig_v2(path, false),

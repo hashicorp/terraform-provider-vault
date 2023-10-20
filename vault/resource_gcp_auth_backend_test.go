@@ -37,9 +37,9 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 	var resAuthFirst api.AuthMount
 	path := resource.PrefixedUniqueId("gcp-basic-")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testGCPAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
@@ -119,9 +119,9 @@ func TestGCPAuthBackend_import(t *testing.T) {
 	path := resource.PrefixedUniqueId("gcp-import-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testGCPAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
@@ -147,8 +147,8 @@ func TestGCPAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_gcp_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),

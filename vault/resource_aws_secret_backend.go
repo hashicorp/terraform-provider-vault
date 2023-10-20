@@ -106,7 +106,7 @@ func awsSecretBackendResource() *schema.Resource {
 				Description: "Specifies if the secret backend is local only",
 			},
 		},
-	})
+	}, false)
 }
 
 func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {

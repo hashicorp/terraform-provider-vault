@@ -33,9 +33,9 @@ func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendStaticRoleConfig_rotationPeriod(name, username, dbName, backend, connURL),
@@ -70,9 +70,9 @@ func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendStaticRoleConfig_rotationPeriod(name, username, dbName, backend, connURL),
@@ -115,7 +115,7 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)

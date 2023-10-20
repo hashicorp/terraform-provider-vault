@@ -33,9 +33,9 @@ func TestConsulSecretBackend(t *testing.T) {
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testConsulSecretBackend_initialConfig(path, token),
@@ -145,7 +145,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 	consulAddr := consulConfig.Address()
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
@@ -213,9 +213,9 @@ func TestConsulSecretBackend_remount(t *testing.T) {
 	store := &testMountStore{}
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testConsulSecretBackend_initialConfig(path, token),

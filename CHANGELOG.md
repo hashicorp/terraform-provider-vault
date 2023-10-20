@@ -1,14 +1,70 @@
 ## Unreleased
 
 FEATURES:
+* Add support for `custom_metadata` on `vault_namespace`: ([#2033](https://github.com/hashicorp/terraform-provider-vault/pull/2033))
+
+BUGS:
+* Fix panic when readnig client_secret from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
+* Fix API request missing `roles` field for `mongodbatlas_secret_role` resource ([#2047](https://github.com/hashicorp/terraform-provider-vault/pull/2047))
+
+IMPROVEMENTS:
+* Updated dependencies: ([#2038](https://github.com/hashicorp/terraform-provider-vault/pull/2038))
+   * `github.com/aws/aws-sdk-go` v1.44.106 -> v1.45.24
+* Updated dependencies: ([#2050](https://github.com/hashicorp/terraform-provider-vault/pull/2050))
+   * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v0.22.0 -> v1.8.0
+   * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v0.13.2 -> v1.4.0
+   * `github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources` v0.3.1 -> v1.1.1
+   * `github.com/Azure/go-autorest/autorest` v0.11.29 removed
+
+## 3.21.0 (Oct 9, 2023)
+
+FEATURES:
+* Add GCP CloudSQL support to Postgres, MySQL DB engines: ([#2012](https://github.com/hashicorp/terraform-provider-vault/pull/2012))
+* Add support for DB Adv TTL Mgmt: ([#2011](https://github.com/hashicorp/terraform-provider-vault/pull/2011))
 * Add support for setting `not_before_duration` argument on `vault_ssh_secret_backend_role`: ([#2019](https://github.com/hashicorp/terraform-provider-vault/pull/2019))
 * Add support for `hmac` key type and key_size to `vault_transit_secret_backend_key`: ([#2034](https://github.com/hashicorp/terraform-provider-vault/pull/2034/))
+* Add support for roles to both rate limit and lease count quotas: ([#1994](https://github.com/hashicorp/terraform-provider-vault/pull/1994))
+* Add `allowed_email_sans` field to write and update functions of `vault_cert_auth_backend_role`: ([#1140](https://github.com/hashicorp/terraform-provider-vault/pull/1140))
+* Add support for `local` parameter in aws secret engine: ([#2013](https://github.com/hashicorp/terraform-provider-vault/pull/2013))
 
 BUGS:
 * Fix duplicate timestamp and incorrect level messages: ([#2031](https://github.com/hashicorp/terraform-provider-vault/pull/2031))
+* Fix panic when setting `key_usage` to an array of empty string and enable it to unset the key usage constraints: ([#2036](https://github.com/hashicorp/terraform-provider-vault/pull/2036))
+* Add state migrator for `external_member_group_ids`  in Identity Group ([#2043](https://github.com/hashicorp/terraform-provider-vault/pull/2043))
+* Fix drift detection for the kv-v2 secrets resource when `disable_read` is enabled: ([#2039](https://github.com/hashicorp/terraform-provider-vault/pull/2039))
+* Add state migrator in secrets/auth backends for `disable_remount` parameter ([#2037](https://github.com/hashicorp/terraform-provider-vault/pull/2037))
+* Fix failure when `auth_login` is specified and vault token is picked up from the runtime/execution environment: ([#2029](https://github.com/hashicorp/terraform-provider-vault/pull/2029))
+* Remove logging of password key: ([#2044](https://github.com/hashicorp/terraform-provider-vault/pull/2044))
 
 IMPROVEMENTS:
+* Oracle DB engine enablement on HCP Vault: ([#2006](https://github.com/hashicorp/terraform-provider-vault/pull/2006))
 * Ensure sensitive values are masked in `vault_approle_auth_backend_login` plan output ([#2008](https://github.com/hashicorp/terraform-provider-vault/pull/2008))
+* Updated dependencies: ([#2038](https://github.com/hashicorp/terraform-provider-vault/pull/2038))
+   * `cloud.google.com/go/compute` v1.10.0 removed
+   * `cloud.google.com/go/compute/metadata` v0.2.3 added
+   * `cloud.google.com/go/iam` v0.3.0 -> v1.1.2
+   * `github.com/Azure/go-autorest/autorest` v0.11.24 -> v0.11.29
+   * `github.com/cenkalti/backoff/v4` v4.1.2 -> v4.2.1
+   * `github.com/coreos/pkg` v0.0.0-20180928190104-399ea9e2e55f -> v0.0.0-20230601102743-20bbbf26f4d8
+   * `github.com/denisenkom/go-mssqldb` v0.12.0 -> v0.12.3
+   * `github.com/go-sql-driver/mysql` v1.6.0 -> v1.7.1
+   * `github.com/google/uuid` v1.3.0 -> v1.3.1
+   * `github.com/gosimple/slug` v1.11.0 -> v1.13.1
+   * `github.com/hashicorp/go-cty` v1.4.1-0.20200414143053-d3edf31b6320 -> v1.4.1-0.20200723130312-85980079f637
+   * `github.com/hashicorp/go-retryablehttp` v0.7.1 -> v0.7.4
+   * `github.com/hashicorp/terraform-plugin-sdk/v2` v2.16.0 -> v2.29.0
+   * `github.com/hashicorp/vault-plugin-auth-jwt` v0.13.2-0.20221012184020-28cc68ee722b -> v0.17.0
+   * `github.com/hashicorp/vault-plugin-auth-kerberos` v0.8.0 -> v0.10.1
+   * `github.com/hashicorp/vault-plugin-auth-oci` v0.13.0-pre -> v0.14.2
+   * `github.com/hashicorp/vault/api` v1.9.3-0.20230628215639-3ca33976762c -> v1.10.0
+   * `github.com/hashicorp/vault/sdk` v0.6.0 -> v0.10.0
+   * `github.com/jcmturner/gokrb5/v8` v8.4.2 -> v8.4.4
+   * `golang.org/x/crypto` v0.6.0 -> v0.14.0
+   * `golang.org/x/net` v0.7.0 -> v0.15.0
+   * `golang.org/x/oauth2` v0.0.0-20221006150949-b44042a4b9c1 -> v0.12.0
+   * `google.golang.org/api` v0.98.0 -> v0.144.0
+   * `google.golang.org/genproto` v0.0.0-20221010155953-15ba04fc1c0e -> v0.0.0-20231002182017-d307bd883b97
+   * `k8s.io/utils` v0.0.0-20220210201930-3a6ce19ff2f9 -> v0.0.0-20230726121419-3b25d923346b
 
 ## 3.20.1 (Sep 13, 2023)
 IMPROVEMENTS:

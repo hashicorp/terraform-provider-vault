@@ -33,9 +33,9 @@ func TestGCPSecretRoleset(t *testing.T) {
 	resourceNameBackend := "vault_gcp_secret_backend.test"
 	resourceName := "vault_gcp_secret_roleset.test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testGCPSecretRolesetDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testGCPSecretRolesetDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPSecretRolesetConfig(backend, roleset, credentials, project, initialRole),
