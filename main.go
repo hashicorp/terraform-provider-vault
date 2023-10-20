@@ -39,6 +39,10 @@ func main() {
 		serveOpts = append(serveOpts, tf5server.WithManagedDebug())
 	}
 
+	// fix duplicate timestamp and incorrect level messages for legacy sdk v2
+	// https://developer.hashicorp.com/terraform/plugin/log/writing#legacy-log-troubleshooting
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+
 	err = tf5server.Serve(
 		"registry.terraform.io/hashicorp/vault",
 		muxServer.ProviderServer,
@@ -48,8 +52,4 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// fix duplicate timestamp and incorrect level messages for legacy sdk v2
-	// https://developer.hashicorp.com/terraform/plugin/log/writing#legacy-log-troubleshooting
-	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
 }
