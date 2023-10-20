@@ -17,16 +17,21 @@ import (
 func TestAccAppRoleAuthBackendLogin_basic(t *testing.T) {
 	// Define the test cases for different token types.
 	testCases := []struct {
-		name      string
-		tokenType string
+		name          string
+		tokenType     string
+		accessorCheck resource.TestCheckFunc
 	}{
 		{
 			name:      "Service",
 			tokenType: "service",
+			accessorCheck: resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
+				"accessor"),
 		},
 		{
 			name:      "Batch",
 			tokenType: "batch",
+			accessorCheck: resource.TestCheckResourceAttr("vault_approle_auth_backend_login.test",
+				"accessor", ""),
 		},
 	}
 
@@ -62,8 +67,7 @@ func TestAccAppRoleAuthBackendLogin_basic(t *testing.T) {
 								consts.FieldLeaseDuration),
 							resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
 								"lease_started"),
-							resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
-								"accessor"),
+							tc.accessorCheck,
 							resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
 								"client_token"),
 						),
@@ -72,44 +76,7 @@ func TestAccAppRoleAuthBackendLogin_basic(t *testing.T) {
 			})
 		})
 	}
-	/*backend := acctest.RandomWithPrefix("approle")
-	role := acctest.RandomWithPrefix("test-role")
 
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAppRoleAuthBackendLoginConfig_basic(backend, role, "batch"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_login.test",
-						"backend", backend),
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_login.test",
-						"policies.#", "3"),
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_login.test",
-						"policies.0", "default"),
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_login.test",
-						"policies.1", "dev"),
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_login.test",
-						"policies.2", "prod"),
-					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
-						"role_id"),
-					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
-						"secret_id"),
-					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
-						"renewable"),
-					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
-						consts.FieldLeaseDuration),
-					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
-						"lease_started"),
-					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
-						"accessor"),
-					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
-						"client_token"),
-				),
-			},
-		},
-	})*/
 }
 
 func testAccAppRoleAuthBackendLoginConfig_basic(backend, role string, tokenType string) string {

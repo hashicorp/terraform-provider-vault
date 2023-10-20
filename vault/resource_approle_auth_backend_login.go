@@ -119,7 +119,13 @@ func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) err
 	}
 	log.Printf("[DEBUG] Logged in with AppRole auth backend %q", path)
 
-	d.SetId(resp.Auth.Accessor)
+	if resp.Auth.Accessor != "" {
+		d.SetId(resp.Auth.Accessor)
+	} else {
+		//We are generating a random ressource id for batch tokens since they don't have an accessor.
+		d.SetId("batch-token-" + d.Get("role_id").(string))
+	}
+
 	d.Set("lease_started", time.Now().Format(time.RFC3339))
 	d.Set("client_token", resp.Auth.ClientToken)
 
@@ -133,7 +139,16 @@ func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error
 	}
 
 	log.Printf("[DEBUG] Reading token %q", d.Id())
-	resp, err := client.Auth().Token().LookupAccessor(d.Id())
+	var resp *api.Secret
+	var err error
+
+	if strings.HasPrefix(d.Id(), "batch-token-") {
+		resp, err = client.Auth().Token().Lookup(d.Get("client_token").(string))
+
+	} else {
+		resp, err = client.Auth().Token().LookupAccessor(d.Id())
+
+	}
 	if err != nil {
 		// If the token is not found (it has expired) we don't return an error
 		if util.IsExpiredTokenErr(err) {
@@ -147,7 +162,8 @@ func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error
 		return nil
 	}
 	log.Printf("[DEBUG] Read token %q", d.Id())
-	if leaseExpiringSoon(d, client) {
+
+	if shouldRenew(d, client) {
 		log.Printf("[DEBUG] Lease for %q expiring soon, renewing", d.Id())
 		renewed, err := client.Auth().Token().Renew(d.Get("client_token").(string), d.Get(consts.FieldLeaseDuration).(int))
 		if err != nil {
@@ -177,6 +193,10 @@ func approleAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) err
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Revoking token %q", accessor)
+	if strings.HasPrefix(d.Id(), "batch-token-") {
+		//Batch tokens cannot be revoked, so we are just skipping
+		return nil
+	}
 	err := client.Auth().Token().RevokeAccessor(accessor)
 	if err != nil {
 		return fmt.Errorf("error revoking token %q", accessor)
@@ -195,7 +215,15 @@ func approleAuthBackendLoginExists(d *schema.ResourceData, meta interface{}) (bo
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Checking if token %q exists", accessor)
-	resp, err := client.Auth().Token().LookupAccessor(accessor)
+	var resp *api.Secret
+	var err error
+
+	if strings.HasPrefix(d.Id(), "batch-token-") {
+		resp, err = client.Auth().Token().Lookup(d.Get("client_token").(string))
+	} else {
+		resp, err = client.Auth().Token().LookupAccessor(d.Id())
+
+	}
 	if err != nil {
 		// If the token is not found (it has expired) we don't return an error
 		if util.IsExpiredTokenErr(err) {
@@ -210,7 +238,11 @@ func approleAuthBackendLoginPath(backend string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/login"
 }
 
-func leaseExpiringSoon(d *schema.ResourceData, client *api.Client) bool {
+// shouldRenew() returns true if the token type is service and is renewable, it returns false for batch tokens and service tokens that are not renewable.
+func shouldRenew(d *schema.ResourceData, client *api.Client) bool {
+	if !d.Get("renewable").(bool) {
+		return false
+	}
 	startedStr := d.Get("lease_started").(string)
 	duration := d.Get(consts.FieldLeaseDuration).(int)
 	if startedStr == "" {
