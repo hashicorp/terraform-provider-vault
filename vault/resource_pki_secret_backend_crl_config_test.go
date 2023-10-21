@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func getCRLConfigChecks(resourceName string, isUpdate bool) resource.TestCheckFunc {
+func getCRLConfigChecks(resourceName string, isUpdate, unifiedCrl bool) resource.TestCheckFunc {
 	baseChecks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "expiry", "72h"),
 		resource.TestCheckResourceAttr(resourceName, "disable", "true"),
@@ -49,9 +49,9 @@ func getCRLConfigChecks(resourceName string, isUpdate bool) resource.TestCheckFu
 	}
 
 	v113UpdateChecks := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, "cross_cluster_revocation", "true"),
-		resource.TestCheckResourceAttr(resourceName, "unified_crl", "true"),
-		resource.TestCheckResourceAttr(resourceName, "unified_crl_on_existing_paths", "true"),
+		resource.TestCheckResourceAttr(resourceName, "cross_cluster_revocation", strconv.FormatBool(unifiedCrl)),
+		resource.TestCheckResourceAttr(resourceName, "unified_crl", strconv.FormatBool(unifiedCrl)),
+		resource.TestCheckResourceAttr(resourceName, "unified_crl_on_existing_paths", strconv.FormatBool(unifiedCrl)),
 	}
 
 	return func(state *terraform.State) error {
@@ -126,18 +126,18 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...string) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	resourceName := "vault_pki_secret_backend_crl_config.test"
+	var unifiedCrl bool
+	if os.Getenv(testutil.EnvVarTfAccEnt) != "" {
+		unifiedCrl = true
+	}
 	steps := []resource.TestStep{
 		{
 			Config: testPkiSecretBackendCrlConfigConfig_defaults(rootPath),
-			Check:  getCRLConfigChecks(resourceName, false),
+			Check:  getCRLConfigChecks(resourceName, false, unifiedCrl),
 		},
 		{
-			SkipFunc: func() (bool, error) {
-				_, found := os.LookupEnv(testutil.EnvVarTfAccEnt)
-				return !found, nil
-			},
-			Config: testPkiSecretBackendCrlConfigConfig_explicit(rootPath),
-			Check:  getCRLConfigChecks(resourceName, true),
+			Config: testPkiSecretBackendCrlConfigConfig_explicit(rootPath, unifiedCrl),
+			Check:  getCRLConfigChecks(resourceName, true, unifiedCrl),
 		},
 		testutil.GetImportTestStep(resourceName, false, nil, ignoreImportFields...),
 	}
@@ -190,9 +190,9 @@ resource "vault_pki_secret_backend_crl_config" "test" {
 `, testPkiSecretBackendCrlConfigConfig_base(rootPath))
 }
 
-func testPkiSecretBackendCrlConfigConfig_explicit(rootPath string) string {
+func testPkiSecretBackendCrlConfigConfig_explicit(rootPath string, unifiedCrl bool) string {
 	return fmt.Sprintf(`
-%s
+%[1]s
 
 resource "vault_pki_secret_backend_crl_config" "test" {
   backend                   	= vault_pki_secret_backend_root_cert.test-ca.backend
@@ -204,9 +204,9 @@ resource "vault_pki_secret_backend_crl_config" "test" {
   auto_rebuild_grace_period 	= "24h"
   enable_delta              	= true
   delta_rebuild_interval   		= "18m"
-  cross_cluster_revocation  	= true
-  unified_crl					= true
-  unified_crl_on_existing_paths = true
+  cross_cluster_revocation  	= %[2]s
+  unified_crl					= %[2]s
+  unified_crl_on_existing_paths = %[2]s
 }
-`, testPkiSecretBackendCrlConfigConfig_base(rootPath))
+`, testPkiSecretBackendCrlConfigConfig_base(rootPath), strconv.FormatBool(unifiedCrl))
 }
