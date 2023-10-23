@@ -69,6 +69,8 @@ bwvTJuiSbAHkhG+eM/04PpWPMo6skek10KmIBvGveHM8R89gbA1Fgw==
 -----END RSA PRIVATE KEY-----
 `
 
+const testBase64PEM = `MIIDIzCCAgugAwIBAgIJAIxJbvl6PnmvMA0GCSqGSIb3DQEBBQUAMBUxEzARBgNVBAMTClZhdWx0IFRlc3QwHhcNMTgwNTA5MTcyMjU0WhcNMjgwNTA2MTcyMjU0WjAVMRMwEQYDVQQDEwpWYXVsdCBUZXN0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxZj/1W69FiancHSEbMhfL0KZvftNksIN2rsMHhVkLDSn7KZyqlVhSOmygARFVmSwi5AO894FAuJU7L/RDcBD6mI3lTzDokeuRoRMpwbNg2aR+VNQaQpdHbLFm3xTO1na7wuxO4F7tDzLQRKzO0wSmqBhXXdJsoTG97mA8Gq5tAR20Uz8vWh3PI8taFG6aSuL7rfm+O3iMoCPTj3DofUENfnd0ZxlXpR/X7Z1iQej5+jXIn0ygoXxc07rfPd6J2jxz0lWL95Q65QWBSaKKNjWHaShSsqGe8KLZu9BFp20+M4Y8fd40B7+mlWk17nUdqvwZtnNL1qf+t0SFFhueQY+4wIDAQABo3YwdDAdBgNVHQ4EFgQUoTWVof3QQakI0Xfamu5nJglXUwswRQYDVR0jBD4wPIAUoTWVof3QQakI0Xfamu5nJglXUwuhGaQXMBUxEzARBgNVBAMTClZhdWx0IFRlc3SCCQCMSW75ej55rzAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4IBAQDFmMBq5s5vBHMrACXfgIBpZSSaiBXz8tVDaiYO5UfZsWqEIn61+NrgJT4Xvhba3VZgGkOLX/9CfnTXx9nq4qL2ht4my2QszXXBJyi0pB+0VIQhbRzjbrYeQn8uCmN5DLph3sA+vJuUWvR7l6h1zUjzRrXWLFQ+qQxtyYT18fgO3uttnbuzptDT23RDRySaoYLpeUFY47RIzFmuIO8bNsh8h5ymHNkVXrrvvqDIxIPD/M21z4ZlZSbsokyVcsGKbF87xv8SFXj5GbtZ7UI0qVYr9zk/Y090Qv1aypM1k5jHWSBCixTrUFtWENQYLYhh2bMP1uJ4UMxSNJXCthRASqNF`
+
 func TestCertAuthBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
 	name := acctest.RandomWithPrefix("tf-test-cert-name")
@@ -112,6 +114,49 @@ func TestCertAuthBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_names.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_organizational_units.#", "0"),
 					testCertAuthBackendCheck_attrs(resourceName, backend, name),
+				),
+			},
+		},
+	})
+}
+
+func TestCertAuthBackend_OCSP(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
+	name := acctest.RandomWithPrefix("tf-test-cert-name")
+
+	resourceName := "vault_cert_auth_backend_role.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
+		},
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testCertAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testCertAuthBackendConfig_OCSP_default(backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, fieldOCSPServersOverride+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, fieldOCSPCACertificates, ""),
+					resource.TestCheckResourceAttr(resourceName, fieldOCSPEnabled, "false"),
+					resource.TestCheckResourceAttr(resourceName, fieldOCSPFailOpen, "false"),
+					resource.TestCheckResourceAttr(resourceName, fieldOCSPQueryAllServers, "false"),
+				),
+			},
+			{
+				Config: testCertAuthBackendConfig_OCSP_basic(backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, fieldOCSPServersOverride+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, fieldOCSPServersOverride+".*", "server1.com"),
+					resource.TestCheckTypeSetElemAttr(resourceName, fieldOCSPServersOverride+".*", "server2.com"),
+					resource.TestCheckResourceAttr(resourceName, fieldOCSPCACertificates, testBase64PEM),
+					resource.TestCheckResourceAttr(resourceName, fieldOCSPEnabled, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOCSPFailOpen, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOCSPQueryAllServers, "true"),
 				),
 			},
 		},
@@ -250,6 +295,53 @@ __CERTIFICATE__
 }
 `, backend, name, certificate, util.ArrayToTerraformList(allowedNames),
 	)
+
+	return config
+}
+
+func testCertAuthBackendConfig_OCSP_default(backend, name string) string {
+	config := fmt.Sprintf(`
+
+resource "vault_auth_backend" "cert" {
+    path = "%s"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name                   = "%s"
+    backend                = vault_auth_backend.cert.path
+
+    certificate = <<EOF
+%s
+EOF
+}
+`, backend, name, testCertificate)
+
+	return config
+}
+
+func testCertAuthBackendConfig_OCSP_basic(backend, name string) string {
+	config := fmt.Sprintf(`
+
+resource "vault_auth_backend" "cert" {
+    path = "%s"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name                   = "%s"
+    backend                = vault_auth_backend.cert.path
+    ocsp_ca_certificates   = "%s"
+    ocsp_enabled           = true
+    ocsp_fail_open         = true
+    ocsp_query_all_servers = true
+    ocsp_servers_override  = ["server1.com", "server2.com"]
+
+    certificate = <<EOF
+%s
+EOF
+}
+`, backend, name, testBase64PEM, testCertificate)
 
 	return config
 }
