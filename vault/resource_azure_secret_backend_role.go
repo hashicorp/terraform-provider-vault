@@ -123,8 +123,8 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		for _, element := range rawAzureList {
 			role := element.(map[string]interface{})
 
-			if (role["role_id"] == "") == (role["role_name"] == "") {
-				return diag.Errorf("must specify at most one of 'role_name' or 'role_id'")
+			if (role["role_id"] == "") && (role["role_name"] == "") {
+				return diag.Errorf("must specify one of 'role_name' or 'role_id'")
 			}
 		}
 
