@@ -105,6 +105,7 @@ func (l *AuthLoginUserpass) Login(client *api.Client) (*api.Secret, error) {
 	}
 
 	params, err := l.copyParamsExcluding(
+		consts.FieldIsRootNamespace,
 		consts.FieldNamespace,
 		consts.FieldMount,
 	)

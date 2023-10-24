@@ -243,10 +243,10 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 			clone.ClearToken()
 		}
 
-		if authLogin.Namespace() != "" {
+		if ns, ok := authLogin.Namespace(); ok {
 			// the namespace configured on the auth_login takes precedence over the provider's
 			// for authentication only.
-			clone.SetNamespace(authLogin.Namespace())
+			clone.SetNamespace(ns)
 		} else if namespace != "" {
 			// authenticate to the engine in the provider's namespace
 			clone.SetNamespace(namespace)

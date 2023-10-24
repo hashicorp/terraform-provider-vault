@@ -44,6 +44,70 @@ func TestAuthLoginUserPass_Init(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:      "basic-empty-ns",
+			authField: consts.FieldAuthLoginUserpass,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginUserpass: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace:       "",
+						consts.FieldIsRootNamespace: true,
+						consts.FieldUsername:        "alice",
+						consts.FieldPassword:        "password1",
+					},
+				},
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:       "",
+				consts.FieldIsRootNamespace: true,
+				consts.FieldMount:           consts.MountTypeUserpass,
+				consts.FieldUsername:        "alice",
+				consts.FieldPassword:        "password1",
+				consts.FieldPasswordFile:    "",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "basic-with-ns",
+			authField: consts.FieldAuthLoginUserpass,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginUserpass: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "baz",
+						consts.FieldUsername:  "alice",
+						consts.FieldPassword:  "password1",
+					},
+				},
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:    "baz",
+				consts.FieldMount:        consts.MountTypeUserpass,
+				consts.FieldUsername:     "alice",
+				consts.FieldPassword:     "password1",
+				consts.FieldPasswordFile: "",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "basic-ns-unset",
+			authField: consts.FieldAuthLoginUserpass,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginUserpass: []interface{}{
+					map[string]interface{}{
+						consts.FieldUsername: "alice",
+						consts.FieldPassword: "password1",
+					},
+				},
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:    "",
+				consts.FieldMount:        consts.MountTypeUserpass,
+				consts.FieldUsername:     "alice",
+				consts.FieldPassword:     "password1",
+				consts.FieldPasswordFile: "",
+			},
+			wantErr: false,
+		},
+		{
 			name:         "error-missing-resource",
 			authField:    consts.FieldAuthLoginUserpass,
 			expectParams: nil,

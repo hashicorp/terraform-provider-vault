@@ -93,7 +93,11 @@ func (l *AuthLoginJWT) Login(client *api.Client) (*api.Secret, error) {
 		return nil, err
 	}
 
-	params, err := l.copyParamsExcluding(consts.FieldNamespace, consts.FieldMount)
+	params, err := l.copyParamsExcluding(
+		consts.FieldIsRootNamespace,
+		consts.FieldNamespace,
+		consts.FieldMount,
+	)
 	if err != nil {
 		return nil, err
 	}

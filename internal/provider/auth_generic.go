@@ -42,6 +42,19 @@ func GetGenericLoginSchemaResource(_ string) *schema.Resource {
 			consts.FieldNamespace: {
 				Type:     schema.TypeString,
 				Optional: true,
+				Description: fmt.Sprintf(
+					"The authentication engine's namespace. Conflicts with %s",
+					consts.FieldIsRootNamespace,
+				),
+			},
+			consts.FieldIsRootNamespace: {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Description: fmt.Sprintf(
+					"Authenticate to the root Vault namespace. Conflicts with %s",
+					consts.FieldNamespace,
+				),
+				ConflictsWith: []string{consts.FieldNamespace},
 			},
 			consts.FieldParameters: {
 				Type:     schema.TypeMap,
@@ -65,13 +78,10 @@ var _ AuthLogin = (*AuthLoginGeneric)(nil)
 // Requires configuration provided by SchemaLoginGeneric.
 type AuthLoginGeneric struct {
 	AuthLoginCommon
-	path      string
-	namespace string
-	method    string
-}
-
-func (l *AuthLoginGeneric) Namespace() string {
-	return l.namespace
+	path            string
+	namespace       string
+	namespaceExists bool
+	method          string
 }
 
 func (l *AuthLoginGeneric) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
@@ -84,10 +94,6 @@ func (l *AuthLoginGeneric) Init(d *schema.ResourceData, authField string) (AuthL
 
 	l.path = path
 	l.params = params
-
-	if v, ok := l.getOk(d, consts.FieldNamespace); ok {
-		l.namespace = v.(string)
-	}
 
 	if v, ok := l.getOk(d, consts.FieldMethod); ok {
 		l.method = v.(string)

@@ -120,6 +120,7 @@ func (l *AuthLoginGCP) Login(client *api.Client) (*api.Secret, error) {
 	}
 
 	params, err := l.copyParamsExcluding(
+		consts.FieldIsRootNamespace,
 		consts.FieldNamespace,
 		consts.FieldMount,
 		consts.FieldJWT,

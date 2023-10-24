@@ -114,7 +114,7 @@ type AuthLogin interface {
 	LoginPath() string
 	Method() string
 	Login(*api.Client) (*api.Secret, error)
-	Namespace() string
+	Namespace() (string, bool)
 	Params() map[string]interface{}
 }
 
@@ -149,14 +149,18 @@ func (l *AuthLoginCommon) Init(d *schema.ResourceData, authField string, validat
 	return l.validate()
 }
 
-func (l *AuthLoginCommon) Namespace() string {
+func (l *AuthLoginCommon) Namespace() (string, bool) {
 	if l.params != nil {
-		ns, ok := l.params[consts.FieldNamespace].(string)
-		if ok {
-			return ns
+		if v, ok := l.params[consts.FieldIsRootNamespace]; ok && v.(bool) {
+			return "", true
 		}
+
+		if ns, ok := l.params[consts.FieldNamespace]; ok && ns.(string) != "" {
+			return ns.(string), true
+		}
+
 	}
-	return ""
+	return "", false
 }
 
 func (l *AuthLoginCommon) MountPath() string {
@@ -255,6 +259,10 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 		}
 	}
 
+	if v, ok := params[consts.FieldIsRootNamespace]; ok && !v.(bool) {
+		delete(params, consts.FieldIsRootNamespace)
+	}
+
 	l.initialized = true
 
 	return path, params, nil
@@ -291,7 +299,11 @@ func (l *AuthLoginCommon) checkFieldsOneOf(d *schema.ResourceData, fields ...str
 }
 
 func (l *AuthLoginCommon) getOk(d *schema.ResourceData, field string) (interface{}, bool) {
-	return d.GetOk(fmt.Sprintf("%s.0.%s", l.authField, field))
+	return d.GetOk(l.fieldPath(d, field))
+}
+
+func (l *AuthLoginCommon) fieldPath(d *schema.ResourceData, field string) string {
+	return fmt.Sprintf("%s.0.%s", l.authField, field)
 }
 
 func (l *AuthLoginCommon) validate() error {
@@ -323,9 +335,21 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 func mustAddLoginSchema(r *schema.Resource, defaultMount string) *schema.Resource {
 	m := map[string]*schema.Schema{
 		consts.FieldNamespace: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "The authentication engine's namespace.",
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: fmt.Sprintf(
+				"The authentication engine's namespace. Conflicts with %s",
+				consts.FieldIsRootNamespace,
+			),
+		},
+		consts.FieldIsRootNamespace: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Description: fmt.Sprintf(
+				"Authenticate to the root Vault namespace. Conflicts with %s",
+				consts.FieldNamespace,
+			),
+			ConflictsWith: []string{consts.FieldNamespace},
 		},
 	}
 
