@@ -312,9 +312,9 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		namespace = tokenNamespace
 		// set the namespace on the provider to ensure that all child
 		// namespace paths are properly honoured.
-		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
-			return nil, err
-		}
+		//if err := d.Set(consts.FieldNamespace, namespace); err != nil {
+		//	return nil, err
+		//}
 	}
 
 	if namespace != "" {

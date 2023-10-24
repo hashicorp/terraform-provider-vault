@@ -17,10 +17,10 @@ import (
 func main() {
 	p := schema.NewProvider(vault.Provider())
 	for name, resource := range generated.DataSourceRegistry {
-		p.RegisterDataSource(name, vault.UpdateSchemaResource(resource))
+		p.RegisterDataSource(name, vault.UpdateSchemaResource(resource, false))
 	}
 	for name, resource := range generated.ResourceRegistry {
-		p.RegisterResource(name, vault.UpdateSchemaResource(resource))
+		p.RegisterResource(name, vault.UpdateSchemaResource(resource, false))
 	}
 
 	serveOpts := &plugin.ServeOpts{

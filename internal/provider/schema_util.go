@@ -66,6 +66,42 @@ func MustAddMountMigrationSchema(r *schema.Resource, customStateUpgrade bool) *s
 	return r
 }
 
+func NamespacePathCustomizeDiffFunc() schema.CustomizeDiffFunc {
+	return func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+		field := consts.FieldNamespace
+		if !diff.HasChange(field) {
+			return nil
+		}
+
+		o, n := diff.GetChange(field)
+		// if namespace is just set, ignore
+		if o == "" {
+			return nil
+		}
+
+		// get namespace set in provider block
+		client := meta.(*ProviderMeta).GetClient()
+		parentNS := client.Namespace()
+
+		// construct provider block ns + resource block ns path
+		constructedNamespace := fmt.Sprintf("%s/%s", parentNS, n)
+
+		fmt.Printf("[VINAY]: parent NS: %s\n", parentNS)
+		fmt.Printf("[VINAY]: constructed NS: %s\n", constructedNamespace)
+		fmt.Printf("[VINAY]: old NS in TF state: %s\n", o)
+		fmt.Printf("[VINAY]: new NS in TF config: %s\n", n)
+
+		// compare fully qualified path in TF state with new constructed namespace
+		if o.(string) == constructedNamespace {
+			return nil
+		}
+
+		// New NS path does not match existing namespace in state
+		// Destroy and recreate resource
+		return diff.ForceNew(field)
+	}
+}
+
 func GetNamespaceSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		consts.FieldNamespace: {
