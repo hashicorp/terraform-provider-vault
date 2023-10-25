@@ -16,7 +16,7 @@ import (
 
 const transformDecodeRoleEndpoint = "/transform/decode/{role_name}"
 
-func RoleNameDataSource() *schema.Resource {
+func transformDecodeDataSource() *schema.Resource {
 	return &schema.Resource{
 		Read: provider.ReadWrapper(readTransformDecodeRoleResource),
 		Schema: map[string]*schema.Schema{

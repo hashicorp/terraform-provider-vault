@@ -22,7 +22,7 @@ func TestDecodeBasic(t *testing.T) {
 			{
 				Config: transformDecode_basicConfig(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_transform_decode_role.test", "decoded_value"),
+					resource.TestCheckResourceAttrSet("data.vault_transform_decode.test", "decoded_value"),
 				),
 			},
 		},
@@ -52,7 +52,7 @@ resource "vault_transform_role" "payments" {
   transformations = [vault_transform_transformation.ccn-fpe.name]
 }
 
-data "vault_transform_decode_role" "test" {
+data "vault_transform_decode" "test" {
   path      = vault_transform_role.payments.path
   role_name = "payments"
   value     = "9300-3376-4943-8903"
@@ -69,8 +69,8 @@ func TestDecodeBatch(t *testing.T) {
 			{
 				Config: transformDecode_batchConfig(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_transform_decode_role.test", "batch_results.#", "1"),
-					resource.TestCheckResourceAttrSet("data.vault_transform_decode_role.test", "batch_results.0.decoded_value"),
+					resource.TestCheckResourceAttr("data.vault_transform_decode.test", "batch_results.#", "1"),
+					resource.TestCheckResourceAttrSet("data.vault_transform_decode.test", "batch_results.0.decoded_value"),
 				),
 			},
 		},
@@ -100,7 +100,7 @@ resource "vault_transform_role" "payments" {
   transformations = [vault_transform_transformation.ccn-fpe.name]
 }
 
-data "vault_transform_decode_role" "test" {
+data "vault_transform_decode" "test" {
   path        = vault_transform_role.payments.path
   role_name   = "payments"
   batch_input = [{ "value" : "9300-3376-4943-8903" }]

@@ -173,6 +173,14 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
 			PathInventory: []string{"/pki/keys"},
 		},
+		"vault_transform_encode": {
+			Resource:      UpdateSchemaResource(transformEncodeDataSource()),
+			PathInventory: []string{"/transform/encode/{role_name}"},
+		},
+		"vault_transform_decode": {
+			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
+			PathInventory: []string{"/transform/decode/{role_name}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*provider.Description{
