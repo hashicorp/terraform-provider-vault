@@ -33,19 +33,16 @@ func GetGenericLoginSchema(authField string) *schema.Schema {
 }
 
 func GetGenericLoginSchemaResource(_ string) *schema.Resource {
-	return &schema.Resource{
+	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			consts.FieldNamespace: {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
 			consts.FieldParameters: {
-				Type:     schema.TypeMap,
-				Optional: true,
+				Type:      schema.TypeMap,
+				Optional:  true,
+				Sensitive: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -55,7 +52,7 @@ func GetGenericLoginSchemaResource(_ string) *schema.Resource {
 				Optional: true,
 			},
 		},
-	}
+	}, consts.FieldAuthLoginGeneric, consts.MountTypeNone)
 }
 
 var _ AuthLogin = (*AuthLoginGeneric)(nil)
@@ -65,13 +62,8 @@ var _ AuthLogin = (*AuthLoginGeneric)(nil)
 // Requires configuration provided by SchemaLoginGeneric.
 type AuthLoginGeneric struct {
 	AuthLoginCommon
-	path      string
-	namespace string
-	method    string
-}
-
-func (l *AuthLoginGeneric) Namespace() string {
-	return l.namespace
+	path   string
+	method string
 }
 
 func (l *AuthLoginGeneric) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
@@ -84,10 +76,6 @@ func (l *AuthLoginGeneric) Init(d *schema.ResourceData, authField string) (AuthL
 
 	l.path = path
 	l.params = params
-
-	if v, ok := l.getOk(d, consts.FieldNamespace); ok {
-		l.namespace = v.(string)
-	}
 
 	if v, ok := l.getOk(d, consts.FieldMethod); ok {
 		l.method = v.(string)
@@ -109,7 +97,10 @@ func (l *AuthLoginGeneric) Login(client *api.Client) (*api.Secret, error) {
 		return nil, err
 	}
 
-	params, err := l.copyParams()
+	params, err := l.copyParamsExcluding(
+		consts.FieldNamespace,
+		consts.FieldUseRootNamespace,
+	)
 	if err != nil {
 		return nil, err
 	}
