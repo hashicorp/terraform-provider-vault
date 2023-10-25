@@ -8,6 +8,7 @@ BUGS:
 * Fix panic when readnig client_secret from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
 * Fix API request missing `roles` field for `mongodbatlas_secret_role` resource ([#2047](https://github.com/hashicorp/terraform-provider-vault/pull/2047))
 * Fix bug when updating vault_azure_secret_backend_role: ([#2063](https://github.com/hashicorp/terraform-provider-vault/pull/2063))
+* Fix string ordering for `gcp_auth` causing GCE auth to fail ([#2064](https://github.com/hashicorp/terraform-provider-vault/pull/2064))
 
 IMPROVEMENTS:
 * Updated dependencies: ([#2038](https://github.com/hashicorp/terraform-provider-vault/pull/2038))
