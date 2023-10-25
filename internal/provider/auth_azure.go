@@ -99,7 +99,7 @@ func GetAzureLoginSchemaResource(authField string) *schema.Resource {
 				ConflictsWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldJWT)},
 			},
 		},
-	}, consts.MountTypeAzure)
+	}, authField, consts.MountTypeAzure)
 }
 
 var _ AuthLogin = (*AuthLoginAzure)(nil)

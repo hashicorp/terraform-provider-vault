@@ -76,7 +76,7 @@ func GetGCPLoginSchemaResource(authField string) *schema.Resource {
 				ConflictsWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldJWT)},
 			},
 		},
-	}, consts.MountTypeGCP)
+	}, authField, consts.MountTypeGCP)
 }
 
 var _ AuthLogin = (*AuthLoginGCP)(nil)
@@ -120,7 +120,7 @@ func (l *AuthLoginGCP) Login(client *api.Client) (*api.Secret, error) {
 	}
 
 	params, err := l.copyParamsExcluding(
-		consts.FieldIsRootNamespace,
+		consts.FieldUseRootNamespace,
 		consts.FieldNamespace,
 		consts.FieldMount,
 		consts.FieldJWT,

@@ -39,8 +39,9 @@ func TestAuthLoginKerberos_Init(t *testing.T) {
 			},
 			authField: consts.FieldAuthLoginKerberos,
 			expectParams: map[string]interface{}{
-				consts.FieldToken:                  testNegTokenInit,
 				consts.FieldNamespace:              "",
+				consts.FieldUseRootNamespace:       false,
+				consts.FieldToken:                  testNegTokenInit,
 				consts.FieldMount:                  consts.MountTypeKerberos,
 				consts.FieldUsername:               "",
 				consts.FieldService:                "",

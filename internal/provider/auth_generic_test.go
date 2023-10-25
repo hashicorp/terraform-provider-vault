@@ -19,7 +19,7 @@ func TestAuthLoginGeneric_Namespace(t *testing.T) {
 		{
 			name: "root-ns",
 			params: map[string]interface{}{
-				consts.FieldIsRootNamespace: true,
+				consts.FieldUseRootNamespace: true,
 			},
 			want:   "",
 			exists: true,

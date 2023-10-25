@@ -5,6 +5,7 @@ package provider
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -33,32 +34,16 @@ func GetGenericLoginSchema(authField string) *schema.Schema {
 }
 
 func GetGenericLoginSchemaResource(_ string) *schema.Resource {
-	return &schema.Resource{
+	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			consts.FieldNamespace: {
-				Type:     schema.TypeString,
-				Optional: true,
-				Description: fmt.Sprintf(
-					"The authentication engine's namespace. Conflicts with %s",
-					consts.FieldIsRootNamespace,
-				),
-			},
-			consts.FieldIsRootNamespace: {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Description: fmt.Sprintf(
-					"Authenticate to the root Vault namespace. Conflicts with %s",
-					consts.FieldNamespace,
-				),
-				ConflictsWith: []string{consts.FieldNamespace},
-			},
 			consts.FieldParameters: {
-				Type:     schema.TypeMap,
-				Optional: true,
+				Type:      schema.TypeMap,
+				Optional:  true,
+				Sensitive: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -68,7 +53,7 @@ func GetGenericLoginSchemaResource(_ string) *schema.Resource {
 				Optional: true,
 			},
 		},
-	}
+	}, consts.FieldAuthLoginGeneric, consts.MountTypeNone)
 }
 
 var _ AuthLogin = (*AuthLoginGeneric)(nil)
@@ -78,10 +63,8 @@ var _ AuthLogin = (*AuthLoginGeneric)(nil)
 // Requires configuration provided by SchemaLoginGeneric.
 type AuthLoginGeneric struct {
 	AuthLoginCommon
-	path            string
-	namespace       string
-	namespaceExists bool
-	method          string
+	path   string
+	method string
 }
 
 func (l *AuthLoginGeneric) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
@@ -115,7 +98,10 @@ func (l *AuthLoginGeneric) Login(client *api.Client) (*api.Secret, error) {
 		return nil, err
 	}
 
-	params, err := l.copyParams()
+	params, err := l.copyParamsExcluding(
+		consts.FieldNamespace,
+		consts.FieldUseRootNamespace,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -98,7 +98,7 @@ func GetKerberosLoginSchemaResource(authField string) *schema.Resource {
 				Description:   "Strip the host from the username found in the keytab.",
 			},
 		},
-	}, consts.MountTypeKerberos)
+	}, authField, consts.MountTypeKerberos)
 
 	return s
 }

@@ -64,7 +64,7 @@ func GetUserpassLoginSchemaResource(authField string) *schema.Resource {
 				},
 			},
 		},
-	}, consts.MountTypeUserpass)
+	}, authField, consts.MountTypeUserpass)
 }
 
 var _ AuthLogin = (*AuthLoginUserpass)(nil)
@@ -105,7 +105,7 @@ func (l *AuthLoginUserpass) Login(client *api.Client) (*api.Secret, error) {
 	}
 
 	params, err := l.copyParamsExcluding(
-		consts.FieldIsRootNamespace,
+		consts.FieldUseRootNamespace,
 		consts.FieldNamespace,
 		consts.FieldMount,
 	)

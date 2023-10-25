@@ -37,7 +37,7 @@ const (
 	FieldParameters                    = "parameters"
 	FieldMethod                        = "method"
 	FieldNamespace                     = "namespace"
-	FieldIsRootNamespace               = "is_root_namespace"
+	FieldUseRootNamespace              = "use_root_namespace"
 	FieldNamespaceID                   = "namespace_id"
 	FieldNamespacePath                 = "namespace_path"
 	FieldPathFQ                        = "path_fq"
