@@ -697,6 +697,22 @@ var (
 			Resource:      UpdateSchemaResource(managedKeysResource()),
 			PathInventory: []string{"/sys/managed-keys/{type}/{name}"},
 		},
+		"vault_transform_transformation": {
+			Resource:      UpdateSchemaResource(transformTransformationResource()),
+			PathInventory: []string{"/transform/transformation/{name}"},
+		},
+		"vault_transform_template": {
+			Resource:      UpdateSchemaResource(transformTemplateResource()),
+			PathInventory: []string{"/transform/template/{name}"},
+		},
+		"vault_transform_role": {
+			Resource:      UpdateSchemaResource(transformRoleResource()),
+			PathInventory: []string{"/transform/role/{name}"},
+		},
+		"vault_transform_alphabet": {
+			Resource:      UpdateSchemaResource(transformAlphabetResource()),
+			PathInventory: []string{"/transform/alphabet/{name}"},
+		},
 	}
 )
 

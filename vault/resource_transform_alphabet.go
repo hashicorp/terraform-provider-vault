@@ -1,10 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package template
-
-// Code generation has been disabled for now.
-// It is okay to edit this file.
+package vault
 
 import (
 	"fmt"
@@ -17,32 +14,11 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const (
-	nameEndpoint = "/transform/template/{name}"
+const transformAlphabetEndpoint = "/transform/alphabet/{name}"
 
-	// schema field names
-	pathField          = "path"
-	alphabetField      = "alphabet"
-	nameField          = "name"
-	patternField       = "pattern"
-	typeField          = "type"
-	encodeFormatField  = "encode_format"
-	decodeFormatsField = "decode_formats"
-)
-
-var requestFields = []string{
-	pathField,
-	alphabetField,
-	nameField,
-	patternField,
-	typeField,
-	encodeFormatField,
-	decodeFormatsField,
-}
-
-func NameResource() *schema.Resource {
+func transformAlphabetResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		pathField: {
+		"path": {
 			Type:        schema.TypeString,
 			Required:    true,
 			ForceNew:    true,
@@ -51,46 +27,24 @@ func NameResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-		alphabetField: {
+		"alphabet": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: `The alphabet to use for this template. This is only used during FPE transformations.`,
+			Description: `A string of characters that contains the alphabet set.`,
 		},
-		nameField: {
+		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: `The name of the template.`,
+			Description: `The name of the alphabet.`,
 			ForceNew:    true,
-		},
-		patternField: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: `The pattern used for matching. Currently, only regular expression pattern is supported.`,
-		},
-		typeField: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: `The pattern type to use for match detection. Currently, only regex is supported.`,
-		},
-		encodeFormatField: {
-			Type:     schema.TypeString,
-			Optional: true,
-			Description: `The regular expression template used for encoding values.
-Only applicable to FPE transformations.`,
-		},
-		decodeFormatsField: {
-			Type:     schema.TypeMap,
-			Optional: true,
-			Description: `The map of regular expression templates used to customize decoded outputs.
-Only applicable to FPE transformations.`,
 		},
 	}
 	return &schema.Resource{
-		Create: createNameResource,
-		Update: updateNameResource,
-		Read:   provider.ReadWrapper(readNameResource),
-		Exists: resourceNameExists,
-		Delete: deleteNameResource,
+		Create: createTransformAlphabetResource,
+		Update: updateTransformAlphabetResource,
+		Read:   provider.ReadWrapper(readTransformAlphabetResource),
+		Exists: resourceTransformAlphabetExists,
+		Delete: deletetransformAlphabetResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -98,25 +52,31 @@ Only applicable to FPE transformations.`,
 	}
 }
 
-func createNameResource(d *schema.ResourceData, meta interface{}) error {
+func createTransformAlphabetResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
 	path := d.Get("path").(string)
-	vaultPath := util.ParsePath(path, nameEndpoint, d)
+	vaultPath := util.ParsePath(path, transformAlphabetEndpoint, d)
 	log.Printf("[DEBUG] Creating %q", vaultPath)
 
+	data := map[string]interface{}{}
+	if v, ok := d.GetOkExists("alphabet"); ok {
+		data["alphabet"] = v
+	}
+	data["name"] = d.Get("name")
+
 	log.Printf("[DEBUG] Writing %q", vaultPath)
-	if _, err := client.Logical().Write(vaultPath, requestData(d, requestFields)); err != nil {
+	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error writing %q: %s", vaultPath, err)
 	}
 	d.SetId(vaultPath)
 	log.Printf("[DEBUG] Wrote %q", vaultPath)
-	return readNameResource(d, meta)
+	return readTransformAlphabetResource(d, meta)
 }
 
-func readNameResource(d *schema.ResourceData, meta interface{}) error {
+func readTransformAlphabetResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -134,7 +94,7 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	pathParams, err := util.PathParameters(nameEndpoint, vaultPath)
+	pathParams, err := util.PathParameters(transformAlphabetEndpoint, vaultPath)
 	if err != nil {
 		return err
 	}
@@ -143,19 +103,15 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error setting state %q, %q: %s", paramName, paramVal, err)
 		}
 	}
-
-	for _, field := range requestFields {
-		if val, ok := resp.Data[field]; ok {
-			if err := d.Set(field, val); err != nil {
-				return fmt.Errorf("error setting state key %q: %s", field, err)
-			}
+	if val, ok := resp.Data["alphabet"]; ok {
+		if err := d.Set("alphabet", val); err != nil {
+			return fmt.Errorf("error setting state key 'alphabet': %s", err)
 		}
 	}
-
 	return nil
 }
 
-func updateNameResource(d *schema.ResourceData, meta interface{}) error {
+func updateTransformAlphabetResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -163,25 +119,18 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
-	if _, err := client.Logical().Write(vaultPath, requestData(d, requestFields)); err != nil {
+	data := map[string]interface{}{}
+	if raw, ok := d.GetOk("alphabet"); ok {
+		data["alphabet"] = raw
+	}
+	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
 	}
-
 	log.Printf("[DEBUG] Updated %q", vaultPath)
-	return readNameResource(d, meta)
+	return readTransformAlphabetResource(d, meta)
 }
 
-func requestData(d *schema.ResourceData, fields []string) map[string]interface{} {
-	data := make(map[string]interface{})
-	for _, field := range fields {
-		if raw, ok := d.GetOk(field); ok {
-			data[field] = raw
-		}
-	}
-	return data
-}
-
-func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
+func deletetransformAlphabetResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -200,7 +149,7 @@ func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceNameExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceTransformAlphabetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e

@@ -1,10 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package decode
-
-// DO NOT EDIT
-// This code is generated.
+package vault
 
 import (
 	"fmt"
@@ -17,11 +14,11 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const roleNameEndpoint = "/transform/decode/{role_name}"
+const transformEncodeRoleEndpoint = "/transform/encode/{role_name}"
 
-func RoleNameDataSource() *schema.Resource {
+func transformEncodeDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: provider.ReadWrapper(readRoleNameResource),
+		Read: provider.ReadWrapper(readTransformEncodeRoleResource),
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,
@@ -36,20 +33,20 @@ func RoleNameDataSource() *schema.Resource {
 				Type:        schema.TypeList,
 				Elem:        &schema.Schema{Type: schema.TypeMap},
 				Optional:    true,
-				Description: "Specifies a list of items to be decoded in a single batch. If this parameter is set, the top-level parameters 'value', 'transformation' and 'tweak' will be ignored. Each batch item within the list can specify these parameters instead.",
+				Description: "Specifies a list of items to be encoded in a single batch. If this parameter is set, the parameters 'value', 'transformation' and 'tweak' will be ignored. Each batch item within the list can specify these parameters instead.",
 			},
 			"batch_results": {
 				Type:        schema.TypeList,
 				Elem:        &schema.Schema{Type: schema.TypeMap},
 				Optional:    true,
 				Computed:    true,
-				Description: "The result of decoding batch_input.",
+				Description: "The result of encoding batch_input.",
 			},
-			"decoded_value": {
+			"encoded_value": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
-				Description: "The result of decoding a value.",
+				Description: "The result of encoding a value.",
 			},
 			"role_name": {
 				Type:        schema.TypeString,
@@ -70,19 +67,19 @@ func RoleNameDataSource() *schema.Resource {
 			"value": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The value in which to decode.",
+				Description: "The value in which to encode.",
 			},
 		},
 	}
 }
 
-func readRoleNameResource(d *schema.ResourceData, meta interface{}) error {
+func readTransformEncodeRoleResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
 	path := d.Get("path").(string)
-	vaultPath := util.ParsePath(path, roleNameEndpoint, d)
+	vaultPath := util.ParsePath(path, transformEncodeRoleEndpoint, d)
 	log.Printf("[DEBUG] Writing %q", vaultPath)
 
 	data := make(map[string]interface{})
@@ -114,7 +111,7 @@ func readRoleNameResource(d *schema.ResourceData, meta interface{}) error {
 	if err := d.Set("batch_results", resp.Data["batch_results"]); err != nil {
 		return err
 	}
-	if err := d.Set("decoded_value", resp.Data["decoded_value"]); err != nil {
+	if err := d.Set("encoded_value", resp.Data["encoded_value"]); err != nil {
 		return err
 	}
 	return nil
