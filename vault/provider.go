@@ -697,6 +697,10 @@ var (
 			Resource:      UpdateSchemaResource(managedKeysResource()),
 			PathInventory: []string{"/sys/managed-keys/{type}/{name}"},
 		},
+		"vault_userpass_user": {
+			Resource:      UpdateSchemaResource(userpassUserResource()),
+			PathInventory: []string{"/auth/userpass/users/{name}"},
+		},
 	}
 )
 

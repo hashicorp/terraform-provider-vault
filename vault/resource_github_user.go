@@ -27,7 +27,7 @@ func githubUserResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Auth backend to which user mapping will be congigured.",
+				Description: "Auth backend to which user mapping will be configured.",
 				ForceNew:    true,
 				Default:     "github",
 				// standardise on no beginning or trailing slashes
