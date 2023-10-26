@@ -173,6 +173,14 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
 			PathInventory: []string{"/pki/keys"},
 		},
+		"vault_transform_encode": {
+			Resource:      UpdateSchemaResource(transformEncodeDataSource()),
+			PathInventory: []string{"/transform/encode/{role_name}"},
+		},
+		"vault_transform_decode": {
+			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
+			PathInventory: []string{"/transform/decode/{role_name}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*provider.Description{
@@ -696,6 +704,22 @@ var (
 		"vault_managed_keys": {
 			Resource:      UpdateSchemaResource(managedKeysResource()),
 			PathInventory: []string{"/sys/managed-keys/{type}/{name}"},
+		},
+		"vault_transform_transformation": {
+			Resource:      UpdateSchemaResource(transformTransformationResource()),
+			PathInventory: []string{"/transform/transformation/{name}"},
+		},
+		"vault_transform_template": {
+			Resource:      UpdateSchemaResource(transformTemplateResource()),
+			PathInventory: []string{"/transform/template/{name}"},
+		},
+		"vault_transform_role": {
+			Resource:      UpdateSchemaResource(transformRoleResource()),
+			PathInventory: []string{"/transform/role/{name}"},
+		},
+		"vault_transform_alphabet": {
+			Resource:      UpdateSchemaResource(transformAlphabetResource()),
+			PathInventory: []string{"/transform/alphabet/{name}"},
 		},
 	}
 )

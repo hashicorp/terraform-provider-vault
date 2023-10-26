@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package transformation
+package vault
 
 import (
 	"fmt"
@@ -9,35 +9,23 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	sdk_schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/schema"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
-var nameTestProvider = func() *schema.Provider {
-	p := schema.NewProvider(vault.Provider())
-	p.RegisterResource("vault_mount", vault.UpdateSchemaResource(vault.MountResource()))
-	p.RegisterResource("vault_transform_transformation_name", vault.UpdateSchemaResource(NameResource()))
-	return p
-}()
-
-func TestTransformationName(t *testing.T) {
+func TestAccTransformTransformation(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 
-	resourceName := "vault_transform_transformation_name.test"
+	resourceName := "vault_transform_transformation.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { testutil.TestEntPreCheck(t) },
-		Providers: map[string]*sdk_schema.Provider{
-			"vault": nameTestProvider.SchemaProvider(),
-		},
-		CheckDestroy: destroy,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      transformTransformationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: basicConfig(path, "ccn-fpe", "fpe", "ccn", "internal", "payments", "*"),
+				Config: transformTransformation_basicConfig(path, "ccn-fpe", "fpe", "ccn", "internal", "payments", "*"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					resource.TestCheckResourceAttr(resourceName, "name", "ccn-fpe"),
@@ -88,7 +76,9 @@ func TestTransformationName(t *testing.T) {
 						t.Fatalf("expected %q, received %q", "ccn-fpw", state.Attributes["name"])
 					}
 					var expectDeletionAllowed string
-					if provider.IsAPISupported(nameTestProvider.SchemaProvider().Meta(), provider.VaultVersion112) {
+
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if provider.IsAPISupported(meta, provider.VaultVersion112) {
 						expectDeletionAllowed = "true"
 					}
 					if state.Attributes["deletion_allowed"] != expectDeletionAllowed {
@@ -98,7 +88,7 @@ func TestTransformationName(t *testing.T) {
 				},
 			},
 			{
-				Config: basicConfig(path, "ccn-fpe", "fpe", "ccn-1", "generated", "payments-1", "-"),
+				Config: transformTransformation_basicConfig(path, "ccn-fpe", "fpe", "ccn-1", "generated", "payments-1", "-"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					resource.TestCheckResourceAttr(resourceName, "name", "ccn-fpe"),
@@ -111,19 +101,21 @@ func TestTransformationName(t *testing.T) {
 				),
 			},
 			{
-				Config:   basicConfig(path, "ccn-fpe", "fpe", "ccn-1", "generated", "payments-1", "-"),
+				Config:   transformTransformation_basicConfig(path, "ccn-fpe", "fpe", "ccn-1", "generated", "payments-1", "-"),
 				PlanOnly: true,
 			},
 		},
 	})
 }
 
-func destroy(s *terraform.State) error {
-	client := nameTestProvider.SchemaProvider().Meta().(*provider.ProviderMeta).GetClient()
-
+func transformTransformationDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_transform_transformation_name" {
+		if rs.Type != "vault_transform_transformation" {
 			continue
+		}
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
 		}
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
@@ -136,14 +128,14 @@ func destroy(s *terraform.State) error {
 	return nil
 }
 
-func basicConfig(path, name, tp, template, tweakSource, allowedRoles, maskingChar string) string {
+func transformTransformation_basicConfig(path, name, tp, template, tweakSource, allowedRoles, maskingChar string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "mount_transform" {
   path = "%s"
   type = "transform"
 }
 
-resource "vault_transform_transformation_name" "test" {
+resource "vault_transform_transformation" "test" {
   path              = vault_mount.mount_transform.path
   name              = "%s"
   type              = "%s"
