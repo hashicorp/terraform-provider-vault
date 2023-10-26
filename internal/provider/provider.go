@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
@@ -67,9 +66,9 @@ func NewProvider(
 	r := &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			consts.FieldAddress: {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultAddress, nil),
+				Type:     schema.TypeString,
+				Required: true,
+				// DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultAddress, nil),
 				Description: "URL of the root of the target Vault server.",
 			},
 			"add_address_to_env": {
@@ -79,36 +78,36 @@ func NewProvider(
 				Description: "If true, adds the value of the `address` argument to the Terraform process environment.",
 			},
 			"token": {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultToken, ""),
+				Type:     schema.TypeString,
+				Required: true,
+				// DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultToken, ""),
 				Description: "Token to use to authenticate to Vault.",
 			},
 			"token_name": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN_NAME", ""),
+				Type:     schema.TypeString,
+				Optional: true,
+				// DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN_NAME", ""),
 				Description: "Token name to use for creating the Vault child token.",
 			},
 			"skip_child_token": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_SKIP_CHILD_TOKEN", false),
+				Type:     schema.TypeBool,
+				Optional: true,
+				// DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_SKIP_CHILD_TOKEN", false),
 
 				// Setting to true will cause max_lease_ttl_seconds and token_name to be ignored (not used).
 				// Note that this is strongly discouraged due to the potential of exposing sensitive secret data.
 				Description: "Set this to true to prevent the creation of ephemeral child token used by this provider.",
 			},
 			consts.FieldCACertFile: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCACert, ""),
+				Type:     schema.TypeString,
+				Optional: true,
+				// DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCACert, ""),
 				Description: "Path to a CA certificate file to validate the server's certificate.",
 			},
 			consts.FieldCACertDir: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCAPath, ""),
+				Type:     schema.TypeString,
+				Optional: true,
+				// DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCAPath, ""),
 				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
 			},
 			consts.FieldClientAuth: {
@@ -120,30 +119,30 @@ func NewProvider(
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						consts.FieldCertFile: {
-							Type:        schema.TypeString,
-							Required:    true,
-							DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientCert, ""),
+							Type:     schema.TypeString,
+							Required: true,
+							// DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientCert, ""),
 							Description: "Path to a file containing the client certificate.",
 						},
 						consts.FieldKeyFile: {
-							Type:        schema.TypeString,
-							Required:    true,
-							DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientKey, ""),
+							Type:     schema.TypeString,
+							Required: true,
+							// DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientKey, ""),
 							Description: "Path to a file containing the private key that the certificate was issued for.",
 						},
 					},
 				},
 			},
 			consts.FieldSkipTLSVerify: {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", false),
+				Type:     schema.TypeBool,
+				Optional: true,
+				// DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", false),
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
 			},
 			consts.FieldTLSServerName: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultTLSServerName, ""),
+				Type:     schema.TypeString,
+				Optional: true,
+				// DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultTLSServerName, ""),
 				Description: "Name to use as the SNI host when connecting via TLS.",
 			},
 			"max_lease_ttl_seconds": {
@@ -154,25 +153,25 @@ func NewProvider(
 				// a reasonable Terraform run can complete but not
 				// significantly longer, so that any leases are revoked shortly
 				// after Terraform has finished running.
-				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_MAX_TTL", 1200),
+				// DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_MAX_TTL", 1200),
 				Description: "Maximum TTL for secret leases requested by this provider.",
 			},
 			"max_retries": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", DefaultMaxHTTPRetries),
+				Type:     schema.TypeInt,
+				Optional: true,
+				// DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", DefaultMaxHTTPRetries),
 				Description: "Maximum number of retries when a 5xx error code is encountered.",
 			},
 			"max_retries_ccc": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES_CCC", DefaultMaxHTTPRetriesCCC),
+				Type:     schema.TypeInt,
+				Optional: true,
+				// DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES_CCC", DefaultMaxHTTPRetriesCCC),
 				Description: "Maximum number of retries for Client Controlled Consistency related operations",
 			},
 			consts.FieldNamespace: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
+				Type:     schema.TypeString,
+				Optional: true,
+				// DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
 				Description: "The namespace to use. Available only for Vault Enterprise.",
 			},
 			consts.FieldSetNamespaceFromToken: {
@@ -186,27 +185,28 @@ func NewProvider(
 			"headers": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Sensitive:   true,
 				Description: "The headers to send with each Vault request.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
 							Type:        schema.TypeString,
 							Required:    true,
+							Sensitive:   true,
 							Description: "The header name",
 						},
 						"value": {
 							Type:        schema.TypeString,
 							Required:    true,
+							Sensitive:   true,
 							Description: "The header value",
 						},
 					},
 				},
 			},
 			consts.FieldSkipGetVaultVersion: {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
+				Type:     schema.TypeBool,
+				Optional: true,
+				// Default:     false,
 				Description: "Skip the dynamic fetching of the Vault server version.",
 			},
 			consts.FieldVaultVersionOverride: {
@@ -223,6 +223,11 @@ func NewProvider(
 	}
 
 	MustAddAuthLoginSchema(r.Schema)
+
+	// Set the provider Meta (instance data) here.
+	// It will be overwritten by the result of the call to ConfigureFunc,
+	// but can be used pre-configuration by other (non-primary) provider servers.
+	r.SetMeta(&ProviderMeta{})
 
 	return r
 }

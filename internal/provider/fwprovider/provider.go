@@ -2,11 +2,15 @@ package fwprovider
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
@@ -48,6 +52,109 @@ func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, res
 			consts.FieldAddress: schema.StringAttribute{
 				Required:    true,
 				Description: "URL of the root of the target Vault server.",
+			},
+			"add_address_to_env": schema.StringAttribute{
+				Optional:    true,
+				Description: "If true, adds the value of the `address` argument to the Terraform process environment.",
+			},
+			"token": schema.StringAttribute{
+				Required:    true,
+				Description: "Token to use to authenticate to Vault.",
+			},
+			"token_name": schema.StringAttribute{
+				Optional:    true,
+				Description: "Token name to use for creating the Vault child token.",
+			},
+			"skip_child_token": schema.BoolAttribute{
+				Optional: true,
+
+				// Setting to true will cause max_lease_ttl_seconds and token_name to be ignored (not used).
+				// Note that this is strongly discouraged due to the potential of exposing sensitive secret data.
+				Description: "Set this to true to prevent the creation of ephemeral child token used by this provider.",
+			},
+			consts.FieldCACertFile: schema.StringAttribute{
+				Optional:    true,
+				Description: "Path to a CA certificate file to validate the server's certificate.",
+			},
+			consts.FieldCACertDir: schema.StringAttribute{
+				Optional:    true,
+				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
+			},
+			consts.FieldSkipTLSVerify: schema.BoolAttribute{
+				Optional:    true,
+				Description: "Set this to true only if the target Vault server is an insecure development instance.",
+			},
+			consts.FieldTLSServerName: schema.StringAttribute{
+				Optional:    true,
+				Description: "Name to use as the SNI host when connecting via TLS.",
+			},
+			"max_lease_ttl_seconds": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Maximum TTL for secret leases requested by this provider.",
+			},
+			"max_retries": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Maximum number of retries when a 5xx error code is encountered.",
+			},
+			"max_retries_ccc": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Maximum number of retries for Client Controlled Consistency related operations",
+			},
+			consts.FieldNamespace: schema.StringAttribute{
+				Optional:    true,
+				Description: "The namespace to use. Available only for Vault Enterprise.",
+			},
+			consts.FieldSkipGetVaultVersion: schema.BoolAttribute{
+				Optional:    true,
+				Description: "Skip the dynamic fetching of the Vault server version.",
+			},
+			consts.FieldVaultVersionOverride: schema.StringAttribute{
+				Optional: true,
+				Description: "Override the Vault server version, " +
+					"which is normally determined dynamically from the target Vault server",
+				Validators: []validator.String{
+					// https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`),
+						"must be a valid semantic version",
+					),
+				},
+			},
+		},
+		Blocks: map[string]schema.Block{
+			consts.FieldClientAuth: schema.ListNestedBlock{
+				Description:        "Client authentication credentials.",
+				DeprecationMessage: fmt.Sprintf("Use %s instead", consts.FieldAuthLoginCert),
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						consts.FieldCertFile: schema.StringAttribute{
+							Required:    true,
+							Description: "Path to a file containing the client certificate.",
+						},
+						consts.FieldKeyFile: schema.StringAttribute{
+							Required:    true,
+							Description: "Path to a file containing the private key that the certificate was issued for.",
+						},
+					},
+				},
+			},
+
+			"headers": schema.ListNestedBlock{
+				Description: "The headers to send with each Vault request.",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"name": schema.StringAttribute{
+							Required:    true,
+							Sensitive:   true,
+							Description: "The header name",
+						},
+						"value": schema.StringAttribute{
+							Required:    true,
+							Sensitive:   true,
+							Description: "The header value",
+						},
+					},
+				},
 			},
 		},
 	}
