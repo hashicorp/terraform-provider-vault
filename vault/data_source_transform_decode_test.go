@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestDecodeBasic(t *testing.T) {
+func TestAccDecodeBasic(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestEntPreCheck(t) },
@@ -60,7 +60,7 @@ data "vault_transform_decode" "test" {
 `, path)
 }
 
-func TestDecodeBatch(t *testing.T) {
+func TestAccDecodeBatch(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestEntPreCheck(t) },

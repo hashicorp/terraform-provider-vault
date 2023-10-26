@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestTransformationName(t *testing.T) {
+func TestAccTransformTransformation(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 
 	resourceName := "vault_transform_transformation.test"

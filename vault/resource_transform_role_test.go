@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestRoleName(t *testing.T) {
+func TestAccTransformRole(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	role := acctest.RandomWithPrefix("test-role")
 

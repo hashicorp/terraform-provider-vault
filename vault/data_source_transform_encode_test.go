@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestEncodeBasic(t *testing.T) {
+func TestAccEncodeBasic(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestEntPreCheck(t) },
@@ -22,7 +22,7 @@ func TestEncodeBasic(t *testing.T) {
 			{
 				Config: transformEncode_basicConfig(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_transform_encode_role.test", "encoded_value"),
+					resource.TestCheckResourceAttrSet("data.vault_transform_encode.test", "encoded_value"),
 				),
 			},
 		},
@@ -52,7 +52,7 @@ resource "vault_transform_role" "payments" {
   transformations = [vault_transform_transformation.ccn-fpe.name]
 }
 
-data "vault_transform_encode_role" "test" {
+data "vault_transform_encode" "test" {
   path      = vault_transform_role.payments.path
   role_name = "payments"
   value     = "1111-2222-3333-4444"
@@ -60,7 +60,7 @@ data "vault_transform_encode_role" "test" {
 `, path)
 }
 
-func TestEncodeBatch(t *testing.T) {
+func TestAccEncodeBatch(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestEntPreCheck(t) },
@@ -69,8 +69,8 @@ func TestEncodeBatch(t *testing.T) {
 			{
 				Config: transformEncodeRole_batchConfig(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_transform_encode_role.test", "batch_results.#", "1"),
-					resource.TestCheckResourceAttrSet("data.vault_transform_encode_role.test", "batch_results.0.encoded_value"),
+					resource.TestCheckResourceAttr("data.vault_transform_encode.test", "batch_results.#", "1"),
+					resource.TestCheckResourceAttrSet("data.vault_transform_encode.test", "batch_results.0.encoded_value"),
 				),
 			},
 		},
@@ -100,7 +100,7 @@ resource "vault_transform_role" "payments" {
   transformations = [vault_transform_transformation.ccn-fpe.name]
 }
 
-data "vault_transform_encode_role" "test" {
+data "vault_transform_encode" "test" {
   path        = vault_transform_role.payments.path
   role_name   = "payments"
   batch_input = [{ "value" : "1111-2222-3333-4444" }]
