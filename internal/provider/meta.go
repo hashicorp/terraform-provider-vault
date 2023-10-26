@@ -188,7 +188,7 @@ func (p *ProviderMeta) setClient() error {
 
 	addr := GetResourceDataStr(d, consts.FieldAddress, api.EnvVaultAddress, "")
 	if addr == "" {
-		return nil, fmt.Errorf("failed to configure Vault address")
+		return fmt.Errorf("failed to configure Vault address")
 	}
 	clientConfig.Address = addr
 
