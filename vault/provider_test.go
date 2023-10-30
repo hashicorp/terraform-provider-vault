@@ -367,6 +367,7 @@ func TestAccProviderToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	origTokenBytes, err := ioutil.ReadFile(tokenFilePath)
+
 	if err == nil {
 		// There is an existing token file. Ensure it is restored after this test.
 		info, err := os.Stat(tokenFilePath)
@@ -404,15 +405,12 @@ func TestAccProviderToken(t *testing.T) {
 		name          string
 		fileToken     bool
 		helperToken   bool
+		envToken      bool
 		schemaToken   bool
 		expectedToken string
 	}
 
 	tests := []testcase{
-		{
-			name:          "None",
-			expectedToken: "",
-		},
 		{
 			// The p will read the token file "~/.vault-token".
 			name:          "File",
@@ -428,10 +426,19 @@ func TestAccProviderToken(t *testing.T) {
 		},
 		{
 			// A VAULT_TOKEN env var or hardcoded token overrides all else.
+			name:          "Env",
+			fileToken:     true,
+			helperToken:   true,
+			envToken:      true,
+			expectedToken: os.Getenv("VAULT_TOKEN"),
+		},
+		{
+			// A VAULT_TOKEN env var or hardcoded token overrides all else.
 			name:          "Schema",
 			fileToken:     true,
 			helperToken:   true,
 			schemaToken:   true,
+			envToken:      true,
 			expectedToken: "schema-token",
 		},
 	}
@@ -459,6 +466,18 @@ func TestAccProviderToken(t *testing.T) {
 			}
 
 			d := providerResource.TestResourceData()
+			// Set up the env token.
+			if tc.envToken {
+				d.Set("token", os.Getenv("VAULT_TOKEN"))
+			} else {
+				// unset vault token env because it takes precedence over helper and file
+				resetConfigPathEnv, err := tempUnsetenv("VAULT_TOKEN")
+				defer failIfErr(t, resetConfigPathEnv)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
 			// Set up the schema token.
 			if tc.schemaToken {
 				d.Set("token", "schema-token")
@@ -559,8 +578,6 @@ func TestAccTokenName(t *testing.T) {
 }
 
 func TestAccChildToken(t *testing.T) {
-	defer os.Unsetenv(consts.EnvVarSkipChildToken)
-
 	checkTokenUsed := func(expectChildToken bool) resource.TestCheckFunc {
 		if expectChildToken {
 			// If the default child token was created, we expect the token
@@ -574,55 +591,23 @@ func TestAccChildToken(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		skipChildTokenEnv    string
-		useChildTokenEnv     bool
 		skipChildTokenSchema string
 		useChildTokenSchema  bool
 		expectChildToken     bool
 	}{
-		"tc1": {
+		"skip_child_token unset in config": {
 			useChildTokenSchema: false,
-			useChildTokenEnv:    false,
 			expectChildToken:    true,
 		},
-		"tc2": {
-			skipChildTokenEnv: "",
-			useChildTokenEnv:  true,
-			expectChildToken:  true,
-		},
-		"tc3": {
-			skipChildTokenEnv: "true",
-			useChildTokenEnv:  true,
-			expectChildToken:  false,
-		},
-		"tc4": {
-			skipChildTokenEnv: "false",
-			useChildTokenEnv:  true,
-			expectChildToken:  true,
-		},
-		"tc5": {
+		"skip_child_token true in config": {
 			skipChildTokenSchema: "true",
 			useChildTokenSchema:  true,
 			expectChildToken:     false,
 		},
-		"tc6": {
+		"skip_child_token false in config": {
 			skipChildTokenSchema: "false",
 			useChildTokenSchema:  true,
 			expectChildToken:     true,
-		},
-		"tc7": {
-			skipChildTokenEnv:    "true",
-			useChildTokenEnv:     true,
-			skipChildTokenSchema: "false",
-			useChildTokenSchema:  true,
-			expectChildToken:     true,
-		},
-		"tc8": {
-			skipChildTokenEnv:    "false",
-			useChildTokenEnv:     true,
-			skipChildTokenSchema: "true",
-			useChildTokenSchema:  true,
-			expectChildToken:     false,
 		},
 	}
 
@@ -633,19 +618,6 @@ func TestAccChildToken(t *testing.T) {
 				PreCheck:          func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
-						PreConfig: func() {
-							if test.useChildTokenEnv {
-								err := os.Setenv(consts.EnvVarSkipChildToken, test.skipChildTokenEnv)
-								if err != nil {
-									t.Fatal(err)
-								}
-							} else {
-								err := os.Unsetenv(consts.EnvVarSkipChildToken)
-								if err != nil {
-									t.Fatal(err)
-								}
-							}
-						},
 						Config: testProviderConfig(test.useChildTokenSchema,
 							consts.FieldSkipChildToken+` = `+test.skipChildTokenSchema,
 						),
@@ -780,6 +752,15 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 			if tc.vaultAddrEnv != "" {
 				unset, err := tempSetenv(api.EnvVaultAddress, tc.vaultAddrEnv)
 				defer failIfErr(t, unset)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// unset vault token env because add_address_to_env will only
+				// be set if the token is unset in the config and the
+				// VAULT_ADDR env variable
+				reset, err := tempUnsetenv(api.EnvVaultToken)
+				defer failIfErr(t, reset)
 				if err != nil {
 					t.Fatal(err)
 				}

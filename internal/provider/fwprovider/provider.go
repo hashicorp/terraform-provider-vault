@@ -2,7 +2,6 @@ package fwprovider
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -46,19 +45,23 @@ func (p *fwprovider) Metadata(ctx context.Context, req provider.MetadataRequest,
 //
 // Schema is called during validate, plan and apply.
 func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
-	// TODO: must this match exactly to the SDKv2 provider's schema?
+	// TODO(JM): This schema must match exactly to the SDKv2 provider's schema
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			// Not `Required` but must be set via config or env. Otherwise we
+			// return an error.
 			consts.FieldAddress: schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "URL of the root of the target Vault server.",
 			},
 			"add_address_to_env": schema.StringAttribute{
 				Optional:    true,
 				Description: "If true, adds the value of the `address` argument to the Terraform process environment.",
 			},
+			// Not `Required` but must be set via config, env, or token helper.
+			// Otherwise we return an error.
 			"token": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "Token to use to authenticate to Vault.",
 			},
 			"token_name": schema.StringAttribute{
@@ -122,23 +125,6 @@ func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, res
 			},
 		},
 		Blocks: map[string]schema.Block{
-			consts.FieldClientAuth: schema.ListNestedBlock{
-				Description:        "Client authentication credentials.",
-				DeprecationMessage: fmt.Sprintf("Use %s instead", consts.FieldAuthLoginCert),
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						consts.FieldCertFile: schema.StringAttribute{
-							Required:    true,
-							Description: "Path to a file containing the client certificate.",
-						},
-						consts.FieldKeyFile: schema.StringAttribute{
-							Required:    true,
-							Description: "Path to a file containing the private key that the certificate was issued for.",
-						},
-					},
-				},
-			},
-
 			"headers": schema.ListNestedBlock{
 				Description: "The headers to send with each Vault request.",
 				NestedObject: schema.NestedBlockObject{
