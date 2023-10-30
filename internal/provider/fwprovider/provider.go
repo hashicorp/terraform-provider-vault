@@ -2,7 +2,6 @@ package fwprovider
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -126,23 +125,6 @@ func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, res
 			},
 		},
 		Blocks: map[string]schema.Block{
-			consts.FieldClientAuth: schema.ListNestedBlock{
-				Description:        "Client authentication credentials.",
-				DeprecationMessage: fmt.Sprintf("Use %s instead", consts.FieldAuthLoginCert),
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						consts.FieldCertFile: schema.StringAttribute{
-							Required:    true,
-							Description: "Path to a file containing the client certificate.",
-						},
-						consts.FieldKeyFile: schema.StringAttribute{
-							Required:    true,
-							Description: "Path to a file containing the private key that the certificate was issued for.",
-						},
-					},
-				},
-			},
-
 			"headers": schema.ListNestedBlock{
 				Description: "The headers to send with each Vault request.",
 				NestedObject: schema.NestedBlockObject{
