@@ -42,7 +42,7 @@ func samlAuthBackendRoleResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		consts.FieldPath: {
 			Type:        schema.TypeString,
-			Optional:    true,
+			Required:    true,
 			Description: "Path where SAML Auth engine is mounted.",
 			ForceNew:    true,
 		},
@@ -69,7 +69,7 @@ func samlAuthBackendRoleResource() *schema.Resource {
 		fieldBoundAttributes: {
 			Type:        schema.TypeMap,
 			Optional:    true,
-			Description: "Mapping of attribute names to values that are expected to exist in the SAML assertion",
+			Description: "Mapping of attribute names to values that are expected to exist in the SAML assertion.",
 		},
 		fieldBoundAttributesType: {
 			Type:        schema.TypeString,

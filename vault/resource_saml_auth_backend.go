@@ -101,7 +101,7 @@ func samlAuthBackendResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Required: true,
-				Description: "The well-formated URLs of your Assertion Consumer Service (ACS) " +
+				Description: "The well-formatted URLs of your Assertion Consumer Service (ACS) " +
 					"that should receive a response from the identity provider.",
 			},
 			fieldDefaultRole: {
