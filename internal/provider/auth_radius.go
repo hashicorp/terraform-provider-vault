@@ -33,7 +33,7 @@ func GetRadiusLoginSchema(authField string) *schema.Schema {
 }
 
 // GetRadiusLoginSchemaResource for the radius authentication engine.
-func GetRadiusLoginSchemaResource(_ string) *schema.Resource {
+func GetRadiusLoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldUsername: {
@@ -49,7 +49,7 @@ func GetRadiusLoginSchemaResource(_ string) *schema.Resource {
 				DefaultFunc: schema.EnvDefaultFunc(consts.EnvVarRadiusPassword, nil),
 			},
 		},
-	}, consts.MountTypeRadius)
+	}, authField, consts.MountTypeRadius)
 }
 
 var _ AuthLogin = (*AuthLoginRadius)(nil)
@@ -94,7 +94,11 @@ func (l *AuthLoginRadius) Login(client *api.Client) (*api.Secret, error) {
 		return nil, err
 	}
 
-	params, err := l.copyParamsExcluding(consts.FieldNamespace, consts.FieldMount)
+	params, err := l.copyParamsExcluding(
+		consts.FieldUseRootNamespace,
+		consts.FieldNamespace,
+		consts.FieldMount,
+	)
 	if err != nil {
 		return nil, err
 	}

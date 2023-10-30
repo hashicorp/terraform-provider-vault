@@ -32,7 +32,7 @@ resource "vault_transform_role" "payments" {
   name            = "payments"
   transformations = ["ccn-fpe"]
 }
-data "vault_transform_encode_role" "test" {
+data "vault_transform_encode" "test" {
     path        = vault_transform_role.payments.path
     role_name   = "payments"
     batch_input = [{"value":"1111-2222-3333-4444"}]

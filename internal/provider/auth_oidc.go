@@ -35,7 +35,7 @@ func GetOIDCLoginSchema(authField string) *schema.Schema {
 }
 
 // GetOIDCLoginSchemaResource for the oidc authentication engine.
-func GetOIDCLoginSchemaResource(_ string) *schema.Resource {
+func GetOIDCLoginSchemaResource(authField string) *schema.Resource {
 	s := mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
@@ -56,7 +56,7 @@ func GetOIDCLoginSchemaResource(_ string) *schema.Resource {
 				ValidateDiagFunc: GetValidateDiagURI([]string{"http", "https"}),
 			},
 		},
-	}, consts.MountTypeOIDC)
+	}, authField, consts.MountTypeOIDC)
 
 	return s
 }

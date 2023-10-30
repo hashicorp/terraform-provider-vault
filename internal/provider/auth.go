@@ -114,7 +114,7 @@ type AuthLogin interface {
 	LoginPath() string
 	Method() string
 	Login(*api.Client) (*api.Secret, error)
-	Namespace() string
+	Namespace() (string, bool)
 	Params() map[string]interface{}
 }
 
@@ -149,14 +149,18 @@ func (l *AuthLoginCommon) Init(d *schema.ResourceData, authField string, validat
 	return l.validate()
 }
 
-func (l *AuthLoginCommon) Namespace() string {
+func (l *AuthLoginCommon) Namespace() (string, bool) {
 	if l.params != nil {
-		ns, ok := l.params[consts.FieldNamespace].(string)
-		if ok {
-			return ns
+		if v, ok := l.params[consts.FieldUseRootNamespace]; ok && v.(bool) {
+			return "", true
 		}
+
+		if ns, ok := l.params[consts.FieldNamespace]; ok && ns.(string) != "" {
+			return ns.(string), true
+		}
+
 	}
-	return ""
+	return "", false
 }
 
 func (l *AuthLoginCommon) MountPath() string {
@@ -246,6 +250,12 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 	var params map[string]interface{}
 	if v, ok := l.getOk(d, consts.FieldParameters); ok {
 		params = v.(map[string]interface{})
+		ns, _ := l.getOk(d, consts.FieldNamespace)
+		params[consts.FieldNamespace] = ns
+
+		if v := l.get(d, consts.FieldUseRootNamespace); v != nil {
+			params[consts.FieldUseRootNamespace] = v
+		}
 	} else {
 		v := config[0]
 		if v == nil {
@@ -291,7 +301,15 @@ func (l *AuthLoginCommon) checkFieldsOneOf(d *schema.ResourceData, fields ...str
 }
 
 func (l *AuthLoginCommon) getOk(d *schema.ResourceData, field string) (interface{}, bool) {
-	return d.GetOk(fmt.Sprintf("%s.0.%s", l.authField, field))
+	return d.GetOk(l.fieldPath(d, field))
+}
+
+func (l *AuthLoginCommon) get(d *schema.ResourceData, field string) interface{} {
+	return d.Get(l.fieldPath(d, field))
+}
+
+func (l *AuthLoginCommon) fieldPath(d *schema.ResourceData, field string) string {
+	return fmt.Sprintf("%s.0.%s", l.authField, field)
 }
 
 func (l *AuthLoginCommon) validate() error {
@@ -320,12 +338,35 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 	return nil, nil
 }
 
-func mustAddLoginSchema(r *schema.Resource, defaultMount string) *schema.Resource {
+func mustAddLoginSchema(r *schema.Resource, authField string, defaultMount string) *schema.Resource {
 	m := map[string]*schema.Schema{
 		consts.FieldNamespace: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "The authentication engine's namespace.",
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: fmt.Sprintf(
+				"The authentication engine's namespace. Conflicts with %s",
+				consts.FieldUseRootNamespace,
+			),
+			ConflictsWith: []string{
+				fmt.Sprintf("%s.0.%s",
+					authField,
+					consts.FieldUseRootNamespace,
+				),
+			},
+		},
+		consts.FieldUseRootNamespace: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Description: fmt.Sprintf(
+				"Authenticate to the root Vault namespace. Conflicts with %s",
+				consts.FieldNamespace,
+			),
+			ConflictsWith: []string{
+				fmt.Sprintf("%s.0.%s",
+					authField,
+					consts.FieldNamespace,
+				),
+			},
 		},
 	}
 
