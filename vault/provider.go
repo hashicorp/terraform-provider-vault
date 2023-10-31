@@ -721,6 +721,14 @@ var (
 			Resource:      UpdateSchemaResource(transformAlphabetResource()),
 			PathInventory: []string{"/transform/alphabet/{name}"},
 		},
+		"vault_saml_auth_backend": {
+			Resource:      UpdateSchemaResource(samlAuthBackendResource()),
+			PathInventory: []string{"/auth/saml/config"},
+		},
+		"vault_saml_auth_backend_role": {
+			Resource:      UpdateSchemaResource(samlAuthBackendRoleResource()),
+			PathInventory: []string{"/auth/saml/role/{name}"},
+		},
 	}
 )
 
