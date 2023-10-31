@@ -214,6 +214,10 @@ variables in order to keep credential information out of the configuration.
 
 * `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
+* `set_namespace_from_token` -(Optional) Defaults to `true`. In the case where the Vault token is
+  for a specific namespace and the provider namespace is not configured, use the token namespace
+  as the root namespace for all resources.
+
 * `skip_get_vault_version` - (Optional) Skip the dynamic fetching of the Vault server version. 
   Set to `true` when the */sys/seal-status* API endpoint is not available. See [vault_version_override](#vault_version_override)
   for related info

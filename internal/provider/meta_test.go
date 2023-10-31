@@ -553,13 +553,15 @@ func TestNewProviderMeta(t *testing.T) {
 	}
 
 	tests := []struct {
-		name               string
-		d                  *schema.ResourceData
-		data               map[string]interface{}
-		wantNamespace      string
-		tokenNamespace     string
-		authLoginNamespace string
-		wantErr            bool
+		name                      string
+		d                         *schema.ResourceData
+		data                      map[string]interface{}
+		wantNamespace             string
+		tokenNamespace            string
+		authLoginNamespace        string
+		wantErr                   bool
+		checkSetSetTokenNamespace bool
+		wantNamespaceFromToken    string
 	}{
 		{
 			name:    "invalid-nil-ResourceData",
@@ -627,21 +629,59 @@ func TestNewProviderMeta(t *testing.T) {
 			name: "with-provider-ns-and-auth-login-with-ns",
 			d:    pr.TestResourceData(),
 			data: map[string]interface{}{
-				consts.FieldNamespace:           nsPrefix + "prov-ns-auth-ns",
+				consts.FieldNamespace:           nsPrefix + "prov-ns-prov-ns",
 				consts.FieldSkipGetVaultVersion: true,
 				consts.FieldSkipChildToken:      true,
 				consts.FieldAuthLoginUserpass: []map[string]interface{}{
 					{
-						consts.FieldNamespace: nsPrefix + "auth-ns-prov-ns",
+						consts.FieldNamespace: nsPrefix + "auth-ns-auth-ns",
 						consts.FieldMount:     consts.MountTypeUserpass,
 						consts.FieldUsername:  defaultUser,
 						consts.FieldPassword:  defaultPassword,
 					},
 				},
 			},
-			authLoginNamespace: nsPrefix + "auth-ns-prov-ns",
-			wantNamespace:      nsPrefix + "prov-ns-auth-ns",
+			authLoginNamespace: nsPrefix + "auth-ns-auth-ns",
+			wantNamespace:      nsPrefix + "prov-ns-prov-ns",
 			wantErr:            false,
+		},
+		{
+			// expect token based namespace to be ignored.
+			name: "set-namespace-from-token-false",
+			d:    pr.TestResourceData(),
+			data: map[string]interface{}{
+				consts.FieldSkipGetVaultVersion:   true,
+				consts.FieldSetNamespaceFromToken: false,
+				consts.FieldSkipChildToken:        true,
+			},
+			tokenNamespace:            nsPrefix + "set-ns-from-token-auth-false-ignored",
+			wantNamespace:             nsPrefix + "set-ns-from-token-auth-false-ignored",
+			checkSetSetTokenNamespace: true,
+			wantNamespaceFromToken:    "",
+			wantErr:                   false,
+		},
+		{
+			// expect token based namespace to be ignored.
+			name: "set-namespace-from-token-true",
+			d:    pr.TestResourceData(),
+			data: map[string]interface{}{
+				consts.FieldSkipGetVaultVersion:   true,
+				consts.FieldSetNamespaceFromToken: true,
+				consts.FieldSkipChildToken:        true,
+				consts.FieldAuthLoginUserpass: []map[string]interface{}{
+					{
+						consts.FieldNamespace: nsPrefix + "set-ns-from-token-auth-true",
+						consts.FieldMount:     consts.MountTypeUserpass,
+						consts.FieldUsername:  defaultUser,
+						consts.FieldPassword:  defaultPassword,
+					},
+				},
+			},
+			authLoginNamespace:        nsPrefix + "set-ns-from-token-auth-true",
+			wantNamespace:             nsPrefix + "set-ns-from-token-auth-true",
+			checkSetSetTokenNamespace: true,
+			wantNamespaceFromToken:    nsPrefix + "set-ns-from-token-auth-true",
+			wantErr:                   false,
 		},
 	}
 
@@ -748,7 +788,11 @@ func TestNewProviderMeta(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(p.client.Namespace(), tt.wantNamespace) {
-				t.Errorf("NewProviderMeta() got ns = %v, want ns %v", p.client.Namespace(), tt.wantNamespace)
+				t.Errorf("NewProviderMeta() got ns = %q, want ns %q", p.client.Namespace(), tt.wantNamespace)
+			}
+
+			if tt.checkSetSetTokenNamespace && tt.wantNamespaceFromToken != tt.d.Get(consts.FieldNamespace).(string) {
+				t.Errorf("NewProviderMeta() got ns = %q, want ns %q", tt.d.Get(consts.FieldNamespace).(string), tt.wantNamespaceFromToken)
 			}
 
 			if client.Token() == "" {

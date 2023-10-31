@@ -175,6 +175,14 @@ func NewProvider(
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
 				Description: "The namespace to use. Available only for Vault Enterprise.",
 			},
+			consts.FieldSetNamespaceFromToken: {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+				Description: "In the case where the Vault token is for a specific namespace " +
+					"and the provider namespace is not configured, use the token namespace " +
+					"as the root namespace for all resources.",
+			},
 			"headers": {
 				Type:        schema.TypeList,
 				Optional:    true,
