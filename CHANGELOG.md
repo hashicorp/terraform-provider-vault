@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 3.22.0 (Nov 1, 2023)
+
 FEATURES:
 * Add support for configuring SAML Auth resources ([#2053](https://github.com/hashicorp/terraform-provider-vault/pull/2053))
 * Add support for `custom_metadata` on `vault_namespace`: ([#2033](https://github.com/hashicorp/terraform-provider-vault/pull/2033))
