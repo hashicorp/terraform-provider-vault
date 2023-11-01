@@ -1,6 +1,10 @@
 name: Build
 
-on: push
+on:
+  push:
+    paths-ignore:
+      - 'website/**'
+      - 'CHANGELOG.md'
 
 permissions:
   # Permission for checking out code

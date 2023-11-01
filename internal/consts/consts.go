@@ -37,6 +37,7 @@ const (
 	FieldParameters                    = "parameters"
 	FieldMethod                        = "method"
 	FieldNamespace                     = "namespace"
+	FieldUseRootNamespace              = "use_root_namespace"
 	FieldNamespaceID                   = "namespace_id"
 	FieldNamespacePath                 = "namespace_path"
 	FieldPathFQ                        = "path_fq"
@@ -362,6 +363,7 @@ const (
 	FieldServiceAccountJWT             = "service_account_jwt"
 	FieldDisableISSValidation          = "disable_iss_validation"
 	FieldPEMKeys                       = "pem_keys"
+	FieldSetNamespaceFromToken         = "set_namespace_from_token"
 	/*
 		common environment variables
 	*/
@@ -421,6 +423,7 @@ const (
 	MountTypeConsul       = "consul"
 	MountTypeTerraform    = "terraform"
 	MountTypeNone         = "none"
+	MountTypeSAML         = "saml"
 
 	/*
 		Vault version constants

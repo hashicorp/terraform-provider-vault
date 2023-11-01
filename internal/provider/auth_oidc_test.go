@@ -33,6 +33,7 @@ func TestAuthLoginOIDC_Init(t *testing.T) {
 			},
 			expectParams: map[string]interface{}{
 				consts.FieldNamespace:               "ns1",
+				consts.FieldUseRootNamespace:        false,
 				consts.FieldMount:                   consts.MountTypeOIDC,
 				consts.FieldRole:                    "alice",
 				consts.FieldCallbackListenerAddress: "",

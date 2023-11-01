@@ -1,10 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package decode
-
-// DO NOT EDIT
-// This code is generated.
+package vault
 
 import (
 	"fmt"
@@ -17,11 +14,11 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const roleNameEndpoint = "/transform/decode/{role_name}"
+const transformDecodeRoleEndpoint = "/transform/decode/{role_name}"
 
-func RoleNameDataSource() *schema.Resource {
+func transformDecodeDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: provider.ReadWrapper(readRoleNameResource),
+		Read: provider.ReadWrapper(readTransformDecodeRoleResource),
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,
@@ -76,13 +73,13 @@ func RoleNameDataSource() *schema.Resource {
 	}
 }
 
-func readRoleNameResource(d *schema.ResourceData, meta interface{}) error {
+func readTransformDecodeRoleResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
 	path := d.Get("path").(string)
-	vaultPath := util.ParsePath(path, roleNameEndpoint, d)
+	vaultPath := util.ParsePath(path, transformDecodeRoleEndpoint, d)
 	log.Printf("[DEBUG] Writing %q", vaultPath)
 
 	data := make(map[string]interface{})

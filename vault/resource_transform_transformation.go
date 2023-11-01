@@ -1,10 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package transformation
-
-// DO NOT EDIT
-// This code is generated.
+package vault
 
 import (
 	"fmt"
@@ -17,9 +14,9 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const nameEndpoint = "/transform/transformation/{name}"
+const transformTransformationEndpoint = "/transform/transformation/{name}"
 
-func NameResource() *schema.Resource {
+func transformTransformationResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		"path": {
 			Type:        schema.TypeString,
@@ -78,11 +75,11 @@ func NameResource() *schema.Resource {
 		},
 	}
 	return &schema.Resource{
-		Create: createNameResource,
-		Update: updateNameResource,
-		Read:   provider.ReadWrapper(readNameResource),
-		Exists: resourceNameExists,
-		Delete: deleteNameResource,
+		Create: createTransformTransformationResource,
+		Update: updateTransformTransformationResource,
+		Read:   provider.ReadWrapper(readTransformTransformationResource),
+		Exists: resourceTransformTransformationExists,
+		Delete: deleteTransformTransformationResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -90,14 +87,14 @@ func NameResource() *schema.Resource {
 	}
 }
 
-func createNameResource(d *schema.ResourceData, meta interface{}) error {
+func createTransformTransformationResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
 
 	path := d.Get("path").(string)
-	vaultPath := util.ParsePath(path, nameEndpoint, d)
+	vaultPath := util.ParsePath(path, transformTransformationEndpoint, d)
 	log.Printf("[DEBUG] Creating %q", vaultPath)
 
 	data := map[string]interface{}{}
@@ -128,10 +125,10 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.SetId(vaultPath)
 	log.Printf("[DEBUG] Wrote %q", vaultPath)
-	return readNameResource(d, meta)
+	return readTransformTransformationResource(d, meta)
 }
 
-func readNameResource(d *schema.ResourceData, meta interface{}) error {
+func readTransformTransformationResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -150,7 +147,7 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	pathParams, err := util.PathParameters(nameEndpoint, vaultPath)
+	pathParams, err := util.PathParameters(transformTransformationEndpoint, vaultPath)
 	if err != nil {
 		return err
 	}
@@ -197,7 +194,7 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func updateNameResource(d *schema.ResourceData, meta interface{}) error {
+func updateTransformTransformationResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -232,10 +229,10 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Updated %q", vaultPath)
-	return readNameResource(d, meta)
+	return readTransformTransformationResource(d, meta)
 }
 
-func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
+func deleteTransformTransformationResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -254,7 +251,7 @@ func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceNameExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceTransformTransformationExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e

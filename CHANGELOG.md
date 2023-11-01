@@ -1,8 +1,25 @@
 ## Unreleased
 
+FEATURES:
+* Add support for configuring SAML Auth resources ([#2053](https://github.com/hashicorp/terraform-provider-vault/pull/2053))
+* Add support for `custom_metadata` on `vault_namespace`: ([#2033](https://github.com/hashicorp/terraform-provider-vault/pull/2033))
+* Add support for `OCSP*` role fields for the cert auth resource: ([#2056](https://github.com/hashicorp/terraform-provider-vault/pull/2056))
+* Add field `set_namespace_from_token` to Provider configuration ([#2070](https://github.com/hashicorp/terraform-provider-vault/pull/2070))
+
 BUGS:
-* Fix panic when readnig client_secret from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
+* Fix panic when reading `client_secret` from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
 * Fix API request missing `roles` field for `mongodbatlas_secret_role` resource ([#2047](https://github.com/hashicorp/terraform-provider-vault/pull/2047))
+* Fix bug when updating vault_azure_secret_backend_role: ([#2063](https://github.com/hashicorp/terraform-provider-vault/pull/2063))
+* Fix audience string ordering for `auth_login_gcp` causing GCE auth to fail ([#2064](https://github.com/hashicorp/terraform-provider-vault/pull/2064))
+
+IMPROVEMENTS:
+* Updated dependencies: ([#2038](https://github.com/hashicorp/terraform-provider-vault/pull/2038))
+   * `github.com/aws/aws-sdk-go` v1.44.106 -> v1.45.24
+* Updated dependencies: ([#2050](https://github.com/hashicorp/terraform-provider-vault/pull/2050))
+   * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v0.22.0 -> v1.8.0
+   * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v0.13.2 -> v1.4.0
+   * `github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources` v0.3.1 -> v1.1.1
+   * `github.com/Azure/go-autorest/autorest` v0.11.29 removed
 
 ## 3.21.0 (Oct 9, 2023)
 

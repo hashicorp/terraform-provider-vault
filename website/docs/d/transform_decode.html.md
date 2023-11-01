@@ -32,7 +32,7 @@ resource "vault_transform_role" "payments" {
   name            = "payments"
   transformations = ["ccn-fpe"]
 }
-data "vault_transform_decode_role" "test" {
+data "vault_transform_decode" "test" {
     path      = vault_transform_role.payments.path
     role_name = "payments"
     value     = "9300-3376-4943-8903"

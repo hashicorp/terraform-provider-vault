@@ -277,12 +277,14 @@ func (p *ProviderMeta) setClient() error {
 			clone.ClearToken()
 		}
 
-		if authLogin.Namespace() != "" {
+		if ns, ok := authLogin.Namespace(); ok {
 			// the namespace configured on the auth_login takes precedence over the provider's
 			// for authentication only.
-			clone.SetNamespace(authLogin.Namespace())
+			log.Printf("[DEBUG] Setting Auth Login namespace to %q, use_root_namespace=%t", ns, ns == "")
+			clone.SetNamespace(ns)
 		} else if namespace != "" {
 			// authenticate to the engine in the provider's namespace
+			log.Printf("[DEBUG] Setting Auth Login namespace to %q from provider configuration", namespace)
 			clone.SetNamespace(namespace)
 		}
 
@@ -346,8 +348,10 @@ func (p *ProviderMeta) setClient() error {
 		namespace = tokenNamespace
 		// set the namespace on the provider to ensure that all child
 		// namespace paths are properly honoured.
-		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
-			return err
+		if v, ok := d.Get(consts.FieldSetNamespaceFromToken).(bool); ok && v {
+			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
+				return err
+			}
 		}
 	}
 
