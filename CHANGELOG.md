@@ -5,11 +5,12 @@ FEATURES:
 * Add support for `custom_metadata` on `vault_namespace`: ([#2033](https://github.com/hashicorp/terraform-provider-vault/pull/2033))
 * Add support for `OCSP*` role fields for the cert auth resource: ([#2056](https://github.com/hashicorp/terraform-provider-vault/pull/2056))
 * Add field `set_namespace_from_token` to Provider configuration ([#2070](https://github.com/hashicorp/terraform-provider-vault/pull/2070))
+* Support authenticating to the root namespace from within an auth_login*: ([#2066](https://github.com/hashicorp/terraform-provider-vault/pull/2066))
 
 BUGS:
 * Fix panic when reading `client_secret` from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
 * Fix API request missing `roles` field for `mongodbatlas_secret_role` resource ([#2047](https://github.com/hashicorp/terraform-provider-vault/pull/2047))
-* Fix bug when updating vault_azure_secret_backend_role: ([#2063](https://github.com/hashicorp/terraform-provider-vault/pull/2063))
+* Fix bug when updating `vault_azure_secret_backend_role`: ([#2063](https://github.com/hashicorp/terraform-provider-vault/pull/2063))
 * Fix audience string ordering for `auth_login_gcp` causing GCE auth to fail ([#2064](https://github.com/hashicorp/terraform-provider-vault/pull/2064))
 
 IMPROVEMENTS:
