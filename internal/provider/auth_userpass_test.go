@@ -35,11 +35,78 @@ func TestAuthLoginUserPass_Init(t *testing.T) {
 				},
 			},
 			expectParams: map[string]interface{}{
-				consts.FieldNamespace:    "ns1",
-				consts.FieldMount:        consts.MountTypeUserpass,
-				consts.FieldUsername:     "alice",
-				consts.FieldPassword:     "password1",
-				consts.FieldPasswordFile: "",
+				consts.FieldNamespace:        "ns1",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeUserpass,
+				consts.FieldUsername:         "alice",
+				consts.FieldPassword:         "password1",
+				consts.FieldPasswordFile:     "",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "basic-empty-ns",
+			authField: consts.FieldAuthLoginUserpass,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginUserpass: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace:        "",
+						consts.FieldUseRootNamespace: true,
+						consts.FieldUsername:         "alice",
+						consts.FieldPassword:         "password1",
+					},
+				},
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "",
+				consts.FieldUseRootNamespace: true,
+				consts.FieldMount:            consts.MountTypeUserpass,
+				consts.FieldUsername:         "alice",
+				consts.FieldPassword:         "password1",
+				consts.FieldPasswordFile:     "",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "basic-with-ns",
+			authField: consts.FieldAuthLoginUserpass,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginUserpass: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "baz",
+						consts.FieldUsername:  "alice",
+						consts.FieldPassword:  "password1",
+					},
+				},
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "baz",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeUserpass,
+				consts.FieldUsername:         "alice",
+				consts.FieldPassword:         "password1",
+				consts.FieldPasswordFile:     "",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "basic-ns-unset",
+			authField: consts.FieldAuthLoginUserpass,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginUserpass: []interface{}{
+					map[string]interface{}{
+						consts.FieldUsername: "alice",
+						consts.FieldPassword: "password1",
+					},
+				},
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeUserpass,
+				consts.FieldUsername:         "alice",
+				consts.FieldPassword:         "password1",
+				consts.FieldPasswordFile:     "",
 			},
 			wantErr: false,
 		},

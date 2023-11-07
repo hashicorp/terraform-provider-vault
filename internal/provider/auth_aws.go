@@ -128,7 +128,7 @@ func GetAWSLoginSchemaResource(authField string) *schema.Resource {
 				Description: `The Vault header value to include in the STS signing request.`,
 			},
 		},
-	}, consts.MountTypeAWS)
+	}, authField, consts.MountTypeAWS)
 }
 
 var _ AuthLogin = (*AuthLoginAWS)(nil)

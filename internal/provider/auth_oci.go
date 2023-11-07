@@ -43,7 +43,7 @@ func GetOCILoginSchema(authField string) *schema.Schema {
 }
 
 // GetOCILoginSchemaResource for the OCI authentication engine.
-func GetOCILoginSchemaResource(_ string) *schema.Resource {
+func GetOCILoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
@@ -60,7 +60,7 @@ func GetOCILoginSchemaResource(_ string) *schema.Resource {
 				),
 			},
 		},
-	}, consts.MountTypeOCI)
+	}, authField, consts.MountTypeOCI)
 }
 
 var _ AuthLogin = (*AuthLoginOCI)(nil)

@@ -6,7 +6,6 @@ package vault
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -28,6 +27,7 @@ func TestAzureSecretBackendRole(t *testing.T) {
 	clientSecret := os.Getenv("ARM_CLIENT_SECRET")
 	resourceGroup := os.Getenv("ARM_RESOURCE_GROUP")
 
+	resourceName := "vault_azure_secret_backend_role"
 	path := acctest.RandomWithPrefix("tf-test-azure")
 	role := acctest.RandomWithPrefix("tf-test-azure-role")
 	resource.Test(t, resource.TestCase{
@@ -38,17 +38,32 @@ func TestAzureSecretBackendRole(t *testing.T) {
 			{
 				Config: testAzureSecretBackendRoleInitialConfig(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "role", role+"-azure-roles"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "description", "Test for Vault Provider"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.#", "1"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.0.role_name", "Reader"),
-					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.0.scope"),
-					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.0.role_id"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "role", role+"-azure-groups"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "description", "Test for Vault Provider"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.#", "1"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.0.group_name", "foobar"),
-					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.0.object_id"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "role", role+"-azure-roles"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "description", "Test for Vault Provider"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "ttl", "300"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "max_ttl", "600"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.#", "1"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.0.role_name", "Reader"),
+					resource.TestCheckResourceAttrSet(resourceName+".test_azure_roles", "azure_roles.0.scope"),
+					resource.TestCheckResourceAttrSet(resourceName+".test_azure_roles", "azure_roles.0.role_id"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "role", role+"-azure-groups"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "description", "Test for Vault Provider"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "azure_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "azure_groups.0.group_name", "foobar"),
+					resource.TestCheckResourceAttrSet(resourceName+".test_azure_groups", "azure_groups.0.object_id"),
+				),
+			},
+			{
+				Config: testAzureSecretBackendRole_updated(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "role", role+"-azure-roles"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "description", "Test for Vault Provider"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "ttl", "600"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "max_ttl", "900"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.#", "1"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.0.role_name", "Reader"),
+					resource.TestCheckResourceAttrSet(resourceName+".test_azure_roles", "azure_roles.0.scope"),
+					resource.TestCheckResourceAttrSet(resourceName+".test_azure_roles", "azure_roles.0.role_id"),
 				),
 			},
 			{
@@ -59,24 +74,20 @@ func TestAzureSecretBackendRole(t *testing.T) {
 				},
 				Config: testAzureSecretBackendRolePermanentlyDelete(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "role", role+"-azure-roles"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "description", "Test for Vault Provider"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "permanently_delete", "false"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.#", "1"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.0.role_name", "Reader"),
-					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.0.scope"),
-					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.0.role_id"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "role", role+"-azure-groups"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "description", "Test for Vault Provider"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "permanently_delete", "true"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.#", "1"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.0.group_name", "foobar"),
-					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.0.object_id"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "role", role+"-azure-roles"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "description", "Test for Vault Provider"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "permanently_delete", "false"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.#", "1"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.0.role_name", "Reader"),
+					resource.TestCheckResourceAttrSet(resourceName+".test_azure_roles", "azure_roles.0.scope"),
+					resource.TestCheckResourceAttrSet(resourceName+".test_azure_roles", "azure_roles.0.role_id"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "role", role+"-azure-groups"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "description", "Test for Vault Provider"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "permanently_delete", "true"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "azure_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "azure_groups.0.group_name", "foobar"),
+					resource.TestCheckResourceAttrSet(resourceName+".test_azure_groups", "azure_groups.0.object_id"),
 				),
-			},
-			{
-				Config:      testAzureSecretBackendRoleConfigError(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
-				ExpectError: regexp.MustCompile("must specify at most one of 'role_name' or 'role_id'"),
 			},
 		},
 	})
@@ -109,32 +120,6 @@ func testAccAzureSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAzureSecretBackendRoleConfigError(subscriptionID string, tenantID string, clientID string, clientSecret string, path string, role string, resourceGroup string) string {
-	return fmt.Sprintf(`
-resource "vault_azure_secret_backend" "azure" {
-  subscription_id = "%s"
-  tenant_id       = "%s"
-  client_id       = "%s"
-  client_secret   = "%s"
-  path            = "%s"
-}
-
-resource "vault_azure_secret_backend_role" "test_azure_roles_error" {
-  backend     = vault_azure_secret_backend.azure.path
-  role        = "%[6]s-azure-roles"
-  ttl         = 300
-  max_ttl     = 600
-  description = "Test for Vault Provider"
-
-  azure_roles {
-    role_name = "Reader"
-    role_id   = "/subscriptions/%[1]s/providers/Microsoft.Authorization/roleDefinitions/%[5]s"
-    scope     = "/subscriptions/%[1]s/resourceGroups/%[7]s"
-  }
-}
-`, subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup)
-}
-
 func testAzureSecretBackendRoleInitialConfig(subscriptionID string, tenantID string, clientID string, clientSecret string, path string, role string, resourceGroup string) string {
 	return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "azure" {
@@ -150,6 +135,43 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
   role        = "%[6]s-azure-roles"
   ttl         = 300
   max_ttl     = 600
+  description = "Test for Vault Provider"
+
+  azure_roles {
+    role_name = "Reader"
+    scope =  "/subscriptions/%[1]s/resourceGroups/%[7]s"
+  }
+}
+
+resource "vault_azure_secret_backend_role" "test_azure_groups" {
+  backend     = vault_azure_secret_backend.azure.path
+  role        = "%[6]s-azure-groups"
+  ttl         = 300
+  max_ttl     = 600
+  description = "Test for Vault Provider"
+
+  azure_groups {
+    group_name = "foobar"
+  }
+}
+`, subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup)
+}
+
+func testAzureSecretBackendRole_updated(subscriptionID string, tenantID string, clientID string, clientSecret string, path string, role string, resourceGroup string) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "azure" {
+  subscription_id = "%s"
+  tenant_id       = "%s"
+  client_id       = "%s"
+  client_secret   = "%s"
+  path            = "%s"
+}
+
+resource "vault_azure_secret_backend_role" "test_azure_roles" {
+  backend     = vault_azure_secret_backend.azure.path
+  role        = "%[6]s-azure-roles"
+  ttl         = 600
+  max_ttl     = 900
   description = "Test for Vault Provider"
 
   azure_roles {

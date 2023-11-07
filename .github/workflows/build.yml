@@ -1,6 +1,11 @@
 name: Build
 
-on: push
+on:
+  push:
+    paths-ignore:
+      - 'website/**'
+      - 'CHANGELOG.md'
+  workflow_dispatch:
 
 permissions:
   # Permission for checking out code
