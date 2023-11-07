@@ -6,6 +6,7 @@ package provider
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -53,6 +54,11 @@ type authLoginRegistry struct {
 // Register field for loginFunc and schemaFunc. A field can only be registered
 // once.
 func (r *authLoginRegistry) Register(field string, loginFunc authLoginFunc, schemaFunc loginSchemaFunc) error {
+	// TODO(JM): remove this after testing
+	// for now we only register auth_login_token_file
+	if field != consts.FieldAuthLoginTokenFile {
+		return nil
+	}
 	e := &authLoginEntry{
 		field:      field,
 		loginFunc:  loginFunc,
@@ -137,14 +143,14 @@ func (l *AuthLoginCommon) Init(d *schema.ResourceData, authField string, validat
 		return err
 	}
 
+	l.mount = path
+	l.params = params
+
 	for _, vf := range validators {
 		if err := vf(d); err != nil {
 			return err
 		}
 	}
-
-	l.mount = path
-	l.params = params
 
 	return l.validate()
 }
@@ -270,11 +276,38 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 	return path, params, nil
 }
 
+type authDefault struct {
+	field      string
+	envVar     string
+	defaultVal string
+}
+
+type authDefaults []authDefault
+
+func (l *AuthLoginCommon) setDefaultFields(d *schema.ResourceData, defaults authDefaults) error {
+	for _, f := range defaults {
+		if _, ok := l.getOk(d, f.field); !ok {
+
+			// if field is unset in the config, check env
+			defaultValue := os.Getenv(f.envVar)
+			if defaultValue == "" {
+				defaultValue = f.defaultVal
+			}
+			l.params[f.field] = defaultValue
+		}
+	}
+
+	return nil
+}
+
 func (l *AuthLoginCommon) checkRequiredFields(d *schema.ResourceData, required ...string) error {
 	var missing []string
 	for _, f := range required {
-		if _, ok := l.getOk(d, f); !ok {
-			missing = append(missing, f)
+		if data, ok := l.getOk(d, f); !ok {
+			// if the field was unset in the config
+			if l.params[f] == data {
+				missing = append(missing, f)
+			}
 		}
 	}
 

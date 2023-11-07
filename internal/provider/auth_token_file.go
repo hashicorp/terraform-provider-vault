@@ -41,9 +41,8 @@ func GetTokenFileSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldFilename: {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc(consts.EnvVarTokenFilename, nil),
+				Type:     schema.TypeString,
+				Optional: true,
 				Description: "The name of a file containing a single " +
 					"line that is a valid Vault token",
 			},
@@ -72,7 +71,17 @@ func (l *AuthLoginTokenFile) Init(d *schema.ResourceData,
 ) (AuthLogin, error) {
 	l.mount = consts.MountTypeNone
 
+	defaults := authDefaults{
+		{
+			field:      consts.FieldFilename,
+			envVar:     consts.EnvVarTokenFilename,
+			defaultVal: "",
+		},
+	}
 	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			return l.setDefaultFields(d, defaults)
+		},
 		func(data *schema.ResourceData) error {
 			return l.checkRequiredFields(d, consts.FieldFilename)
 		},

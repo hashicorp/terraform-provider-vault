@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/sys"
 )
 
 // Ensure the implementation satisfies the provider.Provider interface
@@ -107,6 +108,12 @@ func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, res
 				Optional:    true,
 				Description: "The namespace to use. Available only for Vault Enterprise.",
 			},
+			consts.FieldSetNamespaceFromToken: schema.BoolAttribute{
+				Optional: true,
+				Description: "In the case where the Vault token is for a specific namespace " +
+					"and the provider namespace is not configured, use the token namespace " +
+					"as the root namespace for all resources.",
+			},
 			consts.FieldSkipGetVaultVersion: schema.BoolAttribute{
 				Optional:    true,
 				Description: "Skip the dynamic fetching of the Vault server version.",
@@ -142,6 +149,7 @@ func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, res
 					},
 				},
 			},
+			"auth_login_token_file": AuthLoginTokenFileSchema(),
 		},
 	}
 }
@@ -165,7 +173,9 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 // The resource type name is determined by the Resource implementing
 // the Metadata method. All resources must have unique names.
 func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		sys.NewPasswordPolicyResource,
+	}
 }
 
 // DataSources returns a slice of functions to instantiate each DataSource
