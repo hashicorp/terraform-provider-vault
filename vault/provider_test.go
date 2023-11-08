@@ -169,7 +169,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	}
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 	t.Cleanup(func() {
 		if _, err := client.Logical().Delete(consts.SysNamespaceRoot + namespacePath); err != nil {

@@ -694,7 +694,7 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, secondaryRootUsername, secondaryRootPassword, 15),
 				PreConfig: func() {
 					path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					resp, err := client.Logical().Write(path, map[string]interface{}{})
 					if err != nil {
@@ -916,7 +916,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 					// because it will change the password and cause (future) tests to 401.
 
 					//path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
-					//client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					//client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 					//
 					//_, err := client.Logical().Write(path, map[string]interface{}{})
 					//if err != nil {
@@ -1010,7 +1010,7 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 					// because it will change the password and cause (future) tests to 401.
 
 					//path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
-					//client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					//client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 					//
 					//_, err := client.Logical().Write(path, map[string]interface{}{})
 					//if err != nil {

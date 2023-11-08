@@ -70,7 +70,7 @@ func TestGCPSecretImpersonatedAccount(t *testing.T) {
 }
 
 func testGCPSecretImpersonatedAccountDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_gcp_secret_impersonated_account" {

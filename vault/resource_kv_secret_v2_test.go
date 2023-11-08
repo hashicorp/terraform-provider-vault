@@ -174,7 +174,7 @@ func TestAccKVSecretV2_DisableRead(t *testing.T) {
 
 func readKVData(t *testing.T, mount, name string) {
 	t.Helper()
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 	// Read data at path
 	path := fmt.Sprintf("%s/data/%s", mount, name)
@@ -196,7 +196,7 @@ func readKVData(t *testing.T, mount, name string) {
 
 func writeKVData(t *testing.T, mount, name string) {
 	t.Helper()
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 	data := map[string]interface{}{
 		consts.FieldData: testKVV2Data,
@@ -215,7 +215,7 @@ func writeKVData(t *testing.T, mount, name string) {
 
 func mountKVEngine(t *testing.T, mount, name string) {
 	t.Helper()
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 	err := client.Sys().Mount(mount, &api.MountInput{
 		Type:        "kv-v2",

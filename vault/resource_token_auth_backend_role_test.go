@@ -157,7 +157,7 @@ func testAccCheckTokenAuthBackendRoleDestroy(s *terraform.State) error {
 func testAccTokenAuthBackendRoleCheck_deleted(role string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		endpoint := "auth/token/roles"
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 		resp, err := client.Logical().List(endpoint)
 		if err != nil {

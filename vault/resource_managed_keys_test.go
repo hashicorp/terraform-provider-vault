@@ -52,7 +52,7 @@ func TestManagedKeys(t *testing.T) {
 			{
 				PreConfig: func() {
 					// Delete previously configured managed key from Vault
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					p := getManagedKeysPath(kmsTypeAWS, name0)
 					_, err := client.Logical().Delete(p)
@@ -109,7 +109,7 @@ func TestManagedKeys(t *testing.T) {
 			{
 				PreConfig: func() {
 					// Delete previously configured managed key from Vault
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					p := getManagedKeysPath(kmsTypeAWS, name0)
 					_, err := client.Logical().Delete(p)
