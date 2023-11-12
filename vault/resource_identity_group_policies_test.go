@@ -253,7 +253,7 @@ func testAccIdentityGroupPoliciesConfigNonExclusiveUpdateGroup(group string) str
 resource "vault_identity_group" "group" {
   name = "%s"
   external_policies = true
-  metdata = {
+  metadata = {
 	version = "1"
   }
 }
