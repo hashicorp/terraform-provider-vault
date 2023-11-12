@@ -1,5 +1,9 @@
 ## Unreleased
 
+BUGS:
+
+* Fix `vault_identity_group` loses externally managed policies on updates when `external_policies = true`
+
 ## 3.22.0 (Nov 1, 2023)
 
 FEATURES:
