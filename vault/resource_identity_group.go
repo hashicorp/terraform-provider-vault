@@ -175,7 +175,7 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 			// should be configured on the entity.
 			data["external_policies"] = d.Get("external_policies").(bool)
 			if data["external_policies"].(bool) {
-				data["policies"] = nil
+				delete(data, "policies")
 			}
 		}
 	}

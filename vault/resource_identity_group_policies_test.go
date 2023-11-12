@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
@@ -18,6 +19,7 @@ import (
 )
 
 func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
+	group := acctest.RandomWithPrefix("test-group")
 	resourceName := "vault_identity_group_policies.policies"
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
@@ -25,11 +27,11 @@ func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
 		CheckDestroy:      testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityGroupPoliciesConfigExclusive(),
+				Config: testAccIdentityGroupPoliciesConfigExclusive(group),
 				Check:  testAccIdentityGroupPoliciesCheckAttrs(resourceName),
 			},
 			{
-				Config: testAccIdentityGroupPoliciesConfigExclusiveUpdate(),
+				Config: testAccIdentityGroupPoliciesConfigExclusiveUpdate(group),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "policies.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "policies.0", "dev"),
@@ -42,6 +44,7 @@ func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
 }
 
 func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
+	group := acctest.RandomWithPrefix("test-group")
 	resourceNameDev := "vault_identity_group_policies.dev"
 	resourceNameTest := "vault_identity_group_policies.test"
 	resourceNameGroup := "vault_identity_group.group"
@@ -51,7 +54,7 @@ func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
 		CheckDestroy:      testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityGroupPoliciesConfigNonExclusive(),
+				Config: testAccIdentityGroupPoliciesConfigNonExclusive(group),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceNameDev, "policies.#", "1"),
 					resource.TestCheckResourceAttr(resourceNameDev, "policies.0", "dev"),
@@ -63,7 +66,19 @@ func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccIdentityGroupPoliciesConfigNonExclusiveUpdate(),
+				Config: testAccIdentityGroupPoliciesConfigNonExclusiveUpdate(group),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameDev, "policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceNameDev, "policies.0", "dev"),
+					resource.TestCheckResourceAttr(resourceNameTest, "policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceNameTest, "policies.0", "foo"),
+					testAccIdentityGroupCheckAttrs(resourceNameGroup),
+					testAccIdentityGroupPoliciesCheckAttrs(resourceNameDev),
+					testAccIdentityGroupPoliciesCheckAttrs(resourceNameTest),
+				),
+			},
+			{
+				Config: testAccIdentityGroupPoliciesConfigNonExclusiveUpdateGroup(group),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceNameDev, "policies.#", "1"),
 					resource.TestCheckResourceAttr(resourceNameDev, "policies.0", "dev"),
@@ -165,33 +180,36 @@ func testAccIdentityGroupPoliciesCheckAttrs(resourceName string) resource.TestCh
 	}
 }
 
-func testAccIdentityGroupPoliciesConfigExclusive() string {
+func testAccIdentityGroupPoliciesConfigExclusive(group string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
+  name = "%s"
   external_policies = true
 }
 
 resource "vault_identity_group_policies" "policies" {
   group_id = vault_identity_group.group.id
   policies = ["test"]
-}`)
+}`, group)
 }
 
-func testAccIdentityGroupPoliciesConfigExclusiveUpdate() string {
+func testAccIdentityGroupPoliciesConfigExclusiveUpdate(group string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
+  name = "%s"
   external_policies = true
 }
 
 resource "vault_identity_group_policies" "policies" {
   group_id = vault_identity_group.group.id
   policies = ["dev", "test"]
-}`)
+}`, group)
 }
 
-func testAccIdentityGroupPoliciesConfigNonExclusive() string {
+func testAccIdentityGroupPoliciesConfigNonExclusive(group string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
+  name = "%s"
   external_policies = true
 }
 
@@ -200,19 +218,19 @@ resource "vault_identity_group_policies" "dev" {
   exclusive = false
   policies = ["dev"]
 }
-
 
 resource "vault_identity_group_policies" "test" {
   group_id = vault_identity_group.group.id
   exclusive = false
   policies = ["test"]
 }
-`)
+`, group)
 }
 
-func testAccIdentityGroupPoliciesConfigNonExclusiveUpdate() string {
+func testAccIdentityGroupPoliciesConfigNonExclusiveUpdate(group string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
+  name = "%s"
   external_policies = true
 }
 
@@ -222,11 +240,34 @@ resource "vault_identity_group_policies" "dev" {
   policies = ["dev"]
 }
 
+resource "vault_identity_group_policies" "test" {
+  group_id = vault_identity_group.group.id
+  exclusive = false
+  policies = ["foo"]
+}
+`, group)
+}
+
+func testAccIdentityGroupPoliciesConfigNonExclusiveUpdateGroup(group string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_group" "group" {
+  name = "%s"
+  external_policies = true
+  metdata = {
+	version = "1"
+  }
+}
+
+resource "vault_identity_group_policies" "dev" {
+	group_id = vault_identity_group.group.id
+  exclusive = false
+  policies = ["dev"]
+}
 
 resource "vault_identity_group_policies" "test" {
   group_id = vault_identity_group.group.id
   exclusive = false
   policies = ["foo"]
 }
-`)
+`, group)
 }
