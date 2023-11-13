@@ -238,8 +238,8 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 		return diag.Errorf("failed to create providers client: %s", err)
 	}
 	delay := time.Duration(d.Get("num_seconds_between_tests").(int)) * time.Second
-	maxValidationDuration := d.Get("max_cred_validation_seconds").(int)
-	endTime := time.Now().Add(time.Duration(maxValidationDuration) * time.Second)
+	maxValidationSeconds := d.Get("max_cred_validation_seconds").(int)
+	endTime := time.Now().Add(time.Duration(maxValidationSeconds) * time.Second)
 	wantSuccessCount := d.Get("num_sequential_successes").(int)
 	var successCount int
 	// begin validate_creds retry loop
@@ -280,7 +280,7 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 		if time.Now().After(endTime) {
 			return diag.Errorf(
 				"validation failed after max_cred_validation_seconds of %d, giving up; now=%s, endTime=%s",
-				maxValidationDuration,
+				maxValidationSeconds,
 				time.Now().String(),
 				endTime.String(),
 			)
