@@ -238,49 +238,52 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 		return diag.Errorf("failed to create providers client: %s", err)
 	}
 	delay := time.Duration(d.Get("num_seconds_between_tests").(int)) * time.Second
-	endTime := time.Now().Add(
-		time.Duration(d.Get("max_cred_validation_seconds").(int)) * time.Second)
+	maxValidationDuration := d.Get("max_cred_validation_seconds").(int)
+	endTime := time.Now().Add(time.Duration(maxValidationDuration) * time.Second)
 	wantSuccessCount := d.Get("num_sequential_successes").(int)
 	var successCount int
+	// begin validate_creds retry loop
 	for {
 		pager := providerClient.NewListPager(&armresources.ProvidersClientListOptions{
 			Expand: pointerutil.StringPtr("metadata"),
 		})
 
-		var providers []*armresources.Provider
+		hasError := false
 		for pager.More() {
 			// capture raw response so we can get the status code
 			var rawResponse *http.Response
 			ctxWithResp := runtime.WithCaptureResponse(ctx, &rawResponse)
 
-			nextResult, err := pager.NextPage(ctxWithResp)
+			_, err := pager.NextPage(ctxWithResp)
 			if err != nil {
+				hasError = true
 				log.Printf("[WARN] Provider Client List request failed err=%s", err)
-			}
-			if rawResponse.StatusCode == http.StatusUnauthorized {
-				return diag.Errorf("validation failed, unauthorized credentials from Vault, err=%s", err)
+				// ensure we don't loop forever
+				break
 			}
 
+			// log the response status code and headers
 			log.Printf("[DEBUG] Provider Client List response %+v", rawResponse)
-
-			if nextResult.Value != nil {
-				providers = append(providers, nextResult.Value...)
-			}
 		}
 
-		if len(providers) != 0 {
+		if !hasError {
 			successCount++
 			log.Printf("[DEBUG] Credential validation succeeded on try %d/%d", successCount, wantSuccessCount)
 			if successCount >= wantSuccessCount {
 				break
 			}
 		} else {
-			log.Printf("[WARN] Credential validation failed with %s, retrying in %s", err, delay)
+			log.Printf("[WARN] Credential validation failed, retrying in %s", delay)
 			successCount = 0
 		}
 
 		if time.Now().After(endTime) {
-			return diag.Errorf("validation failed after max_cred_validation_seconds, giving up; now=%s, endTime=%s", time.Now().String(), endTime.String())
+			return diag.Errorf(
+				"validation failed after max_cred_validation_seconds of %d, giving up; now=%s, endTime=%s",
+				maxValidationDuration,
+				time.Now().String(),
+				endTime.String(),
+			)
 		}
 
 		time.Sleep(delay)
