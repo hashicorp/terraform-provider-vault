@@ -359,6 +359,10 @@ See the [Vault
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
+* `split_statements` - (Optional) Disable spliting statements after semi-colons.
+
+* `disconnect_sessions` - (Optional) Disable the built-in session disconnect mechanism.
+
 ### Elasticsearch Configuration Options
 
 * `url` - (Required) The URL for Elasticsearch's API. https requires certificate
