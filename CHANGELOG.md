@@ -2,7 +2,7 @@
 
 BUGS:
 
-* Fix `vault_identity_group` loses externally managed policies on updates when `external_policies = true`
+* Fix `vault_identity_group` loses externally managed policies on updates when `external_policies = true` ([#2084](https://github.com/hashicorp/terraform-provider-vault/pull/2084))
 
 ## 3.22.0 (Nov 1, 2023)
 
