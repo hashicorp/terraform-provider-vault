@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add support for Oracle database plugin configuration options `split_statements` and `disconnect_sessions`: ([#2085](https://github.com/hashicorp/terraform-provider-vault/pull/2085))
+
 ## 3.22.0 (Nov 1, 2023)
 
 FEATURES:
