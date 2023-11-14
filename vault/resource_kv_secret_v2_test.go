@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -172,6 +173,82 @@ func TestAccKVSecretV2_DisableRead(t *testing.T) {
 	})
 }
 
+// Fadia u have added this
+func TestAccKVSecretV2_UpdateOutsideTerraform(t *testing.T) {
+	resourceName := "vault_kv_secret_v2.test"
+	mount := acctest.RandomWithPrefix("tf-kv")
+	name := acctest.RandomWithPrefix("foo")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKVSecretV2Config_initial(mount, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
+					resource.TestCheckResourceAttr(resourceName, "delete_all_versions", "true"),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
+					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
+				),
+			},
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+					path := fmt.Sprintf("%s/data/%s", mount, name)
+					_, err := client.Logical().Write(path, map[string]interface{}{"data": map[string]interface{}{"testkey3": "testvalue3"}})
+					if err != nil {
+						t.Fatalf(fmt.Sprintf("error simulating external change; err=%s", err))
+					}
+
+				},
+
+				Config: testKVSecretV2Config_initial(mount, name),
+
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
+					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
+					resource.TestCheckResourceAttr(resourceName, "data_json", "{\"flag\":false,\"foo\":\"bar\",\"zip\":\"zap\"}"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.version", "3"),
+				),
+				//testRessourceKvSecretV2_check,
+			},
+		},
+	},
+	)
+}
+
+func testRessourceKvSecretV2_check(s *terraform.State) error {
+	resourceState := s.Modules[0].Resources["vault_kv_secret_v2.test"]
+	if resourceState == nil {
+		return fmt.Errorf("resource not found in state %v", s.Modules[0].Resources)
+	}
+
+	iState := resourceState.Primary
+	if iState == nil {
+		return fmt.Errorf("resource has no primary instance")
+	}
+
+	wantJson := `{"flag":false,"foo":"bar","zip":"zap"}`
+
+	if got, want := iState.Attributes["data_json"], wantJson; got != want {
+		return fmt.Errorf("data_json contains %s; want %s", got, want)
+	}
+
+	if got, want := iState.Attributes["data.zip"], "zap"; got != want {
+		return fmt.Errorf("data[\"zip\"] contains %s; want %s", got, want)
+	}
+
+	return nil
+}
+
+// Fadia end of what u have added
 func readKVData(t *testing.T, mount, name string) {
 	t.Helper()
 	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
@@ -192,6 +269,7 @@ func readKVData(t *testing.T, mount, name string) {
 	if !reflect.DeepEqual(resp.Data["data"], testKVV2Data) {
 		t.Fatalf("kvv2 secret data does not match got: %#+v, want: %#+v", resp.Data["data"], testKVV2Data)
 	}
+
 }
 
 func writeKVData(t *testing.T, mount, name string) {
