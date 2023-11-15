@@ -20,9 +20,9 @@ import (
 
 var roleNameTestProvider = func() *schema.Provider {
 	p := schema.NewProvider(vault.Provider())
-	p.RegisterResource("vault_mount", vault.UpdateSchemaResource(vault.MountResource()))
-	p.RegisterResource("vault_transform_transformation_name", vault.UpdateSchemaResource(transformation.NameResource()))
-	p.RegisterResource("vault_transform_role_name", vault.UpdateSchemaResource(role.NameResource()))
+	p.RegisterResource("vault_mount", vault.UpdateSchemaResource(vault.MountResource(), false))
+	p.RegisterResource("vault_transform_transformation_name", vault.UpdateSchemaResource(transformation.NameResource(), false))
+	p.RegisterResource("vault_transform_role_name", vault.UpdateSchemaResource(role.NameResource(), false))
 	p.RegisterDataSource("vault_transform_encode_role_name", RoleNameDataSource())
 	return p
 }()

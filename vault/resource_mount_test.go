@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -278,6 +279,79 @@ func TestResourceMountMangedKeys(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestAccKVSecretV2_Namespaces(t *testing.T) {
+	t.Parallel()
+	resourceName := "vault_mount.test"
+	mount := acctest.RandomWithPrefix("tf-kvv2")
+
+	// ns := acctest.RandomWithPrefix("tf-ns")
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testMountNamespaceConfig_basic(mount, "admin"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, "admin"),
+				),
+			},
+			{
+				Config: testMountNamespaceConfig_updated(mount, "admin"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, "admin"),
+				),
+			},
+		},
+	})
+}
+
+func testMountNamespaceConfig_basic(mount, namespace string) string {
+	ret := fmt.Sprintf(`
+provider "vault" {
+  auth_login {
+    path      = "auth/userpass/login/dev"
+    namespace = "%s"
+    parameters = {
+      password = "secret"
+    }
+  }
+}
+
+resource "vault_mount" "test" {
+	path        = "%s"
+	type        = "kv"
+    namespace   = "%s"
+    options     = { version = "2" }
+    description = "KV Version 2 secret engine mount"
+}`, namespace, mount, namespace)
+
+	return ret
+}
+
+func testMountNamespaceConfig_updated(mount, namespace string) string {
+	ret := fmt.Sprintf(`
+provider "vault" {
+  namespace = "%s"
+  auth_login {
+    path      = "auth/userpass/login/dev"
+    parameters = {
+      password = "secret"
+    }
+  }
+}
+
+resource "vault_mount" "test" {
+	path        = "%s"
+	type        = "kv"
+    options     = { version = "2" }
+    description = "KV Version 2 secret engine mount"
+}`, namespace, mount)
+
+	return ret
 }
 
 func testResourceMount_managedKeysConfig(name, path string, isUpdate bool) string {

@@ -21,7 +21,7 @@ import (
 var nameTestProvider = func() *schema.Provider {
 	p := schema.NewProvider(vault.Provider())
 	p.RegisterResource("vault_mount", vault.UpdateSchemaResource(vault.MountResource()))
-	p.RegisterResource("vault_transform_alphabet_name", vault.UpdateSchemaResource(NameResource()))
+	p.RegisterResource("vault_transform_alphabet_name", vault.UpdateSchemaResource(NameResource(), false))
 	return p
 }()
 

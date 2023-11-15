@@ -74,8 +74,10 @@ func NamespacePathCustomizeDiffFunc() schema.CustomizeDiffFunc {
 		}
 
 		o, n := diff.GetChange(field)
+		oldNS := o.(string)
+		newNS := n.(string)
 		// if namespace is just set, ignore
-		if o == "" {
+		if oldNS == "" {
 			return nil
 		}
 
@@ -84,15 +86,15 @@ func NamespacePathCustomizeDiffFunc() schema.CustomizeDiffFunc {
 		parentNS := client.Namespace()
 
 		// construct provider block ns + resource block ns path
-		constructedNamespace := fmt.Sprintf("%s/%s", parentNS, n)
+		absNamespace := fmt.Sprintf("%s/%s", parentNS, newNS)
 
 		fmt.Printf("[VINAY]: parent NS: %s\n", parentNS)
-		fmt.Printf("[VINAY]: constructed NS: %s\n", constructedNamespace)
-		fmt.Printf("[VINAY]: old NS in TF state: %s\n", o)
-		fmt.Printf("[VINAY]: new NS in TF config: %s\n", n)
+		fmt.Printf("[VINAY]: constructed NS: %s\n", absNamespace)
+		fmt.Printf("[VINAY]: old NS in TF state: %s\n", oldNS)
+		fmt.Printf("[VINAY]: new NS in TF config: %s\n", newNS)
 
 		// compare fully qualified path in TF state with new constructed namespace
-		if o.(string) == constructedNamespace {
+		if oldNS == absNamespace {
 			return nil
 		}
 

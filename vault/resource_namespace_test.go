@@ -109,6 +109,78 @@ func TestAccNamespace(t *testing.T) {
 	})
 }
 
+func TestAccNamespace_customDiff(t *testing.T) {
+	namespacePath := acctest.RandomWithPrefix("tf-ns")
+	parentNSPath := acctest.RandomWithPrefix("parent-ns")
+	resourceName := "vault_namespace.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testNamespaceDestroy(namespacePath),
+		Steps: []resource.TestStep{
+			{
+				Config: testNamespaceCustomDiffConfig_basic(namespacePath, parentNSPath, "admin"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, namespacePath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, "admin/"+parentNSPath),
+				),
+			},
+			{
+				Config: testNamespaceCustomDiffConfig_updated(namespacePath, parentNSPath, "admin"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, namespacePath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, "parent"),
+				),
+			},
+		},
+	})
+}
+
+func testNamespaceCustomDiffConfig_basic(path, parentPath, providerNS string) string {
+	ret := fmt.Sprintf(`
+provider "vault" {
+	auth_login {
+    path = "auth/userpass/login/${var.username}"
+    parameters = {
+      password = "secret"
+    }
+  }
+}
+
+resource "vault_namespace" "parent" {
+  path                   = "%s"
+  namespace              = "%s"
+}
+
+resource "vault_namespace" "test" {
+  path                   = "%s"
+  namespace              = "%s/${vault_namespace.parent.path}"
+}
+`, parentPath, providerNS, path, providerNS)
+
+	return ret
+}
+
+func testNamespaceCustomDiffConfig_updated(path, parentNSPath, providerNS string) string {
+	ret := fmt.Sprintf(`
+provider "vault" {
+  namespace = %q
+}
+
+resource "vault_namespace" "parent" {
+  path                   = "%s"
+}
+
+resource "vault_namespace" "test" {
+  path                   = %q
+  namespace              = vault_namespace.parent.path
+}
+`, providerNS, parentNSPath, path)
+
+	return ret
+}
+
 func testNamespaceCheckAttrs() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_namespace.test"]
