@@ -145,6 +145,8 @@ func testAccAWSSecretBackendRoleCheckBasicAttributes(name, backend string) resou
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "backend", backend),
 		testutil.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_policy_inline", "policy_document", testAccAWSSecretBackendRolePolicyInline_basic),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_groups.#", "0"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_tags.key1", "value1"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_tags.key2", "value2"),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arns", "name", fmt.Sprintf("%s-policy-arn", name)),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arns", "backend", backend),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arns", "policy_arns.#", "1"),
@@ -177,6 +179,8 @@ func testAccAWSSecretBackendRoleCheckUpdatedAttributes(name, backend string) res
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "default_sts_ttl", "3600"),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "max_sts_ttl", "21600"),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_groups.#", "2"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_tags.key1", "value1"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_tags.key2", "value2"),
 		testutil.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_policy_inline", "policy_document", testAccAWSSecretBackendRolePolicyInline_updated),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arns", "name", fmt.Sprintf("%s-policy-arn", name)),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arns", "backend", backend),
@@ -224,6 +228,10 @@ resource "vault_aws_secret_backend_role" "test_policy_inline" {
   policy_document = %q
   credential_type = "assumed_role"
   backend = vault_aws_secret_backend.test.path
+  iam_tags = {
+    "key1" = "value1"
+    "key2" = "value2"
+  }
 }
 `, name, testAccAWSSecretBackendRolePolicyInline_basic),
 
@@ -233,6 +241,10 @@ resource "vault_aws_secret_backend_role" "test_policy_arns" {
   policy_arns = ["%s"]
   credential_type = "iam_user"
   backend = vault_aws_secret_backend.test.path
+  iam_tags = {
+    "key1" = "value1"
+    "key2" = "value2"
+  }
 }
 `, name, testAccAWSSecretBackendRolePolicyArn_basic),
 
@@ -244,6 +256,10 @@ resource "vault_aws_secret_backend_role" "test_policy_inline_and_arns" {
   policy_arns = ["%s"]
   credential_type = "iam_user"
   backend = vault_aws_secret_backend.test.path
+  iam_tags = {
+    "key1" = "value1"
+    "key2" = "value2"
+  }
 }
 `, name, testAccAWSSecretBackendRolePolicyInline_basic, testAccAWSSecretBackendRolePolicyArn_basic),
 
@@ -254,6 +270,10 @@ resource "vault_aws_secret_backend_role" "test_role_arns" {
   role_arns = ["%s"]
   credential_type = "assumed_role"
   backend = vault_aws_secret_backend.test.path
+  iam_tags = {
+    "key1" = "value1"
+    "key2" = "value2"
+  }
 }
 `, name, testAccAWSSecretBackendRoleRoleArn_basic),
 
@@ -263,6 +283,10 @@ resource "vault_aws_secret_backend_role" "test_policy_inline_to_arn" {
   policy_document = %q
   credential_type = "assumed_role"
   backend = vault_aws_secret_backend.test.path
+  iam_tags = {
+    "key1" = "value1"
+    "key2" = "value2"
+  }
 }
 `, name, testAccAWSSecretBackendRolePolicyInline_basic),
 
@@ -272,6 +296,10 @@ resource "vault_aws_secret_backend_role" "test_iam_user_type_optional_attributes
   policy_arns = ["%s"]
   credential_type = "iam_user"
   backend = vault_aws_secret_backend.test.path
+  iam_tags = {
+    "key1" = "value1"
+    "key2" = "value2"
+  }
   permissions_boundary_arn = "%s"
   user_path = "%s"
 }
@@ -300,6 +328,10 @@ resource "vault_aws_secret_backend_role" "test_policy_inline" {
   default_sts_ttl = 3600
   max_sts_ttl = 21600
   iam_groups = ["group1", "group2"]
+  iam_tags = {
+    "key1" = "value1"
+    "key2" = "value2"
+  }
 }
 `, name, testAccAWSSecretBackendRolePolicyInline_updated),
 
@@ -310,6 +342,10 @@ resource "vault_aws_secret_backend_role" "test_policy_arns" {
   credential_type = "iam_user"
   iam_groups = ["group1", "group2"]
   backend = vault_aws_secret_backend.test.path
+  iam_tags = {
+    "key1" = "value1"
+    "key2" = "value2"
+  }
 }
 `, name, testAccAWSSecretBackendRolePolicyArn_updated),
 
@@ -321,6 +357,10 @@ resource "vault_aws_secret_backend_role" "test_policy_inline_and_arns" {
   credential_type = "iam_user"
   iam_groups = ["group1", "group2"]
   backend = vault_aws_secret_backend.test.path
+  iam_tags = {
+    "key1" = "value1"
+    "key2" = "value2"
+  }
 }
 `, name, testAccAWSSecretBackendRolePolicyInline_updated, testAccAWSSecretBackendRolePolicyArn_updated),
 
@@ -331,6 +371,10 @@ resource "vault_aws_secret_backend_role" "test_role_arns" {
     credential_type = "assumed_role"
     iam_groups = ["group1", "group2"]
     backend = vault_aws_secret_backend.test.path
+	iam_tags = {
+		"key1" = "value1"
+		"key2" = "value2"
+	  }
 }
 `, name, testAccAWSSecretBackendRoleRoleArn_updated),
 
@@ -340,6 +384,10 @@ resource "vault_aws_secret_backend_role" "test_role_groups" {
     credential_type = "assumed_role"
     iam_groups = ["group1", "group2"]
     backend = vault_aws_secret_backend.test.path
+	iam_tags = {
+		"key1" = "value1"
+		"key2" = "value2"
+	  }
 }
 `, name),
 
@@ -349,6 +397,10 @@ resource "vault_aws_secret_backend_role" "test_policy_inline_to_arn" {
   policy_arns = ["%s"]
   credential_type = "assumed_role"
   backend = vault_aws_secret_backend.test.path
+  iam_tags = {
+    "key1" = "value1"
+    "key2" = "value2"
+  }
 }
 `, name, testAccAWSSecretBackendRolePolicyArn_updated),
 
