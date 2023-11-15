@@ -1,5 +1,10 @@
 ## Unreleased
 
+## 3.23.0 (Nov 15, 2023)
+
+FEATURES:
+* Add support for lazily authenticating to Vault: ([#2049](https://github.com/hashicorp/terraform-provider-vault/pull/2049))
+
 BUGS:
 * Fix `vault_identity_group` loses externally managed policies on updates when `external_policies = true` ([#2084](https://github.com/hashicorp/terraform-provider-vault/pull/2084))
 * Fix regression in `vault_azure_access_credentials` where we returned prematurely on 401 responses:([#2086](https://github.com/hashicorp/terraform-provider-vault/pull/2086))
