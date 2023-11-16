@@ -145,6 +145,9 @@ func testAccAWSSecretBackendRoleCheckBasicAttributes(name, backend string) resou
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "backend", backend),
 		testutil.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_policy_inline", "policy_document", testAccAWSSecretBackendRolePolicyInline_basic),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_groups.#", "0"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_tags.#", "0"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_tags.key1", "value1"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_tags.key2", "value2"),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arns", "name", fmt.Sprintf("%s-policy-arn", name)),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arns", "backend", backend),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arns", "policy_arns.#", "1"),
@@ -224,6 +227,10 @@ resource "vault_aws_secret_backend_role" "test_policy_inline" {
   policy_document = %q
   credential_type = "assumed_role"
   backend = vault_aws_secret_backend.test.path
+  iam_tags = {
+    "key1" = "value1"
+    "key2" = "value2"
+  }
 }
 `, name, testAccAWSSecretBackendRolePolicyInline_basic),
 
