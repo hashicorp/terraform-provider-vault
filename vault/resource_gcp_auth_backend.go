@@ -228,9 +228,9 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if d.HasChange("tune") {
-		log.Printf("[INFO] %s Auth '%q' tune configuration changed", gcpAuthType, gcpAuthPath)
+		log.Printf("[INFO] %s Auth %q tune configuration changed", gcpAuthType, gcpAuthPath)
 		if raw, ok := d.GetOk("tune"); ok {
-			log.Printf("[DEBUG] Writing %s auth tune to '%q'", gcpAuthType, gcpAuthPath)
+			log.Printf("[DEBUG] Writing %s auth tune to %q", gcpAuthType, gcpAuthPath)
 			err := authMountTune(client, gcpAuthPath, raw)
 			if err != nil {
 				return nil
@@ -243,12 +243,12 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		tune := api.MountConfigInput{Description: &description}
 		err := client.Sys().TuneMount(gcpAuthPath, tune)
 		if err != nil {
-			log.Printf("[ERROR] Error updating %s auth description to '%q'", gcpAuthType, gcpAuthPath)
+			log.Printf("[ERROR] Error updating %s auth description at %q", gcpAuthType, gcpAuthPath)
 			return err
 		}
 	}
 
-	log.Printf("[DEBUG] Writing %s config %q", gcpAuthType, path)
+	log.Printf("[DEBUG] Writing %s config at path %q", gcpAuthType, path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
@@ -316,7 +316,7 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	log.Printf("[DEBUG] Reading %s auth tune from '%q/tune'", gcpAuthType, gcpAuthPath)
+	log.Printf("[DEBUG] Reading %s auth tune from '%s/tune'", gcpAuthType, gcpAuthPath)
 	rawTune, err := authMountTuneGet(client, gcpAuthPath)
 	if err != nil {
 		return fmt.Errorf("error reading tune information from Vault: %w", err)
@@ -328,6 +328,9 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if err := d.Set("accessor", mount.Accessor); err != nil {
+		return err
+	}
+	if err := d.Set("description", mount.Description); err != nil {
 		return err
 	}
 	// set the auth backend's path

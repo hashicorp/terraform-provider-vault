@@ -216,7 +216,7 @@ func TestResourceAuthTune(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resName,
 						&resAuthFirst,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "type", "github"),

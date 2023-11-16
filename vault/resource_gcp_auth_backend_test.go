@@ -38,6 +38,8 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 	path := resource.PrefixedUniqueId("gcp-basic-")
 	resourceType := "vault_gcp_auth_backend"
 	resourceName := resourceType + ".test"
+	description := "GCP Auth Mount"
+	updatedDescription := "GCP Auth Mount updated"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
@@ -45,15 +47,15 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 		CheckDestroy:      testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
 				Check:  testGCPAuthBackendCheck_attrs(resourceName),
 			},
 			{
-				Config: testGCPAuthBackendConfig_update(path, gcpJSONCredentials),
+				Config: testGCPAuthBackendConfig_update(path, gcpJSONCredentials, updatedDescription),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuthFirst,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					testGCPAuthBackendCheck_attrs(resourceName),
 					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.#", "1"),
@@ -67,6 +69,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "cloudresourcemanager.googleapis.com"),
 					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.compute", "compute.googleapis.com"),
+					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "10m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "20m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),
@@ -90,7 +93,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuthFirst,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					testGCPAuthBackendCheck_attrs(resourceName),
 					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.#", "1"),
@@ -131,11 +134,11 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 				},
 			},
 			{
-				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testGCPAuthBackendCheck_attrs(resourceName),
-					resource.TestCheckResourceAttr(resourceName,
-						"custom_endpoint.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "custom_endpoint.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "description", description),
 				),
 			},
 			{
@@ -155,6 +158,7 @@ func TestGCPAuthBackend_import(t *testing.T) {
 	path := resource.PrefixedUniqueId("gcp-import-")
 	resourceType := "vault_gcp_auth_backend"
 	resourceName := resourceType + ".test"
+	description := "GCP Auth Mount"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
@@ -162,7 +166,7 @@ func TestGCPAuthBackend_import(t *testing.T) {
 		CheckDestroy:      testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
 				Check:  testGCPAuthBackendCheck_attrs(resourceName),
 			},
 			{
@@ -183,20 +187,21 @@ func TestGCPAuthBackend_remount(t *testing.T) {
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-gcp-updated")
 	resourceType := "vault_gcp_auth_backend"
 	resourceName := resourceType + ".test"
+	description := "GCP Auth Mount"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
 				Check: resource.ComposeTestCheckFunc(
 					testGCPAuthBackendCheck_attrs(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 				),
 			},
 			{
-				Config: testGCPAuthBackendConfig_basic(updatedPath, gcpJSONCredentials),
+				Config: testGCPAuthBackendConfig_basic(updatedPath, gcpJSONCredentials, description),
 				Check: resource.ComposeTestCheckFunc(
 					testGCPAuthBackendCheck_attrs(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
@@ -245,7 +250,7 @@ func testGCPAuthBackendCheck_attrs(resourceName string) resource.TestCheckFunc {
 	}
 }
 
-func testGCPAuthBackendConfig_basic(path, credentials string) string {
+func testGCPAuthBackendConfig_basic(path, credentials, description string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
   type    = string
@@ -255,11 +260,12 @@ variable "json_credentials" {
 resource "vault_gcp_auth_backend" "test" {
   path        = %q
   credentials = var.json_credentials
+  description = %q
 }
-`, credentials, path)
+`, credentials, path, description)
 }
 
-func testGCPAuthBackendConfig_update(path, credentials string) string {
+func testGCPAuthBackendConfig_update(path, credentials, description string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
   type    = string
@@ -269,6 +275,7 @@ variable "json_credentials" {
 resource "vault_gcp_auth_backend" "test" {
   path        = %q
   credentials = var.json_credentials
+  description = %q
   custom_endpoint {
     api     = "www.googleapis.com"
     iam     = "iam.googleapis.com"
@@ -286,7 +293,7 @@ resource "vault_gcp_auth_backend" "test" {
 	token_type = "batch"
   }
 }
-`, credentials, path)
+`, credentials, path, description)
 }
 
 func testGCPAuthBackendConfig_update_partial(path, credentials string) string {

@@ -41,7 +41,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -57,7 +57,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", "unknown"),
@@ -92,7 +92,7 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -127,7 +127,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -155,7 +155,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -200,7 +200,7 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
 					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
@@ -212,7 +212,7 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", orgMeta.Login),
 					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
@@ -237,7 +237,7 @@ func TestAccGithubAuthBackend_importTuning(t *testing.T) {
 				Config: testAccGithubAuthBackendConfig_tuning(path),
 				Check: testutil.TestAccCheckAuthMountExists(resourceName,
 					&resAuth,
-					testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+					testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "disable_remount"),
 		},
@@ -264,7 +264,7 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -280,7 +280,7 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
-						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", updatedPath),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),

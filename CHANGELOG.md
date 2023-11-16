@@ -2,6 +2,7 @@
 
 BUGS:
 * fix `vault_kv_secret_v2` drift when "data" is in secret name/path ([#2104](https://github.com/hashicorp/terraform-provider-vault/pull/2104))
+
 FEATURES:
 * Adds support to `vault_gcp_auth_backend` for common backend tune parameters ([#1997](https://github.com/terraform-providers/terraform-provider-vault/pull/1997)).
 
