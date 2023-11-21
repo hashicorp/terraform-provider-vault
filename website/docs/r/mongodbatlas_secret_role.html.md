@@ -27,7 +27,7 @@ resource "vault_mount" "mongo" {
 }
 
 resource "vault_mongodbatlas_secret_backend" "config" {
-  mount        = "vault_mount.mongo.path"
+  mount        = vault_mount.mongo.path
   private_key  = "privateKey"
   public_key   = "publicKey"
 }
@@ -63,15 +63,15 @@ The following arguments are supported:
   Required if `project_id` is not set.
 
 * `project_id` - (Optional) Unique identifier for the project to which the target API Key belongs.
-  Required if `organization_id is` not set.
+  Required if `organization_id` is not set.
 
-* `roles` - (Required) List of roles that the API Key needs to have.
+* `roles` - (Required) List of roles that the API Key needs to have. Possible values are `ORG_OWNER`, `ORG_MEMBER`, `ORG_GROUP_CREATOR`, `ORG_BILLING_ADMIN` and `ORG_READ_ONLY`.
 
 * `ip_addresses` - (Optional) IP address to be added to the whitelist for the API key.
 
 * `cidr_blocks` - (Optional) Whitelist entry in CIDR notation to be added for the API key.
 
-* `project_roles` - (Optional) Roles assigned when an org API key is assigned to a project API key.
+* `project_roles` - (Optional) Roles assigned when an org API key is assigned to a project API key. Possible values are `GROUP_CLUSTER_MANAGER`, `GROUP_DATA_ACCESS_ADMIN`, `GROUP_DATA_ACCESS_READ_ONLY`, `GROUP_DATA_ACCESS_READ_WRITE`, `GROUP_OWNER` and `GROUP_READ_ONLY`. 
 
 * `ttl` - (Optional) Duration in seconds after which the issued credential should expire.
 
