@@ -82,7 +82,7 @@ func awsSecretsSyncDestinationWrite(ctx context.Context, d *schema.ResourceData,
 	}
 
 	log.Printf("[DEBUG] Writing AWS sync destination to %q", path)
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return diag.Errorf("error enabling AWS sync destination %q: %s", path, err)
 	}
@@ -102,7 +102,7 @@ func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, 
 	path := awsSecretsSyncDestinationPath(name)
 
 	log.Printf("[DEBUG] Reading AWS sync destination")
-	resp, err := client.Logical().Read(path)
+	resp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
 		return diag.Errorf("error reading AWS sync destination from %q: %s", path, err)
 	}
@@ -132,7 +132,20 @@ func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, 
 }
 
 func awsSecretsSyncDestinationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	// sync destinations can not be deleted
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
+	path := awsSecretsSyncDestinationPath(d.Id())
+
+	log.Printf("[DEBUG] Deleting AWS sync destination at %q", path)
+	_, err := client.Logical().DeleteWithContext(ctx, path)
+	if err != nil {
+		return diag.Errorf("error deleting AWS sync destination at %q: %s", path, err)
+	}
+	log.Printf("[DEBUG] Deleted AWS sync destination at %q", path)
+
 	return nil
 }
 
