@@ -173,5 +173,5 @@ func secretsSyncAssociationSetPath(name, destType string) string {
 }
 
 func secretsSyncAssociationDeletePath(name, destType string) string {
-	return fmt.Sprintf("sys/sync/destinations/%s/%s/associations/set", destType, name)
+	return fmt.Sprintf("sys/sync/destinations/%s/%s/associations/remove", destType, name)
 }

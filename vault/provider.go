@@ -733,6 +733,10 @@ var (
 			Resource:      UpdateSchemaResource(awsSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/aws-sm/{name}"},
 		},
+		"vault_gh_secrets_sync_destination": {
+			Resource:      UpdateSchemaResource(githubSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/gh/{name}"},
+		},
 		"vault_secrets_sync_association": {
 			Resource:      UpdateSchemaResource(secretsSyncAssociationResource()),
 			PathInventory: []string{"/sys/sync/destinations/{type}/{name}/associations/set"},
