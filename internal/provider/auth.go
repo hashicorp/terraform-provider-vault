@@ -19,7 +19,7 @@ import (
 type (
 	loginSchemaFunc   func(string) *schema.Schema
 	getSchemaResource func(string) *schema.Resource
-	validateFunc      func(data *schema.ResourceData) error
+	validateFunc      func(data *schema.ResourceData, params map[string]interface{}) error
 	authLoginFunc     func(*schema.ResourceData) (AuthLogin, error)
 )
 
@@ -54,11 +54,6 @@ type authLoginRegistry struct {
 // Register field for loginFunc and schemaFunc. A field can only be registered
 // once.
 func (r *authLoginRegistry) Register(field string, loginFunc authLoginFunc, schemaFunc loginSchemaFunc) error {
-	// TODO(JM): remove this after testing
-	// for now we only register auth_login_token_file
-	if field != consts.FieldAuthLoginTokenFile {
-		return nil
-	}
 	e := &authLoginEntry{
 		field:      field,
 		loginFunc:  loginFunc,
@@ -143,14 +138,14 @@ func (l *AuthLoginCommon) Init(d *schema.ResourceData, authField string, validat
 		return err
 	}
 
-	l.mount = path
-	l.params = params
-
 	for _, vf := range validators {
-		if err := vf(d); err != nil {
+		if err := vf(d, params); err != nil {
 			return err
 		}
 	}
+
+	l.mount = path
+	l.params = params
 
 	return l.validate()
 }
@@ -278,34 +273,37 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 
 type authDefault struct {
 	field      string
-	envVar     string
+	envVars    []string
 	defaultVal string
 }
 
 type authDefaults []authDefault
 
-func (l *AuthLoginCommon) setDefaultFields(d *schema.ResourceData, defaults authDefaults) error {
+func (l *AuthLoginCommon) setDefaultFields(d *schema.ResourceData, defaults authDefaults, params map[string]interface{}) error {
 	for _, f := range defaults {
 		if _, ok := l.getOk(d, f.field); !ok {
-
 			// if field is unset in the config, check env
-			defaultValue := os.Getenv(f.envVar)
-			if defaultValue == "" {
-				defaultValue = f.defaultVal
+			for _, envVar := range f.envVars {
+				defaultValue := os.Getenv(envVar)
+				if defaultValue == "" {
+					defaultValue = f.defaultVal
+				}
+				params[f.field] = defaultValue
+				// found a value, no need to check other options
+				break
 			}
-			l.params[f.field] = defaultValue
 		}
 	}
 
 	return nil
 }
 
-func (l *AuthLoginCommon) checkRequiredFields(d *schema.ResourceData, required ...string) error {
+func (l *AuthLoginCommon) checkRequiredFields(d *schema.ResourceData, params map[string]interface{}, required ...string) error {
 	var missing []string
 	for _, f := range required {
 		if data, ok := l.getOk(d, f); !ok {
 			// if the field was unset in the config
-			if l.params[f] == data {
+			if params[f] == data {
 				missing = append(missing, f)
 			}
 		}

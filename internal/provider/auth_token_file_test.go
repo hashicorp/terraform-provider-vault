@@ -49,9 +49,7 @@ func TestAuthLoginTokenFile_Init(t *testing.T) {
 				consts.EnvVarTokenFilename: "/tmp/vault-token",
 			},
 			expectParams: map[string]interface{}{
-				consts.FieldNamespace:        "",
-				consts.FieldUseRootNamespace: false,
-				consts.FieldFilename:         "/tmp/vault-token",
+				consts.FieldFilename: "/tmp/vault-token",
 			},
 			wantErr: false,
 		},

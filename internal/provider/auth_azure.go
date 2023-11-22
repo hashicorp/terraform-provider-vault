@@ -46,22 +46,21 @@ func GetAzureLoginSchemaResource(authField string) *schema.Resource {
 				Optional: true,
 				Description: "A signed JSON Web Token. If not specified on will be " +
 					"created automatically",
-				DefaultFunc: schema.EnvDefaultFunc(consts.EnvVarAzureAuthJWT, nil),
 			},
 			consts.FieldRole: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Name of the login role.",
 			},
 			consts.FieldSubscriptionID: {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				Description: "The subscription ID for the machine that generated the MSI token. " +
 					"This information can be obtained through instance metadata.",
 			},
 			consts.FieldResourceGroupName: {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				Description: "The resource group for the machine that generated the MSI token. " +
 					"This information can be obtained through instance metadata.",
 			},
@@ -94,7 +93,6 @@ func GetAzureLoginSchemaResource(authField string) *schema.Resource {
 			consts.FieldScope: {
 				Type:          schema.TypeString,
 				Optional:      true,
-				Default:       defaultAzureScope,
 				Description:   "The scopes to include in the token request.",
 				ConflictsWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldJWT)},
 			},
@@ -122,12 +120,30 @@ func (l *AuthLoginAzure) LoginPath() string {
 }
 
 func (l *AuthLoginAzure) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	defaults := authDefaults{
+		{
+			field:      consts.FieldJWT,
+			envVars:    []string{consts.EnvVarAzureAuthJWT},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldScope,
+			envVars:    []string{""},
+			defaultVal: defaultAzureScope,
+		},
+	}
 	if err := l.AuthLoginCommon.Init(d, authField,
-		func(data *schema.ResourceData) error {
-			err := l.checkRequiredFields(d, l.requiredParams()...)
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			err := l.setDefaultFields(d, defaults, params)
 			if err != nil {
 				return err
 			}
+
+			err = l.checkRequiredFields(d, params, l.requiredParams()...)
+			if err != nil {
+				return err
+			}
+
 			return l.checkFieldsOneOf(d, consts.FieldVMName, consts.FieldVMSSName)
 		},
 	); err != nil {

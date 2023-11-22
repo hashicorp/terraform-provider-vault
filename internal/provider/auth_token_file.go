@@ -74,16 +74,16 @@ func (l *AuthLoginTokenFile) Init(d *schema.ResourceData,
 	defaults := authDefaults{
 		{
 			field:      consts.FieldFilename,
-			envVar:     consts.EnvVarTokenFilename,
+			envVars:    []string{consts.EnvVarTokenFilename},
 			defaultVal: "",
 		},
 	}
 	if err := l.AuthLoginCommon.Init(d, authField,
-		func(data *schema.ResourceData) error {
-			return l.setDefaultFields(d, defaults)
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.setDefaultFields(d, defaults, params)
 		},
-		func(data *schema.ResourceData) error {
-			return l.checkRequiredFields(d, consts.FieldFilename)
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.checkRequiredFields(d, params, consts.FieldFilename)
 		},
 	); err != nil {
 		return nil, err
