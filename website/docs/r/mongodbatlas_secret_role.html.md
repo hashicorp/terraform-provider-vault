@@ -37,10 +37,10 @@ resource "vault_mongodbatlas_secret_role" "role" {
   name              = "tf-test-role"
   organization_id   = "7cf5a45a9ccf6400e60981b7"
   project_id        = "5cf5a45a9ccf6400e60981b6"
-  roles             = "ORG_READ_ONLY"
+  roles             = ["ORG_READ_ONLY"]
   ip_addresses      = "192.168.1.5, 192.168.1.6"
   cidr_blocks       = "192.168.1.3/35"
-  project_roles     = "GROUP_READ_ONLY"
+  project_roles     = ["GROUP_READ_ONLY"]
   ttl               = "60"
   max_ttl           = "120"
 }
