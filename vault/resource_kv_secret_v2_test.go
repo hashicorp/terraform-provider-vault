@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -236,12 +235,14 @@ func TestAccKVSecretV2_UpdateOutsideTerraform(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.version", "1"),
 				),
 			},
 			{
 				PreConfig: func() {
 					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
+					// Simulate external change using Vault CLI
 					path := fmt.Sprintf("%s/data/%s", mount, name)
 					_, err := client.Logical().Write(path, map[string]interface{}{"data": map[string]interface{}{"testkey3": "testvalue3"}})
 					if err != nil {
@@ -253,45 +254,19 @@ func TestAccKVSecretV2_UpdateOutsideTerraform(t *testing.T) {
 				Config: testKVSecretV2Config_initial(mount, name),
 
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
 					resource.TestCheckResourceAttr(resourceName, "data_json", "{\"flag\":false,\"foo\":\"bar\",\"zip\":\"zap\"}"),
+					//we check that the provider updated vault to match the the terraform config therefor creating a new version the secret.
 					resource.TestCheckResourceAttr(resourceName, "metadata.version", "3"),
 				),
-				//testRessourceKvSecretV2_check,
 			},
 		},
 	},
 	)
 }
 
-func testRessourceKvSecretV2_check(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["vault_kv_secret_v2.test"]
-	if resourceState == nil {
-		return fmt.Errorf("resource not found in state %v", s.Modules[0].Resources)
-	}
-
-	iState := resourceState.Primary
-	if iState == nil {
-		return fmt.Errorf("resource has no primary instance")
-	}
-
-	wantJson := `{"flag":false,"foo":"bar","zip":"zap"}`
-
-	if got, want := iState.Attributes["data_json"], wantJson; got != want {
-		return fmt.Errorf("data_json contains %s; want %s", got, want)
-	}
-
-	if got, want := iState.Attributes["data.zip"], "zap"; got != want {
-		return fmt.Errorf("data[\"zip\"] contains %s; want %s", got, want)
-	}
-
-	return nil
-}
-
-// Fadia end of what u have added
 func readKVData(t *testing.T, mount, name string) {
 	t.Helper()
 	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
