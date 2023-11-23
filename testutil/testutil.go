@@ -127,7 +127,7 @@ func GetTestAWSRegion(t *testing.T) string {
 }
 
 type AzureTestConf struct {
-	SubscriptionID, TenantID, ClientID, ClientSecret, Scope string
+	SubscriptionID, TenantID, ClientID, ClientSecret, Scope, AppObjectID string
 }
 
 func GetTestAzureConf(t *testing.T) *AzureTestConf {
@@ -144,6 +144,23 @@ func GetTestAzureConf(t *testing.T) *AzureTestConf {
 		ClientID:       v[2],
 		ClientSecret:   v[3],
 		Scope:          v[4],
+	}
+}
+
+func GetTestAzureConfExistingSP(t *testing.T) *AzureTestConf {
+	v := SkipTestEnvUnset(t,
+		"AZURE_SUBSCRIPTION_ID",
+		"AZURE_TENANT_ID",
+		"AZURE_CLIENT_ID",
+		"AZURE_CLIENT_SECRET",
+		"AZURE_APPLICATION_OBJECT_ID")
+
+	return &AzureTestConf{
+		SubscriptionID: v[0],
+		TenantID:       v[1],
+		ClientID:       v[2],
+		ClientSecret:   v[3],
+		AppObjectID:    v[4],
 	}
 }
 
