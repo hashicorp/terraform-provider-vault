@@ -737,6 +737,10 @@ var (
 			Resource:      UpdateSchemaResource(githubSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/gh/{name}"},
 		},
+		"vault_gcp_secrets_sync_destination": {
+			Resource:      UpdateSchemaResource(gcpSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/gcp-sm/{name}"},
+		},
 		"vault_secrets_sync_association": {
 			Resource:      UpdateSchemaResource(secretsSyncAssociationResource()),
 			PathInventory: []string{"/sys/sync/destinations/{type}/{name}/associations/set"},
