@@ -1,4 +1,4 @@
-Terraform Provider
+Test Terraform Provider
 ==================
 
 - Website: https://www.terraform.io
