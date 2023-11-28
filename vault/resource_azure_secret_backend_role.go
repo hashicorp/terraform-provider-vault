@@ -10,12 +10,21 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
+
+var azureSecretFields = []string{
+	consts.FieldMaxTTL,
+	consts.FieldTTL,
+	consts.FieldApplicationObjectID,
+	consts.FieldSignInAudience,
+}
 
 func azureSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
@@ -24,11 +33,11 @@ func azureSecretBackendRoleResource() *schema.Resource {
 		UpdateContext: azureSecretBackendRoleCreate,
 		DeleteContext: azureSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Unique name of the auth backend to configure.",
@@ -39,91 +48,104 @@ func azureSecretBackendRoleResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
-			"role": {
+			consts.FieldRole: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the role to create",
 				ForceNew:    true,
 			},
-			"description": {
+			consts.FieldDescription: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			"azure_roles": {
+			consts.FieldAzureRoles: {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"role_id": {
+						consts.FieldRoleID: {
 							Type:     schema.TypeString,
 							Computed: true,
 							Optional: true,
 						},
 
-						"role_name": {
+						consts.FieldRoleName: {
 							Type:     schema.TypeString,
 							Computed: true,
 							Optional: true,
 						},
 
-						"scope": {
+						consts.FieldScope: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 					},
 				},
 			},
-			"azure_groups": {
+			consts.FieldAzureGroups: {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"object_id": {
+						consts.FieldObjectID: {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
 
-						"group_name": {
+						consts.FieldGroupName: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 					},
 				},
 			},
-			"application_object_id": {
+			consts.FieldApplicationObjectID: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Application Object ID for an existing service principal that will be used instead of creating dynamic service principals.",
 			},
-			"permanently_delete": {
+			consts.FieldPermanentlyDelete: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Indicates whether the applications and service principals created by Vault will be permanently deleted when the corresponding leases expire.",
 			},
-			"ttl": {
+			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			"max_ttl": {
+			consts.FieldMaxTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
+			},
+			consts.FieldSignInAudience: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the security principal types that are allowed to sign in to the application. Valid values are: AzureADMyOrg, AzureADMultipleOrgs, AzureADandPersonalMicrosoftAccount, PersonalMicrosoftAccount",
+			},
+			consts.FieldTags: {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional:    true,
+				Description: "Comma-separated strings of Azure tags to attach to an application.",
 			},
 		},
 	}
 }
 
 func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceData, meta interface{}, data map[string]interface{}) diag.Diagnostics {
-	if v, ok := d.GetOk("azure_roles"); ok {
+	if v, ok := d.GetOk(consts.FieldAzureRoles); ok {
 		rawAzureList := v.(*schema.Set).List()
 
 		for _, element := range rawAzureList {
 			role := element.(map[string]interface{})
 
-			if (role["role_id"] == "") && (role["role_name"] == "") {
+			if (role[consts.FieldRoleID] == "") && (role[consts.FieldRoleName] == "") {
 				return diag.Errorf("must specify one of 'role_name' or 'role_id'")
 			}
 		}
@@ -137,10 +159,10 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		jsonAzureListString := string(jsonAzureList)
 
 		log.Printf("[DEBUG] Azure RoleSet turned to escaped JSON: %s", jsonAzureListString)
-		data["azure_roles"] = jsonAzureListString
+		data[consts.FieldAzureRoles] = jsonAzureListString
 	}
 
-	if v, ok := d.GetOk("azure_groups"); ok {
+	if v, ok := d.GetOk(consts.FieldAzureGroups); ok {
 		rawAzureList := v.(*schema.Set).List()
 
 		// Vaults API requires we send the policy as an escaped string
@@ -153,21 +175,28 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		jsonAzureListString := string(jsonAzureList)
 
 		log.Printf("[DEBUG] Azure GroupSet turned to escaped JSON: %s", jsonAzureListString)
-		data["azure_groups"] = jsonAzureListString
+		data[consts.FieldAzureGroups] = jsonAzureListString
 	}
 
-	for _, k := range []string{
-		"ttl",
-		"max_ttl",
-		"application_object_id",
-	} {
+	for _, k := range azureSecretFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v.(string)
 		}
 	}
 
+	if v, ok := d.GetOk(consts.FieldTags); ok {
+		data[consts.FieldTags] = expandStringSlice(v.([]interface{}))
+	} else {
+		// check if we are an empty array or null (not set in config)
+		val, _ := d.GetRawConfig().AsValueMap()[consts.FieldTags]
+		if !val.IsNull() {
+			// value was set as empty array in config
+			data[consts.FieldTags] = make([]string, 0)
+		}
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		data["permanently_delete"] = d.Get("permanently_delete").(bool)
+		data[consts.FieldPermanentlyDelete] = d.Get(consts.FieldPermanentlyDelete).(bool)
 	}
 
 	return nil
@@ -179,8 +208,8 @@ func azureSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	backend := d.Get("backend").(string)
-	role := d.Get("role").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	role := d.Get(consts.FieldRole).(string)
 
 	path := azureSecretRoleResourcePath(backend, role)
 
@@ -222,12 +251,7 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 		return nil
 	}
 
-	for _, k := range []string{
-		"ttl",
-		"max_ttl",
-		"application_object_id",
-		"permanently_delete",
-	} {
+	for _, k := range azureSecretFields {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return diag.FromErr(fmt.Errorf("error reading %s for Azure Secret role Backend Role %q: %q", k, path, err))
@@ -235,19 +259,29 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 		}
 	}
 
-	if v, ok := resp.Data["azure_roles"]; ok {
+	if v, ok := resp.Data[consts.FieldPermanentlyDelete]; ok {
+		if err := d.Set(consts.FieldPermanentlyDelete, v); err != nil {
+			return diag.FromErr(fmt.Errorf("error setting permanently delete field: %s", err))
+		}
+	}
+
+	if v, ok := resp.Data[consts.FieldTags].([]interface{}); ok && len(v) > 0 {
+		d.Set(consts.FieldTags, expandStringSlice(v))
+	}
+
+	if v, ok := resp.Data[consts.FieldAzureRoles]; ok {
 		log.Printf("[DEBUG] Role Data from Azure: %s", v)
 
-		err := d.Set("azure_roles", resp.Data["azure_roles"])
+		err := d.Set(consts.FieldAzureRoles, resp.Data[consts.FieldAzureRoles])
 		if err != nil {
 			return diag.FromErr(fmt.Errorf("error setting Azure roles: %s", err))
 		}
 	}
 
-	if v, ok := resp.Data["azure_groups"]; ok {
+	if v, ok := resp.Data[consts.FieldAzureGroups]; ok {
 		log.Printf("[DEBUG] Group Data from Azure: %s", v)
 
-		err := d.Set("azure_groups", resp.Data["azure_groups"])
+		err := d.Set(consts.FieldAzureGroups, resp.Data[consts.FieldAzureGroups])
 		if err != nil {
 			return diag.FromErr(fmt.Errorf("error setting Azure groups: %s", err))
 		}

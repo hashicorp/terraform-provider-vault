@@ -42,6 +42,9 @@ func TestAzureSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "description", "Test for Vault Provider"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "ttl", "300"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "max_ttl", "600"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "sign_in_audience", "AzureADMyOrg"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "tags.#", "1"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "tags.0", "team:engineering"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.#", "1"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.0.role_name", "Reader"),
 					resource.TestCheckResourceAttrSet(resourceName+".test_azure_roles", "azure_roles.0.scope"),
@@ -60,6 +63,10 @@ func TestAzureSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "description", "Test for Vault Provider"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "ttl", "600"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "max_ttl", "900"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "sign_in_audience", "AzureADMultipleOrgs"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "tags.#", "2"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "tags.0", "environment:development"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "tags.1", "project:vault_testing"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.#", "1"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.0.role_name", "Reader"),
 					resource.TestCheckResourceAttrSet(resourceName+".test_azure_roles", "azure_roles.0.scope"),
@@ -131,11 +138,13 @@ resource "vault_azure_secret_backend" "azure" {
 }
 
 resource "vault_azure_secret_backend_role" "test_azure_roles" {
-  backend     = vault_azure_secret_backend.azure.path
-  role        = "%[6]s-azure-roles"
-  ttl         = 300
-  max_ttl     = 600
-  description = "Test for Vault Provider"
+  backend          = vault_azure_secret_backend.azure.path
+  role             = "%[6]s-azure-roles"
+  ttl              = 300
+  max_ttl          = 600
+  description	   = "Test for Vault Provider"
+  sign_in_audience = "AzureADMyOrg"
+  tags             = ["team:engineering"]
 
   azure_roles {
     role_name = "Reader"
@@ -168,11 +177,13 @@ resource "vault_azure_secret_backend" "azure" {
 }
 
 resource "vault_azure_secret_backend_role" "test_azure_roles" {
-  backend     = vault_azure_secret_backend.azure.path
-  role        = "%[6]s-azure-roles"
-  ttl         = 600
-  max_ttl     = 900
-  description = "Test for Vault Provider"
+  backend     	   = vault_azure_secret_backend.azure.path
+  role        	   = "%[6]s-azure-roles"
+  ttl        	   = 600
+  max_ttl    	   = 900
+  description 	   = "Test for Vault Provider"
+  sign_in_audience = "AzureADMultipleOrgs"
+  tags       	   = ["environment:development","project:vault_testing"]
 
   azure_roles {
     role_name = "Reader"
