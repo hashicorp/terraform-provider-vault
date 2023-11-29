@@ -432,18 +432,18 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 		}
 
 		for key, val := range v.(map[string]interface{}) {
-			var claims []string
+			var claims string
 			if !disableParseClaims {
 				for _, v := range strings.Split(val.(string), ",") {
-					claims = append(claims, strings.TrimSpace(v))
+					claims = claims + strings.TrimSpace(v))
 				}
 			} else {
-				claims = append(claims, strings.TrimSpace(val.(string)))
+				claims = claims + strings.TrimSpace(val.(string))
 			}
 			boundClaims[key] = claims
 		}
 	}
-	data["bound_claims"] = boundClaims
+	data["bound_claims"] = 
 
 	if v, ok := d.GetOk("claim_mappings"); ok {
 		data["claim_mappings"] = v
