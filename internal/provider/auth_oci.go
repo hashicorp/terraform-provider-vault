@@ -48,12 +48,12 @@ func GetOCILoginSchemaResource(authField string) *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Name of the login role.",
 			},
 			consts.FieldAuthType: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Authentication type to use when getting OCI credentials.",
 				ValidateDiagFunc: GetValidateDiagChoices(
 					[]string{ociAuthTypeInstance, ociAuthTypeAPIKeys},
@@ -85,8 +85,8 @@ func (l *AuthLoginOCI) LoginPath() string {
 
 func (l *AuthLoginOCI) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
 	if err := l.AuthLoginCommon.Init(d, authField,
-		func(data *schema.ResourceData) error {
-			return l.checkRequiredFields(d, consts.FieldRole, consts.FieldAuthType)
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.checkRequiredFields(d, params, consts.FieldRole, consts.FieldAuthType)
 		},
 	); err != nil {
 		return nil, err

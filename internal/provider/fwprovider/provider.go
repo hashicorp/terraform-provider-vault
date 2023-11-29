@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/sys"
 )
@@ -149,6 +150,17 @@ func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, res
 					},
 				},
 			},
+			"auth_login":            AuthLoginGenericSchema(),
+			"auth_login_aws":        AuthLoginAWSSchema(),
+			"auth_login_azure":      AuthLoginAzureSchema(),
+			"auth_login_gcp":        AuthLoginGCPSchema(),
+			"auth_login_cert":       AuthLoginCertSchema(),
+			"auth_login_jwt":        AuthLoginJWTSchema(),
+			"auth_login_kerberos":   AuthLoginKerberosSchema(),
+			"auth_login_oci":        AuthLoginOCISchema(),
+			"auth_login_oidc":       AuthLoginOIDCSchema(),
+			"auth_login_radius":     AuthLoginRadiusSchema(),
+			"auth_login_userpass":   AuthLoginUserpassSchema(),
 			"auth_login_token_file": AuthLoginTokenFileSchema(),
 		},
 	}

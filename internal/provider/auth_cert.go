@@ -46,12 +46,12 @@ func GetCertLoginSchemaResource(authField string) *schema.Resource {
 			},
 			consts.FieldCertFile: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Path to a file containing the client certificate.",
 			},
 			consts.FieldKeyFile: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Path to a file containing the private key that the certificate was issued for.",
 			},
 		},
@@ -79,8 +79,8 @@ func (l *AuthLoginCert) LoginPath() string {
 
 func (l *AuthLoginCert) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
 	if err := l.AuthLoginCommon.Init(d, authField,
-		func(data *schema.ResourceData) error {
-			return l.checkRequiredFields(d, consts.FieldCertFile, consts.FieldKeyFile)
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.checkRequiredFields(d, params, consts.FieldCertFile, consts.FieldKeyFile)
 		},
 	); err != nil {
 		return nil, err
