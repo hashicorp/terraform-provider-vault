@@ -443,7 +443,7 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 			boundClaims[key] = claims
 		}
 	}
-	data["bound_claims"] = 
+	data["bound_claims"] = boundClaims
 
 	if v, ok := d.GetOk("claim_mappings"); ok {
 		data["claim_mappings"] = v
