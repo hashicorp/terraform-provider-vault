@@ -435,7 +435,7 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 			var claims string
 			if !disableParseClaims {
 				for _, v := range strings.Split(val.(string), ",") {
-					claims = claims + strings.TrimSpace(v))
+					claims = claims + strings.TrimSpace(v)
 				}
 			} else {
 				claims = claims + strings.TrimSpace(val.(string))
