@@ -363,7 +363,6 @@ const (
 	FieldServiceAccountJWT             = "service_account_jwt"
 	FieldDisableISSValidation          = "disable_iss_validation"
 	FieldPEMKeys                       = "pem_keys"
-	FieldSetNamespaceFromToken         = "set_namespace_from_token"
 	/*
 		common environment variables
 	*/

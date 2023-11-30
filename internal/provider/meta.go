@@ -340,12 +340,20 @@ func (p *ProviderMeta) setClient() error {
 			"Future releases may not support this type of configuration.", tokenNamespace)
 
 		namespace = tokenNamespace
+
 		// set the namespace on the provider to ensure that all child
 		// namespace paths are properly honoured.
-		if v, ok := d.Get(consts.FieldSetNamespaceFromToken).(bool); ok && v {
+		// We default to setting the namespace from the token unless the
+		// env var is set to false.
+		setFromToken, err := strconv.ParseBool(os.Getenv("VAULT_SET_NAMESPACE_FROM_TOKEN"))
+		if err == nil && setFromToken || err != nil {
 			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 				return err
 			}
+		} else {
+			log.Printf("[WARN] VAULT_SET_NAMESPACE_FROM_TOKEN environment "+
+				"variable is set to \"false\". The token namespace %q will "+
+				"not be used as the root namespace for all resources.", tokenNamespace)
 		}
 	}
 

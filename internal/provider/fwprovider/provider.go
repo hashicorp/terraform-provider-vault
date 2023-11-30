@@ -109,12 +109,6 @@ func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, res
 				Optional:    true,
 				Description: "The namespace to use. Available only for Vault Enterprise.",
 			},
-			consts.FieldSetNamespaceFromToken: schema.BoolAttribute{
-				Optional: true,
-				Description: "In the case where the Vault token is for a specific namespace " +
-					"and the provider namespace is not configured, use the token namespace " +
-					"as the root namespace for all resources.",
-			},
 			consts.FieldSkipGetVaultVersion: schema.BoolAttribute{
 				Optional:    true,
 				Description: "Skip the dynamic fetching of the Vault server version.",
