@@ -8,9 +8,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -19,7 +19,7 @@ func NewPasswordPolicyResource() resource.Resource {
 }
 
 type PasswordPolicyResource struct {
-	client *api.Client
+	meta *provider.ProviderMeta
 }
 
 func (r *PasswordPolicyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -29,6 +29,8 @@ func (r *PasswordPolicyResource) Metadata(_ context.Context, req resource.Metada
 // PasswordPolicyModel describes the Terraform resource data model to match the
 // resource schema.
 type PasswordPolicyModel struct {
+	Namespace types.String `tfsdk:"namespace"`
+
 	Name   types.String `tfsdk:"name"`
 	Policy types.String `tfsdk:"policy"`
 }
@@ -50,16 +52,7 @@ func (r *PasswordPolicyResource) Configure(_ context.Context, req resource.Confi
 		)
 		return
 	}
-	// TODO(JM): ensure this handles vault namespaces
-	client, err := meta.GetClient()
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Configuring Resource Client",
-			err.Error(),
-		)
-		return
-	}
-	r.client = client
+	r.meta = meta
 }
 
 func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -76,10 +69,11 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 		},
 		MarkdownDescription: "Provides a resource to manage Password Policies.",
 	}
+
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	tflog.Error(ctx, "Create a password policy resource")
 	var plan *PasswordPolicyModel
 
 	// Read Terraform plan data into the model
@@ -89,13 +83,18 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
+	client, err := client.GetClient(ctx, r.meta, plan.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
+		return
+	}
+
 	data := map[string]interface{}{
 		"policy": plan.Policy.ValueString(),
 	}
-	tflog.Error(ctx, "data", data)
-	path := passwordPolicyResourcePath(plan.Name.ValueString())
+	path := r.path(plan.Name.ValueString())
 	// vault returns a nil response on success
-	_, err := r.client.Logical().Write(path, data)
+	_, err = client.Logical().Write(path, data)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Resource",
@@ -112,18 +111,23 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 }
 
 func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	tflog.Error(ctx, "JMF READ a password policy resource")
-
-	var policyModel *PasswordPolicyModel
+	var state *PasswordPolicyModel
 	// Read Terraform prior state data into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &policyModel)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	path := passwordPolicyResourcePath(policyModel.Name.ValueString())
-	policyResp, err := r.client.Logical().Read(path)
+	client, err := client.GetClient(ctx, r.meta, state.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
+		return
+	}
+
+	// TODO: refactor the following read, marshal and unmarshal into a helper?
+	path := r.path(state.Name.ValueString())
+	policyResp, err := client.Logical().Read(path)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Resource from Vault",
@@ -134,8 +138,17 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 
 		return
 	}
+	if policyResp == nil {
+		resp.Diagnostics.AddError(
+			"Unable to Read Resource from Vault",
+			"An unexpected error occurred while attempting to read the resource. "+
+				"Please retry the operation or report this issue to the provider developers.\n\n"+
+				"Vault response was nil",
+		)
 
-	var readResp *PasswordPolicyResourceAPIModel
+		return
+	}
+
 	jsonData, err := json.Marshal(policyResp.Data)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -147,6 +160,7 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
+	var readResp *PasswordPolicyResourceAPIModel
 	err = json.Unmarshal(jsonData, &readResp)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -158,13 +172,12 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	policyModel.Policy = types.StringValue(readResp.Policy)
+	state.Policy = types.StringValue(readResp.Policy)
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &policyModel)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	tflog.Error(ctx, "Update a password policy resource")
 	var plan *PasswordPolicyModel
 
 	// Read Terraform plan data into the model
@@ -174,13 +187,18 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
+	client, err := client.GetClient(ctx, r.meta, plan.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
+		return
+	}
+
 	data := map[string]interface{}{
 		"policy": plan.Policy.ValueString(),
 	}
-	tflog.Error(ctx, "data", data)
-	path := passwordPolicyResourcePath(plan.Name.ValueString())
+	path := r.path(plan.Name.ValueString())
 	// vault returns a nil response on success
-	_, err := r.client.Logical().Write(path, data)
+	_, err = client.Logical().Write(path, data)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update Resource",
@@ -206,9 +224,15 @@ func (r *PasswordPolicyResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	path := passwordPolicyResourcePath(plan.Name.ValueString())
+	client, err := client.GetClient(ctx, r.meta, plan.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
+		return
+	}
 
-	_, err := r.client.Logical().Delete(path)
+	path := r.path(plan.Name.ValueString())
+
+	_, err = client.Logical().Delete(path)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Delete Resource",
@@ -223,6 +247,6 @@ func (r *PasswordPolicyResource) Delete(ctx context.Context, req resource.Delete
 	return
 }
 
-func passwordPolicyResourcePath(name string) string {
+func (r *PasswordPolicyResource) path(name string) string {
 	return fmt.Sprintf("/sys/policies/password/%s", name)
 }
