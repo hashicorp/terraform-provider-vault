@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
 )
 
 func mustAddLoginSchema(s *schema.ListNestedBlock, defaultMount string) schema.Block {
@@ -44,7 +44,7 @@ func mustAddLoginSchema(s *schema.ListNestedBlock, defaultMount string) schema.B
 			Optional:    true,
 			Description: "The path where the authentication engine is mounted.",
 			Validators: []validator.String{
-				stringvalidator.RegexMatches(provider.RegexpPath, "invalid path"),
+				validators.PathValidator(),
 			},
 		}
 	}
