@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
@@ -103,7 +102,6 @@ func NewProvider(
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Path to a CA certificate file to validate the server's certificate.",
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCACert, ""),
 			},
 			consts.FieldCACertDir: {
 				Type:        schema.TypeString,

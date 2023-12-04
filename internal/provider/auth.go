@@ -272,8 +272,11 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 }
 
 type authDefault struct {
-	field      string
-	envVars    []string
+	field string
+
+	// envVars will override defaultVal
+	envVars []string
+	// defaultVal is the fallback if an env var is not set
 	defaultVal string
 }
 

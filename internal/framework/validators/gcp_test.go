@@ -13,13 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-const testFakeCredentialsPath = "./test-fixtures/fake_account.json"
+const testFakeCredentialsPath = "./testdata/fake_account.json"
 
 func TestFrameworkProvider_CredentialsValidator(t *testing.T) {
 	cases := map[string]struct {
-		ConfigValue          func(t *testing.T) types.String
-		ExpectedWarningCount int
-		ExpectedErrorCount   int
+		ConfigValue        func(t *testing.T) types.String
+		ExpectedErrorCount int
 	}{
 		"configuring credentials as a path to a credentials JSON file is valid": {
 			ConfigValue: func(t *testing.T) types.String {
@@ -72,10 +71,7 @@ func TestFrameworkProvider_CredentialsValidator(t *testing.T) {
 			cv.ValidateString(context.Background(), req, &resp)
 
 			// Assert
-			if resp.Diagnostics.WarningsCount() > tc.ExpectedWarningCount {
-				t.Errorf("Expected %d warnings, got %d", tc.ExpectedWarningCount, resp.Diagnostics.WarningsCount())
-			}
-			if resp.Diagnostics.ErrorsCount() > tc.ExpectedErrorCount {
+			if resp.Diagnostics.ErrorsCount() != tc.ExpectedErrorCount {
 				t.Errorf("Expected %d errors, got %d", tc.ExpectedErrorCount, resp.Diagnostics.ErrorsCount())
 			}
 		})
