@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	kvV2SecretMountFromPathRegex = regexp.MustCompile("^(.+)/data/.+$")
-	kvV2SecretNameFromPathRegex  = regexp.MustCompile("^.+/data/(.+)$")
+	kvV2SecretMountFromPathRegex = regexp.MustCompile("^(.+?)/data/.+$")
+	kvV2SecretNameFromPathRegex  = regexp.MustCompile("^.+?/data/(.+?)$")
 
 	kvMetadataFields = map[string]string{
 		consts.FieldMaxVersions:        consts.FieldMaxVersions,
