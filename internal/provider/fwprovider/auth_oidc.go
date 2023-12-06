@@ -12,7 +12,7 @@ func AuthLoginOIDCSchema() schema.Block {
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				consts.FieldRole: schema.StringAttribute{
-					Optional:    true,
+					Required:    true,
 					Description: "Name of the login role.",
 				},
 

@@ -38,11 +38,12 @@ func GetJWTLoginSchemaResource(authField string) *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 				Description: "Name of the login role.",
 			},
 			consts.FieldJWT: {
-				Type:        schema.TypeString,
+				Type: schema.TypeString,
+				// can be set via an env var
 				Optional:    true,
 				Description: "A signed JSON Web Token.",
 			},

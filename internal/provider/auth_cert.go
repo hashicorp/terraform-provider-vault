@@ -46,12 +46,12 @@ func GetCertLoginSchemaResource(authField string) *schema.Resource {
 			},
 			consts.FieldCertFile: {
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 				Description: "Path to a file containing the client certificate.",
 			},
 			consts.FieldKeyFile: {
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 				Description: "Path to a file containing the private key that the certificate was issued for.",
 			},
 		},

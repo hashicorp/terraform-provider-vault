@@ -54,7 +54,7 @@ func GetAWSLoginSchemaResource(authField string) *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 				Description: `The Vault role to use when logging into Vault.`,
 			},
 			// static credential fields

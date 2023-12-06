@@ -39,10 +39,12 @@ func GetRadiusLoginSchemaResource(authField string) *schema.Resource {
 			consts.FieldUsername: {
 				Type:        schema.TypeString,
 				Description: "The Radius username.",
-				Optional:    true,
+				// can be set via an env var
+				Optional: true,
 			},
 			consts.FieldPassword: {
-				Type:        schema.TypeString,
+				Type: schema.TypeString,
+				// can be set via an env var
 				Optional:    true,
 				Description: "The Radius password for username.",
 			},

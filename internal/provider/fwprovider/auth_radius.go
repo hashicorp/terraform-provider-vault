@@ -13,9 +13,11 @@ func AuthLoginRadiusSchema() schema.Block {
 			Attributes: map[string]schema.Attribute{
 				consts.FieldUsername: schema.StringAttribute{
 					Description: "The Radius username.",
-					Optional:    true,
+					// can be set via an env var
+					Optional: true,
 				},
 				consts.FieldPassword: schema.StringAttribute{
+					// can be set via an env var
 					Optional:    true,
 					Description: "The Radius password for username.",
 				},

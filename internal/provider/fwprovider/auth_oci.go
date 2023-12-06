@@ -19,11 +19,11 @@ func AuthLoginOCISchema() schema.Block {
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				consts.FieldRole: schema.StringAttribute{
-					Optional:    true,
+					Required:    true,
 					Description: "Name of the login role.",
 				},
 				consts.FieldAuthType: schema.StringAttribute{
-					Optional:    true,
+					Required:    true,
 					Description: "Authentication type to use when getting OCI credentials.",
 					Validators: []validator.String{
 						stringvalidator.OneOf([]string{ociAuthTypeInstance, ociAuthTypeAPIKeys}...),

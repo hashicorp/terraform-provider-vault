@@ -49,18 +49,18 @@ func GetAzureLoginSchemaResource(authField string) *schema.Resource {
 			},
 			consts.FieldRole: {
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 				Description: "Name of the login role.",
 			},
 			consts.FieldSubscriptionID: {
 				Type:     schema.TypeString,
-				Optional: true,
+				Required: true,
 				Description: "The subscription ID for the machine that generated the MSI token. " +
 					"This information can be obtained through instance metadata.",
 			},
 			consts.FieldResourceGroupName: {
 				Type:     schema.TypeString,
-				Optional: true,
+				Required: true,
 				Description: "The resource group for the machine that generated the MSI token. " +
 					"This information can be obtained through instance metadata.",
 			},

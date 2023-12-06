@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-// Credentials Validator
 var _ validator.String = pathValidator{}
 
 // pathValidator  validates that a given path is a valid Vault path format

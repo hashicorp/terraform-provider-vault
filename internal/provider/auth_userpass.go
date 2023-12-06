@@ -40,7 +40,8 @@ func GetUserpassLoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldUsername: {
-				Type:        schema.TypeString,
+				Type: schema.TypeString,
+				// can be set via an env var
 				Optional:    true,
 				Description: "Login with username",
 			},

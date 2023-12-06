@@ -48,12 +48,12 @@ func GetOCILoginSchemaResource(authField string) *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 				Description: "Name of the login role.",
 			},
 			consts.FieldAuthType: {
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 				Description: "Authentication type to use when getting OCI credentials.",
 				ValidateDiagFunc: GetValidateDiagChoices(
 					[]string{ociAuthTypeInstance, ociAuthTypeAPIKeys},

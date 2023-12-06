@@ -11,6 +11,7 @@ func AuthLoginTokenFileSchema() schema.Block {
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				consts.FieldFilename: schema.StringAttribute{
+					// can be set via an env var
 					Optional: true,
 					Description: "The name of a file containing a single " +
 						"line that is a valid Vault token",

@@ -274,7 +274,9 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 type authDefault struct {
 	field string
 
-	// envVars will override defaultVal
+	// envVars will override defaultVal.
+	// If there are multiple entries in the slice, we use the first value we
+	// find that is set in the environment.
 	envVars []string
 	// defaultVal is the fallback if an env var is not set
 	defaultVal string
@@ -287,11 +289,11 @@ func (l *AuthLoginCommon) setDefaultFields(d *schema.ResourceData, defaults auth
 		if _, ok := l.getOk(d, f.field); !ok {
 			// if field is unset in the config, check env
 			for _, envVar := range f.envVars {
-				defaultValue := os.Getenv(envVar)
-				if defaultValue == "" {
-					defaultValue = f.defaultVal
+				val := os.Getenv(envVar)
+				if val == "" {
+					val = f.defaultVal
 				}
-				params[f.field] = defaultValue
+				params[f.field] = val
 				// found a value, no need to check other options
 				break
 			}

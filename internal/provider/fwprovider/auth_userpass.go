@@ -15,6 +15,7 @@ func AuthLoginUserpassSchema() schema.Block {
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				consts.FieldUsername: schema.StringAttribute{
+					// can be set via an env var
 					Optional:    true,
 					Description: "Login with username",
 				},

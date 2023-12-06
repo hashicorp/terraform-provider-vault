@@ -41,7 +41,8 @@ func GetTokenFileSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldFilename: {
-				Type:     schema.TypeString,
+				Type: schema.TypeString,
+				// can be set via an env var
 				Optional: true,
 				Description: "The name of a file containing a single " +
 					"line that is a valid Vault token",
