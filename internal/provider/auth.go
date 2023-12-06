@@ -286,16 +286,16 @@ type authDefaults []authDefault
 
 func (l *AuthLoginCommon) setDefaultFields(d *schema.ResourceData, defaults authDefaults, params map[string]interface{}) error {
 	for _, f := range defaults {
+		params[f.field] = f.defaultVal
 		if _, ok := l.getOk(d, f.field); !ok {
 			// if field is unset in the config, check env
 			for _, envVar := range f.envVars {
 				val := os.Getenv(envVar)
-				if val == "" {
-					val = f.defaultVal
+				if val != "" {
+					params[f.field] = val
+					// found a value, no need to check other options
+					break
 				}
-				params[f.field] = val
-				// found a value, no need to check other options
-				break
 			}
 		}
 	}
