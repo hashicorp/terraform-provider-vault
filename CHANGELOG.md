@@ -1,6 +1,7 @@
 ## Unreleased
 
 BUGS:
+* fix `vault_kv_secret_v2` drift when "data" is in secret name/path ([#2104](https://github.com/hashicorp/terraform-provider-vault/pull/2104))
 * Fix `bound_claims` Set bound_claims values as per Vault format ([#2102](https://github.com/hashicorp/terraform-provider-vault/pull/2102))
 
 ## 3.23.0 (Nov 15, 2023)
