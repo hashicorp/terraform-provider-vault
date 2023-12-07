@@ -12,32 +12,30 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func TestFrameworkProvider_PathValidator(t *testing.T) {
+func TestFrameworkProvider_URIValidator(t *testing.T) {
 	cases := map[string]struct {
 		configValue        func(t *testing.T) types.String
+		schemes            []string
 		expectedErrorCount int
 	}{
-		"valid": {
+		"basic": {
 			configValue: func(t *testing.T) types.String {
-				return types.StringValue("foo")
+				return types.StringValue("http://foo.baz:8080/qux")
 			},
+			schemes: []string{"http"},
 		},
-		"invalid-leading": {
+		"invalid-scheme": {
 			configValue: func(t *testing.T) types.String {
-				return types.StringValue("/foo")
+				return types.StringValue("https://foo.baz:8080/qux")
 			},
+			schemes:            []string{"http", "tcp"},
 			expectedErrorCount: 1,
 		},
-		"invalid-trailing": {
+		"invalid-url": {
 			configValue: func(t *testing.T) types.String {
-				return types.StringValue("foo/")
+				return types.StringValue("foo.bar")
 			},
-			expectedErrorCount: 1,
-		},
-		"invalid-both": {
-			configValue: func(t *testing.T) types.String {
-				return types.StringValue("/foo/")
-			},
+			schemes:            []string{"http", "tcp"},
 			expectedErrorCount: 1,
 		},
 	}
@@ -53,7 +51,7 @@ func TestFrameworkProvider_PathValidator(t *testing.T) {
 				Diagnostics: diag.Diagnostics{},
 			}
 
-			cv := PathValidator()
+			cv := URIValidator(tc.schemes)
 
 			// Act
 			cv.ValidateString(context.Background(), req, &resp)

@@ -2,8 +2,10 @@ package fwprovider
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
 )
 
 func AuthLoginOIDCSchema() schema.Block {
@@ -19,12 +21,16 @@ func AuthLoginOIDCSchema() schema.Block {
 				consts.FieldCallbackListenerAddress: schema.StringAttribute{
 					Optional:    true,
 					Description: "The callback listener's address. Must be a valid URI without the path.",
-					// ValidateDiagFunc: GetValidateDiagURI([]string{"tcp"}),
+					Validators: []validator.String{
+						validators.URIValidator([]string{"tcp"}),
+					},
 				},
 				consts.FieldCallbackAddress: schema.StringAttribute{
 					Optional:    true,
 					Description: "The callback address. Must be a valid URI without the path.",
-					// ValidateDiagFunc: GetValidateDiagURI([]string{"http", "https"}),
+					Validators: []validator.String{
+						validators.URIValidator([]string{"http", "https"}),
+					},
 				},
 			},
 		},

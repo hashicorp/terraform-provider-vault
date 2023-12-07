@@ -17,22 +17,22 @@ const testFakeCredentialsPath = "./testdata/fake_account.json"
 
 func TestFrameworkProvider_CredentialsValidator(t *testing.T) {
 	cases := map[string]struct {
-		ConfigValue        func(t *testing.T) types.String
-		ExpectedErrorCount int
+		configValue        func(t *testing.T) types.String
+		expectedErrorCount int
 	}{
 		"configuring credentials as a path to a credentials JSON file is valid": {
-			ConfigValue: func(t *testing.T) types.String {
+			configValue: func(t *testing.T) types.String {
 				return types.StringValue(testFakeCredentialsPath) // Path to a test fixture
 			},
 		},
 		"configuring credentials as a path to a non-existant file is NOT valid": {
-			ConfigValue: func(t *testing.T) types.String {
+			configValue: func(t *testing.T) types.String {
 				return types.StringValue("./this/path/doesnt/exist.json") // Doesn't exist
 			},
-			ExpectedErrorCount: 1,
+			expectedErrorCount: 1,
 		},
 		"configuring credentials as a credentials JSON string is valid": {
-			ConfigValue: func(t *testing.T) types.String {
+			configValue: func(t *testing.T) types.String {
 				contents, err := ioutil.ReadFile(testFakeCredentialsPath)
 				if err != nil {
 					t.Fatalf("Unexpected error: %s", err)
@@ -42,13 +42,13 @@ func TestFrameworkProvider_CredentialsValidator(t *testing.T) {
 			},
 		},
 		"configuring credentials as an empty string is not valid": {
-			ConfigValue: func(t *testing.T) types.String {
+			configValue: func(t *testing.T) types.String {
 				return types.StringValue("")
 			},
-			ExpectedErrorCount: 1,
+			expectedErrorCount: 1,
 		},
 		"leaving credentials unconfigured is valid": {
-			ConfigValue: func(t *testing.T) types.String {
+			configValue: func(t *testing.T) types.String {
 				return types.StringNull()
 			},
 		},
@@ -58,7 +58,7 @@ func TestFrameworkProvider_CredentialsValidator(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			// Arrange
 			req := validator.StringRequest{
-				ConfigValue: tc.ConfigValue(t),
+				ConfigValue: tc.configValue(t),
 			}
 
 			resp := validator.StringResponse{
@@ -71,8 +71,8 @@ func TestFrameworkProvider_CredentialsValidator(t *testing.T) {
 			cv.ValidateString(context.Background(), req, &resp)
 
 			// Assert
-			if resp.Diagnostics.ErrorsCount() != tc.ExpectedErrorCount {
-				t.Errorf("Expected %d errors, got %d", tc.ExpectedErrorCount, resp.Diagnostics.ErrorsCount())
+			if resp.Diagnostics.ErrorsCount() != tc.expectedErrorCount {
+				t.Errorf("Expected %d errors, got %d", tc.expectedErrorCount, resp.Diagnostics.ErrorsCount())
 			}
 		})
 	}
