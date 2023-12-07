@@ -23,5 +23,5 @@ func AuthLoginRadiusSchema() schema.Block {
 				},
 			},
 		},
-	}, consts.MountTypeGCP)
+	}, consts.MountTypeRadius)
 }

@@ -87,5 +87,5 @@ func AuthLoginKerberosSchema() schema.Block {
 				},
 			},
 		},
-	}, consts.MountTypeGCP)
+	}, consts.MountTypeKerberos)
 }

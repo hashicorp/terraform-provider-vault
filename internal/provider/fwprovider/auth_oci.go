@@ -31,5 +31,5 @@ func AuthLoginOCISchema() schema.Block {
 				},
 			},
 		},
-	}, consts.MountTypeGCP)
+	}, consts.MountTypeOCI)
 }

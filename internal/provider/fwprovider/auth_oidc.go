@@ -34,5 +34,5 @@ func AuthLoginOIDCSchema() schema.Block {
 				},
 			},
 		},
-	}, consts.MountTypeGCP)
+	}, consts.MountTypeOIDC)
 }
