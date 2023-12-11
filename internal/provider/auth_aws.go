@@ -218,11 +218,6 @@ func (l *AuthLoginAWS) getDefaults() authDefaults {
 			defaultVal: "",
 		},
 		{
-			field:      consts.FieldAWSProfile,
-			envVars:    []string{envVarAWSProfile},
-			defaultVal: "",
-		},
-		{
 			field:      consts.FieldAWSSharedCredentialsFile,
 			envVars:    []string{envVarAWSSharedCredentialsFile},
 			defaultVal: "",
@@ -235,11 +230,6 @@ func (l *AuthLoginAWS) getDefaults() authDefaults {
 		{
 			field:      consts.FieldAWSRoleARN,
 			envVars:    []string{envVarAWSRoleARN},
-			defaultVal: "",
-		},
-		{
-			field:      consts.FieldAWSRoleSessionName,
-			envVars:    []string{envVarAWSRoleSessionName},
 			defaultVal: "",
 		},
 		{

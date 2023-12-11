@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
 )
 
 func AuthLoginAWSSchema() schema.Block {
@@ -60,13 +61,16 @@ func AuthLoginAWSSchema() schema.Block {
 				consts.FieldAWSSTSEndpoint: schema.StringAttribute{
 					Optional:    true,
 					Description: `The STS endpoint URL.`,
-					Validators:  []validator.String{},
-					// ValidateDiagFunc: GetValidateDiagURI([]string{"https", "http"}),
+					Validators: []validator.String{
+						validators.URIValidator([]string{"http", "https"}),
+					},
 				},
 				consts.FieldAWSIAMEndpoint: schema.StringAttribute{
 					Optional:    true,
 					Description: `The IAM endpoint URL.`,
-					// ValidateDiagFunc: GetValidateDiagURI([]string{"https", "http"}),
+					Validators: []validator.String{
+						validators.URIValidator([]string{"http", "https"}),
+					},
 				},
 				consts.FieldHeaderValue: schema.StringAttribute{
 					Optional:    true,
