@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -108,16 +110,72 @@ const tokenHelperScript = `#!/usr/bin/env bash
 echo "helper-token"
 `
 
-func TestAccAuthLoginProviderConfigure(t *testing.T) {
-	rootProvider := Provider()
-	rootProviderResource := &schema.Resource{
-		Schema: rootProvider.Schema,
+// testAccProtoV5ProviderFactories will return a map of provider servers
+// suitable for use as a resource.TestStep.ProtoV5ProviderFactories.
+//
+// When multiplexing providers, the schema and configuration handling must
+// exactly match between all underlying providers of the mux server. Mismatched
+// schemas will result in a runtime error.
+// see: https://developer.hashicorp.com/terraform/plugin/framework/migrating/mux
+//
+// Any tests that use this function will serve as a smoketest to verify the
+// provider schemas match 1-1 so that we may catch runtime errors.
+func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T, v **schema.Provider) map[string]func() (tfprotov5.ProviderServer, error) {
+	providerServerFactory, p, err := ProtoV5ProviderServerFactory(ctx)
+	if err != nil {
+		t.Fatal(err)
 	}
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() { testutil.TestAccPreCheck(t) },
-		Providers: map[string]*schema.Provider{
-			"vault": rootProvider,
+
+	providerServer := providerServerFactory()
+	*v = p.SchemaProvider()
+
+	return map[string]func() (tfprotov5.ProviderServer, error){
+		providerName: func() (tfprotov5.ProviderServer, error) {
+			return providerServer, nil
 		},
+	}
+}
+
+// TestAccMuxServer uses ExternalProviders (vault) to generate a state file
+// with a previous version of the provider and then verify that there are no
+// planned changes after migrating to the Framework.
+//
+// As of TFVP v3.23.0, the resources used in this test are not implemented with
+// the new Terraform Plugin Framework. However, this will act as a smoketest to
+// verify the provider schemas match 1-1.
+//
+// Additionally, when migrating a resource this test can be used as a pattern
+// to follow to verify that switching from SDKv2 to the Framework has not
+// affected your provider's behavior.
+func TestAccMuxServer(t *testing.T) {
+	var p *schema.Provider
+	resource.Test(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"vault": {
+						// 3.23.0 is not multiplexed
+						VersionConstraint: "3.23.0",
+						Source:            "hashicorp/vault",
+					},
+				},
+				Config: testResourceApproleConfig_basic(),
+				Check:  testResourceApproleLoginCheckAttrs(t),
+			},
+			{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				Config:                   testResourceApproleConfig_basic(),
+				PlanOnly:                 true,
+			},
+		},
+	})
+}
+
+func TestAccAuthLoginProviderConfigure(t *testing.T) {
+	var p *schema.Provider
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceApproleConfig_basic(),
@@ -126,6 +184,9 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 		},
 	})
 
+	rootProviderResource := &schema.Resource{
+		Schema: p.Schema,
+	}
 	rootProviderData := rootProviderResource.TestResourceData()
 	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
@@ -133,14 +194,11 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 }
 
 func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
-	rootProvider := Provider()
+	var p *schema.Provider
 
-	rootProviderResource := &schema.Resource{
-		Schema: rootProvider.Schema,
-	}
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: testHeaderConfig("auth", "123"),
@@ -149,6 +207,9 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 		},
 	})
 
+	rootProviderResource := &schema.Resource{
+		Schema: p.Schema,
+	}
 	rootProviderData := rootProviderResource.TestResourceData()
 	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
@@ -548,11 +609,12 @@ func TestAccTokenName(t *testing.T) {
 		},
 	}
 
+	var p *schema.Provider
 	for _, test := range tests {
 		t.Run(test.WantTokenName, func(t *testing.T) {
 			resource.Test(t, resource.TestCase{
-				ProviderFactories: providerFactories,
-				PreCheck:          func() { testutil.TestAccPreCheck(t) },
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
 						PreConfig: func() {
@@ -611,11 +673,12 @@ func TestAccChildToken(t *testing.T) {
 		},
 	}
 
+	var p *schema.Provider
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			resource.Test(t, resource.TestCase{
-				ProviderFactories: providerFactories,
-				PreCheck:          func() { testutil.TestAccPreCheck(t) },
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
 						Config: testProviderConfig(test.useChildTokenSchema,

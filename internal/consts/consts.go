@@ -104,7 +104,6 @@ const (
 	FieldUsername                      = "username"
 	FieldPassword                      = "password"
 	FieldPasswordFile                  = "password_file"
-	FieldClientAuth                    = "client_auth"
 	FieldAuthLoginGeneric              = "auth_login"
 	FieldAuthLoginUserpass             = "auth_login_userpass"
 	FieldAuthLoginAWS                  = "auth_login_aws"
@@ -363,7 +362,6 @@ const (
 	FieldServiceAccountJWT             = "service_account_jwt"
 	FieldDisableISSValidation          = "disable_iss_validation"
 	FieldPEMKeys                       = "pem_keys"
-	FieldSetNamespaceFromToken         = "set_namespace_from_token"
 	/*
 		common environment variables
 	*/

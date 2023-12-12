@@ -9,7 +9,7 @@ description: |-
 # Vault Provider
 
 The Vault provider allows Terraform to read from, write to, and configure
-[HashiCorp Vault](https://vaultproject.io/).
+[HashiCorp Vault](https://developer.hashicorp.com/vault).
 
 ~> **Important** Interacting with Vault from Terraform causes any secrets
 that you read and write to be persisted in both Terraform's state file
@@ -160,12 +160,6 @@ variables in order to keep credential information out of the configuration.
   a limited child token using auth/token/create in order to enforce a short
   TTL and limit exposure. *[See usage details below.](#generic)*
 
-* `client_auth` - (Optional) A configuration block, described below, that
-  provides credentials used by Terraform to authenticate with the Vault
-  server. At present there is little reason to set this, because Terraform
-  does not support the TLS certificate authentication mechanism.
-  *Deprecated, use `auth_login_cert` instead.
-
 * `skip_tls_verify` - (Optional) Set this to `true` to disable verification
   of the Vault server's TLS certificate. This is strongly discouraged except
   in prototype or development environments, since it exposes the possibility
@@ -214,10 +208,6 @@ variables in order to keep credential information out of the configuration.
 
 * `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
-* `set_namespace_from_token` -(Optional) Defaults to `true`. In the case where the Vault token is
-  for a specific namespace and the provider namespace is not configured, use the token namespace
-  as the root namespace for all resources.
-
 * `skip_get_vault_version` - (Optional) Skip the dynamic fetching of the Vault server version. 
   Set to `true` when the */sys/seal-status* API endpoint is not available. See [vault_version_override](#vault_version_override)
   for related info
@@ -233,14 +223,6 @@ only ever use this option in the case where the server version cannot be dynamic
 * `headers` - (Optional) A configuration block, described below, that provides headers
 to be sent along with all requests to the Vault server.  This block can be specified
 multiple times.
-
-The `client_auth` configuration block accepts the following arguments:
-
-* `cert_file` - (Required) Path to a file on local disk that contains the
-  PEM-encoded certificate to present to the server.
-
-* `key_file` - (Required) Path to a file on local disk that contains the
-  PEM-encoded private key for which the authentication certificate was issued.
 
 The `headers` configuration block accepts the following arguments:
 
@@ -741,9 +723,9 @@ provider "vault" {
 The Vault provider supports managing [Namespaces][namespaces] (a feature of
 Vault Enterprise), as well as creating resources in those namespaces by
 utilizing [Provider Aliasing][aliasing]. The `namespace` option in the [provider
-block][provider-block] enables the management of  resources in the specified
-namespace. 
-In addition, all resources and data sources support specifying their own `namespace`. 
+block](#provider-arguments) enables the management of resources in the specified
+namespace.
+In addition, all resources and data sources support specifying their own `namespace`.
 All resource's `namespace` will be made relative to the `provider`'s configured namespace.
 
 ### Importing namespaced resources
@@ -966,11 +948,19 @@ default
 vault_team_policy
 ```
 
-## Tutorials 
+### Token namespaces
+
+In the case where the Vault token is for a specific namespace and the provider
+namespace is not configured, the provider will use the token namespace as the
+root namespace for all resources. This behavior can be disabled by setting the
+`VAULT_SET_NAMESPACE_FROM_TOKEN ` environment variable to "false". The only
+accepted values are "true" and "false".
+
+
+## Tutorials
 
 Refer to the [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise) tutorial for additional examples using Vault namespaces.
 
 
-[namespaces]: https://www.vaultproject.io/docs/enterprise/namespaces#vault-enterprise-namespaces
-[aliasing]: https://www.terraform.io/docs/configuration/providers.html#alias-multiple-provider-configurations
-[provider-block]: /docs#provider-arguments
+[namespaces]: https://developer.hashicorp.com/vault/docs/enterprise/namespaces#vault-enterprise-namespaces
+[aliasing]: https://developer.hashicorp.com/terraform/language/providers/configuration#alias-multiple-provider-configurations

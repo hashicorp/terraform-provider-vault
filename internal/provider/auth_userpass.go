@@ -40,22 +40,20 @@ func GetUserpassLoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldUsername: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: "Login with username",
-				DefaultFunc: schema.EnvDefaultFunc(consts.EnvVarUsername, nil),
 			},
 			consts.FieldPassword: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Login with password",
-				DefaultFunc: schema.EnvDefaultFunc(consts.EnvVarPassword, nil),
 			},
 			consts.FieldPasswordFile: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Login with password from a file",
-				DefaultFunc: schema.EnvDefaultFunc(consts.EnvVarPasswordFile, nil),
 				// unfortunately the SDK does support conflicting relative fields
 				// within a list type. As long as the top level schema does not change
 				// we should be good to hard code fully qualified path like so.
@@ -77,9 +75,30 @@ type AuthLoginUserpass struct {
 }
 
 func (l *AuthLoginUserpass) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	defaults := authDefaults{
+		{
+			field:      consts.FieldUsername,
+			envVars:    []string{consts.EnvVarUsername},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldPassword,
+			envVars:    []string{consts.EnvVarPassword},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldPasswordFile,
+			envVars:    []string{consts.EnvVarPasswordFile},
+			defaultVal: "",
+		},
+	}
+
 	if err := l.AuthLoginCommon.Init(d, authField,
-		func(data *schema.ResourceData) error {
-			return l.checkRequiredFields(d, consts.FieldUsername)
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.setDefaultFields(d, defaults, params)
+		},
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.checkRequiredFields(d, params, consts.FieldUsername)
 		},
 	); err != nil {
 		return nil, err

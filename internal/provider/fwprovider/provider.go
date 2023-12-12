@@ -10,7 +10,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/sys"
 )
 
 // Ensure the implementation satisfies the provider.Provider interface
@@ -142,6 +144,18 @@ func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, res
 					},
 				},
 			},
+			consts.FieldAuthLoginAWS:       AuthLoginAWSSchema(),
+			consts.FieldAuthLoginAzure:     AuthLoginAzureSchema(),
+			consts.FieldAuthLoginCert:      AuthLoginCertSchema(),
+			consts.FieldAuthLoginGCP:       AuthLoginGCPSchema(),
+			consts.FieldAuthLoginGeneric:   AuthLoginGenericSchema(),
+			consts.FieldAuthLoginJWT:       AuthLoginJWTSchema(),
+			consts.FieldAuthLoginKerberos:  AuthLoginKerberosSchema(),
+			consts.FieldAuthLoginOCI:       AuthLoginOCISchema(),
+			consts.FieldAuthLoginOIDC:      AuthLoginOIDCSchema(),
+			consts.FieldAuthLoginRadius:    AuthLoginRadiusSchema(),
+			consts.FieldAuthLoginTokenFile: AuthLoginTokenFileSchema(),
+			consts.FieldAuthLoginUserpass:  AuthLoginUserpassSchema(),
 		},
 	}
 }
@@ -165,7 +179,9 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 // The resource type name is determined by the Resource implementing
 // the Metadata method. All resources must have unique names.
 func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		sys.NewPasswordPolicyResource,
+	}
 }
 
 // DataSources returns a slice of functions to instantiate each DataSource
