@@ -160,12 +160,6 @@ variables in order to keep credential information out of the configuration.
   a limited child token using auth/token/create in order to enforce a short
   TTL and limit exposure. *[See usage details below.](#generic)*
 
-* `client_auth` - (Optional) A configuration block, described below, that
-  provides credentials used by Terraform to authenticate with the Vault
-  server. At present there is little reason to set this, because Terraform
-  does not support the TLS certificate authentication mechanism.
-  *Deprecated, use `auth_login_cert` instead.
-
 * `skip_tls_verify` - (Optional) Set this to `true` to disable verification
   of the Vault server's TLS certificate. This is strongly discouraged except
   in prototype or development environments, since it exposes the possibility
@@ -229,14 +223,6 @@ only ever use this option in the case where the server version cannot be dynamic
 * `headers` - (Optional) A configuration block, described below, that provides headers
 to be sent along with all requests to the Vault server.  This block can be specified
 multiple times.
-
-The `client_auth` configuration block accepts the following arguments:
-
-* `cert_file` - (Required) Path to a file on local disk that contains the
-  PEM-encoded certificate to present to the server.
-
-* `key_file` - (Required) Path to a file on local disk that contains the
-  PEM-encoded private key for which the authentication certificate was issued.
 
 The `headers` configuration block accepts the following arguments:
 
