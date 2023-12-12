@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
 )
 
 func AuthLoginKerberosSchema() schema.Block {
@@ -18,7 +19,9 @@ func AuthLoginKerberosSchema() schema.Block {
 				consts.FieldToken: schema.StringAttribute{
 					Optional:    true,
 					Description: "Simple and Protected GSSAPI Negotiation Mechanism (SPNEGO) token",
-					// ValidateFunc: validateKRBNegToken,
+					Validators: []validator.String{
+						validators.KRBNegTokenValidator(),
+					},
 				},
 				consts.FieldUsername: schema.StringAttribute{
 					Optional:    true,
@@ -50,8 +53,8 @@ func AuthLoginKerberosSchema() schema.Block {
 				consts.FieldKRB5ConfPath: schema.StringAttribute{
 					Optional:    true,
 					Description: "A valid Kerberos configuration file e.g. /etc/krb5.conf.",
-					// ValidateFunc:  validateFileExists,
 					Validators: []validator.String{
+						validators.FileExistsValidator(),
 						stringvalidator.ConflictsWith(
 							path.MatchRelative().AtName(consts.FieldToken),
 						),
@@ -60,8 +63,8 @@ func AuthLoginKerberosSchema() schema.Block {
 				consts.FieldKeytabPath: schema.StringAttribute{
 					Optional:    true,
 					Description: "The Kerberos keytab file containing the entry of the login entity.",
-					// ValidateFunc:  validateFileExists,
 					Validators: []validator.String{
+						validators.FileExistsValidator(),
 						stringvalidator.ConflictsWith(
 							path.MatchRelative().AtName(consts.FieldToken),
 						),
