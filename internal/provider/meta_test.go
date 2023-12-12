@@ -536,7 +536,7 @@ func TestNewProviderMeta(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 	testutil.TestAccPreCheck(t)
 
-	nsPrefix := acctest.RandomWithPrefix("ns")
+	nsPrefix := acctest.RandomWithPrefix("ns") + "-"
 
 	defaultUser := "alice"
 	defaultPassword := "f00bazB1ff"
@@ -550,6 +550,7 @@ func TestNewProviderMeta(t *testing.T) {
 		name                      string
 		d                         *schema.ResourceData
 		data                      map[string]interface{}
+		env                       map[string]string
 		wantNamespace             string
 		tokenNamespace            string
 		authLoginNamespace        string
@@ -644,9 +645,11 @@ func TestNewProviderMeta(t *testing.T) {
 			name: "set-namespace-from-token-false",
 			d:    pr.TestResourceData(),
 			data: map[string]interface{}{
-				consts.FieldSkipGetVaultVersion:   true,
-				consts.FieldSetNamespaceFromToken: false,
-				consts.FieldSkipChildToken:        true,
+				consts.FieldSkipGetVaultVersion: true,
+				consts.FieldSkipChildToken:      true,
+			},
+			env: map[string]string{
+				"VAULT_SET_NAMESPACE_FROM_TOKEN": "false",
 			},
 			tokenNamespace:            nsPrefix + "set-ns-from-token-auth-false-ignored",
 			wantNamespace:             nsPrefix + "set-ns-from-token-auth-false-ignored",
@@ -659,9 +662,8 @@ func TestNewProviderMeta(t *testing.T) {
 			name: "set-namespace-from-token-true",
 			d:    pr.TestResourceData(),
 			data: map[string]interface{}{
-				consts.FieldSkipGetVaultVersion:   true,
-				consts.FieldSetNamespaceFromToken: true,
-				consts.FieldSkipChildToken:        true,
+				consts.FieldSkipGetVaultVersion: true,
+				consts.FieldSkipChildToken:      true,
 				consts.FieldAuthLoginUserpass: []map[string]interface{}{
 					{
 						consts.FieldNamespace: nsPrefix + "set-ns-from-token-auth-true",
@@ -671,10 +673,30 @@ func TestNewProviderMeta(t *testing.T) {
 					},
 				},
 			},
+			env: map[string]string{
+				"VAULT_SET_NAMESPACE_FROM_TOKEN": "true",
+			},
 			authLoginNamespace:        nsPrefix + "set-ns-from-token-auth-true",
 			wantNamespace:             nsPrefix + "set-ns-from-token-auth-true",
 			checkSetSetTokenNamespace: true,
 			wantNamespaceFromToken:    nsPrefix + "set-ns-from-token-auth-true",
+			wantErr:                   false,
+		},
+		{
+			// expect token namespace to be ignored
+			name: "with-token-ns-only-override-env-false",
+			d:    pr.TestResourceData(),
+			data: map[string]interface{}{
+				consts.FieldSkipGetVaultVersion: true,
+				consts.FieldSkipChildToken:      true,
+			},
+			env: map[string]string{
+				"VAULT_SET_NAMESPACE_FROM_TOKEN": "false",
+			},
+			tokenNamespace:            nsPrefix + "token-ns-only",
+			wantNamespace:             nsPrefix + "token-ns-only",
+			checkSetSetTokenNamespace: true,
+			wantNamespaceFromToken:    "",
 			wantErr:                   false,
 		},
 	}
@@ -704,9 +726,20 @@ func TestNewProviderMeta(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// we cannot run these in Parallel
+			// some of the test cases will set env vars that will cause flakiness
+			if tt.env != nil {
+				for k, v := range tt.env {
+					if err := os.Setenv(k, v); err != nil {
+						t.Fatal(err)
+					}
+					t.Cleanup(func() {
+						os.Unsetenv(k)
+					})
+				}
+			}
+
 			if tt.authLoginNamespace != "" {
 				createNamespace(t, client, tt.authLoginNamespace)
 				options := &api.EnableAuthOptions{
@@ -806,7 +839,7 @@ func TestNewProviderMeta_Cert(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 	testutil.TestAccPreCheck(t)
 
-	nsPrefix := acctest.RandomWithPrefix("ns")
+	nsPrefix := acctest.RandomWithPrefix("ns") + "-"
 
 	defaultUser := "alice"
 	defaultPassword := "f00bazB1ff"

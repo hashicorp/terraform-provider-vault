@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"reflect"
 	"testing"
 
@@ -312,6 +313,198 @@ func TestAuthLoginCommon_Namespace(t *testing.T) {
 			}
 			if exists != tt.exists {
 				t.Errorf("Namespace() exists = %v, want %v", exists, tt.exists)
+			}
+		})
+	}
+}
+
+func TestAuthLoginCommon_setDefaultFields(t *testing.T) {
+	tests := []struct {
+		name         string
+		params       map[string]interface{}
+		expectParams map[string]interface{}
+		setEnv       map[string]string
+		defaults     authDefaults
+	}{
+		{
+			name: "default-unset-and-env-unset",
+			params: map[string]interface{}{
+				"foo": "",
+			},
+			defaults: authDefaults{
+				{
+					field:      "foo",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_FOO"},
+					defaultVal: "",
+				},
+			},
+			expectParams: map[string]interface{}{
+				"foo": "",
+			},
+		},
+		{
+			name: "default-set-and-env-unset",
+			params: map[string]interface{}{
+				"foo": "",
+			},
+			defaults: authDefaults{
+				{
+					field:      "foo",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_FOO"},
+					defaultVal: "bar",
+				},
+			},
+			expectParams: map[string]interface{}{
+				"foo": "bar",
+			},
+		},
+		{
+			name: "default-set-and-env-set",
+			params: map[string]interface{}{
+				"foo": "",
+			},
+			defaults: authDefaults{
+				{
+					field:      "foo",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_FOO"},
+					defaultVal: "bar",
+				},
+			},
+			// env vars should override authDefault.defaultVal
+			setEnv: map[string]string{
+				"TEST_TERRAFORM_VAULT_PROVIDER_FOO": "baz",
+			},
+			expectParams: map[string]interface{}{
+				"foo": "baz",
+			},
+		},
+		{
+			name: "default-unset-and-env-set",
+			params: map[string]interface{}{
+				"foo": "",
+			},
+			defaults: authDefaults{
+				{
+					field:      "foo",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_FOO"},
+					defaultVal: "",
+				},
+			},
+			// env vars should override authDefault.defaultVal
+			setEnv: map[string]string{
+				"TEST_TERRAFORM_VAULT_PROVIDER_FOO": "baz",
+			},
+			expectParams: map[string]interface{}{
+				"foo": "baz",
+			},
+		},
+		{
+			name: "multiple-params-default-set-and-env-set",
+			params: map[string]interface{}{
+				"foo": "",
+				"dog": "",
+			},
+			defaults: authDefaults{
+				{
+					field:      "foo",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_FOO"},
+					defaultVal: "bar",
+				},
+				{
+					field:      "dog",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_DOG"},
+					defaultVal: "bark",
+				},
+			},
+			// env vars should override authDefault.defaultVal
+			setEnv: map[string]string{
+				"TEST_TERRAFORM_VAULT_PROVIDER_FOO": "baz",
+				"TEST_TERRAFORM_VAULT_PROVIDER_DOG": "woof",
+			},
+			expectParams: map[string]interface{}{
+				"foo": "baz",
+				"dog": "woof",
+			},
+		},
+		{
+			name: "multiple-params-mixed-set-and-unset",
+			params: map[string]interface{}{
+				"foo": "",
+				"dog": "",
+			},
+			defaults: authDefaults{
+				{
+					field:      "foo",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_FOO"},
+					defaultVal: "bar",
+				},
+				{
+					field:      "dog",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_DOG"},
+					defaultVal: "bark",
+				},
+			},
+			// env vars should override authDefault.defaultVal
+			setEnv: map[string]string{
+				"TEST_TERRAFORM_VAULT_PROVIDER_FOO": "baz",
+			},
+			expectParams: map[string]interface{}{
+				"foo": "baz",
+				"dog": "bark",
+			},
+		},
+		{
+			name: "multiple-env",
+			params: map[string]interface{}{
+				"foo": "",
+			},
+			defaults: authDefaults{
+				{
+					field:      "foo",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_FOO", "TEST_TERRAFORM_VAULT_PROVIDER_QUX"},
+					defaultVal: "",
+				},
+			},
+			setEnv: map[string]string{
+				"TEST_TERRAFORM_VAULT_PROVIDER_QUX": "qux",
+			},
+			expectParams: map[string]interface{}{
+				"foo": "qux",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv != nil {
+				for k, v := range tt.setEnv {
+					t.Setenv(k, v)
+					t.Cleanup(func() {
+						err := os.Unsetenv(k)
+						if err != nil {
+							t.Fatalf("could not unset env, err: %v", err)
+						}
+					},
+					)
+				}
+			}
+			l := &AuthLoginCommon{
+				params:      tt.params,
+				initialized: true,
+			}
+
+			rootProvider := NewProvider(nil, nil)
+			pr := &schema.Resource{
+				Schema: rootProvider.Schema,
+			}
+			d := pr.TestResourceData()
+
+			err := l.setDefaultFields(d, tt.defaults, tt.params)
+			if err != nil {
+				t.Errorf("setDefaultFields() err: %v", err)
+			}
+
+			if !reflect.DeepEqual(tt.expectParams, l.Params()) {
+				t.Errorf("setDefaultFields() expected params %#v, actual %#v", tt.expectParams, l.Params())
 			}
 		})
 	}

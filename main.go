@@ -8,24 +8,12 @@ import (
 	"flag"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
-	"github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
-	"github.com/hashicorp/terraform-provider-vault/schema"
 	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 func main() {
-	ctx := context.Background()
-
-	sdkv2Provider := schema.NewProvider(vault.Provider())
-
-	providers := []func() tfprotov5.ProviderServer{
-		// providerserver.NewProtocol5(provider.New()), // Example terraform-plugin-framework provider
-		sdkv2Provider.GRPCProvider,
-	}
-
-	muxServer, err := tf5muxserver.NewMuxServer(ctx, providers...)
+	serverFactory, _, err := vault.ProtoV5ProviderServerFactory(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,7 +33,7 @@ func main() {
 
 	err = tf5server.Serve(
 		"registry.terraform.io/hashicorp/vault",
-		muxServer.ProviderServer,
+		serverFactory,
 		serveOpts...,
 	)
 

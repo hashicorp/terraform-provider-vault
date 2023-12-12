@@ -104,7 +104,6 @@ const (
 	FieldUsername                      = "username"
 	FieldPassword                      = "password"
 	FieldPasswordFile                  = "password_file"
-	FieldClientAuth                    = "client_auth"
 	FieldAuthLoginGeneric              = "auth_login"
 	FieldAuthLoginUserpass             = "auth_login_userpass"
 	FieldAuthLoginAWS                  = "auth_login_aws"
@@ -363,12 +362,10 @@ const (
 	FieldServiceAccountJWT             = "service_account_jwt"
 	FieldDisableISSValidation          = "disable_iss_validation"
 	FieldPEMKeys                       = "pem_keys"
-	FieldSetNamespaceFromToken         = "set_namespace_from_token"
 	/*
 		common environment variables
 	*/
 	EnvVarVaultNamespaceImport = "TERRAFORM_VAULT_NAMESPACE_IMPORT"
-	EnvVarSkipChildToken       = "TERRAFORM_VAULT_SKIP_CHILD_TOKEN"
 	// EnvVarUsername to get the username for the userpass auth method
 	EnvVarUsername = "TERRAFORM_VAULT_USERNAME"
 	// EnvVarPassword to get the password for the userpass auth method

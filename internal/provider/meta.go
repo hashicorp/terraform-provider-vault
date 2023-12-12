@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -184,27 +185,20 @@ func (p *ProviderMeta) setClient() error {
 
 	d := p.resourceData
 	clientConfig := api.DefaultConfig()
-	addr := d.Get(consts.FieldAddress).(string)
-	if addr != "" {
-		clientConfig.Address = addr
+
+	addr := GetResourceDataStr(d, consts.FieldAddress, api.EnvVaultAddress, "")
+	if addr == "" {
+		return fmt.Errorf("failed to configure Vault address")
 	}
+	clientConfig.Address = addr
+
 	clientConfig.CloneTLSConfig = true
 
 	tlsConfig := &api.TLSConfig{
-		CACert:        d.Get(consts.FieldCACertFile).(string),
-		CAPath:        d.Get(consts.FieldCACertDir).(string),
+		CACert:        GetResourceDataStr(d, consts.FieldCACertFile, api.EnvVaultCACert, ""),
+		CAPath:        GetResourceDataStr(d, consts.FieldCACertDir, api.EnvVaultCAPath, ""),
 		Insecure:      d.Get(consts.FieldSkipTLSVerify).(bool),
-		TLSServerName: d.Get(consts.FieldTLSServerName).(string),
-	}
-
-	if _, ok := d.GetOk(consts.FieldClientAuth); ok {
-		prefix := fmt.Sprintf("%s.0.", consts.FieldClientAuth)
-		if v, ok := d.GetOk(prefix + consts.FieldCertFile); ok {
-			tlsConfig.ClientCert = v.(string)
-		}
-		if v, ok := d.GetOk(prefix + consts.FieldKeyFile); ok {
-			tlsConfig.ClientKey = v.(string)
-		}
+		TLSServerName: GetResourceDataStr(d, consts.FieldTLSServerName, api.EnvVaultTLSServerName, ""),
 	}
 
 	err := clientConfig.ConfigureTLS(tlsConfig)
@@ -251,12 +245,12 @@ func (p *ProviderMeta) setClient() error {
 	}
 	client.SetHeaders(parsedHeaders)
 
-	client.SetMaxRetries(d.Get("max_retries").(int))
+	client.SetMaxRetries(GetResourceDataInt(d, "max_retries", "VAULT_MAX_RETRIES", DefaultMaxHTTPRetries))
 
-	MaxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
+	MaxHTTPRetriesCCC = GetResourceDataInt(d, "max_retries_ccc", "VAULT_MAX_RETRIES_CCC", DefaultMaxHTTPRetriesCCC)
 
 	// Set the namespace to the requested namespace, if provided
-	namespace := d.Get(consts.FieldNamespace).(string)
+	namespace := GetResourceDataStr(d, consts.FieldNamespace, "VAULT_NAMESPACE", "")
 
 	authLogin, err := GetAuthLogin(d)
 	if err != nil {
@@ -346,12 +340,20 @@ func (p *ProviderMeta) setClient() error {
 			"Future releases may not support this type of configuration.", tokenNamespace)
 
 		namespace = tokenNamespace
+
 		// set the namespace on the provider to ensure that all child
 		// namespace paths are properly honoured.
-		if v, ok := d.Get(consts.FieldSetNamespaceFromToken).(bool); ok && v {
+		// We default to setting the namespace from the token unless the
+		// env var is set to false.
+		setFromToken, err := strconv.ParseBool(os.Getenv("VAULT_SET_NAMESPACE_FROM_TOKEN"))
+		if err == nil && setFromToken || err != nil {
 			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 				return err
 			}
+		} else {
+			log.Printf("[WARN] VAULT_SET_NAMESPACE_FROM_TOKEN environment "+
+				"variable is set to \"false\". The token namespace %q will "+
+				"not be used as the root namespace for all resources.", tokenNamespace)
 		}
 	}
 
@@ -554,10 +556,7 @@ func getVaultVersion(client *api.Client) (*version.Version, error) {
 }
 
 func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (string, error) {
-	tokenName := d.Get("token_name").(string)
-	if tokenName == "" {
-		tokenName = "terraform"
-	}
+	tokenName := GetResourceDataStr(d, "token_name", "VAULT_TOKEN_NAME", "terraform")
 
 	// the clone is only used to auth to Vault
 	clone, err := c.Clone()
@@ -581,10 +580,11 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 	// Caution is still required with state files since not all secrets
 	// can explicitly be revoked, and this limited scope won't apply to
 	// any secrets that are *written* by Terraform to Vault.
+	ttl := GetResourceDataInt(d, "max_lease_ttl_seconds", "TERRAFORM_VAULT_MAX_TTL", 1200)
 	childTokenLease, err := clone.Auth().Token().Create(&api.TokenCreateRequest{
 		DisplayName:    tokenName,
-		TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-		ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
+		TTL:            fmt.Sprintf("%ds", ttl),
+		ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
 		Renewable:      pointer.Bool(false),
 	})
 	if err != nil {
@@ -599,8 +599,49 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 	return childToken, nil
 }
 
+// GetResourceDataStr returns the value for a given ResourceData field
+// If the value is the zero value, then it checks the environment variable. If
+// the environment variable is empty, the default dv is returned
+func GetResourceDataStr(d *schema.ResourceData, field, env, dv string) string {
+	if s := d.Get(field).(string); s != "" {
+		return s
+	}
+
+	if env != "" {
+		if s := os.Getenv(env); s != "" {
+			return s
+		}
+	}
+
+	// return default
+	return dv
+}
+
+// GetResourceDataInt returns the value for a given ResourceData field
+// If the value is the zero value, then it checks the environment variable. If
+// the environment variable is empty, the default dv is returned
+func GetResourceDataInt(d *schema.ResourceData, field, env string, dv int) int {
+	if v := d.Get(field).(int); v != 0 {
+		return v
+	}
+	if env != "" {
+		if s := os.Getenv(env); s != "" {
+			ret, err := strconv.Atoi(s)
+			if err == nil {
+				return ret
+			}
+			// swallow the error and return the default because that is the
+			// behavior we had when using SDKv2's schema.EnvDefaultFunc
+		}
+	}
+	// return default
+	return dv
+}
+
 func GetToken(d *schema.ResourceData) (string, error) {
 	if token := d.Get("token").(string); token != "" {
+		return token, nil
+	} else if token = os.Getenv(api.EnvVaultToken); token != "" {
 		return token, nil
 	}
 
