@@ -14,6 +14,9 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
+// ensure we our interface implementation is correct
+var _ resource.ResourceWithConfigure = &PasswordPolicyResource{}
+
 func NewPasswordPolicyResource() resource.Resource {
 	return &PasswordPolicyResource{}
 }
@@ -74,7 +77,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 }
 
 func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan *PasswordPolicyModel
+	var plan PasswordPolicyModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -111,7 +114,7 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 }
 
 func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state *PasswordPolicyModel
+	var state PasswordPolicyModel
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
@@ -178,7 +181,7 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 }
 
 func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan *PasswordPolicyModel
+	var plan PasswordPolicyModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -215,7 +218,7 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 }
 
 func (r *PasswordPolicyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var plan *PasswordPolicyModel
+	var plan PasswordPolicyModel
 
 	// Read Terraform state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &plan)...)
@@ -244,7 +247,8 @@ func (r *PasswordPolicyResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	return
+	// If the logic reaches here, it implicitly succeeded and will remove
+	// the resource from state if there are no other errors.
 }
 
 func (r *PasswordPolicyResource) path(name string) string {
