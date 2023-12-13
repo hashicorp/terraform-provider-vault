@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -90,9 +91,7 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 			{
 				Config: testAccGithubAuthBackendConfig_ns(ns, path, testGHOrg),
 				Check: resource.ComposeTestCheckFunc(
-					testutil.TestAccCheckAuthMountExists(resourceName,
-						&resAuth,
-						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
+					githubAuthMountExistsHelperNS(resourceName, &resAuth),
 					resource.TestCheckResourceAttr(resourceName, "id", path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -105,6 +104,26 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 			},
 		},
 	})
+}
+
+func githubAuthMountExistsHelperNS(resourceName string, out *api.AuthMount) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resourceName)
+		}
+
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("No id for %s is set", resourceName)
+		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		return testutil.AuthMountExistsHelper(resourceName, s, out, client)
+	}
 }
 
 func TestAccGithubAuthBackend_tuning(t *testing.T) {
