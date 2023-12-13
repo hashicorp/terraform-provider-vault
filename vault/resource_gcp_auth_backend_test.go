@@ -32,7 +32,7 @@ const gcpJSONCredentials string = `
 `
 
 func TestGCPAuthBackend_basic(t *testing.T) {
-	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+	testutil.SkipTestAcc(t)
 
 	var resAuthFirst api.AuthMount
 	path := resource.PrefixedUniqueId("gcp-basic-")

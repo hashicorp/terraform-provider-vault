@@ -2,12 +2,10 @@
 
 FEATURES:
 * Add support for `ext_key_usage_oids` in `vault_pki_secret_backend_role` ([#2108](https://github.com/hashicorp/terraform-provider-vault/pull/2108))
+* Adds support to `vault_gcp_auth_backend` for common backend tune parameters ([#1997](https://github.com/terraform-providers/terraform-provider-vault/pull/1997)).
 
 BUGS:
 * fix `vault_kv_secret_v2` drift when "data" is in secret name/path ([#2104](https://github.com/hashicorp/terraform-provider-vault/pull/2104))
-
-FEATURES:
-* Adds support to `vault_gcp_auth_backend` for common backend tune parameters ([#1997](https://github.com/terraform-providers/terraform-provider-vault/pull/1997)).
 
 ## 3.23.0 (Nov 15, 2023)
 
