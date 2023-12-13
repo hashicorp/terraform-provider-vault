@@ -224,6 +224,8 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 }
 
 func TestAccGithubAuthBackend_importTuning(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
 	path := acctest.RandomWithPrefix("github")
 	resourceType := "vault_github_auth_backend"
 	resourceName := resourceType + ".test"
@@ -245,6 +247,8 @@ func TestAccGithubAuthBackend_importTuning(t *testing.T) {
 }
 
 func TestGithubAuthBackend_remount(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
 	path := acctest.RandomWithPrefix("tf-test-gh")
 	updatedPath := acctest.RandomWithPrefix("tf-test-gh-updated")
 

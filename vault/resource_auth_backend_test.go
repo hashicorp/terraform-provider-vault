@@ -204,6 +204,8 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 }
 
 func TestResourceAuthTune(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_auth_backend.test"
 	var resAuthFirst api.AuthMount
