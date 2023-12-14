@@ -21,16 +21,14 @@ func TestAccPasswordPolicy(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-				Config:                   testAccPasswordPolicyConfig(policyName, "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"),
+				Config: testAccPasswordPolicyConfig(policyName, "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", policyName),
 					resource.TestCheckResourceAttrSet(resourceName, "policy"),
 				),
 			},
 			{
-				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-				Config:                   testAccPasswordPolicyConfig(policyName, "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\nrule \"charset\" {\n  charset = \"1234567890\"\nmin-chars = 1\n}\n"),
+				Config: testAccPasswordPolicyConfig(policyName, "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\nrule \"charset\" {\n  charset = \"1234567890\"\nmin-chars = 1\n}\n"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", policyName),
 					resource.TestCheckResourceAttrSet(resourceName, "policy"),
