@@ -26,14 +26,17 @@ type PasswordPolicyResource struct {
 }
 
 func (r *PasswordPolicyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_password_policy_fw"
+	resp.TypeName = req.ProviderTypeName + "_password_policy"
 }
 
 // PasswordPolicyModel describes the Terraform resource data model to match the
 // resource schema.
 type PasswordPolicyModel struct {
+	// common fields to all resources
+	ID        types.String `tfsdk:"id"`
 	Namespace types.String `tfsdk:"namespace"`
 
+	// fields specific to this resource
 	Name   types.String `tfsdk:"name"`
 	Policy types.String `tfsdk:"policy"`
 }
@@ -109,6 +112,9 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
+	// write the ID to state which is required for acceptance testing
+	plan.ID = types.StringValue(path)
+
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -177,6 +183,9 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 
 	state.Policy = types.StringValue(readResp.Policy)
 
+	// write the ID to state which is required for acceptance testing
+	state.ID = types.StringValue(path)
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -212,6 +221,9 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 
 		return
 	}
+
+	// write the ID to state which is required for acceptance testing
+	plan.ID = types.StringValue(path)
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)

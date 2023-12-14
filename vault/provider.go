@@ -553,10 +553,6 @@ var (
 			Resource:      UpdateSchemaResource(rabbitMQSecretBackendRoleResource()),
 			PathInventory: []string{"/rabbitmq/roles/{name}"},
 		},
-		"vault_password_policy": {
-			Resource:      UpdateSchemaResource(passwordPolicyResource()),
-			PathInventory: []string{"/sys/policy/password/{name}"},
-		},
 		"vault_pki_secret_backend_cert": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendCertResource()),
 			PathInventory: []string{"/pki/issue/{role}"},
