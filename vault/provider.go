@@ -69,10 +69,6 @@ var (
 			Resource:      UpdateSchemaResource(ldapDynamicCredDataSource()),
 			PathInventory: []string{"/ldap/creds/{role}"},
 		},
-		"vault_ad_access_credentials": {
-			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
-			PathInventory: []string{"/ad/creds/{role}"},
-		},
 		"vault_nomad_access_token": {
 			Resource:      UpdateSchemaResource(nomadAccessCredentialsDataSource()),
 			PathInventory: []string{"/nomad/creds/{role}"},
