@@ -73,19 +73,9 @@ state changes in the meantime.
 
 - [Environment Variable Removals](#environment-variable-removals)
 
-- [Resource Removals](#resource-removals)
-
-  - [AD Secret Backend: `vault_ad_secret_backend`](#ad-secret-backend)
-  - [AD Secret Library: `vault_ad_secret_library`](#ad-secret-library)
-  - [AD Secret Role: `vault_ad_secret_role`](#ad-secret-role)
-
-- [Data Source Removals](#data-source-removals)
-
-  - [AD Access Credentials: `vault_ad_access_credentials`](#ad-access-credentials)
-
 - [Deprecated Field Removals](#deprecated-field-removals)
 
-  - [Cert Auth Backend: `allowed_organization_units`](#cert-auth-backend)
+  - [Cert Auth Backend: `allowed_organization_units`](#cert-auth-backend-role)
   - [LDAP Secret Backend: `length`](#ldap-secret-backend)
   - [Transit Secret Backend Key: `auto_rotate_interval`](#transit-secret-backend-key)
   - [SSH Backend Role: `allowed_user_key_lengths`](#ssh-backend-role)
@@ -166,30 +156,6 @@ The following environment variables have been removed:
 * `TERRAFORM_VAULT_SKIP_CHILD_TOKEN` - use the `skip_child_token` field instead.
 
 * `VAULT_SKIP_VERIFY` - use the `skip_tls_verify` field instead.
-
-## Resource Removals
-
-The following resources have been removed:
-
-### AD Secret Backend
-
-* `vault_ad_secret_backend` - use `vault_ldap_secret_backend` instead.
-
-### AD Secret Library
-
-* `vault_ad_secret_library` - use `vault_ldap_secret_backend_library_set` instead.
-
-### AD Secret Role
-
-* `vault_ad_secret_role` - use `vault_ldap_secret_backend_static_role` instead.
-
-## Data Source Removals
-
-The following data sources have been removed:
-
-### AD Access Credentials
-
-* `vault_ad_access_credentials` - use `vault_ldap_static_credentials` instead.
 
 ## Deprecated Field Removals
 
