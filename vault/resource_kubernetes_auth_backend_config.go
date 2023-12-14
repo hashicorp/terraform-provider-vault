@@ -43,7 +43,7 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 		},
 		"token_reviewer_jwt": {
 			Type:        schema.TypeString,
-			Description: "A service account JWT used to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API.",
+			Description: "A service account JWT (or other token) used as a bearer token to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API.",
 			Default:     "",
 			Optional:    true,
 			Sensitive:   true,
