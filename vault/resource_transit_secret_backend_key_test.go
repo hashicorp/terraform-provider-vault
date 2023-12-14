@@ -31,9 +31,6 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
-					// auto_rotate_interval is deprecated,
-					// it will be updated to auto_rotate_period in the next step below
-					resource.TestCheckResourceAttr(resourceName, "auto_rotate_interval", "3600"),
 					resource.TestCheckResourceAttr(resourceName, "convergent_encryption", "false"),
 					resource.TestCheckResourceAttr(resourceName, "derived", "false"),
 					resource.TestCheckResourceAttr(resourceName, "exportable", "false"),
@@ -73,16 +70,11 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"auto_rotate_interval", "key_size"},
+				ImportStateVerifyIgnore: []string{"key_size"},
 			},
 			{
 				Config:      testTransitSecretBackendKeyConfig_invalidUpdates(name, backend),
 				ExpectError: regexp.MustCompile("cannot be disabled on a key that already has it enabled"),
-			},
-			{
-				Config:      testTransitSecretBackendKeyConfig_conflicts(name, backend),
-				Destroy:     false,
-				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
 			},
 			{
 				Config:  testTransitSecretBackendKeyConfig_updated(name, backend),
@@ -227,7 +219,6 @@ resource "vault_transit_secret_backend_key" "test" {
   backend = vault_mount.transit.path
   name = "%s"
   deletion_allowed = true
-  auto_rotate_interval = 3600
 }
 `, path, name)
 }
@@ -337,28 +328,6 @@ resource "vault_transit_secret_backend_key" "test" {
   deletion_allowed       = true
   exportable             = false
   allow_plaintext_backup = false
-}
-`, path, name)
-}
-
-func testTransitSecretBackendKeyConfig_conflicts(name, path string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "transit" {
-  path = "%s"
-  type = "transit"
-}
-
-resource "vault_transit_secret_backend_key" "test" {
-  backend = vault_mount.transit.path
-  name = "%s"
-  min_decryption_version = 1
-  min_encryption_version = 1
-  deletion_allowed       = true
-  exportable             = false
-  allow_plaintext_backup = false
-  # conflicts: auto_rotate_interval, auto_rotate_period
-  auto_rotate_interval   = 3600
-  auto_rotate_period     = 3600
 }
 `, path, name)
 }

@@ -90,10 +90,6 @@ The following arguments are supported:
 * `allowed_user_key_config` - (Optional) Set of configuration blocks to define allowed  
   user key configuration, like key type and their lengths. Can be specified multiple times.  
   *See [Configuration-Options](#allowed-user-key-configuration) for more info*
- 
-* `allowed_user_key_lengths` - (Optional) Specifies a map of ssh key types and their expected sizes which 
- are allowed to be signed by the CA type.  
- *Deprecated: use* [allowed_user_key_config](#allowed_user_key_config) *instead*
 
 * `max_ttl` - (Optional) Specifies the maximum Time To Live value.
 

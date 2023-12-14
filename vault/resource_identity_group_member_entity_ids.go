@@ -15,7 +15,7 @@ func identityGroupMemberEntityIdsResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: group.GetGroupMemberUpdateContextFunc(group.EntityResourceType),
 		UpdateContext: group.GetGroupMemberUpdateContextFunc(group.EntityResourceType),
-		ReadContext:   provider.ReadContextWrapper(group.GetGroupMemberReadContextFunc(group.EntityResourceType, true)),
+		ReadContext:   provider.ReadContextWrapper(group.GetGroupMemberReadContextFunc(group.EntityResourceType)),
 		DeleteContext: group.GetGroupMemberDeleteContextFunc(group.EntityResourceType),
 
 		Schema: map[string]*schema.Schema{
@@ -39,13 +39,6 @@ exclusively. Beware of race conditions when disabling exclusive management`,
 				Required:    true,
 				ForceNew:    true,
 				Description: "ID of the group.",
-			},
-			consts.FieldGroupName: {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Name of the group.",
-				Deprecated: `The value for group_name may not always be accurate, 
-use "data.vault_identity_group.*.group_name", "vault_identity_group.*.group_name" instead`,
 			},
 		},
 	}

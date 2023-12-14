@@ -20,7 +20,6 @@ const (
 	fieldAllowedDNSSans             = "allowed_dns_sans"
 	fieldAllowedEmailSans           = "allowed_email_sans"
 	fieldAllowedNames               = "allowed_names"
-	fieldAllowedOrganizationUnits   = "allowed_organization_units"
 	fieldAllowedOrganizationalUnits = "allowed_organizational_units"
 	fieldAllowedURISans             = "allowed_uri_sans"
 	fieldDisplayName                = "display_name"
@@ -43,7 +42,6 @@ var (
 		fieldAllowedDNSSans,
 		fieldAllowedEmailSans,
 		fieldAllowedNames,
-		fieldAllowedOrganizationUnits,
 		fieldAllowedOrganizationalUnits,
 		fieldAllowedURISans,
 		fieldOCSPServersOverride,
@@ -117,23 +115,12 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
-		fieldAllowedOrganizationUnits: {
-			Type: schema.TypeSet,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "Use allowed_organizational_units",
-			ConflictsWith: []string{"allowed_organizational_units"},
-		},
 		fieldAllowedOrganizationalUnits: {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-			Optional:      true,
-			ConflictsWith: []string{"allowed_organization_units"},
+			Optional: true,
 		},
 		fieldRequiredExtensions: {
 			Type: schema.TypeSet,

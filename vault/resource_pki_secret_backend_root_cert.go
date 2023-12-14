@@ -36,16 +36,10 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			return nil
 		},
 		ReadContext: provider.ReadContextWrapper(pkiSecretBackendCertRead),
-		StateUpgraders: []schema.StateUpgrader{
-			{
-				Version: 0,
-				Type:    pkiSecretSerialNumberResourceV0().CoreConfigSchema().ImpliedType(),
-				Upgrade: pkiSecretSerialNumberUpgradeV0,
-			},
-		},
+		// Schema version was updated when `serial_number` was added in place of `serial`
 		SchemaVersion: 1,
 		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
-			key := consts.FieldSerial
+			key := consts.FieldSerialNumber
 			o, _ := d.GetChange(key)
 			// skip on new resource
 			if o.(string) == "" {
@@ -274,12 +268,6 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Computed:    true,
 				Description: "The issuing CA.",
 			},
-			consts.FieldSerial: {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Deprecated:  "Use serial_number instead",
-				Description: "The serial number.",
-			},
 			consts.FieldSerialNumber: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -433,7 +421,6 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		consts.FieldCertificate:  consts.FieldCertificate,
 		consts.FieldIssuingCA:    consts.FieldIssuingCA,
 		consts.FieldSerialNumber: consts.FieldSerialNumber,
-		consts.FieldSerial:       consts.FieldSerialNumber,
 	}
 
 	// multi-issuer API fields that are set to TF state
@@ -562,6 +549,7 @@ func pkiSecretSerialNumberResourceV0() *schema.Resource {
 	}
 }
 
+// @TODO confirm if state upgraders can be removed for major version bumps
 func pkiSecretSerialNumberUpgradeV0(
 	_ context.Context, rawState map[string]interface{}, _ interface{},
 ) (map[string]interface{}, error) {

@@ -145,12 +145,6 @@ func pkiSecretBackendSignResource() *schema.Resource {
 				Description: "The CA chain.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			consts.FieldSerial: {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Deprecated:  "Use serial_number instead",
-				Description: "The serial number.",
-			},
 			consts.FieldSerialNumber: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -253,7 +247,6 @@ func pkiSecretBackendSignCreate(ctx context.Context, d *schema.ResourceData, met
 		consts.FieldCAChain:      consts.FieldCAChain,
 		consts.FieldSerialNumber: consts.FieldSerialNumber,
 		consts.FieldExpiration:   consts.FieldExpiration,
-		consts.FieldSerial:       consts.FieldSerialNumber,
 	}
 
 	for k, v := range certFieldsMap {

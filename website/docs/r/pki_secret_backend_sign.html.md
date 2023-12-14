@@ -113,6 +113,3 @@ In addition to the fields above, the following attributes are exported:
 
 * `renew_pending` - `true` if the current time (during refresh) is after the start of the early renewal window declared by `min_seconds_remaining`, and `false` otherwise; if `auto_renew` is set to `true` then the provider will plan to replace the certificate once renewal is pending.
 
-## Deprecations
-
-* `serial` - Use `serial_number` instead.

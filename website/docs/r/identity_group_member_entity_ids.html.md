@@ -101,8 +101,5 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-In addition to all arguments above, the following attributes are exported:
+No additional attributes are exposed by this resource.
 
-* `group_name` - The name of the group that are assigned the member entities.  
-  *Deprecated: The value for group_name may not always be accurate*
-  *use* `data.vault_identity_group.*.group_name`, *or* `vault_identity_group.*.group_name` *instead.*

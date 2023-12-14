@@ -67,7 +67,6 @@ func TestAccNomadSecretBackendRoleImport(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccADSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testNomadSecretBackendRoleClientConfig(backend, address, token, "bob", "readonly", true),

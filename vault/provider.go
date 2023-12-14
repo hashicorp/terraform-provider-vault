@@ -219,18 +219,6 @@ var (
 			Resource:      UpdateSchemaResource(tokenAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/token/roles/{role_name}"},
 		},
-		"vault_ad_secret_backend": {
-			Resource:      UpdateSchemaResource(adSecretBackendResource()),
-			PathInventory: []string{"/ad"},
-		},
-		"vault_ad_secret_library": {
-			Resource:      UpdateSchemaResource(adSecretBackendLibraryResource()),
-			PathInventory: []string{"/ad/library/{name}"},
-		},
-		"vault_ad_secret_role": {
-			Resource:      UpdateSchemaResource(adSecretBackendRoleResource()),
-			PathInventory: []string{"/ad/roles/{role}"},
-		},
 		"vault_aws_auth_backend_cert": {
 			Resource:      UpdateSchemaResource(awsAuthBackendCertResource()),
 			PathInventory: []string{"/auth/aws/config/certificate/{cert_name}"},

@@ -95,6 +95,3 @@ In addition to the fields above, the following attributes are exported:
  
 * `serial_number` - The certificate's serial number, hex formatted.
 
-## Deprecations
-
-* `serial` - Use `serial_number` instead.
