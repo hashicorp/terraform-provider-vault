@@ -14,11 +14,18 @@ includes some changes that you will need to consider when upgrading. This guide
 is intended to help with that process and focuses only on the changes necessary
 to upgrade from version `3.24.0` to `4.0.0`.
 
+Most of the changes outlined in this guide have been previously marked as
+deprecated in the Terraform `plan`/`apply` output throughout previous provider
+releases, up to and including 3.24.0. These changes, such as deprecation notices,
+can always be found in the [CHANGELOG](https://github.com/hashicorp/terraform-provider-vault/blob/master/CHANGELOG.md).
+
 ## Why version 4.0.0?
 
 We introduced version `4.0.0` of the Vault provider in order to upgrade to the
 [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework).
 The change was deemed significant enough to warrant the major version bump.
+In addition to the aforementioned SDK upgrade all previously deprecated fields,
+and resources have been removed.
 
 While you may see some small changes in your configurations as a result of
 these changes, we don't expect you'll need to make any major refactorings.
@@ -65,6 +72,27 @@ state changes in the meantime.
 - [Provider Field Removals](#provider-field-removals)
 
 - [Environment Variable Removals](#environment-variable-removals)
+
+- [Resource Removals](#resource-removals)
+
+  - [AD Secret Backend: `vault_ad_secret_backend`](#ad-secret-backend)
+  - [AD Secret Library: `vault_ad_secret_library`](#ad-secret-library)
+  - [AD Secret Role: `vault_ad_secret_role`](#ad-secret-role)
+
+- [Data Source Removals](#data-source-removals)
+
+  - [AD Access Credentials: `vault_ad_access_credentials`](#ad-access-credentials)
+
+- [Deprecated Field Removals](#deprecated-field-removals)
+
+  - [Cert Auth Backend: `allowed_organization_units`](#cert-auth-backend)
+  - [LDAP Secret Backend: `length`](#ldap-secret-backend)
+  - [Transit Secret Backend Key: `auto_rotate_interval`](#transit-secret-backend-key)
+  - [SSH Backend Role: `allowed_user_key_lengths`](#ssh-backend-role)
+  - [Consul Backend Role: `token_type`](#console-backend-role)
+  - [PKI Root Cert: `serial`](#pki-root-cert)
+  - [PKI Root Sign Intermediate: `serial`](#pki-root-sign-intermediate)
+  - [PKI Root Sign: `serial`](#pki-sign)
 
 <!-- /TOC -->
 
@@ -123,6 +151,8 @@ Error: failed to configure Vault address
 
 ## Provider Field Removals
 
+The following provider fields have been removed:
+
 * `set_namespace_from_token` - use the environment variable
   `VAULT_SET_NAMESPACE_FROM_TOKEN` instead. Only accepts values of `true`
   or `false`.
@@ -136,3 +166,65 @@ The following environment variables have been removed:
 * `TERRAFORM_VAULT_SKIP_CHILD_TOKEN` - use the `skip_child_token` field instead.
 
 * `VAULT_SKIP_VERIFY` - use the `skip_tls_verify` field instead.
+
+## Resource Removals
+
+The following resources have been removed:
+
+### AD Secret Backend
+
+* `vault_ad_secret_backend` - use `vault_ldap_secret_backend` instead.
+
+### AD Secret Library
+
+* `vault_ad_secret_library` - use `vault_ldap_secret_backend_library_set` instead.
+
+### AD Secret Role
+
+* `vault_ad_secret_role` - use `vault_ldap_secret_backend_static_role` instead.
+
+## Data Source Removals
+
+The following data sources have been removed:
+
+### AD Access Credentials
+
+* `vault_ad_access_credentials` - use `vault_ldap_static_credentials` instead.
+
+## Deprecated Field Removals
+
+The following deprecated fields have been removed:
+
+### Cert Auth Backend Role
+
+* `allowed_organization_units` - removed from the `vault_cert_auth_backend_role` resource.
+
+### LDAP Secret Backend
+
+* `length` - removed from the `vault_ldap_secret_backend` resource.
+
+### Transit Secret Backend Key
+
+* `auto_rotate_interval` - removed from the `vault_transit_secret_backend_key`
+  resource. Use `auto_rotate_period` instead.
+
+### SSH Backend Role
+
+* `allowed_user_key_lengths` - removed from the `vault_ssh_secret_backend_role`
+  resource. Use `allowed_user_key_config` instead.
+
+### Consul Backend Role
+
+* `token_type` - removed from the `vault_consul_secret_backend_role` resource.
+
+### PKI Root Cert
+
+* `serial` - removed from the `vault_pki_secret_backend_root_cert` resource. Use `serial_number` instead.
+
+### PKI Root Sign Intermediate
+
+* `serial` - removed from the `vault_pki_secret_backend_root_sign_intermediate` resource. Use `serial_number` instead.
+
+### PKI Root Sign
+
+* `serial` - removed from the `vault_pki_secret_backend_sign` resource. Use `serial_number` instead.
