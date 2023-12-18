@@ -61,6 +61,8 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "key_usage.1", "KeyAgreement"),
 		resource.TestCheckResourceAttr(resourceName, "key_usage.2", "KeyEncipherment"),
 		resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
+		resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.0", "1.3.6.1.4.1.311.4"),
 		resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
 		resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
 		resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
@@ -160,6 +162,8 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "key_usage.1", "KeyAgreement"),
 		resource.TestCheckResourceAttr(resourceName, "key_usage.2", "KeyEncipherment"),
 		resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
+		resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.0", "1.3.6.1.4.1.311.4"),
 		resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
 		resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
 		resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
@@ -298,6 +302,8 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "key_usage.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "key_usage.0", "DigitalSignature"),
 					resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.0", "1.3.6.1.4.1.311.4"),
 					resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
 					resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
 					resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
@@ -368,6 +374,7 @@ resource "vault_pki_secret_backend_role" "test" {
   key_type                           = "rsa"
   key_bits                           = 2048
   ext_key_usage                      = []
+  ext_key_usage_oids                 = ["1.3.6.1.4.1.311.4"]
   use_csr_common_name                = true
   use_csr_sans                       = true
   ou                                 = ["test"]
@@ -422,6 +429,7 @@ resource "vault_pki_secret_backend_role" "test" {
   key_bits = 2048
   key_usage = ["DigitalSignature"]
   ext_key_usage = []
+  ext_key_usage_oids = ["1.3.6.1.4.1.311.4"]
   use_csr_common_name = true
   use_csr_sans = true
   ou = ["test"]
