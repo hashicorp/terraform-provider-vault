@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/sys"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
 )
 
 // Ensure the implementation satisfies the provider.Provider interface
@@ -47,7 +47,7 @@ func (p *fwprovider) Metadata(ctx context.Context, req provider.MetadataRequest,
 //
 // Schema is called during validate, plan and apply.
 func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
-	// TODO(JM): This schema must match exactly to the SDKv2 provider's schema
+	// This schema must match exactly to the SDKv2 provider's schema
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			// Not `Required` but must be set via config or env. Otherwise we
