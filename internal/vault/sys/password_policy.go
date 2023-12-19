@@ -32,8 +32,10 @@ func (r *PasswordPolicyResource) Metadata(_ context.Context, req resource.Metada
 // PasswordPolicyModel describes the Terraform resource data model to match the
 // resource schema.
 type PasswordPolicyModel struct {
+	// common fields to all migrated resources
+	ID types.String `tfsdk:"id"`
+
 	// common fields to all resources
-	ID        types.String `tfsdk:"id"`
 	Namespace types.String `tfsdk:"namespace"`
 
 	// fields specific to this resource
@@ -41,8 +43,8 @@ type PasswordPolicyModel struct {
 	Policy types.String `tfsdk:"policy"`
 }
 
-// PasswordPolicyResourceAPIModel describes the Vault API data model.
-type PasswordPolicyResourceAPIModel struct {
+// PasswordPolicyAPIModel describes the Vault API data model.
+type PasswordPolicyAPIModel struct {
 	Policy string `json:"policy" mapstructure:"policy"`
 }
 
@@ -76,7 +78,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 		MarkdownDescription: "Provides a resource to manage Password Policies.",
 	}
 
-	base.MustAddBaseSchema(&resp.Schema)
+	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
 func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -169,7 +171,7 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	var readResp *PasswordPolicyResourceAPIModel
+	var readResp PasswordPolicyAPIModel
 	err = json.Unmarshal(jsonData, &readResp)
 	if err != nil {
 		resp.Diagnostics.AddError(

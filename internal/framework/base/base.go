@@ -23,14 +23,30 @@ type BaseModel struct {
 	Namespace types.String `tfsdk:"namespace"`
 }
 
+func legacyBaseSchema() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		// Add an 'id' field to the base schema because
+		//   1. The id field was implicitly added in the SDKv2, so we must
+		//      explicitly add it for existing resources, otherwise its a
+		//      breaking change for practitioners.
+		//   2. The id field is required for acceptance testing with the SDKv2
+		//      package.
+		// See:
+		//   https://developer.hashicorp.com/terraform/plugin/framework/acctests#no-id-found-in-attributes
+		//   https://github.com/hashicorp/terraform-plugin-framework/issues/896
+		"id": schema.StringAttribute{
+			Computed: true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+	}
+}
+
+type schemaFunc func() map[string]schema.Attribute
+
 func baseSchema() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
-		// Required for acceptance testing
-		// https://developer.hashicorp.com/terraform/plugin/framework/acctests#no-id-found-in-attributes
-		"id": schema.StringAttribute{
-			Computed:            true,
-			MarkdownDescription: "ID required by the testing framework",
-		},
 		consts.FieldNamespace: schema.StringAttribute{
 			Optional: true,
 			PlanModifiers: []planmodifier.String{
@@ -44,12 +60,32 @@ func baseSchema() map[string]schema.Attribute {
 	}
 }
 
-func MustAddBaseSchema(s *schema.Schema) {
-	for k, v := range baseSchema() {
-		if _, ok := s.Attributes[k]; ok {
-			panic(fmt.Sprintf("cannot add schema field %q, already exists in the Schema map", k))
-		}
+func mustAddSchema(s *schema.Schema, schemaFuncs ...schemaFunc) {
+	for _, f := range schemaFuncs {
+		for k, v := range f() {
+			if _, ok := s.Attributes[k]; ok {
+				panic(fmt.Sprintf("cannot add schema field %q, already exists in the Schema map", k))
+			}
 
-		s.Attributes[k] = v
+			s.Attributes[k] = v
+		}
 	}
+}
+
+// MustAddBaseSchema adds the schema fields that are required for all
+// resources and data sources.
+//
+// This should be called from a resources or data source's Schema() method.
+func MustAddBaseSchema(s *schema.Schema) {
+	mustAddSchema(s, baseSchema)
+}
+
+// MustAddLegacyBaseSchema adds the schema fields that are required for
+// resources and data sources that have been migrated from SDKv2 to the
+// Terraform Plugin Framework.
+//
+// This should be called from a resources or data source's Schema() method.
+func MustAddLegacyBaseSchema(s *schema.Schema) {
+	mustAddSchema(s, baseSchema)
+	mustAddSchema(s, legacyBaseSchema)
 }

@@ -14,22 +14,28 @@ import (
 )
 
 func TestAccPasswordPolicy(t *testing.T) {
+	ns := acctest.RandomWithPrefix("ns")
 	policyName := acctest.RandomWithPrefix("test-policy")
 	resourceName := "vault_password_policy.test"
+	testPolicy := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"
+	testPolicyUpdated := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\nrule \"charset\" {\n  charset = \"1234567890\"\nmin-chars = 1\n}\n"
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccPasswordPolicyConfig(policyName, "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"),
+				Config: testAccPasswordPolicyConfig(ns, policyName, testPolicy),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
 					resource.TestCheckResourceAttr(resourceName, "name", policyName),
 					resource.TestCheckResourceAttrSet(resourceName, "policy"),
 				),
 			},
 			{
-				Config: testAccPasswordPolicyConfig(policyName, "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\nrule \"charset\" {\n  charset = \"1234567890\"\nmin-chars = 1\n}\n"),
+				Config: testAccPasswordPolicyConfig(ns, policyName, testPolicyUpdated),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
 					resource.TestCheckResourceAttr(resourceName, "name", policyName),
 					resource.TestCheckResourceAttrSet(resourceName, "policy"),
 				),
@@ -38,12 +44,17 @@ func TestAccPasswordPolicy(t *testing.T) {
 	})
 }
 
-func testAccPasswordPolicyConfig(policyName string, policy string) string {
+func testAccPasswordPolicyConfig(ns, policyName, policy string) string {
 	return fmt.Sprintf(`
+resource "vault_namespace" "ns1" {
+    path = "%s"
+}
+
 resource "vault_password_policy" "test" {
+  namespace = vault_namespace.ns1.path
   name = "%s"
-   policy = <<EOT
+  policy = <<EOT
 %s
 EOT
-}`, policyName, policy)
+}`, ns, policyName, policy)
 }
