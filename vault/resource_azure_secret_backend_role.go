@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"log"
 	"strings"
 
@@ -184,14 +185,11 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		}
 	}
 
+	// handle comma separated string field
 	if v, ok := d.GetOk(consts.FieldTags); ok {
-		data[consts.FieldTags] = expandStringSlice(v.([]interface{}))
-	} else {
-		// check if we are an empty array or null (not set in config)
-		val, _ := d.GetRawConfig().AsValueMap()[consts.FieldTags]
-		if !val.IsNull() {
-			// value was set as empty array in config
-			data[consts.FieldTags] = make([]string, 0)
+		tags := util.ToStringArray(v.([]interface{}))
+		if len(tags) > 0 {
+			data[consts.FieldTags] = strings.Join(tags, ",")
 		}
 	}
 
