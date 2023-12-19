@@ -40,6 +40,27 @@ func TestAccPasswordPolicy(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "policy"),
 				),
 			},
+			// {
+			// 	// unfortunately two steps are needed when testing import,
+			// 	// since the tf-plugin-sdk does not allow for specifying environment variables :(
+			// 	// neither does have any support for generic post-step functions.
+			// 	// It is possible that this will cause issues if we ever want to support parallel tests.
+			// 	// We would have to update the SDK to suport specifying extra env vars by step.
+			// 	PreConfig: func() {
+			// 		t.Setenv(consts.EnvVarVaultNamespaceImport, ns)
+			// 	},
+			// 	ImportState:       true,
+			// 	ImportStateVerify: true,
+			// 	ResourceName:      resourceName,
+			// },
+			// {
+			// 	// needed for the import step above :(
+			// 	Config: testAccPasswordPolicyConfig(ns, policyName, testPolicyUpdated),
+			// 	PreConfig: func() {
+			// 		os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+			// 	},
+			// 	PlanOnly: true,
+			// },
 		},
 	})
 }

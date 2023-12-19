@@ -112,7 +112,7 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	// write the ID to state which is required for acceptance testing
+	// write the ID to state which is required for backwards compatibility
 	plan.ID = types.StringValue(plan.Name.ValueString())
 
 	// Save data into Terraform state
@@ -139,7 +139,12 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	// TODO: refactor the following read, marshal and unmarshal into a helper?
-	path := r.path(state.Name.ValueString())
+
+	name := state.Name.ValueString()
+	if name == "" {
+		name = state.ID.ValueString()
+	}
+	path := r.path(name)
 	policyResp, err := client.Logical().Read(path)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -187,8 +192,8 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 
 	state.Policy = types.StringValue(readResp.Policy)
 
-	// write the ID to state which is required for acceptance testing
-	state.ID = types.StringValue(state.Name.ValueString())
+	// write the ID to state which is required for backwards compatibility
+	state.ID = types.StringValue(name)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -229,7 +234,7 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	// write the ID to state which is required for acceptance testing
+	// write the ID to state which is required for backwards compatibility
 	plan.ID = types.StringValue(plan.Name.ValueString())
 
 	// Save data into Terraform state
