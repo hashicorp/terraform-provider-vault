@@ -2,7 +2,6 @@ package sys
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
@@ -138,8 +138,6 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	// TODO: refactor the following read, marshal and unmarshal into a helper?
-
 	name := state.Name.ValueString()
 	if name == "" {
 		name = state.ID.ValueString()
@@ -167,28 +165,8 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	jsonData, err := json.Marshal(policyResp.Data)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to marshal Vault response",
-			"An unexpected error occurred while attempting to marshal the Vault response.\n\n"+
-				"Error: "+err.Error(),
-		)
-
-		return
-	}
-
 	var readResp PasswordPolicyAPIModel
-	err = json.Unmarshal(jsonData, &readResp)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to unmarshal data to API model",
-			"An unexpected error occurred while attempting to unmarshal the data.\n\n"+
-				"Error: "+err.Error(),
-		)
-
-		return
-	}
+	model.ToAPIModel(policyResp.Data, &readResp, resp.Diagnostics)
 
 	state.Policy = types.StringValue(readResp.Policy)
 
