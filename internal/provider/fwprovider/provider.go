@@ -2,6 +2,7 @@ package fwprovider
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	sdkv2provider "github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
 )
 
@@ -167,8 +169,16 @@ func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, res
 //
 // Configure is called during plan and apply.
 func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	// Provider's parsed configuration (its instance state) is available through the primary provider's Meta() method.
-	v := p.Primary.Meta()
+	// Provider's parsed configuration (its instance state) is available
+	// through the primary provider's Meta() method.
+	v, ok := p.Primary.Meta().(*sdkv2provider.ProviderMeta)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *provider.ProviderMeta, got: %T. Please report this issue to the provider developers.", p.Primary.Meta()),
+		)
+		return
+	}
 	resp.DataSourceData = v
 	resp.ResourceData = v
 }
