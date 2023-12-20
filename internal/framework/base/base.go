@@ -2,11 +2,13 @@ package base
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -47,17 +49,16 @@ func (w *WithImportByID) ImportState(ctx context.Context, request resource.Impor
 	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldID), request, response)
 
 	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
-	if ns == "" {
-		response.Diagnostics.AddError(
-			"Unable to Import Resource from Vault",
-			"The "+consts.EnvVarVaultNamespaceImport+"must be set.",
+	if ns != "" {
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
 		)
-
-		return
+		response.Diagnostics.Append(
+			response.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
+		)
 	}
-	response.Diagnostics.Append(
-		response.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
-	)
 }
 
 // DataSourceWithConfigure is a structure to be embedded within a DataSource

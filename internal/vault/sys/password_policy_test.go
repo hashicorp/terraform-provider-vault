@@ -14,19 +14,49 @@ import (
 )
 
 func TestAccPasswordPolicy(t *testing.T) {
-	ns := acctest.RandomWithPrefix("ns")
 	policyName := acctest.RandomWithPrefix("test-policy")
 	resourceName := "vault_password_policy.test"
 	testPolicy := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"
 	testPolicyUpdated := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\nrule \"charset\" {\n  charset = \"1234567890\"\nmin-chars = 1\n}\n"
-	updatedConfig := testAccPasswordPolicyConfig(ns, policyName, testPolicyUpdated)
+	updatedConfig := testAccPasswordPolicyConfig(policyName, testPolicyUpdated)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccPasswordPolicyConfig(ns, policyName, testPolicy),
+				Config: testAccPasswordPolicyConfig(policyName, testPolicy),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", policyName),
+					resource.TestCheckResourceAttrSet(resourceName, "policy"),
+				),
+			},
+			{
+				Config: updatedConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", policyName),
+					resource.TestCheckResourceAttrSet(resourceName, "policy"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+		},
+	})
+}
+
+func TestAccPasswordPolicyNS(t *testing.T) {
+	ns := acctest.RandomWithPrefix("ns")
+	policyName := acctest.RandomWithPrefix("test-policy")
+	resourceName := "vault_password_policy.test"
+	testPolicy := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"
+	testPolicyUpdated := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\nrule \"charset\" {\n  charset = \"1234567890\"\nmin-chars = 1\n}\n"
+	updatedConfig := testAccPasswordPolicyConfigNS(ns, policyName, testPolicyUpdated)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPasswordPolicyConfigNS(ns, policyName, testPolicy),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
 					resource.TestCheckResourceAttr(resourceName, "name", policyName),
@@ -47,7 +77,17 @@ func TestAccPasswordPolicy(t *testing.T) {
 	})
 }
 
-func testAccPasswordPolicyConfig(ns, policyName, policy string) string {
+func testAccPasswordPolicyConfig(policyName, policy string) string {
+	return fmt.Sprintf(`
+resource "vault_password_policy" "test" {
+  name = "%s"
+  policy = <<EOT
+%s
+EOT
+}`, policyName, policy)
+}
+
+func testAccPasswordPolicyConfigNS(ns, policyName, policy string) string {
 	return fmt.Sprintf(`
 resource "vault_namespace" "ns1" {
     path = "%s"
