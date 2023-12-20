@@ -138,10 +138,8 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	name := state.Name.ValueString()
-	if name == "" {
-		name = state.ID.ValueString()
-	}
+	// read the name from the id field to support the import command
+	name := state.ID.ValueString()
 	path := r.path(name)
 	policyResp, err := client.Logical().Read(path)
 	if err != nil {
@@ -169,6 +167,9 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 	model.ToAPIModel(policyResp.Data, &readResp, resp.Diagnostics)
 
 	state.Policy = types.StringValue(readResp.Policy)
+
+	// write the name to state to support the import command
+	state.Name = types.StringValue(name)
 
 	// write the ID to state which is required for backwards compatibility
 	state.ID = types.StringValue(name)
