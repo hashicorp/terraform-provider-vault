@@ -19,12 +19,23 @@ import (
 // structs. See https://github.com/hashicorp/terraform-plugin-framework/issues/242
 // So for now, we must duplicate all fields.
 type BaseModel struct {
+	Namespace types.String `tfsdk:"namespace"`
+}
+
+// BaseModelLegacy describes common fields for all of the Terraform resource
+// data models that have been migrated from SDKv2 to the TF Plugin Framework.
+//
+// Ideally this struct would be imbedded into all Resources and DataSources.
+// However, the Terraform Plugin Framework doesn't support unmarshalling nested
+// structs. See https://github.com/hashicorp/terraform-plugin-framework/issues/242
+// So for now, we must duplicate all fields.
+type BaseModelLegacy struct {
 	ID        types.String `tfsdk:"id"`
 	Namespace types.String `tfsdk:"namespace"`
 }
 
-// MustAddBaseSchema adds the schema fields that are required for all
-// resources and data sources.
+// MustAddBaseSchema adds the schema fields that are required for all net new
+// resources and data sources built with the TF Plugin Framework.
 //
 // This should be called from a resources or data source's Schema() method.
 func MustAddBaseSchema(s *schema.Schema) {
