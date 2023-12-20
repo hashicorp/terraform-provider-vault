@@ -2,7 +2,6 @@ package sys
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -11,29 +10,31 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 )
 
-// ensure we our interface implementation is correct
+// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
 var _ resource.ResourceWithConfigure = &PasswordPolicyResource{}
 
+// NewPasswordPolicyResource returns the implementation for this resource to be
+// imported by the Terraform Plugin Framework provider
 func NewPasswordPolicyResource() resource.Resource {
 	return &PasswordPolicyResource{}
 }
 
+// PasswordPolicyResource implements the methods that define this resource
 type PasswordPolicyResource struct {
-	meta *provider.ProviderMeta
-}
-
-func (r *PasswordPolicyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_password_policy"
+	base.ResourceWithConfigure
+	base.WithImportByID
 }
 
 // PasswordPolicyModel describes the Terraform resource data model to match the
 // resource schema.
 type PasswordPolicyModel struct {
+	// common fields to all migrated resources
+	ID types.String `tfsdk:"id"`
+
 	// common fields to all resources
-	ID        types.String `tfsdk:"id"`
 	Namespace types.String `tfsdk:"namespace"`
 
 	// fields specific to this resource
@@ -41,26 +42,22 @@ type PasswordPolicyModel struct {
 	Policy types.String `tfsdk:"policy"`
 }
 
-// PasswordPolicyResourceAPIModel describes the Vault API data model.
-type PasswordPolicyResourceAPIModel struct {
+// PasswordPolicyAPIModel describes the Vault API data model.
+type PasswordPolicyAPIModel struct {
 	Policy string `json:"policy" mapstructure:"policy"`
 }
 
-func (r *PasswordPolicyResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	meta, ok := req.ProviderData.(*provider.ProviderMeta)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *provider.ProviderMeta, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-		return
-	}
-	r.meta = meta
+// Metadata defines the resource name as it would appear in Terraform configurations
+//
+// https://developer.hashicorp.com/terraform/plugin/framework/resources#metadata-method
+func (r *PasswordPolicyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_password_policy"
 }
 
+// Schema defines this resource's schema which is the data that is available in
+// the resource's configuration, plan, and state
+//
+// https://developer.hashicorp.com/terraform/plugin/framework/resources#schema-method
 func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -76,9 +73,12 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 		MarkdownDescription: "Provides a resource to manage Password Policies.",
 	}
 
-	base.MustAddBaseSchema(&resp.Schema)
+	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
+// Create is called during the terraform apply command.
+//
+// https://developer.hashicorp.com/terraform/plugin/framework/resources/create
 func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan PasswordPolicyModel
 
@@ -89,7 +89,7 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.meta, plan.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
 		return
@@ -112,13 +112,17 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	// write the ID to state which is required for acceptance testing
-	plan.ID = types.StringValue(path)
+	// write the ID to state which is required for backwards compatibility
+	plan.ID = types.StringValue(plan.Name.ValueString())
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
+// Read is called during the terraform apply, terraform plan, and terraform
+// refresh commands.
+//
+// https://developer.hashicorp.com/terraform/plugin/framework/resources/read
 func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state PasswordPolicyModel
 	// Read Terraform prior state data into the model
@@ -128,14 +132,15 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.meta, state.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), state.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
 		return
 	}
 
-	// TODO: refactor the following read, marshal and unmarshal into a helper?
-	path := r.path(state.Name.ValueString())
+	// read the name from the id field to support the import command
+	name := state.ID.ValueString()
+	path := r.path(name)
 	policyResp, err := client.Logical().Read(path)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -158,37 +163,27 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	jsonData, err := json.Marshal(policyResp.Data)
+	var readResp PasswordPolicyAPIModel
+	err = model.ToAPIModel(policyResp.Data, &readResp)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to marshal Vault response",
-			"An unexpected error occurred while attempting to marshal the Vault response.\n\n"+
-				"Error: "+err.Error(),
-		)
-
-		return
-	}
-
-	var readResp *PasswordPolicyResourceAPIModel
-	err = json.Unmarshal(jsonData, &readResp)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to unmarshal data to API model",
-			"An unexpected error occurred while attempting to unmarshal the data.\n\n"+
-				"Error: "+err.Error(),
-		)
-
+		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
 		return
 	}
 
 	state.Policy = types.StringValue(readResp.Policy)
 
-	// write the ID to state which is required for acceptance testing
-	state.ID = types.StringValue(path)
+	// write the name to state to support the import command
+	state.Name = types.StringValue(name)
+
+	// write the ID to state which is required for backwards compatibility
+	state.ID = types.StringValue(name)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
+// Update is called during the terraform apply command
+//
+// https://developer.hashicorp.com/terraform/plugin/framework/resources/update
 func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan PasswordPolicyModel
 
@@ -199,7 +194,7 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.meta, plan.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
 		return
@@ -222,13 +217,16 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	// write the ID to state which is required for acceptance testing
-	plan.ID = types.StringValue(path)
+	// write the ID to state which is required for backwards compatibility
+	plan.ID = types.StringValue(plan.Name.ValueString())
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
+// Delete is called during the terraform apply command
+//
+// https://developer.hashicorp.com/terraform/plugin/framework/resources/delete
 func (r *PasswordPolicyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var plan PasswordPolicyModel
 
@@ -239,7 +237,7 @@ func (r *PasswordPolicyResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.meta, plan.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
 		return

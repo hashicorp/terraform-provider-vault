@@ -1,55 +1,76 @@
 package base
 
 import (
+	"context"
 	"fmt"
+	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-// BaseModel describes common fields for all of the Terraform resource data models
-//
-// Ideally this struct would be imbedded into all Resources and DataSources.
-// However, the Terraform Plugin Framework doesn't support unmarshalling nested
-// structs. See https://github.com/hashicorp/terraform-plugin-framework/issues/242
-// So for now, we must duplicate all fields.
-type BaseModel struct {
-	ID        types.String `tfsdk:"id"`
-	Namespace types.String `tfsdk:"namespace"`
+type withMeta struct {
+	meta *provider.ProviderMeta
 }
 
-func baseSchema() map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		// Required for acceptance testing
-		// https://developer.hashicorp.com/terraform/plugin/framework/acctests#no-id-found-in-attributes
-		"id": schema.StringAttribute{
-			Computed:            true,
-			MarkdownDescription: "ID required by the testing framework",
-		},
-		consts.FieldNamespace: schema.StringAttribute{
-			Optional: true,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
-			},
-			MarkdownDescription: "Target namespace. (requires Enterprise)",
-			Validators: []validator.String{
-				validators.PathValidator(),
-			},
-		},
+func (w *withMeta) Meta() *provider.ProviderMeta {
+	return w.meta
+}
+
+// ResourceWithConfigure is a structure to be embedded within a Resource that
+// implements the ResourceWithConfigure interface.
+type ResourceWithConfigure struct {
+	withMeta
+}
+
+// Configure enables provider-level data or clients to be set in the
+// provider-defined Resource type.
+func (r *ResourceWithConfigure) Configure(_ context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
+	if v, ok := request.ProviderData.(*provider.ProviderMeta); ok {
+		r.meta = v
 	}
 }
 
-func MustAddBaseSchema(s *schema.Schema) {
-	for k, v := range baseSchema() {
-		if _, ok := s.Attributes[k]; ok {
-			panic(fmt.Sprintf("cannot add schema field %q, already exists in the Schema map", k))
-		}
+// WithImportByID is intended to be embedded in resources which import state
+// via the "id" attribute.
+//
+// https://developer.hashicorp.com/terraform/plugin/framework/resources/import.
+//
+// This will ensure the Vault namespace is written to state if it is set in the
+// environment.
+// https://registry.terraform.io/providers/hashicorp/vault/latest/docs#namespace-support
+type WithImportByID struct{}
 
-		s.Attributes[k] = v
+func (w *WithImportByID) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldID), request, response)
+
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		response.Diagnostics.Append(
+			response.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
+		)
+	}
+}
+
+// DataSourceWithConfigure is a structure to be embedded within a DataSource
+// that implements the DataSourceWithConfigure interface.
+type DataSourceWithConfigure struct {
+	withMeta
+}
+
+// Configure enables provider-level data or clients to be set in the
+// provider-defined DataSource type.
+func (d *DataSourceWithConfigure) Configure(_ context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
+	if v, ok := request.ProviderData.(*provider.ProviderMeta); ok {
+		d.meta = v
 	}
 }
