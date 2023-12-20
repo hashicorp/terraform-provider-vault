@@ -5,12 +5,10 @@ package sys_test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -21,6 +19,7 @@ func TestAccPasswordPolicy(t *testing.T) {
 	resourceName := "vault_password_policy.test"
 	testPolicy := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"
 	testPolicyUpdated := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\nrule \"charset\" {\n  charset = \"1234567890\"\nmin-chars = 1\n}\n"
+	updatedConfig := testAccPasswordPolicyConfig(ns, policyName, testPolicyUpdated)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
@@ -35,33 +34,15 @@ func TestAccPasswordPolicy(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccPasswordPolicyConfig(ns, policyName, testPolicyUpdated),
+				Config: updatedConfig,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
 					resource.TestCheckResourceAttr(resourceName, "name", policyName),
 					resource.TestCheckResourceAttrSet(resourceName, "policy"),
 				),
 			},
-			{
-				// Two steps are needed when testing import because the
-				// tf-plugin-sdk does not allow specifying environment
-				// variables. It is possible that this will cause issues if we
-				// ever want to support parallel tests.
-				PreConfig: func() {
-					t.Setenv(consts.EnvVarVaultNamespaceImport, ns)
-				},
-				ImportState:       true,
-				ImportStateVerify: true,
-				ResourceName:      resourceName,
-			},
-			{
-				// needed for the import step above
-				Config: testAccPasswordPolicyConfig(ns, policyName, testPolicyUpdated),
-				PreConfig: func() {
-					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
-				},
-				PlanOnly: true,
-			},
+			testutil.GetImportTestStepNS(t, ns, resourceName, updatedConfig),
+			testutil.GetImportTestStepNSCleanup(t, updatedConfig),
 		},
 	})
 }
