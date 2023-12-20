@@ -164,7 +164,11 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	var readResp PasswordPolicyAPIModel
-	model.ToAPIModel(policyResp.Data, &readResp, resp.Diagnostics)
+	err = model.ToAPIModel(policyResp.Data, &readResp)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
+		return
+	}
 
 	state.Policy = types.StringValue(readResp.Policy)
 
