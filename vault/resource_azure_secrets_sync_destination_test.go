@@ -50,6 +50,11 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldCloud, "cloud"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldClientID,
+				consts.FieldClientSecret,
+				consts.FieldTenantID,
+			),
 		},
 	})
 }

@@ -27,6 +27,11 @@ var azureSyncDestinationFields = []string{
 	consts.FieldTenantID,
 }
 
+var azureNonSensitiveFields = []string{
+	fieldKeyVaultURI,
+	fieldCloud,
+}
+
 func azureSecretsSyncDestinationResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(azureSecretsSyncDestinationWrite, provider.VaultVersion115),
@@ -132,10 +137,14 @@ func azureSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	for _, k := range azureSyncDestinationFields {
-		if v, ok := resp.Data[k]; ok {
-			if err := d.Set(k, v); err != nil {
-				return diag.Errorf("error setting state key %q: err=%s", k, err)
+	for _, k := range azureNonSensitiveFields {
+		if data, ok := resp.Data[vaultFieldConnectionDetails]; ok {
+			if m, ok := data.(map[string]interface{}); ok {
+				if v, ok := m[k]; ok {
+					if err := d.Set(k, v); err != nil {
+						return diag.Errorf("error setting state key %q: err=%s", k, err)
+					}
+				}
 			}
 		}
 	}
