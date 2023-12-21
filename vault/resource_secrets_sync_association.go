@@ -101,7 +101,7 @@ func secretsSyncAssociationWrite(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	log.Printf("[DEBUG] Writing association to %q", path)
-	resp, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return diag.Errorf("error setting secrets sync association %q: %s", path, err)
 	}
@@ -114,15 +114,20 @@ func secretsSyncAssociationWrite(ctx context.Context, d *schema.ResourceData, me
 	// set data that is received from Vault upon writes
 	vaultRespKey := fmt.Sprintf("%s/%s", accessor, name)
 	associatedSecrets := "associated_secrets"
+	secretData, ok := resp.Data[associatedSecrets]
+	if !ok {
+		// did not find any associated secrets for this mount
+		// we expect to see data here since we just wrote an association
+		return diag.Errorf("expected associated secrets; received no secret associations in mount")
+	}
+
 	for _, k := range secretsSyncAssociationFields {
-		if secrets, ok := resp.Data[associatedSecrets]; ok {
-			if secretsMap, ok := secrets.(map[string]interface{}); ok {
-				if val, ok := secretsMap[vaultRespKey]; ok {
-					if valMap, ok := val.(map[string]interface{}); ok {
-						if v, ok := valMap[k]; ok {
-							if err := d.Set(k, v); err != nil {
-								return diag.FromErr(err)
-							}
+		if secretsMap, ok := secretData.(map[string]interface{}); ok {
+			if val, ok := secretsMap[vaultRespKey]; ok {
+				if valMap, ok := val.(map[string]interface{}); ok {
+					if v, ok := valMap[k]; ok {
+						if err := d.Set(k, v); err != nil {
+							return diag.FromErr(err)
 						}
 					}
 				}
