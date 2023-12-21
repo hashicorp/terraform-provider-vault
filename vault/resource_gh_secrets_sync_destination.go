@@ -26,6 +26,11 @@ var githubSyncDestinationFields = []string{
 	fieldRepositoryName,
 }
 
+var githubNonSensitiveFields = []string{
+	fieldRepositoryOwner,
+	fieldRepositoryName,
+}
+
 func githubSecretsSyncDestinationResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(githubSecretsSyncDestinationWrite, provider.VaultVersion115),
@@ -50,10 +55,8 @@ func githubSecretsSyncDestinationResource() *schema.Resource {
 				ForceNew:    true,
 			},
 			fieldRepositoryOwner: {
-				Type:     schema.TypeString,
-				Required: true,
-				// @TODO confirm if this is sensitive
-				// Sensitive:   true,
+				Type:        schema.TypeString,
+				Required:    true,
 				Description: "GitHub organization or username that owns the repository.",
 				ForceNew:    true,
 			},
@@ -119,15 +122,17 @@ func githubSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	for _, k := range githubSyncDestinationFields {
-		if v, ok := resp.Data[k]; ok {
-			if err := d.Set(k, v); err != nil {
-				return diag.Errorf("error setting state key %q: err=%s", k, err)
+	for _, k := range githubNonSensitiveFields {
+		if data, ok := resp.Data[vaultFieldConnectionDetails]; ok {
+			if m, ok := data.(map[string]interface{}); ok {
+				if v, ok := m[k]; ok {
+					if err := d.Set(k, v); err != nil {
+						return diag.Errorf("error setting state key %q: err=%s", k, err)
+					}
+				}
 			}
 		}
 	}
-
-	// set sensitive fields that will not be returned from Vault
 
 	return nil
 }

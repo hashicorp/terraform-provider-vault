@@ -16,7 +16,7 @@ import (
 )
 
 func TestAzureSecretsSyncDestination(t *testing.T) {
-	destName := acctest.RandomWithPrefix("tf-sync-dest")
+	destName := acctest.RandomWithPrefix("tf-sync-dest-azure")
 
 	resourceName := "vault_azure_secrets_sync_destination.test"
 

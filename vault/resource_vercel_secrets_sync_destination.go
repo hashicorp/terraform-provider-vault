@@ -136,7 +136,7 @@ func vercelSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceDat
 	}
 
 	for _, k := range vercelNonSensitiveFields {
-		if data, ok := resp.Data["connection_details"]; ok {
+		if data, ok := resp.Data[vaultFieldConnectionDetails]; ok {
 			if m, ok := data.(map[string]interface{}); ok {
 				if v, ok := m[k]; ok {
 					if err := d.Set(k, v); err != nil {

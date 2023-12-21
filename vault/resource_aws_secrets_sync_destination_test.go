@@ -16,7 +16,7 @@ import (
 )
 
 func TestAWSSecretsSyncDestination(t *testing.T) {
-	destName := acctest.RandomWithPrefix("tf-sync-dest")
+	destName := acctest.RandomWithPrefix("tf-sync-dest-aws")
 
 	resourceName := "vault_aws_secrets_sync_destination.test"
 
@@ -39,6 +39,12 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, region),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				fieldAccessKeyID,
+				fieldSecretAccessKey,
+				// TODO confirm if region will not be returned in response
+				consts.FieldRegion,
+			),
 		},
 	})
 }

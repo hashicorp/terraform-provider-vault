@@ -17,11 +17,17 @@ import (
 const (
 	fieldAccessKeyID     = "access_key_id"
 	fieldSecretAccessKey = "secret_access_key"
+
+	vaultFieldConnectionDetails = "connection_details"
 )
 
 var awsSyncDestinationFields = []string{
 	fieldAccessKeyID,
 	fieldSecretAccessKey,
+	consts.FieldAWSRegion,
+}
+
+var awsSyncNonSensitiveFields = []string{
 	consts.FieldAWSRegion,
 }
 
@@ -44,7 +50,6 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 			fieldAccessKeyID: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Sensitive:   true,
 				Description: "Access key id to authenticate against the AWS secrets manager.",
 				ForceNew:    true,
 			},
@@ -118,6 +123,18 @@ func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
+	for _, k := range awsSyncNonSensitiveFields {
+		if data, ok := resp.Data[vaultFieldConnectionDetails]; ok {
+			if m, ok := data.(map[string]interface{}); ok {
+				if v, ok := m[k]; ok {
+					if err := d.Set(k, v); err != nil {
+						return diag.Errorf("error setting state key %q: err=%s", k, err)
+					}
+				}
+			}
+		}
+	}
+
 	for _, k := range awsSyncDestinationFields {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
@@ -125,8 +142,6 @@ func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, 
 			}
 		}
 	}
-
-	// set sensitive fields that will not be returned from Vault
 
 	return nil
 }

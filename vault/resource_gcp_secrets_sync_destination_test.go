@@ -16,7 +16,7 @@ import (
 )
 
 func TestGCPSecretsSyncDestination(t *testing.T) {
-	destName := acctest.RandomWithPrefix("tf-sync-dest")
+	destName := acctest.RandomWithPrefix("tf-sync-dest-gcp")
 
 	resourceName := "vault_gcp_secrets_sync_destination.test"
 
@@ -40,6 +40,8 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentials, credentials),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldCredentials),
 		},
 	})
 }

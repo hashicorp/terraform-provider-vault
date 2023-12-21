@@ -97,10 +97,6 @@ func gcpSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	// set sensitive fields that will not be returned from Vault
-	if err := d.Set(consts.FieldCredentials, d.Get(consts.FieldCredentials).(string)); err != nil {
-		return diag.FromErr(err)
-	}
 	return nil
 }
 

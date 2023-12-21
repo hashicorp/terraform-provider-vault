@@ -16,9 +16,9 @@ import (
 )
 
 func TestGithubSecretsSyncDestination(t *testing.T) {
-	destName := acctest.RandomWithPrefix("tf-sync-dest")
+	destName := acctest.RandomWithPrefix("tf-sync-dest-gh")
 
-	resourceName := "vault_aws_secrets_sync_destination.test"
+	resourceName := "vault_gh_secrets_sync_destination.test"
 
 	values := testutil.SkipTestEnvUnset(t,
 		"GITHUB_ACCESS_TOKEN",
@@ -47,13 +47,16 @@ func TestGithubSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldRepositoryName, repoName),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				fieldAccessToken,
+			),
 		},
 	})
 }
 
 func testGithubSecretsSyncDestinationConfig(accessToken, repoOwner, repoName, destName string) string {
 	ret := fmt.Sprintf(`
-resource "vault_github_secrets_sync_destination" "test" {
+resource "vault_gh_secrets_sync_destination" "test" {
   name             = "%s"
   access_token     = "%s"
   repository_owner = "%s"

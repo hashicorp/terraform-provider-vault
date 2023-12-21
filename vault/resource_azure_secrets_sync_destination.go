@@ -140,14 +140,6 @@ func azureSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData
 		}
 	}
 
-	// set sensitive fields that will not be returned from Vault
-	if err := d.Set(consts.FieldClientID, d.Get(consts.FieldClientID).(string)); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := d.Set(consts.FieldClientSecret, d.Get(consts.FieldClientSecret).(string)); err != nil {
-		return diag.FromErr(err)
-	}
 	return nil
 }
 
