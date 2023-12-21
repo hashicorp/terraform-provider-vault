@@ -80,27 +80,27 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 //
 // https://developer.hashicorp.com/terraform/plugin/framework/resources/create
 func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan PasswordPolicyModel
+	var data PasswordPolicyModel
 
 	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
 		return
 	}
 
-	data := map[string]interface{}{
-		"policy": plan.Policy.ValueString(),
+	vaultRequest := map[string]interface{}{
+		"policy": data.Policy.ValueString(),
 	}
-	path := r.path(plan.Name.ValueString())
+	path := r.path(data.Name.ValueString())
 	// vault returns a nil response on success
-	_, err = client.Logical().Write(path, data)
+	_, err = client.Logical().Write(path, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Resource",
@@ -113,10 +113,10 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 	}
 
 	// write the ID to state which is required for backwards compatibility
-	plan.ID = types.StringValue(plan.Name.ValueString())
+	data.ID = types.StringValue(data.Name.ValueString())
 
 	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // Read is called during the terraform apply, terraform plan, and terraform
@@ -124,22 +124,22 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 //
 // https://developer.hashicorp.com/terraform/plugin/framework/resources/read
 func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state PasswordPolicyModel
+	var data PasswordPolicyModel
 	// Read Terraform prior state data into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.Meta(), state.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
 		return
 	}
 
 	// read the name from the id field to support the import command
-	name := state.ID.ValueString()
+	name := data.ID.ValueString()
 	path := r.path(name)
 	policyResp, err := client.Logical().Read(path)
 	if err != nil {
@@ -170,42 +170,42 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	state.Policy = types.StringValue(readResp.Policy)
+	data.Policy = types.StringValue(readResp.Policy)
 
 	// write the name to state to support the import command
-	state.Name = types.StringValue(name)
+	data.Name = types.StringValue(name)
 
 	// write the ID to state which is required for backwards compatibility
-	state.ID = types.StringValue(name)
+	data.ID = types.StringValue(name)
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // Update is called during the terraform apply command
 //
 // https://developer.hashicorp.com/terraform/plugin/framework/resources/update
 func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan PasswordPolicyModel
+	var data PasswordPolicyModel
 
 	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
 		return
 	}
 
-	data := map[string]interface{}{
-		"policy": plan.Policy.ValueString(),
+	vaultRequest := map[string]interface{}{
+		"policy": data.Policy.ValueString(),
 	}
-	path := r.path(plan.Name.ValueString())
+	path := r.path(data.Name.ValueString())
 	// vault returns a nil response on success
-	_, err = client.Logical().Write(path, data)
+	_, err = client.Logical().Write(path, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update Resource",
@@ -218,32 +218,32 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 	}
 
 	// write the ID to state which is required for backwards compatibility
-	plan.ID = types.StringValue(plan.Name.ValueString())
+	data.ID = types.StringValue(data.Name.ValueString())
 
 	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // Delete is called during the terraform apply command
 //
 // https://developer.hashicorp.com/terraform/plugin/framework/resources/delete
 func (r *PasswordPolicyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var plan PasswordPolicyModel
+	var data PasswordPolicyModel
 
 	// Read Terraform state data into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
 		return
 	}
 
-	path := r.path(plan.Name.ValueString())
+	path := r.path(data.Name.ValueString())
 
 	_, err = client.Logical().Delete(path)
 	if err != nil {
