@@ -745,6 +745,10 @@ var (
 			Resource:      UpdateSchemaResource(azureSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/azure-kv/{name}"},
 		},
+		"vault_vercel_secrets_sync_destination": {
+			Resource:      UpdateSchemaResource(vercelSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/vercel-project/{name}"},
+		},
 		"vault_secrets_sync_association": {
 			Resource:      UpdateSchemaResource(secretsSyncAssociationResource()),
 			PathInventory: []string{"/sys/sync/destinations/{type}/{name}/associations/set"},
