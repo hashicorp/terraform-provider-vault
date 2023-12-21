@@ -539,11 +539,11 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.connection_url", connURL),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.username", username),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_open_connections", "2"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_idle_connections", "0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_.0.max_connection_lifetime", "0"),
 				),
 			},
 			{
@@ -760,7 +760,6 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 func TestAccDatabaseSecretBackendConnection_mysql_aurora_tls(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineMySQLAurora)
 
-	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "MYSQL_CA", "MYSQL_URL", "MYSQL_CERTIFICATE_KEY")
 	tlsCA, connURL, tlsCertificateKey := values[0], values[1], values[2]
 
