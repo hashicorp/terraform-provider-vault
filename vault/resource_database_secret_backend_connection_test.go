@@ -539,11 +539,11 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_.0.connection_url", connURL),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_.0.username", username),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_.0.max_open_connections", "2"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_.0.max_idle_connections", "0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_connection_lifetime", "0"),
 				),
 			},
 			{
@@ -753,25 +753,6 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.tls_certificate_key", tlsCertificateKey+"\n"),
 				),
 			},
-		},
-	})
-}
-
-func TestAccDatabaseSecretBackendConnection_mysql_aurora_tls(t *testing.T) {
-	MaybeSkipDBTests(t, dbEngineMySQLAurora)
-
-	values := testutil.SkipTestEnvUnset(t, "MYSQL_CA", "MYSQL_URL", "MYSQL_CERTIFICATE_KEY")
-	tlsCA, connURL, tlsCertificateKey := values[0], values[1], values[2]
-
-	backend := acctest.RandomWithPrefix("tf-test-db")
-	pluginName := dbEngineMySQL.DefaultPluginName()
-	name := acctest.RandomWithPrefix("db")
-	password := acctest.RandomWithPrefix("password")
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
-		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_aurora_tls(name, backend, connURL, password, tlsCA, tlsCertificateKey),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
@@ -781,14 +762,14 @@ func TestAccDatabaseSecretBackendConnection_mysql_aurora_tls(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.connection_url", connURL),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_open_connections", "2"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_idle_connections", "0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.%", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.password", password),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.tlsCA", tlsCA+"\n"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.tls_certificate_key", tlsCertificateKey+"\n"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.tlsCA", tlsCA+"\n"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.tls_certificate_key", tlsCertificateKey+"\n"),
 				),
 			},
 		},
