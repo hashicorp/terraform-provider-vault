@@ -739,7 +739,7 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Maximum number of open connections to the database.",
-				Default:     2,
+				Default:     4,
 			},
 			"max_idle_connections": {
 				Type:        schema.TypeInt,
