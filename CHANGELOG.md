@@ -6,6 +6,7 @@ FEATURES:
 
 BUGS:
 * fix `vault_kv_secret_v2` drift when "data" is in secret name/path ([#2104](https://github.com/hashicorp/terraform-provider-vault/pull/2104))
+* fix `vault_database_secret_backend_connection`: allow mysql_rds,mysql_aurora,mysql_legacy options of vault_database_secret_backend_connection terraform resource to allow specifying tls_ca and tls_certificate_key ([#2106](https://github.com/hashicorp/terraform-provider-vault/pull/2106))
 
 ## 3.23.0 (Nov 15, 2023)
 
