@@ -299,7 +299,7 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
 	}
-	if d.HasChange("access_key") || d.HasChange("secret_key") || d.HasChange("region") || d.HasChange("iam_endpoint") || d.HasChange("sts_endpoint") {
+	if d.HasChange("access_key") || d.HasChange("secret_key") || d.HasChange("region") || d.HasChange("iam_endpoint") || d.HasChange("sts_endpoint") || d.HasChange("username_template") {
 		log.Printf("[DEBUG] Updating root credentials at %q", path+"/config/root")
 		data := map[string]interface{}{
 			"access_key": d.Get("access_key").(string),

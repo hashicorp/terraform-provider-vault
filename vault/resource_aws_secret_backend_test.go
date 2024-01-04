@@ -81,6 +81,7 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 	resourceName := resourceType + ".test"
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	templ := fmt.Sprintf(`{{ printf "vault-%%s-%%s-%%s" (printf "%%s-%%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}`)
+	updateTempl := fmt.Sprintf(`{{ printf "vault2-%%s-%%s-%%s" (printf "%%s-%%s" (.DisplayName) (.PolicyName) | truncate 41) (unix_time) (random 20) | truncate 63 }}`)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
@@ -90,6 +91,12 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 				Config: testAccAWSSecretBackendConfig_userTemplate(path, accessKey, secretKey, templ),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "username_template", templ),
+				),
+			},
+			{
+				Config: testAccAWSSecretBackendConfig_userTemplate(path, accessKey, secretKey, updateTempl),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "username_template", updateTempl),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "secret_key", "disable_remount"),
