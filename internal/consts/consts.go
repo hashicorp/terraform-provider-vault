@@ -280,6 +280,7 @@ const (
 	FieldEmailProtectionFlag           = "email_protection_flag"
 	FieldKeyUsage                      = "key_usage"
 	FieldExtKeyUsage                   = "ext_key_usage"
+	FieldExtKeyUsageOIDs               = "ext_key_usage_oids"
 	FieldUseCSRCommonName              = "use_csr_common_name"
 	FieldUseCSRSans                    = "use_csr_sans"
 	FieldOU                            = "ou"
