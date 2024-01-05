@@ -24,7 +24,6 @@ var azureSecretFields = []string{
 	consts.FieldMaxTTL,
 	consts.FieldTTL,
 	consts.FieldApplicationObjectID,
-	consts.FieldSignInAudience,
 }
 
 func azureSecretBackendRoleResource() *schema.Resource {
@@ -185,11 +184,17 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		}
 	}
 
-	// handle comma separated string field
-	if v, ok := d.GetOk(consts.FieldTags); ok {
-		tags := util.ToStringArray(v.([]interface{}))
-		if len(tags) > 0 {
-			data[consts.FieldTags] = strings.Join(tags, ",")
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+	if useAPIVer116 {
+		if v, ok := d.GetOk(consts.FieldSignInAudience); ok && v != "" {
+			data[consts.FieldSignInAudience] = v
+		}
+		// handle comma separated string field
+		if v, ok := d.GetOk(consts.FieldTags); ok {
+			tags := util.ToStringArray(v.([]interface{}))
+			if len(tags) > 0 {
+				data[consts.FieldTags] = strings.Join(tags, ",")
+			}
 		}
 	}
 
@@ -263,8 +268,14 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 		}
 	}
 
-	if v, ok := resp.Data[consts.FieldTags].([]interface{}); ok && len(v) > 0 {
-		d.Set(consts.FieldTags, expandStringSlice(v))
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+	if useAPIVer116 {
+		if err := d.Set(consts.FieldSignInAudience, resp.Data[consts.FieldSignInAudience]); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set(consts.FieldTags, resp.Data[consts.FieldTags]); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if v, ok := resp.Data[consts.FieldAzureRoles]; ok {
