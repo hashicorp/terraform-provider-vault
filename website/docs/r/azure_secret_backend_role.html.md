@@ -75,7 +75,7 @@ The following arguments are supported:
   suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine max TTL time.
 * `sign_in_audience` - (Optional) Specifies the security principal types that are allowed to sign in to the application. 
   Valid values are: AzureADMyOrg, AzureADMultipleOrgs, AzureADandPersonalMicrosoftAccount, PersonalMicrosoftAccount.
-* `tags` - (Optional) - A comma-separated string of Azure tags to attach to an application.
+* `tags` - (Optional) - A list of Azure tags to attach to an application.
 
 ## Attributes Reference
 
