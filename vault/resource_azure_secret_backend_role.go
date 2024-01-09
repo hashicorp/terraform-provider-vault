@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"log"
 	"strings"
@@ -154,7 +153,7 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		// So we marshall and then change into a string
 		jsonAzureList, err := json.Marshal(rawAzureList)
 		if err != nil {
-			return diag.FromErr(fmt.Errorf("error marshaling JSON for azure_roles %q: %s", rawAzureList, err))
+			return diag.Errorf("error marshaling JSON for azure_roles %q: %s", rawAzureList, err)
 		}
 		jsonAzureListString := string(jsonAzureList)
 
@@ -169,7 +168,7 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		// So we marshall and then change into a string
 		jsonAzureList, err := json.Marshal(rawAzureList)
 		if err != nil {
-			return diag.FromErr(fmt.Errorf("error marshaling JSON for azure_groups %q: %s", rawAzureList, err))
+			return diag.Errorf("error marshaling JSON for azure_groups %q: %s", rawAzureList, err)
 		}
 
 		jsonAzureListString := string(jsonAzureList)
@@ -226,7 +225,7 @@ func azureSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, m
 	_, err = client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return diag.FromErr(fmt.Errorf("error writing Azure Secret role %q: %s", path, err))
+		return diag.Errorf("error writing Azure Secret role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote role %q to Azure Secret backend", path)
 
@@ -244,7 +243,7 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 	log.Printf("[DEBUG] Reading Azure Secret role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("error reading Azure Secret role %q: %s", path, err))
+		return diag.Errorf("error reading Azure Secret role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read Azure Secret role %q", path)
 
@@ -257,14 +256,14 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 	for _, k := range azureSecretFields {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
-				return diag.FromErr(fmt.Errorf("error reading %s for Azure Secret role Backend Role %q: %q", k, path, err))
+				return diag.Errorf("error reading %s for Azure Secret role Backend Role %q: %q", k, path, err)
 			}
 		}
 	}
 
 	if v, ok := resp.Data[consts.FieldPermanentlyDelete]; ok {
 		if err := d.Set(consts.FieldPermanentlyDelete, v); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting permanently delete field: %s", err))
+			return diag.Errorf("error setting permanently delete field: %s", err)
 		}
 	}
 
@@ -283,7 +282,7 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 
 		err := d.Set(consts.FieldAzureRoles, resp.Data[consts.FieldAzureRoles])
 		if err != nil {
-			return diag.FromErr(fmt.Errorf("error setting Azure roles: %s", err))
+			return diag.Errorf("error setting Azure roles: %s", err)
 		}
 	}
 
@@ -292,7 +291,7 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 
 		err := d.Set(consts.FieldAzureGroups, resp.Data[consts.FieldAzureGroups])
 		if err != nil {
-			return diag.FromErr(fmt.Errorf("error setting Azure groups: %s", err))
+			return diag.Errorf("error setting Azure groups: %s", err)
 		}
 	}
 
@@ -310,7 +309,7 @@ func azureSecretBackendRoleDelete(_ context.Context, d *schema.ResourceData, met
 	log.Printf("[DEBUG] Deleting Azure Secret role %q", path)
 	_, err = client.Logical().Delete(path)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("Error deleting Azure Secret role %q", path))
+		return diag.Errorf("Error deleting Azure Secret role %q", path)
 	}
 	log.Printf("[DEBUG] Deleted Azure Secret role %q", path)
 
