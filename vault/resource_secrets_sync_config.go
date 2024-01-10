@@ -57,7 +57,7 @@ func secretsSyncConfigWrite(ctx context.Context, d *schema.ResourceData, meta in
 	}
 
 	if client.Namespace() != namespace.RootNamespaceID && client.Namespace() != "" {
-		return diag.Errorf("error writing sync config, this API is reversed to the root namespace and cannot be used with %q", client.Namespace())
+		return diag.Errorf("error writing sync config, this API is reserved to the root namespace and cannot be used with %q", client.Namespace())
 	}
 
 	path := secretsSyncConfigPath()
