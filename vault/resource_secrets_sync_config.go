@@ -64,7 +64,9 @@ func secretsSyncConfigWrite(ctx context.Context, d *schema.ResourceData, meta in
 
 	data := map[string]interface{}{}
 	for _, k := range syncConfigFields {
-		if value, ok := d.GetOk(k); ok {
+		if k == fieldDisabled { // GetOk evaluates the value so a false bool field would be skipped
+			data[k] = d.Get(k)
+		} else if value, ok := d.GetOk(k); ok {
 			data[k] = value
 		}
 	}
@@ -98,6 +100,14 @@ func secretsSyncConfigRead(ctx context.Context, d *schema.ResourceData, meta int
 		log.Printf("[WARN] No config found at %q; removing from state.", path)
 		d.SetId("")
 		return nil
+	}
+
+	for _, k := range syncConfigFields {
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.Errorf("error setting state key %q: err=%s", k, err)
+			}
+		}
 	}
 
 	return nil
