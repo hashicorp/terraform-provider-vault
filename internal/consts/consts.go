@@ -364,6 +364,8 @@ const (
 	FieldDisableISSValidation          = "disable_iss_validation"
 	FieldPEMKeys                       = "pem_keys"
 	FieldSetNamespaceFromToken         = "set_namespace_from_token"
+	FieldCustomTags                    = "custom_tags"
+	FieldSecretNameTemplate            = "secret_name_template"
 	/*
 		common environment variables
 	*/
@@ -435,6 +437,7 @@ const (
 	VaultVersion113 = "1.13.0"
 	VaultVersion114 = "1.14.0"
 	VaultVersion115 = "1.15.0"
+	VaultVersion116 = "1.16.0-beta1+ent"
 
 	/*
 		Vault auth methods

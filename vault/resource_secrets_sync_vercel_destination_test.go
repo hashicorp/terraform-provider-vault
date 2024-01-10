@@ -18,7 +18,7 @@ import (
 func TestVercelSecretsSyncDestination(t *testing.T) {
 	destName := acctest.RandomWithPrefix("tf-sync-dest-vercel")
 
-	resourceName := "vault_vercel_secrets_sync_destination.test"
+	resourceName := "vault_secrets_sync_vercel_destination.test"
 
 	values := testutil.SkipTestEnvUnset(t,
 		"VERCEL_ACCESS_TOKEN",
@@ -30,11 +30,11 @@ func TestVercelSecretsSyncDestination(t *testing.T) {
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: testVercelSecretsSyncDestinationConfig(accessToken, projectID, destName),
+				Config: testVercelSecretsSyncDestinationConfig(accessToken, projectID, destName, defaultSecretsSyncTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -44,6 +44,7 @@ func TestVercelSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "deployment_environments.0", "development"),
 					resource.TestCheckResourceAttr(resourceName, "deployment_environments.1", "preview"),
 					resource.TestCheckResourceAttr(resourceName, "deployment_environments.2", "production"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
@@ -53,15 +54,16 @@ func TestVercelSecretsSyncDestination(t *testing.T) {
 	})
 }
 
-func testVercelSecretsSyncDestinationConfig(accessToken, projectID, destName string) string {
+func testVercelSecretsSyncDestinationConfig(accessToken, projectID, destName, templ string) string {
 	ret := fmt.Sprintf(`
-resource "vault_vercel_secrets_sync_destination" "test" {
+resource "vault_secrets_sync_vercel_destination" "test" {
   name                    = "%s"
   access_token            = "%s"
   project_id              = "%s"
   deployment_environments = ["development", "preview", "production"]
+  secret_name_template    = "%s"
 }
-`, destName, accessToken, projectID)
+`, destName, accessToken, projectID, templ)
 
 	return ret
 }
