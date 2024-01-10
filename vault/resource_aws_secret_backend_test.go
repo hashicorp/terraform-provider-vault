@@ -45,7 +45,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 				Config: testAccAWSSecretBackendConfig_updated(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description updated"),
 					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "1800"),
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "43200"),
 					resource.TestCheckResourceAttr(resourceName, "access_key", accessKey),
@@ -80,7 +80,8 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 	resourceType := "vault_aws_secret_backend"
 	resourceName := resourceType + ".test"
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
-	templ := fmt.Sprintf(`{{ printf "vault-%%s-%%s-%%s" (printf "%%s-%%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}`)
+	templ := fmt.Sprintf(`{{ printf \"vault-%%s-%%s-%%s\" (printf \"%%s-%%s\" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}`)
+	expectedTempl := fmt.Sprintf(`{{ printf "vault-%%s-%%s-%%s" (printf "%%s-%%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}`)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
@@ -89,7 +90,7 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 			{
 				Config: testAccAWSSecretBackendConfig_userTemplate(path, accessKey, secretKey, templ),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "username_template", templ),
+					resource.TestCheckResourceAttr(resourceName, "username_template", expectedTempl),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "secret_key", "disable_remount"),
@@ -146,7 +147,7 @@ func testAccAWSSecretBackendConfig_updated(path, accessKey, secretKey string) st
 	return fmt.Sprintf(`
 resource "vault_aws_secret_backend" "test" {
   path = "%s"
-  description = "test description"
+  description = "test description updated"
   default_lease_ttl_seconds = 1800
   max_lease_ttl_seconds = 43200
   access_key = "%s"
