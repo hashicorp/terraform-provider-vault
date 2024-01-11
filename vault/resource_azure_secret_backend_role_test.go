@@ -87,7 +87,7 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion112), nil
 				},
-				Config: testAzureSecretBackendRolePermanentlyDelete(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
+				Config: testAzureSecretBackendRolePermanentlyDelete_azureRoles(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "role", role+"-azure-roles"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "description", "Test for Vault Provider"),
@@ -152,7 +152,7 @@ func TestAzureSecretBackendRole_AzureGroups(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion112), nil
 				},
-				Config: testAzureSecretBackendRolePermanentlyDelete(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
+				Config: testAzureSecretBackendRolePermanentlyDelete_azureGroups(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "role", role+"-azure-groups"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "description", "Test for Vault Provider"),
@@ -295,7 +295,7 @@ resource "vault_azure_secret_backend_role" "test_azure_groups" {
 `, subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup)
 }
 
-func testAzureSecretBackendRolePermanentlyDelete(subscriptionID string, tenantID string, clientID string, clientSecret string, path string, role string, resourceGroup string) string {
+func testAzureSecretBackendRolePermanentlyDelete_azureRoles(subscriptionID string, tenantID string, clientID string, clientSecret string, path string, role string, resourceGroup string) string {
 	return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "azure" {
   subscription_id = "%s"
@@ -316,6 +316,18 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
     role_name = "Reader"
     scope =  "/subscriptions/%[1]s/resourceGroups/%[7]s"
   }
+}
+`, subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup)
+}
+
+func testAzureSecretBackendRolePermanentlyDelete_azureGroups(subscriptionID string, tenantID string, clientID string, clientSecret string, path string, role string, resourceGroup string) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "azure" {
+  subscription_id = "%s"
+  tenant_id       = "%s"
+  client_id       = "%s"
+  client_secret   = "%s"
+  path            = "%s"
 }
 
 resource "vault_azure_secret_backend_role" "test_azure_groups" {
