@@ -18,8 +18,6 @@ const (
 	fieldAccessKeyID     = "access_key_id"
 	fieldSecretAccessKey = "secret_access_key"
 
-	vaultFieldConnectionDetails = "connection_details"
-
 	awsSyncType = "aws-sm"
 )
 
