@@ -57,19 +57,19 @@ func githubSecretsSyncDestinationResource() *schema.Resource {
 			},
 			fieldAccessToken: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
 				Description: "Fine-grained or personal access token.",
 			},
 			fieldRepositoryOwner: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "GitHub organization or username that owns the repository.",
 				ForceNew:    true,
 			},
 			fieldRepositoryName: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Name of the repository.",
 				ForceNew:    true,
 			},

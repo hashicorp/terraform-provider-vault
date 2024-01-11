@@ -43,7 +43,6 @@ func azureSecretsSyncDestinationResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(azureSecretsSyncDestinationWrite, provider.VaultVersion115),
 		ReadContext:   provider.ReadContextWrapper(azureSecretsSyncDestinationRead),
-		// @TODO confirm this is available
 		UpdateContext: azureSecretsSyncDestinationUpdate,
 		DeleteContext: azureSecretsSyncDestinationDelete,
 		Importer: &schema.ResourceImporter{
@@ -59,24 +58,24 @@ func azureSecretsSyncDestinationResource() *schema.Resource {
 			},
 			fieldKeyVaultURI: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "URI of an existing Azure Key Vault instance.",
 				ForceNew:    true,
 			},
 			consts.FieldClientID: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Client ID of an Azure app registration.",
 			},
 			consts.FieldClientSecret: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
 				Description: "Client Secret of an Azure app registration.",
 			},
 			consts.FieldTenantID: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "ID of the target Azure tenant.",
 				ForceNew:    true,
 			},

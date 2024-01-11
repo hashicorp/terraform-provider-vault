@@ -77,6 +77,7 @@ func MustAddSecretsSyncCommonSchema(r *schema.Resource) *schema.Resource {
 		consts.FieldSecretNameTemplate: {
 			Type:        schema.TypeString,
 			Optional:    true,
+			Computed:    true,
 			Description: "Template describing how to generate external secret names.",
 			// @TODO can this be updated?
 			ForceNew: true,
