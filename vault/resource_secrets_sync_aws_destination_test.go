@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	defaultSecretsSyncTemplate = "new-name-template-{{ .SecretPath }}"
+	defaultSecretsSyncTemplate = "VAULT_{{ .MountAccessor | uppercase }}_{{ .SecretPath | uppercase }}"
 )
 
 func TestAWSSecretsSyncDestination(t *testing.T) {

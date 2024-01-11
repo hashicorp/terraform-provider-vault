@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -18,20 +19,18 @@ import (
 const (
 	fieldSecretName = "secret_name"
 	fieldSyncStatus = "sync_status"
-	fieldAccessor   = "accessor"
 	fieldUpdatedAt  = "updated_at"
 )
 
 var secretsSyncAssociationFields = []string{
 	fieldSecretName,
 	fieldSyncStatus,
-	fieldAccessor,
 	fieldUpdatedAt,
 }
 
 func secretsSyncAssociationResource() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: provider.MountCreateContextWrapper(secretsSyncAssociationWrite, provider.VaultVersion115),
+		CreateContext: provider.MountCreateContextWrapper(secretsSyncAssociationWrite, provider.VaultVersion116),
 		ReadContext:   provider.ReadContextWrapper(secretsSyncAssociationRead),
 		DeleteContext: secretsSyncAssociationDelete,
 
@@ -39,13 +38,13 @@ func secretsSyncAssociationResource() *schema.Resource {
 			consts.FieldName: {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Name of the store/destination.",
+				Description: "Name of the destination.",
 				ForceNew:    true,
 			},
 			consts.FieldType: {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Type of secrets store.",
+				Description: "Type of sync destination.",
 				ForceNew:    true,
 			},
 			consts.FieldMount: {
@@ -53,13 +52,6 @@ func secretsSyncAssociationResource() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 				Description: "Specifies the mount where the secret is located.",
-			},
-			fieldAccessor: {
-				Type:         schema.TypeString,
-				Required:     true,
-				ForceNew:     true,
-				Description:  "Specifies the unique accessor of the mount.",
-				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
 			fieldSecretName: {
 				Type:        schema.TypeString,
@@ -89,15 +81,14 @@ func secretsSyncAssociationWrite(ctx context.Context, d *schema.ResourceData, me
 
 	name := d.Get(consts.FieldName).(string)
 	destType := d.Get(consts.FieldType).(string)
+	secretName := d.Get(fieldSecretName).(string)
+	mount := d.Get(consts.FieldMount).(string)
+
 	path := secretsSyncAssociationSetPath(name, destType)
 
-	data := map[string]interface{}{}
-
-	for _, k := range []string{
-		fieldSecretName,
-		consts.FieldMount,
-	} {
-		data[k] = d.Get(k)
+	data := map[string]interface{}{
+		fieldSecretName:   secretName,
+		consts.FieldMount: mount,
 	}
 
 	log.Printf("[DEBUG] Writing association to %q", path)
@@ -108,11 +99,14 @@ func secretsSyncAssociationWrite(ctx context.Context, d *schema.ResourceData, me
 	log.Printf("[DEBUG] Wrote association to %q", path)
 
 	// expect accessor to be provided from mount
-	accessor := d.Get(fieldAccessor).(string)
+	accessor, err := getMountAccessor(ctx, d, meta)
+	if err != nil {
+		return diag.Errorf("could not obtain accessor from given mount; err=%s", err)
+	}
 
 	// associations can't be read from Vault
 	// set data that is received from Vault upon writes
-	vaultRespKey := fmt.Sprintf("%s/%s", accessor, name)
+	vaultRespKey := fmt.Sprintf("%s/%s", accessor, secretName)
 	associatedSecrets := "associated_secrets"
 	secretData, ok := resp.Data[associatedSecrets]
 	if !ok {
@@ -179,4 +173,29 @@ func secretsSyncAssociationSetPath(name, destType string) string {
 
 func secretsSyncAssociationDeletePath(name, destType string) string {
 	return fmt.Sprintf("sys/sync/destinations/%s/%s/associations/remove", destType, name)
+}
+
+func getMountAccessor(ctx context.Context, d *schema.ResourceData, meta interface{}) (string, error) {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return "", e
+	}
+
+	mount := d.Get(consts.FieldMount).(string)
+
+	log.Printf("[DEBUG] Reading mount %s from Vault", mount)
+	mounts, err := client.Sys().ListMountsWithContext(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// path can have a trailing slash, but doesn't need to have one
+	// this standardises on having a trailing slash, which is how the
+	// API always responds.
+	m, ok := mounts[strings.Trim(mount, "/")+"/"]
+	if !ok {
+		return "", fmt.Errorf("expected mount at %s; no mount found", mount)
+	}
+
+	return m.Accessor, nil
 }

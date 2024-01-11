@@ -36,6 +36,7 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentials, credentials),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, gcpSyncType),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
