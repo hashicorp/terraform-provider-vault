@@ -18,7 +18,7 @@ import (
 func TestGithubSecretsSyncDestination(t *testing.T) {
 	destName := acctest.RandomWithPrefix("tf-sync-dest-gh")
 
-	resourceName := "vault_gh_secrets_sync_destination.test"
+	resourceName := "vault_secrets_sync_gh_destination.test"
 
 	values := testutil.SkipTestEnvUnset(t,
 		"GITHUB_ACCESS_TOKEN",
@@ -34,17 +34,18 @@ func TestGithubSecretsSyncDestination(t *testing.T) {
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: testGithubSecretsSyncDestinationConfig(accessToken, repoOwner, repoName, destName),
+				Config: testGithubSecretsSyncDestinationConfig(accessToken, repoOwner, repoName, destName, defaultSecretsSyncTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, fieldAccessToken, accessToken),
 					resource.TestCheckResourceAttr(resourceName, fieldRepositoryOwner, repoOwner),
 					resource.TestCheckResourceAttr(resourceName, fieldRepositoryName, repoName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
@@ -54,15 +55,16 @@ func TestGithubSecretsSyncDestination(t *testing.T) {
 	})
 }
 
-func testGithubSecretsSyncDestinationConfig(accessToken, repoOwner, repoName, destName string) string {
+func testGithubSecretsSyncDestinationConfig(accessToken, repoOwner, repoName, destName, templ string) string {
 	ret := fmt.Sprintf(`
-resource "vault_gh_secrets_sync_destination" "test" {
-  name             = "%s"
-  access_token     = "%s"
-  repository_owner = "%s"
-  repository_name  = "%s"
+resource "vault_secrets_sync_gh_destination" "test" {
+  name                 = "%s"
+  access_token         = "%s"
+  repository_owner     = "%s"
+  repository_name      = "%s"
+  secret_name_template = "%s"
 }
-`, destName, accessToken, repoOwner, repoName)
+`, destName, accessToken, repoOwner, repoName, templ)
 
 	return ret
 }

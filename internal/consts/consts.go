@@ -364,6 +364,8 @@ const (
 	FieldDisableISSValidation          = "disable_iss_validation"
 	FieldPEMKeys                       = "pem_keys"
 	FieldSetNamespaceFromToken         = "set_namespace_from_token"
+	FieldCustomTags                    = "custom_tags"
+	FieldSecretNameTemplate            = "secret_name_template"
 	/*
 		common environment variables
 	*/

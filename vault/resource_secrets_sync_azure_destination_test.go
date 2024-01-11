@@ -18,7 +18,7 @@ import (
 func TestAzureSecretsSyncDestination(t *testing.T) {
 	destName := acctest.RandomWithPrefix("tf-sync-dest-azure")
 
-	resourceName := "vault_azure_secrets_sync_destination.test"
+	resourceName := "vault_secrets_sync_azure_destination.test"
 
 	values := testutil.SkipTestEnvUnset(t,
 		"AZURE_KEY_VAULT_URI",
@@ -39,7 +39,7 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: testAzureSecretsSyncDestinationConfig(keyVaultURI, clientID, clientSecret, tenantID, destName),
+				Config: testAzureSecretsSyncDestinationConfig(keyVaultURI, clientID, clientSecret, tenantID, destName, defaultSecretsSyncTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -48,27 +48,32 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, tenantID),
 					resource.TestCheckResourceAttr(resourceName, fieldKeyVaultURI, keyVaultURI),
 					resource.TestCheckResourceAttr(resourceName, fieldCloud, "cloud"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				consts.FieldClientID,
 				consts.FieldClientSecret,
-				consts.FieldTenantID,
 			),
 		},
 	})
 }
 
-func testAzureSecretsSyncDestinationConfig(keyVaultURI, clientID, clientSecret, tenantID, destName string) string {
+func testAzureSecretsSyncDestinationConfig(keyVaultURI, clientID, clientSecret, tenantID, destName, templ string) string {
 	ret := fmt.Sprintf(`
-resource "vault_azure_secrets_sync_destination" "test" {
-  name              = "%s"
-  key_vault_uri     = "%s"
-  client_id         = "%s"
-  client_secret     = "%s"
-  tenant_id         = "%s"
+resource "vault_secrets_sync_azure_destination" "test" {
+  name                 = "%s"
+  key_vault_uri        = "%s"
+  client_id            = "%s"
+  client_secret        = "%s"
+  tenant_id            = "%s"
+  secret_name_template = "%s"
+  custom_tags = {
+    "foo" = "bar"
+  }
 }
-`, destName, keyVaultURI, clientID, clientSecret, tenantID)
+`, destName, keyVaultURI, clientID, clientSecret, tenantID, templ)
 
 	return ret
 }

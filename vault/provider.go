@@ -733,23 +733,23 @@ var (
 			Resource:      UpdateSchemaResource(secretsSyncConfigResource()),
 			PathInventory: []string{"/sys/sync/config"},
 		},
-		"vault_aws_secrets_sync_destination": {
+		"vault_secrets_sync_aws_destination": {
 			Resource:      UpdateSchemaResource(awsSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/aws-sm/{name}"},
 		},
-		"vault_gh_secrets_sync_destination": {
-			Resource:      UpdateSchemaResource(githubSecretsSyncDestinationResource()),
-			PathInventory: []string{"/sys/sync/destinations/gh/{name}"},
-		},
-		"vault_gcp_secrets_sync_destination": {
-			Resource:      UpdateSchemaResource(gcpSecretsSyncDestinationResource()),
-			PathInventory: []string{"/sys/sync/destinations/gcp-sm/{name}"},
-		},
-		"vault_azure_secrets_sync_destination": {
+		"vault_secrets_sync_azure_destination": {
 			Resource:      UpdateSchemaResource(azureSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/azure-kv/{name}"},
 		},
-		"vault_vercel_secrets_sync_destination": {
+		"vault_secrets_sync_gcp_destination": {
+			Resource:      UpdateSchemaResource(gcpSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/gcp-sm/{name}"},
+		},
+		"vault_secrets_sync_gh_destination": {
+			Resource:      UpdateSchemaResource(githubSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/gh/{name}"},
+		},
+		"vault_secrets_sync_vercel_destination": {
 			Resource:      UpdateSchemaResource(vercelSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/vercel-project/{name}"},
 		},
