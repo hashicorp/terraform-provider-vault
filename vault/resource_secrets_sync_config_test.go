@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -23,7 +24,7 @@ func TestSecretsSyncConfig(t *testing.T) {
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: testSecretsSyncConfig(true, 1),
+				Config: testSecretsSyncConfig("root", true, 1),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, fieldDisabled, "true"),
@@ -44,15 +45,30 @@ func TestSecretsSyncConfig(t *testing.T) {
 			),
 		},
 	})
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+		}, PreventPostDestroyRefresh: true,
+		Steps: []resource.TestStep{
+			{
+				Config:      testSecretsSyncConfig("non-root-namespace", false, 100000),
+				ExpectError: regexp.MustCompile(".*this API is reserved to the root namespace.*"),
+			},
+		},
+	})
 }
 
-func testSecretsSyncConfig(disabled bool, queueCapacity int) string {
+func testSecretsSyncConfig(namespace string, disabled bool, queueCapacity int) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_config" "test" {
+  namespace      = "%s"
   disabled       = %t
   queue_capacity = %d
 }
-`, disabled, queueCapacity)
+`, namespace, disabled, queueCapacity)
 
 	return ret
 }
