@@ -54,7 +54,7 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 			},
 			consts.FieldCredentials: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
 				Description: "JSON-encoded credentials to use to connect to GCP.",
 			},
