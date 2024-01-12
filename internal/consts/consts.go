@@ -365,6 +365,14 @@ const (
 	FieldDisableISSValidation          = "disable_iss_validation"
 	FieldPEMKeys                       = "pem_keys"
 	FieldSetNamespaceFromToken         = "set_namespace_from_token"
+	FieldAzureRoles                    = "azure_roles"
+	FieldRoleID                        = "role_id"
+	FieldAzureGroups                   = "azure_groups"
+	FieldObjectID                      = "object_id"
+	FieldApplicationObjectID           = "application_object_id"
+	FieldPermanentlyDelete             = "permanently_delete"
+	FieldSignInAudience                = "sign_in_audience"
+	FieldTags                          = "tags"
 	/*
 		common environment variables
 	*/
@@ -436,7 +444,7 @@ const (
 	VaultVersion113 = "1.13.0"
 	VaultVersion114 = "1.14.0"
 	VaultVersion115 = "1.15.0"
-
+	VaultVersion116 = "1.16.0"
 	/*
 		Vault auth methods
 	*/
