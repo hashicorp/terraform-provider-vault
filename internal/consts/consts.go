@@ -373,7 +373,7 @@ const (
 	FieldPermanentlyDelete             = "permanently_delete"
 	FieldSignInAudience                = "sign_in_audience"
 	FieldTags                          = "tags"
-  FieldCustomTags                    = "custom_tags"
+	FieldCustomTags                    = "custom_tags"
 	FieldSecretNameTemplate            = "secret_name_template"
 
 	/*
