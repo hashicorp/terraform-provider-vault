@@ -1,6 +1,6 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_aws_static_credentials data source"
+page_title: "Vault: vault_aws_static_access_credentials data source"
 sidebar_current: "docs-vault-datasource-aws-static-credentials"
 description: |-
   Reads static role credentials from an AWS secret backend in Vault
@@ -41,7 +41,7 @@ resource "vault_aws_secret_backend_static_role" "role" {
 
 
 # generally, these blocks would be in a different module
-data "vault_aws_static_credentials" "creds" {
+data "vault_aws_static_access_credentials" "creds" {
   backend = vault_aws_secret_backend.aws.path
   name    = vault_aws_secret_backend_static_role.role.role_name
 }

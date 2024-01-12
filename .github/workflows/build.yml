@@ -68,6 +68,7 @@ jobs:
         - "vault-enterprise:1.13.8-ent"
         - "vault-enterprise:1.14.4-ent"
         - "vault-enterprise:1.15.0-ent"
+        - "vault:1.15.0"
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -198,7 +199,12 @@ jobs:
           LDAP_BINDPASS: "adminpassword"
           LDAP_URL: "ldap://openldap:1389"
         run: |
-          make testacc-ent TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
+          if [[ ${{ matrix.image }} =~ "-ent" ]]; then
+            target="testacc-ent"
+          else
+            target="testacc"
+          fi
+          make $target TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json

@@ -101,6 +101,8 @@ The following arguments are supported:
 
 * `ext_key_usage` - (Optional) Specify the allowed extended key usage constraint on issued certificates
 
+* `ext_key_usage_oids` - (Optional) Specify the allowed extended key usage OIDs constraint on issued certificates
+
 * `use_csr_common_name` - (Optional) Flag to use the CN in the CSR
 
 * `use_csr_sans` - (Optional) Flag to use the SANs in the CSR

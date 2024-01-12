@@ -280,6 +280,7 @@ const (
 	FieldEmailProtectionFlag           = "email_protection_flag"
 	FieldKeyUsage                      = "key_usage"
 	FieldExtKeyUsage                   = "ext_key_usage"
+	FieldExtKeyUsageOIDs               = "ext_key_usage_oids"
 	FieldUseCSRCommonName              = "use_csr_common_name"
 	FieldUseCSRSans                    = "use_csr_sans"
 	FieldOU                            = "ou"
@@ -364,8 +365,17 @@ const (
 	FieldDisableISSValidation          = "disable_iss_validation"
 	FieldPEMKeys                       = "pem_keys"
 	FieldSetNamespaceFromToken         = "set_namespace_from_token"
-	FieldCustomTags                    = "custom_tags"
+	FieldAzureRoles                    = "azure_roles"
+	FieldRoleID                        = "role_id"
+	FieldAzureGroups                   = "azure_groups"
+	FieldObjectID                      = "object_id"
+	FieldApplicationObjectID           = "application_object_id"
+	FieldPermanentlyDelete             = "permanently_delete"
+	FieldSignInAudience                = "sign_in_audience"
+	FieldTags                          = "tags"
+  FieldCustomTags                    = "custom_tags"
 	FieldSecretNameTemplate            = "secret_name_template"
+
 	/*
 		common environment variables
 	*/

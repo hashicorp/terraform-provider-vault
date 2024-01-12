@@ -1,5 +1,18 @@
 ## Unreleased
 
+FEATURES:
+* Add support for `ext_key_usage_oids` in `vault_pki_secret_backend_role` ([#2108](https://github.com/hashicorp/terraform-provider-vault/pull/2108))
+* Adds support to `vault_gcp_auth_backend` for common backend tune parameters ([#1997](https://github.com/terraform-providers/terraform-provider-vault/pull/1997)).
+
+BUGS:
+* fix `vault_kv_secret_v2` drift when "data" is in secret name/path ([#2104](https://github.com/hashicorp/terraform-provider-vault/pull/2104))
+* fix `vault_database_secret_backend_connection`: allow mysql_rds,mysql_aurora,mysql_legacy options of vault_database_secret_backend_connection terraform resource to allow specifying tls_ca and tls_certificate_key ([#2106](https://github.com/hashicorp/terraform-provider-vault/pull/2106))
+
+## 3.23.0 (Nov 15, 2023)
+
+FEATURES:
+* Add support for lazily authenticating to Vault: ([#2049](https://github.com/hashicorp/terraform-provider-vault/pull/2049))
+
 BUGS:
 * Fix `vault_identity_group` loses externally managed policies on updates when `external_policies = true` ([#2084](https://github.com/hashicorp/terraform-provider-vault/pull/2084))
 * Fix regression in `vault_azure_access_credentials` where we returned prematurely on 401 responses:([#2086](https://github.com/hashicorp/terraform-provider-vault/pull/2086))
@@ -16,6 +29,7 @@ FEATURES:
 BUGS:
 * Fix panic when reading `client_secret` from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
 * Fix API request missing `roles` field for `mongodbatlas_secret_role` resource ([#2047](https://github.com/hashicorp/terraform-provider-vault/pull/2047))
+* Fix ignored `description` updates for `aws_secret_backend` resource ([#2057](https://github.com/hashicorp/terraform-provider-vault/pull/2057))
 * Fix bug when updating `vault_azure_secret_backend_role`: ([#2063](https://github.com/hashicorp/terraform-provider-vault/pull/2063))
 * Fix audience string ordering for `auth_login_gcp` causing GCE auth to fail ([#2064](https://github.com/hashicorp/terraform-provider-vault/pull/2064))
 
