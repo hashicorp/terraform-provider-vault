@@ -11,7 +11,7 @@ description: |-
 ~> **Important** Some resources support tuning of an auth method directly, and
   therefore may present a conflict or configuration loop if used in conjunction
   with `vault_auth_tune`. This resource is intended to be used in situations
-  where an auth method or mount is not tuned via alternative methods.`
+  where an auth method or mount is not tuned via alternative methods.
 
 ## Example Usage
 
@@ -77,6 +77,11 @@ The following arguments are supported:
   options for user lockout. User lockout feature was added in Vault 1.13.
 
 ### User Lockout Options
+
+~> **Important** User lockout in Vault is currently only supported for LDAP,
+  AppRole, and userpass auth methods. Lockout options specified for unsupported
+  auth methods are ignored by this resource and will persist as outstanding
+  changes in Terraform plans until removed from the Terraform configuration.
 
 * `lockout_threshold` - (Optional) Specifies the number of failed login attempts
   after which the user is locked out, specified as a string like \"15\".
