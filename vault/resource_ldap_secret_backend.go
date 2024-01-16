@@ -122,7 +122,7 @@ func ldapSecretBackendResource() *schema.Resource {
 		consts.FieldSkipStaticRoleImportRotation: {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Description: "Skip static role import rotation. This is useful if you are migrating from a Vault version that does not support static role import rotation to one that does.",
+			Description: "Skip rotation of static role secrets on import.",
 		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{

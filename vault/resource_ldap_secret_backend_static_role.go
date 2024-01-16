@@ -47,6 +47,11 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Required:    true,
 			Description: "How often Vault should rotate the password of the user entry.",
 		},
+		consts.FieldSkipImportRotation: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "Skip rotation of the password on import.",
+		},
 	}
 	return &schema.Resource{
 		CreateContext: createUpdateLDAPStaticRoleResource,
