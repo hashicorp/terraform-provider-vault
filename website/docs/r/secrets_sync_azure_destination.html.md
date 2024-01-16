@@ -30,6 +30,7 @@ resource "vault_secrets_sync_azure_destination" "az" {
   client_id            = var.client_id
   client_secret        = var.client_secret
   tenant_id            = var.tenant_id
+  secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
   custom_tags = {
     "foo" = "bar"
   }
@@ -50,7 +51,7 @@ The following arguments are supported:
   Can be omitted and directly provided to Vault using the `KEY_VAULT_URI` environment
   variable.
 
-* `tenant_id` - (Optional) JSON-encoded credentials to use to connect to Azure.
+* `tenant_id` - (Optional) ID of the target Azure tenant.
   Can be omitted and directly provided to Vault using the `AZURE_TENANT_ID` environment
   variable.
 

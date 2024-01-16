@@ -25,9 +25,10 @@ For more information on syncing secrets with GCP, please refer to the Vault
 
 ```hcl
 resource "vault_secrets_sync_gcp_destination" "gcp" {
-  name        = "gcp-dest"
-  credentials = file(var.credentials_file)
-  custom_tags = {
+  name                 = "gcp-dest"
+  credentials          = file(var.credentials_file)
+  secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
+  custom_tags          = {
     "foo" = "bar"
   }
 }

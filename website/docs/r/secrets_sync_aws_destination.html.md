@@ -25,10 +25,14 @@ For more information on syncing secrets with AWS, please refer to the Vault
 
 ```hcl
 resource "vault_secrets_sync_aws_destination" "aws" {
-  name              = "aws-dest"
-  access_key_id     = var.access_key_id
-  secret_access_key = var.secret_access_key
-  region            = "us-east-1"
+  name                 = "aws-dest"
+  access_key_id        = var.access_key_id
+  secret_access_key    = var.secret_access_key
+  region               = "us-east-1"
+  secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
+  custom_tags = {
+    "foo" = "bar"
+  }
 }
 ```
 

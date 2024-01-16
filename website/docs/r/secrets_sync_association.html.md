@@ -43,7 +43,11 @@ resource "vault_kv_secret_v2" "token" {
 }
 
 resource "vault_secrets_sync_gh_destination" "gh" {
-  name = "gh-dest"
+  name                 = "gh-dest"
+  access_token         = var.access_token
+  repository_owner     = var.repo_owner
+  repository_name      = "repo-name-example"
+  secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
 }
 
 resource "vault_secrets_sync_association" "gh_token" {
