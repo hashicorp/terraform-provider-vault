@@ -29,6 +29,7 @@ var azureSyncWriteFields = []string{
 }
 
 var azureSyncReadFields = []string{
+	fieldKeyVaultURI,
 	fieldCloud,
 	consts.FieldClientID,
 	consts.FieldTenantID,
