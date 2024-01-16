@@ -28,11 +28,6 @@ var azureSyncWriteFields = []string{
 	consts.FieldTenantID,
 }
 
-var azureSyncUpdateFields = []string{
-	consts.FieldClientSecret,
-	consts.FieldClientID,
-}
-
 var azureSyncReadFields = []string{
 	fieldCloud,
 	consts.FieldClientID,
@@ -40,10 +35,10 @@ var azureSyncReadFields = []string{
 }
 
 func azureSecretsSyncDestinationResource() *schema.Resource {
-	return &schema.Resource{
-		CreateContext: provider.MountCreateContextWrapper(azureSecretsSyncDestinationWrite, provider.VaultVersion115),
+	return provider.MustAddSecretsSyncCloudSchema(&schema.Resource{
+		CreateContext: provider.MountCreateContextWrapper(azureSecretsSyncDestinationCreateUpdate, provider.VaultVersion115),
 		ReadContext:   provider.ReadContextWrapper(azureSecretsSyncDestinationRead),
-		UpdateContext: azureSecretsSyncDestinationUpdate,
+		UpdateContext: azureSecretsSyncDestinationCreateUpdate,
 		DeleteContext: azureSecretsSyncDestinationDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -86,15 +81,11 @@ func azureSecretsSyncDestinationResource() *schema.Resource {
 				ForceNew:    true,
 			},
 		},
-	}
+	})
 }
 
-func azureSecretsSyncDestinationWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationWrite(ctx, d, meta, azureSyncType, azureSyncWriteFields, azureSyncReadFields)
-}
-
-func azureSecretsSyncDestinationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationUpdate(ctx, d, meta, azureSyncType, azureSyncUpdateFields, azureSyncReadFields)
+func azureSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return syncutil.SyncDestinationCreateUpdate(ctx, d, meta, azureSyncType, azureSyncWriteFields, azureSyncReadFields)
 }
 
 func azureSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

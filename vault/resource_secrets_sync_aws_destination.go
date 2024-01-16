@@ -37,17 +37,11 @@ var awsSyncReadFields = []string{
 	consts.FieldSecretNameTemplate,
 }
 
-// awsSyncUpdateFields contains all fields that can be updated via the API
-var awsSyncUpdateFields = []string{
-	fieldAccessKeyID,
-	fieldSecretAccessKey,
-}
-
 func awsSecretsSyncDestinationResource() *schema.Resource {
 	return provider.MustAddSecretsSyncCloudSchema(&schema.Resource{
-		CreateContext: provider.MountCreateContextWrapper(awsSecretsSyncDestinationWrite, provider.VaultVersion116),
+		CreateContext: provider.MountCreateContextWrapper(awsSecretsSyncDestinationCreateUpdate, provider.VaultVersion116),
 		ReadContext:   provider.ReadContextWrapper(awsSecretsSyncDestinationRead),
-		UpdateContext: awsSecretsSyncDestinationUpdate,
+		UpdateContext: awsSecretsSyncDestinationCreateUpdate,
 		DeleteContext: awsSecretsSyncDestinationDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -82,12 +76,8 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 	})
 }
 
-func awsSecretsSyncDestinationWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationWrite(ctx, d, meta, awsSyncType, awsSyncWriteFields, awsSyncReadFields)
-}
-
-func awsSecretsSyncDestinationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationUpdate(ctx, d, meta, awsSyncType, awsSyncUpdateFields, awsSyncReadFields)
+func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return syncutil.SyncDestinationCreateUpdate(ctx, d, meta, awsSyncType, awsSyncWriteFields, awsSyncReadFields)
 }
 
 func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

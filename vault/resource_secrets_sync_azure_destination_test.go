@@ -39,7 +39,7 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: testAzureSecretsSyncDestinationConfig(keyVaultURI, clientID, clientSecret, tenantID, destName, defaultSecretsSyncTemplate),
+				Config: testAzureSecretsSyncDestinationConfig_initial(keyVaultURI, clientID, clientSecret, tenantID, destName, defaultSecretsSyncTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -53,6 +53,22 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
 			},
+			{
+				Config: testAzureSecretsSyncDestinationConfig_initial(keyVaultURI, clientID, clientSecret, tenantID, destName, updatedSecretsSyncTemplate),
+				Check: resource.ComposeTestCheckFunc(
+
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecret, clientSecret),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, clientID),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, tenantID),
+					resource.TestCheckResourceAttr(resourceName, fieldKeyVaultURI, keyVaultURI),
+					resource.TestCheckResourceAttr(resourceName, fieldCloud, "cloud"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldClientSecret,
 			),
@@ -60,7 +76,7 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 	})
 }
 
-func testAzureSecretsSyncDestinationConfig(keyVaultURI, clientID, clientSecret, tenantID, destName, templ string) string {
+func testAzureSecretsSyncDestinationConfig_initial(keyVaultURI, clientID, clientSecret, tenantID, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_azure_destination" "test" {
   name                 = "%s"
@@ -68,12 +84,24 @@ resource "vault_secrets_sync_azure_destination" "test" {
   client_id            = "%s"
   client_secret        = "%s"
   tenant_id            = "%s"
-  secret_name_template = "%s"
-  custom_tags = {
-    "foo" = "bar"
-  }
+  %s
 }
-`, destName, keyVaultURI, clientID, clientSecret, tenantID, templ)
+`, destName, keyVaultURI, clientID, clientSecret, tenantID, testSecretsSyncDestinationCommonConfig(templ, true, true, false))
+
+	return ret
+}
+
+func testAzureSecretsSyncDestinationConfig_updated(keyVaultURI, clientID, clientSecret, tenantID, destName, templ string) string {
+	ret := fmt.Sprintf(`
+resource "vault_secrets_sync_azure_destination" "test" {
+  name                 = "%s"
+  key_vault_uri        = "%s"
+  client_id            = "%s"
+  client_secret        = "%s"
+  tenant_id            = "%s"
+  %s
+}
+`, destName, keyVaultURI, clientID, clientSecret, tenantID, testSecretsSyncDestinationCommonConfig(templ, true, true, true))
 
 	return ret
 }

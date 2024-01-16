@@ -34,7 +34,7 @@ func TestVercelSecretsSyncDestination(t *testing.T) {
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: testVercelSecretsSyncDestinationConfig(accessToken, projectID, destName, defaultSecretsSyncTemplate),
+				Config: testVercelSecretsSyncDestinationConfig_initial(accessToken, projectID, destName, defaultSecretsSyncTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -47,6 +47,20 @@ func TestVercelSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 				),
 			},
+			{
+				Config: testVercelSecretsSyncDestinationConfig_updated(accessToken, projectID, destName, updatedSecretsSyncTemplate),
+				Check: resource.ComposeTestCheckFunc(
+
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, fieldAccessToken, accessToken),
+					resource.TestCheckResourceAttr(resourceName, fieldProjectID, projectID),
+					resource.TestCheckResourceAttr(resourceName, "deployment_environments.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "deployment_environments.0", "development"),
+					resource.TestCheckResourceAttr(resourceName, "deployment_environments.1", "preview"),
+					resource.TestCheckResourceAttr(resourceName, "deployment_environments.2", "production"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				fieldAccessToken,
 			),
@@ -54,16 +68,30 @@ func TestVercelSecretsSyncDestination(t *testing.T) {
 	})
 }
 
-func testVercelSecretsSyncDestinationConfig(accessToken, projectID, destName, templ string) string {
+func testVercelSecretsSyncDestinationConfig_initial(accessToken, projectID, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_vercel_destination" "test" {
   name                    = "%s"
   access_token            = "%s"
   project_id              = "%s"
   deployment_environments = ["development", "preview", "production"]
-  secret_name_template    = "%s"
+  %s
 }
-`, destName, accessToken, projectID, templ)
+`, destName, accessToken, projectID, testSecretsSyncDestinationCommonConfig(templ, true, false, false))
+
+	return ret
+}
+
+func testVercelSecretsSyncDestinationConfig_updated(accessToken, projectID, destName, templ string) string {
+	ret := fmt.Sprintf(`
+resource "vault_secrets_sync_vercel_destination" "test" {
+  name                    = "%s"
+  access_token            = "%s"
+  project_id              = "%s"
+  deployment_environments = ["development", "preview", "production"]
+  %s
+}
+`, destName, accessToken, projectID, testSecretsSyncDestinationCommonConfig(templ, true, false, true))
 
 	return ret
 }

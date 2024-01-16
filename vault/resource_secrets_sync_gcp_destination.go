@@ -24,12 +24,6 @@ var gcpSyncWriteFields = []string{
 	consts.FieldCustomTags,
 }
 
-var gcpSyncUpdateFields = []string{
-	consts.FieldCredentials,
-	// consts.FieldSecretNameTemplate,
-	// consts.FieldCustomTags,
-}
-
 var gcpSyncReadFields = []string{
 	consts.FieldSecretNameTemplate,
 	consts.FieldCustomTags,
@@ -37,8 +31,8 @@ var gcpSyncReadFields = []string{
 
 func gcpSecretsSyncDestinationResource() *schema.Resource {
 	return provider.MustAddSecretsSyncCloudSchema(&schema.Resource{
-		CreateContext: provider.MountCreateContextWrapper(gcpSecretsSyncDestinationWrite, provider.VaultVersion116),
-		UpdateContext: gcpSecretsSyncDestinationUpdate,
+		CreateContext: provider.MountCreateContextWrapper(gcpSecretsSyncDestinationCreateUpdate, provider.VaultVersion116),
+		UpdateContext: gcpSecretsSyncDestinationCreateUpdate,
 		ReadContext:   provider.ReadContextWrapper(gcpSecretsSyncDestinationRead),
 		DeleteContext: gcpSecretsSyncDestinationDelete,
 		Importer: &schema.ResourceImporter{
@@ -62,12 +56,8 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 	})
 }
 
-func gcpSecretsSyncDestinationWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationWrite(ctx, d, meta, gcpSyncType, gcpSyncWriteFields, gcpSyncReadFields)
-}
-
-func gcpSecretsSyncDestinationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationUpdate(ctx, d, meta, gcpSyncType, gcpSyncUpdateFields, gcpSyncReadFields)
+func gcpSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return syncutil.SyncDestinationCreateUpdate(ctx, d, meta, gcpSyncType, gcpSyncWriteFields, gcpSyncReadFields)
 }
 
 func gcpSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

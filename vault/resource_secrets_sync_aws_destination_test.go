@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	defaultSecretsSyncTemplate = "VAULT_{{ .MountAccessor | uppercase }}_{{ .SecretPath | uppercase }}"
+	defaultSecretsSyncTemplate = "vault/{{ .MountAccessor }}/{{ .SecretPath }}"
+	updatedSecretsSyncTemplate = "VAULT_{{ .MountAccessor | uppercase }}_{{ .SecretPath | uppercase }}"
 )
 
 func TestAWSSecretsSyncDestination(t *testing.T) {
@@ -34,7 +35,7 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAWSSecretsSyncDestinationConfig(accessKey, secretKey, region, destName, defaultSecretsSyncTemplate),
+				Config: testAWSSecretsSyncDestinationConfig_initial(accessKey, secretKey, region, destName, defaultSecretsSyncTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -47,6 +48,21 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
 			},
+			{
+				Config: testAWSSecretsSyncDestinationConfig_updated(accessKey, secretKey, region, destName, updatedSecretsSyncTemplate),
+				Check: resource.ComposeTestCheckFunc(
+
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, fieldAccessKeyID, accessKey),
+					resource.TestCheckResourceAttr(resourceName, fieldSecretAccessKey, secretKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, region),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, awsSyncType),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				fieldAccessKeyID,
 				fieldSecretAccessKey,
@@ -55,19 +71,55 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 	})
 }
 
-func testAWSSecretsSyncDestinationConfig(accessKey, secretKey, region, destName, templ string) string {
+func testAWSSecretsSyncDestinationConfig_initial(accessKey, secretKey, region, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_aws_destination" "test" {
   name                 = "%s"
   access_key_id        = "%s"
   secret_access_key    = "%s"
   region               = "%s"
+  %s
+}
+`, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, false, true, false))
+
+	return ret
+}
+
+func testAWSSecretsSyncDestinationConfig_updated(accessKey, secretKey, region, destName, templ string) string {
+	ret := fmt.Sprintf(`
+resource "vault_secrets_sync_aws_destination" "test" {
+  name                 = "%s"
+  access_key_id        = "%s"
+  secret_access_key    = "%s"
+  region               = "%s"
+  %s
+}
+`, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, true, true, true))
+
+	return ret
+}
+
+func testSecretsSyncDestinationCommonConfig(templ string, withTemplate, withTags, update bool) string {
+	ret := ""
+	if withTemplate {
+		ret += fmt.Sprintf(`
   secret_name_template = "%s"
+`, templ)
+	}
+
+	if withTags && !update {
+		ret += fmt.Sprintf(`
   custom_tags = {
     "foo" = "bar"
   }
-}
-`, destName, accessKey, secretKey, region, templ)
-
+`)
+	} else if withTags && update {
+		ret += fmt.Sprintf(`
+  custom_tags = {
+    "foo" = "bar"
+    "baz" = "bux"
+  }
+`)
+	}
 	return ret
 }

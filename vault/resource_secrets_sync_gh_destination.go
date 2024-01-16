@@ -30,6 +30,7 @@ var githubSyncWriteFields = []string{
 
 var githubSyncUpdateFields = []string{
 	fieldAccessToken,
+	consts.FieldSecretNameTemplate,
 }
 
 var githubSyncReadFields = []string{
@@ -40,9 +41,9 @@ var githubSyncReadFields = []string{
 
 func githubSecretsSyncDestinationResource() *schema.Resource {
 	return provider.MustAddSecretsSyncCommonSchema(&schema.Resource{
-		CreateContext: provider.MountCreateContextWrapper(githubSecretsSyncDestinationWrite, provider.VaultVersion116),
+		CreateContext: provider.MountCreateContextWrapper(githubSecretsSyncDestinationCreateUpdate, provider.VaultVersion116),
 		ReadContext:   provider.ReadContextWrapper(githubSecretsSyncDestinationRead),
-		UpdateContext: githubSecretsSyncDestinationUpdate,
+		UpdateContext: githubSecretsSyncDestinationCreateUpdate,
 		DeleteContext: githubSecretsSyncDestinationDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -77,12 +78,8 @@ func githubSecretsSyncDestinationResource() *schema.Resource {
 	})
 }
 
-func githubSecretsSyncDestinationWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationWrite(ctx, d, meta, ghSyncType, githubSyncWriteFields, githubSyncReadFields)
-}
-
-func githubSecretsSyncDestinationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationUpdate(ctx, d, meta, ghSyncType, githubSyncUpdateFields, githubSyncReadFields)
+func githubSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return syncutil.SyncDestinationCreateUpdate(ctx, d, meta, ghSyncType, githubSyncWriteFields, githubSyncReadFields)
 }
 
 func githubSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

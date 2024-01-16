@@ -29,12 +29,6 @@ var vercelSyncWriteFields = []string{
 	consts.FieldSecretNameTemplate,
 }
 
-var vercelSyncUpdateFields = []string{
-	fieldAccessToken,
-	fieldDeploymentEnvironments,
-	fieldTeamID,
-}
-
 var vercelSyncReadFields = []string{
 	fieldProjectID,
 	fieldTeamID,
@@ -44,8 +38,8 @@ var vercelSyncReadFields = []string{
 
 func vercelSecretsSyncDestinationResource() *schema.Resource {
 	return provider.MustAddSecretsSyncCommonSchema(&schema.Resource{
-		CreateContext: provider.MountCreateContextWrapper(vercelSecretsSyncDestinationWrite, provider.VaultVersion116),
-		UpdateContext: vercelSecretsSyncDestinationUpdate,
+		CreateContext: provider.MountCreateContextWrapper(vercelSecretsSyncDestinationCreateUpdate, provider.VaultVersion116),
+		UpdateContext: vercelSecretsSyncDestinationCreateUpdate,
 		ReadContext:   provider.ReadContextWrapper(vercelSecretsSyncDestinationRead),
 		DeleteContext: vercelSecretsSyncDestinationDelete,
 		Importer: &schema.ResourceImporter{
@@ -89,12 +83,8 @@ func vercelSecretsSyncDestinationResource() *schema.Resource {
 	})
 }
 
-func vercelSecretsSyncDestinationWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationWrite(ctx, d, meta, vercelSyncType, vercelSyncWriteFields, vercelSyncReadFields)
-}
-
-func vercelSecretsSyncDestinationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationUpdate(ctx, d, meta, vercelSyncType, vercelSyncUpdateFields, vercelSyncReadFields)
+func vercelSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return syncutil.SyncDestinationCreateUpdate(ctx, d, meta, vercelSyncType, vercelSyncWriteFields, vercelSyncReadFields)
 }
 
 func vercelSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

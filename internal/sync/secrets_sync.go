@@ -17,7 +17,7 @@ const (
 	fieldOptions           = "options"
 )
 
-func SyncDestinationWrite(ctx context.Context, d *schema.ResourceData, meta interface{}, typ string, writeFields, readFields []string) diag.Diagnostics {
+func SyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}, typ string, writeFields, readFields []string) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -34,14 +34,16 @@ func SyncDestinationWrite(ctx context.Context, d *schema.ResourceData, meta inte
 		}
 	}
 
-	log.Printf("[DEBUG] Writing sync destination to %q", path)
+	log.Printf("[DEBUG] Writing sync destination data to %q", path)
 	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
-		return diag.Errorf("error enabling sync destination %q: %s", path, err)
+		return diag.Errorf("error writing sync destination data to %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Enabled sync destination %q", path)
+	log.Printf("[DEBUG] Wrote sync destination data to %q", path)
 
-	d.SetId(name)
+	if d.IsNewResource() {
+		d.SetId(name)
+	}
 
 	return SyncDestinationRead(ctx, d, meta, typ, readFields)
 }
@@ -97,31 +99,6 @@ func SyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	return nil
-}
-
-func SyncDestinationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}, typ string, updateFields, readFields []string) diag.Diagnostics {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return diag.FromErr(e)
-	}
-
-	path := secretsSyncDestinationPath(d.Id(), typ)
-
-	data := map[string]interface{}{}
-
-	for _, k := range updateFields {
-		data[k] = d.Get(k)
-	}
-
-	log.Printf("[DEBUG] Updating sync destination at %q", path)
-	// @TODO confirm if this should be a JSONMergePatch instead
-	_, err := client.Logical().WriteWithContext(ctx, path, data)
-	if err != nil {
-		return diag.Errorf("error updating sync destination %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Updated sync destination %q", path)
-
-	return SyncDestinationRead(ctx, d, meta, typ, readFields)
 }
 
 func SyncDestinationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}, typ string) diag.Diagnostics {
