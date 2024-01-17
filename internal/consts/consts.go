@@ -280,6 +280,7 @@ const (
 	FieldEmailProtectionFlag           = "email_protection_flag"
 	FieldKeyUsage                      = "key_usage"
 	FieldExtKeyUsage                   = "ext_key_usage"
+	FieldExtKeyUsageOIDs               = "ext_key_usage_oids"
 	FieldUseCSRCommonName              = "use_csr_common_name"
 	FieldUseCSRSans                    = "use_csr_sans"
 	FieldOU                            = "ou"
@@ -364,8 +365,14 @@ const (
 	FieldDisableISSValidation          = "disable_iss_validation"
 	FieldPEMKeys                       = "pem_keys"
 	FieldSetNamespaceFromToken         = "set_namespace_from_token"
-	FieldCustomTags                    = "custom_tags"
-	FieldSecretNameTemplate            = "secret_name_template"
+	FieldAzureRoles                    = "azure_roles"
+	FieldRoleID                        = "role_id"
+	FieldAzureGroups                   = "azure_groups"
+	FieldObjectID                      = "object_id"
+	FieldApplicationObjectID           = "application_object_id"
+	FieldPermanentlyDelete             = "permanently_delete"
+	FieldSignInAudience                = "sign_in_audience"
+	FieldTags                          = "tags"
 	/*
 		common environment variables
 	*/
@@ -438,7 +445,6 @@ const (
 	VaultVersion114 = "1.14.0"
 	VaultVersion115 = "1.15.0"
 	VaultVersion116 = "1.16.0"
-
 	/*
 		Vault auth methods
 	*/

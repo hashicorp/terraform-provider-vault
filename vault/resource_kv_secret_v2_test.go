@@ -22,6 +22,49 @@ var testKVV2Data = map[string]interface{}{
 	"baz": "qux",
 }
 
+func TestAccKVSecretV2_pathRegex(t *testing.T) {
+	tests := map[string]struct {
+		path      string
+		wantMount string
+		wantName  string
+	}{
+		"no nesting": {
+			path:      "kvv2/data/a/b/c/d",
+			wantMount: "kvv2",
+			wantName:  "a/b/c/d",
+		},
+		"nested": {
+			path:      "kvv2/data/test/b/c/test/d",
+			wantMount: "kvv2",
+			wantName:  "test/b/c/test/d",
+		},
+		"nested-with-double-data": {
+			path:      "kvv2/data/a/b/c/data/d",
+			wantMount: "kvv2",
+			wantName:  "a/b/c/data/d",
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			mount, err := getKVV2SecretMountFromPath(tc.path)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if mount != tc.wantMount {
+				t.Fatalf("expected mount %q, got %q", tc.wantMount, mount)
+			}
+
+			name, err := getKVV2SecretNameFromPath(tc.path)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if name != tc.wantName {
+				t.Fatalf("expected name %q, got %q", tc.wantName, name)
+			}
+		})
+	}
+}
+
 func TestAccKVSecretV2(t *testing.T) {
 	t.Parallel()
 	resourceName := "vault_kv_secret_v2.test"
