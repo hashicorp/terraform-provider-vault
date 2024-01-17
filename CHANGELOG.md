@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add destination and association resources to support Secrets Sync. Requires Vault 1.16+ ([#2098](https://github.com/hashicorp/terraform-provider-vault/pull/2098)).
+
 ## 3.24.0 (Jan 17, 2024)
 
 FEATURES:
