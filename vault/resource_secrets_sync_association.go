@@ -5,12 +5,14 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -21,12 +23,6 @@ const (
 	fieldSyncStatus = "sync_status"
 	fieldUpdatedAt  = "updated_at"
 )
-
-var secretsSyncAssociationFields = []string{
-	fieldSecretName,
-	fieldSyncStatus,
-	fieldUpdatedAt,
-}
 
 func secretsSyncAssociationResource() *schema.Resource {
 	return &schema.Resource{
@@ -103,30 +99,29 @@ func secretsSyncAssociationWrite(ctx context.Context, d *schema.ResourceData, me
 	if err != nil {
 		return diag.Errorf("could not obtain accessor from given mount; err=%s", err)
 	}
-
-	// associations can't be read from Vault
-	// set data that is received from Vault upon writes
 	vaultRespKey := fmt.Sprintf("%s/%s", accessor, secretName)
-	associatedSecrets := "associated_secrets"
-	secretData, ok := resp.Data[associatedSecrets]
-	if !ok {
-		// did not find any associated secrets for this mount
-		// we expect to see data here since we just wrote an association
-		return diag.Errorf("expected associated secrets; received no secret associations in mount")
+
+	saModel, err := getSyncAssociationModelFromResponse(resp)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
-	for _, k := range secretsSyncAssociationFields {
-		if secretsMap, ok := secretData.(map[string]interface{}); ok {
-			if val, ok := secretsMap[vaultRespKey]; ok {
-				if valMap, ok := val.(map[string]interface{}); ok {
-					if v, ok := valMap[k]; ok {
-						if err := d.Set(k, v); err != nil {
-							return diag.FromErr(err)
-						}
-					}
-				}
-			}
-		}
+	syncData, ok := saModel.AssociatedSecrets[vaultRespKey]
+	if !ok {
+		return diag.Errorf("no associated secrets found for given mount accessor and secret name %s", vaultRespKey)
+	}
+
+	// set data that is received from Vault upon writes to avoid extra sync association reads
+	if err := d.Set(fieldSecretName, syncData.SecretName); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(fieldSyncStatus, syncData.SyncStatus); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(fieldUpdatedAt, syncData.UpdatedAt); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.SetId(path)
@@ -198,4 +193,32 @@ func getMountAccessor(ctx context.Context, d *schema.ResourceData, meta interfac
 	}
 
 	return m.Accessor, nil
+}
+
+type syncAssociationModel struct {
+	AssociatedSecrets map[string]syncAssociationData `json:"associated_secrets"`
+}
+
+type syncAssociationData struct {
+	Accessor   string `json:"accessor"`
+	SecretName string `json:"secret_name"`
+	SyncStatus string `json:"sync_status"`
+	UpdatedAt  string `json:"updated_at"`
+}
+
+func getSyncAssociationModelFromResponse(resp *api.Secret) (*syncAssociationModel, error) {
+	// convert resp data to JSON
+	b, err := json.Marshal(resp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("error converting vault response to JSON; err=%s", err)
+	}
+
+	// convert JSON to struct
+	var model *syncAssociationModel
+	err = json.Unmarshal(b, &model)
+	if err != nil {
+		return nil, fmt.Errorf("error converting JSON to sync association model; err=%s", err)
+	}
+
+	return model, nil
 }
