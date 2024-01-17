@@ -54,8 +54,8 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 		},
 	}
 	return &schema.Resource{
-		CreateContext: createUpdateLDAPStaticRoleResource,
-		UpdateContext: createUpdateLDAPStaticRoleResource,
+		CreateContext: createLDAPStaticRoleResource,
+		UpdateContext: updateLDAPStaticRoleResource,
 		ReadContext:   provider.ReadContextWrapper(readLDAPStaticRoleResource),
 		DeleteContext: deleteLDAPStaticRoleResource,
 		Importer: &schema.ResourceImporter{
@@ -71,7 +71,17 @@ var ldapSecretBackendStaticRoleFields = []string{
 	consts.FieldRotationPeriod,
 }
 
-func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func updateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if _, ok := d.GetOk(consts.FieldSkipImportRotation); ok {
+		err := d.Set(consts.FieldSkipImportRotation, nil)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	return createLDAPStaticRoleResource(ctx, d, meta)
+}
+
+func createLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return diag.FromErr(err)
