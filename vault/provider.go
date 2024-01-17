@@ -729,6 +729,10 @@ var (
 			Resource:      UpdateSchemaResource(samlAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/saml/role/{name}"},
 		},
+		"vault_secrets_sync_config": {
+			Resource:      UpdateSchemaResource(secretsSyncConfigResource()),
+			PathInventory: []string{"/sys/sync/config"},
+		},
 		"vault_secrets_sync_aws_destination": {
 			Resource:      UpdateSchemaResource(awsSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/aws-sm/{name}"},
