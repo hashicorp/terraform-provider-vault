@@ -30,7 +30,7 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPSecretsSyncDestinationConfig(credentials, destName, defaultSecretsSyncTemplate),
+				Config: testGCPSecretsSyncDestinationConfig_initial(credentials, destName, defaultSecretsSyncTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -41,24 +41,47 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
 			},
+			{
+				Config: testGCPSecretsSyncDestinationConfig_updated(credentials, destName, updatedSecretsSyncTemplate),
+				Check: resource.ComposeTestCheckFunc(
+
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentials, credentials),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, gcpSyncType),
+					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldCredentials),
 		},
 	})
 }
 
-func testGCPSecretsSyncDestinationConfig(credentials, destName, templ string) string {
+func testGCPSecretsSyncDestinationConfig_initial(credentials, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_gcp_destination" "test" {
   name                 = "%s"
   credentials          = <<CREDS
 %sCREDS
-  secret_name_template = "%s"
-  custom_tags = {
-    "foo" = "bar"
-  }
+  %s
 }
-`, destName, credentials, templ)
+`, destName, credentials, testSecretsSyncDestinationCommonConfig(templ, false, true, false))
+
+	return ret
+}
+
+func testGCPSecretsSyncDestinationConfig_updated(credentials, destName, templ string) string {
+	ret := fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  credentials          = <<CREDS
+%sCREDS
+  %s
+}
+`, destName, credentials, testSecretsSyncDestinationCommonConfig(templ, true, true, true))
 
 	return ret
 }

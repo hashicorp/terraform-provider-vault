@@ -79,8 +79,6 @@ func MustAddSecretsSyncCommonSchema(r *schema.Resource) *schema.Resource {
 			Optional:    true,
 			Computed:    true,
 			Description: "Template describing how to generate external secret names.",
-			// @TODO can this be updated?
-			ForceNew: true,
 		},
 	})
 
@@ -93,8 +91,6 @@ func MustAddSecretsSyncCloudSchema(r *schema.Resource) *schema.Resource {
 			Type:        schema.TypeMap,
 			Optional:    true,
 			Description: "Custom tags to set on the secret managed at the destination.",
-			// @TODO can this be updated?
-			ForceNew: true,
 		},
 	})
 

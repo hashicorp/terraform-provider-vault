@@ -38,7 +38,7 @@ func TestGithubSecretsSyncDestination(t *testing.T) {
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: testGithubSecretsSyncDestinationConfig(accessToken, repoOwner, repoName, destName, defaultSecretsSyncTemplate),
+				Config: testGithubSecretsSyncDestinationConfig_initial(accessToken, repoOwner, repoName, destName, defaultSecretsSyncTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -48,6 +48,17 @@ func TestGithubSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 				),
 			},
+			{
+				Config: testGithubSecretsSyncDestinationConfig_updated(accessToken, repoOwner, repoName, destName, updatedSecretsSyncTemplate),
+				Check: resource.ComposeTestCheckFunc(
+
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, fieldAccessToken, accessToken),
+					resource.TestCheckResourceAttr(resourceName, fieldRepositoryOwner, repoOwner),
+					resource.TestCheckResourceAttr(resourceName, fieldRepositoryName, repoName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				fieldAccessToken,
 			),
@@ -55,16 +66,30 @@ func TestGithubSecretsSyncDestination(t *testing.T) {
 	})
 }
 
-func testGithubSecretsSyncDestinationConfig(accessToken, repoOwner, repoName, destName, templ string) string {
+func testGithubSecretsSyncDestinationConfig_initial(accessToken, repoOwner, repoName, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_gh_destination" "test" {
   name                 = "%s"
   access_token         = "%s"
   repository_owner     = "%s"
   repository_name      = "%s"
-  secret_name_template = "%s"
+  %s
 }
-`, destName, accessToken, repoOwner, repoName, templ)
+`, destName, accessToken, repoOwner, repoName, testSecretsSyncDestinationCommonConfig(templ, true, false, false))
+
+	return ret
+}
+
+func testGithubSecretsSyncDestinationConfig_updated(accessToken, repoOwner, repoName, destName, templ string) string {
+	ret := fmt.Sprintf(`
+resource "vault_secrets_sync_gh_destination" "test" {
+  name                 = "%s"
+  access_token         = "%s"
+  repository_owner     = "%s"
+  repository_name      = "%s"
+  %s
+}
+`, destName, accessToken, repoOwner, repoName, testSecretsSyncDestinationCommonConfig(templ, true, false, true))
 
 	return ret
 }
