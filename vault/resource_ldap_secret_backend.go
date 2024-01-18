@@ -184,7 +184,11 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 	booleanFields := []string{
 		consts.FieldInsecureTLS,
 		consts.FieldStartTLS,
-		consts.FieldSkipStaticRoleImportRotation,
+	}
+
+	// add skip_static_role_import_rotation if after vault 1.16
+	if provider.IsAPISupported(meta, provider.VaultVersion116) {
+		booleanFields = append(booleanFields, consts.FieldSkipStaticRoleImportRotation)
 	}
 
 	// use d.Get() for boolean fields

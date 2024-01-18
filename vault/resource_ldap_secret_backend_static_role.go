@@ -69,6 +69,7 @@ var ldapSecretBackendStaticRoleFields = []string{
 	consts.FieldUsername,
 	consts.FieldDN,
 	consts.FieldRotationPeriod,
+	consts.FieldSkipImportRotation,
 }
 
 func updateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -93,6 +94,10 @@ func createLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, m
 	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
 	data := map[string]interface{}{}
 	for _, field := range ldapSecretBackendStaticRoleFields {
+		// omit skip_import_rotation if before vault 1.16
+		if field == consts.FieldSkipImportRotation && provider.IsAPISupported(meta, provider.VaultVersion116) {
+			continue
+		}
 		if v, ok := d.GetOk(field); ok {
 			data[field] = v
 		}
