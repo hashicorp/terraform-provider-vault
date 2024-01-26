@@ -2,6 +2,7 @@
 
 FEATURES:
 * Add destination and association resources to support Secrets Sync. Requires Vault 1.16+ ([#2098](https://github.com/hashicorp/terraform-provider-vault/pull/2098)).
+* Add support for `inheritable` on `vault_quota_rate_limit` and `vault_quota_lease_count`: ([#2133](https://github.com/hashicorp/terraform-provider-vault/pull/2133)).
 
 ## 3.24.0 (Jan 17, 2024)
 
