@@ -54,6 +54,12 @@ func quotaLeaseCountResource() *schema.Resource {
 				Optional:    true,
 				Description: "If set on a quota where path is set to an auth mount with a concept of roles (such as /auth/approle/), this will make the quota restrict login requests to that mount that are made with the specified role.",
 			},
+			"inheritable": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "If set to true on a quota where path is set to a namespace, the same quota will be cumulatively applied to all child namespace. The inheritable parameter cannot be set to true if the path does not specify a namespace. Only the quotas associated with the root namespace are inheritable by default.",
+			},
 		},
 	}
 }
@@ -73,6 +79,12 @@ func quotaLeaseCountCreate(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
 	data["max_leases"] = d.Get("max_leases").(int)
+
+	if data["path"] == "" && d.Get("inheritable") == nil {
+		data["inheritable"] = true
+	} else if v, ok := d.GetOkExists("inheritable"); ok {
+		data["inheritable"] = v.(bool)
+	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		if v, ok := d.GetOk(consts.FieldRole); ok {
@@ -111,7 +123,7 @@ func quotaLeaseCountRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	fields := []string{"path", "max_leases", "name"}
+	fields := []string{"path", "max_leases", "name", "inheritable"}
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		fields = append(fields, consts.FieldRole)
 	}
@@ -142,6 +154,12 @@ func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	data["path"] = d.Get(consts.FieldPath).(string)
 	data["max_leases"] = d.Get("max_leases").(int)
+
+	if data["path"] == "" && d.Get("inheritable") == nil {
+		data["inheritable"] = true
+	} else if v, ok := d.GetOkExists("inheritable"); ok {
+		data["inheritable"] = v.(bool)
+	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		if v, ok := d.GetOk(consts.FieldRole); ok {
