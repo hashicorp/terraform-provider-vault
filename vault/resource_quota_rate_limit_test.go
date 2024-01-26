@@ -29,39 +29,45 @@ func TestQuotaRateLimit(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test")
 	rateLimit := randomQuotaRateString()
 	newRateLimit := randomQuotaRateString()
+	inheritable := true
+	resourceName := "vault_quota_rate_limit.foobar"
+
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:      testQuotaRateLimitCheckDestroy([]string{rateLimit, newRateLimit}),
 		Steps: []resource.TestStep{
 			{
-				Config: testQuotaRateLimitConfig(name, "", rateLimit, 1, 0),
+				Config: testQuotaRateLimitConfig(name, "", rateLimit, 1, 0, inheritable),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", ""),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "rate", rateLimit),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "1"),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "0"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "path", ""),
+					resource.TestCheckResourceAttr(resourceName, "rate", rateLimit),
+					resource.TestCheckResourceAttr(resourceName, "interval", "1"),
+					resource.TestCheckResourceAttr(resourceName, "block_interval", "0"),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", fmt.Sprintf("%t", inheritable)),
 				),
 			},
 			{
-				Config: testQuotaRateLimitConfig(name, "", newRateLimit, 60, 120),
+				Config: testQuotaRateLimitConfig(name, "", newRateLimit, 60, 120, inheritable),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", ""),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "rate", newRateLimit),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "60"),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "120"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "path", ""),
+					resource.TestCheckResourceAttr(resourceName, "rate", newRateLimit),
+					resource.TestCheckResourceAttr(resourceName, "interval", "60"),
+					resource.TestCheckResourceAttr(resourceName, "block_interval", "120"),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", fmt.Sprintf("%t", inheritable)),
 				),
 			},
 			{
-				Config: testQuotaRateLimitConfig(name, "sys/", newRateLimit, 60, 120),
+				Config: testQuotaRateLimitConfig(name, "", newRateLimit, 60, 120, inheritable),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", "sys/"),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "rate", newRateLimit),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "60"),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "120"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "path", ""),
+					resource.TestCheckResourceAttr(resourceName, "rate", newRateLimit),
+					resource.TestCheckResourceAttr(resourceName, "interval", "60"),
+					resource.TestCheckResourceAttr(resourceName, "block_interval", "120"),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", fmt.Sprintf("%t", inheritable)),
 				),
 			},
 		},
@@ -102,6 +108,56 @@ func TestQuotaRateLimitWithRole(t *testing.T) {
 	})
 }
 
+func TestQuotaRateLimitWithNamespace(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test")
+	ns := "ns-" + name
+	rateLimit := randomQuotaRateString()
+	newRateLimit := randomQuotaRateString()
+	inheritable := true
+	resourceName := "vault_quota_rate_limit.foobar"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testQuotaRateLimitCheckDestroy([]string{rateLimit, newRateLimit}),
+		Steps: []resource.TestStep{
+			{
+				Config: testQuotaRateLimitWithNamespaceConfig(ns, name, "", rateLimit, 1, 0, inheritable),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "path", ns+"/"),
+					resource.TestCheckResourceAttr(resourceName, "rate", rateLimit),
+					resource.TestCheckResourceAttr(resourceName, "interval", "1"),
+					resource.TestCheckResourceAttr(resourceName, "block_interval", "0"),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", fmt.Sprintf("%t", inheritable)),
+				),
+			},
+			{
+				Config: testQuotaRateLimitWithNamespaceConfig(ns, name, "", newRateLimit, 60, 120, inheritable),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "path", ns+"/"),
+					resource.TestCheckResourceAttr(resourceName, "rate", newRateLimit),
+					resource.TestCheckResourceAttr(resourceName, "interval", "60"),
+					resource.TestCheckResourceAttr(resourceName, "block_interval", "120"),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", fmt.Sprintf("%t", inheritable)),
+				),
+			},
+			{
+				Config: testQuotaRateLimitWithNamespaceConfig(ns, name, "", newRateLimit, 60, 120, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "path", ns+"/"),
+					resource.TestCheckResourceAttr(resourceName, "rate", newRateLimit),
+					resource.TestCheckResourceAttr(resourceName, "interval", "60"),
+					resource.TestCheckResourceAttr(resourceName, "block_interval", "120"),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", "false"),
+				),
+			},
+		},
+	})
+}
+
 func testQuotaRateLimitCheckDestroy(rateLimits []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
@@ -122,7 +178,7 @@ func testQuotaRateLimitCheckDestroy(rateLimits []string) resource.TestCheckFunc 
 }
 
 // Caution: Don't set test rate values too low or other tests running concurrently might fail
-func testQuotaRateLimitConfig(name, path, rate string, interval, blockInterval int) string {
+func testQuotaRateLimitConfig(name, path, rate string, interval, blockInterval int, inheritable bool) string {
 	return fmt.Sprintf(`
 resource "vault_quota_rate_limit" "foobar" {
   name = "%s"
@@ -130,8 +186,26 @@ resource "vault_quota_rate_limit" "foobar" {
   rate = %s
   interval = %d
   block_interval = %d
+  inheritable  = %t
 }
-`, name, path, rate, interval, blockInterval)
+`, name, path, rate, interval, blockInterval, inheritable)
+}
+
+func testQuotaRateLimitWithNamespaceConfig(ns, name, path, rate string, interval, blockInterval int, inheritable bool) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+	path = "%s"
+	}
+
+resource "vault_quota_rate_limit" "foobar" {
+  name = "%s"
+  path = "${vault_namespace.test.path}/%s"
+  rate = %s
+  interval = %d
+  block_interval = %d
+  inheritable  = %t
+}
+`, ns, name, path, rate, interval, blockInterval, inheritable)
 }
 
 func testQuotaRateLimitWithRoleConfig(backend, role, name, rate string, interval, blockInterval int) string {
