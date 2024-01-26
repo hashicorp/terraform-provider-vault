@@ -118,7 +118,7 @@ func TestQuotaRateLimitWithNamespace(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
 		CheckDestroy:      testQuotaRateLimitCheckDestroy([]string{rateLimit, newRateLimit}),
 		Steps: []resource.TestStep{
 			{
