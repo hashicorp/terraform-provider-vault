@@ -22,6 +22,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/salt"
 )
 
+var LogContextCounter = 0
+
 const (
 	// EnvLogBody enables logging of request and response bodies.
 	// Takes precedence over any other log body configuration.
@@ -56,6 +58,7 @@ func DefaultTransportOptions() *TransportOptions {
 	if logBody, err := strconv.ParseBool(os.Getenv(EnvLogBody)); err == nil {
 		opts.LogRequestBody = logBody
 		opts.LogResponseBody = logBody
+
 	} else {
 		if logRequestBody, err := strconv.ParseBool(os.Getenv(EnvLogRequestBody)); err == nil {
 			opts.LogRequestBody = logRequestBody
@@ -90,6 +93,8 @@ func (t *TransportWrapper) SetTLSConfig(c *tls.Config) error {
 
 func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) {
 	if logging.IsDebugOrHigher() {
+
+		LogContextCounter++
 		var origHeaders http.Header
 		if len(t.options.HMACRequestHeaders) > 0 && len(req.Header) > 0 {
 			origHeaders = req.Header.Clone()
@@ -108,8 +113,10 @@ func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) 
 
 		reqData, err := httputil.DumpRequestOut(req, t.options.LogRequestBody)
 		if err == nil {
+			log.Printf(countReqMsg, t.name, LogContextCounter)
 			log.Printf("[DEBUG] "+logReqMsg, t.name, prettyPrintJsonLines(reqData))
 		} else {
+			log.Printf(countReqMsg, t.name, LogContextCounter)
 			log.Printf("[ERROR] %s API Request error: %#v", t.name, err)
 		}
 
@@ -126,8 +133,10 @@ func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) 
 	if logging.IsDebugOrHigher() {
 		respData, err := httputil.DumpResponse(resp, t.options.LogResponseBody)
 		if err == nil {
+			log.Printf(countReqMsg, t.name, LogContextCounter)
 			log.Printf("[DEBUG] "+logRespMsg, t.name, prettyPrintJsonLines(respData))
 		} else {
+			log.Printf(countReqMsg, t.name, LogContextCounter)
 			log.Printf("[ERROR] %s API Response error: %#v", t.name, err)
 		}
 	}
@@ -156,6 +165,11 @@ func prettyPrintJsonLines(b []byte) string {
 	}
 	return strings.Join(parts, "\n")
 }
+
+const countReqMsg = `%s API Exchange Counter:
+----[ API EXCHANGE ]---------------------------------
+%d
+-----------------------------------------------------`
 
 const logReqMsg = `%s API Request Details:
 ---[ REQUEST ]---------------------------------------
