@@ -534,32 +534,26 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMySQL.Name(), dbEngineTypes),
 		},
 		dbEngineMySQLRDS.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the mysql-rds-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
+			Elem:          mysqlConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLRDS.Name(), dbEngineTypes),
 		},
 		dbEngineMySQLAurora.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the mysql-aurora-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
+			Elem:          mysqlConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLAurora.Name(), dbEngineTypes),
 		},
 		dbEngineMySQLLegacy.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the mysql-legacy-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
+			Elem:          mysqlConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLLegacy.Name(), dbEngineTypes),
 		},
@@ -930,11 +924,11 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineMySQL:
 		setMySQLDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineMySQLRDS:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setMySQLDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineMySQLAurora:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setMySQLDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineMySQLLegacy:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setMySQLDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineOracle:
 		setOracleDatabaseConnectionData(d, prefix, data)
 	case dbEnginePostgres:
@@ -1937,11 +1931,11 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineMySQL:
 		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineMySQLRDS:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineMySQLAurora:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineMySQLLegacy:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineOracle:
 		result = getOracleConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEnginePostgres:

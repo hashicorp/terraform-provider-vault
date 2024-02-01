@@ -41,6 +41,7 @@ var (
 	VaultVersion113 = version.Must(version.NewSemver(consts.VaultVersion113))
 	VaultVersion114 = version.Must(version.NewSemver(consts.VaultVersion114))
 	VaultVersion115 = version.Must(version.NewSemver(consts.VaultVersion115))
+	VaultVersion116 = version.Must(version.NewSemver(consts.VaultVersion116))
 
 	TokenTTLMinRecommended = time.Minute * 15
 )
