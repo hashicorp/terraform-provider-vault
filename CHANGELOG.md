@@ -2,13 +2,13 @@
 
 FEATURES:
 * Add destination and association resources to support Secrets Sync. Requires Vault 1.16+ ([#2098](https://github.com/hashicorp/terraform-provider-vault/pull/2098)).
+* Add support for Oracle database plugin configuration options `split_statements` and `disconnect_sessions`: ([#2085](https://github.com/hashicorp/terraform-provider-vault/pull/2085))
 
 ## 3.24.0 (Jan 17, 2024)
 
 FEATURES:
 * Add support for `ext_key_usage_oids` in `vault_pki_secret_backend_role` ([#2108](https://github.com/hashicorp/terraform-provider-vault/pull/2108))
 * Adds support to `vault_gcp_auth_backend` for common backend tune parameters ([#1997](https://github.com/terraform-providers/terraform-provider-vault/pull/1997)).
-* Add support for Oracle database plugin configuration options `split_statements` and `disconnect_sessions`: ([#2085](https://github.com/hashicorp/terraform-provider-vault/pull/2085))
 * Adds support to `vault_azure_secret_backend_role` for `sign_in_audience` and `tags`. Requires Vault 1.16+. ([#2101](https://github.com/terraform-providers/terraform-provider-vault/pull/2101)).
 
 BUGS:
