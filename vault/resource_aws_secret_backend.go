@@ -343,8 +343,7 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	if d.HasChange(consts.FieldDefaultLeaseTTL) || d.HasChange(consts.FieldMaxLeaseTTL) || d.HasChange(consts.FieldDescription) || d.HasChange(consts.FieldIdentityTokenKey) {
+	if d.HasChanges(consts.FieldDefaultLeaseTTL, consts.FieldMaxLeaseTTL, consts.FieldDescription, consts.FieldIdentityTokenKey) {
 		description := d.Get(consts.FieldDescription).(string)
 		config := api.MountConfigInput{
 			Description:     &description,
@@ -366,7 +365,7 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		}
 		log.Printf("[DEBUG] Updated mount config input for %q", path)
 	}
-	if d.HasChange(consts.FieldAccessKey) || d.HasChange(consts.FieldSecretKey) || d.HasChange(consts.FieldRegion) || d.HasChange(consts.FieldIAMEndpoint) || d.HasChange(consts.FieldSTSEndpoint) || d.HasChange(consts.FieldIdentityTokenTTL) || d.HasChange(consts.FieldIdentityTokenAudience) || d.HasChange(consts.FieldRoleArn) {
+	if d.HasChanges(consts.FieldAccessKey, consts.FieldSecretKey, consts.FieldRegion, consts.FieldIAMEndpoint, consts.FieldSTSEndpoint, consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn) {
 		log.Printf("[DEBUG] Updating root credentials at %q", path+"/config/root")
 		data := map[string]interface{}{
 			consts.FieldAccessKey: d.Get(consts.FieldAccessKey).(string),

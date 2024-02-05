@@ -87,13 +87,13 @@ for credentials issued by this backend.
 
 * `local` - (Optional) Specifies whether the secrets mount will be marked as local. Local mounts are not replicated to performance replicas.
 
-* `identity_token_audience` - (Optional) The audience claim value.
+* `identity_token_audience` - (Optional) The audience claim value. Requires Vault 1.16+.
 
-* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds.
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault 1.16+.
 
-* `identity_token_key` - (Optional) The key to use for signing identity tokens.
+* `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault 1.16+.
 
-* `role_arn` - (Optional) Role ARN to assume for plugin identity token federation.
+* `role_arn` - (Optional) Role ARN to assume for plugin identity token federation. Requires Vault 1.16+.
 
 ```
 {{ if (eq .Type "STS") }}
