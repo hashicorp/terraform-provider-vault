@@ -377,7 +377,7 @@ const (
 	FieldSkipImportRotation            = "skip_import_rotation"
 	FieldCustomTags                    = "custom_tags"
 	FieldSecretNameTemplate            = "secret_name_template"
-  
+
 	/*
 		common environment variables
 	*/

@@ -124,6 +124,15 @@ func readLDAPStaticCreds(ctx context.Context, d *schema.ResourceData, meta inter
 	if err := d.Set(consts.FieldUsername, response.username); err != nil {
 		return diag.FromErr(err)
 	}
+	if provider.IsAPISupported(meta, provider.VaultVersion116) {
+		var skip bool
+		if skipRaw, ok := secret.Data[consts.FieldSkipImportRotation]; ok {
+			skip = skipRaw.(bool)
+		}
+		if err := d.Set(consts.FieldSkipImportRotation, skip); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	return nil
 }
 

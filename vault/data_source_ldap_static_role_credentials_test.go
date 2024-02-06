@@ -37,6 +37,7 @@ func TestAccDataSourceLDAPStaticRoleCredentials(t *testing.T) {
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldPassword),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldTTL),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastVaultRotation),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldSkipImportRotation),
 				),
 			},
 		},
