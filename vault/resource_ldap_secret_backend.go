@@ -254,7 +254,9 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		consts.FieldURL,
 		consts.FieldUserAttr,
 		consts.FieldUserDN,
-		consts.FieldSkipStaticRoleImportRotation,
+	}
+	if provider.IsAPISupported(meta, provider.VaultVersion116) {
+		fields = append(fields, consts.FieldSkipStaticRoleImportRotation)
 	}
 
 	for _, field := range fields {
