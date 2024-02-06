@@ -375,6 +375,9 @@ const (
 	FieldTags                          = "tags"
 	FieldSkipStaticRoleImportRotation  = "skip_static_role_import_rotation"
 	FieldSkipImportRotation            = "skip_import_rotation"
+	FieldCustomTags                    = "custom_tags"
+	FieldSecretNameTemplate            = "secret_name_template"
+  
 	/*
 		common environment variables
 	*/
@@ -447,6 +450,7 @@ const (
 	VaultVersion114 = "1.14.0"
 	VaultVersion115 = "1.15.0"
 	VaultVersion116 = "1.16.0"
+
 	/*
 		Vault auth methods
 	*/
