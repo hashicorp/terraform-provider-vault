@@ -37,6 +37,28 @@ func TestAccDataSourceLDAPStaticRoleCredentials(t *testing.T) {
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldPassword),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldTTL),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastVaultRotation),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDataSourceLDAPStaticRoleCredentialsWithSkipField(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-ldap-static-role-credentials")
+	bindDN, bindPass, url := testutil.GetTestLDAPCreds(t)
+	dn := "cn=alice,ou=users,dc=example,dc=org"
+	username := "alice"
+	dataName := "data.vault_ldap_static_credentials.creds"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPStaticRoleDataSource(backend, bindDN, bindPass, url, username, dn),
+				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldSkipImportRotation),
 				),
 			},
