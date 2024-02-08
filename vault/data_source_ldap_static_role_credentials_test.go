@@ -44,6 +44,7 @@ func TestAccDataSourceLDAPStaticRoleCredentials(t *testing.T) {
 				SkipFunc: func() (bool, error) {
 					return !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion116), nil
 				},
+				RefreshState: true,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldSkipImportRotation),
 				),
