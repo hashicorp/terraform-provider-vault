@@ -375,6 +375,15 @@ const (
 	FieldTags                          = "tags"
 	FieldCustomTags                    = "custom_tags"
 	FieldSecretNameTemplate            = "secret_name_template"
+	FieldIAMEndpoint                   = "iam_endpoint"
+	FieldSTSEndpoint                   = "sts_endpoint"
+	FieldIdentityTokenAudience         = "identity_token_audience"
+	FieldIdentityTokenTTL              = "identity_token_ttl"
+	FieldRoleArn                       = "role_arn"
+	FieldAccessor                      = "accessor"
+	FieldOptions                       = "options"
+	FieldAllowedManagedKeys            = "allowed_managed_keys"
+	FieldIdentityTokenKey              = "identity_token_key"
 
 	/*
 		common environment variables
