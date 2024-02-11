@@ -7,9 +7,11 @@ package helper
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -56,6 +58,7 @@ func DefaultTransportOptions() *TransportOptions {
 	if logBody, err := strconv.ParseBool(os.Getenv(EnvLogBody)); err == nil {
 		opts.LogRequestBody = logBody
 		opts.LogResponseBody = logBody
+
 	} else {
 		if logRequestBody, err := strconv.ParseBool(os.Getenv(EnvLogRequestBody)); err == nil {
 			opts.LogRequestBody = logRequestBody
@@ -89,7 +92,12 @@ func (t *TransportWrapper) SetTLSConfig(c *tls.Config) error {
 }
 
 func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) {
+	transportID := uuid.New().String()
+	log.Printf("Request for UUID %s sent", transportID)
 	if logging.IsDebugOrHigher() {
+		ctx := context.WithValue(req.Context(), "TransportID", transportID)
+		req = req.WithContext(ctx)
+
 		var origHeaders http.Header
 		if len(t.options.HMACRequestHeaders) > 0 && len(req.Header) > 0 {
 			origHeaders = req.Header.Clone()
@@ -105,6 +113,7 @@ func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) 
 				}
 			}
 		}
+		log.Printf("       \n")
 
 		reqData, err := httputil.DumpRequestOut(req, t.options.LogRequestBody)
 		if err == nil {
@@ -123,6 +132,7 @@ func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) 
 		return resp, err
 	}
 
+	log.Printf("Response for UUID %s received", transportID)
 	if logging.IsDebugOrHigher() {
 		respData, err := httputil.DumpResponse(resp, t.options.LogResponseBody)
 		if err == nil {
@@ -131,7 +141,6 @@ func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) 
 			log.Printf("[ERROR] %s API Response error: %#v", t.name, err)
 		}
 	}
-
 	return resp, nil
 }
 
