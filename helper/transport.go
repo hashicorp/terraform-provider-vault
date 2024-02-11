@@ -113,7 +113,6 @@ func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) 
 				}
 			}
 		}
-		log.Printf("       \n")
 
 		reqData, err := httputil.DumpRequestOut(req, t.options.LogRequestBody)
 		if err == nil {
@@ -141,6 +140,7 @@ func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) 
 			log.Printf("[ERROR] %s API Response error: %#v", t.name, err)
 		}
 	}
+
 	return resp, nil
 }
 
