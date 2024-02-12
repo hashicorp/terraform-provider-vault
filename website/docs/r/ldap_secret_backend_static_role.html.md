@@ -61,6 +61,9 @@ The following arguments are supported:
 
 * `rotation_period` - (Required) How often Vault should rotate the password of the user entry.
 
+* `skip_import_rotation` - (Optional) Causes vault to skip the initial secret rotation on import. Not applicable to updates.
+  Requires Vault 1.16 or above.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

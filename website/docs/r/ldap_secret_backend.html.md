@@ -90,6 +90,9 @@ The following arguments are supported:
 
 * `userdn` - (Optional) LDAP domain to use for users (eg: ou=People,dc=example,dc=org)`.
 
+* `skip_static_role_import_rotation` - (Optional) If set to true, static roles will not be rotated during import.
+  Defaults to false. Requires Vault 1.16 or above.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

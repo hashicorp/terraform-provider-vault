@@ -72,3 +72,6 @@ In addition to the arguments above, the following attributes are exported:
 * `ttl` - Duration in seconds after which the issued credential should expire.
  
 * `username` - The name of the static role.
+
+* `skip_import_rotation` - (Optional) Causes vault to skip the initial rotation on import. Not applicable on updates.
+  Requires Vault 1.16 or above.
