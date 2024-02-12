@@ -3,6 +3,7 @@
 FEATURES:
 * Add destination and association resources to support Secrets Sync. Requires Vault 1.16+ ([#2098](https://github.com/hashicorp/terraform-provider-vault/pull/2098)).
 * Add support for Oracle database plugin configuration options `split_statements` and `disconnect_sessions`: ([#2085](https://github.com/hashicorp/terraform-provider-vault/pull/2085))
+* Add support for `skip_import_rotation` and `skip_static_role_import_rotation` in `ldap_secret_backend_static_role` and `ldap_secret_backend` respectively. Requires Vault 1.16+ ([#2128](https://github.com/hashicorp/terraform-provider-vault/pull/2128)).
 
 ## 3.24.0 (Jan 17, 2024)
 
