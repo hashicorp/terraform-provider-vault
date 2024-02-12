@@ -73,12 +73,13 @@ var ldapSecretBackendStaticRoleFields = []string{
 }
 
 func updateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if _, ok := d.GetOk(consts.FieldSkipImportRotation); ok {
-		err := d.Set(consts.FieldSkipImportRotation, nil)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+	// Vault rejects an update request containing skip_import_rotation since the field has no effect.
+	// maybe Vault should silently ignore it, but for now just remove the offending field
+	err := d.Set(consts.FieldSkipImportRotation, nil)
+	if err != nil {
+		return diag.FromErr(err)
 	}
+
 	return createLDAPStaticRoleResource(ctx, d, meta)
 }
 
