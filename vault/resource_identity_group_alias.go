@@ -216,5 +216,5 @@ func identityGroupAliasNamePath(name string) string {
 }
 
 func getIdentityGroupAliasIDPath(id string) string {
-	return fmt.Sprintf("%s/%s", identityGroupAliasPath, id)
+	return fmt.Sprintf("%s/%s", identityGroupAliasIDPath, id)
 }
