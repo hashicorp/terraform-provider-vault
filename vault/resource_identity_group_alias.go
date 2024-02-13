@@ -13,7 +13,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-const identityGroupAliasPath = "/identity/group-alias"
+const (
+	identityGroupAliasPath   = "/identity/group-alias"
+	identityGroupAliasIDPath = identityGroupAliasPath + "/id"
+)
 
 func identityGroupAliasResource() *schema.Resource {
 	return &schema.Resource{
@@ -49,6 +52,10 @@ func identityGroupAliasResource() *schema.Resource {
 }
 
 func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
+	lock, unlock := getEntityLockFuncs(d, identityGroupAliasIDPath)
+	lock()
+	defer unlock()
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -59,9 +66,6 @@ func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
 	canonicalID := d.Get("canonical_id").(string)
 
 	path := identityGroupAliasPath
-
-	provider.VaultMutexKV.Lock(path)
-	defer provider.VaultMutexKV.Unlock(path)
 
 	data := map[string]interface{}{
 		"name":                    name,
@@ -80,6 +84,10 @@ func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
+	lock, unlock := getEntityLockFuncs(d, identityGroupAliasIDPath)
+	lock()
+	defer unlock()
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -88,10 +96,7 @@ func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroupAlias %q", id)
-	path := identityGroupAliasIDPath(id)
-
-	provider.VaultMutexKV.Lock(path)
-	defer provider.VaultMutexKV.Unlock(path)
+	path := getIdentityGroupAliasIDPath(id)
 
 	resp, err := client.Logical().Read(path)
 	if err != nil {
@@ -132,10 +137,7 @@ func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
 
 	id := d.Id()
 
-	path := identityGroupAliasIDPath(id)
-
-	provider.VaultMutexKV.Lock(path)
-	defer provider.VaultMutexKV.Unlock(path)
+	path := getIdentityGroupAliasIDPath(id)
 
 	log.Printf("[DEBUG] Reading IdentityGroupAlias %s from %q", id, path)
 	resp, err := client.Logical().Read(path)
@@ -159,6 +161,10 @@ func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
+	lock, unlock := getEntityLockFuncs(d, identityGroupAliasIDPath)
+	lock()
+	defer unlock()
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -166,10 +172,7 @@ func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
 
 	id := d.Id()
 
-	path := identityGroupAliasIDPath(id)
-
-	provider.VaultMutexKV.Lock(path)
-	defer provider.VaultMutexKV.Unlock(path)
+	path := getIdentityGroupAliasIDPath(id)
 
 	log.Printf("[DEBUG] Deleting IdentityGroupAlias %q", id)
 	_, err := client.Logical().Delete(path)
@@ -189,7 +192,7 @@ func identityGroupAliasExists(d *schema.ResourceData, meta interface{}) (bool, e
 
 	id := d.Id()
 
-	path := identityGroupAliasIDPath(id)
+	path := getIdentityGroupAliasIDPath(id)
 	key := id
 
 	// use the name if no ID is set
@@ -212,6 +215,6 @@ func identityGroupAliasNamePath(name string) string {
 	return fmt.Sprintf("%s/name/%s", identityGroupAliasPath, name)
 }
 
-func identityGroupAliasIDPath(id string) string {
-	return fmt.Sprintf("%s/id/%s", identityGroupAliasPath, id)
+func getIdentityGroupAliasIDPath(id string) string {
+	return fmt.Sprintf("%s/%s", identityGroupAliasPath, id)
 }
