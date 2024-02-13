@@ -60,6 +60,9 @@ func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
 
 	path := identityGroupAliasPath
 
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
+
 	data := map[string]interface{}{
 		"name":                    name,
 		consts.FieldMountAccessor: mountAccessor,
@@ -86,6 +89,9 @@ func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Updating IdentityGroupAlias %q", id)
 	path := identityGroupAliasIDPath(id)
+
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	resp, err := client.Logical().Read(path)
 	if err != nil {
@@ -128,6 +134,9 @@ func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
 
 	path := identityGroupAliasIDPath(id)
 
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
+
 	log.Printf("[DEBUG] Reading IdentityGroupAlias %s from %q", id, path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
@@ -158,6 +167,9 @@ func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)
+
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	log.Printf("[DEBUG] Deleting IdentityGroupAlias %q", id)
 	_, err := client.Logical().Delete(path)
