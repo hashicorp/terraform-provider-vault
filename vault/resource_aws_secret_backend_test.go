@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -28,47 +29,81 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 				Config: testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
-					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
-					resource.TestCheckResourceAttr(resourceName, "access_key", accessKey),
-					resource.TestCheckResourceAttr(resourceName, "secret_key", secretKey),
-					resource.TestCheckResourceAttr(resourceName, "region", "us-east-1"),
-					resource.TestCheckResourceAttr(resourceName, "iam_endpoint", ""),
-					resource.TestCheckResourceAttr(resourceName, "sts_endpoint", ""),
-					resource.TestCheckResourceAttr(resourceName, "local", "false"),
-					resource.TestCheckResourceAttrSet(resourceName, "username_template"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMEndpoint, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSEndpoint, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldUsernameTemplate),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "secret_key", "disable_remount"),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
 			{
 				Config: testAccAWSSecretBackendConfig_updated(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "description", "test description updated"),
-					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "1800"),
-					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "43200"),
-					resource.TestCheckResourceAttr(resourceName, "access_key", accessKey),
-					resource.TestCheckResourceAttr(resourceName, "secret_key", secretKey),
-					resource.TestCheckResourceAttr(resourceName, "region", "us-west-1"),
-					resource.TestCheckResourceAttr(resourceName, "iam_endpoint", "https://iam.amazonaws.com"),
-					resource.TestCheckResourceAttr(resourceName, "sts_endpoint", "https://sts.us-west-1.amazonaws.com"),
-					resource.TestCheckResourceAttr(resourceName, "local", "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "43200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-west-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMEndpoint, "https://iam.amazonaws.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSEndpoint, "https://sts.us-west-1.amazonaws.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
 				),
 			},
 			{
 				Config: testAccAWSSecretBackendConfig_noCreds(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
-					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "1800"),
-					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "43200"),
-					resource.TestCheckResourceAttr(resourceName, "access_key", ""),
-					resource.TestCheckResourceAttr(resourceName, "secret_key", ""),
-					resource.TestCheckResourceAttr(resourceName, "region", "us-west-1"),
-					resource.TestCheckResourceAttr(resourceName, "iam_endpoint", ""),
-					resource.TestCheckResourceAttr(resourceName, "sts_endpoint", ""),
-					resource.TestCheckResourceAttr(resourceName, "local", "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "43200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-west-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMEndpoint, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSEndpoint, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAWSSecretBackend_wif(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	resourceType := "vault_aws_secret_backend"
+	resourceName := resourceType + ".test"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSSecretBackendConfig_wifBasic(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn"),
+				),
+			},
+			{
+				Config: testAccAWSSecretBackendConfig_wifUpdated(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn-updated"),
 				),
 			},
 		},
@@ -90,10 +125,10 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 			{
 				Config: testAccAWSSecretBackendConfig_userTemplate(path, accessKey, secretKey, templ),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "username_template", expectedTempl),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsernameTemplate, expectedTempl),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "secret_key", "disable_remount"),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -111,22 +146,22 @@ func TestAccAWSSecretBackend_remount(t *testing.T) {
 			{
 				Config: testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
-					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
-					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
 				),
 			},
 			{
 				Config: testAccAWSSecretBackendConfig_basic(updatedPath, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
-					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
-					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "secret_key", "disable_remount"),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -157,6 +192,26 @@ resource "vault_aws_secret_backend" "test" {
   iam_endpoint = "https://iam.amazonaws.com"
   sts_endpoint = "https://sts.us-west-1.amazonaws.com"
 }`, path, accessKey, secretKey)
+}
+
+func testAccAWSSecretBackendConfig_wifBasic(path string) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path = "%s"
+  identity_token_audience = "wif-audience"
+  identity_token_ttl = 600
+  role_arn = "test-role-arn"
+}`, path)
+}
+
+func testAccAWSSecretBackendConfig_wifUpdated(path string) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path = "%s"
+  identity_token_audience = "wif-audience-updated"
+  identity_token_ttl = 1800
+  role_arn = "test-role-arn-updated"
+}`, path)
 }
 
 func testAccAWSSecretBackendConfig_noCreds(path string) string {

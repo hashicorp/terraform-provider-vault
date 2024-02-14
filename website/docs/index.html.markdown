@@ -350,8 +350,10 @@ The `auth_login_cert` configuration block accepts the following arguments:
 
 * `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
-* `mount` - (Optional) The name of the authentication engine mount.  
+* `mount` - (Optional) The name of the authentication engine mount.
   Default: `cert`
+
+* `name` - (Optional) Authenticate against only the named certificate role.
 
 * `cert_file` - (Required) Path to a file on local disk that contains the
   PEM-encoded certificate to present to the server.

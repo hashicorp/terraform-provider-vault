@@ -570,12 +570,10 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
 		},
 		dbEngineOracle.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the oracle-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the oracle-database-plugin plugin.",
+			Elem:          oracleConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.Name(), dbEngineTypes),
 		},
@@ -827,6 +825,26 @@ func mssqlConnectionStringResource() *schema.Resource {
 	return r
 }
 
+func oracleConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass: true,
+	})
+	r.Schema["split_statements"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "Set to true in order to split statements after semi-colons.",
+		Default:     true,
+	}
+	r.Schema["disconnect_sessions"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "Set to true to disconnect any open sessions prior to running the revocation statements.",
+		Default:     true,
+	}
+
+	return r
+}
+
 func getDBEngine(d *schema.ResourceData) (*dbEngine, error) {
 	for _, e := range dbEngines {
 		if i, ok := d.GetOk(e.name); ok && len(i.([]interface{})) > 0 {
@@ -912,7 +930,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineMySQLLegacy:
 		setMySQLDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineOracle:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setOracleDatabaseConnectionData(d, prefix, data)
 	case dbEnginePostgres:
 		setPostgresDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineElasticSearch:
@@ -1399,6 +1417,25 @@ func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix
 	return result
 }
 
+func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+	if v, ok := data["split_statements"]; ok {
+		result["split_statements"] = v.(bool)
+	}
+
+	if v, ok := data["disconnect_sessions"]; ok {
+		result["disconnect_sessions"] = v.(bool)
+	}
+
+	return result
+}
+
 func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	if v, ok := d.GetOk(prefix + "connection_url"); ok {
 		data["connection_url"] = v.(string)
@@ -1620,6 +1657,16 @@ func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 	}
 	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
 		data["username_template"] = v.(int)
+	}
+}
+
+func setOracleDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+	if v, ok := d.GetOkExists(prefix + "split_statements"); ok {
+		data["split_statements"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "disconnect_sessions"); ok {
+		data["disconnect_sessions"] = v.(bool)
 	}
 }
 
@@ -1890,7 +1937,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineMySQLLegacy:
 		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineOracle:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getOracleConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEnginePostgres:
 		result = getPostgresConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineElasticSearch:

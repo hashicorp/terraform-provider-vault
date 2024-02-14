@@ -201,6 +201,7 @@ func identityEntityDataSource() *schema.Resource {
 
 func identityEntityLookup(client *api.Client, data map[string]interface{}) (*api.Secret, error) {
 	log.Print("[DEBUG] Looking up IdentityEntity")
+
 	resp, err := client.Logical().Write(entity.LookupPath, data)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading Identity Entity '%v': %w", data, err)
