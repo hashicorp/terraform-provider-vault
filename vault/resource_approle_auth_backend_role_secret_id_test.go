@@ -37,6 +37,18 @@ func TestAccAppRoleAuthBackendRoleSecretID_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
 				),
 			},
+			{
+				PreConfig: func() {
+					// delete approle out-of-band
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					path := fmt.Sprintf("auth/%s/role/%s", backend, role)
+					_, err := client.Logical().Delete(path)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_basic(backend, role),
+			},
 		},
 	})
 }

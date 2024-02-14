@@ -253,8 +253,8 @@ func approleAuthBackendRoleSecretIDRead(ctx context.Context, d *schema.ResourceD
 		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
-
 		if isAppRoleDoesNotExistError(err, role) {
+			// remove secretID from state in case approle is deleted out-of-band
 			log.Printf("[WARN] AppRole auth backend role %q deleted out-of-band, removing secret ID %q from state", role, id)
 			d.SetId("")
 			return nil
@@ -380,6 +380,7 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 		}
 
 		if isAppRoleDoesNotExistError(err, role) {
+			// secretID is invalid if approle is deleted out-of-band
 			return false, nil
 		}
 		return true, fmt.Errorf("error checking if AppRole auth backend role SecretID %q exists: %s", id, err)

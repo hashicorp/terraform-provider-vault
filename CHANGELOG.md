@@ -1,5 +1,8 @@
 ## Unreleased
 
+BUGS:
+* Handle graceful destruction of resources when approle is deleted out-of-band ([#2142](https://github.com/hashicorp/terraform-provider-vault/pull/2142)).
+
 ## 3.25.0 (Feb 14, 2024)
 
 FEATURES:
