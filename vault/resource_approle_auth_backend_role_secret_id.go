@@ -170,7 +170,7 @@ func approleAuthBackendRoleSecretIDCreate(ctx context.Context, d *schema.Resourc
 		var err error
 
 		if client, err = client.Clone(); err != nil {
-			return diag.Errorf("error cloning client: %w", err)
+			return diag.Errorf("error cloning client: %s", err)
 		}
 		client.SetWrappingLookupFunc(func(_, _ string) string {
 			return wrappingTTL.(string)
