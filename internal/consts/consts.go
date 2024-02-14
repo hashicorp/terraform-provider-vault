@@ -375,6 +375,11 @@ const (
 	FieldTags                          = "tags"
 	FieldCustomTags                    = "custom_tags"
 	FieldSecretNameTemplate            = "secret_name_template"
+	FieldCIDRList                      = "cidr_list"
+	FieldAccessor                      = "accessor"
+	FieldSecretID                      = "secret_id"
+	FieldWrappingToken                 = "wrapping_token"
+	FieldWithWrappedAccessor           = "with_wrapped_accessor"
 
 	/*
 		common environment variables
