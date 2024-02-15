@@ -4,9 +4,11 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
-	"strings"
+	"net/http"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -278,6 +280,34 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 	return readMount(d, meta, false)
 }
 
+// getMountIfPresent  will fetch the secret mount at the given path.
+// Currently the Vault api package does not provide a GET /sys/mounts/:path
+// method so we make a raw API request.
+func getMountIfPresent(client *api.Client, path string) (*api.MountOutput, error) {
+	req := client.NewRequest(http.MethodGet, "/v1/sys/mounts/"+path)
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		return nil, fmt.Errorf("error reading from Vault: %s", err)
+	}
+
+	if resp == nil {
+		return nil, fmt.Errorf("expected a response, got nil response")
+	}
+
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %s", err)
+	}
+	var mount api.MountOutput
+	err = json.Unmarshal(data, &mount)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal vault response: %s", err)
+	}
+
+	return &mount, nil
+}
+
 func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -288,17 +318,12 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 
 	log.Printf("[DEBUG] Reading mount %s from Vault", path)
 
-	mounts, err := client.Sys().ListMounts()
+	mount, err := getMountIfPresent(client, path)
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return err
 	}
 
-	// path can have a trailing slash, but doesn't need to have one
-	// this standardises on having a trailing slash, which is how the
-	// API always responds.
-	mount, ok := mounts[strings.Trim(path, "/")+"/"]
-	if !ok {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
+	if mount == nil {
 		d.SetId("")
 		return nil
 	}

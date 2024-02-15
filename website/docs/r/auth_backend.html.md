@@ -8,6 +8,7 @@ description: |-
 
 # vault\_auth\_backend
 
+This resource enables a new auth method at the given path.
 
 ## Example Usage
 

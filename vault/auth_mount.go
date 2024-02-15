@@ -4,8 +4,11 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -125,19 +128,30 @@ func authMountDisable(client *api.Client, path string) error {
 	return nil
 }
 
+// getAuthMountIfPresent will fetch the auth mount at the given path.
+// Currently the Vault api package does not provide a GET /sys/mounts/:path
+// method so we make a raw API request.
 func getAuthMountIfPresent(client *api.Client, path string) (*api.AuthMount, error) {
-	auths, err := client.Sys().ListAuth()
+	req := client.NewRequest(http.MethodGet, "/v1/sys/auth/"+path)
+	resp, err := client.RawRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	configuredPath := path + "/"
-
-	for authBackendPath, auth := range auths {
-		if authBackendPath == configuredPath {
-			return auth, nil
-		}
+	if resp == nil {
+		return nil, fmt.Errorf("expected a response, got nil response")
 	}
 
-	return nil, nil
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %s", err)
+	}
+	var auth api.AuthMount
+	err = json.Unmarshal(data, &auth)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal vault response: %s", err)
+	}
+
+	return &auth, nil
 }
