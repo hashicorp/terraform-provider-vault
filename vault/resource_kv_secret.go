@@ -108,6 +108,15 @@ func kvSecretRead(_ context.Context, d *schema.ResourceData, meta interface{}) d
 		return diag.FromErr(err)
 	}
 
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return diag.Errorf("error marshaling JSON for %q: %s", path, err)
+	}
+
+	if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return nil
 }
 
