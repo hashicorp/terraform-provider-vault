@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -17,9 +20,9 @@ func TestAccIdentityOIDCAssignment(t *testing.T) {
 	resourceName := "vault_identity_oidc_assignment.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckOIDCAssignmentDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckOIDCAssignmentDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOIDCAssignmentConfig_empty(name),

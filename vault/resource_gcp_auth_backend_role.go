@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -111,7 +114,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 
 		CreateContext: gcpAuthResourceCreate,
 		UpdateContext: gcpAuthResourceUpdate,
-		ReadContext:   ReadContextWrapper(gcpAuthResourceRead),
+		ReadContext:   provider.ReadContextWrapper(gcpAuthResourceRead),
 		DeleteContext: gcpAuthResourceDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,

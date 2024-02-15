@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -18,9 +21,9 @@ func TestAlicloudAuthBackendRole_basic(t *testing.T) {
 	arn := acctest.RandomWithPrefix("acs:ram:123456:tf:role/")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAlicloudAuthBackedRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAlicloudAuthBackedRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAlicloudAuthBackedRoleConfig_basic(backend, name, arn),

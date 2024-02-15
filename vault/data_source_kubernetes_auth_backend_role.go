@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -58,7 +61,7 @@ func kubernetesAuthBackendRoleDataSource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Read:   ReadWrapper(kubernetesAuthBackendRoleDataSourceRead),
+		Read:   provider.ReadWrapper(kubernetesAuthBackendRoleDataSourceRead),
 		Schema: fields,
 	}
 }

@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,9 +25,9 @@ func TestAccIdentityGroup(t *testing.T) {
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityGroupDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
@@ -39,9 +43,9 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityGroupDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
@@ -148,9 +152,9 @@ func TestAccIdentityGroupExternal(t *testing.T) {
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityGroupDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
@@ -180,9 +184,9 @@ resource "vault_identity_group" "test_upper" {
 `, group, strings.ToUpper(group[0:1])+group[1:])
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityGroupDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -191,6 +195,40 @@ resource "vault_identity_group" "test_upper" {
 			},
 		},
 	})
+}
+
+func TestIdentityGroupExternalGroupIDsUpgradeV0(t *testing.T) {
+	tests := []struct {
+		name     string
+		rawState map[string]interface{}
+		want     map[string]interface{}
+		wantErr  bool
+	}{
+		{
+			name: "basic",
+			rawState: map[string]interface{}{
+				fieldExternalMemberGroupIDs: nil,
+			},
+			want: map[string]interface{}{
+				fieldExternalMemberGroupIDs: false,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := identityGroupExternalGroupIDsUpgradeV0(nil, tt.rawState, nil)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("identityGroupExternalGroupIDsUpgradeV0() error = %#v, wantErr %#v", err, tt.wantErr)
+				}
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("identityGroupExternalGroupIDsUpgradeV0() got = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
 }
 
 func testAccCheckIdentityGroupDestroy(s *terraform.State) error {

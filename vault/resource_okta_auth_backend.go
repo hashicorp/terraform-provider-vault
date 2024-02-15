@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -23,9 +26,8 @@ func oktaAuthBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: oktaAuthBackendWrite,
 		Delete: oktaAuthBackendDelete,
-		Read:   ReadWrapper(oktaAuthBackendRead),
+		Read:   provider.ReadWrapper(oktaAuthBackendRead),
 		Update: oktaAuthBackendUpdate,
-		Exists: oktaAuthBackendExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -155,7 +157,7 @@ func oktaAuthBackendResource() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"groups": {
 							Type:        schema.TypeSet,
-							Required:    true,
+							Optional:    true,
 							Description: "Groups within the Okta auth backend to associate with this user",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
@@ -213,7 +215,7 @@ func oktaAuthBackendResource() *schema.Resource {
 				Description: "The mount accessor related to the auth mount.",
 			},
 		},
-	})
+	}, false)
 }
 
 func normalizeOktaTTL(i interface{}) string {
@@ -285,10 +287,6 @@ func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
-}
-
-func oktaAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	return isOktaAuthBackendPresent(meta.(*provider.ProviderMeta).GetClient(), d.Id())
 }
 
 func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {

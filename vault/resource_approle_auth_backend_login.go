@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -17,7 +20,7 @@ import (
 func approleAuthBackendLoginResource() *schema.Resource {
 	return &schema.Resource{
 		Create: approleAuthBackendLoginCreate,
-		Read:   ReadWrapper(approleAuthBackendLoginRead),
+		Read:   provider.ReadWrapper(approleAuthBackendLoginRead),
 		Delete: approleAuthBackendLoginDelete,
 		Exists: approleAuthBackendLoginExists,
 
@@ -33,6 +36,7 @@ func approleAuthBackendLoginResource() *schema.Resource {
 				Optional:    true,
 				Description: "The SecretID to log in with.",
 				ForceNew:    true,
+				Sensitive:   true,
 			},
 			"policies": {
 				Type:     schema.TypeList,
@@ -66,6 +70,7 @@ func approleAuthBackendLoginResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The token.",
+				Sensitive:   true,
 			},
 			consts.FieldMetadata: {
 				Type:        schema.TypeMap,

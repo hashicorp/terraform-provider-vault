@@ -1,32 +1,52 @@
 name: Build
 
-on: push
+on:
+  push:
+    paths-ignore:
+      - 'website/**'
+      - 'CHANGELOG.md'
+  workflow_dispatch:
+
+permissions:
+  # Permission for checking out code
+  contents: read
 
 jobs:
-  gh-api-quota-check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: get GH rate-limit config
-        run: |
-          curl -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/rate_limit
   go-version:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.go-version.outputs.version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - id: go-version
-        run: echo "version=$(cat .go-version)" >> $GITHUB_OUTPUT
+        run: echo "version=$(cat .go-version)" >> "$GITHUB_OUTPUT"
   build:
     needs: [go-version]
     runs-on: ubuntu-latest
-    container:
-      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: '.go-version'
+          cache: false
+      # setup-terraform is used to install the Terraform CLI. If we don't do
+      # this then the terraform-plugin-sdk will attempt to download it for each test!
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.4.*'
+          terraform_wrapper: false
+
+      - name: Cache go build
+        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            ~/Library/Caches/go-build
+          key: ${{ runner.os }}-golang-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-golang-
+
       - name: Build
         run: |
           make build
@@ -38,48 +58,59 @@ jobs:
           make test
   acceptance:
     needs: [go-version, build]
-    runs-on: ubuntu-latest
+    runs-on: [custom, linux, custom-linux-large]
     strategy:
       fail-fast: false
       matrix:
-        # TODO: enable 1.9 job once the provider is Vault version aware
         image:
-        - "vault-enterprise:1.10.6-ent"
-        - "vault-enterprise:1.11.4-ent"
-        - "vault-enterprise:1.12.0-ent"
-    container:
-      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
+        - "vault-enterprise:1.11.12-ent"
+        - "vault-enterprise:1.12.11-ent"
+        - "vault-enterprise:1.13.12-ent"
+        - "vault-enterprise:1.14.8-ent"
+        - "vault-enterprise:1.15.4-ent"
+        - "vault:1.15.0"
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
         env:
           VAULT_DEV_ROOT_TOKEN_ID: root
           VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
+          VAULT_AUTH_CONFIG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         options: >-
           --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
           --health-interval 1s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 8200:8200
       mysql:
         image: docker.mirror.hashicorp.services/mysql:latest
         env:
           MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
       mssql:
         image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+        ports:
+          - 1433:1433
       mongo:
         image: docker.mirror.hashicorp.services/mongo:latest
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: mongodb
           MONGO_INITDB_DATABASE: admin
+        ports:
+          - 27017:27017
       postgres:
         image: docker.mirror.hashicorp.services/postgres:latest
         env:
           POSTGRES_PASSWORD: secret
           POSTGRES_DB: database
+        ports:
+          - 5432:5432
       couchbase:
         image: docker.io/couchbase/server-sandbox:7.1.1
         ports:
@@ -99,23 +130,59 @@ jobs:
           --health-timeout 5s
           --health-retries 60
       consul:
-        image: docker.mirror.hashicorp.services/consul:latest
+        image: docker.mirror.hashicorp.services/hashicorp/consul:latest
         env:
           CONSUL_LOCAL_CONFIG: "{\"acl\":{\"enabled\":true}}"
         ports:
-        - 8500:8500
-        - 8600:8600
+          - 8500:8500
+          - 8600:8600
         options: >-
           --health-cmd "curl -f 'http://127.0.0.1:8500/v1/health/node/server-1'"
           --health-interval 1s
           --health-timeout 5s
           --health-retries 5
+      openldap:
+        image: docker.io/bitnami/openldap:2.6
+        ports:
+          - 1389:1389
+          - 1636:1636
+        env:
+          LDAP_ADMIN_USERNAME: "admin"
+          LDAP_ADMIN_PASSWORD: "adminpassword"
+          LDAP_USERS: "alice,bob,foo"
+          LDAP_PASSWORDS: "password1,password2,password3"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: '.go-version'
+          cache: false
+      # setup-terraform is used to install the Terraform CLI. If we don't do
+      # this then the terraform-plugin-sdk will attempt to download it for each test!
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.4.*'
+          terraform_wrapper: false
+      - name: Check Terraform CLI version
+        run: terraform --version
+
+      - name: Cache go build
+        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            ~/Library/Caches/go-build
+          key: ${{ runner.os }}-golang-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-golang-
+
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"
-          VAULT_ADDR: "http://vault:8200"
+          VAULT_ADDR: "http://localhost:8200"
+          # RUNS_IN_CONTAINER is false if not using jobs.<job_id>.container
+          RUNS_IN_CONTAINER: "false"
           MYSQL_URL: "root:mysql@tcp(mysql:3306)/"
           MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
           MYSQL_CONNECTION_USERNAME: "root"
@@ -128,8 +195,16 @@ jobs:
           COUCHBASE_PASSWORD: password
           CONSUL_HTTP_ADDR: "consul:8500"
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          LDAP_BINDDN: "cn=admin,dc=example,dc=org"
+          LDAP_BINDPASS: "adminpassword"
+          LDAP_URL: "ldap://openldap:1389"
         run: |
-          make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
+          if [[ ${{ matrix.image }} =~ "-ent" ]]; then
+            target="testacc-ent"
+          else
+            target="testacc"
+          fi
+          make $target TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json

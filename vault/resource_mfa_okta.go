@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -16,7 +19,7 @@ func mfaOktaResource() *schema.Resource {
 		Create: mfaOktaWrite,
 		Update: mfaOktaUpdate,
 		Delete: mfaOktaDelete,
-		Read:   ReadWrapper(mfaOktaRead),
+		Read:   provider.ReadWrapper(mfaOktaRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

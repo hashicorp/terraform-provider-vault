@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -11,7 +14,8 @@ import (
 
 func adAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(readCredsResource),
+		DeprecationMessage: `This data source is replaced by "vault_ldap_static_credentials" and will be removed in the next major release.`,
+		Read:               provider.ReadWrapper(readCredsResource),
 		Schema: map[string]*schema.Schema{
 			"backend": {
 				Type:        schema.TypeString,

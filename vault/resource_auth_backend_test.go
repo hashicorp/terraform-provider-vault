@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -20,8 +23,8 @@ func TestResourceAuth(t *testing.T) {
 
 	resourceName := "vault_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuth_initialConfig(path + consts.PathDelim),
@@ -60,8 +63,8 @@ func TestAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuth_initialConfig(path),
@@ -201,17 +204,21 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 }
 
 func TestResourceAuthTune(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_auth_backend.test"
 	var resAuthFirst api.AuthMount
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuthTune_initialConfig(backend),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resName, &resAuthFirst),
+					testutil.TestAccCheckAuthMountExists(resName,
+						&resAuthFirst,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "type", "github"),
@@ -270,7 +277,7 @@ resource "vault_auth_backend" "test" {
 
 func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 		auths, err := client.Sys().ListAuth()
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)
@@ -280,7 +287,7 @@ func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource
 		for serverPath, serverAuth := range auths {
 			if serverPath == backend+"/" {
 				found = true
-				if serverAuth.Type != "github" {
+				if serverAuth.Type != "github" && serverAuth.Type != "gcp" {
 					return fmt.Errorf("unexpected auth type")
 				}
 

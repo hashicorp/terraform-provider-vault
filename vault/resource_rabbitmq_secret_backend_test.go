@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -17,9 +20,9 @@ func TestAccRabbitMQSecretBackend_basic(t *testing.T) {
 	resourceType := "vault_rabbitmq_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password),
@@ -62,9 +65,9 @@ func TestAccRabbitMQSecretBackend_template(t *testing.T) {
 	resourceType := "vault_rabbitmq_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendTemplateConfig(path, connectionUri, username, password, path, path),
@@ -96,8 +99,8 @@ func TestRabbitMQSecretBackend_remount(t *testing.T) {
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password),

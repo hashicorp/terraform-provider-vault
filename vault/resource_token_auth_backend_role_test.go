@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -17,9 +20,9 @@ func TestAccTokenAuthBackendRole(t *testing.T) {
 
 	resourceName := "vault_token_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckTokenAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTokenAuthBackendRoleConfig(role),
@@ -40,9 +43,9 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 
 	resourceName := "vault_token_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckTokenAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTokenAuthBackendRoleConfig(role),
@@ -154,7 +157,7 @@ func testAccCheckTokenAuthBackendRoleDestroy(s *terraform.State) error {
 func testAccTokenAuthBackendRoleCheck_deleted(role string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		endpoint := "auth/token/roles"
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 		resp, err := client.Logical().List(endpoint)
 		if err != nil {

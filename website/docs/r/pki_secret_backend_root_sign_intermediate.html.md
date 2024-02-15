@@ -75,6 +75,11 @@ The following arguments are supported:
 
 * `revoke` - If set to `true`, the certificate will be revoked on resource destruction.
 
+* `issuer_ref` - (Optional) Specifies the default issuer of this request. May
+  be the value `default`, a name, or an issuer ID. Use ACLs to prevent access to
+  the `/pki/issuer/:issuer_ref/{issue,sign}/:name` paths to prevent users
+  overriding the role's `issuer_ref` value.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:

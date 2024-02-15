@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -19,7 +22,7 @@ var (
 func awsAuthBackendSTSRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendSTSRoleCreate,
-		Read:   ReadWrapper(awsAuthBackendSTSRoleRead),
+		Read:   provider.ReadWrapper(awsAuthBackendSTSRoleRead),
 		Update: awsAuthBackendSTSRoleUpdate,
 		Delete: awsAuthBackendSTSRoleDelete,
 		Exists: awsAuthBackendSTSRoleExists,

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -15,7 +18,7 @@ func mfaTOTPResource() *schema.Resource {
 		Create: mfaTOTPWrite,
 		Update: mfaTOTPUpdate,
 		Delete: mfaTOTPDelete,
-		Read:   ReadWrapper(mfaTOTPRead),
+		Read:   provider.ReadWrapper(mfaTOTPRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

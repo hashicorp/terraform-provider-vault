@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -23,7 +26,7 @@ func gcpAuthBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: gcpAuthBackendWrite,
 		Update: gcpAuthBackendUpdate,
-		Read:   ReadWrapper(gcpAuthBackendRead),
+		Read:   provider.ReadWrapper(gcpAuthBackendRead),
 		Delete: gcpAuthBackendDelete,
 		Exists: gcpAuthBackendExists,
 		Importer: &schema.ResourceImporter{
@@ -85,8 +88,14 @@ func gcpAuthBackendResource() *schema.Resource {
 					Schema: gcpAuthCustomEndpointSchema(),
 				},
 			},
+			"accessor": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The accessor of the auth backend",
+			},
+			"tune": authMountTuneSchema(),
 		},
-	})
+	}, false)
 }
 
 func gcpAuthCustomEndpointSchema() map[string]*schema.Schema {
@@ -186,7 +195,9 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	path := gcpAuthBackendConfigPath(d.Id())
+	gcpPath := d.Id()
+	gcpAuthPath := "auth/" + gcpPath
+	path := gcpAuthBackendConfigPath(gcpPath)
 
 	if !d.IsNewResource() {
 		newMount, err := util.Remount(d, client, consts.FieldPath, true)
@@ -194,6 +205,7 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 
+		gcpAuthPath = "auth/" + newMount
 		path = gcpAuthBackendConfigPath(newMount)
 	}
 
@@ -215,12 +227,34 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["custom_endpoint"] = endpoints
 	}
 
-	log.Printf("[DEBUG] Writing gcp config %q", path)
+	if d.HasChange("tune") {
+		log.Printf("[INFO] %s Auth %q tune configuration changed", gcpAuthType, gcpAuthPath)
+		if raw, ok := d.GetOk("tune"); ok {
+			log.Printf("[DEBUG] Writing %s auth tune to %q", gcpAuthType, gcpAuthPath)
+			err := authMountTune(client, gcpAuthPath, raw)
+			if err != nil {
+				return nil
+			}
+		}
+	}
+
+	if d.HasChange("description") {
+		description := d.Get("description").(string)
+		tune := api.MountConfigInput{Description: &description}
+		err := client.Sys().TuneMount(gcpAuthPath, tune)
+		if err != nil {
+			log.Printf("[ERROR] Error updating %s auth description at %q", gcpAuthType, gcpAuthPath)
+			return err
+		}
+	}
+
+	log.Printf("[DEBUG] Writing %s config at path %q", gcpAuthType, path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("error writing gcp config %q: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Wrote gcp config %q", path)
 
 	return gcpAuthBackendRead(d, meta)
@@ -232,7 +266,9 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	path := gcpAuthBackendConfigPath(d.Id())
+	gcpPath := d.Id()
+	gcpAuthPath := "auth/" + gcpPath
+	path := gcpAuthBackendConfigPath(gcpPath)
 
 	log.Printf("[DEBUG] Reading gcp auth backend config %q", path)
 	resp, err := client.Logical().Read(path)
@@ -271,8 +307,34 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
+	// fetch AuthMount in order to set accessor attribute
+	mount, err := getAuthMountIfPresent(client, gcpPath)
+	if err != nil {
+		return err
+	}
+	if mount == nil {
+		d.SetId("")
+		return nil
+	}
+	log.Printf("[DEBUG] Reading %s auth tune from '%s/tune'", gcpAuthType, gcpAuthPath)
+	rawTune, err := authMountTuneGet(client, gcpAuthPath)
+	if err != nil {
+		return fmt.Errorf("error reading tune information from Vault: %w", err)
+	}
+	data := map[string]interface{}{}
+	data["tune"] = []map[string]interface{}{rawTune}
+	if err := util.SetResourceData(d, data); err != nil {
+		return err
+	}
+
+	if err := d.Set("accessor", mount.Accessor); err != nil {
+		return err
+	}
+	if err := d.Set("description", mount.Description); err != nil {
+		return err
+	}
 	// set the auth backend's path
-	if err := d.Set("path", d.Id()); err != nil {
+	if err := d.Set("path", gcpPath); err != nil {
 		return err
 	}
 

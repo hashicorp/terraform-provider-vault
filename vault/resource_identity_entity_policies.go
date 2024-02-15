@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -16,7 +19,7 @@ func identityEntityPoliciesResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityEntityPoliciesUpdate,
 		Update: identityEntityPoliciesUpdate,
-		Read:   ReadWrapper(identityEntityPoliciesRead),
+		Read:   provider.ReadWrapper(identityEntityPoliciesRead),
 		Delete: identityEntityPoliciesDelete,
 
 		Schema: map[string]*schema.Schema{

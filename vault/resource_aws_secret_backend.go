@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,6 +8,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -14,15 +19,20 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
+var awsSecretFields = []string{
+	consts.FieldIAMEndpoint,
+	consts.FieldSTSEndpoint,
+	consts.FieldUsernameTemplate,
+}
+
 func awsSecretBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
-		Create: awsSecretBackendCreate,
-		Read:   ReadWrapper(awsSecretBackendRead),
-		Update: awsSecretBackendUpdate,
-		Delete: awsSecretBackendDelete,
-		Exists: awsSecretBackendExists,
+		CreateContext: awsSecretBackendCreate,
+		ReadContext:   provider.ReadContextWrapper(awsSecretBackendRead),
+		UpdateContext: awsSecretBackendUpdate,
+		DeleteContext: awsSecretBackendDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 
@@ -43,60 +53,87 @@ func awsSecretBackendResource() *schema.Resource {
 					return old+"/" == new || new+"/" == old
 				},
 			},
-			"description": {
+			consts.FieldDescription: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			"default_lease_ttl_seconds": {
+			consts.FieldDefaultLeaseTTL: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Computed:    true,
 				Description: "Default lease duration for secrets in seconds",
 			},
-
-			"max_lease_ttl_seconds": {
+			consts.FieldMaxLeaseTTL: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Computed:    true,
 				Description: "Maximum possible lease duration for secrets in seconds",
 			},
-			"access_key": {
+			consts.FieldAccessKey: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The AWS Access Key ID to use when generating new credentials.",
 				Sensitive:   true,
 			},
-			"secret_key": {
+			consts.FieldSecretKey: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The AWS Secret Access Key to use when generating new credentials.",
 				Sensitive:   true,
 			},
-			"region": {
+			consts.FieldRegion: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
 				Description: "The AWS region to make API calls against. Defaults to us-east-1.",
 			},
-			"iam_endpoint": {
+			consts.FieldIAMEndpoint: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Specifies a custom HTTP IAM endpoint to use.",
 			},
-			"sts_endpoint": {
+			consts.FieldSTSEndpoint: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Specifies a custom HTTP STS endpoint to use.",
 			},
-			"username_template": {
+			consts.FieldUsernameTemplate: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
 				Description: "Template describing how dynamic usernames are generated.",
 			},
+			consts.FieldLocal: {
+				Type:        schema.TypeBool,
+				ForceNew:    true,
+				Optional:    true,
+				Default:     false,
+				Description: "Specifies if the secret backend is local only",
+			},
+			consts.FieldRoleArn: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Role ARN to assume for plugin identity token federation.",
+			},
+			consts.FieldIdentityTokenAudience: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The audience claim value.",
+			},
+			consts.FieldIdentityTokenKey: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The key to use for signing identity tokens.",
+			},
+			consts.FieldIdentityTokenTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The TTL of generated identity tokens in seconds.",
+			},
 		},
-	})
+	}, false)
 }
 
 func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
@@ -124,73 +161,92 @@ func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
 	}
 }
 
-func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
+func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Get(consts.FieldPath).(string)
-	description := d.Get("description").(string)
-	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
-	maxTTL := d.Get("max_lease_ttl_seconds").(int)
-	accessKey := d.Get("access_key").(string)
-	secretKey := d.Get("secret_key").(string)
-	region := d.Get("region").(string)
-	iamEndpoint := d.Get("iam_endpoint").(string)
-	stsEndpoint := d.Get("sts_endpoint").(string)
-	usernameTemplate := d.Get("username_template").(string)
+	description := d.Get(consts.FieldDescription).(string)
+	defaultTTL := d.Get(consts.FieldDefaultLeaseTTL).(int)
+	maxTTL := d.Get(consts.FieldMaxLeaseTTL).(int)
+	accessKey := d.Get(consts.FieldAccessKey).(string)
+	secretKey := d.Get(consts.FieldSecretKey).(string)
+	region := d.Get(consts.FieldRegion).(string)
+	local := d.Get(consts.FieldLocal).(bool)
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting AWS backend at %q", path)
+	mountConfig := api.MountConfigInput{
+		DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
+		MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
+	}
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+	if useAPIVer116 {
+		identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
+		if identityTokenKey != "" {
+			mountConfig.IdentityTokenKey = identityTokenKey
+		}
+	}
 	err := client.Sys().Mount(path, &api.MountInput{
 		Type:        consts.MountTypeAWS,
 		Description: description,
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
-		},
+		Local:       local,
+		Config:      mountConfig,
 	})
 	if err != nil {
-		return fmt.Errorf("error mounting to %q: %s", path, err)
+		return diag.Errorf("error mounting to %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Mounted AWS backend at %q", path)
 	d.SetId(path)
 
 	log.Printf("[DEBUG] Writing root credentials to %q", path+"/config/root")
 	data := map[string]interface{}{
-		"access_key": accessKey,
-		"secret_key": secretKey,
+		consts.FieldAccessKey: accessKey,
+		consts.FieldSecretKey: secretKey,
 	}
+	for _, k := range awsSecretFields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v.(string)
+		}
+	}
+
+	if useAPIVer116 {
+		if v, ok := d.GetOk(consts.FieldIdentityTokenAudience); ok && v != "" {
+			data[consts.FieldIdentityTokenAudience] = v.(string)
+		}
+		if v, ok := d.GetOk(consts.FieldRoleArn); ok && v != "" {
+			data[consts.FieldRoleArn] = v.(string)
+		}
+		if v, ok := d.GetOk(consts.FieldIdentityTokenTTL); ok && v != 0 {
+			data[consts.FieldIdentityTokenTTL] = v.(int)
+		}
+	}
+
 	if region != "" {
-		data["region"] = region
+		data[consts.FieldRegion] = region
 	}
-	if iamEndpoint != "" {
-		data["iam_endpoint"] = iamEndpoint
-	}
-	if stsEndpoint != "" {
-		data["sts_endpoint"] = stsEndpoint
-	}
-	if usernameTemplate != "" {
-		data["username_template"] = usernameTemplate
-	}
+
 	_, err = client.Logical().Write(path+"/config/root", data)
 	if err != nil {
-		return fmt.Errorf("error configuring root credentials for %q: %s", path, err)
+		return diag.Errorf("error configuring root credentials for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote root credentials to %q", path+"/config/root")
 	if region == "" {
-		d.Set("region", "us-east-1")
+		d.Set(consts.FieldRegion, "us-east-1")
 	}
 	d.Partial(false)
 
-	return awsSecretBackendRead(d, meta)
+	return awsSecretBackendRead(ctx, d, meta)
 }
 
-func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
+func awsSecretBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -198,7 +254,7 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading AWS backend mount %q from Vault", path)
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		return fmt.Errorf("error reading mount %q: %s", path, err)
+		return diag.Errorf("error reading mount %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read AWS backend mount %q from Vault", path)
 
@@ -220,14 +276,14 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		// case to allow for a transition period.
 		respErr, ok := err.(*api.ResponseError)
 		if !ok || respErr.StatusCode != 405 {
-			return fmt.Errorf("error reading AWS secret backend config/root: %s", err)
+			return diag.Errorf("error reading AWS secret backend config/root: %s", err)
 		}
 		log.Printf("[DEBUG] Unable to read config/root due to old version detected; skipping reading access_key and region parameters")
 		resp = nil
 	}
 	if resp != nil {
-		if v, ok := resp.Data["access_key"].(string); ok {
-			d.Set("access_key", v)
+		if v, ok := resp.Data[consts.FieldAccessKey].(string); ok {
+			d.Set(consts.FieldAccessKey, v)
 		}
 		// Terrible backwards compatibility hack. Previously, if no region was specified,
 		// this provider would just write a region of "us-east-1" into its state. Now that
@@ -235,35 +291,49 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		// it will return an empty string. This could potentially cause unexpected diffs
 		// for users of the provider, so to avoid it, we're doing something similar here
 		// and injecting a fake region of us-east-1 into the state.
-		if v, ok := resp.Data["region"].(string); ok && v != "" {
-			d.Set("region", v)
+		if v, ok := resp.Data[consts.FieldRegion].(string); ok && v != "" {
+			d.Set(consts.FieldRegion, v)
 		} else {
-			d.Set("region", "us-east-1")
+			d.Set(consts.FieldRegion, "us-east-1")
 		}
 
-		if v, ok := resp.Data["iam_endpoint"].(string); ok {
-			d.Set("iam_endpoint", v)
+		for _, k := range awsSecretFields {
+			if v, ok := resp.Data[k]; ok {
+				if err := d.Set(k, v); err != nil {
+					return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", k, path, err)
+				}
+			}
 		}
-		if v, ok := resp.Data["sts_endpoint"].(string); ok {
-			d.Set("sts_endpoint", v)
-		}
-		if v, ok := resp.Data["username_template"].(string); ok {
-			d.Set("username_template", v)
+
+		if useAPIVer116 {
+			if err := d.Set(consts.FieldIdentityTokenAudience, resp.Data[consts.FieldIdentityTokenAudience]); err != nil {
+				return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldIdentityTokenAudience, path, err)
+			}
+			if err := d.Set(consts.FieldRoleArn, resp.Data[consts.FieldRoleArn]); err != nil {
+				return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldRoleArn, path, err)
+			}
+			if err := d.Set(consts.FieldIdentityTokenTTL, resp.Data[consts.FieldIdentityTokenTTL]); err != nil {
+				return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldIdentityTokenTTL, path, err)
+			}
 		}
 	}
 
 	d.Set(consts.FieldPath, path)
-	d.Set("description", mount.Description)
-	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
+	d.Set(consts.FieldDescription, mount.Description)
+	d.Set(consts.FieldDefaultLeaseTTL, mount.Config.DefaultLeaseTTL)
+	d.Set(consts.FieldMaxLeaseTTL, mount.Config.MaxLeaseTTL)
+	d.Set(consts.FieldLocal, mount.Local)
+	if useAPIVer116 {
+		d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey)
+	}
 
 	return nil
 }
 
-func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -271,61 +341,81 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path, err := util.Remount(d, client, consts.FieldPath, false)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-
-	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
+	if d.HasChanges(consts.FieldDefaultLeaseTTL, consts.FieldMaxLeaseTTL, consts.FieldDescription, consts.FieldIdentityTokenKey) {
+		description := d.Get(consts.FieldDescription).(string)
 		config := api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
+			Description:     &description,
+			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
 		}
-		log.Printf("[DEBUG] Updating lease TTLs for %q", path)
+
+		useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+		if useAPIVer116 {
+			identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
+			if identityTokenKey != "" {
+				config.IdentityTokenKey = identityTokenKey
+			}
+		}
+		log.Printf("[DEBUG] Updating mount config input for %q", path)
 		err := client.Sys().TuneMount(path, config)
 		if err != nil {
-			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
+			return diag.Errorf("error updating mount config input for %q: %s", path, err)
 		}
-		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
+		log.Printf("[DEBUG] Updated mount config input for %q", path)
 	}
-	if d.HasChange("access_key") || d.HasChange("secret_key") || d.HasChange("region") || d.HasChange("iam_endpoint") || d.HasChange("sts_endpoint") {
+	if d.HasChanges(consts.FieldAccessKey, consts.FieldSecretKey, consts.FieldRegion, consts.FieldIAMEndpoint, consts.FieldSTSEndpoint, consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn) {
 		log.Printf("[DEBUG] Updating root credentials at %q", path+"/config/root")
 		data := map[string]interface{}{
-			"access_key": d.Get("access_key").(string),
-			"secret_key": d.Get("secret_key").(string),
+			consts.FieldAccessKey: d.Get(consts.FieldAccessKey).(string),
+			consts.FieldSecretKey: d.Get(consts.FieldSecretKey).(string),
 		}
-		region := d.Get("region").(string)
-		iamEndpoint := d.Get("iam_endpoint").(string)
-		stsEndpoint := d.Get("sts_endpoint").(string)
-		usernameTemplate := d.Get("username_template").(string)
 
+		for _, k := range awsSecretFields {
+			if v, ok := d.GetOk(k); ok {
+				data[k] = v.(string)
+			}
+		}
+
+		useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+		if useAPIVer116 {
+			identityTokenAudience := d.Get(consts.FieldIdentityTokenAudience).(string)
+			if identityTokenAudience != "" {
+				data[consts.FieldIdentityTokenAudience] = identityTokenAudience
+			}
+			roleArn := d.Get(consts.FieldRoleArn).(string)
+			if roleArn != "" {
+				data[consts.FieldRoleArn] = roleArn
+			}
+			identityTokenTTL := d.Get(consts.FieldIdentityTokenTTL).(int)
+			if identityTokenTTL != 0 {
+				data[consts.FieldIdentityTokenTTL] = identityTokenTTL
+			}
+		}
+
+		region := d.Get(consts.FieldRegion).(string)
 		if region != "" {
-			data["region"] = region
+			data[consts.FieldRegion] = region
 		}
-		if iamEndpoint != "" {
-			data["iam_endpoint"] = iamEndpoint
-		}
-		if stsEndpoint != "" {
-			data["sts_endpoint"] = stsEndpoint
-		}
-		if usernameTemplate != "" {
-			data["username_template"] = usernameTemplate
-		}
+
 		_, err := client.Logical().Write(path+"/config/root", data)
 		if err != nil {
-			return fmt.Errorf("error configuring root credentials for %q: %s", path, err)
+			return diag.Errorf("error configuring root credentials for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated root credentials at %q", path+"/config/root")
 		if region == "" {
-			d.Set("region", "us-east-1")
+			d.Set(consts.FieldRegion, "us-east-1")
 		}
 	}
 	d.Partial(false)
-	return awsSecretBackendRead(d, meta)
+	return awsSecretBackendRead(ctx, d, meta)
 }
 
-func awsSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func awsSecretBackendDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -333,25 +423,8 @@ func awsSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Unmounting AWS backend %q", path)
 	err := client.Sys().Unmount(path)
 	if err != nil {
-		return fmt.Errorf("error unmounting AWS backend from %q: %s", path, err)
+		return diag.Errorf("error unmounting AWS backend from %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Unmounted AWS backend %q", path)
 	return nil
-}
-
-func awsSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if AWS backend exists at %q", path)
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
-	}
-	log.Printf("[DEBUG] Checked if AWS backend exists at %q", path)
-	_, ok := mounts[strings.Trim(path, "/")+"/"]
-	return ok, nil
 }

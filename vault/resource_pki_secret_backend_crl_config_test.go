@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"testing"
 
@@ -14,37 +18,63 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func getCRLConfigChecks(resourceName string, isUpdate bool) resource.TestCheckFunc {
+func getCRLConfigChecks(resourceName string, isUpdate, unifiedCrl bool) resource.TestCheckFunc {
 	baseChecks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "expiry", "72h"),
 		resource.TestCheckResourceAttr(resourceName, "disable", "true"),
 	}
+
+	v112BaseChecks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "ocsp_disable", "false"),
+		resource.TestCheckResourceAttr(resourceName, "ocsp_expiry", "12h"),
+		resource.TestCheckResourceAttr(resourceName, "auto_rebuild", "true"),
+		resource.TestCheckResourceAttr(resourceName, "auto_rebuild_grace_period", "12h"),
+		resource.TestCheckResourceAttr(resourceName, "enable_delta", "true"),
+		resource.TestCheckResourceAttr(resourceName, "delta_rebuild_interval", "15m"),
+	}
+
+	v112UpdateChecks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "ocsp_disable", "false"),
+		resource.TestCheckResourceAttr(resourceName, "ocsp_expiry", "23h"),
+		resource.TestCheckResourceAttr(resourceName, "auto_rebuild", "true"),
+		resource.TestCheckResourceAttr(resourceName, "auto_rebuild_grace_period", "24h"),
+		resource.TestCheckResourceAttr(resourceName, "enable_delta", "true"),
+		resource.TestCheckResourceAttr(resourceName, "delta_rebuild_interval", "18m"),
+	}
+
+	v113BaseChecks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "cross_cluster_revocation", "false"),
+		resource.TestCheckResourceAttr(resourceName, "unified_crl", "false"),
+		resource.TestCheckResourceAttr(resourceName, "unified_crl_on_existing_paths", "false"),
+	}
+
+	v113UpdateChecks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "cross_cluster_revocation", strconv.FormatBool(unifiedCrl)),
+		resource.TestCheckResourceAttr(resourceName, "unified_crl", strconv.FormatBool(unifiedCrl)),
+		resource.TestCheckResourceAttr(resourceName, "unified_crl_on_existing_paths", strconv.FormatBool(unifiedCrl)),
+	}
+
 	return func(state *terraform.State) error {
 		var checks []resource.TestCheckFunc
 		meta := testProvider.Meta().(*provider.ProviderMeta)
-		if meta.IsAPISupported(provider.VaultVersion112) {
-			var extras []resource.TestCheckFunc
+		isVaultVersion113 := meta.IsAPISupported(provider.VaultVersion113)
+		isVaultVersion112 := meta.IsAPISupported(provider.VaultVersion112)
+		switch {
+		case isVaultVersion113:
 			if !isUpdate {
-				extras = []resource.TestCheckFunc{
-					resource.TestCheckResourceAttr(resourceName, "ocsp_disable", "false"),
-					resource.TestCheckResourceAttr(resourceName, "ocsp_expiry", "12h"),
-					resource.TestCheckResourceAttr(resourceName, "auto_rebuild", "true"),
-					resource.TestCheckResourceAttr(resourceName, "auto_rebuild_grace_period", "12h"),
-					resource.TestCheckResourceAttr(resourceName, "enable_delta", "true"),
-					resource.TestCheckResourceAttr(resourceName, "delta_rebuild_interval", "15m"),
-				}
+				checks = append(checks, v113BaseChecks...)
+				checks = append(checks, v112BaseChecks...)
 			} else {
-				extras = []resource.TestCheckFunc{
-					resource.TestCheckResourceAttr(resourceName, "ocsp_disable", "false"),
-					resource.TestCheckResourceAttr(resourceName, "ocsp_expiry", "23h"),
-					resource.TestCheckResourceAttr(resourceName, "auto_rebuild", "true"),
-					resource.TestCheckResourceAttr(resourceName, "auto_rebuild_grace_period", "24h"),
-					resource.TestCheckResourceAttr(resourceName, "enable_delta", "true"),
-					resource.TestCheckResourceAttr(resourceName, "delta_rebuild_interval", "18m"),
-				}
+				checks = append(checks, v113UpdateChecks...)
+				checks = append(checks, v112UpdateChecks...)
 			}
-			checks = append(checks, extras...)
-		} else {
+		case isVaultVersion112:
+			if !isUpdate {
+				checks = append(checks, v112BaseChecks...)
+			} else {
+				checks = append(checks, v112UpdateChecks...)
+			}
+		default:
 			checks = baseChecks
 		}
 		return resource.ComposeAggregateTestCheckFunc(checks...)(state)
@@ -64,14 +94,30 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 			"auto_rebuild_grace_period",
 			"enable_delta",
 			"delta_rebuild_interval",
+			"cross_cluster_revocation",
+			"unified_crl",
+			"unified_crl_on_existing_paths",
 		)
 	})
 
-	// test against vault-1.12 and above
-	t.Run("vault-1.12-and-above", func(t *testing.T) {
+	// test against vault-1.12
+	t.Run("vault-1.12", func(t *testing.T) {
 		setupCRLConfigTest(t, func() {
 			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion113)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
+			"cross_cluster_revocation",
+			"unified_crl",
+			"unified_crl_on_existing_paths",
+		)
+	})
+
+	// test against vault-1.13 and above
+	t.Run("vault-1.13-and-above", func(t *testing.T) {
+		setupCRLConfigTest(t, func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
 		},
 		)
 	})
@@ -80,22 +126,26 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...string) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	resourceName := "vault_pki_secret_backend_crl_config.test"
-	steps := append([]resource.TestStep{
+	var unifiedCrl bool
+	if os.Getenv(testutil.EnvVarTfAccEnt) != "" {
+		unifiedCrl = true
+	}
+	steps := []resource.TestStep{
 		{
 			Config: testPkiSecretBackendCrlConfigConfig_defaults(rootPath),
-			Check:  getCRLConfigChecks(resourceName, false),
+			Check:  getCRLConfigChecks(resourceName, false, unifiedCrl),
 		},
 		{
-			Config: testPkiSecretBackendCrlConfigConfig_explicit(rootPath),
-			Check:  getCRLConfigChecks(resourceName, true),
+			Config: testPkiSecretBackendCrlConfigConfig_explicit(rootPath, unifiedCrl),
+			Check:  getCRLConfigChecks(resourceName, true, unifiedCrl),
 		},
 		testutil.GetImportTestStep(resourceName, false, nil, ignoreImportFields...),
-	})
+	}
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     preCheck,
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
-		Steps:        steps,
+		ProviderFactories: providerFactories,
+		PreCheck:          preCheck,
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps:             steps,
 	})
 }
 
@@ -133,27 +183,30 @@ resource "vault_pki_secret_backend_crl_config" "test" {
   expiry       = "72h"
   disable      = true
   ocsp_disable = false
-  #ocsp_expiry = "13h"
+  ocsp_expiry = "12h"
   auto_rebuild = true
   enable_delta = true
 }
 `, testPkiSecretBackendCrlConfigConfig_base(rootPath))
 }
 
-func testPkiSecretBackendCrlConfigConfig_explicit(rootPath string) string {
+func testPkiSecretBackendCrlConfigConfig_explicit(rootPath string, unifiedCrl bool) string {
 	return fmt.Sprintf(`
-%s
+%[1]s
 
 resource "vault_pki_secret_backend_crl_config" "test" {
-  backend                   = vault_pki_secret_backend_root_cert.test-ca.backend
-  expiry                    = "72h"
-  disable                   = true
-  ocsp_disable              = false
-  ocsp_expiry               = "23h"
-  auto_rebuild              = true
-  auto_rebuild_grace_period = "24h"
-  enable_delta              = true
-  delta_rebuild_interval    = "18m"
+  backend                   	= vault_pki_secret_backend_root_cert.test-ca.backend
+  expiry                    	= "72h"
+  disable                   	= true
+  ocsp_disable              	= false
+  ocsp_expiry               	= "23h"
+  auto_rebuild              	= true
+  auto_rebuild_grace_period 	= "24h"
+  enable_delta              	= true
+  delta_rebuild_interval   		= "18m"
+  cross_cluster_revocation  	= %[2]s
+  unified_crl					= %[2]s
+  unified_crl_on_existing_paths = %[2]s
 }
-`, testPkiSecretBackendCrlConfigConfig_base(rootPath))
+`, testPkiSecretBackendCrlConfigConfig_base(rootPath), strconv.FormatBool(unifiedCrl))
 }

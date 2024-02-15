@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -103,7 +106,7 @@ func gcpAuthBackendRoleDataSource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Read:   ReadWrapper(gcpAuthBackendRoleRead),
+		Read:   provider.ReadWrapper(gcpAuthBackendRoleRead),
 		Schema: fields,
 	}
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mfa
 
 import (
@@ -59,8 +62,10 @@ var loginEnforcementSchemaMap = map[string]*schema.Schema{
 	},
 }
 
+// GetLoginEnforcementSchemaResource returns the resource needed to provision an identity/mfa/login-enforcement
+// resource.
 func GetLoginEnforcementSchemaResource() (*schema.Resource, error) {
-	config, err := NewContextFuncConfig(MethodTypeLoginEnforcement, PathTypeName, nil, nil, nil)
+	config, err := NewContextFuncConfig(MethodTypeLoginEnforcement, PathTypeName, nil, nil, nil, nil)
 	if err != nil {
 		return nil, err
 	}

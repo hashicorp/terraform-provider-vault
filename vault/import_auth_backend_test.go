@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -13,9 +16,9 @@ import (
 func TestAccAuthBackend_importBasic(t *testing.T) {
 	path := "github-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAuthBackendDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuth_initialConfig(path),

@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mfa
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const (
@@ -41,8 +45,9 @@ var oktaSchemaMap = map[string]*schema.Schema{
 	},
 }
 
+// GetOKTASchemaResource returns the resource needed to provision an identity/mfa/okta resource.
 func GetOKTASchemaResource() (*schema.Resource, error) {
-	config, err := NewContextFuncConfig(MethodTypeOKTA, PathTypeMethodID, nil, nil, nil)
+	config, err := NewContextFuncConfig(MethodTypeOKTA, PathTypeMethodID, nil, nil, nil, nil)
 	// TODO: the primary_email field is not included in the response
 	// from vault-10.x and up. Its value will be derived the from resource data
 	// if not present in the response from Vault.
@@ -50,6 +55,8 @@ func GetOKTASchemaResource() (*schema.Resource, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	config.setAPIValueGetter(consts.FieldUsernameFormat, util.GetAPIRequestValue)
 
 	return getMethodSchemaResource(oktaSchemaMap, config), nil
 }

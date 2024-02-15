@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -105,7 +108,7 @@ func databaseSecretsMountCustomizeDiff(ctx context.Context, d *schema.ResourceDi
 func databaseSecretsMountResource() *schema.Resource {
 	return &schema.Resource{
 		Create:        databaseSecretsMountCreateOrUpdate,
-		Read:          ReadWrapper(databaseSecretsMountRead),
+		Read:          provider.ReadWrapper(databaseSecretsMountRead),
 		Update:        databaseSecretsMountCreateOrUpdate,
 		Delete:        databaseSecretsMountDelete,
 		CustomizeDiff: databaseSecretsMountCustomizeDiff,
@@ -243,7 +246,7 @@ func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}
 					return fmt.Errorf("duplicate name %q for engine %#v", name, engine)
 				}
 				seen[name] = true
-				if err := writeDatabaseSecretConfig(d, client, engine, i, true, path); err != nil {
+				if err := writeDatabaseSecretConfig(d, client, engine, i, true, path, meta); err != nil {
 					return err
 				}
 				count++
@@ -293,7 +296,7 @@ func databaseSecretsMountRead(d *schema.ResourceData, meta interface{}) error {
 	store := &dbConfigStore{}
 	if v, ok := resp.Data["keys"]; ok {
 		for _, v := range v.([]interface{}) {
-			if err := readDBEngineConfig(d, client, store, v.(string)); err != nil {
+			if err := readDBEngineConfig(d, client, store, v.(string), meta); err != nil {
 				return err
 			}
 		}
@@ -312,7 +315,7 @@ func databaseSecretsMountDelete(d *schema.ResourceData, meta interface{}) error 
 	return mountDelete(d, meta)
 }
 
-func readDBEngineConfig(d *schema.ResourceData, client *api.Client, store *dbConfigStore, name string) error {
+func readDBEngineConfig(d *schema.ResourceData, client *api.Client, store *dbConfigStore, name string, meta interface{}) error {
 	root := d.Id()
 
 	path := databaseSecretBackendConnectionPath(root, name)
@@ -333,7 +336,7 @@ func readDBEngineConfig(d *schema.ResourceData, client *api.Client, store *dbCon
 	}
 
 	idx := len(store.Get(engine))
-	result, err := getDBConnectionConfig(d, engine, idx, resp)
+	result, err := getDBConnectionConfig(d, engine, idx, resp, meta)
 	if err != nil {
 		return err
 	}

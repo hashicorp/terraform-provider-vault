@@ -1,23 +1,25 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
+	"os"
+	"path"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAuthLoginCert_Init(t *testing.T) {
-	type fields struct {
-		AuthLoginCommon AuthLoginCommon
-	}
-
 	s := map[string]*schema.Schema{
 		consts.FieldCACertFile: {
 			Type:     schema.TypeString,
@@ -37,15 +39,7 @@ func TestAuthLoginCert_Init(t *testing.T) {
 		},
 	}
 
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectMount  string
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name: "without-role-name",
 			raw: map[string]interface{}{
@@ -59,12 +53,13 @@ func TestAuthLoginCert_Init(t *testing.T) {
 			},
 			authField: consts.FieldAuthLoginCert,
 			expectParams: map[string]interface{}{
-				consts.FieldNamespace:  "",
-				consts.FieldMount:      consts.MountTypeCert,
-				consts.FieldName:       "",
-				consts.FieldCACertFile: "ca.crt",
-				consts.FieldCertFile:   "cert.crt",
-				consts.FieldKeyFile:    "cert.key",
+				consts.FieldNamespace:        "",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeCert,
+				consts.FieldName:             "",
+				consts.FieldCACertFile:       "ca.crt",
+				consts.FieldCertFile:         "cert.crt",
+				consts.FieldKeyFile:          "cert.key",
 			},
 			wantErr: false,
 		},
@@ -81,11 +76,12 @@ func TestAuthLoginCert_Init(t *testing.T) {
 			},
 			authField: consts.FieldAuthLoginCert,
 			expectParams: map[string]interface{}{
-				consts.FieldNamespace: "",
-				consts.FieldMount:     consts.MountTypeCert,
-				consts.FieldName:      "bob",
-				consts.FieldCertFile:  "cert.crt",
-				consts.FieldKeyFile:   "cert.key",
+				consts.FieldNamespace:        "",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeCert,
+				consts.FieldName:             "bob",
+				consts.FieldCertFile:         "cert.crt",
+				consts.FieldKeyFile:          "cert.key",
 			},
 			wantErr: false,
 		},
@@ -103,12 +99,13 @@ func TestAuthLoginCert_Init(t *testing.T) {
 			},
 			authField: consts.FieldAuthLoginCert,
 			expectParams: map[string]interface{}{
-				consts.FieldNamespace:  "ns1",
-				consts.FieldMount:      consts.MountTypeCert,
-				consts.FieldName:       "",
-				consts.FieldCACertFile: "ca.crt",
-				consts.FieldCertFile:   "cert.crt",
-				consts.FieldKeyFile:    "cert.key",
+				consts.FieldNamespace:        "ns1",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeCert,
+				consts.FieldName:             "",
+				consts.FieldCACertFile:       "ca.crt",
+				consts.FieldCertFile:         "cert.crt",
+				consts.FieldKeyFile:          "cert.key",
 			},
 			wantErr: false,
 		},
@@ -131,15 +128,16 @@ func TestAuthLoginCert_Init(t *testing.T) {
 			},
 			authField: consts.FieldAuthLoginCert,
 			expectParams: map[string]interface{}{
-				consts.FieldCACertDir:     "/foo/baz",
-				consts.FieldSkipTLSVerify: true,
-				consts.FieldTLSServerName: "baz.biff",
-				consts.FieldNamespace:     "ns1",
-				consts.FieldMount:         "cert1",
-				consts.FieldName:          "bob",
-				consts.FieldCACertFile:    "ca.crt",
-				consts.FieldCertFile:      "cert.crt",
-				consts.FieldKeyFile:       "cert.key",
+				consts.FieldNamespace:        "ns1",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldCACertDir:        "/foo/baz",
+				consts.FieldSkipTLSVerify:    true,
+				consts.FieldTLSServerName:    "baz.biff",
+				consts.FieldMount:            "cert1",
+				consts.FieldName:             "bob",
+				consts.FieldCACertFile:       "ca.crt",
+				consts.FieldCertFile:         "cert.crt",
+				consts.FieldKeyFile:          "cert.key",
 			},
 			wantErr: false,
 		},
@@ -157,22 +155,7 @@ func TestAuthLoginCert_Init(t *testing.T) {
 			t.Cleanup(func() {
 				delete(s, tt.authField)
 			})
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginCert{}
-
-			err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if !reflect.DeepEqual(tt.expectErr, err) {
-				t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-			}
-
-			if !reflect.DeepEqual(tt.expectParams, l.params) {
-				t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginCert{})
 		})
 	}
 }
@@ -209,10 +192,11 @@ func TestAuthLoginCert_LoginPath(t *testing.T) {
 func TestAuthLoginCert_Login(t *testing.T) {
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		role := "default"
-		if v, ok := t.params[len(t.params)-1][consts.FieldName]; ok {
-			role = v.(string)
+		if t.params != nil {
+			if v, ok := t.params[len(t.params)-1][consts.FieldName]; ok {
+				role = v.(string)
+			}
 		}
-
 		m, err := json.Marshal(
 			&api.Secret{
 				Auth: &api.SecretAuth{
@@ -231,13 +215,34 @@ func TestAuthLoginCert_Login(t *testing.T) {
 		w.Write(m)
 	}
 
+	tempDir := t.TempDir()
+
+	b, k, err := testutil.GenerateCA()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certFile := path.Join(tempDir, "cert.crt")
+	if err := os.WriteFile(certFile, b, 0o400); err != nil {
+		t.Fatal(err)
+	}
+
+	keyFile := path.Join(tempDir, "cert.key")
+	if err := os.WriteFile(keyFile, k, 0o400); err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []authLoginTest{
 		{
 			name: "default",
 			authLogin: &AuthLoginCert{
 				AuthLoginCommon{
-					authField:   "baz",
-					params:      map[string]interface{}{},
+					authField: "baz",
+					params: map[string]interface{}{
+						consts.FieldCertFile:      certFile,
+						consts.FieldKeyFile:       keyFile,
+						consts.FieldSkipTLSVerify: true,
+					},
 					initialized: true,
 				},
 			},
@@ -248,7 +253,7 @@ func TestAuthLoginCert_Login(t *testing.T) {
 			expectReqPaths: []string{
 				"/v1/auth/cert/login",
 			},
-			expectReqParams: []map[string]interface{}{{}},
+			expectReqParams: nil,
 			want: &api.Secret{
 				Auth: &api.SecretAuth{
 					Metadata: map[string]string{
@@ -256,6 +261,7 @@ func TestAuthLoginCert_Login(t *testing.T) {
 					},
 				},
 			},
+			tls:     true,
 			wantErr: false,
 		},
 		{
@@ -265,7 +271,10 @@ func TestAuthLoginCert_Login(t *testing.T) {
 					authField: "baz",
 					mount:     "qux",
 					params: map[string]interface{}{
-						consts.FieldName: "bob",
+						consts.FieldName:          "bob",
+						consts.FieldCertFile:      certFile,
+						consts.FieldKeyFile:       keyFile,
+						consts.FieldSkipTLSVerify: true,
 					},
 					initialized: true,
 				},
@@ -287,7 +296,30 @@ func TestAuthLoginCert_Login(t *testing.T) {
 					},
 				},
 			},
+			tls:     true,
 			wantErr: false,
+		},
+		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginCert{
+				AuthLoginCommon{
+					authField: "baz",
+					mount:     "qux",
+					params: map[string]interface{}{
+						consts.FieldName:          "bob",
+						consts.FieldCertFile:      certFile,
+						consts.FieldKeyFile:       keyFile,
+						consts.FieldSkipTLSVerify: true,
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
 		},
 		{
 			name: "error-uninitialized",
@@ -301,11 +333,13 @@ func TestAuthLoginCert_Login(t *testing.T) {
 			},
 			want:      nil,
 			wantErr:   true,
+			tls:       true,
 			expectErr: authLoginInitCheckError,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

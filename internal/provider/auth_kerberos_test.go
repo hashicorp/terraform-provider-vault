@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -23,15 +27,7 @@ const (
 )
 
 func TestAuthLoginKerberos_Init(t *testing.T) {
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectMount  string
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name: "with-token",
 			raw: map[string]interface{}{
@@ -43,8 +39,9 @@ func TestAuthLoginKerberos_Init(t *testing.T) {
 			},
 			authField: consts.FieldAuthLoginKerberos,
 			expectParams: map[string]interface{}{
-				consts.FieldToken:                  testNegTokenInit,
 				consts.FieldNamespace:              "",
+				consts.FieldUseRootNamespace:       false,
+				consts.FieldToken:                  testNegTokenInit,
 				consts.FieldMount:                  consts.MountTypeKerberos,
 				consts.FieldUsername:               "",
 				consts.FieldService:                "",
@@ -88,25 +85,7 @@ func TestAuthLoginKerberos_Init(t *testing.T) {
 			s := map[string]*schema.Schema{
 				tt.authField: GetKerberosLoginSchema(tt.authField),
 			}
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginKerberos{}
-			err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if err != nil {
-				if tt.expectErr != nil {
-					if !reflect.DeepEqual(tt.expectErr, err) {
-						t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-					}
-				}
-			} else {
-				if !reflect.DeepEqual(tt.expectParams, l.params) {
-					t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-				}
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginKerberos{})
 		})
 	}
 }
@@ -143,7 +122,11 @@ func TestAuthLoginKerberos_LoginPath(t *testing.T) {
 func TestAuthLoginKerberos_Login(t *testing.T) {
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		m, err := json.Marshal(
-			&api.Secret{},
+			&api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "kerberos",
+				},
+			},
 		)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -190,7 +173,11 @@ func TestAuthLoginKerberos_Login(t *testing.T) {
 					consts.FieldAuthorization: fmt.Sprintf("Negotiate %s", testNegTokenInit),
 				},
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "kerberos",
+				},
+			},
 			wantErr: false,
 		},
 		{
@@ -229,12 +216,50 @@ func TestAuthLoginKerberos_Login(t *testing.T) {
 					consts.FieldAuthorization: fmt.Sprintf("Negotiate %s", testNegTokenInit),
 				},
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "kerberos",
+				},
+			},
 			wantErr: false,
+		},
+		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginKerberos{
+				authHeaderFunc: getTestAuthHeaderFunc(&krbauth.LoginCfg{
+					Username:               "alice",
+					Service:                "service1",
+					Realm:                  "realm1",
+					KeytabPath:             "/etc/kerberos/keytab",
+					Krb5ConfPath:           "/etc/kerberos/krb5.conf",
+					DisableFASTNegotiation: true,
+					RemoveInstanceName:     false,
+				}),
+				AuthLoginCommon: AuthLoginCommon{
+					authField: consts.FieldAuthLoginKerberos,
+					params: map[string]interface{}{
+						consts.FieldUsername:               "alice",
+						consts.FieldService:                "service1",
+						consts.FieldRealm:                  "realm1",
+						consts.FieldKeytabPath:             "/etc/kerberos/keytab",
+						consts.FieldKRB5ConfPath:           "/etc/kerberos/krb5.conf",
+						consts.FieldDisableFastNegotiation: true,
+						consts.FieldRemoveInstanceName:     false,
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

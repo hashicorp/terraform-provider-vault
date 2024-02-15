@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -60,10 +63,11 @@ func adSecretBackendLibraryResource() *schema.Resource {
 		},
 	}
 	return &schema.Resource{
-		Create: createLibraryResource,
-		Update: updateLibraryResource,
-		Read:   ReadWrapper(readLibraryResource),
-		Delete: deleteLibraryResource,
+		DeprecationMessage: `This resource is replaced by "vault_ldap_secret_backend_library_set" and will be removed in the next major release.`,
+		Create:             createLibraryResource,
+		Update:             updateLibraryResource,
+		Read:               provider.ReadWrapper(readLibraryResource),
+		Delete:             deleteLibraryResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

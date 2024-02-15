@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -16,7 +19,7 @@ var awsAuthBackendIdentityWhitelistBackendFromPathRegex = regexp.MustCompile("^a
 func awsAuthBackendIdentityWhitelistResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendIdentityWhitelistWrite,
-		Read:   ReadWrapper(awsAuthBackendIdentityWhitelistRead),
+		Read:   provider.ReadWrapper(awsAuthBackendIdentityWhitelistRead),
 		Update: awsAuthBackendIdentityWhitelistWrite,
 		Delete: awsAuthBackendIdentityWhitelistDelete,
 		Exists: awsAuthBackendIdentityWhitelistExists,

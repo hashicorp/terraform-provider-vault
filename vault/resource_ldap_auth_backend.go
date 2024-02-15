@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -63,6 +66,11 @@ func ldapAuthBackendResource() *schema.Resource {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
+		},
+		"max_page_size": {
+			Type:     schema.TypeInt,
+			Default:  -1,
+			Optional: true,
 		},
 		"userdn": {
 			Type:     schema.TypeString,
@@ -166,18 +174,25 @@ func ldapAuthBackendResource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
-		SchemaVersion: 1,
-
+		SchemaVersion: 2,
+		// Handle custom state upgrade case since schema version was already 1
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 1,
+				Type:    provider.SecretsAuthMountDisableRemountResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: provider.SecretsAuthMountDisableRemountUpgradeV0,
+			},
+		},
 		CreateContext: ldapAuthBackendWrite,
 		UpdateContext: ldapAuthBackendUpdate,
-		ReadContext:   ReadContextWrapper(ldapAuthBackendRead),
+		ReadContext:   provider.ReadContextWrapper(ldapAuthBackendRead),
 		DeleteContext: ldapAuthBackendDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema:        fields,
-	})
+	}, true)
 }
 
 func ldapAuthBackendConfigPath(path string) string {
@@ -263,6 +278,11 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	if v, ok := d.GetOkExists("case_sensitive_names"); ok {
 		data["case_sensitive_names"] = v.(bool)
 	}
+
+	if v, ok := d.GetOkExists("max_page_size"); ok {
+		data["max_page_size"] = v
+	}
+
 	if v, ok := d.GetOk("userdn"); ok {
 		data["userdn"] = v.(string)
 	}
@@ -378,6 +398,7 @@ func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfa
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("binddn", resp.Data["binddn"])
 	d.Set("case_sensitive_names", resp.Data["case_sensitive_names"])
+	d.Set("max_page_size", resp.Data["max_page_size"])
 	d.Set("userdn", resp.Data["userdn"])
 	d.Set("userattr", resp.Data["userattr"])
 	d.Set("userfilter", resp.Data["userfilter"])

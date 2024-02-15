@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -14,7 +17,7 @@ import (
 func auditResource() *schema.Resource {
 	return &schema.Resource{
 		Create: auditWrite,
-		Read:   ReadWrapper(auditRead),
+		Read:   provider.ReadWrapper(auditRead),
 		Delete: auditDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

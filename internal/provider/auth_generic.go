@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -9,6 +12,18 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+func init() {
+	field := consts.FieldAuthLoginGeneric
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginGeneric{}
+			return a.Init(r, field)
+		},
+		GetGenericLoginSchema); err != nil {
+		panic(err)
+	}
+}
+
 func GetGenericLoginSchema(authField string) *schema.Schema {
 	return getLoginSchema(
 		authField,
@@ -18,19 +33,16 @@ func GetGenericLoginSchema(authField string) *schema.Schema {
 }
 
 func GetGenericLoginSchemaResource(_ string) *schema.Resource {
-	return &schema.Resource{
+	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			consts.FieldNamespace: {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
 			consts.FieldParameters: {
-				Type:     schema.TypeMap,
-				Optional: true,
+				Type:      schema.TypeMap,
+				Optional:  true,
+				Sensitive: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -40,43 +52,36 @@ func GetGenericLoginSchemaResource(_ string) *schema.Resource {
 				Optional: true,
 			},
 		},
-	}
+	}, consts.FieldAuthLoginGeneric, consts.MountTypeNone)
 }
+
+var _ AuthLogin = (*AuthLoginGeneric)(nil)
 
 // AuthLoginGeneric provides a raw interface for authenticating to most
 // authentication engines.
 // Requires configuration provided by SchemaLoginGeneric.
 type AuthLoginGeneric struct {
 	AuthLoginCommon
-	path      string
-	namespace string
-	method    string
+	path   string
+	method string
 }
 
-func (l *AuthLoginGeneric) Namespace() string {
-	return l.namespace
-}
-
-func (l *AuthLoginGeneric) Init(d *schema.ResourceData, authField string) error {
+func (l *AuthLoginGeneric) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
 	l.authField = authField
 
 	path, params, err := l.init(d)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	l.path = path
 	l.params = params
 
-	if v, ok := l.getOk(d, consts.FieldNamespace); ok {
-		l.namespace = v.(string)
-	}
-
 	if v, ok := l.getOk(d, consts.FieldMethod); ok {
 		l.method = v.(string)
 	}
 
-	return nil
+	return l, nil
 }
 
 func (l *AuthLoginGeneric) LoginPath() string {
@@ -92,7 +97,10 @@ func (l *AuthLoginGeneric) Login(client *api.Client) (*api.Secret, error) {
 		return nil, err
 	}
 
-	params, err := l.copyParams()
+	params, err := l.copyParamsExcluding(
+		consts.FieldNamespace,
+		consts.FieldUseRootNamespace,
+	)
 	if err != nil {
 		return nil, err
 	}

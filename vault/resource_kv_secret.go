@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -17,7 +20,7 @@ func kvSecretResource(name string) *schema.Resource {
 		CreateContext: kvSecretWrite,
 		UpdateContext: kvSecretWrite,
 		DeleteContext: kvSecretDelete,
-		ReadContext:   ReadContextWrapper(ReadContextWrapper(kvSecretRead)),
+		ReadContext:   provider.ReadContextWrapper(provider.ReadContextWrapper(kvSecretRead)),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

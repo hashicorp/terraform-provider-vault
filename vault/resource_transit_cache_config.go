@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -14,7 +17,7 @@ func transitSecretBackendCacheConfig() *schema.Resource {
 	return &schema.Resource{
 		Create: transitSecretBackendCacheConfigUpdate,
 		Update: transitSecretBackendCacheConfigUpdate,
-		Read:   ReadWrapper(transitSecretBackendCacheConfigRead),
+		Read:   provider.ReadWrapper(transitSecretBackendCacheConfigRead),
 		Delete: transitSecretBackendCacheConfigDelete,
 
 		Schema: map[string]*schema.Schema{

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -11,6 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func kvSecretBackendV2Resource() *schema.Resource {
@@ -18,7 +22,7 @@ func kvSecretBackendV2Resource() *schema.Resource {
 		CreateContext: kvSecretBackendV2CreateUpdate,
 		UpdateContext: kvSecretBackendV2CreateUpdate,
 		DeleteContext: kvSecretBackendV2Delete,
-		ReadContext:   ReadContextWrapper(kvSecretBackendV2Read),
+		ReadContext:   provider.ReadContextWrapper(kvSecretBackendV2Read),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -69,7 +73,7 @@ func kvSecretBackendV2CreateUpdate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	path := mount + "/config"
-	if _, err := client.Logical().Write(path, data); err != nil {
+	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
 		return diag.Errorf("error writing config data to %s, err=%s", path, err)
 	}
 

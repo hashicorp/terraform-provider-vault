@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -26,8 +29,8 @@ type testMountConfig struct {
 func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
 	path := acctest.RandomWithPrefix("example")
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`
@@ -66,8 +69,8 @@ func TestResourceMount(t *testing.T) {
 		description: "updated",
 	}
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_initialConfig(cfg),
@@ -90,8 +93,8 @@ func TestResourceMount(t *testing.T) {
 func TestResourceMount_Local(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_InitialConfigLocalMount(path),
@@ -110,8 +113,8 @@ func TestResourceMount_Local(t *testing.T) {
 func TestResourceMount_SealWrap(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_InitialConfigSealWrap(path),
@@ -135,8 +138,8 @@ func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
 	expectReqKeysUpdate := []string{"test3request", "test4request"}
 	expectRespKeysUpdate := []string{"test3response", "test4response"}
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_AuditNonHMACRequestKeysConfig(path, expectReqKeysNew, expectRespKeysNew),
@@ -186,8 +189,8 @@ func TestResourceMount_KVV2(t *testing.T) {
 		description: "Example mount for testing",
 	}
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: kvv2Cfg,
@@ -206,8 +209,8 @@ func TestResourceMount_KVV2(t *testing.T) {
 func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 	path := acctest.RandomWithPrefix("example")
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_InitialConfigExternalEntropyAccess(path),
@@ -240,8 +243,8 @@ func TestResourceMountMangedKeys(t *testing.T) {
 	resourceName := "vault_mount.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_managedKeysConfig(keyName, path, false),
@@ -772,7 +775,7 @@ resource "vault_mount" "test" {
 }
 
 func findMount(path string) (*api.MountOutput, error) {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 	path = path + "/"
 

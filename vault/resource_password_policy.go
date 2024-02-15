@@ -1,7 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var passwordPolicyAttributes = []string{"policy"}
@@ -11,7 +16,7 @@ func passwordPolicyResource() *schema.Resource {
 		Create: resourcePasswordPolicyWrite,
 		Update: resourcePasswordPolicyWrite,
 		Delete: resourcePasswordPolicyDelete,
-		Read:   ReadWrapper(resourcePasswordPolicyRead),
+		Read:   provider.ReadWrapper(resourcePasswordPolicyRead),
 
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

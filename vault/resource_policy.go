@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -14,7 +17,7 @@ func policyResource() *schema.Resource {
 		Create: policyWrite,
 		Update: policyWrite,
 		Delete: policyDelete,
-		Read:   ReadWrapper(policyRead),
+		Read:   provider.ReadWrapper(policyRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -18,7 +21,7 @@ const (
 func pkiSecretBackendCrlConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendCrlConfigCreate,
-		Read:   ReadWrapper(pkiSecretBackendCrlConfigRead),
+		Read:   provider.ReadWrapper(pkiSecretBackendCrlConfigRead),
 		Update: pkiSecretBackendCrlConfigUpdate,
 		Delete: pkiSecretBackendCrlConfigDelete,
 		Importer: &schema.ResourceImporter{
@@ -85,6 +88,25 @@ func pkiSecretBackendCrlConfigResource() *schema.Resource {
 				Description: "Interval to check for new revocations on, to regenerate the delta CRL.",
 				Computed:    true,
 			},
+			"cross_cluster_revocation": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Enable cross-cluster revocation request queues.",
+				Computed:    true,
+			},
+			"unified_crl": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Enables unified CRL and OCSP building.",
+				Computed:    true,
+			},
+			"unified_crl_on_existing_paths": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Description: "Enables serving the unified CRL and OCSP on the existing, previously " +
+					"cluster-local paths.",
+				Computed: true,
+			},
 		},
 	}
 }
@@ -111,6 +133,14 @@ func pkiSecretBackendCrlConfigCreate(d *schema.ResourceData, meta interface{}) e
 			"auto_rebuild_grace_period",
 			"enable_delta",
 			"delta_rebuild_interval",
+		}...)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		fields = append(fields, []string{
+			"cross_cluster_revocation",
+			"unified_crl",
+			"unified_crl_on_existing_paths",
 		}...)
 	}
 
@@ -180,6 +210,14 @@ func pkiSecretBackendCrlConfigUpdate(d *schema.ResourceData, meta interface{}) e
 			"auto_rebuild_grace_period",
 			"enable_delta",
 			"delta_rebuild_interval",
+		}...)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		fields = append(fields, []string{
+			"cross_cluster_revocation",
+			"unified_crl",
+			"unified_crl_on_existing_paths",
 		}...)
 	}
 

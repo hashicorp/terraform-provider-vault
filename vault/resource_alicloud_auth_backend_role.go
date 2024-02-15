@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -42,7 +45,7 @@ func alicloudAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: alicloudAuthBackendRoleCreate,
 		UpdateContext: alicloudAuthBackendRoleUpdate,
-		ReadContext:   ReadContextWrapper(alicloudAuthBackendRoleRead),
+		ReadContext:   provider.ReadContextWrapper(alicloudAuthBackendRoleRead),
 		DeleteContext: alicloudAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,

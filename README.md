@@ -23,7 +23,7 @@ Requirements
 ------------
 
 - [Terraform](https://www.terraform.io/downloads.html) 0.12.x and above, we recommend using the latest stable release whenever possible.
-- [Go](https://golang.org/doc/install) 1.19 (to build the provider plugin)
+- [Go](https://golang.org/doc/install) 1.20 (to build the provider plugin)
 
 Building The Provider
 ---------------------
@@ -45,7 +45,7 @@ $ make build
 Developing the Provider
 ---------------------------
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.19+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
+If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.20+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
 
 To compile the provider, run `make build`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
 
@@ -122,3 +122,51 @@ make dev
 ```
 Now Terraform is set up to use the `dev` provider build instead of the provider 
 from the HashiCorp registry.
+
+Debugging the Provider
+---------------------------
+
+The following is adapted from [Debugging Providers](https://developer.hashicorp.com/terraform/plugin/debugging).
+
+### Starting A Provider In Debug Mode
+
+You can enable debbuging with the `make debug` target:
+
+```shell
+make debug
+```
+
+This target will build a binary with compiler optimizations disabled and copy
+the provider binary to the `~/.terraform.d/plugins` directory. Next run Delve
+on the host machine:
+
+```shell
+dlv exec --accept-multiclient --continue --headless --listen=:2345 \
+  ~/.terraform.d/plugins/terraform-provider-vault -- -debug
+```
+
+The above command enables the debugger to run the process for you.
+`terraform-provider-vault` is the name of the executable that was built with
+the `make debug` target. The above command will also output the
+`TF_REATTACH_PROVIDERS` information:
+
+```shell
+TF_REATTACH_PROVIDERS='{"hashicorp/vault":{"Protocol":"grpc","ProtocolVersion":5,"Pid":52780,"Test":true,"Addr":{"Network":"unix","String":"/var/folders/g1/9xn1l6mx0x1dry5wqm78fjpw0000gq/T/plugin2557833286"}}}'
+```
+
+Connect your debugger, such as your editor or the Delve CLI, to the debug
+server. The following command will connect with the Delve CLI:
+
+```shell
+dlv connect :2345
+```
+
+At this point you may set breakpoint in your code.
+
+### Running Terraform With A Provider In Debug Mode
+
+Copy the line starting with `TF_REATTACH_PROVIDERS` from your provider's output.
+Either export it, or prefix every Terraform command with it.
+
+Run Terraform as usual. Any breakpoints you have set will halt execution and
+show you the current variable values.

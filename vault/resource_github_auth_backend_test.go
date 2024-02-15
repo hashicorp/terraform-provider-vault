@@ -1,10 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"fmt"
-	"log"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -32,14 +33,16 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resourceName, &resAuth),
+					testutil.TestAccCheckAuthMountExists(resourceName,
+						&resAuth,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -53,7 +56,9 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 			{
 				Config: testAccGithubAuthBackendConfig_updated(path, "unknown", 2999),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resourceName, &resAuth),
+					testutil.TestAccCheckAuthMountExists(resourceName,
+						&resAuth,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", "unknown"),
@@ -79,14 +84,14 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubAuthBackendConfig_ns(ns, path, testGHOrg),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resourceName, &resAuth),
+					githubAuthMountExistsHelperNS(resourceName, &resAuth),
 					resource.TestCheckResourceAttr(resourceName, "id", path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -101,6 +106,26 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 	})
 }
 
+func githubAuthMountExistsHelperNS(resourceName string, out *api.AuthMount) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resourceName)
+		}
+
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("No id for %s is set", resourceName)
+		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		return testutil.AuthMountExistsHelper(resourceName, s, out, client)
+	}
+}
+
 func TestAccGithubAuthBackend_tuning(t *testing.T) {
 	testutil.SkipTestAcc(t)
 
@@ -112,14 +137,16 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubAuthBackendConfig_tuning(backend),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resourceName, &resAuth),
+					testutil.TestAccCheckAuthMountExists(resourceName,
+						&resAuth,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -145,7 +172,9 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 			{
 				Config: testAccGithubAuthBackendConfig_tuningUpdated(backend),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resourceName, &resAuth),
+					testutil.TestAccCheckAuthMountExists(resourceName,
+						&resAuth,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -181,14 +210,16 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 	resourceName := resourceType + ".test"
 	var resAuth api.AuthMount
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubAuthBackendConfig_description(path, testGHOrg, "Github Auth Mount"),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resourceName, &resAuth),
+					testutil.TestAccCheckAuthMountExists(resourceName,
+						&resAuth,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
 					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
@@ -198,7 +229,9 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 			{
 				Config: testAccGithubAuthBackendConfig_description(path, testGHOrg, "Github Auth Mount Updated"),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resourceName, &resAuth),
+					testutil.TestAccCheckAuthMountExists(resourceName,
+						&resAuth,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", orgMeta.Login),
 					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
@@ -210,18 +243,22 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 }
 
 func TestAccGithubAuthBackend_importTuning(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
 	path := acctest.RandomWithPrefix("github")
 	resourceType := "vault_github_auth_backend"
 	resourceName := resourceType + ".test"
 	var resAuth api.AuthMount
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubAuthBackendConfig_tuning(path),
-				Check:  testAccCheckAuthMountExists(resourceName, &resAuth),
+				Check: testutil.TestAccCheckAuthMountExists(resourceName,
+					&resAuth,
+					testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "disable_remount"),
 		},
@@ -229,6 +266,8 @@ func TestAccGithubAuthBackend_importTuning(t *testing.T) {
 }
 
 func TestGithubAuthBackend_remount(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
 	path := acctest.RandomWithPrefix("tf-test-gh")
 	updatedPath := acctest.RandomWithPrefix("tf-test-gh-updated")
 
@@ -239,14 +278,16 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resourceName, &resAuth),
+					testutil.TestAccCheckAuthMountExists(resourceName,
+						&resAuth,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -260,7 +301,9 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 			{
 				Config: testAccGithubAuthBackendConfig_basic(updatedPath, testGHOrg),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resourceName, &resAuth),
+					testutil.TestAccCheckAuthMountExists(resourceName,
+						&resAuth,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 					resource.TestCheckResourceAttr(resourceName, "id", updatedPath),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
@@ -274,42 +317,6 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil, "disable_remount"),
 		},
 	})
-}
-
-func testAccCheckAuthMountExists(n string, out *api.AuthMount) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		return authMountExistsHelper(n, s, out)
-	}
-}
-
-func authMountExistsHelper(resourceName string, s *terraform.State, out *api.AuthMount) error {
-	rs, ok := s.RootModule().Resources[resourceName]
-	if !ok {
-		return fmt.Errorf("Not found: %s", resourceName)
-	}
-
-	if rs.Primary.ID == "" {
-		return fmt.Errorf("No id for %s is set", resourceName)
-	}
-
-	client, e := provider.GetClient(rs.Primary, testProvider.Meta())
-	if e != nil {
-		return e
-	}
-
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
-	}
-
-	resp := auths[strings.Trim(rs.Primary.ID, "/")+"/"]
-	if resp == nil {
-		return fmt.Errorf("auth mount %s not present", rs.Primary.ID)
-	}
-	log.Printf("[INFO] Auth mount resource '%v' confirmed to exist at path: %v", resourceName, rs.Primary.ID)
-	*out = *resp
-
-	return nil
 }
 
 func testAccGithubAuthBackendConfig_basic(path, org string) string {
@@ -358,7 +365,7 @@ func testAccGithubAuthBackendConfig_tuning(path string) string {
 resource "vault_github_auth_backend" "test" {
   	path = "%s"
   	organization = "%s"
-  
+
   	tune {
 		default_lease_ttl = "10m"
 		max_lease_ttl = "20m"
@@ -378,7 +385,7 @@ func testAccGithubAuthBackendConfig_tuningUpdated(path string) string {
 resource "vault_github_auth_backend" "test" {
   	path = "%s"
 	organization = "%s"
-  
+
   	tune {
 		default_lease_ttl = "50m"
 		max_lease_ttl = "1h10m"
@@ -397,7 +404,7 @@ func testAccGithubAuthBackendConfig_description(path, org, description string) s
 resource "vault_github_auth_backend" "test" {
 	path = "%s"
 	organization = "%s"
-	description = "%s"  
+	description = "%s"
 }
 `, path, org, description)
 }

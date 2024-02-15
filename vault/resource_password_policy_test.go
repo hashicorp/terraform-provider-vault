@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -15,9 +18,9 @@ import (
 func TestAccPasswordPolicy(t *testing.T) {
 	policyName := acctest.RandomWithPrefix("test-policy")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccPasswordPolicyCheckDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccPasswordPolicyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPasswordPolicy(policyName, "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"),
@@ -41,9 +44,9 @@ func TestAccPasswordPolicy_import(t *testing.T) {
 	policyName := acctest.RandomWithPrefix("test-policy")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccPasswordPolicyCheckDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccPasswordPolicyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPasswordPolicy(policyName, "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"),

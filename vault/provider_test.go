@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -136,8 +139,8 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 		Schema: rootProvider.Schema,
 	}
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testHeaderConfig("auth", "123"),
@@ -154,6 +157,7 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 
 func TestAccNamespaceProviderConfigure(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
+	testutil.SkipTestAcc(t)
 
 	rootProvider := Provider()
 	rootProviderResource := &schema.Resource{
@@ -165,20 +169,18 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	}
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
-	// Create a test namespace and make sure it stays there
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() { testutil.TestAccPreCheck(t) },
-		Providers: map[string]*schema.Provider{
-			"vault": rootProvider,
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testNamespaceConfig(namespacePath),
-				Check:  testNamespaceCheckAttrs(),
-			},
-		},
+	t.Cleanup(func() {
+		if _, err := client.Logical().Delete(consts.SysNamespaceRoot + namespacePath); err != nil {
+			t.Errorf("failed to delete parent namespace %q, err=%s", namespacePath, err)
+		}
 	})
+
+	// create the namespace for the provider
+	if _, err := client.Logical().Write(consts.SysNamespaceRoot+namespacePath, nil); err != nil {
+		t.Fatal(err)
+	}
 
 	nsProvider := Provider()
 	nsProviderResource := &schema.Resource{
@@ -272,7 +274,7 @@ func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
 			Schema: approleProvider.Schema,
 		}
 		approleProviderData := approleProviderResource.TestResourceData()
-		approleProviderData.Set(consts.FieldAuthLoginDefault, authLoginData)
+		approleProviderData.Set(consts.FieldAuthLoginGeneric, authLoginData)
 		_, err := provider.NewProviderMeta(approleProviderData)
 		if err != nil {
 			t.Fatal(err)
@@ -528,28 +530,30 @@ func TestAccTokenName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		resource.Test(t, resource.TestCase{
-			Providers: testProviders,
-			PreCheck:  func() { testutil.TestAccPreCheck(t) },
-			Steps: []resource.TestStep{
-				{
-					PreConfig: func() {
-						if test.UseTokenNameEnv {
-							err := os.Setenv("VAULT_TOKEN_NAME", test.TokenNameEnv)
-							if err != nil {
-								t.Fatal(err)
+		t.Run(test.WantTokenName, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				ProviderFactories: providerFactories,
+				PreCheck:          func() { testutil.TestAccPreCheck(t) },
+				Steps: []resource.TestStep{
+					{
+						PreConfig: func() {
+							if test.UseTokenNameEnv {
+								err := os.Setenv("VAULT_TOKEN_NAME", test.TokenNameEnv)
+								if err != nil {
+									t.Fatal(err)
+								}
+							} else {
+								err := os.Unsetenv("VAULT_TOKEN_NAME")
+								if err != nil {
+									t.Fatal(err)
+								}
 							}
-						} else {
-							err := os.Unsetenv("VAULT_TOKEN_NAME")
-							if err != nil {
-								t.Fatal(err)
-							}
-						}
+						},
+						Config: testProviderConfig(test.UseTokenNameSchema, `token_name = "`+test.TokenNameSchema+`"`),
+						Check:  checkSelfToken("display_name", test.WantTokenName),
 					},
-					Config: testProviderConfig(test.UseTokenNameSchema, `token_name = "`+test.TokenNameSchema+`"`),
-					Check:  checkSelfToken("display_name", test.WantTokenName),
 				},
-			},
+			})
 		})
 	}
 }
@@ -569,51 +573,51 @@ func TestAccChildToken(t *testing.T) {
 		}
 	}
 
-	tests := []struct {
+	tests := map[string]struct {
 		skipChildTokenEnv    string
 		useChildTokenEnv     bool
 		skipChildTokenSchema string
 		useChildTokenSchema  bool
 		expectChildToken     bool
 	}{
-		{
+		"tc1": {
 			useChildTokenSchema: false,
 			useChildTokenEnv:    false,
 			expectChildToken:    true,
 		},
-		{
+		"tc2": {
 			skipChildTokenEnv: "",
 			useChildTokenEnv:  true,
 			expectChildToken:  true,
 		},
-		{
+		"tc3": {
 			skipChildTokenEnv: "true",
 			useChildTokenEnv:  true,
 			expectChildToken:  false,
 		},
-		{
+		"tc4": {
 			skipChildTokenEnv: "false",
 			useChildTokenEnv:  true,
 			expectChildToken:  true,
 		},
-		{
+		"tc5": {
 			skipChildTokenSchema: "true",
 			useChildTokenSchema:  true,
 			expectChildToken:     false,
 		},
-		{
+		"tc6": {
 			skipChildTokenSchema: "false",
 			useChildTokenSchema:  true,
 			expectChildToken:     true,
 		},
-		{
+		"tc7": {
 			skipChildTokenEnv:    "true",
 			useChildTokenEnv:     true,
 			skipChildTokenSchema: "false",
 			useChildTokenSchema:  true,
 			expectChildToken:     true,
 		},
-		{
+		"tc8": {
 			skipChildTokenEnv:    "false",
 			useChildTokenEnv:     true,
 			skipChildTokenSchema: "true",
@@ -622,29 +626,33 @@ func TestAccChildToken(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		resource.Test(t, resource.TestCase{
-			Providers: testProviders,
-			PreCheck:  func() { testutil.TestAccPreCheck(t) },
-			Steps: []resource.TestStep{
-				{
-					PreConfig: func() {
-						if test.useChildTokenEnv {
-							err := os.Setenv(consts.EnvVarSkipChildToken, test.skipChildTokenEnv)
-							if err != nil {
-								t.Fatal(err)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				ProviderFactories: providerFactories,
+				PreCheck:          func() { testutil.TestAccPreCheck(t) },
+				Steps: []resource.TestStep{
+					{
+						PreConfig: func() {
+							if test.useChildTokenEnv {
+								err := os.Setenv(consts.EnvVarSkipChildToken, test.skipChildTokenEnv)
+								if err != nil {
+									t.Fatal(err)
+								}
+							} else {
+								err := os.Unsetenv(consts.EnvVarSkipChildToken)
+								if err != nil {
+									t.Fatal(err)
+								}
 							}
-						} else {
-							err := os.Unsetenv(consts.EnvVarSkipChildToken)
-							if err != nil {
-								t.Fatal(err)
-							}
-						}
+						},
+						Config: testProviderConfig(test.useChildTokenSchema,
+							consts.FieldSkipChildToken+` = `+test.skipChildTokenSchema,
+						),
+						Check: checkTokenUsed(test.expectChildToken),
 					},
-					Config: testProviderConfig(test.useChildTokenSchema, `skip_child_token = `+test.skipChildTokenSchema),
-					Check:  checkTokenUsed(test.expectChildToken),
 				},
-			},
+			})
 		})
 	}
 }

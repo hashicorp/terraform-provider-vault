@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -15,9 +18,9 @@ import (
 func TestAccEndpointGoverningPolicy(t *testing.T) {
 	policyName := acctest.RandomWithPrefix("test-policy")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccEndpointGoverningPolicyCheckDestroy,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccEndpointGoverningPolicyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccEndpointGoverningPolicy(policyName, "test/*", "soft-mandatory"),

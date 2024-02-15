@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -17,7 +20,7 @@ func mfaDuoResource() *schema.Resource {
 		CreateContext: mfaDuoWrite,
 		UpdateContext: mfaDuoWrite,
 		DeleteContext: mfaDuoDelete,
-		ReadContext:   ReadContextWrapper(mfaDuoRead),
+		ReadContext:   provider.ReadContextWrapper(mfaDuoRead),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

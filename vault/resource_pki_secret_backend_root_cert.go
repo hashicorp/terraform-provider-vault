@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -10,23 +13,29 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
+const (
+	issuerNotFoundErr = "unable to find PKI issuer for reference"
+)
+
 func pkiSecretBackendRootCertResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendRootCertCreate,
-		Delete: pkiSecretBackendRootCertDelete,
-		Update: func(data *schema.ResourceData, i interface{}) error {
+		CreateContext: pkiSecretBackendRootCertCreate,
+		DeleteContext: pkiSecretBackendRootCertDelete,
+		UpdateContext: func(ctx context.Context, data *schema.ResourceData, i interface{}) diag.Diagnostics {
 			return nil
 		},
-		Read: ReadWrapper(pkiSecretBackendCertRead),
+		ReadContext: provider.ReadContextWrapper(pkiSecretBackendCertRead),
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -36,7 +45,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 		},
 		SchemaVersion: 1,
 		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
-			key := "serial"
+			key := consts.FieldSerial
 			o, _ := d.GetChange(key)
 			// skip on new resource
 			if o.(string) == "" {
@@ -48,9 +57,38 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				return e
 			}
 
-			cert, err := getCACertificate(client, d.Get("backend").(string))
-			if err != nil {
-				return err
+			var cert *x509.Certificate
+			isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+			if isIssuerAPISupported {
+				// get the specific certificate for issuer with issuer_id
+				cert, e = getIssuerPEM(client, d.Get(consts.FieldBackend).(string), d.Get(consts.FieldIssuerID).(string))
+				if e != nil {
+					// Check if this is an out-of-band change on the issuer
+					if util.Is500(e) && util.ErrorContainsString(e, issuerNotFoundErr) {
+						log.Printf("[WARN] issuer deleted out-of-band. re-creating root cert")
+						// Force a change on the issuer ID field since
+						// it no longer exists and must be re-created
+						if e = d.SetNewComputed(consts.FieldIssuerID); e != nil {
+							return e
+						}
+
+						if e := d.ForceNew(consts.FieldIssuerID); e != nil {
+							return e
+						}
+
+						return nil
+					}
+
+					// not an out-of-band issuer error
+					return e
+				}
+			} else {
+				// get the 'default' issuer's certificate
+				// default behavior for non multi-issuer API
+				cert, e = getDefaultCAPEM(client, d.Get(consts.FieldBackend).(string))
+				if e != nil {
+					return e
+				}
 			}
 
 			if cert != nil {
@@ -70,26 +108,26 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
-			"type": {
+			consts.FieldType: {
 				Type:         schema.TypeString,
 				Required:     true,
-				Description:  "Type of root to create. Must be either \"exported\" or \"internal\".",
+				Description:  "Type of root to create. Must be either \"existing\", \"exported\", \"internal\" or \"kms\"",
 				ForceNew:     true,
-				ValidateFunc: validation.StringInSlice([]string{"exported", "internal", "kms"}, false),
+				ValidateFunc: validation.StringInSlice([]string{consts.FieldExisting, consts.FieldExported, consts.FieldInternal, keyTypeKMS}, false),
 			},
-			"common_name": {
+			consts.FieldCommonName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "CN of root to create.",
 				ForceNew:    true,
 			},
-			"alt_names": {
+			consts.FieldAltNames: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative names.",
@@ -98,7 +136,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ip_sans": {
+			consts.FieldIPSans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative IPs.",
@@ -107,7 +145,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"uri_sans": {
+			consts.FieldURISans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative URIs.",
@@ -116,7 +154,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"other_sans": {
+			consts.FieldOtherSans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of other SANs.",
@@ -125,13 +163,13 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ttl": {
+			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    false,
 				Description: "Time to live.",
 			},
-			"format": {
+			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "The format of data.",
@@ -139,7 +177,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Default:      "pem",
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle"}, false),
 			},
-			"private_key_format": {
+			consts.FieldPrivateKeyFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "The private key format.",
@@ -147,7 +185,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Default:      "der",
 				ValidateFunc: validation.StringInSlice([]string{"der", "pkcs8"}, false),
 			},
-			"key_type": {
+			consts.FieldKeyType: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "The desired key type.",
@@ -155,27 +193,27 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Default:      "rsa",
 				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
 			},
-			"key_bits": {
+			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "The number of bits to use.",
 				ForceNew:    true,
 				Default:     2048,
 			},
-			"max_path_length": {
+			consts.FieldMaxPathLength: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "The maximum path length to encode in the generated certificate.",
 				ForceNew:    true,
 				Default:     -1,
 			},
-			"exclude_cn_from_sans": {
+			consts.FieldExcludeCNFromSans: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Flag to exclude CN from SANs.",
 				ForceNew:    true,
 			},
-			"permitted_dns_domains": {
+			consts.FieldPermittedDNSDomains: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of domains for which certificates are allowed to be issued.",
@@ -184,192 +222,254 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ou": {
+			consts.FieldOu: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The organization unit.",
 				ForceNew:    true,
 			},
-			"organization": {
+			consts.FieldOrganization: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The organization.",
 				ForceNew:    true,
 			},
-			"country": {
+			consts.FieldCountry: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The country.",
 				ForceNew:    true,
 			},
-			"locality": {
+			consts.FieldLocality: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The locality.",
 				ForceNew:    true,
 			},
-			"province": {
+			consts.FieldProvince: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The province.",
 				ForceNew:    true,
 			},
-			"street_address": {
+			consts.FieldStreetAddress: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The street address.",
 				ForceNew:    true,
 			},
-			"postal_code": {
+			consts.FieldPostalCode: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The postal code.",
 				ForceNew:    true,
 			},
-			"certificate": {
+			consts.FieldCertificate: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The certificate.",
 			},
-			"issuing_ca": {
+			consts.FieldIssuingCA: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The issuing CA.",
 			},
-			"serial": {
+			consts.FieldSerial: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Deprecated:  "Use serial_number instead",
 				Description: "The serial number.",
 			},
-			"serial_number": {
+			consts.FieldSerialNumber: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The certificate's serial number, hex formatted.",
 			},
-			"managed_key_name": {
+			consts.FieldManagedKeyName: {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Computed:      true,
 				Description:   "The name of the previously configured managed key.",
 				ForceNew:      true,
-				ConflictsWith: []string{"managed_key_id"},
+				ConflictsWith: []string{consts.FieldManagedKeyID},
 			},
-			"managed_key_id": {
+			consts.FieldManagedKeyID: {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the previously configured managed key.",
 				ForceNew:      true,
-				ConflictsWith: []string{"managed_key_name"},
+				ConflictsWith: []string{consts.FieldManagedKeyName},
+			},
+			consts.FieldIssuerName: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				Description: "Provides a name to the specified issuer. The name must be unique " +
+					"across all issuers and not be the reserved value 'default'.",
+				ForceNew: true,
+			},
+			consts.FieldIssuerID: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The ID of the generated issuer.",
+				ForceNew:    true,
+			},
+			consts.FieldKeyName: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				Description: "When a new key is created with this request, optionally specifies " +
+					"the name for this.",
+				ForceNew: true,
+			},
+			consts.FieldKeyRef: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specifies the key to use for generating this request.",
+				ForceNew:    true,
+			},
+			consts.FieldKeyID: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The ID of the generated key.",
+				ForceNew:    true,
 			},
 		},
 	}
 }
 
-func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
-	rootType := d.Get("type").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	rootType := d.Get(consts.FieldType).(string)
 
-	path := pkiSecretBackendIntermediateSetSignedReadPath(backend, rootType)
+	path := pkiSecretBackendGenerateRootPath(backend, rootType, provider.IsAPISupported(meta, provider.VaultVersion111))
 
-	iAltNames := d.Get("alt_names").([]interface{})
-	altNames := make([]string, 0, len(iAltNames))
-	for _, iAltName := range iAltNames {
-		altNames = append(altNames, iAltName.(string))
+	rootCertAPIFields := []string{
+		consts.FieldCommonName,
+		consts.FieldTTL,
+		consts.FieldFormat,
+		consts.FieldPrivateKeyFormat,
+		consts.FieldMaxPathLength,
+		consts.FieldOu,
+		consts.FieldOrganization,
+		consts.FieldCountry,
+		consts.FieldLocality,
+		consts.FieldProvince,
+		consts.FieldStreetAddress,
+		consts.FieldPostalCode,
+		consts.FieldManagedKeyName,
+		consts.FieldManagedKeyID,
 	}
 
-	iIPSans := d.Get("ip_sans").([]interface{})
-	ipSans := make([]string, 0, len(iIPSans))
-	for _, iIpSan := range iIPSans {
-		ipSans = append(ipSans, iIpSan.(string))
+	rootCertBooleanAPIFields := []string{
+		consts.FieldExcludeCNFromSans,
 	}
 
-	iURISans := d.Get("uri_sans").([]interface{})
-	uriSans := make([]string, 0, len(iURISans))
-	for _, iUriSan := range iURISans {
-		uriSans = append(uriSans, iUriSan.(string))
+	rootCertStringArrayFields := []string{
+		consts.FieldAltNames,
+		consts.FieldIPSans,
+		consts.FieldURISans,
+		consts.FieldOtherSans,
+		consts.FieldPermittedDNSDomains,
 	}
 
-	iOtherSans := d.Get("other_sans").([]interface{})
-	otherSans := make([]string, 0, len(iOtherSans))
-	for _, iOtherSan := range iOtherSans {
-		otherSans = append(otherSans, iOtherSan.(string))
+	// add multi-issuer write API fields if supported
+	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+
+	// Fields only used when we are generating a key
+	if !(rootType == keyTypeKMS || rootType == consts.FieldExisting) {
+		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
 	}
 
-	iPermittedDNSDomains := d.Get("permitted_dns_domains").([]interface{})
-	permittedDNSDomains := make([]string, 0, len(iPermittedDNSDomains))
-	for _, iPermittedDNSDomain := range iPermittedDNSDomains {
-		permittedDNSDomains = append(permittedDNSDomains, iPermittedDNSDomain.(string))
+	if isIssuerAPISupported {
+		// We always can specify the issuer name we are generating root certs
+		rootCertAPIFields = append(rootCertAPIFields, consts.FieldIssuerName)
+
+		if rootType == consts.FieldExisting {
+			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyRef)
+		} else {
+			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyName)
+		}
 	}
 
-	data := map[string]interface{}{
-		"common_name":          d.Get("common_name").(string),
-		"ttl":                  d.Get("ttl").(string),
-		"format":               d.Get("format").(string),
-		"private_key_format":   d.Get("private_key_format").(string),
-		"max_path_length":      d.Get("max_path_length").(int),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
-		"ou":                   d.Get("ou").(string),
-		"organization":         d.Get("organization").(string),
-		"country":              d.Get("country").(string),
-		"locality":             d.Get("locality").(string),
-		"province":             d.Get("province").(string),
-		"street_address":       d.Get("street_address").(string),
-		"postal_code":          d.Get("postal_code").(string),
-		"managed_key_name":     d.Get("managed_key_name").(string),
-		"managed_key_id":       d.Get("managed_key_id").(string),
+	data := map[string]interface{}{}
+	for _, k := range rootCertAPIFields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
 
-	if rootType != "kms" {
-		data["key_type"] = d.Get("key_type").(string)
-		data["key_bits"] = d.Get("key_bits").(int)
+	// add boolean fields
+	for _, k := range rootCertBooleanAPIFields {
+		data[k] = d.Get(k)
 	}
 
-	if len(altNames) > 0 {
-		data["alt_names"] = strings.Join(altNames, ",")
-	}
-
-	if len(ipSans) > 0 {
-		data["ip_sans"] = strings.Join(ipSans, ",")
-	}
-
-	if len(uriSans) > 0 {
-		data["uri_sans"] = strings.Join(uriSans, ",")
-	}
-
-	if len(otherSans) > 0 {
-		data["other_sans"] = strings.Join(otherSans, ",")
-	}
-
-	if len(permittedDNSDomains) > 0 {
-		data["permitted_dns_domains"] = strings.Join(permittedDNSDomains, ",")
+	// add comma separated string fields
+	for _, k := range rootCertStringArrayFields {
+		m := util.ToStringArray(d.Get(k).([]interface{}))
+		if len(m) > 0 {
+			data[k] = strings.Join(m, ",")
+		}
 	}
 
 	log.Printf("[DEBUG] Creating root cert on PKI secret backend %q", backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating root cert for PKI secret backend %q: %s", backend, err)
+		return diag.Errorf("error creating root cert for PKI secret backend %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Created root cert on PKI secret backend %q", backend)
 
-	d.Set("certificate", resp.Data["certificate"])
-	d.Set("issuing_ca", resp.Data["issuing_ca"])
-	d.Set("serial", resp.Data["serial_number"])
-	d.Set("serial_number", resp.Data["serial_number"])
+	// helpful to consolidate code into single loop
+	// since 'serial' is deprecated, we read the 'serial_number'
+	// field from the response in order to set to the TF state
+	certFieldsMap := map[string]string{
+		consts.FieldCertificate:  consts.FieldCertificate,
+		consts.FieldIssuingCA:    consts.FieldIssuingCA,
+		consts.FieldSerialNumber: consts.FieldSerialNumber,
+		consts.FieldSerial:       consts.FieldSerialNumber,
+	}
 
-	d.SetId(path)
+	// multi-issuer API fields that are set to TF state
+	// after a read from Vault
+	multiIssuerAPIComputedFields := []string{
+		consts.FieldIssuerID,
+		consts.FieldKeyID,
+	}
+
+	if isIssuerAPISupported {
+		// add multi-issuer read API fields to field map
+		for _, k := range multiIssuerAPIComputedFields {
+			certFieldsMap[k] = k
+		}
+	}
+
+	for k, v := range certFieldsMap {
+		if err := d.Set(k, resp.Data[v]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	id := path
+	if isIssuerAPISupported {
+		// multiple root certs can be issued
+		// ensure ID for each root_cert resource is unique
+		issuerID := resp.Data[consts.FieldIssuerID]
+		id = fmt.Sprintf("%s/issuer/%s", backend, issuerID)
+	}
+
+	d.SetId(id)
 
 	return nil
 }
 
-func getCACertificate(client *api.Client, mount string) (*x509.Certificate, error) {
-	path := fmt.Sprintf("/v1/%s/ca/pem", mount)
+func getCACertificate(client *api.Client, path string) (*x509.Certificate, error) {
 	req := client.NewRequest(http.MethodGet, path)
 	req.ClientToken = ""
 	resp, err := client.RawRequest(req)
@@ -402,36 +502,58 @@ func getCACertificate(client *api.Client, mount string) (*x509.Certificate, erro
 	return nil, nil
 }
 
-func pkiSecretBackendRootCertDelete(d *schema.ResourceData, meta interface{}) error {
+func getDefaultCAPEM(client *api.Client, mount string) (*x509.Certificate, error) {
+	path := fmt.Sprintf("/v1/%s/ca/pem", mount)
+	return getCACertificate(client, path)
+}
+
+func getIssuerPEM(client *api.Client, mount, issuerID string) (*x509.Certificate, error) {
+	path := fmt.Sprintf("/v1/%s/issuer/%s/pem", mount, issuerID)
+	return getCACertificate(client, path)
+}
+
+func pkiSecretBackendRootCertDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
+	backend := d.Get(consts.FieldBackend).(string)
 
-	path := pkiSecretBackendIntermediateSetSignedDeletePath(backend)
+	path := pkiSecretBackendDeleteRootPath(backend)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		// @TODO can be removed in future versions of the Provider
+		// this is added to allow a seamless upgrade for users
+		// from v3.18.0/v3.19.0 of the Provider
+		if !strings.Contains(d.Id(), "/root/generate/") {
+			path = d.Id()
+		}
+	}
 
 	log.Printf("[DEBUG] Deleting root cert from PKI secret backend %q", path)
 	if _, err := client.Logical().Delete(path); err != nil {
-		return fmt.Errorf("error deleting root cert from PKI secret backend %q: %s", path, err)
+		return diag.Errorf("error deleting root cert from PKI secret backend %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Deleted root cert from PKI secret backend %q", path)
 	return nil
 }
 
-func pkiSecretBackendIntermediateSetSignedReadPath(backend string, rootType string) string {
+func pkiSecretBackendGenerateRootPath(backend, rootType string, isMultiIssuerSupported bool) string {
+	if isMultiIssuerSupported {
+		return strings.Trim(backend, "/") + "/issuers/generate/root/" + strings.Trim(rootType, "/")
+	}
 	return strings.Trim(backend, "/") + "/root/generate/" + strings.Trim(rootType, "/")
 }
 
-func pkiSecretBackendIntermediateSetSignedDeletePath(backend string) string {
+func pkiSecretBackendDeleteRootPath(backend string) string {
 	return strings.Trim(backend, "/") + "/root"
 }
 
 func pkiSecretSerialNumberResourceV0() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"serial_number": {
+			consts.FieldSerialNumber: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
@@ -443,7 +565,7 @@ func pkiSecretSerialNumberResourceV0() *schema.Resource {
 func pkiSecretSerialNumberUpgradeV0(
 	_ context.Context, rawState map[string]interface{}, _ interface{},
 ) (map[string]interface{}, error) {
-	rawState["serial_number"] = rawState["serial"]
+	rawState[consts.FieldSerialNumber] = rawState[consts.FieldSerial]
 
 	return rawState, nil
 }

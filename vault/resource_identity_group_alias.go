@@ -1,24 +1,31 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-const identityGroupAliasPath = "/identity/group-alias"
+const (
+	identityGroupAliasPath   = "/identity/group-alias"
+	identityGroupAliasIDPath = identityGroupAliasPath + "/id"
+)
 
 func identityGroupAliasResource() *schema.Resource {
 	return &schema.Resource{
-		Create: identityGroupAliasCreate,
-		Update: identityGroupAliasUpdate,
-		Read:   ReadWrapper(identityGroupAliasRead),
-		Delete: identityGroupAliasDelete,
-		Exists: identityGroupAliasExists,
+		CreateContext: identityGroupAliasCreate,
+		UpdateContext: identityGroupAliasUpdate,
+		ReadContext:   provider.ReadContextWrapper(identityGroupAliasRead),
+		DeleteContext: identityGroupAliasDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -45,10 +52,14 @@ func identityGroupAliasResource() *schema.Resource {
 	}
 }
 
-func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
+func identityGroupAliasCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	lock, unlock := getEntityLockFuncs(d, identityGroupAliasIDPath)
+	lock()
+	defer unlock()
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	name := d.Get("name").(string)
@@ -63,30 +74,34 @@ func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
 		"canonical_id":            canonicalID,
 	}
 
-	resp, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
-		return fmt.Errorf("error writing IdentityGroupAlias to %q: %s", name, err)
+		return diag.FromErr(fmt.Errorf("error writing IdentityGroupAlias to %q: %s", name, err))
 	}
 	log.Printf("[DEBUG] Wrote IdentityGroupAlias %q", name)
 	d.SetId(resp.Data["id"].(string))
 
-	return identityGroupAliasRead(d, meta)
+	return identityGroupAliasRead(ctx, d, meta)
 }
 
-func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
+func identityGroupAliasUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	lock, unlock := getEntityLockFuncs(d, identityGroupAliasIDPath)
+	lock()
+	defer unlock()
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroupAlias %q", id)
-	path := identityGroupAliasIDPath(id)
+	path := getIdentityGroupAliasIDPath(id)
 
-	resp, err := client.Logical().Read(path)
+	resp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error updating IdentityGroupAlias %q: %s", id, err)
+		return diag.FromErr(fmt.Errorf("error updating IdentityGroupAlias %q: %s", id, err))
 	}
 
 	data := map[string]interface{}{
@@ -105,30 +120,30 @@ func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["canonical_id"] = canonicalID
 	}
 
-	_, err = client.Logical().Write(path, data)
+	_, err = client.Logical().WriteWithContext(ctx, path, data)
 
 	if err != nil {
-		return fmt.Errorf("error updating IdentityGroupAlias %q: %s", id, err)
+		return diag.FromErr(fmt.Errorf("error updating IdentityGroupAlias %q: %s", id, err))
 	}
 	log.Printf("[DEBUG] Updated IdentityGroupAlias %q", id)
 
-	return identityGroupAliasRead(d, meta)
+	return identityGroupAliasRead(ctx, d, meta)
 }
 
-func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
+func identityGroupAliasRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	id := d.Id()
 
-	path := identityGroupAliasIDPath(id)
+	path := getIdentityGroupAliasIDPath(id)
 
 	log.Printf("[DEBUG] Reading IdentityGroupAlias %s from %q", id, path)
-	resp, err := client.Logical().Read(path)
+	resp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error reading IdentityGroupAlias %q: %s", id, err)
+		return diag.FromErr(fmt.Errorf("error reading IdentityGroupAlias %q: %s", id, err))
 	}
 	log.Printf("[DEBUG] Read IdentityGroupAlias %s", id)
 	if resp == nil {
@@ -140,63 +155,40 @@ func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(resp.Data["id"].(string))
 	for _, k := range []string{"name", consts.FieldMountAccessor, "canonical_id"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key \"%s\" on IdentityGroupAlias %q: %s", k, id, err)
+			return diag.FromErr(fmt.Errorf("error setting state key \"%s\" on IdentityGroupAlias %q: %s", k, id, err))
 		}
 	}
 	return nil
 }
 
-func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
+func identityGroupAliasDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	lock, unlock := getEntityLockFuncs(d, identityGroupAliasIDPath)
+	lock()
+	defer unlock()
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	id := d.Id()
 
-	path := identityGroupAliasIDPath(id)
+	path := getIdentityGroupAliasIDPath(id)
 
 	log.Printf("[DEBUG] Deleting IdentityGroupAlias %q", id)
-	_, err := client.Logical().Delete(path)
+	_, err := client.Logical().DeleteWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error IdentityGroupAlias %q", id)
+		return diag.FromErr(fmt.Errorf("error IdentityGroupAlias %q", id))
 	}
 	log.Printf("[DEBUG] Deleted IdentityGroupAlias %q", id)
 
 	return nil
 }
 
-func identityGroupAliasExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	id := d.Id()
-
-	path := identityGroupAliasIDPath(id)
-	key := id
-
-	// use the name if no ID is set
-	if len(id) == 0 {
-		key = d.Get("name").(string)
-		path = identityGroupAliasNamePath(key)
-	}
-
-	log.Printf("[DEBUG] Checking if IdentityGroupAlias %q exists", key)
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if IdentityGroupAlias %q exists: %s", key, err)
-	}
-	log.Printf("[DEBUG] Checked if IdentityGroupAlias %q exists", key)
-
-	return resp != nil, nil
-}
-
 func identityGroupAliasNamePath(name string) string {
 	return fmt.Sprintf("%s/name/%s", identityGroupAliasPath, name)
 }
 
-func identityGroupAliasIDPath(id string) string {
-	return fmt.Sprintf("%s/id/%s", identityGroupAliasPath, id)
+func getIdentityGroupAliasIDPath(id string) string {
+	return fmt.Sprintf("%s/%s", identityGroupAliasIDPath, id)
 }

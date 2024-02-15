@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -19,9 +22,9 @@ func TestAzureAuthBackendRole_basic(t *testing.T) {
 
 	resourceName := "vault_azure_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAzureAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAzureAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureAuthBackendRoleConfig_basic(backend, name),
@@ -37,9 +40,9 @@ func TestAzureAuthBackendRole(t *testing.T) {
 
 	resourceName := "vault_azure_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAzureAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAzureAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureAuthBackendRoleConfig(backend, name),

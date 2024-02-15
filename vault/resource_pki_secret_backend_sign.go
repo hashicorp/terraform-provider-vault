@@ -1,24 +1,31 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pkiSecretBackendSignResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendSignCreate,
-		Delete: pkiSecretBackendSignDelete,
-		Update: func(data *schema.ResourceData, i interface{}) error {
+		CreateContext: pkiSecretBackendSignCreate,
+		DeleteContext: pkiSecretBackendSignDelete,
+		UpdateContext: func(ctx context.Context, data *schema.ResourceData, i interface{}) diag.Diagnostics {
 			return nil
 		},
-		Read: ReadWrapper(pkiSecretBackendCertRead),
+		ReadContext: provider.ReadContextWrapper(pkiSecretBackendCertRead),
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -30,31 +37,31 @@ func pkiSecretBackendSignResource() *schema.Resource {
 		CustomizeDiff: pkiCertAutoRenewCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
-			"name": {
+			consts.FieldName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the role to create the certificate against.",
 				ForceNew:    true,
 			},
-			"csr": {
+			consts.FieldCSR: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The CSR.",
 				ForceNew:    true,
 			},
-			"common_name": {
+			consts.FieldCommonName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "CN of intermediate to create.",
 				ForceNew:    true,
 			},
-			"alt_names": {
+			consts.FieldAltNames: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative names.",
@@ -63,7 +70,7 @@ func pkiSecretBackendSignResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"other_sans": {
+			consts.FieldOtherSans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of other SANs.",
@@ -72,7 +79,7 @@ func pkiSecretBackendSignResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ip_sans": {
+			consts.FieldIPSans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative IPs.",
@@ -81,7 +88,7 @@ func pkiSecretBackendSignResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"uri_sans": {
+			consts.FieldURISans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative URIs.",
@@ -90,13 +97,13 @@ func pkiSecretBackendSignResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ttl": {
+			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    false,
 				Description: "Time to live.",
 			},
-			"format": {
+			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "The format of data.",
@@ -104,154 +111,167 @@ func pkiSecretBackendSignResource() *schema.Resource {
 				Default:      "pem",
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle"}, false),
 			},
-			"exclude_cn_from_sans": {
+			consts.FieldExcludeCNFromSans: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Flag to exclude CN from SANs.",
 				ForceNew:    true,
 			},
-			"auto_renew": {
+			consts.FieldAutoRenew: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
 				Description: "If enabled, a new certificate will be generated if the expiration is within min_seconds_remaining",
 			},
-			"min_seconds_remaining": {
+			consts.FieldMinSecondsRemaining: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     604800,
 				Description: "Generate a new certificate when the expiration is within this number of seconds",
 			},
-			"certificate": {
+			consts.FieldCertificate: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The certicate.",
 			},
-			"issuing_ca": {
+			consts.FieldIssuingCA: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The issuing CA.",
 			},
-			"ca_chain": {
+			consts.FieldCAChain: {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Description: "The CA chain.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"serial": {
+			consts.FieldSerial: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Deprecated:  "Use serial_number instead",
 				Description: "The serial number.",
 			},
-			"serial_number": {
+			consts.FieldSerialNumber: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The certificate's serial number, hex formatted.",
 			},
-			"expiration": {
+			consts.FieldExpiration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "The certificate expiration as a Unix-style timestamp.",
 			},
-			"renew_pending": {
+			consts.FieldRenewPending: {
 				Type:     schema.TypeBool,
 				Computed: true,
 				Description: "Initially false, and then set to true during refresh once " +
 					"the expiration is less than min_seconds_remaining in the future.",
 			},
+			consts.FieldIssuerRef: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the default issuer of this request.",
+			},
 		},
 	}
 }
 
-func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendSignCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
-	name := d.Get("name").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	name := d.Get(consts.FieldName).(string)
 
 	path := pkiSecretBackendIssuePath(backend, name)
 
-	commonName := d.Get("common_name").(string)
+	commonName := d.Get(consts.FieldCommonName).(string)
 
-	iAltNames := d.Get("alt_names").([]interface{})
-	altNames := make([]string, 0, len(iAltNames))
-	for _, iAltName := range iAltNames {
-		altNames = append(altNames, iAltName.(string))
+	signAPIFields := []string{
+		consts.FieldCSR,
+		consts.FieldCommonName,
+		consts.FieldTTL,
+		consts.FieldFormat,
 	}
 
-	iOtherSans := d.Get("other_sans").([]interface{})
-	otherSans := make([]string, 0, len(iOtherSans))
-	for _, iOtherSan := range iOtherSans {
-		otherSans = append(otherSans, iOtherSan.(string))
+	signBooleanAPIFields := []string{
+		consts.FieldExcludeCNFromSans,
 	}
 
-	iIPSans := d.Get("ip_sans").([]interface{})
-	ipSans := make([]string, 0, len(iIPSans))
-	for _, iIpSan := range iIPSans {
-		ipSans = append(ipSans, iIpSan.(string))
+	signStringArrayAPIFields := []string{
+		consts.FieldAltNames,
+		consts.FieldOtherSans,
+		consts.FieldIPSans,
+		consts.FieldURISans,
 	}
 
-	iURISans := d.Get("uri_sans").([]interface{})
-	uriSans := make([]string, 0, len(iURISans))
-	for _, iUriSan := range iURISans {
-		uriSans = append(uriSans, iUriSan.(string))
+	data := map[string]interface{}{}
+	for _, k := range signAPIFields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
 
-	data := map[string]interface{}{
-		"csr":                  d.Get("csr").(string),
-		"common_name":          d.Get("common_name").(string),
-		"ttl":                  d.Get("ttl").(string),
-		"format":               d.Get("format").(string),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
+	// add version specific multi-issuer fields
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if issuerRef, ok := d.GetOk(consts.FieldIssuerRef); ok {
+			data[consts.FieldIssuerRef] = issuerRef
+		}
 	}
 
-	if len(altNames) > 0 {
-		data["alt_names"] = strings.Join(altNames, ",")
+	// add boolean fields
+	for _, k := range signBooleanAPIFields {
+		data[k] = d.Get(k)
 	}
 
-	if len(otherSans) > 0 {
-		data["other_sans"] = strings.Join(otherSans, ",")
-	}
-
-	if len(ipSans) > 0 {
-		data["ip_sans"] = strings.Join(ipSans, ",")
-	}
-
-	if len(uriSans) > 0 {
-		data["uri_sans"] = strings.Join(uriSans, ",")
+	// add comma separated string fields
+	for _, k := range signStringArrayAPIFields {
+		m := util.ToStringArray(d.Get(k).([]interface{}))
+		if len(m) > 0 {
+			data[k] = strings.Join(m, ",")
+		}
 	}
 
 	log.Printf("[DEBUG] Creating certificate sign %s by %s on PKI secret backend %q", commonName, name,
 		backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating certificate sign %s by %s for PKI secret backend %q: %s",
+		return diag.Errorf("error creating certificate sign %s by %s for PKI secret backend %q: %s",
 			commonName, name, backend, err)
 	}
 	log.Printf("[DEBUG] Created certificate sign %s by %s on PKI secret backend %q", commonName, name,
 		backend)
 
-	d.Set("certificate", resp.Data["certificate"])
-	d.Set("issuing_ca", resp.Data["issuing_ca"])
-	d.Set("ca_chain", resp.Data["ca_chain"])
-	d.Set("serial", resp.Data["serial_number"])
-	d.Set("serial_number", resp.Data["serial_number"])
-	d.Set("expiration", resp.Data["expiration"])
+	// helpful to consolidate code into single loop
+	// since 'serial' is deprecated, we read the 'serial_number'
+	// field from the response in order to set to the TF state
+	certFieldsMap := map[string]string{
+		consts.FieldCertificate:  consts.FieldCertificate,
+		consts.FieldIssuingCA:    consts.FieldIssuingCA,
+		consts.FieldCAChain:      consts.FieldCAChain,
+		consts.FieldSerialNumber: consts.FieldSerialNumber,
+		consts.FieldExpiration:   consts.FieldExpiration,
+		consts.FieldSerial:       consts.FieldSerialNumber,
+	}
+
+	for k, v := range certFieldsMap {
+		if err := d.Set(k, resp.Data[v]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(fmt.Sprintf("%s/%s/%s", backend, name, commonName))
 
-	return pkiSecretBackendCertRead(d, meta)
+	return pkiSecretBackendCertRead(ctx, d, meta)
 }
 
-func pkiSecretBackendSignDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendSignDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -17,9 +20,9 @@ func TestAccIdentityOidc(t *testing.T) {
 
 	const resourceName = "vault_identity_oidc.server"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityOidcDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityOidcDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcConfig(issuer),
@@ -40,7 +43,7 @@ func TestAccIdentityOidc(t *testing.T) {
 }
 
 func testAccCheckIdentityOidcDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 	path := identityOidcPathTemplate
 
 	resp, err := client.Logical().Read(path)

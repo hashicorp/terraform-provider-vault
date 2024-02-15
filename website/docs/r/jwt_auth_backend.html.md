@@ -145,7 +145,7 @@ In addition to the fields above, the following attributes are exported:
 
 ## Import
 
-JWT auth backend can be imported using the `type`, e.g.
+JWT auth backend can be imported using the `path`, e.g.
 
 ```
 $ terraform import vault_jwt_auth_backend.oidc oidc

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -13,36 +16,29 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const (
-	fieldKubernetesHost    = "kubernetes_host"
-	fieldKubernetesCACert  = "kubernetes_ca_cert"
-	fieldServiceAccountJWT = "service_account_jwt"
-	fieldDisableLocalCAJWT = "disable_local_ca_jwt"
-)
-
 func kubernetesSecretBackendResource() *schema.Resource {
 	resource := &schema.Resource{
-		CreateContext: MountCreateContextWrapper(kubernetesSecretBackendCreateUpdate, provider.VaultVersion111),
-		ReadContext:   ReadContextWrapper(kubernetesSecretBackendRead),
+		CreateContext: provider.MountCreateContextWrapper(kubernetesSecretBackendCreateUpdate, provider.VaultVersion111),
+		ReadContext:   provider.ReadContextWrapper(kubernetesSecretBackendRead),
 		UpdateContext: kubernetesSecretBackendCreateUpdate,
 		DeleteContext: kubernetesSecretBackendDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
-			fieldKubernetesHost: {
+			consts.FieldKubernetesHost: {
 				Type:        schema.TypeString,
 				Description: "The Kubernetes API URL to connect to.",
 				Optional:    true,
 			},
-			fieldKubernetesCACert: {
+			consts.FieldKubernetesCACert: {
 				Type: schema.TypeString,
 				Description: "A PEM-encoded CA certificate used by the secret engine to " +
 					"verify the Kubernetes API server certificate. Defaults to the " +
 					"local pod’s CA if found, or otherwise the host's root CA set.",
 				Optional: true,
 			},
-			fieldServiceAccountJWT: {
+			consts.FieldServiceAccountJWT: {
 				Type: schema.TypeString,
 				Description: "The JSON web token of the service account used by the " +
 					"secrets engine to manage Kubernetes credentials. Defaults to the " +
@@ -50,7 +46,7 @@ func kubernetesSecretBackendResource() *schema.Resource {
 				Optional:  true,
 				Sensitive: true,
 			},
-			fieldDisableLocalCAJWT: {
+			consts.FieldDisableLocalCAJWT: {
 				Type: schema.TypeBool,
 				Description: "Disable defaulting to the local CA certificate and service " +
 					"account JWT when running in a Kubernetes pod.",
@@ -88,9 +84,9 @@ func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.Resource
 
 	data := make(map[string]interface{})
 	fields := []string{
-		fieldKubernetesCACert,
-		fieldServiceAccountJWT,
-		fieldDisableLocalCAJWT,
+		consts.FieldKubernetesCACert,
+		consts.FieldServiceAccountJWT,
+		consts.FieldDisableLocalCAJWT,
 	}
 	for _, k := range fields {
 		if d.HasChange(k) {
@@ -101,7 +97,7 @@ func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.Resource
 	// kubernetes_host always needs to be provided on configuration updates.
 	// Otherwise, an error will occur if the KUBERNETES_SERVICE_HOST and
 	// KUBERNETES_SERVICE_PORT_HTTPS environment variables aren't set.
-	data[fieldKubernetesHost] = d.Get(fieldKubernetesHost)
+	data[consts.FieldKubernetesHost] = d.Get(consts.FieldKubernetesHost)
 
 	configPath := fmt.Sprintf("%s/config", path)
 	if _, err := client.Logical().Write(configPath, data); err != nil {
@@ -133,9 +129,9 @@ func kubernetesSecretBackendRead(_ context.Context, d *schema.ResourceData, meta
 	// fieldServiceAccountJWT can't be read from the API
 	// and is intentionally omitted from this list
 	fields := []string{
-		fieldKubernetesHost,
-		fieldKubernetesCACert,
-		fieldDisableLocalCAJWT,
+		consts.FieldKubernetesHost,
+		consts.FieldKubernetesCACert,
+		consts.FieldDisableLocalCAJWT,
 	}
 	for _, k := range fields {
 		if err := d.Set(k, resp.Data[k]); err != nil {

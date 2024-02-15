@@ -17,6 +17,10 @@ artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
+~> **Important** Multi-Issuer Functionality is enabled on this version
+of the Provider. If migrating from an older version of Vault or the Provider,
+please refer to the [PKI Multi-Issuer Upgrade Guide](../guides/pki_multi_issuer_upgrade.html.markdown)
+
 ## Example Usage
 
 ```hcl
@@ -86,6 +90,12 @@ The following arguments are supported:
   Only needed as a workaround in some compatibility scenarios with Active Directory
   Certificate Services
 
+* `key_name` - (Optional) When a new key is created with this request, optionally specifies
+  the name for this. The global ref `default` may not be used as a name.
+
+* `key_ref` - (Optional) Specifies the key (either default, by name, or by identifier) to use
+  for generating this request. Only suitable for `type=existing` requests.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
@@ -97,3 +107,5 @@ In addition to the fields above, the following attributes are exported:
 * `private_key_type` - The private key type
 
 * `serial_number` - The serial number
+
+* `key_id` - The ID of the generated key.

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -22,7 +25,7 @@ var (
 func consulSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: consulSecretBackendRoleWrite,
-		ReadContext:   ReadContextWrapper(consulSecretBackendRoleRead),
+		ReadContext:   provider.ReadContextWrapper(consulSecretBackendRoleRead),
 		UpdateContext: consulSecretBackendRoleWrite,
 		DeleteContext: consulSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

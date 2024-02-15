@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -14,8 +17,8 @@ func TestAccAWSAuthBackendRoleTag_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-aws")
 	role := acctest.RandomWithPrefix("tf-test-aws")
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleTagConfig_basic(backend, role),

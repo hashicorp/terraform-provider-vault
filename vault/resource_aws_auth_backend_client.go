@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -11,10 +14,14 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
+const (
+	useSTSRegionFromClient = "use_sts_region_from_client"
+)
+
 func awsAuthBackendClientResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendWrite,
-		Read:   ReadWrapper(awsAuthBackendRead),
+		Read:   provider.ReadWrapper(awsAuthBackendRead),
 		Update: awsAuthBackendWrite,
 		Delete: awsAuthBackendDelete,
 		Exists: awsAuthBackendExists,
@@ -66,6 +73,12 @@ func awsAuthBackendClientResource() *schema.Resource {
 				Optional:    true,
 				Description: "Region to override the default region for making AWS STS API calls.",
 			},
+			useSTSRegionFromClient: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "If set, will override sts_region and use the region from the client request's header",
+			},
 			"iam_server_id_header_value": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -88,6 +101,7 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
 	stsRegion := d.Get("sts_region").(string)
+	stsRegionFromClient := d.Get("use_sts_region_from_client").(bool)
 
 	iamServerIDHeaderValue := d.Get("iam_server_id_header_value").(string)
 
@@ -105,6 +119,10 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
 		data["access_key"] = d.Get("access_key").(string)
 		data["secret_key"] = d.Get("secret_key").(string)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		data[useSTSRegionFromClient] = stsRegionFromClient
 	}
 
 	// sts_endpoint and sts_region are required to be set together
@@ -156,6 +174,10 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("sts_endpoint", secret.Data["sts_endpoint"])
 	d.Set("sts_region", secret.Data["sts_region"])
 	d.Set("iam_server_id_header_value", secret.Data["iam_server_id_header_value"])
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		d.Set(useSTSRegionFromClient, secret.Data[useSTSRegionFromClient])
+	}
+
 	return nil
 }
 

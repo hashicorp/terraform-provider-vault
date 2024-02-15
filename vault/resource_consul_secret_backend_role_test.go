@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -15,6 +18,7 @@ import (
 )
 
 func TestConsulSecretBackendRole(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-consul")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
@@ -67,7 +71,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "client-0:dc1"))
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
@@ -119,9 +123,9 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"))
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testConsulSecretBackendRole_initialConfig(path, name, token, true, false),
@@ -175,7 +179,7 @@ func TestConsulSecretBackendRole_Legacy(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "policies.1", "far"))
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion111)
@@ -225,9 +229,9 @@ func TestConsulSecretBackendRole_Legacy(t *testing.T) {
 		resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "bar"))
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testConsulSecretBackendRole_initialConfig(path, name, token, false, true),

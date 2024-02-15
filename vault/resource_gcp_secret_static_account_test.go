@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -44,9 +47,9 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 	resourceNameBackend := "vault_gcp_secret_backend.test"
 	resourceName := "vault_gcp_secret_static_account.test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testGCPSecretStaticAccountDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testGCPSecretStaticAccountDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: noBindings,

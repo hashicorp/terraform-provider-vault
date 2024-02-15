@@ -8,6 +8,9 @@ description: |-
 
 # vault\_ad\_secret\_role
 
+~> **Note** This resource is replaced by "vault_ldap_secret_backend_static_role"
+and will be removed in the next major release.
+
 Creates a role on an Active Directory Secret Backend for Vault. Roles are
 used to map credentials to existing Active Directory service accounts.
 

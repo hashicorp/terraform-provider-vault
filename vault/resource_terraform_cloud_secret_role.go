@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -19,7 +22,7 @@ var (
 func terraformCloudSecretRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: terraformCloudSecretRoleWrite,
-		Read:   ReadWrapper(terraformCloudSecretRoleRead),
+		Read:   provider.ReadWrapper(terraformCloudSecretRoleRead),
 		Update: terraformCloudSecretRoleWrite,
 		Delete: terraformCloudSecretRoleDelete,
 		Exists: terraformCloudSecretRoleExists,

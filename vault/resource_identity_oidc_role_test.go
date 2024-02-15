@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -21,9 +24,9 @@ func TestAccIdentityOidcRole(t *testing.T) {
 
 	resourceName := "vault_identity_oidc_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityOidcRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityOidcRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcRoleConfig(name),
@@ -50,9 +53,9 @@ func TestAccIdentityOidcRoleWithClientId(t *testing.T) {
 
 	resourceName := "vault_identity_oidc_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityOidcRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityOidcRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcRoleWithClientIdConfig(name, clientId),
@@ -81,9 +84,9 @@ func TestAccIdentityOidcRoleUpdate(t *testing.T) {
 
 	resourceName := "vault_identity_oidc_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityOidcRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityOidcRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcRoleWithClientIdConfig(name, clientId),

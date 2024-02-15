@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -24,9 +27,9 @@ func TestResourceGenericEndpoint(t *testing.T) {
 		"vault_generic_endpoint.u1_entity",
 	}
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testResourceGenericEndpoint_destroyCheck(resourceNames, path),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testResourceGenericEndpoint_destroyCheck(resourceNames, path),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericEndpoint_initialConfig(path),

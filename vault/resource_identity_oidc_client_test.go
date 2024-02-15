@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -21,9 +24,9 @@ func TestAccIdentityOIDCClient(t *testing.T) {
 	resourceName := "vault_identity_oidc_client.client"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckOIDCClientDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckOIDCClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOIDCClientConfig_basic(keyName, assignmentName, clientName),

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -23,9 +27,9 @@ func TestAccIdentityEntity(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -40,9 +44,9 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -69,9 +73,9 @@ func TestAccIdentityEntityUpdateRemoveValues(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -99,9 +103,9 @@ func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -220,34 +224,35 @@ func TestReadEntity(t *testing.T) {
 		maxRetries      int
 		expectedRetries int
 		wantError       error
-		retryHandler    *testRetryHandler
+		retryHandler    *testutil.TestRetryHandler
+		retryWait       time.Duration
 	}{
 		{
 			name: "retry-none",
-			retryHandler: &testRetryHandler{
-				okAtCount: 1,
-				// retryStatus: http.StatusNotFound,
-				respData: []byte(`{"data": {"foo": "baz"}}`),
+			retryHandler: &testutil.TestRetryHandler{
+				OKAtCount: 1,
+				// RetryStatus: http.StatusNotFound,
+				RespData: []byte(`{"data": {"foo": "baz"}}`),
 			},
 			maxRetries:      4,
 			expectedRetries: 0,
 		},
 		{
 			name: "retry-ok-404",
-			retryHandler: &testRetryHandler{
-				okAtCount:   3,
-				retryStatus: http.StatusNotFound,
-				respData:    []byte(`{"data": {"foo": "baz"}}`),
+			retryHandler: &testutil.TestRetryHandler{
+				OKAtCount:   3,
+				RetryStatus: http.StatusNotFound,
+				RespData:    []byte(`{"data": {"foo": "baz"}}`),
 			},
 			maxRetries:      4,
 			expectedRetries: 2,
 		},
 		{
 			name: "retry-ok-412",
-			retryHandler: &testRetryHandler{
-				okAtCount:   3,
-				retryStatus: http.StatusPreconditionFailed,
-				respData:    []byte(`{"data": {"foo": "baz"}}`),
+			retryHandler: &testutil.TestRetryHandler{
+				OKAtCount:   3,
+				RetryStatus: http.StatusPreconditionFailed,
+				RespData:    []byte(`{"data": {"foo": "baz"}}`),
 			},
 			maxRetries:      4,
 			expectedRetries: 2,
@@ -255,9 +260,9 @@ func TestReadEntity(t *testing.T) {
 		{
 			name: "retry-exhausted-default-max-404",
 			path: entity.JoinEntityID("retry-exhausted-default-max-404"),
-			retryHandler: &testRetryHandler{
-				okAtCount:   0,
-				retryStatus: http.StatusNotFound,
+			retryHandler: &testutil.TestRetryHandler{
+				OKAtCount:   0,
+				RetryStatus: http.StatusNotFound,
 			},
 			maxRetries:      DefaultMaxHTTPRetriesCCC,
 			expectedRetries: DefaultMaxHTTPRetriesCCC,
@@ -267,9 +272,9 @@ func TestReadEntity(t *testing.T) {
 		{
 			name: "retry-exhausted-default-max-412",
 			path: entity.JoinEntityID("retry-exhausted-default-max-412"),
-			retryHandler: &testRetryHandler{
-				okAtCount:   0,
-				retryStatus: http.StatusPreconditionFailed,
+			retryHandler: &testutil.TestRetryHandler{
+				OKAtCount:   0,
+				RetryStatus: http.StatusPreconditionFailed,
 			},
 			maxRetries:      DefaultMaxHTTPRetriesCCC,
 			expectedRetries: DefaultMaxHTTPRetriesCCC,
@@ -279,26 +284,28 @@ func TestReadEntity(t *testing.T) {
 		{
 			name: "retry-exhausted-custom-max-404",
 			path: entity.JoinEntityID("retry-exhausted-custom-max-404"),
-			retryHandler: &testRetryHandler{
-				okAtCount:   0,
-				retryStatus: http.StatusNotFound,
+			retryHandler: &testutil.TestRetryHandler{
+				OKAtCount:   0,
+				RetryStatus: http.StatusNotFound,
 			},
 			maxRetries:      5,
 			expectedRetries: 5,
 			wantError: fmt.Errorf(`%w: %q`, entity.ErrEntityNotFound,
 				entity.JoinEntityID("retry-exhausted-custom-max-404")),
+			retryWait: time.Millisecond,
 		},
 		{
 			name: "retry-exhausted-custom-max-412",
 			path: entity.JoinEntityID("retry-exhausted-custom-max-412"),
-			retryHandler: &testRetryHandler{
-				okAtCount:   0,
-				retryStatus: http.StatusPreconditionFailed,
+			retryHandler: &testutil.TestRetryHandler{
+				OKAtCount:   0,
+				RetryStatus: http.StatusPreconditionFailed,
 			},
 			maxRetries:      5,
 			expectedRetries: 5,
 			wantError: fmt.Errorf(`failed reading %q`,
 				entity.JoinEntityID("retry-exhausted-custom-max-412")),
+			retryWait: time.Millisecond,
 		},
 	}
 
@@ -311,7 +318,7 @@ func TestReadEntity(t *testing.T) {
 
 			r := tt.retryHandler
 
-			config, ln := testutil.TestHTTPServer(t, r.handler())
+			config, ln := testutil.TestHTTPServer(t, r.Handler())
 			defer ln.Close()
 
 			config.Address = fmt.Sprintf("http://%s", ln.Addr())
@@ -325,7 +332,14 @@ func TestReadEntity(t *testing.T) {
 				path = tt.name
 			}
 
-			actualResp, err := entity.ReadEntity(c, path, true)
+			retryWait := time.Nanosecond
+			if tt.retryWait != 0 {
+				// set wait to be larger for flaky tests
+				retryWait = tt.retryWait
+			}
+			actualResp, err := entity.ReadEntity(c, path, true,
+				entity.WithMinRetryWait(retryWait),
+				entity.WithMaxRetryWait(retryWait))
 
 			if tt.wantError != nil {
 				if err == nil {
@@ -336,7 +350,7 @@ func TestReadEntity(t *testing.T) {
 					t.Errorf("expected err %q, actual %q", tt.wantError, err)
 				}
 
-				if tt.retryHandler.retryStatus == http.StatusNotFound {
+				if tt.retryHandler.RetryStatus == http.StatusNotFound {
 					if !group.IsIdentityNotFoundError(err) {
 						t.Errorf("expected an errEntityNotFound err %q, actual %q", entity.ErrEntityNotFound, err)
 					}
@@ -347,8 +361,8 @@ func TestReadEntity(t *testing.T) {
 				}
 
 				var data map[string]interface{}
-				if err := json.Unmarshal(tt.retryHandler.respData, &data); err != nil {
-					t.Fatalf("invalid test data %#v, err=%s", tt.retryHandler.respData, err)
+				if err := json.Unmarshal(tt.retryHandler.RespData, &data); err != nil {
+					t.Fatalf("invalid test data %#v, err=%s", tt.retryHandler.RespData, err)
 				}
 
 				expectedResp := &api.Secret{
@@ -360,9 +374,8 @@ func TestReadEntity(t *testing.T) {
 				}
 			}
 
-			retries := r.requests - 1
-			if tt.expectedRetries != retries {
-				t.Fatalf("expected %d retries, actual %d", tt.expectedRetries, retries)
+			if tt.expectedRetries != r.Retries {
+				t.Fatalf("expected %d retries, actual %d", tt.expectedRetries, r.Retries)
 			}
 		})
 	}
@@ -397,25 +410,5 @@ func TestIsEntityNotFoundError(t *testing.T) {
 				t.Fatalf("isIdentityNotFoundError(): expected %v, actual %v", tt.expected, actual)
 			}
 		})
-	}
-}
-
-type testRetryHandler struct {
-	requests    int
-	okAtCount   int
-	respData    []byte
-	retryStatus int
-}
-
-func (t *testRetryHandler) handler() http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		t.requests++
-		if t.okAtCount > 0 && (t.requests >= t.okAtCount) {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(t.respData)
-			return
-		} else {
-			w.WriteHeader(t.retryStatus)
-		}
 	}
 }

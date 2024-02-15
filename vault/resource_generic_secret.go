@@ -1,18 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
-	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const latestSecretVersion = -1
@@ -24,7 +24,7 @@ func genericSecretResource(name string) *schema.Resource {
 		Create: genericSecretResourceWrite,
 		Update: genericSecretResourceWrite,
 		Delete: genericSecretResourceDelete,
-		Read:   ReadWrapper(genericSecretResourceRead),
+		Read:   provider.ReadWrapper(genericSecretResourceRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -149,24 +149,8 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 
 	}
 
-	writeData := func() error {
-		if _, err := client.Logical().Write(path, data); err != nil {
-			if respErr, ok := err.(*api.ResponseError); ok && (respErr.StatusCode == http.StatusBadRequest) {
-				return err
-			} else {
-				return backoff.Permanent(err)
-			}
-		}
-		return nil
-	}
-
-	bo := backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Millisecond*500), 10)
-
-	log.Printf("[DEBUG] Writing generic Vault secret to  %s", path)
-	if err := backoff.RetryNotify(writeData, bo, func(err error, duration time.Duration) {
-		log.Printf("[WARN] create generic secret %q failed, retrying in %s", path, duration)
-	}); err != nil {
-		return fmt.Errorf("error creating generic secret: %s", err)
+	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
+		return err
 	}
 
 	d.SetId(originalPath)

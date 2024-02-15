@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -19,9 +22,9 @@ import (
 func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityEntityPoliciesDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityPoliciesConfigExclusive(entity),
@@ -43,9 +46,9 @@ func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityEntityPoliciesDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityPoliciesConfigNonExclusive(entity),
@@ -58,6 +61,16 @@ func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 			},
 			{
 				Config: testAccIdentityEntityPoliciesConfigNonExclusiveUpdate(entity),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityEntityPoliciesCheckLogical("vault_identity_entity.entity", []string{"dev", "foo"}),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.0", "foo"),
+				),
+			},
+			{
+				Config: testAccIdentityEntityPoliciesConfigNonExclusiveUpdateEntity(entity),
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityEntityPoliciesCheckLogical("vault_identity_entity.entity", []string{"dev", "foo"}),
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.#", "1"),
@@ -254,6 +267,31 @@ func testAccIdentityEntityPoliciesConfigNonExclusiveUpdate(entity string) string
 resource "vault_identity_entity" "entity" {
   name = "%s"
   external_policies = true
+}
+
+resource "vault_identity_entity_policies" "dev" {
+	entity_id = vault_identity_entity.entity.id
+  exclusive = false
+  policies = ["dev"]
+}
+
+
+resource "vault_identity_entity_policies" "test" {
+  entity_id = vault_identity_entity.entity.id
+  exclusive = false
+  policies = ["foo"]
+}
+`, entity)
+}
+
+func testAccIdentityEntityPoliciesConfigNonExclusiveUpdateEntity(entity string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "entity" {
+  name = "%s"
+  external_policies = true
+  metadata = {
+    version = "1"
+  }
 }
 
 resource "vault_identity_entity_policies" "dev" {

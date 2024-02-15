@@ -56,6 +56,13 @@ The following arguments are supported:
 
 * `delta_rebuild_interval` - (Optional) Interval to check for new revocations on, to regenerate the delta CRL.
 
+* `cross_cluster_revocation` - (Optional) Enable cross-cluster revocation request queues. **Vault 1.13+**
+
+* `unified_crl` - (Optional) Enables unified CRL and OCSP building. **Vault 1.13+**
+
+* `unified_crl_on_existing_paths` - (Optional) Enables serving the unified CRL and OCSP on the existing, previously
+ cluster-local paths. **Vault 1.13+**
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

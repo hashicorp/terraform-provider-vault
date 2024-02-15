@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -97,7 +100,7 @@ func raftAutopilotStateDataSource() *schema.Resource {
 		},
 	}
 	return &schema.Resource{
-		Read:   ReadWrapper(raftAutopilotStateDataSourceRead),
+		Read:   provider.ReadWrapper(raftAutopilotStateDataSourceRead),
 		Schema: fields,
 	}
 }

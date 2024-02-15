@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -12,7 +15,7 @@ import (
 
 func approleAuthBackendRoleIDDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(approleAuthBackendRoleIDRead),
+		Read: provider.ReadWrapper(approleAuthBackendRoleIDRead),
 
 		Schema: map[string]*schema.Schema{
 			"role_name": {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -23,7 +26,7 @@ func ldapAuthBackendUserResource() *schema.Resource {
 
 		Create: ldapAuthBackendUserResourceWrite,
 		Update: ldapAuthBackendUserResourceWrite,
-		Read:   ReadWrapper(ldapAuthBackendUserResourceRead),
+		Read:   provider.ReadWrapper(ldapAuthBackendUserResourceRead),
 		Delete: ldapAuthBackendUserResourceDelete,
 		Exists: ldapAuthBackendUserResourceExists,
 		Importer: &schema.ResourceImporter{

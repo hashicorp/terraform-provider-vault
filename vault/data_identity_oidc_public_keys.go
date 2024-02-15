@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -15,7 +18,7 @@ const identityOIDCPublicKeysPathSuffix = "/.well-known/keys"
 
 func identityOIDCPublicKeysDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(readOIDCPublicKeysResource),
+		Read: provider.ReadWrapper(readOIDCPublicKeysResource),
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

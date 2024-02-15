@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -14,12 +17,13 @@ import (
 )
 
 func TestDataSourceIdentityEntityName(t *testing.T) {
+	t.Parallel()
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "data.vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityEntity_configName(entity),
@@ -35,12 +39,13 @@ func TestDataSourceIdentityEntityName(t *testing.T) {
 }
 
 func TestDataSourceIdentityEntityAlias(t *testing.T) {
+	t.Parallel()
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "data.vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityEntity_configAlias(entity),

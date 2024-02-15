@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -15,7 +18,7 @@ import (
 func oktaAuthBackendUserResource() *schema.Resource {
 	return &schema.Resource{
 		Create: oktaAuthBackendUserWrite,
-		Read:   ReadWrapper(oktaAuthBackendUserRead),
+		Read:   provider.ReadWrapper(oktaAuthBackendUserRead),
 		Update: oktaAuthBackendUserWrite,
 		Delete: oktaAuthBackendUserDelete,
 

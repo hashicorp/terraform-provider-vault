@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -66,6 +69,11 @@ func sshSecretBackendRoleResource() *schema.Resource {
 		"allowed_critical_options": {
 			Type:     schema.TypeString,
 			Optional: true,
+		},
+		"allowed_domains_template": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
 		},
 		"allowed_domains": {
 			Type:     schema.TypeString,
@@ -179,11 +187,17 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
+		"not_before_duration": {
+			Type:        schema.TypeString,
+			Description: "Specifies the duration by which to backdate the ValidAfter property. Uses duration format strings.",
+			Optional:    true,
+			Computed:    true,
+		},
 	}
 
 	return &schema.Resource{
 		Create: sshSecretBackendRoleWrite,
-		Read:   ReadWrapper(sshSecretBackendRoleRead),
+		Read:   provider.ReadWrapper(sshSecretBackendRoleRead),
 		Update: sshSecretBackendRoleWrite,
 		Delete: sshSecretBackendRoleDelete,
 		Exists: sshSecretBackendRoleExists,
@@ -255,6 +269,8 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		if v, ok := d.GetOk("default_user_template"); ok {
 			data["default_user_template"] = v.(bool)
 		}
+
+		data["allowed_domains_template"] = d.Get("allowed_domains_template")
 	}
 
 	if v, ok := d.GetOk("key_id_format"); ok {
@@ -271,6 +287,10 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("ttl"); ok {
 		data["ttl"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("not_before_duration"); ok {
+		data["not_before_duration"] = v.(string)
 	}
 
 	var isUserKeyConfig bool
@@ -374,11 +394,11 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		"cidr_list", "allowed_extensions", "default_extensions",
 		"default_critical_options", "allowed_users_template",
 		"allowed_users", "default_user", "key_id_format",
-		"max_ttl", "ttl", "algorithm_signer",
+		"max_ttl", "ttl", "algorithm_signer", "not_before_duration",
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		fields = append(fields, []string{"default_user_template"}...)
+		fields = append(fields, []string{"default_user_template", "allowed_domains_template"}...)
 	}
 
 	// cidr_list cannot be read from the API

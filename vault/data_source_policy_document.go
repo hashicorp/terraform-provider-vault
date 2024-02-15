@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -9,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -41,7 +45,7 @@ var allowedCapabilities = []string{
 
 func policyDocumentDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(policyDocumentDataSourceRead),
+		Read: provider.ReadWrapper(policyDocumentDataSourceRead),
 		Schema: map[string]*schema.Schema{
 			"rule": {
 				Type:        schema.TypeList,

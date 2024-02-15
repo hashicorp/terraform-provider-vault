@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -11,6 +14,17 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
+
+func init() {
+	field := consts.FieldAuthLoginAWS
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginAWS{}
+			return a.Init(r, field)
+		}, GetAWSLoginSchema); err != nil {
+		panic(err)
+	}
+}
 
 // GetAWSLoginSchema for the AWS authentication engine.
 func GetAWSLoginSchema(authField string) *schema.Schema {
@@ -114,8 +128,10 @@ func GetAWSLoginSchemaResource(authField string) *schema.Resource {
 				Description: `The Vault header value to include in the STS signing request.`,
 			},
 		},
-	}, consts.MountTypeAWS)
+	}, authField, consts.MountTypeAWS)
 }
+
+var _ AuthLogin = (*AuthLoginAWS)(nil)
 
 // AuthLoginAWS for handling the Vault AWS authentication engine.
 // Requires configuration provided by SchemaLoginAWS.
@@ -123,16 +139,16 @@ type AuthLoginAWS struct {
 	AuthLoginCommon
 }
 
-func (l *AuthLoginAWS) Init(d *schema.ResourceData, authField string) error {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return err
+func (l *AuthLoginAWS) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			return l.checkRequiredFields(d, consts.FieldRole)
+		},
+	); err != nil {
+		return nil, err
 	}
 
-	if err := l.checkRequiredFields(d, consts.FieldRole); err != nil {
-		return err
-	}
-
-	return nil
+	return l, nil
 }
 
 // MountPath for the aws authentication engine.

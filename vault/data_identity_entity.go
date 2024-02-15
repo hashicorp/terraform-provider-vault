@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -89,7 +92,7 @@ var (
 
 func identityEntityDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(identityEntityDataSourceRead),
+		Read: provider.ReadWrapper(identityEntityDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"entity_name": {
@@ -198,6 +201,7 @@ func identityEntityDataSource() *schema.Resource {
 
 func identityEntityLookup(client *api.Client, data map[string]interface{}) (*api.Secret, error) {
 	log.Print("[DEBUG] Looking up IdentityEntity")
+
 	resp, err := client.Logical().Write(entity.LookupPath, data)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading Identity Entity '%v': %w", data, err)

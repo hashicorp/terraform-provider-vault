@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -14,7 +17,7 @@ import (
 func terraformCloudSecretCredsResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createTerraformCloudSecretCredsResource,
-		Read:   ReadWrapper(readTerraformCloudSecretCredsResource),
+		Read:   provider.ReadWrapper(readTerraformCloudSecretCredsResource),
 		Update: updateTerraformCloudSecretCredsResource,
 		Delete: deleteTerraformCloudSecretCredsResource,
 		Schema: map[string]*schema.Schema{

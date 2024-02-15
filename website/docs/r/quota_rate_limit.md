@@ -51,6 +51,8 @@ The following arguments are supported:
 * `block_interval` - (Optional) If set, when a client reaches a rate limit threshold, the client will
   be prohibited from any further requests until after the 'block_interval' in seconds has elapsed.
 
+* `role` - (Optional) If set on a quota where `path` is set to an auth mount with a concept of roles (such as /auth/approle/), this will make the quota restrict login requests to that mount that are made with the specified role.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

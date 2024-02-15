@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -15,7 +18,7 @@ import (
 func awsAuthBackendLoginResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendLoginCreate,
-		Read:   ReadWrapper(awsAuthBackendLoginRead),
+		Read:   provider.ReadWrapper(awsAuthBackendLoginRead),
 		Delete: awsAuthBackendLoginDelete,
 
 		Schema: map[string]*schema.Schema{

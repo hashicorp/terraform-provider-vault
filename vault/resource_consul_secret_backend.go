@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -20,7 +23,7 @@ import (
 func consulSecretBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: consulSecretBackendCreate,
-		ReadContext:   ReadContextWrapper(consulSecretBackendRead),
+		ReadContext:   provider.ReadContextWrapper(consulSecretBackendRead),
 		UpdateContext: consulSecretBackendUpdate,
 		DeleteContext: consulSecretBackendDelete,
 		CustomizeDiff: consulSecretsBackendCustomizeDiff,
@@ -110,7 +113,7 @@ func consulSecretBackendResource() *schema.Resource {
 				Description: "Specifies if the secret backend is local only",
 			},
 		},
-	})
+	}, false)
 }
 
 func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

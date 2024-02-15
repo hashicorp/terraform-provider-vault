@@ -1,7 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var rgpPolicyAttributes = []string{"enforcement_level", "policy"}
@@ -11,7 +16,7 @@ func rgpPolicyResource() *schema.Resource {
 		Create: rgpPolicyWrite,
 		Update: rgpPolicyWrite,
 		Delete: rgpPolicyDelete,
-		Read:   ReadWrapper(rgpPolicyRead),
+		Read:   provider.ReadWrapper(rgpPolicyRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -16,7 +19,7 @@ func TestAccRaftAutopilotConfig_basic(t *testing.T) {
 	resourceName := "vault_raft_autopilot.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")

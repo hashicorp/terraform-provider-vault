@@ -1,5 +1,28 @@
 <!--- See what makes a good Pull Request at : https://github.com/hashicorp/terraform-provider-vault/blob/master/.github/CONTRIBUTING.md --->
 
+
+### Description
+<!--- Description of the change. For example: This PR updates ABC resource so that we can XYZ --->
+
+
+<!--- If your PR fully resolves and should automatically close the linked issue, use Closes. Otherwise, use Relates --->
+Relates OR Closes #0000
+
+
+### Checklist
+- [ ] Added [CHANGELOG](https://github.com/hashicorp/terraform-provider-vault/blob/master/CHANGELOG.md) entry (only for user-facing changes)
+- [ ] Acceptance tests where run against all supported Vault Versions
+
+
+### Output from acceptance testing:
+
+```
+$ make testacc TESTARGS='-run=TestAccXXX'
+
+...
+```
+
+
 <!--- Please keep this note for the community --->
 
 ### Community Note
@@ -9,22 +32,3 @@
 
 <!--- Thank you for keeping this note for the community --->
 
-<!--- If your PR fully resolves and should automatically close the linked issue, use Closes. Otherwise, use Relates --->
-Relates OR Closes #0000
-
-Release note for [CHANGELOG](https://github.com/hashicorp/terraform-provider-vault/blob/master/CHANGELOG.md):
-<!--
-If change is not user facing, just write "NONE" in the release-note block below.
--->
-
-```release-note
-
-```
-
-Output from acceptance testing:
-
-```
-$ make testacc TESTARGS='-run=TestAccXXX'
-
-...
-```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -23,23 +26,33 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 
 	resourceName := "vault_pki_secret_backend_sign.test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath),
+				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", intermediatePath),
 					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
 					testValidateCSR(resourceName),
 				),
 			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion111), nil
+				},
+				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, `issuer_ref = "test"`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerRef, "test"),
+				),
+			},
 		},
 	})
 }
 
-func testPkiSecretBackendSignConfig_basic(rootPath string, intermediatePath string) string {
+func testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test-root" {
   path                      = "%s"
@@ -138,8 +151,9 @@ o3DybUeUmknYjl109rdSf+76nuREICHatxXgN3xCMFuBaN4WLO+ksd6Y1Ys=
 -----END CERTIFICATE REQUEST-----
 EOT
   common_name = "cert.test.my.domain"
+  %s
 }
-`, rootPath, intermediatePath)
+`, rootPath, intermediatePath, extraConfig)
 }
 
 func TestPkiSecretBackendSign_renew(t *testing.T) {
@@ -159,9 +173,9 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 		testValidateCSR(resourceName),
 	}
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendSignConfig_renew(path),
@@ -185,7 +199,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 			{
 				// test unmounted backend
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					if err := client.Sys().Unmount(path); err != nil {
 						t.Fatal(err)

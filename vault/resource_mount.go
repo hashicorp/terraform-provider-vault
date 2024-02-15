@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -128,7 +131,7 @@ func MountResource() *schema.Resource {
 		Create: mountWrite,
 		Update: mountUpdate,
 		Delete: mountDelete,
-		Read:   ReadWrapper(mountRead),
+		Read:   provider.ReadWrapper(mountRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

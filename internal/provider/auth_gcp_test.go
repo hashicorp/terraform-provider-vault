@@ -1,11 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -18,21 +21,9 @@ import (
 const envVarGCPServiceAccount = "TF_ACC_GOOGLE_SERVICE_ACCOUNT"
 
 func TestAuthLoginGCP_Init(t *testing.T) {
-	type fields struct {
-		AuthLoginCommon AuthLoginCommon
-	}
-
 	s := map[string]*schema.Schema{}
 
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectMount  string
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name:         "error-missing-resource",
 			authField:    consts.FieldAuthLoginGCP,
@@ -47,22 +38,7 @@ func TestAuthLoginGCP_Init(t *testing.T) {
 			t.Cleanup(func() {
 				delete(s, tt.authField)
 			})
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginGCP{}
-
-			err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if !reflect.DeepEqual(tt.expectErr, err) {
-				t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-			}
-
-			if !reflect.DeepEqual(tt.expectParams, l.params) {
-				t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginGCP{})
 		})
 	}
 }
@@ -194,6 +170,42 @@ func TestAuthLoginGCP_Login(t *testing.T) {
 			},
 		},
 		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginGCP{
+				AuthLoginCommon{
+					authField: "baz",
+					mount:     "qux",
+					params: map[string]interface{}{
+						consts.FieldRole:           "bob",
+						consts.FieldCredentials:    os.Getenv(consts.EnvVarGoogleApplicationCreds),
+						consts.FieldServiceAccount: os.Getenv(envVarGCPServiceAccount),
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				excludeParams: []string{consts.FieldJWT},
+				handlerFunc:   handlerFunc,
+			},
+			expectReqCount: 1,
+			expectReqPaths: []string{
+				"/v1/auth/qux/login",
+			},
+			expectReqParams: []map[string]interface{}{{
+				consts.FieldRole: "bob",
+			}},
+			want: &api.Secret{
+				Auth: &api.SecretAuth{
+					Metadata: map[string]string{
+						consts.FieldRole: "bob",
+					},
+				},
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
+		{
 			name: "no-jwt",
 			authLogin: &AuthLoginGCP{
 				AuthLoginCommon{
@@ -226,6 +238,7 @@ func TestAuthLoginGCP_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

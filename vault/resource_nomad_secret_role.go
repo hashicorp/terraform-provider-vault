@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -57,7 +60,7 @@ func nomadSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createNomadRoleResource,
 		Update: updateNomadRoleResource,
-		Read:   ReadWrapper(readNomadRoleResource),
+		Read:   provider.ReadWrapper(readNomadRoleResource),
 		Delete: deleteNomadRoleResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

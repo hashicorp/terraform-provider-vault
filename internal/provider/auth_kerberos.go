@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -13,6 +16,17 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
+
+func init() {
+	field := consts.FieldAuthLoginKerberos
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginKerberos{}
+			return a.Init(r, field)
+		}, GetKerberosLoginSchema); err != nil {
+		panic(err)
+	}
+}
 
 // GetKerberosLoginSchema for the kerberos authentication engine.
 func GetKerberosLoginSchema(authField string) *schema.Schema {
@@ -84,10 +98,12 @@ func GetKerberosLoginSchemaResource(authField string) *schema.Resource {
 				Description:   "Strip the host from the username found in the keytab.",
 			},
 		},
-	}, consts.MountTypeKerberos)
+	}, authField, consts.MountTypeKerberos)
 
 	return s
 }
+
+var _ AuthLogin = (*AuthLoginKerberos)(nil)
 
 type AuthLoginKerberos struct {
 	AuthLoginCommon
@@ -108,32 +124,25 @@ func (l *AuthLoginKerberos) LoginPath() string {
 	return fmt.Sprintf("auth/%s/login", l.MountPath())
 }
 
-func (l *AuthLoginKerberos) Init(d *schema.ResourceData, authField string) error {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return err
-	}
-
-	if _, ok := l.getOk(d, consts.FieldToken); !ok {
-		required := []string{
-			consts.FieldUsername,
-			consts.FieldService,
-			consts.FieldRealm,
-			consts.FieldKeytabPath,
-			consts.FieldKRB5ConfPath,
-		}
-		var missing []string
-		for _, f := range required {
-			if _, ok := l.getOk(d, f); !ok {
-				missing = append(missing, f)
+func (l *AuthLoginKerberos) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			if _, ok := l.getOk(d, consts.FieldToken); !ok {
+				return l.checkRequiredFields(d,
+					consts.FieldUsername,
+					consts.FieldService,
+					consts.FieldRealm,
+					consts.FieldKeytabPath,
+					consts.FieldKRB5ConfPath,
+				)
 			}
-		}
-
-		if len(missing) > 0 {
-			return fmt.Errorf("required fields are unset: %v", missing)
-		}
+			return nil
+		},
+	); err != nil {
+		return nil, err
 	}
 
-	return nil
+	return l, nil
 }
 
 // Method name for the kerberos authentication engine.

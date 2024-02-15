@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -11,7 +14,7 @@ import (
 
 func authBackendDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(authBackendDataSourceRead),
+		Read: provider.ReadWrapper(authBackendDataSourceRead),
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,

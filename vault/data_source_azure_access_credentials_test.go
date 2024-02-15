@@ -1,7 +1,9 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -12,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+// TestAccDataSourceAzureAccessCredentials_basic tests the creation of dynamic
+// service principals
 func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 	// This test takes a while because it's testing a loop that
 	// retries real credentials until they're eventually consistent.
@@ -21,8 +25,8 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
 	conf := testutil.GetTestAzureConf(t)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 20),
@@ -32,12 +36,70 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "lease_id"),
 				),
 			},
+		},
+	})
+}
+
+// TestAccDataSourceAzureAccessCredentials_basic tests the credential
+// generation for existing service principals
+func TestAccDataSourceAzureAccessCredentials_ExistingSP(t *testing.T) {
+	// This test takes a while because it's testing a loop that
+	// retries real credentials until they're eventually consistent.
+	if testing.Short() {
+		t.SkipNow()
+	}
+	mountPath := acctest.RandomWithPrefix("tf-test-azure")
+	conf := testutil.GetTestAzureConfExistingSP(t)
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
 			{
-				Config:      testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 5),
-				ExpectError: regexp.MustCompile(`despite trying for 5 seconds, 1 seconds apart, we were never able to get 1000 successes in a row`),
+				Config: testAccDataSourceAzureAccessCredentialsConfig_existingSP(mountPath, conf, 60),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "client_id"),
+					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "client_secret"),
+					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "lease_id"),
+				),
 			},
 		},
 	})
+}
+
+func testAccDataSourceAzureAccessCredentialsConfig_existingSP(mountPath string, conf *testutil.AzureTestConf, maxSecs int) string {
+	template := `
+resource "vault_azure_secret_backend" "test" {
+	path = "{{mountPath}}"
+	subscription_id = "{{subscriptionID}}"
+	tenant_id = "{{tenantID}}"
+	client_id = "{{clientID}}"
+	client_secret = "{{clientSecret}}"
+}
+
+resource "vault_azure_secret_backend_role" "test" {
+	backend = vault_azure_secret_backend.test.path
+	role = "my-role"
+	application_object_id = "{{appObjectID}}"
+	ttl = 300
+	max_ttl = 600
+}
+
+data "vault_azure_access_credentials" "test" {
+    backend = vault_azure_secret_backend.test.path
+    role = vault_azure_secret_backend_role.test.role
+    validate_creds = true
+	num_seconds_between_tests = 1
+	max_cred_validation_seconds = {{maxCredValidationSeconds}}
+}`
+
+	parsed := strings.Replace(template, "{{mountPath}}", mountPath, -1)
+	parsed = strings.Replace(parsed, "{{subscriptionID}}", conf.SubscriptionID, -1)
+	parsed = strings.Replace(parsed, "{{tenantID}}", conf.TenantID, -1)
+	parsed = strings.Replace(parsed, "{{clientID}}", conf.ClientID, -1)
+	parsed = strings.Replace(parsed, "{{clientSecret}}", conf.ClientSecret, -1)
+	parsed = strings.Replace(parsed, "{{appObjectID}}", conf.AppObjectID, -1)
+	parsed = strings.Replace(parsed, "{{maxCredValidationSeconds}}", strconv.Itoa(maxSecs), -1)
+	return parsed
 }
 
 func testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath string, conf *testutil.AzureTestConf, maxSecs int) string {

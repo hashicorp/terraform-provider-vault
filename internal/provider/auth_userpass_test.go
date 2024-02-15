@@ -1,7 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"path"
@@ -9,10 +14,133 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
+
+func TestAuthLoginUserPass_Init(t *testing.T) {
+	tests := []authLoginInitTest{
+		{
+			name:      "basic",
+			authField: consts.FieldAuthLoginUserpass,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginUserpass: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "ns1",
+						consts.FieldUsername:  "alice",
+						consts.FieldPassword:  "password1",
+					},
+				},
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "ns1",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeUserpass,
+				consts.FieldUsername:         "alice",
+				consts.FieldPassword:         "password1",
+				consts.FieldPasswordFile:     "",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "basic-empty-ns",
+			authField: consts.FieldAuthLoginUserpass,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginUserpass: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace:        "",
+						consts.FieldUseRootNamespace: true,
+						consts.FieldUsername:         "alice",
+						consts.FieldPassword:         "password1",
+					},
+				},
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "",
+				consts.FieldUseRootNamespace: true,
+				consts.FieldMount:            consts.MountTypeUserpass,
+				consts.FieldUsername:         "alice",
+				consts.FieldPassword:         "password1",
+				consts.FieldPasswordFile:     "",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "basic-with-ns",
+			authField: consts.FieldAuthLoginUserpass,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginUserpass: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "baz",
+						consts.FieldUsername:  "alice",
+						consts.FieldPassword:  "password1",
+					},
+				},
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "baz",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeUserpass,
+				consts.FieldUsername:         "alice",
+				consts.FieldPassword:         "password1",
+				consts.FieldPasswordFile:     "",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "basic-ns-unset",
+			authField: consts.FieldAuthLoginUserpass,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginUserpass: []interface{}{
+					map[string]interface{}{
+						consts.FieldUsername: "alice",
+						consts.FieldPassword: "password1",
+					},
+				},
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeUserpass,
+				consts.FieldUsername:         "alice",
+				consts.FieldPassword:         "password1",
+				consts.FieldPasswordFile:     "",
+			},
+			wantErr: false,
+		},
+		{
+			name:         "error-missing-resource",
+			authField:    consts.FieldAuthLoginUserpass,
+			expectParams: nil,
+			wantErr:      true,
+			expectErr:    fmt.Errorf("resource data missing field %q", consts.FieldAuthLoginUserpass),
+		},
+		{
+			name:      "error-missing-required",
+			authField: consts.FieldAuthLoginUserpass,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginUserpass: []interface{}{
+					map[string]interface{}{},
+				},
+			},
+			expectParams: nil,
+			wantErr:      true,
+			expectErr: fmt.Errorf("required fields are unset: %v", []string{
+				consts.FieldUsername,
+			}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := map[string]*schema.Schema{
+				tt.authField: GetUserpassLoginSchema(tt.authField),
+			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginUserpass{})
+		})
+	}
+}
 
 func Test_setupUserpassAuthParams(t *testing.T) {
 	tests := []struct {
@@ -166,6 +294,26 @@ func TestAuthLoginUserpass_Login(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginUserpass{
+				AuthLoginCommon{
+					authField: "baz",
+					mount:     "foo",
+					params: map[string]interface{}{
+						consts.FieldUsername: "bob",
+						consts.FieldPassword: "baz",
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
+		{
 			name: "error-no-username",
 			authLogin: &AuthLoginUserpass{
 				AuthLoginCommon{
@@ -203,6 +351,7 @@ func TestAuthLoginUserpass_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

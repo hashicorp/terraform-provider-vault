@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -19,7 +22,7 @@ var (
 func gcpSecretStaticAccountResource() *schema.Resource {
 	return &schema.Resource{
 		Create: gcpSecretStaticAccountCreate,
-		Read:   ReadWrapper(gcpSecretStaticAccountRead),
+		Read:   provider.ReadWrapper(gcpSecretStaticAccountRead),
 		Update: gcpSecretStaticAccountUpdate,
 		Delete: gcpSecretStaticAccountDelete,
 		Exists: gcpSecretStaticAccountExists,

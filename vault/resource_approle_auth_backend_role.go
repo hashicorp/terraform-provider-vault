@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -74,7 +77,7 @@ func approleAuthBackendRoleResource() *schema.Resource {
 
 	return &schema.Resource{
 		CreateContext: approleAuthBackendRoleCreate,
-		ReadContext:   ReadContextWrapper(approleAuthBackendRoleRead),
+		ReadContext:   provider.ReadContextWrapper(approleAuthBackendRoleRead),
 		UpdateContext: approleAuthBackendRoleUpdate,
 		DeleteContext: approleAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

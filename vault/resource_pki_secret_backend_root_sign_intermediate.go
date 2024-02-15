@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,19 +10,22 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendRootSignIntermediateCreate,
-		Read:   ReadWrapper(pkiSecretBackendRootSignIntermediateRead),
-		Update: pkiSecretBackendRootSignIntermediateUpdate,
-		Delete: pkiSecretBackendCertDelete,
+		CreateContext: pkiSecretBackendRootSignIntermediateCreate,
+		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendRootSignIntermediateRead),
+		UpdateContext: pkiSecretBackendRootSignIntermediateUpdate,
+		DeleteContext: pkiSecretBackendCertDelete,
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -34,25 +40,25 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 		},
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
-			"csr": {
+			consts.FieldCSR: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The CSR.",
 				ForceNew:    true,
 			},
-			"common_name": {
+			consts.FieldCommonName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "CN of intermediate to create.",
 				ForceNew:    true,
 			},
-			"alt_names": {
+			consts.FieldAltNames: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative names.",
@@ -61,7 +67,7 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ip_sans": {
+			consts.FieldIPSans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative IPs.",
@@ -70,7 +76,7 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"uri_sans": {
+			consts.FieldURISans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative URIs.",
@@ -79,7 +85,7 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"other_sans": {
+			consts.FieldOtherSans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of other SANs.",
@@ -88,13 +94,13 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ttl": {
+			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    false,
 				Description: "Time to live.",
 			},
-			"format": {
+			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "The format of data.",
@@ -102,27 +108,27 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Default:      "pem",
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle"}, false),
 			},
-			"max_path_length": {
+			consts.FieldMaxPathLength: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "The maximum path length to encode in the generated certificate.",
 				ForceNew:    true,
 				Default:     -1,
 			},
-			"exclude_cn_from_sans": {
+			consts.FieldExcludeCNFromSans: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Flag to exclude CN from SANs.",
 				ForceNew:    true,
 			},
-			"use_csr_values": {
+			consts.FieldUseCSRValues: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Preserve CSR values.",
 				ForceNew:    true,
 				Default:     false,
 			},
-			"permitted_dns_domains": {
+			consts.FieldPermittedDNSDomains: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of domains for which certificates are allowed to be issued.",
@@ -131,59 +137,59 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ou": {
+			consts.FieldOu: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The organization unit.",
 				ForceNew:    true,
 			},
-			"organization": {
+			consts.FieldOrganization: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The organization.",
 				ForceNew:    true,
 			},
-			"country": {
+			consts.FieldCountry: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The country.",
 				ForceNew:    true,
 			},
-			"locality": {
+			consts.FieldLocality: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The locality.",
 				ForceNew:    true,
 			},
-			"province": {
+			consts.FieldProvince: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The province.",
 				ForceNew:    true,
 			},
-			"street_address": {
+			consts.FieldStreetAddress: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The street address.",
 				ForceNew:    true,
 			},
-			"postal_code": {
+			consts.FieldPostalCode: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The postal code.",
 				ForceNew:    true,
 			},
-			"certificate": {
+			consts.FieldCertificate: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The signed intermediate CA certificate.",
 			},
-			"issuing_ca": {
+			consts.FieldIssuingCA: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The issuing CA certificate.",
 			},
-			"ca_chain": {
+			consts.FieldCAChain: {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Description: "The CA chain as a list of format specific certificates",
@@ -191,140 +197,143 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"certificate_bundle": {
+			consts.FieldCertificateBundle: {
 				Type:     schema.TypeString,
 				Computed: true,
 				Description: "The concatenation of the intermediate and issuing CA certificates (PEM encoded). " +
 					"Requires the format to be set to any of: pem, " +
 					"pem_bundle. The value will be empty for all other formats.",
 			},
-			"serial": {
+			consts.FieldSerial: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Deprecated:  "Use serial_number instead",
 				Description: "The serial number.",
 			},
-			"serial_number": {
+			consts.FieldSerialNumber: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The certificate's serial number, hex formatted.",
 			},
-			"revoke": {
+			consts.FieldRevoke: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
 				Description: "Revoke the certificate upon resource destruction.",
 			},
+			consts.FieldIssuerRef: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the default issuer of this request.",
+			},
 		},
 	}
 }
 
-func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
-
+	backend := d.Get(consts.FieldBackend).(string)
 	path := pkiSecretBackendRootSignIntermediateCreatePath(backend)
 
-	commonName := d.Get("common_name").(string)
+	commonName := d.Get(consts.FieldCommonName).(string)
 
-	iAltNames := d.Get("alt_names").([]interface{})
-	altNames := make([]string, 0, len(iAltNames))
-	for _, iAltName := range iAltNames {
-		altNames = append(altNames, iAltName.(string))
+	intermediateSignAPIFields := []string{
+		consts.FieldCSR,
+		consts.FieldCommonName,
+		consts.FieldTTL,
+		consts.FieldFormat,
+		consts.FieldMaxPathLength,
+		consts.FieldOu,
+		consts.FieldOrganization,
+		consts.FieldCountry,
+		consts.FieldLocality,
+		consts.FieldProvince,
+		consts.FieldStreetAddress,
+		consts.FieldPostalCode,
 	}
 
-	iIPSans := d.Get("ip_sans").([]interface{})
-	ipSans := make([]string, 0, len(iIPSans))
-	for _, iIpSan := range iIPSans {
-		ipSans = append(ipSans, iIpSan.(string))
+	intermediateSignBooleanAPIFields := []string{
+		consts.FieldExcludeCNFromSans,
+		consts.FieldUseCSRValues,
 	}
 
-	iUriSans := d.Get("uri_sans").([]interface{})
-	uriSans := make([]string, 0, len(iUriSans))
-	for _, iUriSan := range iUriSans {
-		uriSans = append(uriSans, iUriSan.(string))
+	intermediateSignStringArrayFields := []string{
+		consts.FieldAltNames,
+		consts.FieldIPSans,
+		consts.FieldURISans,
+		consts.FieldOtherSans,
+		consts.FieldPermittedDNSDomains,
 	}
 
-	iOtherSans := d.Get("other_sans").([]interface{})
-	otherSans := make([]string, 0, len(iOtherSans))
-	for _, iOtherSan := range iOtherSans {
-		otherSans = append(otherSans, iOtherSan.(string))
+	data := map[string]interface{}{}
+	for _, k := range intermediateSignAPIFields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
 
-	iPermittedDNSDomains := d.Get("permitted_dns_domains").([]interface{})
-	permittedDNSDomains := make([]string, 0, len(iPermittedDNSDomains))
-	for _, iPermittedDNSDomain := range iPermittedDNSDomains {
-		permittedDNSDomains = append(permittedDNSDomains, iPermittedDNSDomain.(string))
+	// add version specific multi-issuer fields
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if issuerRef, ok := d.GetOk(consts.FieldIssuerRef); ok {
+			data[consts.FieldIssuerRef] = issuerRef
+		}
 	}
 
-	data := map[string]interface{}{
-		"csr":                  d.Get("csr").(string),
-		"common_name":          d.Get("common_name").(string),
-		"ttl":                  d.Get("ttl").(string),
-		"format":               d.Get("format").(string),
-		"max_path_length":      d.Get("max_path_length").(int),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
-		"use_csr_values":       d.Get("use_csr_values").(bool),
-		"ou":                   d.Get("ou").(string),
-		"organization":         d.Get("organization").(string),
-		"country":              d.Get("country").(string),
-		"locality":             d.Get("locality").(string),
-		"province":             d.Get("province").(string),
-		"street_address":       d.Get("street_address").(string),
-		"postal_code":          d.Get("postal_code").(string),
+	// add boolean fields
+	for _, k := range intermediateSignBooleanAPIFields {
+		data[k] = d.Get(k)
 	}
 
-	if len(altNames) > 0 {
-		data["alt_names"] = strings.Join(altNames, ",")
-	}
-
-	if len(ipSans) > 0 {
-		data["ip_sans"] = strings.Join(ipSans, ",")
-	}
-
-	if len(uriSans) > 0 {
-		data["uri_sans"] = strings.Join(uriSans, ",")
-	}
-
-	if len(otherSans) > 0 {
-		data["other_sans"] = strings.Join(otherSans, ",")
-	}
-
-	if len(permittedDNSDomains) > 0 {
-		data["permitted_dns_domains"] = strings.Join(permittedDNSDomains, ",")
+	// add comma separated string fields
+	for _, k := range intermediateSignStringArrayFields {
+		m := util.ToStringArray(d.Get(k).([]interface{}))
+		if len(m) > 0 {
+			data[k] = strings.Join(m, ",")
+		}
 	}
 
 	log.Printf("[DEBUG] Creating root sign-intermediate on PKI secret backend %q", backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating root sign-intermediate on PKI secret backend %q: %s", backend, err)
+		return diag.Errorf("error creating root sign-intermediate on PKI secret backend %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Created root sign-intermediate on PKI secret backend %q", backend)
 
-	d.Set("certificate", resp.Data["certificate"])
-	d.Set("issuing_ca", resp.Data["issuing_ca"])
-	d.Set("serial", resp.Data["serial_number"])
-	d.Set("serial_number", resp.Data["serial_number"])
+	// helpful to consolidate code into single loop
+	// since 'serial' is deprecated, we read the 'serial_number'
+	// field from the response in order to set to the TF state
+	certFieldsMap := map[string]string{
+		consts.FieldCertificate:  consts.FieldCertificate,
+		consts.FieldIssuingCA:    consts.FieldIssuingCA,
+		consts.FieldSerialNumber: consts.FieldSerialNumber,
+		consts.FieldSerial:       consts.FieldSerialNumber,
+	}
+
+	for k, v := range certFieldsMap {
+		if err := d.Set(k, resp.Data[v]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	if err := setCAChain(d, resp); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err := setCertificateBundle(d, resp); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(fmt.Sprintf("%s/%s", backend, commonName))
 
-	return pkiSecretBackendRootSignIntermediateRead(d, meta)
+	return pkiSecretBackendRootSignIntermediateRead(ctx, d, meta)
 }
 
 func setCAChain(d *schema.ResourceData, resp *api.Secret) error {
-	field := "ca_chain"
+	field := consts.FieldCAChain
 	var caChain []string
 	if v, ok := resp.Data[field]; ok && v != nil {
 		switch v := v.(type) {
@@ -354,7 +363,7 @@ func getCAChain(m map[string]interface{}, literal bool) ([]string, error) {
 }
 
 func isPEMFormat(d *schema.ResourceData) bool {
-	format := d.Get("format").(string)
+	format := d.Get(consts.FieldFormat).(string)
 	switch format {
 	case "pem", "pem_bundle":
 		return true
@@ -364,7 +373,7 @@ func isPEMFormat(d *schema.ResourceData) bool {
 }
 
 func setCertificateBundle(d *schema.ResourceData, resp *api.Secret) error {
-	field := "certificate_bundle"
+	field := consts.FieldCertificateBundle
 	if !isPEMFormat(d) {
 		log.Printf("[WARN] Cannot set the %q, not in PEM format", field)
 		return nil
@@ -400,7 +409,7 @@ func parseCertChain(m map[string]interface{}, asCA, literal bool) ([]string, err
 		return nil
 	}
 
-	fields := []string{"issuing_ca", "certificate"}
+	fields := []string{consts.FieldIssuingCA, consts.FieldCertificate}
 	if !asCA {
 		fields = []string{fields[1], fields[0]}
 	}
@@ -421,15 +430,11 @@ func parseCertChain(m map[string]interface{}, asCA, literal bool) ([]string, err
 	return chain, nil
 }
 
-func pkiSecretBackendRootSignIntermediateRead(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendRootSignIntermediateRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 
-func pkiSecretBackendRootSignIntermediateUpdate(d *schema.ResourceData, m interface{}) error {
-	return nil
-}
-
-func pkiSecretBackendRootSignIntermediateDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendRootSignIntermediateUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	return nil
 }
 
@@ -440,7 +445,7 @@ func pkiSecretBackendRootSignIntermediateCreatePath(backend string) string {
 func pkiSecretRootSignIntermediateRV0() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"ca_chain": {
+			consts.FieldCAChain: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
@@ -456,7 +461,7 @@ func pkiSecretRootSignIntermediateRUpgradeV0(
 	if err != nil {
 		return nil, err
 	}
-	rawState["ca_chain"] = caChain
+	rawState[consts.FieldCAChain] = caChain
 
 	return rawState, nil
 }

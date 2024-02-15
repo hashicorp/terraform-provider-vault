@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -16,7 +19,7 @@ var errKMIPScopeNotFound = errors.New("KMIP scope not found")
 func kmipSecretScopeResource() *schema.Resource {
 	return &schema.Resource{
 		Create: kmipSecretScopeCreate,
-		Read:   ReadWrapper(kmipSecretScopeRead),
+		Read:   provider.ReadWrapper(kmipSecretScopeRead),
 		Update: kmipSecretScopeUpdate,
 		Delete: kmipSecretScopeDelete,
 		Importer: &schema.ResourceImporter{

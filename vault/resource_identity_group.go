@@ -1,6 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -14,14 +18,27 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
+const (
+	fieldExternalMemberGroupIDs = "external_member_group_ids"
+)
+
 func identityGroupResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityGroupCreate,
 		Update: identityGroupUpdate,
-		Read:   ReadWrapper(identityGroupRead),
+		Read:   provider.ReadWrapper(identityGroupRead),
 		Delete: identityGroupDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
+		},
+
+		SchemaVersion: 1,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    identityGroupExternalGroupIDsResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: identityGroupExternalGroupIDsUpgradeV0,
+			},
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -73,7 +90,7 @@ func identityGroupResource() *schema.Resource {
 				// Suppress the diff if group type is "external" because we cannot manage
 				// group members
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					if d.Get("type").(string) == "external" || d.Get("external_member_group_ids").(bool) == true {
+					if d.Get("type").(string) == "external" || d.Get(fieldExternalMemberGroupIDs).(bool) == true {
 						return true
 					}
 					return false
@@ -103,7 +120,7 @@ func identityGroupResource() *schema.Resource {
 				Description: "Manage member entities externally through `vault_identity_group_member_entity_ids`",
 			},
 
-			"external_member_group_ids": {
+			fieldExternalMemberGroupIDs: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
@@ -129,7 +146,8 @@ func identityGroupUpdateFields(d *schema.ResourceData, meta interface{}, data ma
 				data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
 			}
 
-			if externalMemberGroupIds, ok := d.GetOk("external_member_group_ids"); !(ok && externalMemberGroupIds.(bool)) {
+			externalMemberGroupIds := d.Get(fieldExternalMemberGroupIDs)
+			if !externalMemberGroupIds.(bool) {
 				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 			}
 		}
@@ -148,7 +166,7 @@ func identityGroupUpdateFields(d *schema.ResourceData, meta interface{}, data ma
 					data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
 				}
 
-				if !d.Get("external_member_group_ids").(bool) {
+				if !d.Get(fieldExternalMemberGroupIDs).(bool) {
 					data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 				}
 			}
@@ -328,4 +346,27 @@ func readIdentityGroupMemberEntityIds(client *api.Client, groupID string, retry 
 		return v.([]interface{}), nil
 	}
 	return make([]interface{}, 0), nil
+}
+
+func identityGroupExternalGroupIDsResourceV0() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			fieldExternalMemberGroupIDs: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Manage member groups externally through `vault_identity_group_member_group_ids`",
+			},
+		},
+	}
+}
+
+func identityGroupExternalGroupIDsUpgradeV0(
+	_ context.Context, rawState map[string]interface{}, _ interface{},
+) (map[string]interface{}, error) {
+	if rawState[fieldExternalMemberGroupIDs] == nil {
+		rawState[fieldExternalMemberGroupIDs] = false
+	}
+
+	return rawState, nil
 }

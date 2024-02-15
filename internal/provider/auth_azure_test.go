@@ -1,10 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -17,14 +20,7 @@ import (
 const envVarTFAccAzureAuth = "TF_ACC_AZURE_AUTH"
 
 func TestAuthLoginAzure_Init(t *testing.T) {
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name:      "basic",
 			authField: consts.FieldAuthLoginAzure,
@@ -42,6 +38,7 @@ func TestAuthLoginAzure_Init(t *testing.T) {
 			},
 			expectParams: map[string]interface{}{
 				consts.FieldNamespace:         "ns1",
+				consts.FieldUseRootNamespace:  false,
 				consts.FieldMount:             consts.MountTypeAzure,
 				consts.FieldRole:              "alice",
 				consts.FieldJWT:               "jwt1",
@@ -104,25 +101,7 @@ func TestAuthLoginAzure_Init(t *testing.T) {
 			s := map[string]*schema.Schema{
 				tt.authField: GetAzureLoginSchema(tt.authField),
 			}
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginAzure{}
-			err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if err != nil {
-				if tt.expectErr != nil {
-					if !reflect.DeepEqual(tt.expectErr, err) {
-						t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-					}
-				}
-			} else {
-				if !reflect.DeepEqual(tt.expectParams, l.params) {
-					t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-				}
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginAzure{})
 		})
 	}
 }
@@ -177,7 +156,11 @@ func TestAuthLoginAzure_LoginPath(t *testing.T) {
 func TestAuthLoginAzure_Login(t *testing.T) {
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		m, err := json.Marshal(
-			&api.Secret{},
+			&api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "azure",
+				},
+			},
 		)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -221,7 +204,11 @@ func TestAuthLoginAzure_Login(t *testing.T) {
 					consts.FieldResourceGroupName: "res1",
 				},
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "azure",
+				},
+			},
 			wantErr: false,
 		},
 		{
@@ -248,8 +235,33 @@ func TestAuthLoginAzure_Login(t *testing.T) {
 			skipFunc: func(t *testing.T) {
 				testutil.SkipTestEnvUnset(t, envVarTFAccAzureAuth)
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "azure",
+				},
+			},
 			wantErr: false,
+		},
+		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginAzure{
+				AuthLoginCommon: AuthLoginCommon{
+					authField: consts.FieldAuthLoginAzure,
+					params: map[string]interface{}{
+						consts.FieldRole:              "alice",
+						consts.FieldJWT:               "jwt1",
+						consts.FieldSubscriptionID:    "sub1",
+						consts.FieldResourceGroupName: "res1",
+						consts.FieldVMSSName:          "vmss1",
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
 		},
 		{
 			name: "error-uninitialized",
@@ -269,6 +281,7 @@ func TestAuthLoginAzure_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

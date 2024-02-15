@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -17,7 +20,7 @@ import (
 func tokenResource() *schema.Resource {
 	return &schema.Resource{
 		Create: tokenCreate,
-		Read:   ReadWrapper(tokenRead),
+		Read:   provider.ReadWrapper(tokenRead),
 		Update: tokenUpdate,
 		Delete: tokenDelete,
 		Exists: tokenExists,

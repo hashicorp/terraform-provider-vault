@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -58,6 +61,8 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "key_usage.1", "KeyAgreement"),
 		resource.TestCheckResourceAttr(resourceName, "key_usage.2", "KeyEncipherment"),
 		resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
+		resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.0", "1.3.6.1.4.1.311.4"),
 		resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
 		resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
 		resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
@@ -74,9 +79,9 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
 	}
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),
@@ -111,9 +116,9 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, combinedPolicyIdentifiers),
@@ -141,7 +146,9 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "enforce_hostnames", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allow_ip_sans", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.0", "uri.test.domain"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans_template", "false"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
+		resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "true"),
 		resource.TestCheckResourceAttr(resourceName, "server_flag", "true"),
 		resource.TestCheckResourceAttr(resourceName, "client_flag", "true"),
 		resource.TestCheckResourceAttr(resourceName, "code_signing_flag", "false"),
@@ -155,6 +162,8 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "key_usage.1", "KeyAgreement"),
 		resource.TestCheckResourceAttr(resourceName, "key_usage.2", "KeyEncipherment"),
 		resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
+		resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.0", "1.3.6.1.4.1.311.4"),
 		resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
 		resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
 		resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
@@ -173,9 +182,9 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
 	}
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),
@@ -220,6 +229,45 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion111), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, ""),
+				Check:  resource.TestCheckResourceAttr(resourceName, "issuer_ref", "default"),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion111), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, `issuer_ref = "root-a"`),
+				Check:  resource.TestCheckResourceAttr(resourceName, "issuer_ref", "root-a"),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion113), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, `allowed_user_ids = ["test"]`),
+				Check:  resource.TestCheckResourceAttr(resourceName, "allowed_user_ids.0", "test"),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testPkiSecretBackendRoleConfig_updated(name, backend, testLegacyPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -237,8 +285,12 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allow_any_name", "false"),
 					resource.TestCheckResourceAttr(resourceName, "enforce_hostnames", "true"),
 					resource.TestCheckResourceAttr(resourceName, "allow_ip_sans", "true"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.0", "uri.test.domain"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.1", "spiffe://{{identity.entity.name}}"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans_template", "true"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
+					resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "false"),
 					resource.TestCheckResourceAttr(resourceName, "server_flag", "true"),
 					resource.TestCheckResourceAttr(resourceName, "client_flag", "true"),
 					resource.TestCheckResourceAttr(resourceName, "code_signing_flag", "false"),
@@ -250,6 +302,8 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "key_usage.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "key_usage.0", "DigitalSignature"),
 					resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.0", "1.3.6.1.4.1.311.4"),
 					resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
 					resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
 					resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
@@ -273,11 +327,24 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
+			{
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, `key_usage = [""]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "key_usage.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "key_usage.0", ""),
+				),
+			},
+			{
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, `key_usage = []`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "key_usage.#", "0"),
+				),
+			},
 		},
 	})
 }
 
-func testPkiSecretBackendRoleConfig_basic(name, path string, roleTTL, maxTTL int, policyIdentifiers string) string {
+func testPkiSecretBackendRoleConfig_basic(name, path string, roleTTL, maxTTL int, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "pki" {
   path = "%s"
@@ -307,6 +374,7 @@ resource "vault_pki_secret_backend_role" "test" {
   key_type                           = "rsa"
   key_bits                           = 2048
   ext_key_usage                      = []
+  ext_key_usage_oids                 = ["1.3.6.1.4.1.311.4"]
   use_csr_common_name                = true
   use_csr_sans                       = true
   ou                                 = ["test"]
@@ -324,7 +392,7 @@ resource "vault_pki_secret_backend_role" "test" {
   not_before_duration                = "45m"
   allowed_serial_numbers             = ["*"]
 }
-`, path, name, roleTTL, maxTTL, policyIdentifiers)
+`, path, name, roleTTL, maxTTL, extraConfig)
 }
 
 func testPkiSecretBackendRoleConfig_updated(name, path string, policyIdentifiers string) string {
@@ -349,8 +417,10 @@ resource "vault_pki_secret_backend_role" "test" {
   allow_any_name = false
   enforce_hostnames = true
   allow_ip_sans = true
-  allowed_uri_sans = ["uri.test.domain"]
+  allowed_uri_sans = ["uri.test.domain", "spiffe://{{identity.entity.name}}"]
+  allowed_uri_sans_template = true
   allowed_other_sans = ["1.2.3.4.5.5;UTF8:test"]
+  allow_wildcard_certificates = false
   server_flag = true
   client_flag = true
   code_signing_flag = false
@@ -359,6 +429,7 @@ resource "vault_pki_secret_backend_role" "test" {
   key_bits = 2048
   key_usage = ["DigitalSignature"]
   ext_key_usage = []
+  ext_key_usage_oids = ["1.3.6.1.4.1.311.4"]
   use_csr_common_name = true
   use_csr_sans = true
   ou = ["test"]

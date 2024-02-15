@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -25,8 +28,8 @@ func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 	region := testutil.GetTestAWSRegion(t)
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAccessCredentialsConfig_basic(mountPath, accessKey, secretKey, region),
@@ -107,8 +110,8 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			resource.Test(t, resource.TestCase{
-				Providers: testProviders,
-				PreCheck:  func() { testutil.TestAccPreCheck(t) },
+				ProviderFactories: providerFactories,
+				PreCheck:          func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
 						Config: test.config,
@@ -134,8 +137,8 @@ func TestAccDataSourceAWSAccessCredentials_sts_ttl(t *testing.T) {
 	ttl := "18m"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAccessCredentialsConfig_sts_basic(mountPath, accessKey, secretKey, region),

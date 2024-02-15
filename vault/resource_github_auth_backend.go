@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -59,7 +62,7 @@ func githubAuthBackendResource() *schema.Resource {
 
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: githubAuthBackendCreate,
-		Read:   ReadWrapper(githubAuthBackendRead),
+		Read:   provider.ReadWrapper(githubAuthBackendRead),
 		Update: githubAuthBackendUpdate,
 		Delete: githubAuthBackendDelete,
 		Importer: &schema.ResourceImporter{
@@ -67,7 +70,7 @@ func githubAuthBackendResource() *schema.Resource {
 		},
 		Schema:        fields,
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
-	})
+	}, false)
 }
 
 func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {

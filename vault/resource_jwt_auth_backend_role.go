@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -147,7 +150,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 
 	return &schema.Resource{
 		CreateContext: jwtAuthBackendRoleCreate,
-		ReadContext:   ReadContextWrapper(jwtAuthBackendRoleRead),
+		ReadContext:   provider.ReadContextWrapper(jwtAuthBackendRoleRead),
 		UpdateContext: jwtAuthBackendRoleUpdate,
 		DeleteContext: jwtAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

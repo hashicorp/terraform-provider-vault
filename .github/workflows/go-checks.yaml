@@ -1,0 +1,10 @@
+name: Go checks
+on:
+  push:
+    paths-ignore:
+      - 'website/**'
+      - 'CHANGELOG.md'
+jobs:
+  go-checks:
+    # using `main` as the ref will keep your workflow up-to-date
+    uses: hashicorp/vault-workflows-common/.github/workflows/go-checks.yaml@main

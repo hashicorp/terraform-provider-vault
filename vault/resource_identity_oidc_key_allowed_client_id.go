@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -13,7 +16,7 @@ import (
 func identityOidcKeyAllowedClientId() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOidcKeyAllowedClientIdWrite,
-		Read:   ReadWrapper(identityOidcKeyAllowedClientIdRead),
+		Read:   provider.ReadWrapper(identityOidcKeyAllowedClientIdRead),
 		Delete: identityOidcKeyAllowedClientIdDelete,
 
 		Schema: map[string]*schema.Schema{

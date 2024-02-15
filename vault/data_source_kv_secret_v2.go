@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -16,7 +19,7 @@ import (
 
 func kvSecretV2DataSource() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: ReadContextWrapper(kvSecretV2DataSourceRead),
+		ReadContext: provider.ReadContextWrapper(kvSecretV2DataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldMount: {
@@ -134,8 +137,10 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set(consts.FieldData, serializeDataMapToString(data.(map[string]interface{}))); err != nil {
-		return diag.FromErr(err)
+	if v, ok := data.(map[string]interface{}); ok {
+		if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if v, ok := secret.Data["metadata"]; ok {

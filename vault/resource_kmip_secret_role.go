@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -50,7 +53,7 @@ var kmipRoleAPIBooleanFields = []string{
 func kmipSecretRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: kmipSecretRoleCreate,
-		Read:   ReadWrapper(kmipSecretRoleRead),
+		Read:   provider.ReadWrapper(kmipSecretRoleRead),
 		Update: kmipSecretRoleUpdate,
 		Delete: kmipSecretRoleDelete,
 		Importer: &schema.ResourceImporter{

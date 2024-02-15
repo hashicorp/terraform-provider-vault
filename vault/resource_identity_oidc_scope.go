@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -16,7 +19,7 @@ func identityOIDCScopeResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOIDCScopeCreateUpdate,
 		Update: identityOIDCScopeCreateUpdate,
-		Read:   ReadWrapper(identityOIDCScopeRead),
+		Read:   provider.ReadWrapper(identityOIDCScopeRead),
 		Delete: identityOIDCScopeDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

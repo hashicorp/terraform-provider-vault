@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -12,7 +15,7 @@ import (
 
 func kvSecretListDataSourceV2() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: ReadContextWrapper(kvSecretV2ListDataSourceRead),
+		ReadContext: provider.ReadContextWrapper(kvSecretV2ListDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldMount: {

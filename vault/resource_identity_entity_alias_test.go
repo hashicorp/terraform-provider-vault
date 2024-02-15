@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -23,9 +26,9 @@ func TestAccIdentityEntityAlias(t *testing.T) {
 	nameGithubA := "vault_auth_backend.githubA"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityAliasDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityAliasConfig(entity, false, false),
@@ -121,9 +124,9 @@ resource "vault_identity_entity_alias" "test2" {
 	entityResource1 := "vault_identity_entity.test1"
 	entityResource2 := "vault_identity_entity.test2"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityAliasDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				// test the case where the apply operation would produce two new aliases having the same name
@@ -187,7 +190,7 @@ resource "vault_identity_entity_alias" "test2" {
 			{
 				// delete one of the alias's to ensure an update operation re-creates it.
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					aliases, err := entity.FindAliases(client, &entity.FindAliasParams{
 						Name: alias,
@@ -236,9 +239,9 @@ func TestAccIdentityEntityAlias_Update(t *testing.T) {
 	nameGithubB := "vault_auth_backend.githubB"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityAliasDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityAliasConfig(entity, false, false),
@@ -294,9 +297,9 @@ func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
 	// TODO add back empty custom_metadata update tests
 	// once bug in Vault is resolved
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityAliasDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityAliasMetadataConfig(entity, false),

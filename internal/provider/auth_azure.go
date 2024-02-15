@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -13,6 +16,17 @@ import (
 )
 
 const defaultAzureScope = "https://management.azure.com/"
+
+func init() {
+	field := consts.FieldAuthLoginAzure
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginAzure{}
+			return a.Init(r, field)
+		}, GetAzureLoginSchema); err != nil {
+		panic(err)
+	}
+}
 
 // GetAzureLoginSchema for the azure authentication engine.
 func GetAzureLoginSchema(authField string) *schema.Schema {
@@ -85,8 +99,10 @@ func GetAzureLoginSchemaResource(authField string) *schema.Resource {
 				ConflictsWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldJWT)},
 			},
 		},
-	}, consts.MountTypeAzure)
+	}, authField, consts.MountTypeAzure)
 }
+
+var _ AuthLogin = (*AuthLoginAzure)(nil)
 
 type AuthLoginAzure struct {
 	AuthLoginCommon
@@ -105,20 +121,20 @@ func (l *AuthLoginAzure) LoginPath() string {
 	return fmt.Sprintf("auth/%s/login", l.MountPath())
 }
 
-func (l *AuthLoginAzure) Init(d *schema.ResourceData, authField string) error {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return err
+func (l *AuthLoginAzure) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			err := l.checkRequiredFields(d, l.requiredParams()...)
+			if err != nil {
+				return err
+			}
+			return l.checkFieldsOneOf(d, consts.FieldVMName, consts.FieldVMSSName)
+		},
+	); err != nil {
+		return nil, err
 	}
 
-	if err := l.checkRequiredFields(d, l.requiredParams()...); err != nil {
-		return err
-	}
-
-	if err := l.checkFieldsOneOf(d, consts.FieldVMName, consts.FieldVMSSName); err != nil {
-		return err
-	}
-
-	return nil
+	return l, nil
 }
 
 func (l *AuthLoginAzure) requiredParams() []string {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -15,7 +18,7 @@ func identityOIDCAssignmentResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOIDCAssignmentCreateUpdate,
 		Update: identityOIDCAssignmentCreateUpdate,
-		Read:   ReadWrapper(identityOIDCAssignmentRead),
+		Read:   provider.ReadWrapper(identityOIDCAssignmentRead),
 		Delete: identityOIDCAssignmentDelete,
 
 		Schema: map[string]*schema.Schema{

@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 output "mount_path" {
   value = values(vault_mount.demo)[*].path
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -19,9 +22,9 @@ func TestAccTransitCacheConfig(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-cache-config")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccTransitCacheConfigCheckDestroyed,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccTransitCacheConfigCheckDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTransitCacheConfig(name, 600),

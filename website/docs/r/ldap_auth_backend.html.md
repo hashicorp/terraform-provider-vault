@@ -40,6 +40,9 @@ The following arguments are supported:
 
 * `case_sensitive_names` - (Optional) Control case senstivity of objects fetched from LDAP, this is used for object matching in vault
 
+* `max_page_size` - (Optional) Sets the max page size for LDAP lookups, by default it's set to -1.
+   *Available only for Vault 1.11.11+, 1.12.7+, and 1.13.3+*.
+
 * `tls_min_version` - (Optional) Minimum acceptable version of TLS
 
 * `tls_max_version` - (Optional) Maximum acceptable version of TLS

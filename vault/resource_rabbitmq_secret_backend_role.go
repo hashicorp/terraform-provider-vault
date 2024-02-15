@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -14,7 +17,7 @@ import (
 func rabbitMQSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: rabbitMQSecretBackendRoleWrite,
-		Read:   ReadWrapper(rabbitMQSecretBackendRoleRead),
+		Read:   provider.ReadWrapper(rabbitMQSecretBackendRoleRead),
 		Update: rabbitMQSecretBackendRoleWrite,
 		Delete: rabbitMQSecretBackendRoleDelete,
 		Exists: rabbitMQSecretBackendRoleExists,

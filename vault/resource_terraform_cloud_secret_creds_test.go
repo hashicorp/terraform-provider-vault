@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -20,7 +23,7 @@ func TestAccResourceTerraformCloudSecretCredsOrganizationBasic(t *testing.T) {
 	token, organization := vals[0], vals[1]
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -45,7 +48,7 @@ func TestAccResourceTerraformCloudSecretCredsTeamBasic(t *testing.T) {
 	token, organization, teamID := vals[0], vals[1], vals[2]
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -71,7 +74,7 @@ func TestAccResourceTerraformCloudSecretCredsUserBasic(t *testing.T) {
 	token, userID := vals[0], vals[1]
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},

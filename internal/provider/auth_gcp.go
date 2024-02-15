@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -21,6 +24,17 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
+
+func init() {
+	field := consts.FieldAuthLoginGCP
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginGCP{}
+			return a.Init(r, field)
+		}, GetGCPLoginSchema); err != nil {
+		panic(err)
+	}
+}
 
 // GetGCPLoginSchema for the gcp authentication engine.
 func GetGCPLoginSchema(authField string) *schema.Schema {
@@ -62,14 +76,23 @@ func GetGCPLoginSchemaResource(authField string) *schema.Resource {
 				ConflictsWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldJWT)},
 			},
 		},
-	}, consts.MountTypeGCP)
+	}, authField, consts.MountTypeGCP)
 }
+
+var _ AuthLogin = (*AuthLoginGCP)(nil)
 
 // AuthLoginGCP provides an interface for authenticating to the
 // gcp authentication engine.
 // Requires configuration provided by SchemaLoginGCP.
 type AuthLoginGCP struct {
 	AuthLoginCommon
+}
+
+func (l *AuthLoginGCP) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
+		return nil, err
+	}
+	return l, nil
 }
 
 // MountPath for the cert authentication engine.
@@ -97,6 +120,7 @@ func (l *AuthLoginGCP) Login(client *api.Client) (*api.Secret, error) {
 	}
 
 	params, err := l.copyParamsExcluding(
+		consts.FieldUseRootNamespace,
 		consts.FieldNamespace,
 		consts.FieldMount,
 		consts.FieldJWT,
@@ -187,7 +211,7 @@ func (l *AuthLoginGCP) getJWT(ctx context.Context) (string, error) {
 	if metadata.OnGCE() {
 		// If we are running on GCE instance we can get the JWT token
 		// from the meta-data service.
-		audience := fmt.Sprintf("%s/vault", l.params[consts.FieldRole])
+		audience := fmt.Sprintf("vault/%s", l.params[consts.FieldRole])
 		c := metadata.NewClient(nil)
 		resp, err := c.Get(
 			fmt.Sprintf("instance/service-accounts/default/identity?audience=%s&format=full", audience),

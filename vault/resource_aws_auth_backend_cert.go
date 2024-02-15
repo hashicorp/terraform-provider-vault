@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -21,7 +24,7 @@ var (
 func awsAuthBackendCertResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendCertCreate,
-		Read:   ReadWrapper(awsAuthBackendCertRead),
+		Read:   provider.ReadWrapper(awsAuthBackendCertRead),
 		Delete: awsAuthBackendCertDelete,
 		Exists: awsAuthBackendCertExists,
 		Importer: &schema.ResourceImporter{
