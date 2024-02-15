@@ -2,6 +2,7 @@
 
 BUGS:
 * Handle graceful destruction of resources when approle is deleted out-of-band ([#2142](https://github.com/hashicorp/terraform-provider-vault/pull/2142)).
+* Correctly detect drift of kvv1 secrets ([#2144](https://github.com/hashicorp/terraform-provider-vault/pull/2144))
 
 ## 3.25.0 (Feb 14, 2024)
 
