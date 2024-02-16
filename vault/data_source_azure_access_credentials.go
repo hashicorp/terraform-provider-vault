@@ -33,7 +33,7 @@ const (
 	azureUSGovCloudEnvName  = "AZUREUSGOVERNMENTCLOUD"
 )
 
-var configs = map[string]cloud.Configuration{
+var azureCloudConfigMap = map[string]cloud.Configuration{
 	azureChinaCloudEnvName:  cloud.AzureChina,
 	azurePublicCloudEnvName: cloud.AzurePublic,
 	azureUSGovCloudEnvName:  cloud.AzureGovernment,
@@ -313,7 +313,7 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 }
 
 func getAzureCloudConfigFromName(name string) (cloud.Configuration, error) {
-	if c, ok := configs[strings.ToUpper(name)]; !ok {
+	if c, ok := azureCloudConfigMap[strings.ToUpper(name)]; !ok {
 		return c, fmt.Errorf("unsupported Azure cloud name %q", name)
 	} else {
 		return c, nil

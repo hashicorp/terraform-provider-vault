@@ -174,7 +174,7 @@ func Test_getAzureCloudConfigFromName(t *testing.T) {
 			wantErr:   true,
 		},
 	}
-	for k, v := range configs {
+	for k, v := range azureCloudConfigMap {
 		tests = append(tests, test{
 			name:      "mixed-" + k,
 			cloudName: mixedCap(k),
