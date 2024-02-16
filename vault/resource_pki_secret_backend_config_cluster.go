@@ -9,6 +9,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -16,17 +17,12 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-var pkiClusterFields = []string{
-	consts.FieldPath,
-	consts.FieldAIAPath,
-}
-
 func pkiSecretBackendConfigClusterResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendConfigClusterCreateUpdate,
-		Read:   provider.ReadWrapper(pkiSecretBackendConfigClusterRead),
-		Update: pkiSecretBackendConfigClusterCreateUpdate,
-		Delete: pkiSecretBackendConfigClusterDelete,
+		CreateContext: provider.MountCreateContextWrapper(pkiSecretBackendConfigClusterCreate, provider.VaultVersion113),
+		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendConfigClusterRead),
+		UpdateContext: pkiSecretBackendConfigClusterUpdate,
+		DeleteContext: pkiSecretBackendConfigClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: func(_ context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 				id := d.Id()
@@ -47,96 +43,119 @@ func pkiSecretBackendConfigClusterResource() *schema.Resource {
 			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The path of the PKI secret backend the resource belongs to.",
+				ForceNew:    true,
+				Description: "Full path where PKI backend is mounted.",
 			},
 			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Specifies the path to this performance replication cluster's API mount path.",
-				Elem:        &schema.Schema{Type: schema.TypeString},
+				Description: "Path to the cluster's API mount path.",
 			},
 			consts.FieldAIAPath: {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Specifies the path to this performance replication cluster's AIA distribution point.",
-				Elem:        &schema.Schema{Type: schema.TypeString},
+				Description: "Path to the cluster's AIA distribution point.",
 			},
 		},
 	}
 }
 
-func pkiSecretBackendConfigClusterCreateUpdate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendConfigClusterCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	path := fmt.Sprintf("%s/config/cluster", backend)
 
-	path := pkiSecretBackendConfigClusterPath(backend)
-
-	action := "Create"
-	if !d.IsNewResource() {
-		action = "Update"
+	resp, err := client.Logical().ReadWithContext(ctx, path)
+	if err != nil {
+		return diag.Errorf("error reading cluster config at %s, err=%s", path, err)
 	}
 
+	if resp == nil {
+		return diag.Errorf("no cluster config found at path %s", path)
+	}
+
+	d.SetId(path)
+
+	return pkiSecretBackendConfigClusterUpdate(ctx, d, meta)
+}
+
+func pkiSecretBackendConfigClusterUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
+	path := d.Id()
+
+	fields := []string{
+		consts.FieldPath,
+		consts.FieldAIAPath,
+	}
+
+	var patchRequired bool
 	data := map[string]interface{}{}
-
-	for _, k := range pkiClusterFields {
-		if v, ok := d.GetOk(k); ok {
-			data[k] = v
+	for _, k := range fields {
+		if d.HasChange(k) {
+			data[k] = d.Get(k)
+			patchRequired = true
 		}
 	}
 
-	log.Printf("[DEBUG] %s cluster config on PKI secret backend %q", action, backend)
-	_, err := client.Logical().Write(path, data)
-	if err != nil {
-		return fmt.Errorf("error writing PKI cluster config to %q: %w", backend, err)
-	}
-	log.Printf("[DEBUG] %sd cluster config on PKI secret backend %q", action, backend)
-
-	if d.IsNewResource() {
-		d.SetId(fmt.Sprintf("%s/config/cluster", backend))
+	if patchRequired {
+		_, err := client.Logical().WriteWithContext(ctx, path, data)
+		if err != nil {
+			return diag.Errorf("error writing data to %q, err=%s", path, err)
+		}
 	}
 
-	return pkiSecretBackendConfigClusterRead(d, meta)
+	return pkiSecretBackendConfigClusterRead(ctx, d, meta)
 }
 
-func pkiSecretBackendConfigClusterRead(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendConfigClusterRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
 	if path == "" {
-		return fmt.Errorf("no path set, id=%q", d.Id())
+		return diag.Errorf("no path set, id=%q", d.Id())
 	}
 
-	log.Printf("[DEBUG] Reading cluster config from PKI secret path %q", path)
-	config, err := client.Logical().Read(path)
+	log.Printf("[DEBUG] Reading %s from Vault", path)
+	resp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error reading cluster config on PKI secret backend %q: %s", path, err)
+		return diag.Errorf("error reading from Vault: %s", err)
 	}
 
-	if config == nil {
-		log.Printf("[WARN] Removing cluster config path %q as its ID is invalid", path)
-		d.SetId("")
+	if resp == nil {
+		backend := d.Get(consts.FieldBackend).(string)
+		path := fmt.Sprintf("%s/config/cluster", backend)
+		d.SetId(path)
+
 		return nil
 	}
 
-	for _, k := range pkiClusterFields {
-		d.Set(k, config.Data[k])
+	fields := []string{
+		consts.FieldPath,
+		consts.FieldAIAPath,
+	}
+
+	for _, k := range fields {
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return diag.Errorf("error setting state key %q for issuer, err=%s",
+				k, err)
+		}
 	}
 
 	return nil
 }
 
-func pkiSecretBackendConfigClusterDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendConfigClusterDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
-}
-
-func pkiSecretBackendConfigClusterPath(backend string) string {
-	return strings.Trim(backend, "/") + "/config/cluster"
 }

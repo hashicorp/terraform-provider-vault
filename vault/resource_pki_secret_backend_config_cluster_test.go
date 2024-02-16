@@ -5,14 +5,10 @@ package vault
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -20,121 +16,55 @@ import (
 )
 
 func TestPkiSecretBackendConfigCluster_basic(t *testing.T) {
-	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	backend := acctest.RandomWithPrefix("pki-root")
+	resourceType := "vault_pki_secret_backend_config_cluster"
+	resourceName := resourceType + ".test"
 
 	clusterPath := "http://127.0.0.1:8200/v1/pki"
 	clusterAiaPath := "http://127.0.0.1:8200/v1/pki"
 
-	resourceType := "vault_pki_secret_backend_config_cluster"
-	resourceName := resourceType + ".test"
-	getChecks := func(p, a string) []resource.TestCheckFunc {
-		checks := []resource.TestCheckFunc{
-			resource.TestCheckResourceAttr(
-				resourceName, "path", p),
-			resource.TestCheckResourceAttr(
-				resourceName, "aia_path", a),
-		}
-		return checks
-	}
-
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
-				// Test that reading from an unconfigured mount succeeds
-				Config: testPkiSecretBackendCertConfigClusterMountConfig(rootPath),
-				Check:  testPkiSecretBackendConfigClusterEmptyRead,
-			},
-			{
-				Config: testPkiSecretBackendCertConfigClusterConfig(
-					rootPath, clusterPath, clusterAiaPath),
+				Config: testPkiSecretBackendConfigCluster(backend, "", ""),
 				Check: resource.ComposeTestCheckFunc(
-					getChecks(clusterPath, clusterAiaPath)...,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAIAPath, ""),
 				),
 			},
 			{
-				Config: testPkiSecretBackendCertConfigClusterConfig(
-					rootPath, clusterPath, clusterAiaPath),
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testPkiSecretBackendCertConfigClusterConfig(
-					rootPath, clusterPath+"/new", clusterAiaPath+"/new"),
+				Config: testPkiSecretBackendConfigCluster(backend, clusterPath, clusterAiaPath),
 				Check: resource.ComposeTestCheckFunc(
-					getChecks(clusterPath+"/new", clusterAiaPath+"/new")...,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, clusterPath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAIAPath, clusterAiaPath),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
 
-func testPkiSecretBackendConfigClusterEmptyRead(s *terraform.State) error {
-	paths, err := listPkiClusterPaths(s)
-	if err != nil {
-		return err
-	}
-	for _, path := range paths {
-		d := &schema.ResourceData{}
-		d.SetId(path)
-		if err := pkiSecretBackendConfigClusterRead(d, testProvider.Meta()); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func listPkiClusterPaths(s *terraform.State) ([]string, error) {
-	var paths []string
-
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_mount" {
-			continue
-		}
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "pki" && path == rsPath {
-				paths = append(paths, path)
-			}
-		}
-	}
-
-	return paths, nil
-}
-
-func testPkiSecretBackendCertConfigClusterMountConfig(rootPath string) string {
+func testPkiSecretBackendConfigCluster(path, clusterPath string, clusterAiaPath string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test-root" {
-  path                      = "%s"
-  type                      = "pki"
-  description               = "test root"
+resource "vault_mount" "test" {
+	path                      = "%s"
+	type                      = "pki"
+	description               = "PKI secret engine mount"
   default_lease_ttl_seconds = 8640000
   max_lease_ttl_seconds     = 8640000
 }
-`, rootPath)
-}
-
-func testPkiSecretBackendCertConfigClusterConfig(rootPath string, clusterPath string, clusterAiaPath string) string {
-	return fmt.Sprintf(`
-%s
 
 resource "vault_pki_secret_backend_config_cluster" "test" {
-  backend  = vault_mount.test-root.path
+  backend  = vault_mount.test.path
   path     = "%s"
   aia_path = "%s"
-}
-`,
-		testPkiSecretBackendCertConfigClusterMountConfig(rootPath),
-		clusterPath, clusterAiaPath)
+}`, path, clusterPath, clusterAiaPath)
 }
