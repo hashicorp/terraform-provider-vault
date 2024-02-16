@@ -300,13 +300,13 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 	log.Printf("[DEBUG] Reading mount %s from Vault", path)
 
 	mount, err := getMountIfPresent(client, path)
-	if err != nil {
-		return err
-	}
-
 	if mount == nil {
 		d.SetId("")
 		return nil
+	}
+
+	if err != nil {
+		return err
 	}
 
 	if !excludeType {
