@@ -4,11 +4,8 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -284,28 +281,14 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 // Currently the Vault api package does not provide a GET /sys/mounts/:path
 // method so we make a raw API request.
 func getMountIfPresent(client *api.Client, path string) (*api.MountOutput, error) {
-	req := client.NewRequest(http.MethodGet, "/v1/sys/mounts/"+path)
-	resp, err := client.RawRequest(req)
+	mount, err := client.Sys().GetMount(path)
 	if err != nil {
 		return nil, fmt.Errorf("error reading from Vault: %s", err)
 	}
-
-	if resp == nil {
-		return nil, fmt.Errorf("expected a response, got nil response")
+	if mount.Accessor == "" {
+		return nil, fmt.Errorf("mount not found: %s", err)
 	}
-
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %s", err)
-	}
-	var mount api.MountOutput
-	err = json.Unmarshal(data, &mount)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal vault response: %s", err)
-	}
-
-	return &mount, nil
+	return mount, nil
 }
 
 func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {

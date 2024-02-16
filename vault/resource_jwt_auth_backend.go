@@ -280,7 +280,7 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if mount == nil {
-		// If we fell out here then we didn't find our Auth in the list.
+		// If we fell out here then we didn't find our Auth mount
 		d.SetId("")
 		return nil
 	}
