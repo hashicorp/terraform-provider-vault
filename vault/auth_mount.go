@@ -126,8 +126,6 @@ func authMountDisable(client *api.Client, path string) error {
 }
 
 // getAuthMountIfPresent will fetch the auth mount at the given path.
-// Currently the Vault api package does not provide a GET /sys/mounts/:path
-// method so we make a raw API request.
 func getAuthMountIfPresent(client *api.Client, path string) (*api.AuthMount, error) {
 	auth, err := client.Sys().GetAuth(path)
 	if err != nil {

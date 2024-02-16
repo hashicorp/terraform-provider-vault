@@ -278,8 +278,6 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 // getMountIfPresent  will fetch the secret mount at the given path.
-// Currently the Vault api package does not provide a GET /sys/mounts/:path
-// method so we make a raw API request.
 func getMountIfPresent(client *api.Client, path string) (*api.MountOutput, error) {
 	mount, err := client.Sys().GetMount(path)
 	if err != nil {
