@@ -148,7 +148,7 @@ func pkiSecretBackendConfigClusterRead(ctx context.Context, d *schema.ResourceDa
 
 	for _, k := range fields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return diag.Errorf("error setting state key %q for issuer, err=%s",
+			return diag.Errorf("error setting state key %q for cluster config, err=%s",
 				k, err)
 		}
 	}
