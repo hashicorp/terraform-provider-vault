@@ -388,6 +388,7 @@ const (
 	FieldSecretID                      = "secret_id"
 	FieldWrappingToken                 = "wrapping_token"
 	FieldWithWrappedAccessor           = "with_wrapped_accessor"
+	FieldAIAPath                       = "aia_path"
 
 	/*
 		common environment variables

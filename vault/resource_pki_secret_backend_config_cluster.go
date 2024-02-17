@@ -48,12 +48,12 @@ func pkiSecretBackendConfigClusterResource() *schema.Resource {
 			},
 			consts.FieldPath: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Path to the cluster's API mount path.",
 			},
 			consts.FieldAIAPath: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Path to the cluster's AIA distribution point.",
 			},
 		},
@@ -134,9 +134,7 @@ func pkiSecretBackendConfigClusterRead(ctx context.Context, d *schema.ResourceDa
 	}
 
 	if resp == nil {
-		backend := d.Get(consts.FieldBackend).(string)
-		path := fmt.Sprintf("%s/config/cluster", backend)
-		d.SetId(path)
+		d.SetId("")
 
 		return nil
 	}
