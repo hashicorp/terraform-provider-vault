@@ -89,7 +89,12 @@ func pkiSecretBackendConfigUrlsCreateUpdate(d *schema.ResourceData, meta interfa
 		"issuing_certificates":    d.Get("issuing_certificates"),
 		"crl_distribution_points": d.Get("crl_distribution_points"),
 		"ocsp_servers":            d.Get("ocsp_servers"),
-		"enable_templating":       d.Get("enable_templating"),
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion114) {
+		if enableTemplating, ok := d.GetOkExists("enable_templating"); ok {
+			data["enable_templating"] = enableTemplating
+		}
 	}
 
 	log.Printf("[DEBUG] %s URL config on PKI secret backend %q", action, backend)
@@ -134,10 +139,15 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 		"issuing_certificates",
 		"crl_distribution_points",
 		"ocsp_servers",
-		"enable_templating",
 	}
 	for _, k := range fields {
 		if err := d.Set(k, config.Data[k]); err != nil {
+			return err
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion114) {
+		if err := d.Set("enable_templating", config.Data["enable_templating"]); err != nil {
 			return err
 		}
 	}

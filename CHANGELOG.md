@@ -2,6 +2,8 @@
 
 BUGS:
 * Handle graceful destruction of resources when approle is deleted out-of-band ([#2142](https://github.com/hashicorp/terraform-provider-vault/pull/2142)).
+
+IMPROVEMENTS:
 * Add support to `enable_templating` in `vault_pki_secret_backend_config_urls` ([#2147](https://github.com/hashicorp/terraform-provider-vault/pull/2147)).
 
 FEATURES:
