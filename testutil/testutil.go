@@ -133,6 +133,8 @@ type AzureTestConf struct {
 }
 
 func GetTestAzureConf(t *testing.T) *AzureTestConf {
+	t.Helper()
+
 	v := SkipTestEnvUnset(t,
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
