@@ -5,9 +5,11 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -76,7 +78,14 @@ func pkiSecretBackendIntermediateSetSignedCreate(ctx context.Context, d *schema.
 	}
 	log.Printf("[DEBUG] Created intermediate set-signed on PKI secret backend %q", backend)
 
-	d.SetId(path)
+	id := path
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		// multiple set-signed calls can be made
+		// ensure unique IDs
+		uniqueSuffix := uuid.New()
+		id = fmt.Sprintf("%s/%s", path, uniqueSuffix)
+	}
+	d.SetId(id)
 
 	computedIssuerFields := []string{consts.FieldImportedIssuers, consts.FieldImportedKeys}
 
