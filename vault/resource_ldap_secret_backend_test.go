@@ -65,8 +65,8 @@ func TestLDAPSecretBackend(t *testing.T) {
 				SkipFunc: func() (bool, error) {
 					return !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion116), nil
 				},
-				RefreshState: true,
-				Check:        resource.TestCheckResourceAttrSet(resourceName, consts.FieldSkipStaticRoleImportRotation),
+				Config: testLDAPSecretBackendConfig_withSkip(path, bindDN, bindPass),
+				Check:  resource.TestCheckResourceAttrSet(resourceName, consts.FieldSkipStaticRoleImportRotation),
 			},
 			{
 				Config: testLDAPSecretBackendConfig(path, updatedDescription, bindDN, bindPass, url, updatedUserDN, "openldap", false),
@@ -194,6 +194,17 @@ resource "vault_ldap_secret_backend" "test" {
   description               = "test description"
   binddn                    = "%s"
   bindpass                  = "%s"
+}`, path, bindDN, bindPass)
+}
+
+func testLDAPSecretBackendConfig_withSkip(path, bindDN, bindPass string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                      = "%s"
+  description               = "test description"
+  binddn                    = "%s"
+  bindpass                  = "%s"
+  skip_static_role_import_rotation = true
 }`, path, bindDN, bindPass)
 }
 

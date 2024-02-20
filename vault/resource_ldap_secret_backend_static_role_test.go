@@ -47,8 +47,8 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 				SkipFunc: func() (bool, error) {
 					return !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion116), nil
 				},
-				RefreshState: true,
-				Check:        resource.TestCheckResourceAttrSet(resourceName, consts.FieldSkipImportRotation),
+				Config: testLDAPSecretBackendStaticRoleConfig_withSkip(path, bindDN, bindPass, url, username, dn, username, rotationPeriod),
+				Check:  resource.TestCheckResourceAttrSet(resourceName, consts.FieldSkipImportRotation),
 			},
 			{
 				Config: testLDAPSecretBackendStaticRoleConfig(path, bindDN, bindPass, url, updatedUsername, updatedDN, updatedUsername, updatedRotationPeriod),
@@ -80,6 +80,28 @@ resource "vault_ldap_secret_backend_static_role" "role" {
   dn              = "%s"
   role_name       = "%s"
   rotation_period = %s
+}
+`, mount, bindDN, bindPass, url, username, dn, role, rotationPeriod)
+}
+
+func testLDAPSecretBackendStaticRoleConfig_withSkip(mount, bindDN, bindPass, url, username, dn, role, rotationPeriod string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                      = "%s"
+  description               = "test description"
+  binddn                    = "%s"
+  bindpass                  = "%s"
+  url                       = "%s"
+  userdn                    = "CN=Users,DC=corp,DC=example,DC=net"
+}
+
+resource "vault_ldap_secret_backend_static_role" "role" {
+  mount            = vault_ldap_secret_backend.test.path
+  username        = "%s"
+  dn              = "%s"
+  role_name       = "%s"
+  rotation_period = %s
+  skip_import_rotation = true
 }
 `, mount, bindDN, bindPass, url, username, dn, role, rotationPeriod)
 }
