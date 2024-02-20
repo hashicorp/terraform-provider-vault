@@ -42,7 +42,7 @@ func TestAccDataSourceLDAPStaticRoleCredentials(t *testing.T) {
 			// second 1.16 gated check
 			{
 				SkipFunc: func() (bool, error) {
-					return !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion116), nil
+					return !testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion116), nil
 				},
 				Config: testLDAPStaticRoleDataSourceWithSkipImportRotation(backend, bindDN, bindPass, url, username, dn),
 				Check: resource.ComposeTestCheckFunc(
