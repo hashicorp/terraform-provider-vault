@@ -73,17 +73,14 @@ var ldapSecretBackendStaticRoleFields = []string{
 }
 
 func updateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	// Vault rejects an update request containing skip_import_rotation since the field has no effect.
-	// maybe Vault should silently ignore it, but for now just remove the offending field
-	err := d.Set(consts.FieldSkipImportRotation, nil)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	return createLDAPStaticRoleResource(ctx, d, meta)
+	return createUpdateLDAPStaticRoleResource(ctx, d, meta, true)
 }
 
 func createLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return createUpdateLDAPStaticRoleResource(ctx, d, meta, false)
+}
+
+func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}, isUpdate bool) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -95,8 +92,8 @@ func createLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, m
 	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
 	data := map[string]interface{}{}
 	for _, field := range ldapSecretBackendStaticRoleFields {
-		// omit skip_import_rotation if before vault 1.16
-		if field == consts.FieldSkipImportRotation && !provider.IsAPISupported(meta, provider.VaultVersion116) {
+		// omit skip_import_rotation if before vault 1.16 or if updating
+		if field == consts.FieldSkipImportRotation && (!provider.IsAPISupported(meta, provider.VaultVersion116) || isUpdate) {
 			continue
 		}
 		if v, ok := d.GetOk(field); ok {
