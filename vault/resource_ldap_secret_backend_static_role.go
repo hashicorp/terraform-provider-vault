@@ -54,8 +54,12 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 		},
 	}
 	return &schema.Resource{
-		CreateContext: createLDAPStaticRoleResource,
-		UpdateContext: updateLDAPStaticRoleResource,
+		CreateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+			return createUpdateLDAPStaticRoleResource(ctx, d, meta, false)
+		},
+		UpdateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+			return createUpdateLDAPStaticRoleResource(ctx, d, meta, true)
+		},
 		ReadContext:   provider.ReadContextWrapper(readLDAPStaticRoleResource),
 		DeleteContext: deleteLDAPStaticRoleResource,
 		Importer: &schema.ResourceImporter{
@@ -72,14 +76,6 @@ var ldapSecretBackendStaticRoleFields = []string{
 	consts.FieldSkipImportRotation,
 }
 
-func updateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return createUpdateLDAPStaticRoleResource(ctx, d, meta, true)
-}
-
-func createLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return createUpdateLDAPStaticRoleResource(ctx, d, meta, false)
-}
-
 func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}, isUpdate bool) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
@@ -92,7 +88,7 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
 	data := map[string]interface{}{}
 	for _, field := range ldapSecretBackendStaticRoleFields {
-		// omit skip_import_rotation if before vault 1.16 or if updating
+		// omit skip_import_rotation if before vault 1.16 or if updating (vault will reject an update request if this field is set)
 		if field == consts.FieldSkipImportRotation && (!provider.IsAPISupported(meta, provider.VaultVersion116) || isUpdate) {
 			continue
 		}
