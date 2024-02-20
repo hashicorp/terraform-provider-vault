@@ -22,6 +22,7 @@ var gcpSyncWriteFields = []string{
 	consts.FieldCredentials,
 	consts.FieldSecretNameTemplate,
 	consts.FieldCustomTags,
+	consts.FieldProjectID,
 }
 
 var gcpSyncReadFields = []string{
@@ -51,6 +52,11 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				Sensitive:   true,
 				Description: "JSON-encoded credentials to use to connect to GCP.",
+			},
+			consts.FieldProjectID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The target project to manage secrets in.",
 			},
 		},
 	})
