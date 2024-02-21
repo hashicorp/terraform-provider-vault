@@ -373,6 +373,8 @@ const (
 	FieldPermanentlyDelete             = "permanently_delete"
 	FieldSignInAudience                = "sign_in_audience"
 	FieldTags                          = "tags"
+	FieldSkipStaticRoleImportRotation  = "skip_static_role_import_rotation"
+	FieldSkipImportRotation            = "skip_import_rotation"
 	FieldCustomTags                    = "custom_tags"
 	FieldSecretNameTemplate            = "secret_name_template"
 	FieldIAMEndpoint                   = "iam_endpoint"
