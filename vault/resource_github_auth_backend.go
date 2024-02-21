@@ -179,13 +179,6 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
 
-	log.Printf("[DEBUG] Reading github auth mount from '%q'", path)
-	mount, err := authMountInfoGet(client, d.Id())
-	if err != nil {
-		return fmt.Errorf("error reading github auth mount from '%q': %w", path, err)
-	}
-	log.Printf("[INFO] Read github auth mount from '%q'", path)
-
 	log.Printf("[DEBUG] Reading github auth config from '%q'", configPath)
 	resp, err := client.Logical().Read(configPath)
 	if err != nil {
@@ -198,6 +191,13 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
+
+	log.Printf("[DEBUG] Reading github auth mount from '%q'", path)
+	mount, err := authMountInfoGet(client, d.Id())
+	if err != nil {
+		return fmt.Errorf("error reading github auth mount from '%q': %w", path, err)
+	}
+	log.Printf("[INFO] Read github auth mount from '%q'", path)
 
 	log.Printf("[DEBUG] Reading github auth tune from '%q/tune'", path)
 	rawTune, err := authMountTuneGet(client, path)

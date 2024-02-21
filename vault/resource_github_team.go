@@ -4,7 +4,6 @@
 package vault
 
 import (
-	"fmt"
 	"log"
 	"strings"
 
@@ -101,10 +100,20 @@ func githubTeamRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
+	// If the auth method is not enabled, dt is nil
+	if dt == nil {
+		log.Printf("[WARN] Github team mapping from '%q' is null, removing from state", d.Id())
+		d.SetId("")
+		return nil
+	}
+
 	if v, ok := dt.Data["key"]; ok {
 		d.Set("team", v.(string))
 	} else {
-		return fmt.Errorf("github team information not found at path: '%v'", d.Id())
+		// If the method is enabled but the team is not mapped, the API responds 200 with an empty Data object
+		log.Printf("[WARN] Github team information from '%q' not found, removing from state", d.Id())
+		d.SetId("")
+		return nil
 	}
 
 	if v, ok := dt.Data["value"]; ok {
