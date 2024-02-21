@@ -69,11 +69,6 @@ func ldapStaticCredDataSource() *schema.Resource {
 				Computed:    true,
 				Description: "Name of the static role.",
 			},
-			consts.FieldSkipImportRotation: {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: "Skip rotation of the password on import.",
-			},
 		},
 	}
 }
