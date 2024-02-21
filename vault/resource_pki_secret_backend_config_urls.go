@@ -91,7 +91,7 @@ func pkiSecretBackendConfigUrlsCreateUpdate(d *schema.ResourceData, meta interfa
 		"ocsp_servers":            d.Get("ocsp_servers"),
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion114) {
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		if enableTemplating, ok := d.GetOkExists("enable_templating"); ok {
 			data["enable_templating"] = enableTemplating
 		}
@@ -146,7 +146,7 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion114) {
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		if err := d.Set("enable_templating", config.Data["enable_templating"]); err != nil {
 			return err
 		}

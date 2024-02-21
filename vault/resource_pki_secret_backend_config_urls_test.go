@@ -44,7 +44,7 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 			resource.TestCheckResourceAttr(
 				resourceName, "ocsp_servers.0", o),
 		}
-		v114Checks := []resource.TestCheckFunc{
+		v113Checks := []resource.TestCheckFunc{
 			resource.TestCheckResourceAttr(
 				resourceName, "enable_templating", strconv.FormatBool(e)),
 		}
@@ -53,8 +53,8 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 			var checks []resource.TestCheckFunc
 			meta := testProvider.Meta().(*provider.ProviderMeta)
 			checks = append(checks, baseChecks...)
-			if provider.IsAPISupported(meta, provider.VaultVersion114) {
-				checks = append(checks, v114Checks...)
+			if provider.IsAPISupported(meta, provider.VaultVersion113) {
+				checks = append(checks, v113Checks...)
 			}
 
 			return resource.ComposeTestCheckFunc(checks...)(state)
@@ -80,7 +80,7 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return provider.IsAPISupported(meta, provider.VaultVersion114), nil
+					return provider.IsAPISupported(meta, provider.VaultVersion113), nil
 				},
 				Config: testPkiSecretBackendCertConfigUrlsConfig(
 					rootPath, issuingCertificates, crlDistributionPoints, ocspServers),
@@ -91,16 +91,16 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !provider.IsAPISupported(meta, provider.VaultVersion114), nil
+					return !provider.IsAPISupported(meta, provider.VaultVersion113), nil
 				},
-				Config: testPkiSecretBackendCertConfigUrlsConfig114(
+				Config: testPkiSecretBackendCertConfigUrlsConfig113(
 					rootPath, issuingCertificates, crlDistributionPoints, ocspServers, enableTemplating),
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			{
-				Config: testPkiSecretBackendCertConfigUrlsConfig114(
+				Config: testPkiSecretBackendCertConfigUrlsConfig113(
 					rootPath, issuingCertificates+"/new", crlDistributionPoints+"/new", ocspServers+"/new", !enableTemplating),
 				Check: getChecks(
 					issuingCertificates+"/new", crlDistributionPoints+"/new", ocspServers+"/new", !enableTemplating),
@@ -177,7 +177,7 @@ resource "vault_pki_secret_backend_config_urls" "test" {
 		issuingCertificates, crlDistributionPoints, ocspServers)
 }
 
-func testPkiSecretBackendCertConfigUrlsConfig114(rootPath string, issuingCertificates string, crlDistributionPoints string, ocspServers string, enableTemplating bool) string {
+func testPkiSecretBackendCertConfigUrlsConfig113(rootPath string, issuingCertificates string, crlDistributionPoints string, ocspServers string, enableTemplating bool) string {
 	return fmt.Sprintf(`
 %s
 
