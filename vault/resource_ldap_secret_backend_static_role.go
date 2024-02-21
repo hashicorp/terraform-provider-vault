@@ -54,12 +54,8 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 		},
 	}
 	return &schema.Resource{
-		CreateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-			return createUpdateLDAPStaticRoleResource(ctx, d, meta, false)
-		},
-		UpdateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-			return createUpdateLDAPStaticRoleResource(ctx, d, meta, true)
-		},
+		CreateContext: createUpdateLDAPStaticRoleResource,
+		UpdateContext: createUpdateLDAPStaticRoleResource,
 		ReadContext:   provider.ReadContextWrapper(readLDAPStaticRoleResource),
 		DeleteContext: deleteLDAPStaticRoleResource,
 		Importer: &schema.ResourceImporter{
@@ -76,7 +72,7 @@ var ldapSecretBackendStaticRoleFields = []string{
 	consts.FieldSkipImportRotation,
 }
 
-func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}, isUpdate bool) diag.Diagnostics {
+func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -88,8 +84,9 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
 	data := map[string]interface{}{}
 	for _, field := range ldapSecretBackendStaticRoleFields {
-		// omit skip_import_rotation if before vault 1.16 or if updating (vault will reject an update request if this field is set)
-		if field == consts.FieldSkipImportRotation && (!provider.IsAPISupported(meta, provider.VaultVersion116) || isUpdate) {
+		// omit skip_import_rotation if vault version is less that 1.16 or if this is an update
+		// (alternately, only include skip_import_rotation on new resources created on 1.16
+		if field == consts.FieldSkipImportRotation && (!provider.IsAPISupported(meta, provider.VaultVersion116) || !d.IsNewResource()) {
 			continue
 		}
 		if v, ok := d.GetOk(field); ok {
