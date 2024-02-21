@@ -46,7 +46,7 @@ func TestAccDataSourceLDAPStaticRoleCredentials(t *testing.T) {
 				},
 				Config: testLDAPStaticRoleDataSourceWithSkipImportRotation(backend, bindDN, bindPass, url, username, dn),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("vault_ldap_secret_backend_static_role_with_skip", consts.FieldSkipImportRotation),
+					resource.TestCheckResourceAttr("vault_ldap_secret_backend_static_role_with_skip", consts.FieldSkipImportRotation, "true"),
 				),
 			},
 		},
