@@ -346,7 +346,7 @@ func pkiSecretBackendCertRead(ctx context.Context, d *schema.ResourceData, meta 
 	}
 
 	if err != nil {
-		return diag.Errorf("error reading mount %q: %s", path, err)
+		return diag.FromErr(err)
 	}
 
 	if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {

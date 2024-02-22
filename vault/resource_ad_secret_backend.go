@@ -373,7 +373,7 @@ func readConfigResource(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("error reading mount %q: %s", path, err)
+		return err
 	}
 
 	d.Set("backend", d.Id())

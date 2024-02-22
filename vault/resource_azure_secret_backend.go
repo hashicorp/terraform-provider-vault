@@ -146,7 +146,7 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("error reading mount %q: %s", path, err)
+		return err
 	}
 
 	log.Printf("[DEBUG] Read Azure backend mount %q from Vault", path)

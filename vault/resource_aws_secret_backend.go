@@ -263,7 +263,7 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	if err != nil {
-		return diag.Errorf("error reading mount %q: %s", path, err)
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[DEBUG] Read AWS backend mount %q from Vault", path)

@@ -366,7 +366,7 @@ func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfa
 	}
 
 	if err != nil {
-		return diag.Errorf("error reading from Vault: %s", err)
+		return diag.FromErr(err)
 	}
 
 	d.Set("path", path)

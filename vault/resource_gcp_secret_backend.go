@@ -156,7 +156,7 @@ func gcpSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("error reading mount %q: %s", path, err)
+		return err
 	}
 
 	log.Printf("[DEBUG] Read GCP backend mount %q from Vault", path)
@@ -243,7 +243,7 @@ func gcpSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, err
 	}
 
 	if err != nil {
-		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
+		return true, err
 	}
 
 	return true, nil

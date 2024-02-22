@@ -208,7 +208,7 @@ func consulSecretBackendRead(_ context.Context, d *schema.ResourceData, meta int
 	}
 
 	if err != nil {
-		return diag.Errorf("error reading mount %q: %s", path, err)
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)

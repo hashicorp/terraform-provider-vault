@@ -158,7 +158,7 @@ func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) e
 	}
 
 	if err != nil {
-		return fmt.Errorf("error reading mount %q: %s", backend, err)
+		return err
 	}
 
 	d.Set("backend", backend)

@@ -209,7 +209,7 @@ func readNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) err
 	}
 
 	if err != nil {
-		return fmt.Errorf("error reading mount %q: %s", path, err)
+		return err
 	}
 
 	d.Set("backend", d.Id())

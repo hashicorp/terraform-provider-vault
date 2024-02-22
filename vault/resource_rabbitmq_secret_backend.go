@@ -163,7 +163,7 @@ func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("error reading mount %q: %s", path, err)
+		return err
 	}
 
 	d.Set(consts.FieldPath, path)
@@ -255,7 +255,7 @@ func rabbitMQSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool
 	}
 
 	if err != nil {
-		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
+		return true, err
 	}
 
 	return true, nil
