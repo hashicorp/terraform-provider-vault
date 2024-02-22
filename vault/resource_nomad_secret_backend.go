@@ -4,6 +4,8 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -11,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -198,18 +201,20 @@ func readNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) err
 	path := d.Id()
 	log.Printf("[DEBUG] Reading %q", path)
 
-	mountResp, err := client.Sys().MountConfig(path)
-	if err != nil && util.Is404(err) {
-		log.Printf("[WARN] %q not found, removing from state", path)
+	mount, err := mountutil.GetMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
-	} else if err != nil {
-		return fmt.Errorf("error reading %q: %s", path, err)
+	}
+
+	if err != nil {
+		return fmt.Errorf("error reading mount %q: %s", path, err)
 	}
 
 	d.Set("backend", d.Id())
-	d.Set("default_lease_ttl_seconds", mountResp.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mountResp.MaxLeaseTTL)
+	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
+	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 
 	configPath := fmt.Sprintf("%s/config/access", d.Id())
 	log.Printf("[DEBUG] Reading %q", configPath)
