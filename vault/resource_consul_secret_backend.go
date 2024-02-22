@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -198,19 +200,15 @@ func consulSecretBackendRead(_ context.Context, d *schema.ResourceData, meta int
 
 	log.Printf("[DEBUG] Reading Consul backend mount %q from Vault", path)
 
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return diag.Errorf("error reading mount %q: %s", path, err)
-	}
-
-	// path can have a trailing slash, but doesn't need to have one
-	// this standardises on having a trailing slash, which is how the
-	// API always responds.
-	mount, ok := mounts[strings.Trim(path, "/")+"/"]
-	if !ok {
+	mount, err := mountutil.GetMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
 		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
+	}
+
+	if err != nil {
+		return diag.Errorf("error reading mount %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)

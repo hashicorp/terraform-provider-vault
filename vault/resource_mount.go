@@ -4,6 +4,8 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 type schemaMap map[string]*schema.Schema
@@ -277,18 +280,6 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 	return readMount(d, meta, false)
 }
 
-// getMountIfPresent  will fetch the secret mount at the given path.
-func getMountIfPresent(client *api.Client, path string) (*api.MountOutput, error) {
-	mount, err := client.Sys().GetMount(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading from Vault: %s", err)
-	}
-	if mount.Accessor == "" {
-		return nil, fmt.Errorf("mount not found: %s", err)
-	}
-	return mount, nil
-}
-
 func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -299,8 +290,9 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 
 	log.Printf("[DEBUG] Reading mount %s from Vault", path)
 
-	mount, err := getMountIfPresent(client, path)
-	if mount == nil {
+	mount, err := mountutil.GetMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
 	}

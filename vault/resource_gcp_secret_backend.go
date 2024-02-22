@@ -4,6 +4,8 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func gcpSecretBackendResource(name string) *schema.Resource {
@@ -144,20 +147,19 @@ func gcpSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading GCP backend mount %q from Vault", path)
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return fmt.Errorf("error reading mount %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Read GCP backend mount %q from Vault", path)
 
-	// the API always returns the path with a trailing slash, so let's make
-	// sure we always specify it as a trailing slash.
-	mount, ok := mounts[strings.Trim(path, "/")+"/"]
-	if !ok {
-		log.Printf("[WARN] Mount %q not found, removing backend from state.", path)
+	mount, err := mountutil.GetMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
 	}
+
+	if err != nil {
+		return fmt.Errorf("error reading mount %q: %s", path, err)
+	}
+
+	log.Printf("[DEBUG] Read GCP backend mount %q from Vault", path)
 
 	d.Set("path", path)
 	d.Set("description", mount.Description)
@@ -235,13 +237,16 @@ func gcpSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, err
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if GCP backend exists at %q", path)
-	mounts, err := client.Sys().ListMounts()
+	_, err := mountutil.GetMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		return false, nil
+	}
+
 	if err != nil {
 		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
 	}
-	log.Printf("[DEBUG] Checked if GCP backend exists at %q", path)
-	_, ok := mounts[strings.Trim(path, "/")+"/"]
-	return ok, nil
+
+	return true, nil
 }
 
 func gcpSecretBackendConfigPath(backend string) string {
