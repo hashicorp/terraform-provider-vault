@@ -7,7 +7,6 @@ package helper
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -93,10 +92,8 @@ func (t *TransportWrapper) SetTLSConfig(c *tls.Config) error {
 
 func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) {
 	transportID := uuid.New().String()
-	log.Printf("Request for UUID %s sent", transportID)
+
 	if logging.IsDebugOrHigher() {
-		ctx := context.WithValue(req.Context(), "TransportID", transportID)
-		req = req.WithContext(ctx)
 
 		var origHeaders http.Header
 		if len(t.options.HMACRequestHeaders) > 0 && len(req.Header) > 0 {
@@ -116,7 +113,7 @@ func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) 
 
 		reqData, err := httputil.DumpRequestOut(req, t.options.LogRequestBody)
 		if err == nil {
-			log.Printf("[DEBUG] "+logReqMsg, t.name, prettyPrintJsonLines(reqData))
+			log.Printf("[DEBUG] "+logReqMsg, transportID, t.name, prettyPrintJsonLines(reqData))
 		} else {
 			log.Printf("[ERROR] %s API Request error: %#v", t.name, err)
 		}
@@ -131,11 +128,10 @@ func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) 
 		return resp, err
 	}
 
-	log.Printf("Response for UUID %s received", transportID)
 	if logging.IsDebugOrHigher() {
 		respData, err := httputil.DumpResponse(resp, t.options.LogResponseBody)
 		if err == nil {
-			log.Printf("[DEBUG] "+logRespMsg, t.name, prettyPrintJsonLines(respData))
+			log.Printf("[DEBUG] "+logRespMsg, transportID, t.name, prettyPrintJsonLines(respData))
 		} else {
 			log.Printf("[ERROR] %s API Response error: %#v", t.name, err)
 		}
@@ -166,12 +162,12 @@ func prettyPrintJsonLines(b []byte) string {
 	return strings.Join(parts, "\n")
 }
 
-const logReqMsg = `%s API Request Details:
+const logReqMsg = `[%s] %s API Request Details:
 ---[ REQUEST ]---------------------------------------
 %s
 -----------------------------------------------------`
 
-const logRespMsg = `%s API Response Details:
+const logRespMsg = `[%s] %s API Response Details:
 ---[ RESPONSE ]--------------------------------------
 %s
 -----------------------------------------------------`
