@@ -391,6 +391,12 @@ const (
 	FieldWrappingToken                 = "wrapping_token"
 	FieldWithWrappedAccessor           = "with_wrapped_accessor"
 	FieldAIAPath                       = "aia_path"
+	FieldTitle                         = "title"
+	FieldMessageBase64                 = "message_base64"
+	FieldAuthenticated                 = "authenticated"
+	FieldStartTime                     = "start_time"
+	FieldEndTime                       = "end_time"
+	FieldLink                          = "link"
 
 	/*
 		common environment variables
