@@ -37,6 +37,20 @@ func GetMount(ctx context.Context, client *api.Client, path string) (*api.MountO
 	return mount, nil
 }
 
+// GetAuthMount will fetch the auth mount at the given path.
+func GetAuthMount(ctx context.Context, client *api.Client, path string) (*api.MountOutput, error) {
+	mount, err := client.Sys().GetAuthWithContext(ctx, path)
+	// Hardcoding the error string check is not ideal, but Vault does not
+	// return 404 in this case
+	if err != nil && strings.Contains(err.Error(), ErrVaultAuthMountNotFound) || mount == nil {
+		return nil, fmt.Errorf("%w: %s", ErrMountNotFound, err)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error reading from Vault: %s", err)
+	}
+	return mount, nil
+}
+
 // NormalizeMountPath to be in a form valid for accessing values from api.MountOutput
 func NormalizeMountPath(path string) string {
 	return TrimSlashes(path) + consts.PathDelim

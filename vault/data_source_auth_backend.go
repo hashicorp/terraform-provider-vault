@@ -4,12 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func authBackendDataSource() *schema.Resource {
@@ -66,28 +68,23 @@ func authBackendDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	targetPath := d.Get("path").(string)
+	path := d.Get("path").(string)
 
-	auths, err := client.Sys().ListAuth()
+	auth, err := mountutil.GetAuthMount(context.Background(), client, path)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	for path, auth := range auths {
-		path = strings.TrimSuffix(path, "/")
-		if path == targetPath {
-			// Compatibility with resource_auth_backend id
-			d.SetId(path)
-			d.Set("type", auth.Type)
-			d.Set("description", auth.Description)
-			d.Set("accessor", auth.Accessor)
-			d.Set("default_lease_ttl_seconds", auth.Config.DefaultLeaseTTL)
-			d.Set("max_lease_ttl_seconds", auth.Config.MaxLeaseTTL)
-			d.Set("listing_visibility", auth.Config.ListingVisibility)
-			d.Set("local", auth.Local)
-			return nil
-		}
-	}
+	path = strings.TrimSuffix(path, "/")
+	d.SetId(path)
+	d.Set("type", auth.Type)
+	d.Set("description", auth.Description)
+	d.Set("accessor", auth.Accessor)
+	d.Set("default_lease_ttl_seconds", auth.Config.DefaultLeaseTTL)
+	d.Set("max_lease_ttl_seconds", auth.Config.MaxLeaseTTL)
+	d.Set("listing_visibility", auth.Config.ListingVisibility)
+	d.Set("local", auth.Local)
+	return nil
 
 	// If we fell out here then we didn't find our Auth in the list.
 	return nil
