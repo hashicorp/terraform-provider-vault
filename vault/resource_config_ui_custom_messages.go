@@ -162,7 +162,7 @@ func configUICustomMessageRead(ctx context.Context, d *schema.ResourceData, meta
 		}
 	}
 
-	var linkValue []interface{}
+	var linkValue *schema.Set
 	var linkMap map[string]interface{}
 
 	if v, ok := secretData[consts.FieldLink]; ok {
@@ -179,12 +179,13 @@ func configUICustomMessageRead(ctx context.Context, d *schema.ResourceData, meta
 					return diag.Errorf("invalid href value in link specification: %v", v)
 				}
 				if len(k) > 0 && len(stringV) > 0 {
-					linkValue = []interface{}{
+					var f schema.SchemaSetFunc // I don't know what to set this to
+					linkValue = schema.NewSet(f, []interface{}{
 						map[string]interface{}{
 							"title": k,
 							"href":  stringV,
 						},
-					}
+					})
 				}
 				break
 			}
@@ -215,12 +216,12 @@ func configUICustomMessageUpdate(ctx context.Context, d *schema.ResourceData, me
 
 	id := d.Id()
 
-	if d.HasChanges(consts.FieldTitle, consts.FieldMessageBase64, consts.FieldAuthenticated, consts.FieldType, consts.FieldStartTime, consts.FieldEndTime, consts.FieldOptions, consts.FieldLink) {
-		e = client.Sys().UpdateUICustomMessageWithContext(ctx, id, buildUICustomMessageRequest(d))
-		if e != nil {
-			return diag.FromErr(e)
-		}
+	//if d.HasChanges(consts.FieldTitle, consts.FieldMessageBase64, consts.FieldAuthenticated, consts.FieldType, consts.FieldStartTime, consts.FieldEndTime, consts.FieldOptions, consts.FieldLink) {
+	e = client.Sys().UpdateUICustomMessageWithContext(ctx, id, buildUICustomMessageRequest(d))
+	if e != nil {
+		return diag.FromErr(e)
 	}
+	//}
 
 	return configUICustomMessageRead(ctx, d, meta)
 }
