@@ -110,15 +110,3 @@ func authMountDisable(client *api.Client, path string) error {
 
 	return nil
 }
-
-// getAuthMountIfPresent will fetch the auth mount at the given path.
-func getAuthMountIfPresent(client *api.Client, path string) (*api.AuthMount, error) {
-	auth, err := client.Sys().GetAuth(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading from Vault: %s", err)
-	}
-	if auth.Accessor == "" {
-		return nil, fmt.Errorf("mount not found: %s", err)
-	}
-	return auth, nil
-}
