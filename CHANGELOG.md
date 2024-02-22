@@ -5,6 +5,7 @@ BUGS:
 
 FEATURES:
 * Add support for `skip_import_rotation` and `skip_static_role_import_rotation` in `ldap_secret_backend_static_role` and `ldap_secret_backend` respectively. Requires Vault 1.16+ ([#2128](https://github.com/hashicorp/terraform-provider-vault/pull/2128)).
+* Improve logging to track full API exchanges between the provider and Vault ([#2139](https://github.com/hashicorp/terraform-provider-vault/pull/2139))
 
 ## 3.25.0 (Feb 14, 2024)
 
@@ -12,7 +13,6 @@ FEATURES:
 * Add destination and association resources to support Secrets Sync. Requires Vault 1.16+ ([#2098](https://github.com/hashicorp/terraform-provider-vault/pull/2098)).
 * Add support for configuration of plugin WIF to the AWS Secret Backend. Requires Vault 1.16+ ([#2138](https://github.com/hashicorp/terraform-provider-vault/pull/2138)).
 * Add support for Oracle database plugin configuration options `split_statements` and `disconnect_sessions`: ([#2085](https://github.com/hashicorp/terraform-provider-vault/pull/2085))
-* Improve logging to track full API exchanges between the provider and Vault ([#2139](https://github.com/hashicorp/terraform-provider-vault/pull/2139))
 
 IMPROVEMENTS:
 * Add an API client lock to the `vault_identity_group_alias` resource: ([#2140](https://github.com/hashicorp/terraform-provider-vault/pull/2140))
