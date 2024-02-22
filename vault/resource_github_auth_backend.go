@@ -183,7 +183,7 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	configPath := path + "/config"
 
 	log.Printf("[DEBUG] Reading github auth mount from '%q'", path)
-	mount, err := mountutil.GetAuthMount(context.Background(), client, path)
+	mount, err := mountutil.GetAuthMount(context.Background(), client, d.Id())
 	if errors.Is(err, mountutil.ErrMountNotFound) {
 		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
