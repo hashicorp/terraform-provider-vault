@@ -162,7 +162,7 @@ func configUICustomMessageRead(ctx context.Context, d *schema.ResourceData, meta
 		}
 	}
 
-	var linkValue *schema.Set
+	var linkValue []map[string]interface{}
 	var linkMap map[string]interface{}
 
 	if v, ok := secretData[consts.FieldLink]; ok {
@@ -179,13 +179,11 @@ func configUICustomMessageRead(ctx context.Context, d *schema.ResourceData, meta
 					return diag.Errorf("invalid href value in link specification: %v", v)
 				}
 				if len(k) > 0 && len(stringV) > 0 {
-					var f schema.SchemaSetFunc // I don't know what to set this to
-					linkValue = schema.NewSet(f, []interface{}{
-						map[string]interface{}{
-							"title": k,
-							"href":  stringV,
-						},
-					})
+					linkValue = append(linkValue, map[string]interface{}{
+						"title": k,
+						"href":  stringV,
+					},
+					)
 				}
 				break
 			}
