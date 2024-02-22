@@ -28,6 +28,8 @@ var awsSyncWriteFields = []string{
 	consts.FieldRegion,
 	consts.FieldCustomTags,
 	consts.FieldSecretNameTemplate,
+	consts.FieldRoleArn,
+	consts.FieldExternalID,
 }
 
 // awsSyncReadFields contains all fields that are returned on read from the API
@@ -35,6 +37,8 @@ var awsSyncReadFields = []string{
 	consts.FieldRegion,
 	consts.FieldCustomTags,
 	consts.FieldSecretNameTemplate,
+	consts.FieldRoleArn,
+	consts.FieldExternalID,
 }
 
 func awsSecretsSyncDestinationResource() *schema.Resource {
@@ -71,6 +75,16 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				Description: "Region where to manage the secrets manager entries.",
 				ForceNew:    true,
+			},
+			consts.FieldRoleArn: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies a role to assume when connecting to AWS.",
+			},
+			consts.FieldExternalID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Extra protection that must match the trust policy granting access to the AWS IAM role ARN.",
 			},
 		},
 	})

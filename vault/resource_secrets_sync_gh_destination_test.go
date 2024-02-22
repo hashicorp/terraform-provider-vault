@@ -45,6 +45,8 @@ func TestGithubSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldAccessToken, accessToken),
 					resource.TestCheckResourceAttr(resourceName, fieldRepositoryOwner, repoOwner),
 					resource.TestCheckResourceAttr(resourceName, fieldRepositoryName, repoName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAppName, "test-app-name"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldInstallationID, "test-installation-id"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 				),
 			},
@@ -56,6 +58,8 @@ func TestGithubSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldAccessToken, accessToken),
 					resource.TestCheckResourceAttr(resourceName, fieldRepositoryOwner, repoOwner),
 					resource.TestCheckResourceAttr(resourceName, fieldRepositoryName, repoName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAppName, "test-app-name-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldInstallationID, "test-installation-id-updated"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
 				),
 			},
@@ -73,6 +77,8 @@ resource "vault_secrets_sync_gh_destination" "test" {
   access_token         = "%s"
   repository_owner     = "%s"
   repository_name      = "%s"
+  app_name             = "test-app-name"
+  installation_id      = "test-installation-id"
   %s
 }
 `, destName, accessToken, repoOwner, repoName, testSecretsSyncDestinationCommonConfig(templ, true, false, false))
@@ -87,6 +93,8 @@ resource "vault_secrets_sync_gh_destination" "test" {
   access_token         = "%s"
   repository_owner     = "%s"
   repository_name      = "%s"
+  app_name             = "test-app-name-updated"
+  installation_id      = "test-installation-id-updated"
   %s
 }
 `, destName, accessToken, repoOwner, repoName, testSecretsSyncDestinationCommonConfig(templ, true, false, true))

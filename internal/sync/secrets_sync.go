@@ -123,5 +123,12 @@ func SyncDestinationDelete(ctx context.Context, d *schema.ResourceData, meta int
 }
 
 func secretsSyncDestinationPath(name, typ string) string {
-	return fmt.Sprintf("sys/sync/destinations/%s/%s", typ, name)
+	var path string
+	switch typ {
+	case "github-apps":
+		path = fmt.Sprintf("sys/sync/%s/%s", typ, name)
+	default:
+		path = fmt.Sprintf("sys/sync/destinations/%s/%s", typ, name)
+	}
+	return path
 }

@@ -44,6 +44,8 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, region),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, awsSyncType),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "role-arn-test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, "external-id-test"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
@@ -58,6 +60,8 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, region),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, awsSyncType),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "role-arn-test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, "external-id-test"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),
@@ -78,6 +82,8 @@ resource "vault_secrets_sync_aws_destination" "test" {
   access_key_id        = "%s"
   secret_access_key    = "%s"
   region               = "%s"
+  role_arn			   = "role-arn-test"
+  external_id          = "external-id-test"
   %s
 }
 `, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, false, true, false))
@@ -92,6 +98,8 @@ resource "vault_secrets_sync_aws_destination" "test" {
   access_key_id        = "%s"
   secret_access_key    = "%s"
   region               = "%s"
+  role_arn			   = "role-arn-updated"
+  external_id          = "external-id-updated"
   %s
 }
 `, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, true, true, true))

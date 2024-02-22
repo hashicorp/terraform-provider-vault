@@ -54,7 +54,7 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 				),
 			},
 			{
-				Config: testAzureSecretsSyncDestinationConfig_initial(keyVaultURI, clientID, clientSecret, tenantID, destName, updatedSecretsSyncTemplate),
+				Config: testAzureSecretsSyncDestinationConfig_updated(keyVaultURI, clientID, clientSecret, tenantID, destName, updatedSecretsSyncTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),

@@ -28,6 +28,7 @@ var gcpSyncWriteFields = []string{
 var gcpSyncReadFields = []string{
 	consts.FieldSecretNameTemplate,
 	consts.FieldCustomTags,
+	consts.FieldProjectID,
 }
 
 func gcpSecretsSyncDestinationResource() *schema.Resource {
@@ -56,6 +57,7 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 			consts.FieldProjectID: {
 				Type:        schema.TypeString,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "The target project to manage secrets in.",
 			},
 		},
