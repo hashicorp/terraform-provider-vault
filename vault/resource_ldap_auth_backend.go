@@ -350,7 +350,7 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	return ldapAuthBackendRead(ctx, d, meta)
 }
 
-func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -358,7 +358,7 @@ func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfa
 
 	path := d.Id()
 
-	authMount, err := mountutil.GetAuthMount(context.Background(), client, path)
+	authMount, err := mountutil.GetAuthMount(ctx, client, path)
 	if errors.Is(err, mountutil.ErrMountNotFound) {
 		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")

@@ -189,7 +189,7 @@ Vault client version does not meet the minimum requirement for this feature (Vau
 	return consulSecretBackendRead(ctx, d, meta)
 }
 
-func consulSecretBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func consulSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -200,7 +200,7 @@ func consulSecretBackendRead(_ context.Context, d *schema.ResourceData, meta int
 
 	log.Printf("[DEBUG] Reading Consul backend mount %q from Vault", path)
 
-	mount, err := mountutil.GetMount(context.Background(), client, path)
+	mount, err := mountutil.GetMount(ctx, client, path)
 	if errors.Is(err, mountutil.ErrMountNotFound) {
 		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
@@ -210,6 +210,8 @@ func consulSecretBackendRead(_ context.Context, d *schema.ResourceData, meta int
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	log.Printf("[DEBUG] Read Consul backend mount %q from Vault", path)
 
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)
 	secret, err := client.Logical().Read(configPath)
