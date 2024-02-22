@@ -92,7 +92,6 @@ func (t *TransportWrapper) SetTLSConfig(c *tls.Config) error {
 
 func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) {
 	transportID := uuid.New().String()
-
 	if logging.IsDebugOrHigher() {
 
 		var origHeaders http.Header
