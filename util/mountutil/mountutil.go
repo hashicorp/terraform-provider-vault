@@ -49,7 +49,7 @@ func TrimSlashes(path string) string {
 
 // CheckMountEnabledWithContext in Vault
 func CheckMountEnabledWithContext(ctx context.Context, client *api.Client, path string) (bool, error) {
-	_, err := GetMount(context.Background(), client, path)
+	_, err := GetMount(ctx, client, path)
 	if errors.Is(err, ErrMountNotFound) {
 		return false, err
 	}
