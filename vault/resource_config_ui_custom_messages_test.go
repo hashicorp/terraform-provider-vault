@@ -45,14 +45,12 @@ func testConfigUICustomMessageConfig(isUpdate bool) string {
 	}
 }
 
-var f resource.CheckResourceAttrWithFunc
-
 func TestAccConfigUICustomMessage(t *testing.T) {
 	resourceName := "vault_config_ui_custom_message.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testConfigUICustomMessageConfig(false),
