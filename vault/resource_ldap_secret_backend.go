@@ -119,6 +119,11 @@ func ldapSecretBackendResource() *schema.Resource {
 			Optional:    true,
 			Description: "LDAP domain to use for users (eg: ou=People,dc=example,dc=org)",
 		},
+		consts.FieldSkipStaticRoleImportRotation: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "Skip rotation of static role secrets on import.",
+		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(createUpdateLDAPConfigResource, provider.VaultVersion112),
@@ -179,6 +184,11 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 	booleanFields := []string{
 		consts.FieldInsecureTLS,
 		consts.FieldStartTLS,
+	}
+
+	// add skip_static_role_import_rotation if after vault 1.16
+	if provider.IsAPISupported(meta, provider.VaultVersion116) {
+		booleanFields = append(booleanFields, consts.FieldSkipStaticRoleImportRotation)
 	}
 
 	// use d.Get() for boolean fields
@@ -244,6 +254,9 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		consts.FieldURL,
 		consts.FieldUserAttr,
 		consts.FieldUserDN,
+	}
+	if provider.IsAPISupported(meta, provider.VaultVersion116) {
+		fields = append(fields, consts.FieldSkipStaticRoleImportRotation)
 	}
 
 	for _, field := range fields {

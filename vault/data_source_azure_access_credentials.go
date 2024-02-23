@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
@@ -24,6 +25,19 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
+
+// https://learn.microsoft.com/en-us/graph/sdks/national-clouds
+const (
+	azurePublicCloudEnvName = "AZUREPUBLICCLOUD"
+	azureChinaCloudEnvName  = "AZURECHINACLOUD"
+	azureUSGovCloudEnvName  = "AZUREUSGOVERNMENTCLOUD"
+)
+
+var azureCloudConfigMap = map[string]cloud.Configuration{
+	azureChinaCloudEnvName:  cloud.AzureChina,
+	azurePublicCloudEnvName: cloud.AzurePublic,
+	azureUSGovCloudEnvName:  cloud.AzureGovernment,
+}
 
 func azureAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
@@ -216,7 +230,6 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(e)
 	}
 
-	clientOptions := &arm.ClientOptions{}
 	var environment string
 	if v, ok := d.GetOk("environment"); ok {
 		environment = v.(string)
@@ -230,10 +243,17 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 		}
 	}
 
-	cloudConfig, err := cloudConfigFromName(environment)
-	clientOptions.Cloud = cloudConfig
+	cloudConfig, err := getAzureCloudConfigFromName(environment)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	providerClient, err := armresources.NewProvidersClient(subscriptionID, creds, clientOptions)
+	providerClient, err := armresources.NewProvidersClient(subscriptionID, creds,
+		&arm.ClientOptions{
+			ClientOptions: policy.ClientOptions{
+				Cloud: cloudConfig,
+			},
+		})
 	if err != nil {
 		return diag.Errorf("failed to create providers client: %s", err)
 	}
@@ -292,25 +312,10 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 	return nil
 }
 
-// https://learn.microsoft.com/en-us/graph/sdks/national-clouds
-const (
-	azurePublicCloudEnvName = "AZUREPUBLICCLOUD"
-	azureChinaCloudEnvName  = "AZURECHINACLOUD"
-	azureUSGovCloudEnvName  = "AZUREUSGOVERNMENTCLOUD"
-)
-
-func cloudConfigFromName(name string) (cloud.Configuration, error) {
-	configs := map[string]cloud.Configuration{
-		azureChinaCloudEnvName:  cloud.AzureChina,
-		azurePublicCloudEnvName: cloud.AzurePublic,
-		azureUSGovCloudEnvName:  cloud.AzureGovernment,
+func getAzureCloudConfigFromName(name string) (cloud.Configuration, error) {
+	if c, ok := azureCloudConfigMap[strings.ToUpper(name)]; !ok {
+		return c, fmt.Errorf("unsupported Azure cloud name %q", name)
+	} else {
+		return c, nil
 	}
-
-	name = strings.ToUpper(name)
-	c, ok := configs[name]
-	if !ok {
-		return c, fmt.Errorf("err: no cloud configuration matching the name %q", name)
-	}
-
-	return c, nil
 }

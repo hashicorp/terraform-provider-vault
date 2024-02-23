@@ -4,10 +4,13 @@
 package vault
 
 import (
+	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
@@ -139,4 +142,68 @@ data "vault_azure_access_credentials" "test" {
 	parsed = strings.Replace(parsed, "{{scope}}", conf.Scope, -1)
 	parsed = strings.Replace(parsed, "{{maxCredValidationSeconds}}", strconv.Itoa(maxSecs), -1)
 	return parsed
+}
+
+func Test_getAzureCloudConfigFromName(t *testing.T) {
+	t.Parallel()
+
+	mixedCap := func(s string) string {
+		var r string
+		s = strings.ToUpper(s)
+		for i := 0; i < len(s); i++ {
+			l := fmt.Sprintf("%c", s[i])
+			if i%2 == 0 {
+				r += strings.ToLower(l)
+			} else {
+				r += l
+			}
+		}
+		return r
+	}
+
+	type test struct {
+		name      string
+		cloudName string
+		want      cloud.Configuration
+		wantErr   bool
+	}
+	tests := []test{
+		{
+			name:      "invalid",
+			cloudName: "unknown",
+			wantErr:   true,
+		},
+	}
+	for k, v := range azureCloudConfigMap {
+		tests = append(tests, test{
+			name:      "mixed-" + k,
+			cloudName: mixedCap(k),
+			want:      v,
+			wantErr:   false,
+		})
+		tests = append(tests, test{
+			name:      "default-" + k,
+			cloudName: k,
+			want:      v,
+			wantErr:   false,
+		})
+		tests = append(tests, test{
+			name:      "lower-" + strings.ToLower(k),
+			cloudName: strings.ToLower(k),
+			want:      v,
+			wantErr:   false,
+		})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getAzureCloudConfigFromName(tt.cloudName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getAzureCloudConfigFromName() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getAzureCloudConfigFromName() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

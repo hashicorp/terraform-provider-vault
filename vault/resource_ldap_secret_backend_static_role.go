@@ -47,6 +47,11 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Required:    true,
 			Description: "How often Vault should rotate the password of the user entry.",
 		},
+		consts.FieldSkipImportRotation: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "Skip rotation of the password on import.",
+		},
 	}
 	return &schema.Resource{
 		CreateContext: createUpdateLDAPStaticRoleResource,
@@ -64,6 +69,7 @@ var ldapSecretBackendStaticRoleFields = []string{
 	consts.FieldUsername,
 	consts.FieldDN,
 	consts.FieldRotationPeriod,
+	consts.FieldSkipImportRotation,
 }
 
 func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -78,6 +84,11 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
 	data := map[string]interface{}{}
 	for _, field := range ldapSecretBackendStaticRoleFields {
+		// omit skip_import_rotation if vault version is less that 1.16 or if this is an update
+		// (alternately, only include skip_import_rotation on new resources created on 1.16
+		if field == consts.FieldSkipImportRotation && (!provider.IsAPISupported(meta, provider.VaultVersion116) || !d.IsNewResource()) {
+			continue
+		}
 		if v, ok := d.GetOk(field); ok {
 			data[field] = v
 		}
@@ -109,6 +120,9 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	for _, field := range ldapSecretBackendStaticRoleFields {
+		if field == consts.FieldSkipImportRotation && !provider.IsAPISupported(meta, provider.VaultVersion116) {
+			continue
+		}
 		if val, ok := resp.Data[field]; ok {
 			if err := d.Set(field, val); err != nil {
 				return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
