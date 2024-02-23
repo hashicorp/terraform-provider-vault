@@ -92,9 +92,7 @@ func pkiSecretBackendConfigUrlsCreateUpdate(d *schema.ResourceData, meta interfa
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion113) {
-		if enableTemplating, ok := d.GetOkExists("enable_templating"); ok {
-			data["enable_templating"] = enableTemplating
-		}
+		data["enable_templating"] = d.Get("enable_templating")
 	}
 
 	log.Printf("[DEBUG] %s URL config on PKI secret backend %q", action, backend)

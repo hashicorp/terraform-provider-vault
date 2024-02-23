@@ -80,7 +80,7 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return provider.IsAPISupported(meta, provider.VaultVersion113), nil
+					return !provider.IsAPISupported(meta, provider.VaultVersion113), nil
 				},
 				Config: testPkiSecretBackendCertConfigUrlsConfig(
 					rootPath, issuingCertificates, crlDistributionPoints, ocspServers),
