@@ -4,7 +4,8 @@ BUGS:
 * Handle graceful destruction of resources when approle is deleted out-of-band ([#2142](https://github.com/hashicorp/terraform-provider-vault/pull/2142)).
 
 FEATURES:
-* Add support for PKI Secrets Engine cluster configuration. Requires Vault 1.13+ ([#1949](https://github.com/hashicorp/terraform-provider-vault/pull/1949)).
+* Add support for PKI Secrets Engine cluster configuration with the `vault_pki_secret_backend_config_cluster` resource. Requires Vault 1.13+ ([#1949](https://github.com/hashicorp/terraform-provider-vault/pull/1949)).
+* Add support to `enable_templating` in `vault_pki_secret_backend_config_urls` ([#2147](https://github.com/hashicorp/terraform-provider-vault/pull/2147)).
 * Add support for `skip_import_rotation` and `skip_static_role_import_rotation` in `ldap_secret_backend_static_role` and `ldap_secret_backend` respectively. Requires Vault 1.16+ ([#2128](https://github.com/hashicorp/terraform-provider-vault/pull/2128)).
 * Improve logging to track full API exchanges between the provider and Vault ([#2139](https://github.com/hashicorp/terraform-provider-vault/pull/2139))
 

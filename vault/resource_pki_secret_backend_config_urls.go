@@ -61,6 +61,11 @@ func pkiSecretBackendConfigUrlsResource() *schema.Resource {
 				Description: "Specifies the URL values for the OCSP Servers field.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
+			"enable_templating": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Specifies that templating of AIA fields is allowed.",
+			},
 		},
 	}
 }
@@ -84,6 +89,10 @@ func pkiSecretBackendConfigUrlsCreateUpdate(d *schema.ResourceData, meta interfa
 		"issuing_certificates":    d.Get("issuing_certificates"),
 		"crl_distribution_points": d.Get("crl_distribution_points"),
 		"ocsp_servers":            d.Get("ocsp_servers"),
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		data["enable_templating"] = d.Get("enable_templating")
 	}
 
 	log.Printf("[DEBUG] %s URL config on PKI secret backend %q", action, backend)
@@ -131,6 +140,12 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 	}
 	for _, k := range fields {
 		if err := d.Set(k, config.Data[k]); err != nil {
+			return err
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		if err := d.Set("enable_templating", config.Data["enable_templating"]); err != nil {
 			return err
 		}
 	}
