@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -16,6 +17,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
+
+var pkiSecretBackendFromConfigClusterRegex = regexp.MustCompile("^(.+)/config/cluster$")
 
 func pkiSecretBackendConfigClusterResource() *schema.Resource {
 	return &schema.Resource{
@@ -45,6 +48,10 @@ func pkiSecretBackendConfigClusterResource() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 				Description: "Full path where PKI backend is mounted.",
+				// standardise on no beginning or trailing slashes
+				StateFunc: func(v interface{}) string {
+					return strings.Trim(v.(string), "/")
+				},
 			},
 			consts.FieldPath: {
 				Type:        schema.TypeString,
@@ -122,9 +129,14 @@ func pkiSecretBackendConfigClusterRead(ctx context.Context, d *schema.ResourceDa
 	}
 
 	path := d.Id()
-
 	if path == "" {
 		return diag.Errorf("no path set, id=%q", d.Id())
+	}
+
+	// get backend from full path
+	backend, err := pkiSecretBackendFromConfigCluster(path)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[DEBUG] Reading %s from Vault", path)
@@ -137,6 +149,11 @@ func pkiSecretBackendConfigClusterRead(ctx context.Context, d *schema.ResourceDa
 		d.SetId("")
 
 		return nil
+	}
+
+	// set backend and issuerRef
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		return diag.FromErr(err)
 	}
 
 	fields := []string{
@@ -156,4 +173,15 @@ func pkiSecretBackendConfigClusterRead(ctx context.Context, d *schema.ResourceDa
 
 func pkiSecretBackendConfigClusterDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
+}
+
+func pkiSecretBackendFromConfigCluster(path string) (string, error) {
+	if !pkiSecretBackendFromConfigClusterRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
+	}
+	res := pkiSecretBackendFromConfigClusterRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
 }
