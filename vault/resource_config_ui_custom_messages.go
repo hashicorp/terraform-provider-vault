@@ -29,24 +29,24 @@ func configUICustomMessageResource() *schema.Resource {
 			consts.FieldID: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Unique ID for the custom message",
+				Description: "The unique ID for the custom message",
 			},
 			consts.FieldTitle: {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Title of the custom message",
+				Description: "The title of the custom message",
 			},
 			consts.FieldMessageBase64: {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The base64-encoded message content of the custom message",
+				Description: "The base64-encoded content of the custom message",
 			},
 			consts.FieldAuthenticated: {
 				Type:     schema.TypeBool,
 				Optional: true,
 
 				Default:     true,
-				Description: "Flag indicating if custom message is pre-login (false) or post-login (true)",
+				Description: "A flag indicating whether the custom message is displayed pre-login (false) or post-login (true)",
 			},
 			consts.FieldType: {
 				Type:     schema.TypeString,
@@ -65,7 +65,7 @@ func configUICustomMessageResource() *schema.Resource {
 
 					return nil
 				},
-				Description: "Display type of custom message. Allowed values are banner and modal",
+				Description: "The display type of custom message. Allowed values are banner and modal",
 			},
 			consts.FieldStartTime: {
 				Type:        schema.TypeString,
@@ -75,7 +75,7 @@ func configUICustomMessageResource() *schema.Resource {
 			consts.FieldEndTime: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The ending time of the active period of the custom message",
+				Description: "The ending time of the active period of the custom message. Can be omitted for non-expiring messages",
 			},
 			consts.FieldLink: {
 				Type:     schema.TypeSet,
@@ -139,6 +139,7 @@ func configUICustomMessageRead(ctx context.Context, d *schema.ResourceData, meta
 
 	id := d.Id()
 
+	log.Printf("[DEBUG] Reading custom message %q", id)
 	secret, e := client.Sys().ReadUICustomMessage(id)
 	if e != nil {
 		return diag.FromErr(e)
@@ -163,7 +164,6 @@ func configUICustomMessageRead(ctx context.Context, d *schema.ResourceData, meta
 	}
 
 	var linkValue []map[string]interface{}
-	var linkMap map[string]interface{}
 
 	if v, ok := secretData[consts.FieldLink]; ok {
 		if v != nil {
@@ -197,12 +197,13 @@ func configUICustomMessageRead(ctx context.Context, d *schema.ResourceData, meta
 	d.Set(consts.FieldStartTime, secretData[consts.FieldStartTime])
 	d.Set(consts.FieldEndTime, endTimeValue)
 
-	if linkMap != nil {
+	if linkValue != nil {
 		d.Set(consts.FieldLink, linkValue)
 	}
 
 	d.Set(consts.FieldOptions, secretData[consts.FieldOptions])
 
+	log.Printf("[DEBUG] Read custom message %q", id)
 	return nil
 }
 
@@ -214,13 +215,15 @@ func configUICustomMessageUpdate(ctx context.Context, d *schema.ResourceData, me
 
 	id := d.Id()
 
-	//if d.HasChanges(consts.FieldTitle, consts.FieldMessageBase64, consts.FieldAuthenticated, consts.FieldType, consts.FieldStartTime, consts.FieldEndTime, consts.FieldOptions, consts.FieldLink) {
-	e = client.Sys().UpdateUICustomMessageWithContext(ctx, id, buildUICustomMessageRequest(d))
-	if e != nil {
-		return diag.FromErr(e)
+	if d.HasChanges(consts.FieldTitle, consts.FieldMessageBase64, consts.FieldAuthenticated, consts.FieldType, consts.FieldStartTime, consts.FieldEndTime, consts.FieldOptions, consts.FieldLink) {
+		log.Printf("[DEBUG] Updating custom message %q", id)
+		e = client.Sys().UpdateUICustomMessageWithContext(ctx, id, buildUICustomMessageRequest(d))
+		if e != nil {
+			return diag.FromErr(e)
+		}
 	}
-	//}
 
+	log.Printf("[DEBUG] Updated custom message %q", id)
 	return configUICustomMessageRead(ctx, d, meta)
 }
 
