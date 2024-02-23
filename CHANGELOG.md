@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add new resource `vault_config_ui_custom_message`: ([#2154](https://github.com/hashicorp/terraform-provider-vault/pull/2154)).
+
 BUGS:
 * Handle graceful destruction of resources when approle is deleted out-of-band ([#2142](https://github.com/hashicorp/terraform-provider-vault/pull/2142)).
 
