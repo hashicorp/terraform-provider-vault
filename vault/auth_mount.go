@@ -6,7 +6,6 @@ package vault
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -77,19 +76,6 @@ func authMountTuneSchema() *schema.Schema {
 	}
 }
 
-func authMountInfoGet(client *api.Client, path string) (*api.AuthMount, error) {
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return nil, fmt.Errorf("error reading from auth mounts: %s", err)
-	}
-
-	authMount := auths[strings.Trim(path, "/")+"/"]
-	if authMount == nil {
-		return nil, fmt.Errorf("auth mount %s not present", path)
-	}
-	return authMount, nil
-}
-
 func authMountTune(client *api.Client, path string, configured interface{}) error {
 	input := expandAuthMethodTune(configured.(*schema.Set).List())
 
@@ -123,16 +109,4 @@ func authMountDisable(client *api.Client, path string) error {
 	log.Printf("[INFO] Disabled auth mount from '%q'", path)
 
 	return nil
-}
-
-// getAuthMountIfPresent will fetch the auth mount at the given path.
-func getAuthMountIfPresent(client *api.Client, path string) (*api.AuthMount, error) {
-	auth, err := client.Sys().GetAuth(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading from Vault: %s", err)
-	}
-	if auth.Accessor == "" {
-		return nil, fmt.Errorf("mount not found: %s", err)
-	}
-	return auth, nil
 }

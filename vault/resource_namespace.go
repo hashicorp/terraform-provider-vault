@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func namespaceResource() *schema.Resource {
@@ -193,7 +194,7 @@ func namespaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}
 
 	toSet := map[string]interface{}{
 		consts.FieldNamespaceID: resp.Data[consts.FieldID],
-		consts.FieldPath:        util.TrimSlashes(path),
+		consts.FieldPath:        mountutil.TrimSlashes(path),
 		// set computed parameter to nil for vault versions <= 1.11
 		// prevents 'known after apply' drift in TF state since field
 		// would never be set otherwise

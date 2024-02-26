@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 var oktaAuthType = "okta"
@@ -298,24 +300,19 @@ func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
 
-	present, err := isOktaAuthBackendPresent(client, path)
-	if err != nil {
-		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
-	}
-
-	if !present {
-		// If we fell out here then we didn't find our Auth in the list.
+	mount, err := mountutil.GetAuthMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
 	}
 
-	if err := d.Set(consts.FieldPath, path); err != nil {
+	if err != nil {
 		return err
 	}
 
-	mount, err := authMountInfoGet(client, path)
-	if err != nil {
-		return fmt.Errorf("error reading okta oth mount from '%q': %s", path, err)
+	if err := d.Set(consts.FieldPath, path); err != nil {
+		return err
 	}
 
 	if err := d.Set("accessor", mount.Accessor); err != nil {

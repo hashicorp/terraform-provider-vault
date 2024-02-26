@@ -4,6 +4,8 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func githubAuthBackendResource() *schema.Resource {
@@ -180,10 +183,17 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	configPath := path + "/config"
 
 	log.Printf("[DEBUG] Reading github auth mount from '%q'", path)
-	mount, err := authMountInfoGet(client, d.Id())
-	if err != nil {
-		return fmt.Errorf("error reading github auth mount from '%q': %w", path, err)
+	mount, err := mountutil.GetAuthMount(context.Background(), client, d.Id())
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
+		d.SetId("")
+		return nil
 	}
+
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Read github auth mount from '%q'", path)
 
 	log.Printf("[DEBUG] Reading github auth config from '%q'", configPath)

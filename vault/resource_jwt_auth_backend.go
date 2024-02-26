@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func jwtAuthBackendResource() *schema.Resource {
@@ -274,15 +275,15 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.Set("path", path)
 
-	mount, err := getAuthMountIfPresent(client, path)
-	if err != nil {
-		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
-	}
-
-	if mount == nil {
-		// If we fell out here then we didn't find our Auth mount
+	mount, err := mountutil.GetAuthMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
+	}
+
+	if err != nil {
+		return err
 	}
 
 	config, err := client.Logical().Read(jwtConfigEndpoint(path))

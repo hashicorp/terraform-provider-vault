@@ -50,7 +50,6 @@ func listOktaUsers(client *api.Client, path string) ([]string, error) {
 
 func readOktaUser(client *api.Client, path string, username string) (*oktaUser, error) {
 	secret, err := client.Logical().Read(oktaUserEndpoint(path, username))
-
 	if err != nil {
 		return nil, err
 	}
@@ -74,24 +73,6 @@ func updateOktaUser(client *api.Client, path string, user oktaUser) error {
 func deleteOktaUser(client *api.Client, path, username string) error {
 	_, err := client.Logical().Delete(oktaUserEndpoint(path, username))
 	return err
-}
-
-func isOktaAuthBackendPresent(client *api.Client, path string) (bool, error) {
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return false, fmt.Errorf("error reading from Vault: %s", err)
-	}
-
-	configuredPath := path + "/"
-
-	for authBackendPath, auth := range auths {
-
-		if auth.Type == "okta" && authBackendPath == configuredPath {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
 
 func isOktaGroupPresent(client *api.Client, path, name string) (bool, error) {
@@ -122,7 +103,6 @@ func listOktaGroups(client *api.Client, path string) ([]string, error) {
 
 func readOktaGroup(client *api.Client, path string, name string) (*oktaGroup, error) {
 	secret, err := client.Logical().Read(oktaGroupEndpoint(path, name))
-
 	if err != nil {
 		return nil, err
 	}
