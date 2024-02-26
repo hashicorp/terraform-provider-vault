@@ -113,12 +113,15 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 	log.Printf("[DEBUG] Reading %q", rolePath)
 
 	resp, err := client.Logical().ReadWithContext(ctx, rolePath)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	if resp == nil {
 		log.Printf("[WARN] %q not found, removing from state", rolePath)
 		d.SetId("")
 		return nil
 	}
-
 	for _, field := range ldapSecretBackendStaticRoleFields {
 		if field == consts.FieldSkipImportRotation && !provider.IsAPISupported(meta, provider.VaultVersion116) {
 			continue
