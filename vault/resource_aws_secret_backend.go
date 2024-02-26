@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 var awsSecretFields = []string{
@@ -241,7 +243,7 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 	return awsSecretBackendRead(ctx, d, meta)
 }
 
-func awsSecretBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
 
 	client, e := provider.GetClient(d, meta)
@@ -252,20 +254,19 @@ func awsSecretBackendRead(_ context.Context, d *schema.ResourceData, meta interf
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading AWS backend mount %q from Vault", path)
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return diag.Errorf("error reading mount %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Read AWS backend mount %q from Vault", path)
 
-	// the API always returns the path with a trailing slash, so let's make
-	// sure we always specify it as a trailing slash.
-	mount, ok := mounts[strings.Trim(path, "/")+"/"]
-	if !ok {
-		log.Printf("[WARN] Mount %q not found, removing backend from state.", path)
+	mount, err := mountutil.GetMount(ctx, client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
 	}
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	log.Printf("[DEBUG] Read AWS backend mount %q from Vault", path)
 
 	log.Printf("[DEBUG] Read AWS secret backend config/root %s", path)
 	resp, err := client.Logical().Read(path + "/config/root")

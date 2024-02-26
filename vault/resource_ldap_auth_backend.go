@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"log"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 const ldapAuthType string = "ldap"
@@ -348,25 +350,26 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	return ldapAuthBackendRead(ctx, d, meta)
 }
 
-func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
 
 	path := d.Id()
-	auths, err := client.Sys().ListAuth()
+
+	authMount, err := mountutil.GetAuthMount(ctx, client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
+		d.SetId("")
+		return nil
+	}
+
 	if err != nil {
-		return diag.Errorf("error reading from Vault: %s", err)
+		return diag.FromErr(err)
 	}
 
 	d.Set("path", path)
-
-	authMount := auths[strings.Trim(path, "/")+"/"]
-	if authMount == nil {
-		return diag.Errorf("auth mount %s not present", path)
-	}
-
 	d.Set("description", authMount.Description)
 	d.Set("accessor", authMount.Accessor)
 	d.Set("local", authMount.Local)

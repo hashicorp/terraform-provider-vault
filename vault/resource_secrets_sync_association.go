@@ -6,9 +6,9 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -16,6 +16,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 const (
@@ -179,17 +180,14 @@ func getMountAccessor(ctx context.Context, d *schema.ResourceData, meta interfac
 	mount := d.Get(consts.FieldMount).(string)
 
 	log.Printf("[DEBUG] Reading mount %s from Vault", mount)
-	mounts, err := client.Sys().ListMountsWithContext(ctx)
-	if err != nil {
-		return "", err
+
+	m, err := mountutil.GetMount(context.Background(), client, mount)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		return "", fmt.Errorf("expected mount at %s; no mount found", mount)
 	}
 
-	// path can have a trailing slash, but doesn't need to have one
-	// this standardises on having a trailing slash, which is how the
-	// API always responds.
-	m, ok := mounts[strings.Trim(mount, "/")+"/"]
-	if !ok {
-		return "", fmt.Errorf("expected mount at %s; no mount found", mount)
+	if err != nil {
+		return "", err
 	}
 
 	return m.Accessor, nil

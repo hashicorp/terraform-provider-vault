@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func pkiSecretBackendConfigUrlsResource() *schema.Resource {
@@ -28,7 +28,7 @@ func pkiSecretBackendConfigUrlsResource() *schema.Resource {
 					return nil, fmt.Errorf("no path set for import, id=%q", id)
 				}
 
-				parts := strings.Split(util.NormalizeMountPath(id), "/")
+				parts := strings.Split(mountutil.NormalizeMountPath(id), "/")
 				if err := d.Set("backend", parts[0]); err != nil {
 					return nil, err
 				}

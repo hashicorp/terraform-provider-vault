@@ -4,6 +4,8 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func AuthBackendResource() *schema.Resource {
@@ -126,14 +129,15 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 
-	mount, err := getAuthMountIfPresent(client, path)
-	if err != nil {
-		return err
-	}
-
-	if mount == nil {
+	mount, err := mountutil.GetAuthMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
+	}
+
+	if err != nil {
+		return err
 	}
 
 	if err := d.Set("type", mount.Type); err != nil {
