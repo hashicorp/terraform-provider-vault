@@ -77,15 +77,28 @@ func authBackendDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	path = strings.TrimSuffix(path, "/")
 	d.SetId(path)
-	d.Set("type", auth.Type)
-	d.Set("description", auth.Description)
-	d.Set("accessor", auth.Accessor)
-	d.Set("default_lease_ttl_seconds", auth.Config.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", auth.Config.MaxLeaseTTL)
-	d.Set("listing_visibility", auth.Config.ListingVisibility)
-	d.Set("local", auth.Local)
-	return nil
 
-	// If we fell out here then we didn't find our Auth in the list.
+	if err := d.Set("type", auth.Type); err != nil {
+		return err
+	}
+	if err := d.Set("description", auth.Description); err != nil {
+		return err
+	}
+	if err := d.Set("accessor", auth.Accessor); err != nil {
+		return err
+	}
+	if err := d.Set("default_lease_ttl_seconds", auth.Config.DefaultLeaseTTL); err != nil {
+		return err
+	}
+	if err := d.Set("max_lease_ttl_seconds", auth.Config.MaxLeaseTTL); err != nil {
+		return err
+	}
+	if err := d.Set("listing_visibility", auth.Config.ListingVisibility); err != nil {
+		return err
+	}
+	if err := d.Set("local", auth.Local); err != nil {
+		return err
+	}
+
 	return nil
 }
