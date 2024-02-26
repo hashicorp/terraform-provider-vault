@@ -761,6 +761,14 @@ var (
 			Resource:      UpdateSchemaResource(secretsSyncAssociationResource()),
 			PathInventory: []string{"/sys/sync/destinations/{type}/{name}/associations/set"},
 		},
+		"vault_plugin": {
+			Resource:      UpdateSchemaResource(pluginResource()),
+			PathInventory: []string{"/sys/plugins/catalog/{type}/{name}"},
+		},
+		"vault_plugin_pinned_version": {
+			Resource:      UpdateSchemaResource(pluginPinnedVersionResource()),
+			PathInventory: []string{"/sys/plugins/pins/{type}/{name}"},
+		},
 	}
 )
 
