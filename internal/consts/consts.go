@@ -438,6 +438,12 @@ const (
 	FieldMaxRetries                    = "max_retries"
 	FieldSessionTags                   = "session_tags"
 	FieldSelfManagedPassword           = "self_managed_password"
+	FieldAllowedIssuers                = "allowed_issuers"
+	FieldAllowedRoles                  = "allowed_roles"
+	FieldAllowRoleExtKeyUsage          = "allow_role_ext_key_usage"
+	FieldDefaultDirectoryPolicy        = "default_directory_policy"
+	FieldDnsResolver                   = "dns_resolver"
+	FieldEabPolicy                     = "eab_policy"
 
 	/*
 		common environment variables
