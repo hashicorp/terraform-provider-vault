@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -15,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 const (
@@ -307,15 +310,17 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	// fetch AuthMount in order to set accessor attribute
-	mount, err := getAuthMountIfPresent(client, gcpPath)
-	if err != nil {
-		return err
-	}
-	if mount == nil {
+	mount, err := mountutil.GetAuthMount(context.Background(), client, gcpPath)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", gcpPath)
 		d.SetId("")
 		return nil
 	}
+
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[DEBUG] Reading %s auth tune from '%s/tune'", gcpAuthType, gcpAuthPath)
 	rawTune, err := authMountTuneGet(client, gcpAuthPath)
 	if err != nil {

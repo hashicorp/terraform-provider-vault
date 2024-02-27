@@ -46,6 +46,8 @@ The following arguments are supported:
 
 * `ocsp_servers` - (Optional) Specifies the URL values for the OCSP Servers field.
 
+* `enable_templating` - (Optional) Specifies that templating of AIA fields is allowed.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

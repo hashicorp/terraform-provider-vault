@@ -29,7 +29,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.18.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.10.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.14.2
-	github.com/hashicorp/vault/api v1.11.1-0.20240201194553-aab72100fb2f
+	github.com/hashicorp/vault/api v1.12.1-0.20240216201659-6dd2389edd36
 	github.com/hashicorp/vault/sdk v0.10.2
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/mitchellh/go-homedir v1.1.0

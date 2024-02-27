@@ -569,6 +569,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCAResource()),
 			PathInventory: []string{"/pki/config/ca"},
 		},
+		"vault_pki_secret_backend_config_cluster": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigClusterResource()),
+			PathInventory: []string{"/pki/config/cluster"},
+		},
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),
 			PathInventory: []string{"/pki/config/urls"},

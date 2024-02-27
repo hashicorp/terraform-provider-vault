@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func testCheckMountDestroyed(resourceType, mountType, pathField string) resource.TestCheckFunc {
@@ -59,9 +60,9 @@ func testCheckMountDestroyed(resourceType, mountType, pathField string) resource
 				return err
 			}
 
-			rsPath = util.NormalizeMountPath(rsPath)
+			rsPath = mountutil.NormalizeMountPath(rsPath)
 			for path, mount := range mounts {
-				path = util.NormalizeMountPath(path)
+				path = mountutil.NormalizeMountPath(path)
 				if mount.Type == mountType && path == rsPath {
 					return fmt.Errorf("mount %q still exists", path)
 				}

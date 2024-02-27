@@ -93,3 +93,5 @@ The following attributes are exported:
 * `deletion_time` - Deletion time for the secret.
 
 * `destroyed` - Indicates whether the secret has been destroyed.
+
+* `version` - Version of the secret.

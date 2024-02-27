@@ -8,6 +8,7 @@ description: |-
 
 # vault\_mount
 
+This resource enables a new secrets engine at the given path.
 
 ## Example Usage
 
