@@ -3,6 +3,7 @@
 BUGS:
 * Handle graceful destruction of resources when approle is deleted out-of-band ([#2142](https://github.com/hashicorp/terraform-provider-vault/pull/2142)).
 * Ensure errors are returned on read operations for `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_library_set`, and `vault_ldap_secret_backend_static_role` ([#2156](https://github.com/hashicorp/terraform-provider-vault/pull/2156)).
+* Ensure proper use of issuer endpoints for root sign intermediate resource: ([#2160](https://github.com/hashicorp/terraform-provider-vault/pull/2160))
 
 FEATURES:
 * Add support for PKI Secrets Engine cluster configuration with the `vault_pki_secret_backend_config_cluster` resource. Requires Vault 1.13+ ([#1949](https://github.com/hashicorp/terraform-provider-vault/pull/1949)).

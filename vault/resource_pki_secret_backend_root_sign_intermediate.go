@@ -237,7 +237,6 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 	}
 
 	backend := d.Get(consts.FieldBackend).(string)
-	path := pkiSecretBackendRootSignIntermediateCreatePath(backend)
 
 	commonName := d.Get(consts.FieldCommonName).(string)
 
@@ -277,9 +276,11 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 	}
 
 	// add version specific multi-issuer fields
+	var issuerRef string
 	if provider.IsAPISupported(meta, provider.VaultVersion111) {
-		if issuerRef, ok := d.GetOk(consts.FieldIssuerRef); ok {
-			data[consts.FieldIssuerRef] = issuerRef
+		if v, ok := d.GetOk(consts.FieldIssuerRef); ok {
+			data[consts.FieldIssuerRef] = v
+			issuerRef = v.(string)
 		}
 	}
 
@@ -295,6 +296,8 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 			data[k] = strings.Join(m, ",")
 		}
 	}
+
+	path := pkiSecretBackendRootSignIntermediateCreatePath(backend, issuerRef)
 
 	log.Printf("[DEBUG] Creating root sign-intermediate on PKI secret backend %q", backend)
 	resp, err := client.Logical().Write(path, data)
@@ -327,7 +330,14 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		return diag.FromErr(err)
 	}
 
-	d.SetId(fmt.Sprintf("%s/%s", backend, commonName))
+	if issuerRef != "" {
+		// encodes unique ID info for the particular issuer and
+		// the CN of the Intermediate CSR
+		d.SetId(fmt.Sprintf("%s/%s", path, commonName))
+	} else {
+		// leave behavior unchanged for default issuer
+		d.SetId(fmt.Sprintf("%s/%s", backend, commonName))
+	}
 
 	return pkiSecretBackendRootSignIntermediateRead(ctx, d, meta)
 }
@@ -438,7 +448,11 @@ func pkiSecretBackendRootSignIntermediateUpdate(ctx context.Context, d *schema.R
 	return nil
 }
 
-func pkiSecretBackendRootSignIntermediateCreatePath(backend string) string {
+func pkiSecretBackendRootSignIntermediateCreatePath(backend string, issuer string) string {
+	// Send request to multi-issuer endpoint
+	if issuer != "" {
+		return strings.Trim(backend, "/") + fmt.Sprintf("/issuer/%s/sign-intermediate", issuer)
+	}
 	return strings.Trim(backend, "/") + "/root/sign-intermediate"
 }
 
