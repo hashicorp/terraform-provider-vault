@@ -1,5 +1,8 @@
 ## Unreleased
 
+BUGS:
+* Ensure proper use of issuer endpoints for root sign intermediate resource: ([#2160](https://github.com/hashicorp/terraform-provider-vault/pull/2160))
+
 ## 3.25.0 (Feb 14, 2024)
 
 FEATURES:
