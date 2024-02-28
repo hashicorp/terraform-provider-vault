@@ -1,0 +1,144 @@
+---
+layout: "vault"
+page_title: "Terraform Vault Provider 4.0.0 Upgrade Guide"
+sidebar_current: "docs-vault-provider-version-3-upgrade"
+description: |-
+  Terraform Vault Provider 4.0.0 Upgrade Guide
+
+---
+
+# Terraform Vault Provider 4.0.0 Upgrade Guide
+
+Version `4.0.0` of the Vault provider for Terraform is a major release and
+includes some changes that you will need to consider when upgrading. This guide
+is intended to help with that process and focuses only on the changes necessary
+to upgrade from version `3.25.0` to `4.0.0`.
+
+Most of the changes outlined in this guide have been previously marked as
+deprecated in the Terraform `plan`/`apply` output throughout previous provider
+releases, up to and including 3.25.0. These changes, such as deprecation notices,
+can always be found in the [CHANGELOG](https://github.com/hashicorp/terraform-provider-vault/blob/master/CHANGELOG.md).
+
+-> If you are upgrading from `1.9.x`. Please follow the
+[2.0.0 Upgrade Guide](./version_2_upgrade.html) before proceeding any further.
+
+-> If you are upgrading from `2.24.x`. Please follow the
+[3.0.0 Upgrade Guide](./version_3_upgrade.html) before proceeding any further.
+
+## Why version 4.0.0?
+
+We introduced version `4.0.0` of the Vault provider in order to make
+performance improvements for deployments that manage many Vault secret or auth
+engine mounts. This improvement required changes to the underlying Vault API
+calls, which in turn would require policy adjustments in environments where
+permissions are least privilege.
+
+The change was deemed significant enough to warrant the major version bump.
+In addition to the aforementioned performance improvements, all previously deprecated fields
+and resources have been removed.
+
+While you may see some small changes in your configurations as a result of
+these changes, we don't expect you'll need to make any major refactorings.
+However, please pay special attention to the changes noted in the TODO(JM) section.
+
+## Which Terraform versions are supported?
+
+Terraform versions `0.12.x` and greater are fully supported. Support for `0.11.x` has been removed.
+If you are still on one of the `0.11.x` versions we recommend upgrading to the latest stable release of Terraform.
+
+Please see the [Terraform Upgrade Guide](https://www.terraform.io/upgrade-guides/index.html)
+for more info about upgrading Terraform.
+
+## I accidentally upgraded to 4.0.0, how do I downgrade to `2.X`?
+
+If you've inadvertently upgraded to `4.0.0`, first see the
+[Provider Version Configuration Guide](#provider-version-configuration) to lock
+your provider version; if you've constrained the provider to a lower version
+such as shown in the previous version example in that guide, Terraform will pull
+in a `2.X` series release on `terraform init`.
+
+If you've only run `terraform init` or `terraform plan`, your state will not
+have been modified and downgrading your provider is sufficient.
+
+If you've run `terraform refresh` or `terraform apply`, Terraform may have made
+state changes in the meantime.
+
+- If you're using a *local* state, `terraform refresh` with a downgraded
+  provider is likely sufficient to revert your state.
+- If you're using a *remote* state backend
+  - That does not support versioning, see the local state instructions above
+  - That supports *versioning* you can revert the Terraform state file to a previous
+    version by hand. If you do so and Terraform created resources as part of a
+    `terraform apply`, you'll need to either `terraform import` them or delete
+    them by hand.
+
+## Upgrade Topics
+
+<!-- TOC depthFrom:2 depthTo:2 -->
+
+- [Provider Version Configuration](#provider-version-configuration)
+- [Provider Policy Changes](#provider-policy-changes)
+
+<!-- /TOC -->
+
+## Provider Version Configuration
+
+-> Before upgrading to version `4.0.0`, it is recommended to upgrade to the most
+recent version of the provider (`3.25.0`) and ensure that your environment
+successfully runs [`terraform plan`](https://www.terraform.io/docs/commands/plan.html)
+without unexpected changes or deprecation notices.
+
+It is recommended to use [version constraints](https://www.terraform.io/docs/configuration/providers.html#provider-versions)
+when configuring Terraform providers. If you are following that recommendation,
+update the version constraints in your Terraform configuration and run
+[`terraform init`](https://www.terraform.io/docs/commands/init.html) to download
+the new version.
+
+If you aren't using version constraints, you can use `terraform init -upgrade`
+in order to upgrade your provider to the latest released version.
+
+For example, given this previous configuration:
+
+```hcl
+provider "vault" {
+  # ... other configuration ...
+
+  version = "~> 3.25.0"
+}
+```
+
+An updated configuration:
+
+```hcl
+provider "vault" {
+  # ... other configuration ...
+
+  version = "~> 4.0.0"
+}
+```
+
+## Provider Policy Changes
+
+- GET sys/auth -> GET sys/auth/:path
+  - data sources
+    - vault_auth_backend
+  - resources
+    - vault_auth_backend
+    - vault_aws_secret_backend
+    - vault_azure_secret_backend
+    - vault_consul_secret_backend
+    - vault_gcp_auth_backend
+    - vault_gcp_secret_backend
+    - vault_github_auth_backend
+    - vault_jwt_auth_backend
+    - vault_ldap_auth_backend
+    - vault_mount
+    - vault_okta_auth_backend
+    - vault_pki_secret_backend_cert
+    - vault_rabbitmq_secret_backend
+    - vault_terraform_cloud_secret_backend
+
+- GET sys/auth/:path/config -> GET sys/auth/:path
+  - vault_ad_secret_backend
+  - vault_nomad_secret_backend
+
