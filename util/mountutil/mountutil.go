@@ -28,11 +28,16 @@ func GetMount(ctx context.Context, client *api.Client, path string) (*api.MountO
 	mount, err := client.Sys().GetMountWithContext(ctx, path)
 	// Hardcoding the error string check is not ideal, but Vault does not
 	// return 404 in this case
-	if err != nil && strings.Contains(err.Error(), ErrVaultSecretMountNotFound) || mount == nil {
+	if err != nil && strings.Contains(err.Error(), ErrVaultSecretMountNotFound) {
 		return nil, fmt.Errorf("%w: %s", ErrMountNotFound, err)
 	}
+	// some other error occured, like 403, etc.
 	if err != nil {
 		return nil, fmt.Errorf("error reading from Vault: %s", err)
+	}
+	// no error but no mount either, so return not found
+	if mount == nil {
+		return nil, fmt.Errorf("%w: %s", ErrMountNotFound, err)
 	}
 	return mount, nil
 }
@@ -42,11 +47,16 @@ func GetAuthMount(ctx context.Context, client *api.Client, path string) (*api.Mo
 	mount, err := client.Sys().GetAuthWithContext(ctx, path)
 	// Hardcoding the error string check is not ideal, but Vault does not
 	// return 404 in this case
-	if err != nil && strings.Contains(err.Error(), ErrVaultAuthMountNotFound) || mount == nil {
+	if err != nil && strings.Contains(err.Error(), ErrVaultAuthMountNotFound) {
 		return nil, fmt.Errorf("%w: %s", ErrMountNotFound, err)
 	}
+	// some other error occured, like 403, etc.
 	if err != nil {
 		return nil, fmt.Errorf("error reading from Vault: %s", err)
+	}
+	// no error but no mount either, so return not found
+	if mount == nil {
+		return nil, fmt.Errorf("%w: %s", ErrMountNotFound, err)
 	}
 	return mount, nil
 }
