@@ -49,13 +49,13 @@ If you are still on one of the `0.11.x` versions we recommend upgrading to the l
 Please see the [Terraform Upgrade Guide](https://www.terraform.io/upgrade-guides/index.html)
 for more info about upgrading Terraform.
 
-## I accidentally upgraded to 4.0.0, how do I downgrade to `2.X`?
+## I accidentally upgraded to 4.0.0, how do I downgrade to `3.X`?
 
 If you've inadvertently upgraded to `4.0.0`, first see the
 [Provider Version Configuration Guide](#provider-version-configuration) to lock
 your provider version; if you've constrained the provider to a lower version
 such as shown in the previous version example in that guide, Terraform will pull
-in a `2.X` series release on `terraform init`.
+in a `3.X` series release on `terraform init`.
 
 If you've only run `terraform init` or `terraform plan`, your state will not
 have been modified and downgrading your provider is sufficient.
@@ -119,26 +119,115 @@ provider "vault" {
 
 ## Provider Policy Changes
 
-- GET sys/auth -> GET sys/auth/:path
-  - data sources
-    - vault_auth_backend
-  - resources
-    - vault_auth_backend
-    - vault_aws_secret_backend
-    - vault_azure_secret_backend
-    - vault_consul_secret_backend
-    - vault_gcp_auth_backend
-    - vault_gcp_secret_backend
-    - vault_github_auth_backend
-    - vault_jwt_auth_backend
-    - vault_ldap_auth_backend
-    - vault_mount
-    - vault_okta_auth_backend
-    - vault_pki_secret_backend_cert
-    - vault_rabbitmq_secret_backend
-    - vault_terraform_cloud_secret_backend
+Version `4.0.0` of the Vault provider made changes to the underlying Vault API
+calls, which in turn may require policy adjustments in environments where
+permissions are least privilege.
 
-- GET sys/auth/:path/config -> GET sys/auth/:path
-  - vault_ad_secret_backend
-  - vault_nomad_secret_backend
+Please see the [Capabilities](https://developer.hashicorp.com/vault/docs/concepts/policies#capabilities)
+section of the Vault Policies documentation for more information on Vault
+policies.
 
+### Auth method resource changes
+
+The following Vault auth method resources and data sources have changes that
+may require policy adjustments:
+
+Data sources
+  - `vault_auth_backend`
+
+Resources
+  - `vault_auth_backend`
+  - `vault_gcp_auth_backend`
+  - `vault_github_auth_backend`
+  - `vault_jwt_auth_backend`
+  - `vault_ldap_auth_backend`
+  - `vault_okta_auth_backend`
+
+<table>
+<thead>
+  <tr>
+    <th colspan="2">3.X</th>
+    <th colspan="2">4.X</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>Method</td>
+    <td>Path</td>
+    <td>Method</td>
+    <td>Path</td>
+  </tr>
+  <tr>
+    <td>GET</td>
+    <td>sys/auth</td>
+    <td>GET</td>
+    <td>sys/auth/:path</td>
+  </tr>
+</tbody>
+</table>
+
+### Secret engine resource changes
+
+The following Vault secret engine resources have changes that may require
+policy adjustments:
+
+Resources
+  - `vault_aws_secret_backend`
+  - `vault_azure_secret_backend`
+  - `vault_consul_secret_backend`
+  - `vault_gcp_secret_backend`
+  - `vault_mount`
+  - `vault_pki_secret_backend_cert`
+  - `vault_rabbitmq_secret_backend`
+  - `vault_terraform_cloud_secret_backend`
+
+<table>
+<thead>
+  <tr>
+    <th colspan="2">3.X</th>
+    <th colspan="2">4.X</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>Method</td>
+    <td>Path</td>
+    <td>Method</td>
+    <td>Path</td>
+  </tr>
+  <tr>
+    <td>GET</td>
+    <td>sys/mounts</td>
+    <td>GET</td>
+    <td>sys/mounts/:path</td>
+  </tr>
+</tbody>
+</table>
+
+
+Resources
+  - `vault_ad_secret_backend`
+  - `vault_nomad_secret_backend`
+
+<table>
+<thead>
+  <tr>
+    <th colspan="2">3.X</th>
+    <th colspan="2">4.X</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>Method</td>
+    <td>Path</td>
+    <td>Method</td>
+    <td>Path</td>
+  </tr>
+  <tr>
+    <td>GET</td>
+    <td>sys/mounts/:path/config</td>
+    <td>GET</td>
+    <td>sys/mounts/:path</td>
+  </tr>
+</tbody>
+</table>
