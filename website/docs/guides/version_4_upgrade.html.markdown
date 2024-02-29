@@ -129,19 +129,19 @@ policies.
 
 ### Auth method resource changes
 
-The following Vault auth method resources and data sources have changes that
-may require policy adjustments:
+The below table specifies what changed between version 3.X and 4.X for the
+following resources:
 
-Data sources
-  - `vault_auth_backend`
+#### Data sources
+- `vault_auth_backend`
 
-Resources
-  - `vault_auth_backend`
-  - `vault_gcp_auth_backend`
-  - `vault_github_auth_backend`
-  - `vault_jwt_auth_backend`
-  - `vault_ldap_auth_backend`
-  - `vault_okta_auth_backend`
+#### Resources
+- `vault_auth_backend`
+- `vault_gcp_auth_backend`
+- `vault_github_auth_backend`
+- `vault_jwt_auth_backend`
+- `vault_ldap_auth_backend`
+- `vault_okta_auth_backend`
 
 <table>
 <thead>
@@ -166,12 +166,32 @@ Resources
 </tbody>
 </table>
 
+For example, in version 3.X the following policy is required for the
+`vault_gcp_auth_backend` resource to perform the GET `sys/auth` HTTP operation:
+
+```hcl
+path "sys/auth"
+{
+    capabilities = ["read"]
+}
+```
+
+In version 4.X the following policy is required for the
+`vault_gcp_auth_backend` resource to perform the GET `sys/auth/:path` HTTP operation:
+
+```hcl
+path "sys/auth/gcp"
+{
+    capabilities = ["read"]
+}
+```
+
 ### Secret engine resource changes
 
-The following Vault secret engine resources have changes that may require
-policy adjustments:
+The below table specifies what changed between version 3.X and 4.X for the
+following resources:
 
-Resources
+#### Resources
   - `vault_aws_secret_backend`
   - `vault_azure_secret_backend`
   - `vault_consul_secret_backend`
@@ -204,6 +224,28 @@ Resources
 </tbody>
 </table>
 
+For example, in version 3.X the following policy is required for the
+`vault_gcp_secret_backend` resource to perform the GET `sys/mounts` HTTP operation:
+
+```hcl
+path "sys/mounts"
+{
+    capabilities = ["read"]
+}
+```
+
+In version 4.X the following policy is required for the
+`vault_gcp_secret_backend` resource to perform the GET `sys/mounts/:path` HTTP operation:
+
+```hcl
+path "sys/mounts/gcp"
+{
+  capabilities = ["read"]
+}
+```
+
+The below table specifies what changed between version 3.X and 4.X for the
+following resources:
 
 Resources
   - `vault_ad_secret_backend`
@@ -225,9 +267,29 @@ Resources
   </tr>
   <tr>
     <td>GET</td>
-    <td>sys/mounts/:path/config</td>
+    <td>sys/mounts/:path/tune</td>
     <td>GET</td>
     <td>sys/mounts/:path</td>
   </tr>
 </tbody>
 </table>
+
+For example, in version 3.X the following policy is required for the
+`vault_nomad_secret_backend` resource to perform the GET `sys/mounts` HTTP operation:
+
+```hcl
+path "sys/mounts/nomad/tune"
+{
+    capabilities = ["read"]
+}
+```
+
+In version 4.X the following policy is required for the
+`vault_nomad_secret_backend` resource to perform the GET `sys/mounts/:path` HTTP operation:
+
+```hcl
+path "sys/mounts/nomad"
+{
+  capabilities = ["read"]
+}
+```
