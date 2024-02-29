@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -28,9 +29,13 @@ const (
 
 func pluginResource() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: provider.MountCreateContextWrapper(pluginWrite, provider.VaultVersion116),
+		CreateContext: pluginWrite,
+		UpdateContext: pluginWrite,
 		ReadContext:   provider.ReadContextWrapper(pluginRead),
 		DeleteContext: pluginDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldType: {
@@ -53,45 +58,40 @@ func pluginResource() *schema.Resource {
 			},
 			fieldSHA256: {
 				Type:        schema.TypeString,
-				Description: "The SHA256 sum of the plugin binary.",
+				Description: "SHA256 sum of the plugin binary.",
 				Required:    true,
-				ForceNew:    true,
 			},
 			fieldCommand: {
 				Type:        schema.TypeString,
-				Description: "The command to execute the plugin, relative to the plugin_directory.",
+				Description: "Command to execute the plugin, relative to the plugin_directory.",
 				Required:    true,
-				ForceNew:    true,
 			},
 			fieldArgs: {
 				Type:        schema.TypeList,
-				Description: "Any additional arguments to pass to the plugin.",
+				Description: "List of additional arguments to pass to the plugin.",
 				Optional:    true,
-				ForceNew:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
 			fieldEnv: {
 				Type:        schema.TypeList,
-				Description: "Any additional environment variables to run the plugin with.",
+				Description: "List of additional environment variables to run the plugin with in KEY=VALUE form.",
 				Optional:    true,
-				ForceNew:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Sensitive: true,
 			},
 			fieldOCIImage: {
 				Type:        schema.TypeString,
 				Description: "Specifies OCI image to run. If specified, setting command, args, and env will update the container's entrypoint, args, and environment variables (append-only) respectively.",
 				Optional:    true,
-				ForceNew:    true,
 			},
 			fieldRuntime: {
 				Type:        schema.TypeString,
 				Description: "Specifies Vault plugin runtime to use if oci_image is specified.",
 				Optional:    true,
-				ForceNew:    true,
 			},
 		},
 	}
@@ -142,12 +142,21 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 		return diag.FromErr(e)
 	}
 
-	pluginType, err := api.ParsePluginType(d.Get(consts.FieldType).(string))
+	var typ, name, version string
+	parts := strings.Split(d.Id(), "/")
+	switch len(parts) {
+	case 2:
+		typ, name = parts[0], parts[1]
+	case 3:
+		typ, name, version = parts[0], parts[1], parts[2]
+	default:
+		return diag.Errorf("invalid ID %q, must be of form <type>/<name> or <type>/<name>/<semantic-version>", d.Id())
+	}
+
+	pluginType, err := api.ParsePluginType(typ)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	name := d.Get(consts.FieldName).(string)
-	version := d.Get(consts.FieldVersion).(string)
 
 	resp, err := client.Sys().GetPluginWithContext(ctx, &api.GetPluginInput{
 		Type:    pluginType,
@@ -159,9 +168,14 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 		return diag.Errorf("error reading plugin %q %q %q: %s", pluginType, name, version, err)
 	}
 
+	d.Set(consts.FieldType, typ)
+	d.Set(consts.FieldName, name)
+	d.Set(consts.FieldVersion, version)
 	d.Set(fieldSHA256, resp.SHA256)
 	d.Set(fieldCommand, resp.Command)
-	d.Set(fieldArgs, resp.Args)
+	if len(resp.Args) > 0 {
+		d.Set(fieldArgs, resp.Args)
+	}
 	d.Set(fieldOCIImage, resp.OCIImage)
 	d.Set(fieldRuntime, resp.Runtime)
 
