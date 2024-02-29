@@ -78,12 +78,12 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 func testAWSSecretsSyncDestinationConfig_initial(accessKey, secretKey, region, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_aws_destination" "test" {
-  name					= "%s"
-  access_key_id			= "%s"
-  secret_access_key		= "%s"
-  region				= "%s"
-  role_arn				= "role-arn-test"
-  external_id			= "external-id-test"
+  name                  = "%s"
+  access_key_id	        = "%s"
+  secret_access_key     = "%s"
+  region                = "%s"
+  role_arn              = "role-arn-test"
+  external_id           = "external-id-test"
   %s
 }
 `, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, false, true, false))
@@ -94,12 +94,12 @@ resource "vault_secrets_sync_aws_destination" "test" {
 func testAWSSecretsSyncDestinationConfig_updated(accessKey, secretKey, region, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_aws_destination" "test" {
-  name					= "%s"
-  access_key_id			= "%s"
-  secret_access_key		= "%s"
-  region				= "%s"
-  role_arn				= "role-arn-updated"
-  external_id			= "external-id-updated"
+  name                  = "%s"
+  access_key_id         = "%s"
+  secret_access_key     = "%s"
+  region                = "%s"
+  role_arn              = "role-arn-updated"
+  external_id           = "external-id-updated"
   %s
 }
 `, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, true, true, true))
