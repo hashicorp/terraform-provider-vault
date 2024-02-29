@@ -15,10 +15,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestGithubAppsSecretsSyncDestination(t *testing.T) {
-	destName := acctest.RandomWithPrefix("tf-sync-dest-github-apps")
+func TestGithubAppsSecretsSync(t *testing.T) {
+	appName := acctest.RandomWithPrefix("tf-sync-github-apps")
 
-	resourceName := "vault_secrets_sync_github_apps_destination.test"
+	resourceName := "vault_secrets_sync_github_apps.test"
 
 	values := testutil.SkipTestEnvUnset(t,
 		"GITHUB_APPS_PRIVATE_KEY",
@@ -36,23 +36,21 @@ func TestGithubAppsSecretsSyncDestination(t *testing.T) {
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: testGithubAppsSecretsSyncDestinationConfig_initial(privateKey, appID, destName, defaultSecretsSyncTemplate),
+				Config: testGithubAppsSecretsSyncConfig_initial(privateKey, appID, appName),
 				Check: resource.ComposeTestCheckFunc(
 
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, appName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKey, privateKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAppID, appID),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 				),
 			},
 			{
-				Config: testGithubAppsSecretsSyncDestinationConfig_updated(privateKey, appID, destName, updatedSecretsSyncTemplate),
+				Config: testGithubAppsSecretsSyncConfig_updated(privateKey, appID, appName),
 				Check: resource.ComposeTestCheckFunc(
 
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, appName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKey, privateKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAppID, appID),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
@@ -62,28 +60,26 @@ func TestGithubAppsSecretsSyncDestination(t *testing.T) {
 	})
 }
 
-func testGithubAppsSecretsSyncDestinationConfig_initial(privateKey, appID, destName, templ string) string {
+func testGithubAppsSecretsSyncConfig_initial(privateKey, appID, appName string) string {
 	ret := fmt.Sprintf(`
-resource "vault_secrets_sync_github_apps_destination" "test" {
+resource "vault_secrets_sync_github_apps" "test" {
   name           = "%s"
   private_key    = "%s"
   app_id         = "%s"
-  %s
 }
-`, destName, privateKey, appID, testSecretsSyncDestinationCommonConfig(templ, true, false, false))
+`, appName, privateKey, appID)
 
 	return ret
 }
 
-func testGithubAppsSecretsSyncDestinationConfig_updated(privateKey, appID, destName, templ string) string {
+func testGithubAppsSecretsSyncConfig_updated(privateKey, appID, appName string) string {
 	ret := fmt.Sprintf(`
-resource "vault_secrets_sync_github_apps_destination" "test" {
+resource "vault_secrets_sync_github_apps" "test" {
   name           = "%s"
   private_key    = "%s"
   app_id         = "%s"
-  %s
 }
-`, destName, privateKey, appID, testSecretsSyncDestinationCommonConfig(templ, true, false, true))
+`, appName, privateKey, appID)
 
 	return ret
 }
