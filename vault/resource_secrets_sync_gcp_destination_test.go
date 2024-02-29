@@ -65,7 +65,7 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 func testGCPSecretsSyncDestinationConfig_initial(credentials, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_gcp_destination" "test" {
-  name	= "%s"
+  name			= "%s"
   project_id	= "gcp-project-id"
   credentials	= <<CREDS
 %sCREDS
@@ -79,7 +79,7 @@ resource "vault_secrets_sync_gcp_destination" "test" {
 func testGCPSecretsSyncDestinationConfig_updated(credentials, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_gcp_destination" "test" {
-  name	= "%s"
+  name			= "%s"
   project_id	= "gcp-project-id-updated"
   credentials	= <<CREDS
 %sCREDS
