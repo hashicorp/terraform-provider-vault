@@ -76,6 +76,8 @@ jobs:
           VAULT_DEV_ROOT_TOKEN_ID: root
           VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
           VAULT_AUTH_CONFIG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VAULT_LOCAL_CONFIG: |
+            {"plugin_directory": "/vault/plugins"}
         options: >-
           --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
           --health-interval 1s
@@ -83,6 +85,8 @@ jobs:
           --health-retries 5
         ports:
           - 8200:8200
+        volumes:
+          - ${{ github.workspace }}:/vault/plugins
       mysql:
         image: docker.mirror.hashicorp.services/mysql:latest
         env:
@@ -165,6 +169,18 @@ jobs:
           terraform_wrapper: false
       - name: Check Terraform CLI version
         run: terraform --version
+      - name: Download external plugin
+        id: plugin
+        env:
+          PLUGIN: "vault-plugin-auth-jwt"
+          VERSION: "0.17.0"
+        run: |
+          ZIP="${PLUGIN}_${VERSION}_linux_amd64.zip"
+          SHA256SUMS="${PLUGIN}_${VERSION}_SHA256SUMS"
+          curl -sO "https://releases.hashicorp.com/${PLUGIN}/${VERSION}/{${ZIP},${SHA256SUMS}}"
+          shasum -a 256 -c "${PLUGIN}_${VERSION}_SHA256SUMS" --ignore-missing
+          unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
+          echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
       - name: Cache go build
         uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
@@ -198,6 +214,7 @@ jobs:
           LDAP_BINDDN: "cn=admin,dc=example,dc=org"
           LDAP_BINDPASS: "adminpassword"
           LDAP_URL: "ldap://openldap:1389"
+          VAULT_PLUGIN_COMMAND: ${{ steps.plugin.outputs.command }}
         run: |
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
             target="testacc-ent"

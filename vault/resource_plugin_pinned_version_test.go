@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -30,6 +31,7 @@ func TestPluginPinnedVersion(t *testing.T) {
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
+			testutil.SkipTestEnvUnset(t, envPluginCommand)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		Steps: []resource.TestStep{
@@ -58,7 +60,7 @@ resource "vault_plugin_pinned_version" "test" {
   name      = vault_plugin.test.name
   version   = vault_plugin.test.version
 }
-`, testPluginConfig(pluginType, name, version, sha256, "command", `["--arg"]`, `["foo=bar"]`))
+`, testPluginConfig(pluginType, name, version, sha256, os.Getenv(envPluginCommand), `["--arg"]`, `["foo=bar"]`))
 
 	return ret
 }
