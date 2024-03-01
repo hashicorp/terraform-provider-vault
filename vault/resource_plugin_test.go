@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -17,11 +18,12 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+const envPluginCommand = "VAULT_PLUGIN_COMMAND"
+
 func TestPlugin(t *testing.T) {
 	const (
 		typ     = "auth"
 		version = "v1.0.0"
-		cmd     = "command"
 		args    = `["--foo"]`
 		env     = `["FOO=BAR"]`
 	)
@@ -30,11 +32,13 @@ func TestPlugin(t *testing.T) {
 
 	resourceName := "vault_plugin.test"
 	sha256 := strings.Repeat("01234567", 8)
+	cmd := os.Getenv(envPluginCommand)
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
+			testutil.SkipTestEnvUnset(t, envPluginCommand)
 		},
 		Steps: []resource.TestStep{
 			{
