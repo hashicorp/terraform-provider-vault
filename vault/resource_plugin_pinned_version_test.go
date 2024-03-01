@@ -29,7 +29,7 @@ func TestPluginPinnedVersion(t *testing.T) {
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		Steps: []resource.TestStep{
 			{

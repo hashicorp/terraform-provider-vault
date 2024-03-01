@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -21,8 +20,8 @@ func TestPlugin(t *testing.T) {
 		version = "v1.0.0"
 		sha     = "sha256"
 		cmd     = "command"
-		args    = "--foo"
-		env     = "FOO=BAR"
+		args    = `["--foo"]`
+		env     = `["FOO=BAR"]`
 		img     = "ociImage"
 		runtime = "runtime"
 	)
@@ -35,7 +34,6 @@ func TestPlugin(t *testing.T) {
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		Steps: []resource.TestStep{
 			{
