@@ -31,7 +31,7 @@ func pluginResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: pluginWrite,
 		UpdateContext: pluginWrite,
-		ReadContext:   provider.ReadContextWrapper(pluginRead),
+		ReadContext:   pluginRead,
 		DeleteContext: pluginDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,

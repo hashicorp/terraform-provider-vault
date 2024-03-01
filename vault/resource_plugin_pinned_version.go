@@ -20,7 +20,7 @@ func pluginPinnedVersionResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(pluginPinnedVersionWrite, provider.VaultVersion116),
 		UpdateContext: provider.UpdateContextWrapper(pluginPinnedVersionWrite, provider.VaultVersion116),
-		ReadContext:   provider.ReadContextWrapper(pluginPinnedVersionRead),
+		ReadContext:   pluginPinnedVersionRead,
 		DeleteContext: pluginPinnedVersionDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,

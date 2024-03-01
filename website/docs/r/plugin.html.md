@@ -43,11 +43,6 @@ resource "vault_auth_backend" "jwt_auth" {
 
 The following arguments are supported:
 
-* `namespace` - (Optional) The namespace to provision the resource in.
-  The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
-   *Available only for Vault Enterprise*.
-
 * `type` - (Required) Type of plugin; one of "auth", "secret", or "database".
 
 * `name` - (Required) Name of the plugin.
