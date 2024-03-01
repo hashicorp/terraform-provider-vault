@@ -89,9 +89,15 @@ func pluginPinnedVersionRead(ctx context.Context, d *schema.ResourceData, meta i
 		return diag.Errorf("error reading plugin %q: %s", d.Id(), err)
 	}
 
-	d.Set(consts.FieldType, typ)
-	d.Set(consts.FieldName, name)
-	d.Set(consts.FieldVersion, resp.Data["version"])
+	if err := d.Set(consts.FieldType, typ); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldName, name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldVersion, resp.Data["version"]); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }

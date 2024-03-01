@@ -85,12 +85,12 @@ func pluginResource() *schema.Resource {
 			},
 			fieldOCIImage: {
 				Type:        schema.TypeString,
-				Description: "Specifies OCI image to run. If specified, setting command, args, and env will update the container's entrypoint, args, and environment variables (append-only) respectively.",
+				Description: "OCI image to run. If specified, setting command, args, and env will update the container's entrypoint, args, and environment variables (append-only) respectively.",
 				Optional:    true,
 			},
 			fieldRuntime: {
 				Type:        schema.TypeString,
-				Description: "Specifies Vault plugin runtime to use if oci_image is specified.",
+				Description: "Vault plugin runtime to use if oci_image is specified.",
 				Optional:    true,
 			},
 		},
@@ -168,16 +168,32 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 		return diag.Errorf("error reading plugin %q %q %q: %s", pluginType, name, version, err)
 	}
 
-	d.Set(consts.FieldType, typ)
-	d.Set(consts.FieldName, name)
-	d.Set(consts.FieldVersion, version)
-	d.Set(fieldSHA256, resp.SHA256)
-	d.Set(fieldCommand, resp.Command)
-	if len(resp.Args) > 0 {
-		d.Set(fieldArgs, resp.Args)
+	if err := d.Set(consts.FieldType, typ); err != nil {
+		return diag.FromErr(err)
 	}
-	d.Set(fieldOCIImage, resp.OCIImage)
-	d.Set(fieldRuntime, resp.Runtime)
+	if err := d.Set(consts.FieldName, name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldVersion, version); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(fieldSHA256, resp.SHA256); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(fieldCommand, resp.Command); err != nil {
+		return diag.FromErr(err)
+	}
+	if len(resp.Args) > 0 {
+		if err := d.Set(fieldArgs, resp.Args); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if err := d.Set(fieldOCIImage, resp.OCIImage); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(fieldRuntime, resp.Runtime); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
