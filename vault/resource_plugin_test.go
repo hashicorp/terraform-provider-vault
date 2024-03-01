@@ -5,10 +5,13 @@ package vault
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -18,17 +21,15 @@ func TestPlugin(t *testing.T) {
 	const (
 		typ     = "auth"
 		version = "v1.0.0"
-		sha     = "sha256"
 		cmd     = "command"
 		args    = `["--foo"]`
 		env     = `["FOO=BAR"]`
-		img     = "ociImage"
-		runtime = "runtime"
 	)
 
 	destName := acctest.RandomWithPrefix("tf-plugin")
 
 	resourceName := "vault_plugin.test"
+	sha256 := strings.Repeat("01234567", 8)
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -37,26 +38,24 @@ func TestPlugin(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testPluginConfig(typ, destName, version, sha, cmd, args, env, img, runtime),
+				Config: testPluginConfig(typ, destName, version, sha256, cmd, args, env),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
-					resource.TestCheckResourceAttr(resourceName, fieldSHA256, sha),
+					resource.TestCheckResourceAttr(resourceName, fieldSHA256, sha256),
 					resource.TestCheckResourceAttr(resourceName, fieldCommand, cmd),
-					resource.TestCheckResourceAttr(resourceName, fieldArgs, args),
-					resource.TestCheckResourceAttr(resourceName, fieldEnv, env),
-					resource.TestCheckResourceAttr(resourceName, fieldOCIImage, img),
-					resource.TestCheckResourceAttr(resourceName, fieldRuntime, runtime),
+					testValidateList(resourceName, fieldArgs, []string{"--foo"}),
+					testValidateList(resourceName, fieldEnv, []string{"FOO=BAR"}),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			testutil.GetImportTestStep(resourceName, false, nil, "env"),
 		},
 	})
 }
 
-func testPluginConfig(pluginType, name, version, sha256, command, args, env, ociImage, runtime string) string {
+func testPluginConfig(pluginType, name, version, sha256, command, args, env string) string {
 	ret := fmt.Sprintf(`
 resource "vault_plugin" "test" {
   type      = "%s"
@@ -66,10 +65,31 @@ resource "vault_plugin" "test" {
   command   = "%s"
   args      = %s
   env       = %s
-  oci_image = "%s"
-  runtime   = "%s"
 }
-`, pluginType, name, version, sha256, command, args, env, ociImage, runtime)
+`, pluginType, name, version, sha256, command, args, env)
 
 	return ret
+}
+
+func testValidateList(resourceName, attr string, expected []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		attrs := rs.Primary.Attributes
+
+		if attrs[attr+".#"] != strconv.Itoa(len(expected)) {
+			return fmt.Errorf("expected %s to have %d elements, got %s", attr, len(expected), attrs[attr+".#"])
+		}
+
+		for i, exp := range expected {
+			if actual := attrs[attr+"."+strconv.Itoa(i)]; actual != exp {
+				return fmt.Errorf("expected %s[%d] to be %q, got %q", attr, i, exp, actual)
+			}
+		}
+
+		return nil
+	}
 }

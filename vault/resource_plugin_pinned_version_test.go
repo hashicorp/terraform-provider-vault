@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -47,13 +48,17 @@ func TestPluginPinnedVersion(t *testing.T) {
 }
 
 func testPluginPinnedVersionConfig(pluginType, name, version string) string {
+	sha256 := strings.Repeat("01234567", 8)
+
 	ret := fmt.Sprintf(`
+%s
+
 resource "vault_plugin_pinned_version" "test" {
-  type      = "%s"
-  name      = "%s"
-  version   = "%s"
+  type      = vault_plugin.test.type
+  name      = vault_plugin.test.name
+  version   = vault_plugin.test.version
 }
-`, pluginType, name, version)
+`, testPluginConfig(pluginType, name, version, sha256, "command", `["--arg"]`, `["foo=bar"]`))
 
 	return ret
 }
