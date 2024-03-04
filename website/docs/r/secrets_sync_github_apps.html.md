@@ -43,6 +43,8 @@ The following arguments are supported:
 
 * `app_id` - (Required) The GitHub application ID.
 
+* `private_key` - (Required) The content of a PEM formatted private key generated on GitHub for the app.
+
 ## Import
 
 GitHub Apps Secrets sync configuration endpoint can be imported using the `name`, e.g.
