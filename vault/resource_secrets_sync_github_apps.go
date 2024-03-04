@@ -28,7 +28,7 @@ var githubAppsSyncWriteFields = []string{
 var githubAppsSyncReadFields = []string{
 	consts.FieldName,
 	consts.FieldAppID,
-	//fieldFingerprint,
+	fieldFingerprint,
 }
 
 func githubAppsSecretsSyncResource() *schema.Resource {
@@ -59,6 +59,11 @@ func githubAppsSecretsSyncResource() *schema.Resource {
 				Required:    true,
 				Sensitive:   true,
 				Description: "The content of a PEM formatted private key generated on GitHub for the app.",
+			},
+			fieldFingerprint: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "A fingerprint of a private key.",
 			},
 		},
 	}
