@@ -390,6 +390,10 @@ const (
 	FieldSecretID                      = "secret_id"
 	FieldWrappingToken                 = "wrapping_token"
 	FieldWithWrappedAccessor           = "with_wrapped_accessor"
+	FieldExternalID                    = "external_id"
+	FieldAppName                       = "app_name"
+	FieldInstallationID                = "installation_id"
+	FieldAppID                         = "app_id"
 	FieldAIAPath                       = "aia_path"
 
 	/*

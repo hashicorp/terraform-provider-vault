@@ -37,6 +37,7 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentials, credentials),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, gcpSyncType),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, "gcp-project-id"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
@@ -49,6 +50,7 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentials, credentials),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, gcpSyncType),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, "gcp-project-id-updated"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),
@@ -63,8 +65,9 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 func testGCPSecretsSyncDestinationConfig_initial(credentials, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_gcp_destination" "test" {
-  name                 = "%s"
-  credentials          = <<CREDS
+  name          = "%s"
+  project_id    = "gcp-project-id"
+  credentials   = <<CREDS
 %sCREDS
   %s
 }
@@ -76,8 +79,9 @@ resource "vault_secrets_sync_gcp_destination" "test" {
 func testGCPSecretsSyncDestinationConfig_updated(credentials, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_gcp_destination" "test" {
-  name                 = "%s"
-  credentials          = <<CREDS
+  name          = "%s"
+  project_id    = "gcp-project-id-updated"
+  credentials   = <<CREDS
 %sCREDS
   %s
 }

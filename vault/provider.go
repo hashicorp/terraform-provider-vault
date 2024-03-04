@@ -753,6 +753,10 @@ var (
 			Resource:      UpdateSchemaResource(githubSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/gh/{name}"},
 		},
+		"vault_secrets_sync_github_apps": {
+			Resource:      UpdateSchemaResource(githubAppsSecretsSyncResource()),
+			PathInventory: []string{"/sys/sync/github-apps/{name}"},
+		},
 		"vault_secrets_sync_vercel_destination": {
 			Resource:      UpdateSchemaResource(vercelSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/vercel-project/{name}"},
