@@ -164,6 +164,12 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 			}
 		}
 
+		if v, ok := metadata["version"]; ok {
+			if err := d.Set("version", v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
 		if customMetadata, ok := metadata["custom_metadata"]; ok && customMetadata != nil {
 			if v, ok := customMetadata.(map[string]interface{}); ok {
 				if err := d.Set("custom_metadata", serializeDataMapToString(v)); err != nil {
