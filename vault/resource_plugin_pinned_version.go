@@ -86,7 +86,7 @@ func pluginPinnedVersionRead(ctx context.Context, d *schema.ResourceData, meta i
 	resp, err := client.Logical().ReadWithContext(ctx, idToPath(d.Id()))
 
 	if err != nil {
-		return diag.Errorf("error reading plugin %q: %s", d.Id(), err)
+		return diag.Errorf("error reading pinned plugin version %q: %s", d.Id(), err)
 	}
 
 	if err := d.Set(consts.FieldType, typ); err != nil {
