@@ -29,7 +29,6 @@ func transitSecretBackendKeyResource() *schema.Resource {
 		Read:   provider.ReadWrapper(transitSecretBackendKeyRead),
 		Update: transitSecretBackendKeyUpdate,
 		Delete: transitSecretBackendKeyDelete,
-		Exists: transitSecretBackendKeyExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -375,28 +374,15 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		"deletion_allowed", "derived", "exportable",
 		"supports_decryption", "supports_derivation",
 		"supports_encryption", "supports_signing", "type",
-	}
-
-	set := func(f, k string) error {
-		v, ok := secret.Data[k]
-		if !ok {
-			log.Printf("[WARN] Expected key %q not found in response, path=%q", k, path)
-		}
-		if err := d.Set(f, v); err != nil {
-			return err
-		}
-		return nil
+		"auto_rotate_period",
 	}
 
 	for _, f := range fields {
-		if err := set(f, f); err != nil {
-			return err
+		if v, ok := secret.Data[f]; ok {
+			if err := d.Set(f, v); err != nil {
+				return err
+			}
 		}
-	}
-
-	autoRotatePeriodField := "auto_rotate_period"
-	if err := set(autoRotatePeriodField, "auto_rotate_period"); err != nil {
-		return nil
 	}
 
 	return nil
@@ -444,22 +430,6 @@ func transitSecretBackendKeyDelete(d *schema.ResourceData, meta interface{}) err
 	}
 	log.Printf("[DEBUG] Deleted keyu %q", path)
 	return nil
-}
-
-func transitSecretBackendKeyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if key %q exists", path)
-	secret, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if key %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if key %q exists", path)
-	return secret != nil, nil
 }
 
 func transitSecretBackendKeyPath(backend string, name string) string {

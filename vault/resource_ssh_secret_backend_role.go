@@ -190,7 +190,6 @@ func sshSecretBackendRoleResource() *schema.Resource {
 		Read:   provider.ReadWrapper(sshSecretBackendRoleRead),
 		Update: sshSecretBackendRoleWrite,
 		Delete: sshSecretBackendRoleDelete,
-		Exists: sshSecretBackendRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -283,10 +282,8 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		data["not_before_duration"] = v.(string)
 	}
 
-	var isUserKeyConfig bool
 	if v, ok := d.GetOk("allowed_user_key_config"); ok {
 		// post vault-1.10
-		isUserKeyConfig = true
 		vals := make(map[string][]interface{})
 		for _, m := range v.(*schema.Set).List() {
 			val := m.(map[string]interface{})
@@ -298,32 +295,7 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Writing role %q on SSH backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		// in the case where vault does not support a list of key lengths,
-		// we fall back to map[string]interface{}.
-		// TODO: once we support Vault API version semantics,
-		// we can use it rather than checking the error string.
-		if isUserKeyConfig && strings.Contains(err.Error(),
-			"error processing allowed_user_key_lengths") {
-			keyConfigs := make(map[string]interface{}, 0)
-			for k, v := range data["allowed_user_key_lengths"].(map[string][]interface{}) {
-				var l interface{}
-				count := len(v)
-				if count > 0 {
-					l = v[0]
-				}
-				if count > 1 {
-					log.Printf("[WARN] Only single key lengths are supported by the Vault server, "+
-						"but %d are configured for key type %q", count, k)
-				}
-				keyConfigs[k] = l
-			}
-			data["allowed_user_key_lengths"] = keyConfigs
-			_, err = client.Logical().Write(path, data)
-		}
-
-		if err != nil {
-			return fmt.Errorf("error writing role %q for backend %q: %s", name, backend, err)
-		}
+		return fmt.Errorf("error writing role %q for backend %q: %s", name, backend, err)
 	}
 	log.Printf("[DEBUG] Wrote role %q on SSH backend %q", name, backend)
 
@@ -460,22 +432,6 @@ func sshSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Deleted role %q", path)
 
 	return nil
-}
-
-func sshSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if %q exists", path)
-	role, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if %q exists", path)
-	return role != nil, nil
 }
 
 func sshRoleResourcePath(backend, name string) string {
