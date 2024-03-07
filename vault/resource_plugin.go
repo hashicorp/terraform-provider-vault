@@ -114,6 +114,16 @@ func pluginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 		id = fmt.Sprintf("%s/%s", id, version)
 	}
 
+	if diagErr := versionedPluginsSupported(meta, version); diagErr != nil {
+		return diagErr
+	}
+
+	ociImage := d.Get(fieldOCIImage).(string)
+	runtime := d.Get(fieldRuntime).(string)
+	if diagErr := containerizedPluginsSupported(meta, ociImage, runtime); diagErr != nil {
+		return diagErr
+	}
+
 	log.Printf("[DEBUG] Writing plugin %q", id)
 	err = client.Sys().RegisterPluginWithContext(ctx, &api.RegisterPluginInput{
 		Type:     pluginType,
@@ -123,8 +133,8 @@ func pluginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 		Command:  d.Get(fieldCommand).(string),
 		Args:     util.ToStringArray(d.Get(fieldArgs).([]interface{})),
 		Env:      util.ToStringArray(d.Get(fieldEnv).([]interface{})),
-		OCIImage: d.Get(fieldOCIImage).(string),
-		Runtime:  d.Get(fieldRuntime).(string),
+		OCIImage: ociImage,
+		Runtime:  runtime,
 	})
 	if err != nil {
 		return diag.Errorf("error updating plugin %q: %s", id, err)
@@ -133,7 +143,7 @@ func pluginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 
 	d.SetId(id)
 
-	return nil
+	return pluginRead(ctx, d, meta)
 }
 
 func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -153,6 +163,10 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 		return diag.Errorf("invalid ID %q, must be of form <type>/<name> or <type>/<name>/<semantic-version>", d.Id())
 	}
 
+	if diagErr := versionedPluginsSupported(meta, version); diagErr != nil {
+		return diagErr
+	}
+
 	pluginType, err := api.ParsePluginType(typ)
 	if err != nil {
 		return diag.FromErr(err)
@@ -164,35 +178,30 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 		Version: version,
 	})
 
-	if err != nil {
-		return diag.Errorf("error reading plugin %q %q %q: %s", pluginType, name, version, err)
+	if err != nil && util.Is404(err) {
+		log.Printf("[WARN] plugin %q not found, removing from state", d.Id())
+		d.SetId("")
+		return nil
+	} else if err != nil {
+		return diag.Errorf("error reading plugin %q: %s", d.Id(), err)
 	}
 
-	if err := d.Set(consts.FieldType, typ); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldName, name); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldVersion, version); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(fieldSHA256, resp.SHA256); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(fieldCommand, resp.Command); err != nil {
-		return diag.FromErr(err)
+	result := map[string]any{
+		consts.FieldType:    typ,
+		consts.FieldName:    name,
+		consts.FieldVersion: version,
+		fieldSHA256:         resp.SHA256,
+		fieldCommand:        resp.Command,
+		fieldOCIImage:       resp.OCIImage,
+		fieldRuntime:        resp.Runtime,
 	}
 	if len(resp.Args) > 0 {
-		if err := d.Set(fieldArgs, resp.Args); err != nil {
-			return diag.FromErr(err)
+		result[fieldArgs] = resp.Args
+	}
+	for k, v := range result {
+		if err := d.Set(k, v); err != nil {
+			return diag.Errorf("error setting %q: %s", k, err)
 		}
-	}
-	if err := d.Set(fieldOCIImage, resp.OCIImage); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(fieldRuntime, resp.Runtime); err != nil {
-		return diag.FromErr(err)
 	}
 
 	return nil
@@ -211,16 +220,32 @@ func pluginDelete(ctx context.Context, d *schema.ResourceData, meta interface{})
 	name := d.Get(consts.FieldName).(string)
 	version := d.Get(consts.FieldVersion).(string)
 
-	log.Printf("[DEBUG] Removing plugin %q %q %q", pluginType, name, version)
+	log.Printf("[DEBUG] Removing plugin %q", d.Id())
 	err = client.Sys().DeregisterPluginWithContext(ctx, &api.DeregisterPluginInput{
 		Type:    pluginType,
 		Name:    name,
 		Version: version,
 	})
 	if err != nil {
-		return diag.Errorf("error removing plugin %q %q %q: %s", pluginType, name, version, err)
+		return diag.Errorf("error removing plugin %q: %s", d.Id(), err)
 	}
-	log.Printf("[DEBUG] Removed plugin %q %q %q", pluginType, name, version)
+	log.Printf("[DEBUG] Removed plugin %q", d.Id())
+
+	return nil
+}
+
+func versionedPluginsSupported(meta interface{}, version string) diag.Diagnostics {
+	if version != "" && !provider.IsAPISupported(meta, provider.VaultVersion112) {
+		return diag.Errorf("plugin version %q specified but versioned plugins are only supported in Vault 1.12 and later", version)
+	}
+
+	return nil
+}
+
+func containerizedPluginsSupported(meta interface{}, ociImage, runtime string) diag.Diagnostics {
+	if (ociImage != "" || runtime != "") && !provider.IsAPISupported(meta, provider.VaultVersion115) {
+		return diag.Errorf("plugin oci_image %q and/or runtime %q specified but containerized plugins are only supported in Vault 1.15 and later", ociImage, runtime)
+	}
 
 	return nil
 }

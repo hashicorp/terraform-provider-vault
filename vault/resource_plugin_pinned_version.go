@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pluginPinnedVersionResource() *schema.Resource {
@@ -67,7 +68,7 @@ func pluginPinnedVersionWrite(ctx context.Context, d *schema.ResourceData, meta 
 
 	d.SetId(id)
 
-	return nil
+	return pluginPinnedVersionRead(ctx, d, meta)
 }
 
 func pluginPinnedVersionRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -85,18 +86,22 @@ func pluginPinnedVersionRead(ctx context.Context, d *schema.ResourceData, meta i
 
 	resp, err := client.Logical().ReadWithContext(ctx, idToPath(d.Id()))
 
-	if err != nil {
+	if err != nil && util.Is404(err) {
+		log.Printf("[WARN] pinned plugin version %q not found, removing from state", d.Id())
+		d.SetId("")
+		return nil
+	} else if err != nil {
 		return diag.Errorf("error reading pinned plugin version %q: %s", d.Id(), err)
 	}
 
-	if err := d.Set(consts.FieldType, typ); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldName, name); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldVersion, resp.Data["version"]); err != nil {
-		return diag.FromErr(err)
+	for k, v := range map[string]any{
+		consts.FieldType:    typ,
+		consts.FieldName:    name,
+		consts.FieldVersion: resp.Data["version"],
+	} {
+		if err := d.Set(k, v); err != nil {
+			return diag.Errorf("error setting %q: %s", k, err)
+		}
 	}
 
 	return nil
