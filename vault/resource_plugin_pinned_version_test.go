@@ -60,7 +60,7 @@ resource "vault_plugin_pinned_version" "test" {
   name      = vault_plugin.test.name
   version   = vault_plugin.test.version
 }
-`, testPluginConfig(pluginType, name, version, sha256, os.Getenv(envPluginCommand), `["--arg"]`, `["foo=bar"]`))
+`, testPluginConfig(pluginType, name, version, sha256, os.Getenv(envPluginCommand), `["--arg"]`, `["foo=bar"]`, true))
 
 	return ret
 }
