@@ -74,7 +74,7 @@ resource "vault_plugin" "test" {
   args      = %s
   env       = %s
 }
-`, pluginType, name, version, sha256, command, args, env)
+`, pluginType, name, sha256, command, args, env)
 	}
 
 	return fmt.Sprintf(`
