@@ -27,16 +27,23 @@ func TestPlugin(t *testing.T) {
 		version = "v1.0.0"
 		args    = `["--foo"]`
 		env     = `["FOO=BAR"]`
+
+		argsUpdated = `["--bar"]`
+		envUpdated  = `["FOO=BAZ"]`
 	)
 
-	destName := acctest.RandomWithPrefix("tf-plugin")
+	destName := acctest.RandomWithPrefix("tf/plugin")
 
 	resourceName := "vault_plugin.test"
 	sha256 := strings.Repeat("01234567", 8)
+	sha256Updated := strings.Repeat("12345678", 8)
 	cmd := os.Getenv(envPluginCommand)
 
-	m := testProvider.Meta().(*provider.ProviderMeta)
-	versionsSupported := m.GetVaultVersion().GreaterThanOrEqual(provider.VaultVersion112)
+	versionsSupported := true
+	if testProvider != nil {
+		m := testProvider.Meta().(*provider.ProviderMeta)
+		versionsSupported = m.GetVaultVersion().GreaterThanOrEqual(provider.VaultVersion112)
+	}
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -58,6 +65,19 @@ func TestPlugin(t *testing.T) {
 					testValidateList(resourceName, fieldEnv, []string{"FOO=BAR"}),
 				),
 			},
+			{
+				Config: testPluginConfig(typ, destName, version, sha256Updated, cmd, argsUpdated, envUpdated, versionsSupported),
+				Check: resource.ComposeTestCheckFunc(
+
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					testCheckVersionAttr(resourceName, version, versionsSupported),
+					resource.TestCheckResourceAttr(resourceName, fieldSHA256, sha256Updated),
+					resource.TestCheckResourceAttr(resourceName, fieldCommand, cmd),
+					testValidateList(resourceName, fieldArgs, []string{"--bar"}),
+					testValidateList(resourceName, fieldEnv, []string{"FOO=BAZ"}),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil, "env"),
 		},
 	})
@@ -65,7 +85,7 @@ func TestPlugin(t *testing.T) {
 
 func testPluginConfig(pluginType, name, version, sha256, command, args, env string, versionsSupported bool) string {
 	if !versionsSupported {
-		fmt.Sprintf(`
+		return fmt.Sprintf(`
 resource "vault_plugin" "test" {
   type      = "%s"
   name      = "%s"

@@ -154,13 +154,14 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 
 	var typ, name, version string
 	parts := strings.Split(d.Id(), "/")
-	switch len(parts) {
+	lenParts := len(parts)
+	switch lenParts {
+	case 0, 1:
+		return diag.Errorf("invalid ID %q, must be of form <type>/<name> or <type>/<name>/<semantic-version>", d.Id())
 	case 2:
 		typ, name = parts[0], parts[1]
-	case 3:
-		typ, name, version = parts[0], parts[1], parts[2]
 	default:
-		return diag.Errorf("invalid ID %q, must be of form <type>/<name> or <type>/<name>/<semantic-version>", d.Id())
+		typ, name, version = parts[0], strings.Join(parts[1:lenParts-1], "/"), parts[lenParts-1]
 	}
 
 	if diagErr := versionedPluginsSupported(meta, version); diagErr != nil {
