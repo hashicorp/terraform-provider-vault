@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Terraform Vault Provider 4.0.0 Upgrade Guide"
-sidebar_current: "docs-vault-provider-version-3-upgrade"
+sidebar_current: "docs-vault-provider-version-4-upgrade"
 description: |-
   Terraform Vault Provider 4.0.0 Upgrade Guide
 
@@ -39,12 +39,11 @@ and resources have been removed.
 
 While you may see some small changes in your configurations as a result of
 these changes, we don't expect you'll need to make any major refactorings.
-However, please pay special attention to the changes noted in the TODO(JM) section.
+However, please pay special attention to the changes noted in the [Provider Policy Changes](#provider-policy-changes) section.
 
 ## Which Terraform versions are supported?
 
-Terraform versions `0.12.x` and greater are fully supported. Support for `0.11.x` has been removed.
-If you are still on one of the `0.11.x` versions we recommend upgrading to the latest stable release of Terraform.
+Terraform versions `1.0.x ` and greater are fully supported.
 
 Please see the [Terraform Upgrade Guide](https://www.terraform.io/upgrade-guides/index.html)
 for more info about upgrading Terraform.
@@ -78,6 +77,8 @@ state changes in the meantime.
 
 - [Provider Version Configuration](#provider-version-configuration)
 - [Provider Policy Changes](#provider-policy-changes)
+  - [Auth method resource changes](#auth-method-resource-changes)
+  - [Secret engine resource changes](#secret-engine-resource-changes)
 
 <!-- /TOC -->
 
@@ -167,7 +168,8 @@ following resources:
 </table>
 
 For example, in version 3.X the following policy is required for the
-`vault_gcp_auth_backend` resource to perform the GET `sys/auth` HTTP operation:
+`vault_gcp_auth_backend` resource since its mount metadata is retrieved with
+the GET `sys/auth` HTTP operation:
 
 ```hcl
 path "sys/auth"
@@ -177,7 +179,8 @@ path "sys/auth"
 ```
 
 In version 4.X the following policy is required for the
-`vault_gcp_auth_backend` resource to perform the GET `sys/auth/:path` HTTP operation:
+`vault_gcp_auth_backend` resource since its mount metadata is retrieved with
+the GET `sys/auth/:path` HTTP operation:
 
 ```hcl
 path "sys/auth/gcp"
@@ -225,7 +228,8 @@ following resources:
 </table>
 
 For example, in version 3.X the following policy is required for the
-`vault_gcp_secret_backend` resource to perform the GET `sys/mounts` HTTP operation:
+`vault_gcp_secret_backend` resource since its mount metadata is retrieved with
+the GET `sys/mounts` HTTP operation:
 
 ```hcl
 path "sys/mounts"
@@ -235,7 +239,8 @@ path "sys/mounts"
 ```
 
 In version 4.X the following policy is required for the
-`vault_gcp_secret_backend` resource to perform the GET `sys/mounts/:path` HTTP operation:
+`vault_gcp_secret_backend` resource since its mount metadata is retrieved with
+the GET `sys/mounts/:path` HTTP operation:
 
 ```hcl
 path "sys/mounts/gcp"
@@ -247,7 +252,7 @@ path "sys/mounts/gcp"
 The below table specifies what changed between version 3.X and 4.X for the
 following resources:
 
-Resources
+#### Resources
   - `vault_ad_secret_backend`
   - `vault_nomad_secret_backend`
 
@@ -275,7 +280,8 @@ Resources
 </table>
 
 For example, in version 3.X the following policy is required for the
-`vault_nomad_secret_backend` resource to perform the GET `sys/mounts` HTTP operation:
+`vault_nomad_secret_backend` resource since its mount tune metadata is retrieved
+with the GET `sys/mounts` HTTP operation:
 
 ```hcl
 path "sys/mounts/nomad/tune"
@@ -285,7 +291,8 @@ path "sys/mounts/nomad/tune"
 ```
 
 In version 4.X the following policy is required for the
-`vault_nomad_secret_backend` resource to perform the GET `sys/mounts/:path` HTTP operation:
+`vault_nomad_secret_backend` resource since its mount metadata is retrieved
+with the GET `sys/mounts/:path` HTTP operation:
 
 ```hcl
 path "sys/mounts/nomad"
