@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -34,6 +35,9 @@ func TestPlugin(t *testing.T) {
 	sha256 := strings.Repeat("01234567", 8)
 	cmd := os.Getenv(envPluginCommand)
 
+	m := testProvider.Meta().(*provider.ProviderMeta)
+	versionsSupported := m.GetVaultVersion().GreaterThanOrEqual(provider.VaultVersion112)
+
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
@@ -42,12 +46,12 @@ func TestPlugin(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testPluginConfig(typ, destName, version, sha256, cmd, args, env),
+				Config: testPluginConfig(typ, destName, version, sha256, cmd, args, env, versionsSupported),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
+					testCheckVersionAttr(resourceName, version, versionsSupported),
 					resource.TestCheckResourceAttr(resourceName, fieldSHA256, sha256),
 					resource.TestCheckResourceAttr(resourceName, fieldCommand, cmd),
 					testValidateList(resourceName, fieldArgs, []string{"--foo"}),
@@ -59,8 +63,21 @@ func TestPlugin(t *testing.T) {
 	})
 }
 
-func testPluginConfig(pluginType, name, version, sha256, command, args, env string) string {
-	ret := fmt.Sprintf(`
+func testPluginConfig(pluginType, name, version, sha256, command, args, env string, versionsSupported bool) string {
+	if !versionsSupported {
+		fmt.Sprintf(`
+resource "vault_plugin" "test" {
+  type      = "%s"
+  name      = "%s"
+  sha256    = "%s"
+  command   = "%s"
+  args      = %s
+  env       = %s
+}
+`, pluginType, name, version, sha256, command, args, env)
+	}
+
+	return fmt.Sprintf(`
 resource "vault_plugin" "test" {
   type      = "%s"
   name      = "%s"
@@ -71,8 +88,6 @@ resource "vault_plugin" "test" {
   env       = %s
 }
 `, pluginType, name, version, sha256, command, args, env)
-
-	return ret
 }
 
 func testValidateList(resourceName, attr string, expected []string) resource.TestCheckFunc {
@@ -94,6 +109,16 @@ func testValidateList(resourceName, attr string, expected []string) resource.Tes
 			}
 		}
 
+		return nil
+	}
+}
+
+func testCheckVersionAttr(resourceName, expected string, versionsSupported bool) resource.TestCheckFunc {
+	if versionsSupported {
+		return resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, expected)
+	}
+
+	return func(*terraform.State) error {
 		return nil
 	}
 }
