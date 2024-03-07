@@ -94,7 +94,3 @@ In addition to the fields above, the following attributes are exported:
   Requires the `format` to be set to any of: pem, pem_bundle. The value will be empty for all other formats.
  
 * `serial_number` - The certificate's serial number, hex formatted.
-
-## Deprecations
-
-* `serial` - Use `serial_number` instead.

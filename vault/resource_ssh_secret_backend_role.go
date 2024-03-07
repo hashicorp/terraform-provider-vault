@@ -120,20 +120,10 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			Type:     schema.TypeString,
 			Required: true,
 		},
-		"allowed_user_key_lengths": {
-			Type:          schema.TypeMap,
-			Optional:      true,
-			ConflictsWith: []string{"allowed_user_key_config"},
-			Deprecated:    "Set in allowed_user_key_config",
-			Elem: &schema.Schema{
-				Type: schema.TypeInt,
-			},
-		},
 		"allowed_user_key_config": {
-			Type:          schema.TypeSet,
-			Optional:      true,
-			Description:   "Set of allowed public key types and their relevant configuration",
-			ConflictsWith: []string{"allowed_user_key_lengths"},
+			Type:        schema.TypeSet,
+			Optional:    true,
+			Description: "Set of allowed public key types and their relevant configuration",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"type": {
@@ -303,9 +293,6 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 			vals[val["type"].(string)] = val["lengths"].([]interface{})
 		}
 		data["allowed_user_key_lengths"] = vals
-	} else if v, ok := d.GetOk("allowed_user_key_lengths"); ok {
-		// pre vault-1.10
-		data["allowed_user_key_lengths"] = v
 	}
 
 	log.Printf("[DEBUG] Writing role %q on SSH backend %q", name, backend)
@@ -422,35 +409,9 @@ func setSSHRoleKeyConfig(d *schema.ResourceData, role *api.Secret) error {
 		return err
 	}
 
-	newField := "allowed_user_key_config"
-	legacyField := "allowed_user_key_lengths"
-	// work around to support the allowed_user_key_lengths with Vault 1.10+
-	if _, ok := d.GetOk(legacyField); ok {
-		v := make(map[string]interface{})
-		for _, val := range keyConfigs {
-			keyType := val["type"].(string)
-			lengths := val["lengths"].([]interface{})
-			var l interface{}
-			count := len(lengths)
-			if count > 0 {
-				l = lengths[0]
-			}
-
-			if count > 1 {
-				log.Printf("[WARN] Vault 1.10+ returned more than one "+
-					"key length for key type %q, specify key lengths in a "+
-					"%q block instead of %q with values %v",
-					newField, keyType, legacyField, lengths)
-			}
-
-			v[keyType] = l
-		}
-
-		return d.Set(legacyField, v)
-	} else {
-		// set the key configuration
-		return d.Set(newField, keyConfigs)
-	}
+	field := "allowed_user_key_config"
+	// set the key configuration
+	return d.Set(field, keyConfigs)
 }
 
 func getSSHRoleKeyConfig(role *api.Secret) ([]map[string]interface{}, error) {

@@ -78,20 +78,11 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Description: "If set, enables taking backup of named key in the plaintext format. Once set, this cannot be disabled.",
 				Default:     false,
 			},
-			"auto_rotate_interval": {
-				Type:          schema.TypeInt,
-				Optional:      true,
-				Computed:      true,
-				Deprecated:    "Use auto_rotate_period instead",
-				Description:   "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
-				ConflictsWith: []string{"auto_rotate_period"},
-			},
 			"auto_rotate_period": {
-				Type:          schema.TypeInt,
-				Optional:      true,
-				Computed:      true,
-				Description:   "Amount of seconds the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
-				ConflictsWith: []string{"auto_rotate_interval"},
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "Amount of seconds the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
 			},
 			"type": {
 				Type:         schema.TypeString,
@@ -252,13 +243,7 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 func getTransitAutoRotatePeriod(d *schema.ResourceData) int {
 	var autoRotatePeriod int
 	v, ok := d.GetOkExists("auto_rotate_period")
-	if !ok {
-		if v, ok := d.GetOkExists("auto_rotate_interval"); ok {
-			log.Printf("[WARN] Using auto_rotate_internal to set auto_rotate_period, " +
-				"please use auto_rotate_period instead")
-			autoRotatePeriod = v.(int)
-		}
-	} else {
+	if ok {
 		autoRotatePeriod = v.(int)
 	}
 
@@ -410,10 +395,6 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 	}
 
 	autoRotatePeriodField := "auto_rotate_period"
-	if _, ok := d.GetOkExists("auto_rotate_interval"); ok {
-		autoRotatePeriodField = "auto_rotate_interval"
-	}
-
 	if err := set(autoRotatePeriodField, "auto_rotate_period"); err != nil {
 		return nil
 	}

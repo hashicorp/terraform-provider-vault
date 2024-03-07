@@ -116,8 +116,6 @@ In addition to the fields above, the following attributes are exported:
 * `certificate` - The certificate.
 
 * `issuing_ca` - The issuing CA certificate.
-
-* `serial` - Deprecated, use `serial_number` instead.
  
 * `serial_number` - The certificate's serial number, hex formatted.
 

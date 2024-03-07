@@ -38,7 +38,6 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldCountry, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldLocality, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
-		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerial),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
 	}
 

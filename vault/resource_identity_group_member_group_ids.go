@@ -15,7 +15,7 @@ func identityGroupMemberGroupIdsResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: group.GetGroupMemberUpdateContextFunc(group.GroupResourceType),
 		UpdateContext: group.GetGroupMemberUpdateContextFunc(group.GroupResourceType),
-		ReadContext:   provider.ReadContextWrapper(group.GetGroupMemberReadContextFunc(group.GroupResourceType, false)),
+		ReadContext:   provider.ReadContextWrapper(group.GetGroupMemberReadContextFunc(group.GroupResourceType)),
 		DeleteContext: group.GetGroupMemberDeleteContextFunc(group.GroupResourceType),
 
 		Schema: map[string]*schema.Schema{

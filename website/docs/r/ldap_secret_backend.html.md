@@ -64,9 +64,6 @@ The following arguments are supported:
 * `insecure_tls` - (Optional) Skip LDAP server SSL Certificate verification. This is not recommended for production.
   Defaults to `false`.
 
-* `length` - (Optional) **Deprecated** use `password_policy`. The desired length of passwords that Vault generates.
-  *Mutually exclusive with `password_policy` on vault-1.11+*
-
 * `local` - (Optional) Mark the secrets engine as local-only. Local engines are not replicated or removed by
   replication.Tolerance duration to use when checking the last rotation time.
 
