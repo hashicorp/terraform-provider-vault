@@ -1,5 +1,7 @@
 ## Unreleased
 
+* Add support for `allowed_kubernetes_namespace_selector` in `vault_kubernetes_secret_backend_role` ([#2180](https://github.com/hashicorp/terraform-provider-vault/pull/2180)).
+
 ## 4.1.0 (Mar 20, 2024)
 
 CHANGES TO VAULT POLICY REQUIREMENTS:

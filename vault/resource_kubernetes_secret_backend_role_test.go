@@ -79,6 +79,26 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 				),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion112), nil
+				},
+				Config: testKubernetesSecretBackendRole_UpdateConfig3(backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, fieldAllowedKubernetesNamespaceSelector, "{\"matchLabels\":{\"team\":\"hades\"}}"),
+					resource.TestCheckResourceAttr(resourceName, fieldGeneratedRoleRules, ""),
+					resource.TestCheckResourceAttr(resourceName, fieldServiceAccountName, ""),
+					resource.TestCheckResourceAttr(resourceName, fieldKubernetesRoleType, "Role"),
+					resource.TestCheckResourceAttr(resourceName, fieldKubernetesRoleName, "existing_role"),
+					resource.TestCheckResourceAttr(resourceName, fieldTokenMaxTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, fieldExtraLabels+".%", "0"),
+					resource.TestCheckResourceAttr(resourceName, fieldExtraAnnotations+".%", "0"),
+				),
+			},
+			{
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -166,6 +186,21 @@ resource "vault_kubernetes_secret_backend_role" "test" {
   name                          = "%s"
   allowed_kubernetes_namespaces = ["*"]
   kubernetes_role_name          = "existing_role"
+}
+`, backend, name)
+}
+
+func testKubernetesSecretBackendRole_UpdateConfig3(backend, name string) string {
+	return fmt.Sprintf(`
+resource "vault_kubernetes_secret_backend" "backend" {
+  path = "%s"
+}
+
+resource "vault_kubernetes_secret_backend_role" "test" {
+  backend                               = vault_kubernetes_secret_backend.backend.path
+  name                                  = "%s"
+  allowed_kubernetes_namespace_selector = "{\"matchLabels\":{\"team\":\"hades\"}}"
+  kubernetes_role_name                  = "existing_role"
 }
 `, backend, name)
 }

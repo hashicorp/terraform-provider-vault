@@ -139,8 +139,14 @@ The following arguments are supported:
 * `backend` - (Required) The path of the Kubernetes Secrets Engine backend mount to create
   the role in.
 
-* `allowed_kubernetes_namespaces` - (Required) The list of Kubernetes namespaces this role 
-  can generate credentials for. If set to `*` all namespaces are allowed.
+* `allowed_kubernetes_namespaces` - (Optional) The list of Kubernetes namespaces this role 
+  can generate credentials for. If set to `*` all namespaces are allowed. If set with 
+  `allowed_kubernetes_namespace_selector`, the conditions are `OR`ed.
+
+* `allowed_kubernetes_namespace_selector` - (Optional) A label selector for Kubernetes namespaces 
+  in which credentials can be generated. Accepts either a JSON or YAML object. The value should be 
+  of type [LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#labelselector-v1-meta). 
+  If set with `allowed_kubernetes_namespace`, the conditions are `OR`ed.
 
 * `token_max_ttl` - (Optional) The maximum TTL for generated Kubernetes tokens in seconds.
 
