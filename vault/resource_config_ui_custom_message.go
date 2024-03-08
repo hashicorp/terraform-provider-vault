@@ -17,7 +17,7 @@ import (
 
 func configUICustomMessageResource() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: configUICustomMessageCreate,
+		CreateContext: provider.MountCreateContextWrapper(configUICustomMessageCreate, provider.VaultVersion116),
 		ReadContext:   configUICustomMessageRead,
 		UpdateContext: configUICustomMessageUpdate,
 		DeleteContext: configUICustomMessageDelete,
@@ -75,7 +75,7 @@ func configUICustomMessageResource() *schema.Resource {
 			consts.FieldEndTime: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The ending time of the active period of the custom message. Can be omitted for non-expiring messages",
+				Description: "The ending time of the active period of the custom message. Can be omitted for non-expiring message",
 			},
 			consts.FieldLink: {
 				Type:     schema.TypeSet,
@@ -107,6 +107,10 @@ func configUICustomMessageResource() *schema.Resource {
 }
 
 func configUICustomMessageCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if !provider.IsEnterpriseSupported(meta) {
+		return diag.Errorf("config_ui_custom_message is not supported by this version of vault")
+	}
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -146,7 +150,9 @@ func configUICustomMessageRead(ctx context.Context, d *schema.ResourceData, meta
 	}
 
 	if secret == nil || secret.Data == nil {
-		return diag.Errorf("response from Vault server is empty")
+		log.Printf("response from Vault server is empty")
+		d.SetId("")
+		return nil
 	}
 
 	secretData := secret.Data
