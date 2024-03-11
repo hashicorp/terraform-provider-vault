@@ -79,6 +79,19 @@ state changes in the meantime.
 - [Provider Policy Changes](#provider-policy-changes)
   - [Auth method resource changes](#auth-method-resource-changes)
   - [Secret engine resource changes](#secret-engine-resource-changes)
+- [Deprecated Field Removals](#deprecated-field-removals)
+  - [AD Secret Backend](#ad-secret-backend)
+    - [`length`](#ad-secret-backend)
+    - [`formatter`](#ad-secret-backend)
+  - [Cert Auth Backend: `allowed_organization_units`](#cert-auth-backend-role)
+  - [Consul Backend Role: `token_type`](#console-backend-role)
+  - [Identity Group Member Entities: `group_name`](#identity-group-member-entities)
+  - [LDAP Secret Backend: `length`](#ldap-secret-backend)
+  - [PKI Root Cert: `serial`](#pki-root-cert)
+  - [PKI Root Sign Intermediate: `serial`](#pki-root-sign-intermediate)
+  - [PKI Root Sign: `serial`](#pki-sign)
+  - [SSH Backend Role: `allowed_user_key_lengths`](#ssh-backend-role)
+  - [Transit Secret Backend Key: `auto_rotate_interval`](#transit-secret-backend-key)
 
 <!-- /TOC -->
 
@@ -300,3 +313,51 @@ path "sys/mounts/nomad"
   capabilities = ["read"]
 }
 ```
+
+## Deprecated Field Removals
+
+The following deprecated fields have been removed:
+
+### AD Secret Backend
+
+* `length` - removed from the `vault_ad_secret_backend` resource.
+
+* `formatter` - removed from the `vault_ad_secret_backend` resource.
+
+### Cert Auth Backend Role
+
+* `allowed_organization_units` - removed from the `vault_cert_auth_backend_role` resource.
+
+### Consul Backend Role
+
+* `token_type` - removed from the `vault_consul_secret_backend_role` resource.
+
+### Identity Group Member Entities
+
+* `group_name` - removed from the `vault_identity_group_member_entity_ids` resource.
+
+### LDAP Secret Backend
+
+* `length` - removed from the `vault_ldap_secret_backend` resource.
+
+### PKI Root Cert
+
+* `serial` - removed from the `vault_pki_secret_backend_root_cert` resource. Use `serial_number` instead.
+
+### PKI Root Sign Intermediate
+
+* `serial` - removed from the `vault_pki_secret_backend_root_sign_intermediate` resource. Use `serial_number` instead.
+
+### PKI Root Sign
+
+* `serial` - removed from the `vault_pki_secret_backend_sign` resource. Use `serial_number` instead.
+
+### SSH Backend Role
+
+* `allowed_user_key_lengths` - removed from the `vault_ssh_secret_backend_role`
+  resource. Use `allowed_user_key_config` instead.
+
+### Transit Secret Backend Key
+
+* `auto_rotate_interval` - removed from the `vault_transit_secret_backend_key`
+  resource. Use `auto_rotate_period` instead.
