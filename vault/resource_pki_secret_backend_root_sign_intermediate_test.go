@@ -246,7 +246,7 @@ func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string
 		resource.TestCheckResourceAttr(res, "locality", "San Francisco"),
 		resource.TestCheckResourceAttr(res, "province", "CA"),
 		resource.TestCheckResourceAttr(res, "format", format),
-		resource.TestCheckResourceAttrSet(res, "serial"),
+		resource.TestCheckResourceAttrSet(res, "serial_number"),
 		assertPKICertificateBundle(res, format),
 		assertPKICAChain(res),
 	)

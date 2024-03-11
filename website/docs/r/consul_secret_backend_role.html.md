@@ -69,9 +69,6 @@ identities to attach to the token. Applicable for Vault 1.11+ with Consul 1.8+.
 
 * `ttl` - (Optional) Specifies the TTL for this role.
 
-* `token_type` - (Optional) Specifies the type of token to create when using this role. Valid values are "client" or "management".
-  *Deprecated: Consul 1.11 and later removed the legacy ACL system which supported this field.*
-
 * `local` - (Optional) Indicates that the token should not be replicated globally and instead be local to the current datacenter.
 
 ## Attributes Reference

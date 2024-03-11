@@ -84,11 +84,6 @@ The following arguments are supported:
 
 * `supports_signing` - Whether or not the key supports signing, based on key type.
 
-
-## Deprecations
-
-* `auto_rotate_interval` - Replaced by `auto_rotate_period`.
-
 ## Import
 
 Transit secret backend keys can be imported using the `path`, e.g.

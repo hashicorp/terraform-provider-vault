@@ -145,12 +145,6 @@ func pkiSecretBackendSignResource() *schema.Resource {
 				Description: "The CA chain.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			consts.FieldSerial: {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Deprecated:  "Use serial_number instead",
-				Description: "The serial number.",
-			},
 			consts.FieldSerialNumber: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -244,16 +238,12 @@ func pkiSecretBackendSignCreate(ctx context.Context, d *schema.ResourceData, met
 	log.Printf("[DEBUG] Created certificate sign %s by %s on PKI secret backend %q", commonName, name,
 		backend)
 
-	// helpful to consolidate code into single loop
-	// since 'serial' is deprecated, we read the 'serial_number'
-	// field from the response in order to set to the TF state
 	certFieldsMap := map[string]string{
 		consts.FieldCertificate:  consts.FieldCertificate,
 		consts.FieldIssuingCA:    consts.FieldIssuingCA,
 		consts.FieldCAChain:      consts.FieldCAChain,
 		consts.FieldSerialNumber: consts.FieldSerialNumber,
 		consts.FieldExpiration:   consts.FieldExpiration,
-		consts.FieldSerial:       consts.FieldSerialNumber,
 	}
 
 	for k, v := range certFieldsMap {
