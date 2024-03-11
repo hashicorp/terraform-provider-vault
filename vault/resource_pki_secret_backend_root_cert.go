@@ -540,7 +540,7 @@ func pkiSecretBackendDeleteRootPath(backend string) string {
 	return strings.Trim(backend, "/") + "/root"
 }
 
-// TODO confirm if this can be removed since users should already be on 3.25
+// Deprecated — internal-only. Removed in next major version bump
 func pkiSecretSerialNumberResourceV0() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
@@ -553,6 +553,7 @@ func pkiSecretSerialNumberResourceV0() *schema.Resource {
 	}
 }
 
+// Deprecated — internal-only. Removed in next major version bump
 func pkiSecretSerialNumberUpgradeV0(
 	_ context.Context, rawState map[string]interface{}, _ interface{},
 ) (map[string]interface{}, error) {
