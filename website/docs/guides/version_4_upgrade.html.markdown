@@ -41,6 +41,11 @@ While you may see some small changes in your configurations as a result of
 these changes, we don't expect you'll need to make any major refactorings.
 However, please pay special attention to the changes noted in the [Provider Policy Changes](#provider-policy-changes) section.
 
+## What Vault server versions are supported in version 4.X?
+
+The Vault provider will be dropping Vault version support for Vault <= v1.10.0.
+This means that only Vault server version 1.11.x and greater will be supported.
+
 ## What is the impact of these changes?
 
 The changes are breaking changes in environments where permissions are least
@@ -164,6 +169,9 @@ following resources:
 - `vault_ldap_auth_backend`
 - `vault_okta_auth_backend`
 
+-> Note that the table below does not include any additional policies the
+individual resources might require.
+
 <table>
 <thead>
   <tr>
@@ -187,9 +195,9 @@ following resources:
 </tbody>
 </table>
 
-For example, in version 3.X the following policy is required for the
-`vault_gcp_auth_backend` resource since its mount metadata is retrieved with
-the GET `sys/auth` HTTP operation:
+For example, in version 3.X the `vault_gcp_auth_backend` resource retrieves
+mount metadata with the GET `sys/auth` HTTP operation which corresponds to the
+following policy in Vault:
 
 ```hcl
 path "sys/auth"
@@ -198,9 +206,9 @@ path "sys/auth"
 }
 ```
 
-In version 4.X the following policy is required for the
-`vault_gcp_auth_backend` resource since its mount metadata is retrieved with
-the GET `sys/auth/:path` HTTP operation:
+In version 4.X the `vault_gcp_auth_backend` resource retrieves mount metadata
+with the GET `sys/auth/:path` HTTP operation which corresponds to the following
+policy in Vault:
 
 ```hcl
 path "sys/auth/gcp"
@@ -223,6 +231,9 @@ following resources:
   - `vault_pki_secret_backend_cert`
   - `vault_rabbitmq_secret_backend`
   - `vault_terraform_cloud_secret_backend`
+
+-> Note that the table below does not include any additional policies the
+individual resources might require.
 
 <table>
 <thead>
@@ -247,9 +258,9 @@ following resources:
 </tbody>
 </table>
 
-For example, in version 3.X the following policy is required for the
-`vault_gcp_secret_backend` resource since its mount metadata is retrieved with
-the GET `sys/mounts` HTTP operation:
+For example, in version 3.X the `vault_gcp_secret_backend` resource retrieves
+mount metadata with the GET `sys/mounts` HTTP operation which corresponds to the
+following policy in Vault:
 
 ```hcl
 path "sys/mounts"
@@ -258,9 +269,9 @@ path "sys/mounts"
 }
 ```
 
-In version 4.X the following policy is required for the
-`vault_gcp_secret_backend` resource since its mount metadata is retrieved with
-the GET `sys/mounts/:path` HTTP operation:
+In version 4.X the `vault_gcp_secret_backend` resource retrieves mount metadata
+with the GET `sys/mounts/:path` HTTP operation which corresponds to the following
+policy in Vault:
 
 ```hcl
 path "sys/mounts/gcp"
@@ -275,6 +286,9 @@ following resources:
 #### Resources
   - `vault_ad_secret_backend`
   - `vault_nomad_secret_backend`
+
+-> Note that the table below does not include any additional policies the
+individual resources might require.
 
 <table>
 <thead>
@@ -299,9 +313,9 @@ following resources:
 </tbody>
 </table>
 
-For example, in version 3.X the following policy is required for the
-`vault_nomad_secret_backend` resource since its mount tune metadata is retrieved
-with the GET `sys/mounts` HTTP operation:
+For example, in version 3.X the `vault_nomad_secret_backend` resource retrieves
+mount tune metadata with the GET `sys/mounts/:path/tune` HTTP operation which
+corresponds to the following policy in Vault:
 
 ```hcl
 path "sys/mounts/nomad/tune"
@@ -310,9 +324,9 @@ path "sys/mounts/nomad/tune"
 }
 ```
 
-In version 4.X the following policy is required for the
-`vault_nomad_secret_backend` resource since its mount metadata is retrieved
-with the GET `sys/mounts/:path` HTTP operation:
+In version 4.X the `vault_nomad_secret_backend` resource retrieves mount metadata
+with the GET `sys/mounts/:path` HTTP operation which corresponds to the following
+policy in Vault:
 
 ```hcl
 path "sys/mounts/nomad"
