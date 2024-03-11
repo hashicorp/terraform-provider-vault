@@ -41,6 +41,13 @@ While you may see some small changes in your configurations as a result of
 these changes, we don't expect you'll need to make any major refactorings.
 However, please pay special attention to the changes noted in the [Provider Policy Changes](#provider-policy-changes) section.
 
+## What is the impact of these changes?
+
+The changes are breaking changes in environments where permissions are least
+privilege. The breaking changes in this case are blocking but not destructive.
+That is, deployments will fail until the required Vault policy adjustments have
+been made.
+
 ## Which Terraform versions are supported?
 
 Terraform versions `1.0.x ` and greater are fully supported.
