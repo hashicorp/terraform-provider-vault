@@ -41,6 +41,37 @@ While you may see some small changes in your configurations as a result of
 these changes, we don't expect you'll need to make any major refactorings.
 However, please pay special attention to the changes noted in the [Provider Policy Changes](#provider-policy-changes) section.
 
+## What performance improvements should we expect to see?
+
+Version `4.0.0` changed the READ operations across many resources to call Vault
+API's to only fetch mount metadata necessary for the resource.  Previously,
+these resources were calling a Vault API which returned mount metadata for all
+enabled mounts. This would result in a substantially higher CPU and memory
+footprint for the provider in cases where a given Vault server has a large
+number of secret/auth mounts.
+
+The following is the list of resources that should see performance improvements
+when many mounts are enabled in Vault:
+
+#### Data sources
+- `vault_auth_backend`
+
+#### Resources
+- `vault_auth_backend`
+- `vault_aws_secret_backend`
+- `vault_azure_secret_backend`
+- `vault_consul_secret_backend`
+- `vault_gcp_auth_backend`
+- `vault_gcp_secret_backend`
+- `vault_github_auth_backend`
+- `vault_jwt_auth_backend`
+- `vault_ldap_auth_backend`
+- `vault_mount`
+- `vault_okta_auth_backend`
+- `vault_pki_secret_backend_cert`
+- `vault_rabbitmq_secret_backend`
+- `vault_terraform_cloud_secret_backend`
+
 ## What Vault server versions are supported in version 4.X?
 
 The Vault provider will be dropping Vault version support for Vault <= v1.10.0.
