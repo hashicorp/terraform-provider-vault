@@ -175,9 +175,16 @@ func pkiSecretBackendIssuerUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	// only write to Vault if a patch is required
 	if patchRequired {
-		_, err := client.Logical().WriteWithContext(ctx, path, data)
-		if err != nil {
-			return diag.Errorf("error writing data to %q, err=%s", path, err)
+		if d.IsNewResource() {
+			_, err := client.Logical().WriteWithContext(ctx, path, data)
+			if err != nil {
+				return diag.Errorf("error writing issuer data to %q, err=%s", path, err)
+			}
+		} else {
+			_, err := client.Logical().JSONMergePatch(ctx, path, data)
+			if err != nil {
+				return diag.Errorf("error updating issuer data at %q, err=%s", path, err)
+			}
 		}
 	}
 

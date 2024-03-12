@@ -52,6 +52,22 @@ func TestAccPKISecretBackendIssuer_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerID),
 				),
 			},
+			// ensure JSON merge patch functions as expected. No overwrites
+			{
+				Config: testAccPKISecretBackendIssuer_basic(backend,
+					fmt.Sprintf(`issuer_name = "%s"
+										leaf_not_after_behavior = "truncate"
+										crl_distribution_points = ["http://example.com/crl.crl"]`, issuerName)),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerName, issuerName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLeafNotAfterBehavior, "truncate"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", consts.FieldCRLDistributionPoints), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0", consts.FieldCRLDistributionPoints), "http://example.com/crl.crl"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerRef),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerID),
+				),
+			},
 			// ignore changes in 'usage' field since it can be returned in any order
 			// example, error in attribute equivalence in following
 			// Import returns "crl-signing,read-only,issuing-certificates"
