@@ -37,6 +37,16 @@ var ldapAuthBackendFields = []string{
 	consts.FieldGroupAttr,
 }
 
+var ldapAuthBackendBooleanFields = []string{
+	consts.FieldStartTLS,
+	consts.FieldInsecureTLS,
+	consts.FieldCaseSensitiveNames,
+	consts.FieldDiscoverDN,
+	consts.FieldDenyNullBind,
+	consts.FieldUsernameAsAlias,
+	consts.FieldUseTokenGroups,
+}
+
 func ldapAuthBackendResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		consts.FieldURL: {
@@ -258,26 +268,15 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 
 	data := map[string]interface{}{}
 
-	if v, ok := d.GetOkExists("starttls"); ok {
-		data["starttls"] = v.(bool)
-	}
-
-	if v, ok := d.GetOkExists("insecure_tls"); ok {
-		data["insecure_tls"] = v.(bool)
-	}
-
-	if v, ok := d.GetOk("bindpass"); ok {
-		data["bindpass"] = v.(string)
-	}
-
 	for _, k := range ldapAuthBackendFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v.(string)
 		}
 	}
 
-	if v, ok := d.GetOkExists("case_sensitive_names"); ok {
-		data["case_sensitive_names"] = v.(bool)
+	// handle boolean fields
+	for _, k := range ldapAuthBackendBooleanFields {
+		data[k] = d.Get(k)
 	}
 
 	useAPIVer111 := provider.IsAPISupported(meta, provider.VaultVersion111)
@@ -287,28 +286,16 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		}
 	}
 
-	if v, ok := d.GetOkExists("discoverdn"); ok {
-		data["discoverdn"] = v.(bool)
+	if v, ok := d.GetOk(consts.FieldBindPass); ok {
+		data[consts.FieldBindPass] = v.(string)
 	}
 
-	if v, ok := d.GetOkExists("deny_null_bind"); ok {
-		data["deny_null_bind"] = v.(bool)
+	if v, ok := d.GetOk(consts.FieldClientTLSCert); ok {
+		data[consts.FieldClientTLSCert] = v.(string)
 	}
 
-	if v, ok := d.GetOkExists("username_as_alias"); ok {
-		data["username_as_alias"] = v.(bool)
-	}
-
-	if v, ok := d.GetOkExists("use_token_groups"); ok {
-		data["use_token_groups"] = v.(bool)
-	}
-
-	if v, ok := d.GetOk("client_tls_cert"); ok {
-		data["client_tls_cert"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("client_tls_key"); ok {
-		data["client_tls_key"] = v.(string)
+	if v, ok := d.GetOk(consts.FieldClientTLSKey); ok {
+		data[consts.FieldClientTLSKey] = v.(string)
 	}
 
 	updateTokenFields(d, data, false)
@@ -343,10 +330,10 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
-	d.Set("path", path)
-	d.Set("description", authMount.Description)
-	d.Set("accessor", authMount.Accessor)
-	d.Set("local", authMount.Local)
+	d.Set(consts.FieldPath, path)
+	d.Set(consts.FieldDescription, authMount.Description)
+	d.Set(consts.FieldAccessor, authMount.Accessor)
+	d.Set(consts.FieldLocal, authMount.Local)
 
 	path = ldapAuthBackendConfigPath(path)
 
@@ -367,20 +354,17 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
-	d.Set("starttls", resp.Data["starttls"])
-	d.Set("insecure_tls", resp.Data["insecure_tls"])
-	d.Set("case_sensitive_names", resp.Data["case_sensitive_names"])
-	d.Set("discoverdn", resp.Data["discoverdn"])
-	d.Set("deny_null_bind", resp.Data["deny_null_bind"])
-	d.Set("username_as_alias", resp.Data["username_as_alias"])
-	d.Set("use_token_groups", resp.Data["use_token_groups"])
-
 	for _, k := range ldapAuthBackendFields {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return diag.Errorf("error reading %s for LDAP Auth Backend Role %q: %q", k, path, err)
 			}
 		}
+	}
+
+	// handle TypeBool
+	for _, k := range ldapAuthBackendBooleanFields {
+		d.Set(k, resp.Data[k])
 	}
 
 	useAPIVer111 := provider.IsAPISupported(meta, provider.VaultVersion111)
