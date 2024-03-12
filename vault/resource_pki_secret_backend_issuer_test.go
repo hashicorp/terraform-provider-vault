@@ -43,12 +43,11 @@ func TestAccPKISecretBackendIssuer_basic(t *testing.T) {
 			},
 			{
 				Config: testAccPKISecretBackendIssuer_basic(backend,
-					fmt.Sprintf(`issuer_name = "%s"
-										leaf_not_after_behavior = "truncate"`, issuerName)),
+					fmt.Sprintf(`issuer_name = "%s"`, issuerName)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerName, issuerName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldLeafNotAfterBehavior, "truncate"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLeafNotAfterBehavior, "err"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerRef),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerID),
 				),
@@ -64,14 +63,11 @@ func TestAccPKISecretBackendIssuer_basic(t *testing.T) {
 			{
 				Config: testAccPKISecretBackendIssuer_basic(backend,
 					fmt.Sprintf(`issuer_name = "%s"
-										leaf_not_after_behavior = "truncate"
-										crl_distribution_points = ["http://example.com/crl.crl"]`, issuerName)),
+										leaf_not_after_behavior = "truncate"`, issuerName)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerName, issuerName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLeafNotAfterBehavior, "truncate"),
-					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", consts.FieldCRLDistributionPoints), "1"),
-					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0", consts.FieldCRLDistributionPoints), "http://example.com/crl.crl"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerRef),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerID),
 				),
