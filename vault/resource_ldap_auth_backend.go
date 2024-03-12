@@ -22,64 +22,79 @@ import (
 
 const ldapAuthType string = "ldap"
 
+var ldapAuthBackendFields = []string{
+	consts.FieldURL,
+	consts.FieldTLSMinVersion,
+	consts.FieldTLSMaxVersion,
+	consts.FieldCertificate,
+	consts.FieldBindDN,
+	consts.FieldUserDN,
+	consts.FieldUserAttr,
+	consts.FieldUserFilter,
+	consts.FieldUPNDomain,
+	consts.FieldGroupFilter,
+	consts.FieldGroupDN,
+	consts.FieldGroupAttr,
+}
+
 func ldapAuthBackendResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		"url": {
+		consts.FieldURL: {
 			Type:     schema.TypeString,
 			Required: true,
 		},
-		"starttls": {
+		consts.FieldStartTLS: {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
 		},
-		"tls_min_version": {
+		consts.FieldTLSMinVersion: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		"tls_max_version": {
+		consts.FieldTLSMaxVersion: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		"insecure_tls": {
+		consts.FieldInsecureTLS: {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
 		},
-		"certificate": {
+		consts.FieldCertificate: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		"binddn": {
+		consts.FieldBindDN: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		"bindpass": {
+		consts.FieldBindPass: {
 			Type:      schema.TypeString,
 			Optional:  true,
 			Computed:  true,
 			Sensitive: true,
 		},
-		"case_sensitive_names": {
+		consts.FieldCaseSensitiveNames: {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
 		},
-		"max_page_size": {
+		consts.FieldMaxPageSize: {
 			Type:     schema.TypeInt,
 			Default:  -1,
 			Optional: true,
 		},
-		"userdn": {
+		consts.FieldUserDN: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		"userattr": {
+		consts.FieldUserAttr: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
@@ -87,59 +102,57 @@ func ldapAuthBackendResource() *schema.Resource {
 				return strings.ToLower(v.(string))
 			},
 		},
-		"userfilter": {
+		consts.FieldUserFilter: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		"discoverdn": {
+		consts.FieldDiscoverDN: {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
 		},
-		"deny_null_bind": {
+		consts.FieldDenyNullBind: {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
 		},
-		"upndomain": {
+		consts.FieldUPNDomain: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		"groupfilter": {
+		consts.FieldGroupFilter: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		"groupdn": {
+		consts.FieldGroupDN: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		"groupattr": {
+		consts.FieldGroupAttr: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		"username_as_alias": {
+		consts.FieldUsernameAsAlias: {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Computed:    true,
 			Description: "Force the auth method to use the username passed by the user as the alias name.",
 		},
-		"use_token_groups": {
+		consts.FieldUseTokenGroups: {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
 		},
-
-		"description": {
+		consts.FieldDescription: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-
 		consts.FieldPath: {
 			Type:     schema.TypeString,
 			Optional: true,
@@ -148,24 +161,24 @@ func ldapAuthBackendResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-		"local": {
+		consts.FieldLocal: {
 			Type:        schema.TypeBool,
 			ForceNew:    true,
 			Optional:    true,
 			Default:     false,
 			Description: "Specifies if the auth method is local only",
 		},
-		"accessor": {
+		consts.FieldAccessor: {
 			Type:        schema.TypeString,
 			Computed:    true,
 			Description: "The accessor of the LDAP auth backend",
 		},
-		"client_tls_cert": {
+		consts.FieldClientTLSCert: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		"client_tls_key": {
+		consts.FieldClientTLSKey: {
 			Type:      schema.TypeString,
 			Optional:  true,
 			Computed:  true,
@@ -245,56 +258,33 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 
 	data := map[string]interface{}{}
 
-	if v, ok := d.GetOk("url"); ok {
-		data["url"] = v.(string)
-	}
-
 	if v, ok := d.GetOkExists("starttls"); ok {
 		data["starttls"] = v.(bool)
-	}
-
-	if v, ok := d.GetOk("tls_min_version"); ok {
-		data["tls_min_version"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("tls_max_version"); ok {
-		data["tls_max_version"] = v.(string)
 	}
 
 	if v, ok := d.GetOkExists("insecure_tls"); ok {
 		data["insecure_tls"] = v.(bool)
 	}
 
-	if v, ok := d.GetOk("certificate"); ok {
-		data["certificate"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("binddn"); ok {
-		data["binddn"] = v.(string)
-	}
-
 	if v, ok := d.GetOk("bindpass"); ok {
 		data["bindpass"] = v.(string)
+	}
+
+	for _, k := range ldapAuthBackendFields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v.(string)
+		}
 	}
 
 	if v, ok := d.GetOkExists("case_sensitive_names"); ok {
 		data["case_sensitive_names"] = v.(bool)
 	}
 
-	if v, ok := d.GetOkExists("max_page_size"); ok {
-		data["max_page_size"] = v
-	}
-
-	if v, ok := d.GetOk("userdn"); ok {
-		data["userdn"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("userattr"); ok {
-		data["userattr"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("userfilter"); ok {
-		data["userfilter"] = v.(string)
+	useAPIVer111 := provider.IsAPISupported(meta, provider.VaultVersion111)
+	if useAPIVer111 {
+		if v, ok := d.GetOk(consts.FieldMaxPageSize); ok {
+			data[consts.FieldMaxPageSize] = v
+		}
 	}
 
 	if v, ok := d.GetOkExists("discoverdn"); ok {
@@ -303,22 +293,6 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 
 	if v, ok := d.GetOkExists("deny_null_bind"); ok {
 		data["deny_null_bind"] = v.(bool)
-	}
-
-	if v, ok := d.GetOk("upndomain"); ok {
-		data["upndomain"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("groupfilter"); ok {
-		data["groupfilter"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("groupdn"); ok {
-		data["groupdn"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("groupattr"); ok {
-		data["groupattr"] = v.(string)
 	}
 
 	if v, ok := d.GetOkExists("username_as_alias"); ok {
@@ -393,26 +367,26 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
-	d.Set("url", resp.Data["url"])
 	d.Set("starttls", resp.Data["starttls"])
-	d.Set("tls_min_version", resp.Data["tls_min_version"])
-	d.Set("tls_max_version", resp.Data["tls_max_version"])
 	d.Set("insecure_tls", resp.Data["insecure_tls"])
-	d.Set("certificate", resp.Data["certificate"])
-	d.Set("binddn", resp.Data["binddn"])
 	d.Set("case_sensitive_names", resp.Data["case_sensitive_names"])
-	d.Set("max_page_size", resp.Data["max_page_size"])
-	d.Set("userdn", resp.Data["userdn"])
-	d.Set("userattr", resp.Data["userattr"])
-	d.Set("userfilter", resp.Data["userfilter"])
 	d.Set("discoverdn", resp.Data["discoverdn"])
 	d.Set("deny_null_bind", resp.Data["deny_null_bind"])
-	d.Set("upndomain", resp.Data["upndomain"])
-	d.Set("groupfilter", resp.Data["groupfilter"])
-	d.Set("groupdn", resp.Data["groupdn"])
-	d.Set("groupattr", resp.Data["groupattr"])
 	d.Set("username_as_alias", resp.Data["username_as_alias"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
+
+	for _, k := range ldapAuthBackendFields {
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.Errorf("error reading %s for LDAP Auth Backend Role %q: %q", k, path, err)
+			}
+		}
+	}
+
+	useAPIVer111 := provider.IsAPISupported(meta, provider.VaultVersion111)
+	if useAPIVer111 {
+		d.Set(consts.FieldMaxPageSize, resp.Data[consts.FieldMaxPageSize])
+	}
 
 	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API
 	// So... if they drift, they drift.
