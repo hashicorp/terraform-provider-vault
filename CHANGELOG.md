@@ -1,5 +1,8 @@
 ## Unreleased
 
+BUGS:
+* fix `vault_azure_access_credentials` to default to Azure Public Cloud ([#2190](https://github.com/hashicorp/terraform-provider-vault/pull/2190))
+
 ## 4.0.0 (Mar 13, 2024)
 
 **Important**: This release requires read policies to be set at the path level for mount metadata.

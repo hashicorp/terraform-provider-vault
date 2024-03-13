@@ -173,6 +173,12 @@ func Test_getAzureCloudConfigFromName(t *testing.T) {
 			cloudName: "unknown",
 			wantErr:   true,
 		},
+		{
+			name:      "empty",
+			cloudName: "",
+			want:      cloud.AzurePublic,
+			wantErr:   false,
+		},
 	}
 	for k, v := range azureCloudConfigMap {
 		tests = append(tests, test{
