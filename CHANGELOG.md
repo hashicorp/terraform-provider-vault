@@ -2,6 +2,11 @@
 
 ## 4.0.0 (Mar 13, 2024)
 
+**Important**: This release requires read policies to be set at the path level for mount metadata.
+For example, instead of permissions at `sys/auth` you must set permissions at
+the `sys/auth/:path` level. Please refer to the details in the
+[Terraform Vault Provider 4.0.0 Upgrade Guide](/docs/providers/vault/guides/version_4_upgrade.html).
+
 FEATURES:
 * Add support for PKI Secrets Engine cluster configuration with the `vault_pki_secret_backend_config_cluster` resource. Requires Vault 1.13+ ([#1949](https://github.com/hashicorp/terraform-provider-vault/pull/1949)).
 * Add support to `enable_templating` in `vault_pki_secret_backend_config_urls` ([#2147](https://github.com/hashicorp/terraform-provider-vault/pull/2147)).
