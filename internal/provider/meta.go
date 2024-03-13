@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/config"
+	config "github.com/hashicorp/vault/api/cliconfig"
 	"k8s.io/utils/pointer"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"

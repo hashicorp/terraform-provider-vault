@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/config"
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -50,7 +49,10 @@ import (
 // each run. In case of weird behavior, restart the Vault dev server to
 // start over with a fresh Vault. (Remember to reset VAULT_TOKEN.)
 
-const providerName = "vault"
+const (
+	providerName  = "vault"
+	configPathEnv = "VAULT_CONFIG_PATH"
+)
 
 var testInitOnce = sync.Once{}
 
@@ -388,7 +390,7 @@ func TestAccProviderToken(t *testing.T) {
 	}
 
 	// Clear the config file env var and restore it after the test.
-	reset, err := tempUnsetenv(config.ConfigPathEnv)
+	reset, err := tempUnsetenv(configPathEnv)
 	defer failIfErr(t, reset)
 	if err != nil {
 		t.Fatal(err)
@@ -722,7 +724,7 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 	testutil.SkipTestAcc(t)
 
 	// Clear the config file env var and restore it after the test.
-	resetConfigPathEnv, err := tempUnsetenv(config.ConfigPathEnv)
+	resetConfigPathEnv, err := tempUnsetenv(configPathEnv)
 	defer failIfErr(t, resetConfigPathEnv)
 	if err != nil {
 		t.Fatal(err)
@@ -893,13 +895,13 @@ func setupTestTokenHelper(t *testing.T, script string) (cleanup func()) {
 		t.Fatal(err)
 	}
 	// Point Vault at the config file.
-	os.Setenv(config.ConfigPathEnv, configPath)
+	os.Setenv(configPathEnv, configPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	return func() {
-		if err := os.Unsetenv(config.ConfigPathEnv); err != nil {
+		if err := os.Unsetenv(configPathEnv); err != nil {
 			t.Fatal(err)
 		}
 
