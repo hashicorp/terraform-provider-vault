@@ -79,10 +79,13 @@ This means that only Vault server version 1.11.x and greater will be supported.
 
 ## What is the impact of these changes?
 
-The changes are breaking changes in environments where permissions are least
-privilege. The breaking changes in this case are blocking but not destructive.
-That is, deployments will fail until the required Vault policy adjustments have
-been made.
+With this change, Vault will require read policies to be set at the path level.
+For example, instead of permissions at `sys/auth` you must set permissions at
+the `sys/auth/:path` level. Please refer to the details in the
+[Provider Policy Changes](#provider-policy-changes) section.
+
+The changes in this case are blocking but not destructive. That is, deployments
+will fail until the required Vault policy adjustments have been made.
 
 ## Which Terraform versions are supported?
 
