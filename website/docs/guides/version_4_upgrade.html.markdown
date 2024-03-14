@@ -54,23 +54,29 @@ The following is the list of resources that should see performance improvements
 when many mounts are enabled in Vault:
 
 #### Data sources
-- `vault_auth_backend`
+* `vault_auth_backend`
 
 #### Resources
-- `vault_auth_backend`
-- `vault_aws_secret_backend`
-- `vault_azure_secret_backend`
-- `vault_consul_secret_backend`
-- `vault_gcp_auth_backend`
-- `vault_gcp_secret_backend`
-- `vault_github_auth_backend`
-- `vault_jwt_auth_backend`
-- `vault_ldap_auth_backend`
-- `vault_mount`
-- `vault_okta_auth_backend`
-- `vault_pki_secret_backend_cert`
-- `vault_rabbitmq_secret_backend`
-- `vault_terraform_cloud_secret_backend`
+* `vault_auth_backend`
+* `vault_aws_secret_backend`
+* `vault_azure_secret_backend`
+* `vault_consul_secret_backend`
+* `vault_database_secrets_mount`
+* `vault_gcp_auth_backend`
+* `vault_gcp_secret_backend`
+* `vault_github_auth_backend`
+* `vault_jwt_auth_backend`
+* `vault_kubernetes_secret_backend`
+* `vault_ldap_auth_backend`
+* `vault_ldap_secret_backend`
+* `vault_mount`
+* `vault_okta_auth_backend`
+* `vault_pki_secret_backend_cert`
+* `vault_pki_secret_backend_intermediate_set_signed`
+* `vault_pki_secret_backend_root_cert`
+* `vault_pki_secret_backend_sign`
+* `vault_rabbitmq_secret_backend`
+* `vault_terraform_cloud_secret_backend`
 
 ## What Vault server versions are supported in version 4.X?
 
@@ -257,14 +263,20 @@ The below table specifies what changed between version 3.X and 4.X for the
 following resources:
 
 #### Resources
-  - `vault_aws_secret_backend`
-  - `vault_azure_secret_backend`
-  - `vault_consul_secret_backend`
-  - `vault_gcp_secret_backend`
-  - `vault_mount`
-  - `vault_pki_secret_backend_cert`
-  - `vault_rabbitmq_secret_backend`
-  - `vault_terraform_cloud_secret_backend`
+- `vault_aws_secret_backend`
+- `vault_azure_secret_backend`
+- `vault_consul_secret_backend`
+- `vault_database_secrets_mount`
+- `vault_gcp_secret_backend`
+- `vault_kubernetes_secret_backend`
+- `vault_ldap_secret_backend`
+- `vault_mount`
+- `vault_pki_secret_backend_cert`
+- `vault_pki_secret_backend_intermediate_set_signed`
+- `vault_pki_secret_backend_root_cert`
+- `vault_pki_secret_backend_sign`
+- `vault_rabbitmq_secret_backend`
+- `vault_terraform_cloud_secret_backend`
 
 -> Note that the table below does not include any additional policies the
 individual resources might require.
