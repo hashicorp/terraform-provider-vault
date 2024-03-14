@@ -80,8 +80,8 @@ when many mounts are enabled in Vault:
 
 ## What Vault server versions are supported in version 4.X?
 
-The Vault provider will be dropping Vault version support for Vault <= v1.10.0.
-This means that only Vault server version 1.11.x and greater will be supported.
+The Vault provider will be dropping Vault version support for Vault <= `1.10.x`.
+This means that only Vault server version `1.11.x` and greater will be supported.
 
 ## What is the impact of these changes?
 
