@@ -48,10 +48,8 @@ on each resource's documentation page about how any secrets are persisted
 to the state and consider carefully whether such usage is compatible with
 their security policies.
 
-Except as otherwise noted, the resources that write secrets into Vault are
-designed such that they require only the *create* and *update* capabilities
-on the relevant resources, so that distinct tokens can be used for reading
-vs. writing and thus limit the exposure of a compromised token.
+Please see the [Vault Policies and the Terraform Vault Provider](/docs/providers/vault/guides/policies.html)
+guide for details on token capabilites.
 
 ## Using Vault credentials in Terraform configuration
 
