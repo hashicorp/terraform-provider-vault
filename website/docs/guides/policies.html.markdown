@@ -22,8 +22,8 @@ Provider should not be given a token that has the root policy assigned to it.
 Instead, the Vault provider should be given a token that limits its actions to only
 the operations that it needs to provision Vault's resources.
 
-For example, the following policy would limit the Vault provider to enabling and
-configuring the Google Cloud secrets engine via the `vault_gcp_secret_backend`
+For example, the following policy would limit the Vault provider to managing
+the lifecycle of the Google Cloud secrets engine via the `vault_gcp_secret_backend`
 resource:
 
 ```hcl
