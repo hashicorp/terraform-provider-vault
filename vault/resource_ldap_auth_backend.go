@@ -364,7 +364,11 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 
 	// handle TypeBool
 	for _, k := range ldapAuthBackendBooleanFields {
-		d.Set(k, resp.Data[k])
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.Errorf("error reading %s for LDAP Auth Backend Role %q: %q", k, path, err)
+			}
+		}
 	}
 
 	useAPIVer111 := provider.IsAPISupported(meta, provider.VaultVersion111)
