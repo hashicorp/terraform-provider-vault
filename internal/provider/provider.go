@@ -275,6 +275,21 @@ func MountCreateContextWrapper(f schema.CreateContextFunc, minVersion *version.V
 	}
 }
 
+// UpdateContextWrapper performs a minimum version requirement check prior to the
+// wrapped schema.UpdateContextFunc.
+func UpdateContextWrapper(f schema.UpdateContextFunc, minVersion *version.Version) schema.UpdateContextFunc {
+	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+		currentVersion := meta.(*ProviderMeta).GetVaultVersion()
+
+		if !IsAPISupported(meta, minVersion) {
+			return diag.Errorf("feature not enabled on current Vault version. min version required=%s; "+
+				"current vault version=%s", minVersion, currentVersion)
+		}
+
+		return f(ctx, d, meta)
+	}
+}
+
 func importNamespace(d *schema.ResourceData) error {
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
 		s := d.State()
