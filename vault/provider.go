@@ -765,6 +765,10 @@ var (
 			Resource:      UpdateSchemaResource(secretsSyncAssociationResource()),
 			PathInventory: []string{"/sys/sync/destinations/{type}/{name}/associations/set"},
 		},
+		"vault_config_ui_custom_message": {
+			Resource:      UpdateSchemaResource(configUICustomMessageResource()),
+			PathInventory: []string{"/sys/config/ui/custom-messages"},
+		},
 	}
 )
 
