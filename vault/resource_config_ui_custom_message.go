@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -146,11 +147,16 @@ func configUICustomMessageRead(ctx context.Context, d *schema.ResourceData, meta
 	log.Printf("[DEBUG] Reading custom message %q", id)
 	secret, e := client.Sys().ReadUICustomMessage(id)
 	if e != nil {
+		if util.Is404(e) {
+			log.Printf("[DEBUG] custom message %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(e)
 	}
 
 	if secret == nil || secret.Data == nil {
-		log.Printf("response from Vault server is empty")
+		log.Printf("[DEBUG] response from Vault server is empty for %q, removing from state", id)
 		d.SetId("")
 		return nil
 	}
