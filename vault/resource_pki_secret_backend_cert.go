@@ -271,9 +271,6 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 		d.Set(consts.FieldCAChain, strings.Join(convertIntoSliceOfString(caChain)[:], "\n"))
 	}
 
-	// helpful to consolidate code into single loop
-	// since 'serial' is deprecated, we read the 'serial_number'
-	// field from the response in order to set to the TF state
 	computedFields := []string{
 		consts.FieldCertificate,
 		consts.FieldIssuingCA,

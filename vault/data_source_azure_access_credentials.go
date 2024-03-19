@@ -125,7 +125,7 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: `The Azure environment to use during credential validation.
-Defaults to the environment configured in the Vault backend.
+Defaults to the Azure Public Cloud.
 Some possible values: AzurePublicCloud, AzureUSGovernmentCloud`,
 			},
 		},
@@ -313,6 +313,9 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 }
 
 func getAzureCloudConfigFromName(name string) (cloud.Configuration, error) {
+	if name == "" {
+		return cloud.AzurePublic, nil
+	}
 	if c, ok := azureCloudConfigMap[strings.ToUpper(name)]; !ok {
 		return c, fmt.Errorf("unsupported Azure cloud name %q", name)
 	} else {

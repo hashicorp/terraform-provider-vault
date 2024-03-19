@@ -111,7 +111,7 @@ func GetGroupMemberUpdateContextFunc(resourceType int) func(context.Context, *sc
 
 // GetGroupMemberReadContextFunc is a common context function for all
 // read operations to be performed on Identity Group Members
-func GetGroupMemberReadContextFunc(resourceType int, setGroupName bool) schema.ReadContextFunc {
+func GetGroupMemberReadContextFunc(resourceType int) schema.ReadContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		client, e := provider.GetClient(d, meta)
 		if e != nil {
@@ -138,12 +138,6 @@ func GetGroupMemberReadContextFunc(resourceType int, setGroupName bool) schema.R
 
 		if err := d.Set(consts.FieldGroupID, id); err != nil {
 			return diag.FromErr(err)
-		}
-
-		if setGroupName {
-			if err := d.Set(consts.FieldGroupName, resp.Data[consts.FieldName]); err != nil {
-				return diag.FromErr(err)
-			}
 		}
 
 		if err := SetGroupMember(d, resp, memberField); err != nil {

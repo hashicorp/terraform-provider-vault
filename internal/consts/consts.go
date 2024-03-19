@@ -407,6 +407,12 @@ const (
 	FieldGroupAttr                     = "groupattr"
 	FieldUsernameAsAlias               = "username_as_alias"
 	FieldUseTokenGroups                = "use_token_groups"
+	FieldTitle                         = "title"
+	FieldMessageBase64                 = "message_base64"
+	FieldAuthenticated                 = "authenticated"
+	FieldStartTime                     = "start_time"
+	FieldEndTime                       = "end_time"
+	FieldLink                          = "link"
 
 	/*
 		common environment variables

@@ -204,12 +204,6 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 					"Requires the format to be set to any of: pem, " +
 					"pem_bundle. The value will be empty for all other formats.",
 			},
-			consts.FieldSerial: {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Deprecated:  "Use serial_number instead",
-				Description: "The serial number.",
-			},
 			consts.FieldSerialNumber: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -306,14 +300,10 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 	}
 	log.Printf("[DEBUG] Created root sign-intermediate on PKI secret backend %q", backend)
 
-	// helpful to consolidate code into single loop
-	// since 'serial' is deprecated, we read the 'serial_number'
-	// field from the response in order to set to the TF state
 	certFieldsMap := map[string]string{
 		consts.FieldCertificate:  consts.FieldCertificate,
 		consts.FieldIssuingCA:    consts.FieldIssuingCA,
 		consts.FieldSerialNumber: consts.FieldSerialNumber,
-		consts.FieldSerial:       consts.FieldSerialNumber,
 	}
 
 	for k, v := range certFieldsMap {
