@@ -133,6 +133,11 @@ func ldapAuthBackendResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
+		"anonymous_group_search": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
 
 		"description": {
 			Type:     schema.TypeString,
@@ -329,6 +334,10 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		data["use_token_groups"] = v.(bool)
 	}
 
+	if v, ok := d.GetOkExists("anonymous_group_search"); ok {
+		data["anonymous_group_search"] = v.(bool)
+	}
+
 	if v, ok := d.GetOk("client_tls_cert"); ok {
 		data["client_tls_cert"] = v.(string)
 	}
@@ -413,6 +422,7 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	d.Set("groupattr", resp.Data["groupattr"])
 	d.Set("username_as_alias", resp.Data["username_as_alias"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
+	d.Set("anonymous_group_search", resp.Data["anonymous_group_search"])
 
 	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API
 	// So... if they drift, they drift.
