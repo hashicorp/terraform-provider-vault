@@ -228,6 +228,7 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 			"upndomain":            "upndomain",
 			"groupfilter":          "groupfilter",
 			"username_as_alias":    "username_as_alias",
+			"description":          "description",
 			"groupdn":              "groupdn",
 			"groupattr":            "groupattr",
 			"use_token_groups":     "use_token_groups",

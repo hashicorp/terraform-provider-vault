@@ -245,6 +245,10 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 
 	data := map[string]interface{}{}
 
+	if v, ok := d.GetOk("description"); ok {
+		data["description"] = v.(string)
+	}
+
 	if v, ok := d.GetOk("url"); ok {
 		data["url"] = v.(string)
 	}
