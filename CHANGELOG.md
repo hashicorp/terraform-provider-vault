@@ -16,6 +16,7 @@ FEATURES:
 * Add support to `enable_templating` in `vault_pki_secret_backend_config_urls` ([#2147](https://github.com/hashicorp/terraform-provider-vault/pull/2147)).
 * Add support for `skip_import_rotation` and `skip_static_role_import_rotation` in `ldap_secret_backend_static_role` and `ldap_secret_backend` respectively. Requires Vault 1.16+ ([#2128](https://github.com/hashicorp/terraform-provider-vault/pull/2128)).
 * Improve logging to track full API exchanges between the provider and Vault ([#2139](https://github.com/hashicorp/terraform-provider-vault/pull/2139))
+* Add support for ACME configuration with the `vault_pki_secret_backend_config_acme` resource. Requires Vault 1.14+ ([#2157](https://github.com/hashicorp/terraform-provider-vault/pull/2157)).
 
 IMPROVEMENTS:
 * Improve performance of READ operations across many resources: ([#2145](https://github.com/hashicorp/terraform-provider-vault/pull/2145)), ([#2152](https://github.com/hashicorp/terraform-provider-vault/pull/2152))
