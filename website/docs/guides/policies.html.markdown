@@ -36,7 +36,7 @@ path "auth/token/create"
 # Permit managing the lifecycle of the gcp secrets engine mount
 path "sys/mounts/gcp"
 {
-  capabilities = ["read", "create", "update", "delete", "sudo"]
+  capabilities = ["read", "create", "update", "delete"]
 }
 
 # Permit reading tune metadata of the gcp secrets engine

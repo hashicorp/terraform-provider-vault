@@ -87,7 +87,7 @@ This means that only Vault server version `1.11.x` and greater will be supported
 
 With this change, Vault will require read policies to be set at the path level.
 For example, instead of permissions at `sys/auth` you must set permissions at
-the `sys/auth/:path` level. Please refer to the details in the
+the `sys/mounts/auth/:path` level. Please refer to the details in the
 [Provider Policy Changes](#provider-policy-changes) section.
 
 The changes in this case are blocking but not destructive. That is, deployments
@@ -230,7 +230,7 @@ individual resources might require.
     <td>GET</td>
     <td>sys/auth</td>
     <td>GET</td>
-    <td>sys/auth/:path</td>
+    <td>sys/mounts/auth/:path</td>
   </tr>
 </tbody>
 </table>
@@ -247,11 +247,11 @@ path "sys/auth"
 ```
 
 In version 4.X the `vault_gcp_auth_backend` resource retrieves mount metadata
-with the GET `sys/auth/:path` HTTP operation which corresponds to the following
+with the GET `sys/mounts/auth/:path` HTTP operation which corresponds to the following
 policy in Vault:
 
 ```hcl
-path "sys/auth/gcp"
+path "sys/mounts/auth/gcp"
 {
     capabilities = ["read"]
 }

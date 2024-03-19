@@ -2,6 +2,7 @@
 
 BUGS:
 * fix `vault_azure_access_credentials` to default to Azure Public Cloud ([#2190](https://github.com/hashicorp/terraform-provider-vault/pull/2190))
+* do not require sudo permissions for auth read operations ([#2198](https://github.com/hashicorp/terraform-provider-vault/pull/2198))
 
 ## 4.0.0 (Mar 13, 2024)
 
