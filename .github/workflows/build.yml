@@ -31,9 +31,9 @@ jobs:
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.4.*'
+          terraform_version: '1.7.*'
           terraform_wrapper: false
 
       - name: Cache go build
@@ -65,10 +65,10 @@ jobs:
         image:
         - "vault-enterprise:1.11.12-ent"
         - "vault-enterprise:1.12.11-ent"
-        - "vault-enterprise:1.13.12-ent"
-        - "vault-enterprise:1.14.8-ent"
-        - "vault-enterprise:1.15.4-ent"
-        - "vault:1.15.0"
+        - "vault-enterprise:1.13.13-ent"
+        - "vault-enterprise:1.14.10-ent"
+        - "vault-enterprise:1.15.6-ent"
+        - "vault:latest"
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -159,9 +159,9 @@ jobs:
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.4.*'
+          terraform_version: '1.7.*'
           terraform_wrapper: false
       - name: Check Terraform CLI version
         run: terraform --version
