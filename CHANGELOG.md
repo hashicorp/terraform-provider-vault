@@ -1,8 +1,23 @@
 ## Unreleased
 
+## 4.1.0 (Mar 20, 2024)
+
+POLICY CHANGES:
+
+* **Important**: This release requires read policies to be set at the path level for mount metadata.
+The v4.0.0 release required read permissions at `sys/auth/:path` which was a
+sudo endpoint. The v4.1.0 release changed that to instead require permissions
+at the `sys/mounts/auth/:path` level and sudo is no longer required. Please
+refer to the details in the [Terraform Vault Provider 4.0.0 Upgrade Guide](/docs/providers/vault/guides/version_4_upgrade.html).
+
+FEATURES:
+* Add new resource `vault_config_ui_custom_message`. Requires Vault 1.16+ Enterprise: ([#2154](https://github.com/hashicorp/terraform-provider-vault/pull/2154)).
+
+IMPROVEMENTS:
+* do not require sudo permissions for auth read operations ([#2198](https://github.com/hashicorp/terraform-provider-vault/pull/2198))
+
 BUGS:
 * fix `vault_azure_access_credentials` to default to Azure Public Cloud ([#2190](https://github.com/hashicorp/terraform-provider-vault/pull/2190))
-* do not require sudo permissions for auth read operations ([#2198](https://github.com/hashicorp/terraform-provider-vault/pull/2198))
 
 ## 4.0.0 (Mar 13, 2024)
 
@@ -16,7 +31,6 @@ FEATURES:
 * Add support to `enable_templating` in `vault_pki_secret_backend_config_urls` ([#2147](https://github.com/hashicorp/terraform-provider-vault/pull/2147)).
 * Add support for `skip_import_rotation` and `skip_static_role_import_rotation` in `ldap_secret_backend_static_role` and `ldap_secret_backend` respectively. Requires Vault 1.16+ ([#2128](https://github.com/hashicorp/terraform-provider-vault/pull/2128)).
 * Improve logging to track full API exchanges between the provider and Vault ([#2139](https://github.com/hashicorp/terraform-provider-vault/pull/2139))
-* Add new resource `vault_config_ui_custom_message`. Requires Vault 1.16+ Enterprise: ([#2154](https://github.com/hashicorp/terraform-provider-vault/pull/2154)).
 
 IMPROVEMENTS:
 * Improve performance of READ operations across many resources: ([#2145](https://github.com/hashicorp/terraform-provider-vault/pull/2145)), ([#2152](https://github.com/hashicorp/terraform-provider-vault/pull/2152))
