@@ -2,7 +2,7 @@
 
 ## 4.1.0 (Mar 20, 2024)
 
-POLICY CHANGES:
+CHANGES TO VAULT POLICY REQUIREMENTS:
 
 * **Important**: This release requires read policies to be set at the path level for mount metadata.
 The v4.0.0 release required read permissions at `sys/auth/:path` which was a
