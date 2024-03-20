@@ -29,7 +29,7 @@ returned. This will, however, increase the time it takes for the credentials
 to be returned, blocking Terraform's execution until they are ready.
 
 If `validate_creds` is used, by default, credentials will be validated by 
-making a test call to Azure every 7 seconds. When we have received 8 
+making a test call to Azure every 1 seconds. When we have received 8 
 successes in a row, the credentials will be returned. We have seen propagation 
 times take up to 15 minutes, so the maximum length of time for the check defaults 
 to 20 minutes. However, propagation times will vary widely based on each company's Azure

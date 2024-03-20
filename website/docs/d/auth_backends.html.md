@@ -18,6 +18,7 @@ data "vault_auth_backends" "example" {}
 data "vault_auth_backends" "example-filter" {
   type = "kubernetes"
 }
+```
 
 ## Argument Reference
 
