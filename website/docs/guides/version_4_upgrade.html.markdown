@@ -1,18 +1,18 @@
 ---
 layout: "vault"
-page_title: "Terraform Vault Provider 4.0.0 Upgrade Guide"
+page_title: "Terraform Vault Provider 4.X Upgrade Guide"
 sidebar_current: "docs-vault-provider-version-4-upgrade"
 description: |-
-  Terraform Vault Provider 4.0.0 Upgrade Guide
+  Terraform Vault Provider 4.X Upgrade Guide
 
 ---
 
-# Terraform Vault Provider 4.0.0 Upgrade Guide
+# Terraform Vault Provider 4.X Upgrade Guide
 
-Version `4.0.0` of the Vault provider for Terraform is a major release and
+Version `4.X` of the Vault provider for Terraform is a major release and
 includes some changes that you will need to consider when upgrading. This guide
 is intended to help with that process and focuses only on the changes necessary
-to upgrade from version `3.25.0` to `4.0.0`.
+to upgrade from version `3.X` to `4.X`.
 
 Most of the changes outlined in this guide have been previously marked as
 deprecated in the Terraform `plan`/`apply` output throughout previous provider
@@ -25,9 +25,9 @@ can always be found in the [CHANGELOG](https://github.com/hashicorp/terraform-pr
 -> If you are upgrading from `2.24.x`. Please follow the
 [3.0.0 Upgrade Guide](./version_3_upgrade.html) before proceeding any further.
 
-## Why version 4.0.0?
+## Why version 4.X?
 
-We introduced version `4.0.0` of the Vault provider in order to make
+We introduced version `4.X` of the Vault provider in order to make
 performance improvements for deployments that manage many Vault secret or auth
 engine mounts. This improvement required changes to the underlying Vault API
 calls, which in turn would require policy adjustments in environments where
@@ -43,7 +43,7 @@ However, please pay special attention to the changes noted in the [Provider Poli
 
 ## What performance improvements should we expect to see?
 
-Version `4.0.0` changed the READ operations across many resources to call Vault
+Version `4.X` changed the READ operations across many resources to call Vault
 API's to only fetch mount metadata necessary for the resource.  Previously,
 these resources were calling a Vault API which returned mount metadata for all
 enabled mounts. This would result in a substantially higher CPU and memory
@@ -100,9 +100,9 @@ Terraform versions `1.0.x ` and greater are fully supported.
 Please see the [Terraform Upgrade Guide](https://www.terraform.io/upgrade-guides/index.html)
 for more info about upgrading Terraform.
 
-## I accidentally upgraded to 4.0.0, how do I downgrade to `3.X`?
+## I accidentally upgraded to 4.X, how do I downgrade to 3.X?
 
-If you've inadvertently upgraded to `4.0.0`, first see the
+If you've inadvertently upgraded to `4.X`, first see the
 [Provider Version Configuration Guide](#provider-version-configuration) to lock
 your provider version; if you've constrained the provider to a lower version
 such as shown in the previous version example in that guide, Terraform will pull
@@ -149,7 +149,7 @@ state changes in the meantime.
 
 ## Provider Version Configuration
 
--> Before upgrading to version `4.0.0`, it is recommended to upgrade to the most
+-> Before upgrading to version `4.X`, it is recommended to upgrade to the most
 recent version of the provider (`3.25.0`) and ensure that your environment
 successfully runs [`terraform plan`](https://www.terraform.io/docs/commands/plan.html)
 without unexpected changes or deprecation notices.
@@ -185,13 +185,17 @@ provider "vault" {
 
 ## Provider Policy Changes
 
-Version `4.0.0` of the Vault provider made changes to the underlying Vault API
+Version `4.X` of the Vault provider made changes to the underlying Vault API
 calls, which in turn may require policy adjustments in environments where
 permissions are least privilege.
 
 Please see the [Capabilities](https://developer.hashicorp.com/vault/docs/concepts/policies#capabilities)
 section of the Vault Policies documentation for more information on Vault
 policies.
+
+-> Note the `4.0.0` release required read permissions at `sys/auth/:path` which was a
+sudo endpoint. The `4.1.0` release changed that to instead require permissions
+at the `sys/mounts/auth/:path` level and sudo is no longer required.
 
 ### Auth method resource changes
 
