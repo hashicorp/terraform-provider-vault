@@ -34,6 +34,7 @@ const (
 )
 
 func kubernetesSecretBackendRoleResource() *schema.Resource {
+	name := "vault_kubernetes_secret_backend_role"
 	return &schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(kubernetesSecretBackendRoleCreateUpdate, provider.VaultVersion111),
 		ReadContext:   provider.ReadContextWrapper(kubernetesSecretBackendRoleRead),
@@ -70,6 +71,11 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 			},
 			fieldAllowedKubernetesNamespaceSelector: {
 				Type: schema.TypeString,
+				// We rebuild the attached JSON string to a simple singleline
+				// string. This makes terraform not want to change when an extra
+				// space is included in the JSON string.
+				StateFunc:    NormalizeDataJSONFunc(name),
+				ValidateFunc: ValidateDataJSONFunc(name),
 				Description: "A label selector for Kubernetes namespaces in which credentials can be" +
 					"generated. Accepts either a JSON or YAML object. The value should be of type" +
 					"LabelSelector. If set with `allowed_kubernetes_namespace`, the conditions are `OR`ed.",
