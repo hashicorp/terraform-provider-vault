@@ -65,6 +65,9 @@ The following arguments are supported:
 * `secret_name_template` - (Optional) Template describing how to generate external secret names.
   Supports a subset of the Go Template syntax.
 
+* `granularity` - (Optional) Determines what level of information is synced as a distinct resource 
+  at the destination. Supports `secret-path` and `secret-key`.
+
 * `role_arn` - (Optional) Specifies a role to assume when connecting to AWS. When assuming a role, 
   Vault uses temporary STS credentials to authenticate. An initial session with the proper trust relationship must 
   exist for Vault to be able to assume this role. The role can be in a different account. 
