@@ -23,6 +23,7 @@ const (
 var azureSyncWriteFields = []string{
 	fieldKeyVaultURI,
 	fieldCloud,
+	consts.FieldGranularity,
 	consts.FieldClientSecret,
 	consts.FieldClientID,
 	consts.FieldTenantID,
@@ -31,6 +32,7 @@ var azureSyncWriteFields = []string{
 var azureSyncReadFields = []string{
 	fieldKeyVaultURI,
 	fieldCloud,
+	consts.FieldGranularity,
 	consts.FieldClientID,
 	consts.FieldTenantID,
 }
@@ -81,6 +83,12 @@ func azureSecretsSyncDestinationResource() *schema.Resource {
 				Description: "Specifies a cloud for the client.",
 				ForceNew:    true,
 			},
+			consts.FieldGranularity: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Determines what level of information is synced as a distinct resource at the destination. " +
+					"Can be 'secret-path' or 'secret-key'",
+			},
 		},
 	})
 }
@@ -90,7 +98,9 @@ func azureSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Reso
 }
 
 func azureSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationRead(ctx, d, meta, azureSyncType, azureSyncReadFields)
+	return syncutil.SyncDestinationRead(ctx, d, meta, azureSyncType, azureSyncReadFields, map[string]string{
+		consts.FieldGranularity: consts.FieldGranularityLevel,
+	})
 }
 
 func azureSecretsSyncDestinationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

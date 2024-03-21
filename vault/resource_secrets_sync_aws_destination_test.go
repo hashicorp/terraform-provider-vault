@@ -44,6 +44,7 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, region),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, awsSyncType),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "role-arn-test"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, "external-id-test"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
@@ -51,7 +52,7 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 				),
 			},
 			{
-				Config: testAWSSecretsSyncDestinationConfig_updated(accessKey, secretKey, region, destName, updatedSecretsSyncTemplate),
+				Config: testAWSSecretsSyncDestinationConfig_updated(accessKey, secretKey, region, destName, secretsKeyTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -59,9 +60,10 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldSecretAccessKey, secretKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, region),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, awsSyncType),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "role-arn-test"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, "external-id-test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, secretsKeyTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-key"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "role-arn-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, "external-id-updated"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),
@@ -127,6 +129,16 @@ func testSecretsSyncDestinationCommonConfig(templ string, withTemplate, withTags
     "foo" = "bar"
     "baz" = "bux"
   }
+`)
+	}
+
+	if update {
+		ret += fmt.Sprintf(`
+  granularity = "secret-key"
+`)
+	} else {
+		ret += fmt.Sprintf(`
+  granularity = "secret-path"
 `)
 	}
 	return ret

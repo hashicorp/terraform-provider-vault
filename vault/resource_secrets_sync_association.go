@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"regexp"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -16,13 +18,17 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	syncutil "github.com/hashicorp/terraform-provider-vault/internal/sync"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
+
+var syncAssociationFieldsFromIDRegex = regexp.MustCompile("^(.+)/dest/(.+)/mount/(.+)/secret/(.+)$")
 
 const (
 	fieldSecretName = "secret_name"
 	fieldSyncStatus = "sync_status"
 	fieldUpdatedAt  = "updated_at"
+	fieldSubkeys    = "subkeys"
 )
 
 func secretsSyncAssociationResource() *schema.Resource {
@@ -30,6 +36,9 @@ func secretsSyncAssociationResource() *schema.Resource {
 		CreateContext: provider.MountCreateContextWrapper(secretsSyncAssociationWrite, provider.VaultVersion116),
 		ReadContext:   provider.ReadContextWrapper(secretsSyncAssociationRead),
 		DeleteContext: secretsSyncAssociationDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldName: {
@@ -57,14 +66,22 @@ func secretsSyncAssociationResource() *schema.Resource {
 				Description: "Specifies the name of the secret to synchronize.",
 			},
 			fieldSyncStatus: {
-				Type:        schema.TypeString,
+				Type:        schema.TypeMap,
 				Computed:    true,
-				Description: "Specifies the status of the association.",
+				Description: "Map of sync status for each subkey of the associated secret.",
 			},
 			fieldUpdatedAt: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Duration string stating when the secret was last updated.",
+			},
+			fieldSubkeys: {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Computed:    true,
+				Description: "Subkeys for the associated secret.",
 			},
 		},
 	}
@@ -89,48 +106,99 @@ func secretsSyncAssociationWrite(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	log.Printf("[DEBUG] Writing association to %q", path)
-	resp, err := client.Logical().WriteWithContext(ctx, path, data)
+	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return diag.Errorf("error setting secrets sync association %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote association to %q", path)
 
-	// expect accessor to be provided from mount
-	accessor, err := getMountAccessor(ctx, d, meta)
+	// ex: gh/dest/gh-dest-1/mount/kv/secret/token
+	// unique. each destination should only have one association for a particular accessor and secret
+	id := fmt.Sprintf("%s/dest/%s/mount/%s/secret/%s", destType, name, mount, secretName)
+	d.SetId(id)
+
+	return secretsSyncAssociationRead(ctx, d, meta)
+}
+
+func secretsSyncAssociationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
+	id := d.Id()
+	fields, err := syncAssociationFieldsFromID(id)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	typ := fields[0]
+	destName := fields[1]
+	mount := fields[2]
+	secretName := fields[3]
+
+	if err := d.Set(fieldSecretName, secretName); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldName, destName); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldType, typ); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldMount, mount); err != nil {
+		return diag.FromErr(err)
+	}
+
+	accessor, err := getMountAccessor(ctx, d, meta, mount)
 	if err != nil {
 		return diag.Errorf("could not obtain accessor from given mount; err=%s", err)
 	}
-	vaultRespKey := fmt.Sprintf("%s/%s", accessor, secretName)
+	// List all associations for secret destination
+	resp, err := client.Logical().Read(fmt.Sprintf("%s/%s", syncutil.SecretsSyncDestinationPath(destName, typ), "associations"))
+	if err != nil {
+		return diag.Errorf("error reading associations for destination %s of type %s", destName, typ)
+	}
 
-	saModel, err := getSyncAssociationModelFromResponse(resp)
+	model, err := getSyncAssociationModelFromResponse(resp)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	syncData, ok := saModel.AssociatedSecrets[vaultRespKey]
-	if !ok {
-		return diag.Errorf("no associated secrets found for given mount accessor and secret name %s", vaultRespKey)
+	status := map[string]string{}
+	subKeys := make([]string, 0)
+	var updatedAt string
+	prefix := fmt.Sprintf("%s/%s", accessor, secretName)
+	for k, v := range model.AssociatedSecrets {
+		if strings.HasPrefix(k, prefix) {
+			status[k] = v.SyncStatus
+			// only add sub-keys if they are non-zero
+			if v.Subkey != "" {
+				subKeys = append(subKeys, v.Subkey)
+			}
+			updatedAt = v.UpdatedAt
+		}
 	}
 
-	// set data that is received from Vault upon writes to avoid extra sync association reads
-	if err := d.Set(fieldSecretName, syncData.SecretName); err != nil {
+	if len(status) == 0 {
+		return diag.Errorf("no associated secrets found for given mount accessor and secret name %s/%s", accessor, secretName)
+	}
+
+	if err := d.Set(fieldSyncStatus, status); err != nil {
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set(fieldSyncStatus, syncData.SyncStatus); err != nil {
+	if err := d.Set(fieldSubkeys, subKeys); err != nil {
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set(fieldUpdatedAt, syncData.UpdatedAt); err != nil {
+	if err := d.Set(fieldUpdatedAt, updatedAt); err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.SetId(path)
-
-	return nil
-}
-
-func secretsSyncAssociationRead(_ context.Context, _ *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	return nil
 }
 
@@ -140,21 +208,26 @@ func secretsSyncAssociationDelete(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(e)
 	}
 
-	name := d.Get(consts.FieldName).(string)
-	destType := d.Get(consts.FieldType).(string)
-	path := secretsSyncAssociationDeletePath(name, destType)
+	id := d.Id()
+	fields, err := syncAssociationFieldsFromID(id)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	data := map[string]interface{}{}
+	destType := fields[0]
+	destName := fields[1]
+	mount := fields[2]
+	secretName := fields[3]
 
-	for _, k := range []string{
-		fieldSecretName,
-		consts.FieldMount,
-	} {
-		data[k] = d.Get(k)
+	path := secretsSyncAssociationDeletePath(destName, destType)
+
+	data := map[string]interface{}{
+		fieldSecretName:   secretName,
+		consts.FieldMount: mount,
 	}
 
 	log.Printf("[DEBUG] Removing association from %q", path)
-	_, err := client.Logical().Write(path, data)
+	_, err = client.Logical().Write(path, data)
 	if err != nil {
 		return diag.Errorf("error removing secrets sync association %q: %s", path, err)
 	}
@@ -171,17 +244,15 @@ func secretsSyncAssociationDeletePath(name, destType string) string {
 	return fmt.Sprintf("sys/sync/destinations/%s/%s/associations/remove", destType, name)
 }
 
-func getMountAccessor(ctx context.Context, d *schema.ResourceData, meta interface{}) (string, error) {
+func getMountAccessor(ctx context.Context, d *schema.ResourceData, meta interface{}, mount string) (string, error) {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return "", e
 	}
 
-	mount := d.Get(consts.FieldMount).(string)
-
 	log.Printf("[DEBUG] Reading mount %s from Vault", mount)
 
-	m, err := mountutil.GetMount(context.Background(), client, mount)
+	m, err := mountutil.GetMount(ctx, client, mount)
 	if errors.Is(err, mountutil.ErrMountNotFound) {
 		return "", fmt.Errorf("expected mount at %s; no mount found", mount)
 	}
@@ -202,6 +273,7 @@ type syncAssociationData struct {
 	SecretName string `json:"secret_name"`
 	SyncStatus string `json:"sync_status"`
 	UpdatedAt  string `json:"updated_at"`
+	Subkey     string `json:"sub_key"`
 }
 
 func getSyncAssociationModelFromResponse(resp *api.Secret) (*syncAssociationModel, error) {
@@ -219,4 +291,19 @@ func getSyncAssociationModelFromResponse(resp *api.Secret) (*syncAssociationMode
 	}
 
 	return model, nil
+}
+
+func syncAssociationFieldsFromID(id string) ([]string, error) {
+	if !syncAssociationFieldsFromIDRegex.MatchString(id) {
+		return nil, fmt.Errorf("regex did not match")
+	}
+	res := syncAssociationFieldsFromIDRegex.FindStringSubmatch(id)
+	// 5 matches
+	// full string itself
+	// 4 desired fields
+	if len(res) != 5 {
+		return nil, fmt.Errorf("unexpected number of matches (%d) for fields; "+""+
+			"format=:type/dest/:destination/mount/:mount/secret/:secretName", len(res))
+	}
+	return res[1:], nil
 }

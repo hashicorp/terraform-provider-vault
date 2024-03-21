@@ -25,6 +25,7 @@ const (
 var awsSyncWriteFields = []string{
 	fieldAccessKeyID,
 	fieldSecretAccessKey,
+	consts.FieldGranularity,
 	consts.FieldRegion,
 	consts.FieldCustomTags,
 	consts.FieldSecretNameTemplate,
@@ -36,6 +37,7 @@ var awsSyncWriteFields = []string{
 var awsSyncReadFields = []string{
 	consts.FieldRegion,
 	consts.FieldCustomTags,
+	consts.FieldGranularity,
 	consts.FieldSecretNameTemplate,
 	consts.FieldRoleArn,
 	consts.FieldExternalID,
@@ -86,6 +88,12 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				Description: "Extra protection that must match the trust policy granting access to the AWS IAM role ARN.",
 			},
+			consts.FieldGranularity: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Determines what level of information is synced as a distinct resource at the destination. " +
+					"Can be 'secret-path' or 'secret-key'",
+			},
 		},
 	})
 }
@@ -96,7 +104,9 @@ func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Resour
 
 func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	// since other fields come back as '******', we only set the non-sensitive region fields
-	return syncutil.SyncDestinationRead(ctx, d, meta, awsSyncType, awsSyncReadFields)
+	return syncutil.SyncDestinationRead(ctx, d, meta, awsSyncType, awsSyncReadFields, map[string]string{
+		consts.FieldGranularity: consts.FieldGranularityLevel,
+	})
 }
 
 func awsSecretsSyncDestinationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
