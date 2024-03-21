@@ -1,5 +1,11 @@
 ## Unreleased
 
+FEATURES:
+* Add `granularity` to Secrets Sync destination resources ([#2202](https://github.com/hashicorp/terraform-provider-vault/pull/2202))
+
+IMPROVEMENTS:
+* Enable Secrets Sync Association resource to track sync status across all subkeys of a secret ([#2202](https://github.com/hashicorp/terraform-provider-vault/pull/2202))
+
 ## 4.1.0 (Mar 20, 2024)
 
 CHANGES TO VAULT POLICY REQUIREMENTS:
