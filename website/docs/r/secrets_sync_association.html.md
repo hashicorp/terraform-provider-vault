@@ -83,4 +83,8 @@ The following attributes are exported in addition to the above:
 
 * `subkeys` - A list of subkeys for the associated secret.
 
-* `updated_at` - Duration string specifying when the associated secret was last updated (all subkeys).
+* `updated_at` - A map of duration string specifying when the associated secret was last updated
+  for each subkey of the associated secret.
+  (for ex.
+  `{kv_624bea/aws-token/dev: "2024-03-21T12:42:02.558533-07:00",
+  kv_624bea/aws-token/prod: "2024-03-21T12:42:02.558533-07:00"}`).

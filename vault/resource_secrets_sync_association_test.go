@@ -48,7 +48,7 @@ func TestSecretsSyncAssociation_gh(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, ghSyncType),
 					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", fieldSubkeys), "0"),
 					resource.TestCheckResourceAttr(resourceName, "sync_status.%", "1"),
-					resource.TestCheckResourceAttrSet(resourceName, fieldUpdatedAt),
+					resource.TestCheckResourceAttr(resourceName, "updated_at.%", "1"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -71,9 +70,10 @@ func secretsSyncAssociationResource() *schema.Resource {
 				Description: "Map of sync status for each subkey of the associated secret.",
 			},
 			fieldUpdatedAt: {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Duration string stating when the secret was last updated.",
+				Type:     schema.TypeMap,
+				Computed: true,
+				Description: "Map of duration string stating when the secret was last updated for " +
+					"each subkey of the secret.",
 			},
 			fieldSubkeys: {
 				Type: schema.TypeList,
@@ -169,17 +169,16 @@ func secretsSyncAssociationRead(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	status := map[string]string{}
+	updatedAt := map[string]string{}
 	subKeys := make([]string, 0)
-	var updatedAt string
-	prefix := fmt.Sprintf("%s/%s", accessor, secretName)
 	for k, v := range model.AssociatedSecrets {
-		if strings.HasPrefix(k, prefix) {
+		if v.SecretName == secretName && v.Accessor == accessor {
 			status[k] = v.SyncStatus
+			updatedAt[k] = v.UpdatedAt
 			// only add sub-keys if they are non-zero
 			if v.Subkey != "" {
 				subKeys = append(subKeys, v.Subkey)
 			}
-			updatedAt = v.UpdatedAt
 		}
 	}
 
