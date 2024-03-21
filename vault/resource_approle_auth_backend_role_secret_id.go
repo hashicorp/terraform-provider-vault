@@ -417,5 +417,5 @@ func approleAuthBackendRoleSecretIDParseID(id string) (backend, role, accessor s
 }
 
 func isAppRoleDoesNotExistError(err error, role string) bool {
-	return util.Is500(err) && strings.Contains(err.Error(), fmt.Sprintf("role \"%s\" does not exist", role))
+	return util.Is404(err) || (util.Is500(err) && strings.Contains(err.Error(), fmt.Sprintf("role \"%s\" does not exist", role)))
 }
