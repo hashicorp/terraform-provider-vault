@@ -373,7 +373,9 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 
 	useAPIVer111 := provider.IsAPISupported(meta, provider.VaultVersion111)
 	if useAPIVer111 {
-		d.Set(consts.FieldMaxPageSize, resp.Data[consts.FieldMaxPageSize])
+		if err := d.Set(consts.FieldMaxPageSize, resp.Data[consts.FieldMaxPageSize]); err != nil {
+			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldMaxPageSize, path, err)
+		}
 	}
 
 	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API
