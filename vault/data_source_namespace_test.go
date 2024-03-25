@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func TestAccDataSourceNamespace(t *testing.T) {
@@ -22,8 +22,8 @@ func TestAccDataSourceNamespace(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-ns")
 	pathChild := acctest.RandomWithPrefix("tf-child")
 
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-	providerNS := util.TrimSlashes(client.Namespace())
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+	providerNS := mountutil.TrimSlashes(client.Namespace())
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
