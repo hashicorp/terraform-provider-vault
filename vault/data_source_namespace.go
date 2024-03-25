@@ -67,7 +67,7 @@ func namespaceDataSourceRead(ctx context.Context, d *schema.ResourceData, meta i
 
 	log.Printf("[DEBUG] Reading namespace %q from Vault", path)
 
-	resp, err := client.Logical().Read(consts.SysNamespaceRoot + path)
+	resp, err := client.Logical().ReadWithContext(ctx, consts.SysNamespaceRoot+path)
 	if err != nil {
 		return diag.Errorf("error reading namespace %q from Vault: %s", path, err)
 	}
