@@ -27,7 +27,7 @@ const (
 	fieldSecretName = "secret_name"
 	fieldSyncStatus = "sync_status"
 	fieldUpdatedAt  = "updated_at"
-	fieldSubkeys    = "subkeys"
+	fieldSubkey     = "sub_key"
 )
 
 func secretsSyncAssociationResource() *schema.Resource {
@@ -64,24 +64,30 @@ func secretsSyncAssociationResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Specifies the name of the secret to synchronize.",
 			},
-			fieldSyncStatus: {
-				Type:        schema.TypeMap,
+			consts.FieldMetadata: {
+				Type:        schema.TypeList,
 				Computed:    true,
-				Description: "Map of sync status for each subkey of the associated secret.",
-			},
-			fieldUpdatedAt: {
-				Type:     schema.TypeMap,
-				Computed: true,
-				Description: "Map of duration string stating when the secret was last updated for " +
-					"each subkey of the secret.",
-			},
-			fieldSubkeys: {
-				Type: schema.TypeList,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
+				Description: "Metadata for each subkey of the associated secret.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						fieldSyncStatus: {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Sync status of the particular subkey.",
+						},
+						fieldUpdatedAt: {
+							Type:     schema.TypeString,
+							Computed: true,
+							Description: "Duration string stating when the secret was " +
+								"last updated for this subkey.",
+						},
+						fieldSubkey: {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Subkey of the associated secret.",
+						},
+					},
 				},
-				Computed:    true,
-				Description: "Subkeys for the associated secret.",
 			},
 		},
 	}
@@ -158,7 +164,7 @@ func secretsSyncAssociationRead(ctx context.Context, d *schema.ResourceData, met
 		return diag.Errorf("could not obtain accessor from given mount; err=%s", err)
 	}
 	// List all associations for secret destination
-	resp, err := client.Logical().Read(fmt.Sprintf("%s/%s", syncutil.SecretsSyncDestinationPath(destName, typ), "associations"))
+	resp, err := client.Logical().ReadWithContext(ctx, fmt.Sprintf("%s/%s", syncutil.SecretsSyncDestinationPath(destName, typ), "associations"))
 	if err != nil {
 		return diag.Errorf("error reading associations for destination %s of type %s", destName, typ)
 	}
@@ -168,33 +174,26 @@ func secretsSyncAssociationRead(ctx context.Context, d *schema.ResourceData, met
 		return diag.FromErr(err)
 	}
 
-	status := map[string]string{}
-	updatedAt := map[string]string{}
-	subKeys := make([]string, 0)
-	for k, v := range model.AssociatedSecrets {
+	metadata := make([]map[string]interface{}, 0)
+	for _, v := range model.AssociatedSecrets {
 		if v.SecretName == secretName && v.Accessor == accessor {
-			status[k] = v.SyncStatus
-			updatedAt[k] = v.UpdatedAt
-			// only add sub-keys if they are non-zero
-			if v.Subkey != "" {
-				subKeys = append(subKeys, v.Subkey)
+			m := map[string]interface{}{
+				fieldSubkey:     v.Subkey,
+				fieldSyncStatus: v.SyncStatus,
+				fieldUpdatedAt:  v.UpdatedAt,
 			}
+
+			metadata = append(metadata, m)
 		}
 	}
 
-	if len(status) == 0 {
-		return diag.Errorf("no associated secrets found for given mount accessor and secret name %s/%s", accessor, secretName)
+	if len(metadata) == 0 {
+		log.Printf("[WARN] no associated secrets found for given mount accessor and secret name %s/%s, removing from state", accessor, secretName)
+		d.SetId("")
+		return nil
 	}
 
-	if err := d.Set(fieldSyncStatus, status); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := d.Set(fieldSubkeys, subKeys); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := d.Set(fieldUpdatedAt, updatedAt); err != nil {
+	if err := d.Set(consts.FieldMetadata, metadata); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -226,7 +225,7 @@ func secretsSyncAssociationDelete(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	log.Printf("[DEBUG] Removing association from %q", path)
-	_, err = client.Logical().Write(path, data)
+	_, err = client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return diag.Errorf("error removing secrets sync association %q: %s", path, err)
 	}
