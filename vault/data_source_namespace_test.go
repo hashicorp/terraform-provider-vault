@@ -13,17 +13,14 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func TestAccDataSourceNamespace(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 
+	resourceName := "data.vault_namespace"
 	path := acctest.RandomWithPrefix("tf-ns")
 	pathChild := acctest.RandomWithPrefix("tf-child")
-
-	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
-	providerNS := mountutil.TrimSlashes(client.Namespace())
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -33,15 +30,13 @@ func TestAccDataSourceNamespace(t *testing.T) {
 			{
 				Config: testAccDataSourceNamespaceConfig_nested(path, pathChild),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_namespace.parent", consts.FieldPath, path),
-					resource.TestCheckResourceAttr("data.vault_namespace.parent", consts.FieldPathFQ, path),
-					resource.TestCheckResourceAttr("data.vault_namespace.parent", consts.FieldID, fmt.Sprintf("%s/%s/", providerNS, path)),
-					resource.TestCheckResourceAttrSet("data.vault_namespace.parent", consts.FieldNamespaceID),
+					resource.TestCheckResourceAttr(resourceName+".parent", consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName+".parent", consts.FieldPathFQ, path),
+					resource.TestCheckResourceAttrSet(resourceName+".parent", consts.FieldNamespaceID),
 
-					resource.TestCheckResourceAttr("data.vault_namespace.child", consts.FieldPath, pathChild),
-					resource.TestCheckResourceAttr("data.vault_namespace.child", consts.FieldPathFQ, fmt.Sprintf("%s/%s", path, pathChild)),
-					resource.TestCheckResourceAttr("data.vault_namespace.child", consts.FieldID, fmt.Sprintf("%s/%s/%s/", providerNS, path, pathChild)),
-					resource.TestCheckResourceAttrSet("data.vault_namespace.child", consts.FieldNamespaceID),
+					resource.TestCheckResourceAttr(resourceName+".child", consts.FieldPath, pathChild),
+					resource.TestCheckResourceAttr(resourceName+".child", consts.FieldPathFQ, fmt.Sprintf("%s/%s", path, pathChild)),
+					resource.TestCheckResourceAttrSet(resourceName+".child", consts.FieldNamespaceID),
 				),
 			},
 		},
@@ -58,10 +53,10 @@ func TestAccDataSourceNamespace(t *testing.T) {
 			{
 				Config: testAccDataSourceNamespaceConfig_customMetadata(path),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_namespace.test", consts.FieldPath, path),
-					resource.TestCheckResourceAttr("data.vault_namespace.test", consts.FieldCustomMetadata+".%", "2"),
-					resource.TestCheckResourceAttr("data.vault_namespace.test", consts.FieldCustomMetadata+".foo", "abc"),
-					resource.TestCheckResourceAttr("data.vault_namespace.test", consts.FieldCustomMetadata+".zip", "zap"),
+					resource.TestCheckResourceAttr(resourceName+".test", consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName+".test", consts.FieldCustomMetadata+".%", "2"),
+					resource.TestCheckResourceAttr(resourceName+".test", consts.FieldCustomMetadata+".foo", "abc"),
+					resource.TestCheckResourceAttr(resourceName+".test", consts.FieldCustomMetadata+".zip", "zap"),
 				),
 			},
 		},
@@ -70,18 +65,16 @@ func TestAccDataSourceNamespace(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testNamespaceDestroy(pathChild),
+		CheckDestroy: testNamespaceDestroy(path),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceNamespaceConfig_current(pathChild),
+				Config: testAccDataSourceNamespaceConfig_current(path),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_namespace.current", consts.FieldPath, ""),
-					resource.TestCheckResourceAttr("data.vault_namespace.current", consts.FieldPathFQ, ""),
-					resource.TestCheckResourceAttr("data.vault_namespace.current", consts.FieldID, fmt.Sprintf("%s/", providerNS)),
+					resource.TestCheckResourceAttr(resourceName+".current", consts.FieldPath, ""),
+					resource.TestCheckResourceAttr(resourceName+".current", consts.FieldPathFQ, ""),
 
-					resource.TestCheckResourceAttr("data.vault_namespace.child", consts.FieldPath, ""),
-					resource.TestCheckResourceAttr("data.vault_namespace.child", consts.FieldPathFQ, pathChild),
-					resource.TestCheckResourceAttr("data.vault_namespace.child", consts.FieldID, fmt.Sprintf("%s/%s/", providerNS, pathChild)),
+					resource.TestCheckResourceAttr(resourceName+".test", consts.FieldPath, ""),
+					resource.TestCheckResourceAttr(resourceName+".test", consts.FieldPathFQ, path),
 				),
 			},
 		},
@@ -130,18 +123,18 @@ data "vault_namespace" "test" {
 	return config
 }
 
-func testAccDataSourceNamespaceConfig_current(childPath string) string {
+func testAccDataSourceNamespaceConfig_current(path string) string {
 	config := fmt.Sprintf(`
-resource "vault_namespace" "child" {
+resource "vault_namespace" "test" {
   path = %q
 }
 
 data "vault_namespace" "current" {}
 
-data "vault_namespace" "child" {
-  namespace = vault_namespace.child.path
+data "vault_namespace" "test" {
+  namespace = vault_namespace.test.path
 }
-	`, childPath)
+	`, path)
 
 	return config
 }

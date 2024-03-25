@@ -60,7 +60,7 @@ func namespaceDataSourceRead(ctx context.Context, d *schema.ResourceData, meta i
 	if v, ok := d.GetOk(consts.FieldPath); ok {
 		path = v.(string)
 	} else {
-		log.Printf("[DEBUG] Returning current namespace")
+		log.Printf("[DEBUG] namespace not set in config, returning current Vault client namespace")
 		providerNS := client.Namespace()
 		return namespaceDataSourceReadCurrent(d, providerNS)
 	}
