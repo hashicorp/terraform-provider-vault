@@ -201,14 +201,15 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 
 	path := getKVV2Path(mount, name, consts.FieldData)
 
-	var secretData map[string]interface{}
-	err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &secretData)
-	if err != nil {
-		return diag.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
-	}
+	data := map[string]interface{}{}
+	if dataJSON, ok := d.GetOk(consts.FieldDataJSON); ok {
+		var secretData map[string]interface{}
+		err := json.Unmarshal([]byte(dataJSON.(string)), &secretData)
+		if err != nil {
+			return diag.Errorf("data_json %#v syntax error: %s", dataJSON, err)
+		}
 
-	data := map[string]interface{}{
-		"data": secretData,
+		data["data"] = secretData
 	}
 
 	kvFields := []string{"cas", "options"}
