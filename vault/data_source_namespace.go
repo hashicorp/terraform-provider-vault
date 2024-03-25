@@ -77,17 +77,25 @@ func namespaceDataSourceRead(ctx context.Context, d *schema.ResourceData, meta i
 
 	d.SetId(resp.Data[consts.FieldPath].(string))
 
-	d.Set(consts.FieldNamespaceID, resp.Data["id"])
-	d.Set(consts.FieldPath, mountutil.TrimSlashes(path))
+	if err := d.Set(consts.FieldNamespaceID, resp.Data["id"]); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldPath, mountutil.TrimSlashes(path)); err != nil {
+		return diag.FromErr(err)
+	}
 
 	pathFQ := path
 	if parent, ok := d.GetOk(consts.FieldNamespace); ok {
 		pathFQ = strings.Join([]string{parent.(string), path}, "/")
 	}
-	d.Set(consts.FieldPathFQ, pathFQ)
+	if err := d.Set(consts.FieldPathFQ, pathFQ); err != nil {
+		return diag.FromErr(err)
+	}
 
 	if v, ok := resp.Data["custom_metadata"]; ok {
-		d.Set(consts.FieldCustomMetadata, v)
+		if err := d.Set(consts.FieldCustomMetadata, v); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil
@@ -97,13 +105,17 @@ func namespaceDataSourceReadCurrent(d *schema.ResourceData, providerNS string) d
 	id := mountutil.NormalizeMountPath(providerNS)
 	d.SetId(id)
 
-	d.Set(consts.FieldPath, "")
+	if err := d.Set(consts.FieldPath, ""); err != nil {
+		return diag.FromErr(err)
+	}
 
 	pathFQ := ""
 	if parent, ok := d.GetOk(consts.FieldNamespace); ok {
 		pathFQ = parent.(string)
 	}
-	d.Set(consts.FieldPathFQ, pathFQ)
+	if err := d.Set(consts.FieldPathFQ, pathFQ); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
