@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -25,98 +26,135 @@ import (
 var oktaAuthType = "okta"
 
 func oktaAuthBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
-		Create: oktaAuthBackendWrite,
-		Delete: oktaAuthBackendDelete,
-		Read:   provider.ReadWrapper(oktaAuthBackendRead),
-		Update: oktaAuthBackendUpdate,
-		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+	fields := map[string]*schema.Schema{
+		consts.FieldPath: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "path to mount the backend",
+			Default:     oktaAuthType,
+			ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
+				value := v.(string)
+				if strings.HasSuffix(value, "/") {
+					errs = append(errs, errors.New("cannot write to a path ending in '/'"))
+				}
+				return
+			},
 		},
-		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
-		Schema: map[string]*schema.Schema{
-			consts.FieldPath: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "path to mount the backend",
-				Default:     oktaAuthType,
-				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
-					value := v.(string)
-					if strings.HasSuffix(value, "/") {
-						errs = append(errs, errors.New("cannot write to a path ending in '/'"))
-					}
-					return
+
+		"description": {
+			Type:        schema.TypeString,
+			Required:    false,
+			Optional:    true,
+			Description: "The description of the auth backend",
+		},
+
+		"organization": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Optional:    false,
+			Description: "The Okta organization. This will be the first part of the url https://XXX.okta.com.",
+		},
+
+		"token": {
+			Type:        schema.TypeString,
+			Required:    false,
+			Optional:    true,
+			Description: "The Okta API token. This is required to query Okta for user group membership. If this is not supplied only locally configured groups will be enabled.",
+			Sensitive:   true,
+		},
+
+		"base_url": {
+			Type:        schema.TypeString,
+			Required:    false,
+			Optional:    true,
+			Description: "The Okta url. Examples: oktapreview.com, okta.com (default)",
+		},
+
+		"bypass_okta_mfa": {
+			Type:        schema.TypeBool,
+			Required:    false,
+			Optional:    true,
+			Description: "When true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.",
+		},
+
+		"ttl": {
+			Type:         schema.TypeString,
+			Required:     false,
+			Optional:     true,
+			Default:      "0",
+			Description:  "Duration after which authentication will be expired",
+			ValidateFunc: validateOktaTTL,
+			StateFunc:    normalizeOktaTTL,
+		},
+
+		"max_ttl": {
+			Type:         schema.TypeString,
+			Required:     false,
+			Optional:     true,
+			Description:  "Maximum duration after which authentication will be expired",
+			Default:      "0",
+			ValidateFunc: validateOktaTTL,
+			StateFunc:    normalizeOktaTTL,
+		},
+
+		"group": {
+			Type:       schema.TypeSet,
+			Required:   false,
+			Optional:   true,
+			Computed:   true,
+			ConfigMode: schema.SchemaConfigModeAttr,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"group_name": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "Name of the Okta group",
+						ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
+							value := v.(string)
+							// No comma as it'll become part of a comma separate list
+							if strings.Contains(value, ",") {
+								errs = append(errs, errors.New("group cannot contain ','"))
+							}
+							return
+						},
+					},
+
+					"policies": {
+						Type:        schema.TypeSet,
+						Required:    true,
+						Description: "Policies to associate with this group",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+							ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
+								value := v.(string)
+								// No comma as it'll become part of a comma separate list
+								if strings.Contains(value, ",") {
+									errs = append(errs, errors.New("policy cannot contain ','"))
+								}
+								return
+							},
+						},
+						Set: schema.HashString,
+					},
 				},
 			},
+			Set: resourceOktaGroupHash,
+		},
 
-			"description": {
-				Type:        schema.TypeString,
-				Required:    false,
-				Optional:    true,
-				Description: "The description of the auth backend",
-			},
-
-			"organization": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Optional:    false,
-				Description: "The Okta organization. This will be the first part of the url https://XXX.okta.com.",
-			},
-
-			"token": {
-				Type:        schema.TypeString,
-				Required:    false,
-				Optional:    true,
-				Description: "The Okta API token. This is required to query Okta for user group membership. If this is not supplied only locally configured groups will be enabled.",
-				Sensitive:   true,
-			},
-
-			"base_url": {
-				Type:        schema.TypeString,
-				Required:    false,
-				Optional:    true,
-				Description: "The Okta url. Examples: oktapreview.com, okta.com (default)",
-			},
-
-			"bypass_okta_mfa": {
-				Type:        schema.TypeBool,
-				Required:    false,
-				Optional:    true,
-				Description: "When true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.",
-			},
-
-			"ttl": {
-				Type:         schema.TypeString,
-				Required:     false,
-				Optional:     true,
-				Default:      "0",
-				Description:  "Duration after which authentication will be expired",
-				ValidateFunc: validateOktaTTL,
-				StateFunc:    normalizeOktaTTL,
-			},
-
-			"max_ttl": {
-				Type:         schema.TypeString,
-				Required:     false,
-				Optional:     true,
-				Description:  "Maximum duration after which authentication will be expired",
-				Default:      "0",
-				ValidateFunc: validateOktaTTL,
-				StateFunc:    normalizeOktaTTL,
-			},
-
-			"group": {
-				Type:       schema.TypeSet,
-				Required:   false,
-				Optional:   true,
-				Computed:   true,
-				ConfigMode: schema.SchemaConfigModeAttr,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"group_name": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "Name of the Okta group",
+		"user": {
+			Type:       schema.TypeSet,
+			Required:   false,
+			Optional:   true,
+			Computed:   true,
+			ConfigMode: schema.SchemaConfigModeAttr,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"groups": {
+						Type:        schema.TypeSet,
+						Optional:    true,
+						Description: "Groups within the Okta auth backend to associate with this user",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
 							ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
 								value := v.(string)
 								// No comma as it'll become part of a comma separate list
@@ -126,97 +164,64 @@ func oktaAuthBackendResource() *schema.Resource {
 								return
 							},
 						},
+						Set: schema.HashString,
+					},
 
-						"policies": {
-							Type:        schema.TypeSet,
-							Required:    true,
-							Description: "Policies to associate with this group",
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-								ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
-									value := v.(string)
-									// No comma as it'll become part of a comma separate list
-									if strings.Contains(value, ",") {
-										errs = append(errs, errors.New("policy cannot contain ','"))
-									}
-									return
-								},
-							},
-							Set: schema.HashString,
+					"username": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "Name of the user within Okta",
+						ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
+							value := v.(string)
+							if strings.Contains(value, "/") {
+								errs = append(errs, errors.New("user cannot contain '/'"))
+							}
+							return
 						},
 					},
-				},
-				Set: resourceOktaGroupHash,
-			},
 
-			"user": {
-				Type:       schema.TypeSet,
-				Required:   false,
-				Optional:   true,
-				Computed:   true,
-				ConfigMode: schema.SchemaConfigModeAttr,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"groups": {
-							Type:        schema.TypeSet,
-							Optional:    true,
-							Description: "Groups within the Okta auth backend to associate with this user",
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-								ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
-									value := v.(string)
-									// No comma as it'll become part of a comma separate list
-									if strings.Contains(value, ",") {
-										errs = append(errs, errors.New("group cannot contain ','"))
-									}
-									return
-								},
-							},
-							Set: schema.HashString,
-						},
-
-						"username": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "Name of the user within Okta",
+					"policies": {
+						Type:        schema.TypeSet,
+						Required:    false,
+						Optional:    true,
+						Description: "Policies to associate with this user",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
 							ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
 								value := v.(string)
-								if strings.Contains(value, "/") {
-									errs = append(errs, errors.New("user cannot contain '/'"))
+								// No comma as it'll become part of a comma separate list
+								if strings.Contains(value, ",") {
+									errs = append(errs, errors.New("policy cannot contain ','"))
 								}
 								return
 							},
 						},
-
-						"policies": {
-							Type:        schema.TypeSet,
-							Required:    false,
-							Optional:    true,
-							Description: "Policies to associate with this user",
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-								ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
-									value := v.(string)
-									// No comma as it'll become part of a comma separate list
-									if strings.Contains(value, ",") {
-										errs = append(errs, errors.New("policy cannot contain ','"))
-									}
-									return
-								},
-							},
-							Set: schema.HashString,
-						},
+						Set: schema.HashString,
 					},
 				},
-				Set: resourceOktaUserHash,
 			},
-
-			"accessor": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The mount accessor related to the auth mount.",
-			},
+			Set: resourceOktaUserHash,
 		},
+
+		"accessor": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "The mount accessor related to the auth mount.",
+		},
+	}
+
+	addTokenFields(fields, &addTokenFieldsConfig{})
+
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		CreateContext: oktaAuthBackendWrite,
+		DeleteContext: oktaAuthBackendDelete,
+		ReadContext:   provider.ReadContextWrapper(oktaAuthBackendRead),
+		UpdateContext: oktaAuthBackendUpdate,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
+		Schema:        fields,
 	}, false)
 }
 
@@ -248,10 +253,10 @@ func parseDurationSeconds(i interface{}) (string, error) {
 	return strconv.Itoa(int(d.Seconds())), nil
 }
 
-func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
+func oktaAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		diag.FromErr(e)
 	}
 
 	authType := oktaAuthType
@@ -265,18 +270,18 @@ func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		Description: desc,
 	})
 	if err != nil {
-		return fmt.Errorf("error writing to Vault: %s", err)
+		return diag.Errorf("error writing to Vault: %s", err)
 	}
 	log.Printf("[INFO] Enabled okta auth backend at '%s'", path)
 
 	d.SetId(path)
-	return oktaAuthBackendUpdate(d, meta)
+	return oktaAuthBackendUpdate(ctx, d, meta)
 }
 
-func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func oktaAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -285,16 +290,16 @@ func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 
 	err := client.Sys().DisableAuth(path)
 	if err != nil {
-		return fmt.Errorf("error disabling auth from Vault: %s", err)
+		return diag.Errorf("error disabling auth from Vault: %s", err)
 	}
 
 	return nil
 }
 
-func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
+func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -308,40 +313,40 @@ func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err := d.Set(consts.FieldPath, path); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err := d.Set("accessor", mount.Accessor); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if err := d.Set("description", mount.Description); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[DEBUG] Reading groups for mount %s from Vault", path)
 	groups, err := oktaReadAllGroups(client, path)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if err := d.Set("group", groups); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[DEBUG] Reading users for mount %s from Vault", path)
 	users, err := oktaReadAllUsers(client, path)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if err := d.Set("user", users); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err := oktaReadAuthConfig(client, path, d); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
@@ -351,6 +356,10 @@ func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData)
 	log.Printf("[DEBUG] Reading auth config for mount %s from Vault", path)
 	config, err := client.Logical().Read(oktaConfigEndpoint(path))
 	if err != nil {
+		return err
+	}
+
+	if err := readTokenFields(d, config); err != nil {
 		return err
 	}
 
@@ -386,10 +395,10 @@ func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData)
 	return nil
 }
 
-func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+func oktaAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -397,7 +406,7 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	if !d.IsNewResource() {
 		path, e = util.Remount(d, client, consts.FieldPath, true)
 		if e != nil {
-			return e
+			return diag.FromErr(e)
 		}
 	}
 
@@ -418,9 +427,11 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		configuration["max_ttl"] = maxTtl
 	}
 
+	updateTokenFields(d, configuration, false)
+
 	_, err := client.Logical().Write(oktaConfigEndpoint(path), configuration)
 	if err != nil {
-		return fmt.Errorf("error updating configuration to Vault for path %s: %s", path, err)
+		return diag.Errorf("error updating configuration to Vault for path %s: %s", path, err)
 	}
 
 	if d.HasChange("group") {
@@ -428,7 +439,7 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		err = oktaAuthUpdateGroups(d, client, path, oldValue, newValue)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
@@ -437,11 +448,11 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		err = oktaAuthUpdateUsers(d, client, path, oldValue, newValue)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
-	return oktaAuthBackendRead(d, meta)
+	return oktaAuthBackendRead(ctx, d, meta)
 }
 
 func oktaReadAllGroups(client *api.Client, path string) (*schema.Set, error) {
