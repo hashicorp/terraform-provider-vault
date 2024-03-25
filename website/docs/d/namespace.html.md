@@ -1,6 +1,6 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_namespace data souece"
+page_title: "Vault: vault_namespace data source"
 sidebar_current: "docs-vault-datasource-namespace"
 description: |-
   Reads namespace information from Vault
@@ -8,7 +8,7 @@ description: |-
 
 # vault\_namespace
 
-Lookup a [Namespaces](https://www.vaultproject.io/docs/enterprise/namespaces/index.html) from Vault or from the provider configuration.
+Lookup a [Namespace](https://developer.hashicorp.com/vault/docs/enterprise/namespaces) from Vault or from the provider configuration.
 
 **Note** this feature is available only with Vault Enterprise.
 
@@ -53,10 +53,11 @@ The following arguments are supported:
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
-   *Available only for Vault Enterprise*.
 
 * `path` - (Optional) The path of the namespace. Must not have a trailing `/`.
-  If not specified or empty, path attributes are set for the current namespace based on the `namespace` arguments of the provider and this data source. Other than path related attributes will be `null` in this case.
+  If not specified or empty, path attributes are set for the current namespace
+  based on the `namespace` arguments of the provider and this data source.
+  Other path related attributes will be empty in this case.
 
 ## Attributes Reference
 

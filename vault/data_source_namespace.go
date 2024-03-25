@@ -42,9 +42,6 @@ func namespaceDataSource() *schema.Resource {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "Metadata associated with this namespace.",
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
 			},
 		},
 	}
@@ -60,7 +57,7 @@ func namespaceDataSourceRead(ctx context.Context, d *schema.ResourceData, meta i
 	if v, ok := d.GetOk(consts.FieldPath); ok {
 		path = v.(string)
 	} else {
-		log.Printf("[DEBUG] namespace not set in config, returning current Vault client namespace")
+		log.Printf("[DEBUG] namespace path not set in config, returning current Vault client namespace")
 		providerNS := client.Namespace()
 		return namespaceDataSourceReadCurrent(d, providerNS)
 	}
