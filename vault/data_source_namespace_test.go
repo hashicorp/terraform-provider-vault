@@ -47,7 +47,6 @@ func TestAccDataSourceNamespace(t *testing.T) {
 		},
 	})
 
-	/* TODO: Enable when #1766 merged
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
@@ -67,7 +66,6 @@ func TestAccDataSourceNamespace(t *testing.T) {
 			},
 		},
 	})
-	*/
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
