@@ -69,6 +69,11 @@ var (
 			Resource:      UpdateSchemaResource(ldapDynamicCredDataSource()),
 			PathInventory: []string{"/ldap/creds/{role}"},
 		},
+		"vault_namespace": {
+			Resource:       UpdateSchemaResource(namespaceDataSource()),
+			PathInventory:  []string{"/sys/namespaces/{path}"},
+			EnterpriseOnly: true,
+		},
 		"vault_ad_access_credentials": {
 			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},
