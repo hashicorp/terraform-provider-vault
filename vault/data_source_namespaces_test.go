@@ -18,6 +18,7 @@ func TestAccDataSourceNamespaces(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 
 	ns := acctest.RandomWithPrefix("tf-ns")
+	resourceName := "data.vault_namespaces"
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
@@ -26,12 +27,12 @@ func TestAccDataSourceNamespaces(t *testing.T) {
 			{
 				Config: testAccDataSourceNamespacesConfig(ns, 3),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_namespaces.test", consts.FieldPaths+".#", "3"),
-					resource.TestCheckTypeSetElemAttr("data.vault_namespaces.test", consts.FieldPaths+".*", "test-0"),
-					resource.TestCheckTypeSetElemAttr("data.vault_namespaces.test", consts.FieldPaths+".*", "test-1"),
-					resource.TestCheckTypeSetElemAttr("data.vault_namespaces.test", consts.FieldPaths+".*", "test-2"),
+					resource.TestCheckResourceAttr(resourceName+".test", consts.FieldPaths+".#", "3"),
+					resource.TestCheckTypeSetElemAttr(resourceName+".test", consts.FieldPaths+".*", "test-0"),
+					resource.TestCheckTypeSetElemAttr(resourceName+".test", consts.FieldPaths+".*", "test-1"),
+					resource.TestCheckTypeSetElemAttr(resourceName+".test", consts.FieldPaths+".*", "test-2"),
 
-					resource.TestCheckResourceAttr("data.vault_namespaces.nested", consts.FieldPaths+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName+".nested", consts.FieldPaths+".#", "0"),
 				),
 			},
 		},

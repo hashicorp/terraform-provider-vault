@@ -13,12 +13,12 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func namespacesDataSource() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: ReadContextWrapper(namespacesDataSourceRead),
+		ReadContext: provider.ReadContextWrapper(namespacesDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPaths: {
@@ -39,7 +39,7 @@ func namespacesDataSourceRead(ctx context.Context, d *schema.ResourceData, meta 
 
 	log.Printf("[DEBUG] Reading namespaces from Vault")
 
-	resp, err := client.Logical().List(SysNamespaceRoot)
+	resp, err := client.Logical().ListWithContext(ctx, consts.SysNamespaceRoot)
 	if err != nil {
 		return diag.Errorf("error reading namespaces from Vault: %s", err)
 	}
@@ -47,7 +47,7 @@ func namespacesDataSourceRead(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.Errorf("error setting %q to state: %s", consts.FieldPaths, err)
 	}
 
-	id := util.NormalizeMountPath(client.Namespace())
+	id := mountutil.NormalizeMountPath(client.Namespace())
 	d.SetId(id)
 
 	return nil
@@ -61,7 +61,7 @@ func flattenPaths(resp *api.Secret) []interface{} {
 	paths := []interface{}{}
 	if keys, ok := resp.Data["keys"]; ok {
 		for _, key := range keys.([]interface{}) {
-			paths = append(paths, util.TrimSlashes(key.(string)))
+			paths = append(paths, mountutil.TrimSlashes(key.(string)))
 		}
 	}
 	return paths
