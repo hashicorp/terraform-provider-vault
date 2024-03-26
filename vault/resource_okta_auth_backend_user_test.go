@@ -70,7 +70,7 @@ func testAccOktaAuthBackendUser_InitialCheck(s *terraform.State) error {
 
 func testAccOktaAuthBackendUser_Destroyed(path, userName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 		group, err := client.Logical().Read(fmt.Sprintf("/auth/%s/users/%s", path, userName))
 		if err != nil {

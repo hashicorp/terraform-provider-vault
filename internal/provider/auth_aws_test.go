@@ -46,6 +46,7 @@ func TestAuthLoginAWS_Init(t *testing.T) {
 			},
 			expectParams: map[string]interface{}{
 				consts.FieldNamespace:                "ns1",
+				consts.FieldUseRootNamespace:         false,
 				consts.FieldRole:                     "alice",
 				consts.FieldMount:                    consts.MountTypeAWS,
 				consts.FieldAWSAccessKeyID:           "key-id",

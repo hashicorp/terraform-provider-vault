@@ -225,6 +225,7 @@ func TestReadEntity(t *testing.T) {
 		expectedRetries int
 		wantError       error
 		retryHandler    *testutil.TestRetryHandler
+		retryWait       time.Duration
 	}{
 		{
 			name: "retry-none",
@@ -291,6 +292,7 @@ func TestReadEntity(t *testing.T) {
 			expectedRetries: 5,
 			wantError: fmt.Errorf(`%w: %q`, entity.ErrEntityNotFound,
 				entity.JoinEntityID("retry-exhausted-custom-max-404")),
+			retryWait: time.Millisecond,
 		},
 		{
 			name: "retry-exhausted-custom-max-412",
@@ -303,6 +305,7 @@ func TestReadEntity(t *testing.T) {
 			expectedRetries: 5,
 			wantError: fmt.Errorf(`failed reading %q`,
 				entity.JoinEntityID("retry-exhausted-custom-max-412")),
+			retryWait: 500 * time.Millisecond,
 		},
 	}
 
@@ -329,9 +332,14 @@ func TestReadEntity(t *testing.T) {
 				path = tt.name
 			}
 
+			retryWait := time.Nanosecond
+			if tt.retryWait != 0 {
+				// set wait to be larger for flaky tests
+				retryWait = tt.retryWait
+			}
 			actualResp, err := entity.ReadEntity(c, path, true,
-				entity.WithMinRetryWait(time.Nanosecond),
-				entity.WithMaxRetryWait(time.Nanosecond))
+				entity.WithMinRetryWait(retryWait),
+				entity.WithMaxRetryWait(retryWait))
 
 			if tt.wantError != nil {
 				if err == nil {

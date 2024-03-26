@@ -38,7 +38,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path the PKI secret backend is mounted at, with no leading or trailing `/`s.
@@ -100,6 +100,8 @@ The following arguments are supported:
   To specify no default key usage constraints, set this to an empty list `[]`.
 
 * `ext_key_usage` - (Optional) Specify the allowed extended key usage constraint on issued certificates
+
+* `ext_key_usage_oids` - (Optional) Specify the allowed extended key usage OIDs constraint on issued certificates
 
 * `use_csr_common_name` - (Optional) Flag to use the CN in the CSR
 

@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,20 +12,22 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func namespaceResource() *schema.Resource {
 	return &schema.Resource{
-		Create: namespaceCreate,
-		Update: namespaceCreate,
-		Delete: namespaceDelete,
-		Read:   provider.ReadWrapper(namespaceRead),
+		CreateContext: namespaceCreate,
+		UpdateContext: namespaceUpdate,
+		DeleteContext: namespaceDelete,
+		ReadContext:   provider.ReadContextWrapper(namespaceRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -48,31 +51,79 @@ func namespaceResource() *schema.Resource {
 				Optional:    true,
 				Description: "The fully qualified namespace path.",
 			},
+			consts.FieldCustomMetadata: {
+				Type:     schema.TypeMap,
+				Computed: true,
+				Optional: true,
+				Description: "Custom metadata describing this namespace. Value type " +
+					"is map[string]string.",
+			},
 		},
 	}
 }
 
-func namespaceCreate(d *schema.ResourceData, meta interface{}) error {
+func namespaceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Get(consts.FieldPath).(string)
 
-	log.Printf("[DEBUG] Creating namespace %s in Vault", path)
-	_, err := client.Logical().Write(consts.SysNamespaceRoot+path, nil)
-	if err != nil {
-		return fmt.Errorf("error writing to Vault: %s", err)
+	var data map[string]interface{}
+
+	// data is non-nil only if Vault version >= 1.12
+	// and custom_metadata is provided
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := d.GetOk(consts.FieldCustomMetadata); ok {
+			data = map[string]interface{}{
+				consts.FieldCustomMetadata: v,
+			}
+		}
 	}
 
-	return namespaceRead(d, meta)
+	log.Printf("[DEBUG] Creating namespace %s in Vault", path)
+	_, err := client.Logical().Write(consts.SysNamespaceRoot+path, data)
+	if err != nil {
+		return diag.Errorf("error writing to Vault: %s", err)
+	}
+
+	return namespaceRead(ctx, d, meta)
 }
 
-func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
+func namespaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	// Updating a namespace is only supported in
+	// Vault versions >= 1.12
+	if !provider.IsAPISupported(meta, provider.VaultVersion112) {
+		return nil
+	}
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
+	}
+
+	path := d.Get(consts.FieldPath).(string)
+
+	var data map[string]interface{}
+	if v, ok := d.GetOk(consts.FieldCustomMetadata); ok {
+		data = map[string]interface{}{
+			consts.FieldCustomMetadata: v,
+		}
+	}
+
+	log.Printf("[DEBUG] Creating namespace %s in Vault", path)
+	if _, err := client.Logical().JSONMergePatch(ctx, consts.SysNamespaceRoot+path, data); err != nil {
+		return diag.Errorf("error writing to Vault: %s", err)
+	}
+
+	return namespaceRead(ctx, d, meta)
+}
+
+func namespaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
 	}
 
 	path := d.Get(consts.FieldPath).(string)
@@ -99,11 +150,11 @@ func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
 	if err := backoff.RetryNotify(deleteNS, bo, func(err error, duration time.Duration) {
 		log.Printf("[WARN] Deleting namespace %q failed, retrying in %s", path, duration)
 	}); err != nil {
-		return fmt.Errorf("error deleting from Vault: %s", err)
+		return diag.Errorf("error deleting from Vault: %s", err)
 	}
 
 	// wait for the namespace to be gone...
-	return backoff.RetryNotify(func() error {
+	return diag.FromErr(backoff.RetryNotify(func() error {
 		if resp, _ := client.Logical().Read(consts.SysNamespaceRoot + path); resp != nil {
 			return fmt.Errorf("namespace %q still exists", path)
 		}
@@ -115,13 +166,13 @@ func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
 				"[WARN] Waiting for Vault to garbage collect the %q namespace, retrying in %s",
 				path, duration)
 		},
-	)
+	))
 }
 
-func namespaceRead(d *schema.ResourceData, meta interface{}) error {
+func namespaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	upgradeNonPathdNamespaceID(d)
@@ -130,7 +181,7 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 
 	resp, err := client.Logical().Read(consts.SysNamespaceRoot + path)
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return diag.Errorf("error reading from Vault: %s", err)
 	}
 
 	if resp == nil {
@@ -142,8 +193,16 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(resp.Data[consts.FieldPath].(string))
 
 	toSet := map[string]interface{}{
-		consts.FieldNamespaceID: resp.Data["id"],
-		consts.FieldPath:        util.TrimSlashes(path),
+		consts.FieldNamespaceID: resp.Data[consts.FieldID],
+		consts.FieldPath:        mountutil.TrimSlashes(path),
+		// set computed parameter to nil for vault versions <= 1.11
+		// prevents 'known after apply' drift in TF state since field
+		// would never be set otherwise
+		consts.FieldCustomMetadata: nil,
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		toSet[consts.FieldCustomMetadata] = resp.Data[consts.FieldCustomMetadata]
 	}
 
 	pathFQ := path
@@ -153,7 +212,7 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 	toSet[consts.FieldPathFQ] = pathFQ
 
 	if err := util.SetResourceData(d, toSet); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil

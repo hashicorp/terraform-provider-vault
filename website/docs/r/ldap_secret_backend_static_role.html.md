@@ -45,7 +45,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
 * `mount` - (Optional) The unique path this backend should be mounted at. Must
@@ -60,6 +60,9 @@ The following arguments are supported:
   search performed during password rotation. Cannot be modified after creation.
 
 * `rotation_period` - (Required) How often Vault should rotate the password of the user entry.
+
+* `skip_import_rotation` - (Optional) Causes vault to skip the initial secret rotation on import. Not applicable to updates.
+  Requires Vault 1.16 or above.
 
 ## Attributes Reference
 

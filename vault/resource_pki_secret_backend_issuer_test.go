@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -40,6 +41,25 @@ func TestAccPKISecretBackendIssuer_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerID),
 				),
 			},
+			{
+				Config: testAccPKISecretBackendIssuer_basic(backend,
+					fmt.Sprintf(`issuer_name = "%s"`, issuerName)),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerName, issuerName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLeafNotAfterBehavior, "err"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerRef),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerID),
+				),
+			},
+			// confirm error case when updating issuer by sending invalid option
+			{
+				Config: testAccPKISecretBackendIssuer_basic(backend,
+					fmt.Sprintf(`issuer_name = "%s"
+										leaf_not_after_behavior = "invalid"`, issuerName)),
+				ExpectError: regexp.MustCompile("error updating issuer data"),
+			},
+			// ensure JSON merge patch functions as expected. No overwrites
 			{
 				Config: testAccPKISecretBackendIssuer_basic(backend,
 					fmt.Sprintf(`issuer_name = "%s"

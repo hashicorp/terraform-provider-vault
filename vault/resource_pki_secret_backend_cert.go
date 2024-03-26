@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func pkiSecretBackendCertResource() *schema.Resource {
@@ -269,9 +271,6 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 		d.Set(consts.FieldCAChain, strings.Join(convertIntoSliceOfString(caChain)[:], "\n"))
 	}
 
-	// helpful to consolidate code into single loop
-	// since 'serial' is deprecated, we read the 'serial_number'
-	// field from the response in order to set to the TF state
 	computedFields := []string{
 		consts.FieldCertificate,
 		consts.FieldIssuingCA,
@@ -325,7 +324,7 @@ func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, me
 	return nil
 }
 
-func pkiSecretBackendCertRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func pkiSecretBackendCertRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	if d.IsNewResource() {
 		return nil
 	}
@@ -335,20 +334,20 @@ func pkiSecretBackendCertRead(_ context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(e)
 	}
 	path := d.Get(consts.FieldBackend).(string)
-	enabled, err := util.CheckMountEnabled(client, path)
-	if err != nil {
-		log.Printf("[WARN] Failed to check if mount %q exist, preempting the read operation", path)
+
+	_, err := mountutil.GetMount(ctx, client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
+		d.SetId("")
 		return nil
 	}
 
-	if enabled {
-		if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
-			return diag.FromErr(err)
-		}
-	} else {
-		// trigger a resource re-creation whenever the engine's mount has disappeared
-		log.Printf("[WARN] Mount %q does not exist, setting resource for re-creation", path)
-		d.SetId("")
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return nil

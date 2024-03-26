@@ -35,31 +35,53 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
-* `name` - (Required) Name of the role
+* `backend` - (Optional string: "cert") Path to the mounted Cert auth backend
 
-* `certificate` - (Required) CA certificate used to validate client certificates
+* `name` - (Required string) Name of the role
 
-* `allowed_names` - (Optional) DEPRECATED: Please use the individual `allowed_X_sans` parameters instead. Allowed subject names for authenticated client certificates
+* `certificate` - (Required string) CA certificate used to validate client certificates
 
-* `allowed_common_names` - (Optional) Allowed the common names for authenticated client certificates
+* `allowed_names` - (Optional string) DEPRECATED: Please use the individual `allowed_X_sans` parameters instead. Allowed subject names for authenticated client certificates
 
-* `allowed_dns_sans` - (Optional) Allowed alternative dns names for authenticated client certificates
+* `allowed_common_names` - (Optional array: []) Allowed the common names for authenticated client certificates
 
-* `allowed_email_sans` - (Optional) Allowed emails for authenticated client certificates
+* `allowed_dns_sans` - (Optional array: []) Allowed alternative dns names for authenticated client certificates
 
-* `allowed_uri_sans` - (Optional) Allowed URIs for authenticated client certificates
+* `allowed_email_sans` - (Optional array: []) Allowed emails for authenticated client certificates
 
-* `allowed_organizational_units` - (Optional) Allowed organization units for authenticated client certificates.
- *In previous provider releases this field was incorrectly named `allowed_organization_units`, please update accordingly*
+* `allowed_uri_sans` - (Optional array: []) Allowed URIs for authenticated client certificates
 
-* `required_extensions` - (Optional) TLS extensions required on client certificates
+* `allowed_organizational_units` - (Optional array: []) Allowed organization units for authenticated client certificates.
 
-* `display_name` - (Optional) The name to display on tokens issued under this role.
+* `required_extensions` - (Optional array: []) TLS extensions required on
+  client certificates
 
-* `backend` - (Optional) Path to the mounted Cert auth backend
+* `display_name` - (Optional string: "") The name to display on tokens issued under this role.
+
+* `ocsp_enabled` (Optional bool: false) - If enabled, validate certificates'
+  revocation status using OCSP. Requires Vault version 1.13+.
+
+* `ocsp_ca_certificates` (Optional string: "") Any additional CA certificates
+  needed to verify OCSP responses. Provided as base64 encoded PEM data.
+  Requires Vault version 1.13+.
+
+* `ocsp_servers_override` (Optional array: []): A comma-separated list of OCSP
+  server addresses. If unset, the OCSP server is determined from the
+  AuthorityInformationAccess extension on the certificate being inspected.
+  Requires Vault version 1.13+.
+
+* `ocsp_fail_open` (Optional bool: false) - If true and an OCSP response cannot
+  be fetched or is of an unknown status, the login will proceed as if the
+  certificate has not been revoked.
+  Requires Vault version 1.13+.
+
+* `ocsp_query_all_servers` (Optional bool: false) - If set to true, rather than
+  accepting the first successful OCSP response, query all servers and consider
+  the certificate valid only if all servers agree.
+  Requires Vault version 1.13+.
 
 ### Common Token Arguments
 

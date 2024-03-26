@@ -58,19 +58,10 @@ func ldapSecretBackendResource() *schema.Resource {
 			Optional:    true,
 			Description: "Skip LDAP server SSL Certificate verification - insecure and not recommended for production use.",
 		},
-		consts.FieldLength: {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "Length is deprecated and password_policy should be used with Vault >= 1.5.",
-			Description:   "The desired length of passwords that Vault generates.",
-			ConflictsWith: []string{consts.FieldPasswordPolicy},
-		},
 		consts.FieldPasswordPolicy: {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Description:   "Name of the password policy to use to generate passwords.",
-			ConflictsWith: []string{consts.FieldLength},
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Name of the password policy to use to generate passwords.",
 		},
 		consts.FieldSchema: {
 			Type:        schema.TypeString,
@@ -119,6 +110,11 @@ func ldapSecretBackendResource() *schema.Resource {
 			Optional:    true,
 			Description: "LDAP domain to use for users (eg: ou=People,dc=example,dc=org)",
 		},
+		consts.FieldSkipStaticRoleImportRotation: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "Skip rotation of static role secrets on import.",
+		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(createUpdateLDAPConfigResource, provider.VaultVersion112),
@@ -166,7 +162,6 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 		consts.FieldConnectionTimeout,
 		consts.FieldClientTLSCert,
 		consts.FieldClientTLSKey,
-		consts.FieldLength,
 		consts.FieldPasswordPolicy,
 		consts.FieldRequestTimeout,
 		consts.FieldSchema,
@@ -179,6 +174,11 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 	booleanFields := []string{
 		consts.FieldInsecureTLS,
 		consts.FieldStartTLS,
+	}
+
+	// add skip_static_role_import_rotation if after vault 1.16
+	if provider.IsAPISupported(meta, provider.VaultVersion116) {
+		booleanFields = append(booleanFields, consts.FieldSkipStaticRoleImportRotation)
 	}
 
 	// use d.Get() for boolean fields
@@ -235,7 +235,6 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		consts.FieldClientTLSCert,
 		consts.FieldClientTLSKey,
 		consts.FieldInsecureTLS,
-		consts.FieldLength,
 		consts.FieldPasswordPolicy,
 		consts.FieldRequestTimeout,
 		consts.FieldSchema,
@@ -244,6 +243,9 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		consts.FieldURL,
 		consts.FieldUserAttr,
 		consts.FieldUserDN,
+	}
+	if provider.IsAPISupported(meta, provider.VaultVersion116) {
+		fields = append(fields, consts.FieldSkipStaticRoleImportRotation)
 	}
 
 	for _, field := range fields {

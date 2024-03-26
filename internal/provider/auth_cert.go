@@ -55,7 +55,7 @@ func GetCertLoginSchemaResource(authField string) *schema.Resource {
 				Description: "Path to a file containing the private key that the certificate was issued for.",
 			},
 		},
-	}, consts.MountTypeCert)
+	}, authField, consts.MountTypeCert)
 }
 
 var _ AuthLogin = (*AuthLoginCert)(nil)

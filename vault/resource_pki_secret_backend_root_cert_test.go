@@ -38,7 +38,6 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldCountry, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldLocality, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
-		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerial),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
 	}
 
@@ -78,7 +77,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 			{
 				// test out of band update to the root CA
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					_, err := client.Logical().Delete(fmt.Sprintf("%s/root", path))
 					if err != nil {

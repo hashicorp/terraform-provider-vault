@@ -72,7 +72,7 @@ func TestDataSourceKVV2Secret_deletedSecret(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					err := client.Sys().Mount(mount, &api.MountInput{
 						Type:        "kv-v2",

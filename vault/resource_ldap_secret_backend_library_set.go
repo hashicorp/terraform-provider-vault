@@ -114,12 +114,15 @@ func readLDAPLibrarySetResource(ctx context.Context, d *schema.ResourceData, met
 	log.Printf("[DEBUG] Reading %q", libraryPath)
 
 	resp, err := client.Logical().ReadWithContext(ctx, libraryPath)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	if resp == nil {
 		log.Printf("[WARN] %q not found, removing from state", libraryPath)
 		d.SetId("")
 		return nil
 	}
-
 	for _, field := range ldapSecretBackendLibrarySetFields {
 		if val, ok := resp.Data[field]; ok {
 			if err := d.Set(field, val); err != nil {

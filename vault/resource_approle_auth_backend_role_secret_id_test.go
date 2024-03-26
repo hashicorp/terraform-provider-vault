@@ -37,6 +37,18 @@ func TestAccAppRoleAuthBackendRoleSecretID_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
 				),
 			},
+			{
+				PreConfig: func() {
+					// delete approle out-of-band
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					path := fmt.Sprintf("auth/%s/role/%s", backend, role)
+					_, err := client.Logical().Delete(path)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_basic(backend, role),
+			},
 		},
 	})
 }
@@ -290,7 +302,7 @@ provider "vault" {
 
 func testAssertClientNamespace(expectedNS string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 		actualNS := client.Headers().Get(helper.NamespaceHeaderName)
 		if actualNS != expectedNS {
 			return fmt.Errorf("expected namespace %v, actual %v", expectedNS, actualNS)

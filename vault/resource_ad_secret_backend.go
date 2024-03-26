@@ -4,6 +4,8 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -11,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -86,14 +89,6 @@ func adSecretBackendResource() *schema.Resource {
 			Optional:    true,
 			Description: `Use anonymous bind to discover the bind DN of a user.`,
 		},
-		"formatter": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    `Formatter is deprecated and password_policy should be used with Vault >= 1.5.`,
-			Description:   `Text to insert the password into, ex. "customPrefix{{PASSWORD}}customSuffix".`,
-			ConflictsWith: []string{"password_policy"},
-		},
 		"groupattr": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -119,13 +114,6 @@ func adSecretBackendResource() *schema.Resource {
 			Optional:    true,
 			Computed:    true,
 			Description: `The number of seconds after a Vault rotation where, if Active Directory shows a later rotation, it should be considered out-of-band.`,
-		},
-		"length": {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Computed:    true,
-			Deprecated:  `Length is deprecated and password_policy should be used with Vault >= 1.5.`,
-			Description: `The desired length of passwords that Vault generates.`,
 		},
 		"local": {
 			Type:        schema.TypeBool,
@@ -283,9 +271,6 @@ func createConfigResource(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOkExists("discoverdn"); ok {
 		data["discoverdn"] = v
 	}
-	if v, ok := d.GetOkExists("formatter"); ok {
-		data["formatter"] = v
-	}
 	if v, ok := d.GetOkExists("groupattr"); ok {
 		data["groupattr"] = v
 	}
@@ -300,9 +285,6 @@ func createConfigResource(d *schema.ResourceData, meta interface{}) error {
 	}
 	if v, ok := d.GetOkExists("last_rotation_tolerance"); ok {
 		data["last_rotation_tolerance"] = v
-	}
-	if v, ok := d.GetOkExists("length"); ok {
-		data["length"] = v
 	}
 	if v, ok := d.GetOkExists("max_ttl"); ok {
 		data["max_ttl"] = v
@@ -362,19 +344,21 @@ func readConfigResource(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	log.Printf("[DEBUG] Reading %q", path)
 
-	mountResp, err := client.Sys().MountConfig(path)
-	if err != nil && util.Is404(err) {
-		log.Printf("[WARN] %q not found, removing from state", path)
+	mount, err := mountutil.GetMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
-	} else if err != nil {
-		return fmt.Errorf("error reading %q: %s", path, err)
+	}
+
+	if err != nil {
+		return err
 	}
 
 	d.Set("backend", d.Id())
 
-	d.Set("default_lease_ttl_seconds", mountResp.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mountResp.MaxLeaseTTL)
+	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
+	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 
 	configPath := fmt.Sprintf("%s/config", d.Id())
 	log.Printf("[DEBUG] Reading %q", configPath)
@@ -425,11 +409,6 @@ func readConfigResource(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error setting state key 'discoverdn': %s", err)
 		}
 	}
-	if val, ok := resp.Data["formatter"]; ok {
-		if err := d.Set("formatter", val); err != nil {
-			return fmt.Errorf("error setting state key 'formatter': %s", err)
-		}
-	}
 	if val, ok := resp.Data["groupattr"]; ok {
 		if err := d.Set("groupattr", val); err != nil {
 			return fmt.Errorf("error setting state key 'groupattr': %s", err)
@@ -453,11 +432,6 @@ func readConfigResource(d *schema.ResourceData, meta interface{}) error {
 	if val, ok := resp.Data["last_rotation_tolerance"]; ok {
 		if err := d.Set("last_rotation_tolerance", val); err != nil {
 			return fmt.Errorf("error setting state key 'last_rotation_tolerance': %s", err)
-		}
-	}
-	if val, ok := resp.Data["length"]; ok {
-		if err := d.Set("length", val); err != nil {
-			return fmt.Errorf("error setting state key 'length': %s", err)
 		}
 	}
 	if val, ok := resp.Data["max_ttl"]; ok {
@@ -593,9 +567,6 @@ func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 	if raw, ok := d.GetOk("discoverdn"); ok {
 		data["discoverdn"] = raw
 	}
-	if raw, ok := d.GetOk("formatter"); ok {
-		data["formatter"] = raw
-	}
 	if raw, ok := d.GetOk("groupattr"); ok {
 		data["groupattr"] = raw
 	}
@@ -605,14 +576,8 @@ func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 	if raw, ok := d.GetOk("groupfilter"); ok {
 		data["groupfilter"] = raw
 	}
-	if raw, ok := d.GetOk("insecure_tls"); ok {
-		data["insecure_tls"] = raw
-	}
 	if raw, ok := d.GetOk("last_rotation_tolerance"); ok {
 		data["last_rotation_tolerance"] = raw
-	}
-	if raw, ok := d.GetOk("length"); ok {
-		data["length"] = raw
 	}
 	if raw, ok := d.GetOk("max_ttl"); ok {
 		data["max_ttl"] = raw
@@ -653,6 +618,7 @@ func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 	if raw, ok := d.GetOk("userdn"); ok {
 		data["userdn"] = raw
 	}
+	data["insecure_tls"] = d.Get("insecure_tls")
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
 	}

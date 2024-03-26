@@ -93,6 +93,18 @@ func TestAccNamespace(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceNameParent, consts.FieldPath, namespacePath+"-foo"),
 					testNamespaceDestroy(namespacePath)),
 			},
+			{
+				SkipFunc: func() (bool, error) {
+					return !testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion112), nil
+				},
+				Config: testNamespaceCustomMetadata(namespacePath + "-cm"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameParent, consts.FieldPath, namespacePath+"-cm"),
+					resource.TestCheckResourceAttr(resourceNameParent, "custom_metadata.%", "2"),
+					resource.TestCheckResourceAttr(resourceNameParent, "custom_metadata.foo", "abc"),
+					resource.TestCheckResourceAttr(resourceNameParent, "custom_metadata.bar", "123"),
+					testNamespaceDestroy(namespacePath)),
+			},
 		},
 	})
 }
@@ -115,7 +127,7 @@ func testNamespaceCheckAttrs() resource.TestCheckFunc {
 
 func testNamespaceDestroy(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 		namespaceRef, err := client.Logical().Read(fmt.Sprintf("%s/%s", consts.SysNamespaceRoot, path))
 		if err != nil {
@@ -159,4 +171,16 @@ resource "vault_namespace" "child" {
 `, count, ns)
 
 	return config
+}
+
+func testNamespaceCustomMetadata(path string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "parent" {
+  path            = %q
+  custom_metadata = {
+    foo = "abc",
+    bar = "123"
+  }
+}
+`, path)
 }

@@ -42,7 +42,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `name` - (Required) The name of the client.
@@ -67,7 +67,12 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+In addition to the arguments above, the following attributes are exported:
+
+* `client_id` - The Client ID returned by Vault.
+
+* `client_secret` - The Client Secret Key returned by Vault.
+   For public OpenID Clients `client_secret` is set to an empty string `""`
 
 ## Import
 

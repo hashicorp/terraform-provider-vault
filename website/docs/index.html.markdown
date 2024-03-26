@@ -48,10 +48,8 @@ on each resource's documentation page about how any secrets are persisted
 to the state and consider carefully whether such usage is compatible with
 their security policies.
 
-Except as otherwise noted, the resources that write secrets into Vault are
-designed such that they require only the *create* and *update* capabilities
-on the relevant resources, so that distinct tokens can be used for reading
-vs. writing and thus limit the exposure of a compromised token.
+Please see the [Vault Policies and the Terraform Vault Provider](/docs/providers/vault/guides/policies.html)
+guide for details on token capabilites.
 
 ## Using Vault credentials in Terraform configuration
 
@@ -212,6 +210,12 @@ variables in order to keep credential information out of the configuration.
   See [namespaces](https://www.vaultproject.io/docs/enterprise/namespaces) for more info.
   *Available only for Vault Enterprise*.
 
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
+
+* `set_namespace_from_token` -(Optional) Defaults to `true`. In the case where the Vault token is
+  for a specific namespace and the provider namespace is not configured, use the token namespace
+  as the root namespace for all resources.
+
 * `skip_get_vault_version` - (Optional) Skip the dynamic fetching of the Vault server version. 
   Set to `true` when the */sys/seal-status* API endpoint is not available. See [vault_version_override](#vault_version_override)
   for related info
@@ -260,6 +264,8 @@ The `auth_login_userpass` configuration block accepts the following arguments:
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
 
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
+
 * `mount` - (Optional) The name of the authentication engine mount.  
   Default: `userpass`
 
@@ -284,6 +290,8 @@ The `auth_login_aws` configuration block accepts the following arguments:
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
+
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
 * `mount` - (Optional) The name of the authentication engine mount.  
   Default: `aws`
@@ -338,8 +346,12 @@ The `auth_login_cert` configuration block accepts the following arguments:
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
 
-* `mount` - (Optional) The name of the authentication engine mount.  
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
+
+* `mount` - (Optional) The name of the authentication engine mount.
   Default: `cert`
+
+* `name` - (Optional) Authenticate against only the named certificate role.
 
 * `cert_file` - (Required) Path to a file on local disk that contains the
   PEM-encoded certificate to present to the server.
@@ -364,6 +376,8 @@ The `auth_login_gcp` configuration block accepts the following arguments:
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
+
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
 * `mount` - (Optional) The name of the authentication engine mount.  
   Default: `gcp`
@@ -395,6 +409,8 @@ The `auth_login_kerberos` configuration block accepts the following arguments:
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
+
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
 * `mount` - (Optional) The name of the authentication engine mount.  
   Default: `kerberos`
@@ -436,6 +452,8 @@ The `auth_login_radius` configuration block accepts the following arguments:
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
 
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
+
 * `mount` - (Optional) The name of the authentication engine mount.  
   Default: `radius`
 
@@ -456,6 +474,8 @@ The `auth_login_oci` configuration block accepts the following arguments:
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
+
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
 * `mount` - (Optional) The name of the authentication engine mount.  
   Default: `oci`
@@ -481,6 +501,8 @@ The `auth_login_oidc` configuration block accepts the following arguments:
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
 
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
+
 * `mount` - (Optional) The name of the authentication engine mount.  
   Default: `oidc`
 
@@ -504,6 +526,8 @@ The `auth_login_jwt` configuration block accepts the following arguments:
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
 
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
+
 * `mount` - (Optional) The name of the authentication engine mount.  
   Default: `jwt`
 
@@ -525,6 +549,8 @@ The `auth_login_azure` configuration block accepts the following arguments:
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
+
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
 * `mount` - (Optional) The name of the authentication engine mount.  
   Default: `azure`
@@ -567,6 +593,8 @@ The `auth_login_token_file` configuration block accepts the following arguments:
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
 
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
+
 * `filename` - (Required) The filename containing a Vault token. The file must contain a single Vault token 
   and be user readable e.g. perms=`0600`. May be set via the `TERRAFORM_VAULT_TOKEN_FILENAME`
   environment variable.
@@ -588,6 +616,8 @@ The path-based `auth_login` configuration block accepts the following arguments:
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
+
+* `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
 * `method` - (Optional) When configured, will enable auth method specific operations.
   For example, when set to `aws`, the provider will automatically sign login requests

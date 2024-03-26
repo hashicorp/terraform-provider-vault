@@ -74,10 +74,13 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `path` - (Required) The path of the namespace. Must not have a trailing `/`.
+
+* `custom_metadata` - (Optional) Custom metadata describing this namespace. Value type
+  is `map[string]string`. Requires Vault version 1.12+.
 
 ## Attributes Reference
 

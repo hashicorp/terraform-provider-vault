@@ -69,6 +69,11 @@ var (
 			Resource:      UpdateSchemaResource(ldapDynamicCredDataSource()),
 			PathInventory: []string{"/ldap/creds/{role}"},
 		},
+		"vault_namespace": {
+			Resource:       UpdateSchemaResource(namespaceDataSource()),
+			PathInventory:  []string{"/sys/namespaces/{path}"},
+			EnterpriseOnly: true,
+		},
 		"vault_ad_access_credentials": {
 			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},
@@ -177,6 +182,14 @@ var (
 		"vault_pki_secret_backend_keys": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
 			PathInventory: []string{"/pki/keys"},
+		},
+		"vault_transform_encode": {
+			Resource:      UpdateSchemaResource(transformEncodeDataSource()),
+			PathInventory: []string{"/transform/encode/{role_name}"},
+		},
+		"vault_transform_decode": {
+			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
+			PathInventory: []string{"/transform/decode/{role_name}"},
 		},
 	}
 
@@ -566,6 +579,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCAResource()),
 			PathInventory: []string{"/pki/config/ca"},
 		},
+		"vault_pki_secret_backend_config_cluster": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigClusterResource()),
+			PathInventory: []string{"/pki/config/cluster"},
+		},
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),
 			PathInventory: []string{"/pki/config/urls"},
@@ -701,6 +718,66 @@ var (
 		"vault_managed_keys": {
 			Resource:      UpdateSchemaResource(managedKeysResource()),
 			PathInventory: []string{"/sys/managed-keys/{type}/{name}"},
+		},
+		"vault_transform_transformation": {
+			Resource:      UpdateSchemaResource(transformTransformationResource()),
+			PathInventory: []string{"/transform/transformation/{name}"},
+		},
+		"vault_transform_template": {
+			Resource:      UpdateSchemaResource(transformTemplateResource()),
+			PathInventory: []string{"/transform/template/{name}"},
+		},
+		"vault_transform_role": {
+			Resource:      UpdateSchemaResource(transformRoleResource()),
+			PathInventory: []string{"/transform/role/{name}"},
+		},
+		"vault_transform_alphabet": {
+			Resource:      UpdateSchemaResource(transformAlphabetResource()),
+			PathInventory: []string{"/transform/alphabet/{name}"},
+		},
+		"vault_saml_auth_backend": {
+			Resource:      UpdateSchemaResource(samlAuthBackendResource()),
+			PathInventory: []string{"/auth/saml/config"},
+		},
+		"vault_saml_auth_backend_role": {
+			Resource:      UpdateSchemaResource(samlAuthBackendRoleResource()),
+			PathInventory: []string{"/auth/saml/role/{name}"},
+		},
+		"vault_secrets_sync_config": {
+			Resource:      UpdateSchemaResource(secretsSyncConfigResource()),
+			PathInventory: []string{"/sys/sync/config"},
+		},
+		"vault_secrets_sync_aws_destination": {
+			Resource:      UpdateSchemaResource(awsSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/aws-sm/{name}"},
+		},
+		"vault_secrets_sync_azure_destination": {
+			Resource:      UpdateSchemaResource(azureSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/azure-kv/{name}"},
+		},
+		"vault_secrets_sync_gcp_destination": {
+			Resource:      UpdateSchemaResource(gcpSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/gcp-sm/{name}"},
+		},
+		"vault_secrets_sync_gh_destination": {
+			Resource:      UpdateSchemaResource(githubSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/gh/{name}"},
+		},
+		"vault_secrets_sync_github_apps": {
+			Resource:      UpdateSchemaResource(githubAppsSecretsSyncResource()),
+			PathInventory: []string{"/sys/sync/github-apps/{name}"},
+		},
+		"vault_secrets_sync_vercel_destination": {
+			Resource:      UpdateSchemaResource(vercelSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/vercel-project/{name}"},
+		},
+		"vault_secrets_sync_association": {
+			Resource:      UpdateSchemaResource(secretsSyncAssociationResource()),
+			PathInventory: []string{"/sys/sync/destinations/{type}/{name}/associations/set"},
+		},
+		"vault_config_ui_custom_message": {
+			Resource:      UpdateSchemaResource(configUICustomMessageResource()),
+			PathInventory: []string{"/sys/config/ui/custom-messages"},
 		},
 	}
 )

@@ -25,11 +25,12 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 	issuingCertificates := "http://127.0.0.1:8200/v1/pki/ca"
 	crlDistributionPoints := "http://127.0.0.1:8200/v1/pki/crl"
 	ocspServers := "http://127.0.0.1:8200/v1/pki/oscp"
+	enableTemplating := false
 
 	resourceType := "vault_pki_secret_backend_config_urls"
 	resourceName := resourceType + ".test"
-	getChecks := func(i, c, o string) []resource.TestCheckFunc {
-		checks := []resource.TestCheckFunc{
+	getChecks := func(i, c, o string, e bool) resource.TestCheckFunc {
+		baseChecks := []resource.TestCheckFunc{
 			resource.TestCheckResourceAttr(
 				resourceName, "issuing_certificates.#", "1"),
 			resource.TestCheckResourceAttr(
@@ -43,7 +44,21 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 			resource.TestCheckResourceAttr(
 				resourceName, "ocsp_servers.0", o),
 		}
-		return checks
+		v113Checks := []resource.TestCheckFunc{
+			resource.TestCheckResourceAttr(
+				resourceName, "enable_templating", strconv.FormatBool(e)),
+		}
+
+		return func(state *terraform.State) error {
+			var checks []resource.TestCheckFunc
+			meta := testProvider.Meta().(*provider.ProviderMeta)
+			checks = append(checks, baseChecks...)
+			if provider.IsAPISupported(meta, provider.VaultVersion113) {
+				checks = append(checks, v113Checks...)
+			}
+
+			return resource.ComposeTestCheckFunc(checks...)(state)
+		}
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -59,11 +74,14 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 			{
 				Config: testPkiSecretBackendCertConfigUrlsConfig(
 					rootPath, issuingCertificates, crlDistributionPoints, ocspServers),
-				Check: resource.ComposeTestCheckFunc(
-					getChecks(issuingCertificates, crlDistributionPoints, ocspServers)...,
-				),
+				Check: getChecks(
+					issuingCertificates, crlDistributionPoints, ocspServers, enableTemplating),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !provider.IsAPISupported(meta, provider.VaultVersion113), nil
+				},
 				Config: testPkiSecretBackendCertConfigUrlsConfig(
 					rootPath, issuingCertificates, crlDistributionPoints, ocspServers),
 				ResourceName:      resourceName,
@@ -71,11 +89,21 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testPkiSecretBackendCertConfigUrlsConfig(
-					rootPath, issuingCertificates+"/new", crlDistributionPoints+"/new", ocspServers+"/new"),
-				Check: resource.ComposeTestCheckFunc(
-					getChecks(issuingCertificates+"/new", crlDistributionPoints+"/new", ocspServers+"/new")...,
-				),
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !provider.IsAPISupported(meta, provider.VaultVersion113), nil
+				},
+				Config: testPkiSecretBackendCertConfigUrlsConfig113(
+					rootPath, issuingCertificates, crlDistributionPoints, ocspServers, enableTemplating),
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testPkiSecretBackendCertConfigUrlsConfig113(
+					rootPath, issuingCertificates+"/new", crlDistributionPoints+"/new", ocspServers+"/new", !enableTemplating),
+				Check: getChecks(
+					issuingCertificates+"/new", crlDistributionPoints+"/new", ocspServers+"/new", !enableTemplating),
 			},
 		},
 	})
@@ -99,7 +127,7 @@ func testPkiSecretBackendConfigUrlsEmptyRead(s *terraform.State) error {
 func listPkiPaths(s *terraform.State) ([]string, error) {
 	var paths []string
 
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
@@ -147,4 +175,20 @@ resource "vault_pki_secret_backend_config_urls" "test" {
 `,
 		testPkiSecretBackendCertConfigUrlsMountConfig(rootPath),
 		issuingCertificates, crlDistributionPoints, ocspServers)
+}
+
+func testPkiSecretBackendCertConfigUrlsConfig113(rootPath string, issuingCertificates string, crlDistributionPoints string, ocspServers string, enableTemplating bool) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_pki_secret_backend_config_urls" "test" {
+  backend                 = vault_mount.test-root.path
+  issuing_certificates    = ["%s"]
+  crl_distribution_points = ["%s"]
+  ocsp_servers            = ["%s"]
+  enable_templating       = %t
+}
+`,
+		testPkiSecretBackendCertConfigUrlsMountConfig(rootPath),
+		issuingCertificates, crlDistributionPoints, ocspServers, enableTemplating)
 }

@@ -33,7 +33,7 @@ func GetJWTLoginSchema(authField string) *schema.Schema {
 }
 
 // GetJWTLoginSchemaResource for the jwt authentication engine.
-func GetJWTLoginSchemaResource(_ string) *schema.Resource {
+func GetJWTLoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
@@ -48,7 +48,7 @@ func GetJWTLoginSchemaResource(_ string) *schema.Resource {
 				DefaultFunc: schema.EnvDefaultFunc(consts.EnvVarVaultAuthJWT, nil),
 			},
 		},
-	}, consts.MountTypeJWT)
+	}, authField, consts.MountTypeJWT)
 }
 
 var _ AuthLogin = (*AuthLoginJWT)(nil)
@@ -93,7 +93,11 @@ func (l *AuthLoginJWT) Login(client *api.Client) (*api.Secret, error) {
 		return nil, err
 	}
 
-	params, err := l.copyParamsExcluding(consts.FieldNamespace, consts.FieldMount)
+	params, err := l.copyParamsExcluding(
+		consts.FieldUseRootNamespace,
+		consts.FieldNamespace,
+		consts.FieldMount,
+	)
 	if err != nil {
 		return nil, err
 	}

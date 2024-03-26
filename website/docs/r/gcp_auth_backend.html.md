@@ -31,7 +31,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `credentials` - A JSON string containing the contents of a GCP credentials file. If this value is empty, Vault will try to use Application Default Credentials from the machine on which the Vault server is running.
@@ -59,6 +59,37 @@ The following arguments are supported:
 
   The endpoint value provided for a given key has the form of `scheme://host:port`.
   The `scheme://` and `:port` portions of the endpoint value are optional.
+
+* `tune` - (Optional) Extra configuration block. Structure is documented below.
+
+The `tune` block is used to tune the auth backend:
+
+* `default_lease_ttl` - (Optional) Specifies the default time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `max_lease_ttl` - (Optional) Specifies the maximum time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the request data object.
+
+* `listing_visibility` - (Optional) Specifies whether to show this mount in
+  the UI-specific listing endpoint. Valid values are "unauth" or "hidden".
+
+* `passthrough_request_headers` - (Optional) List of headers to whitelist and
+  pass from the request to the backend.
+
+* `allowed_response_headers` - (Optional) List of headers to whitelist and allowing
+  a plugin to include them in the response.
+
+* `token_type` - (Optional) Specifies the type of tokens that should be returned by
+  the mount. Valid values are "default-service", "default-batch", "service", "batch".
+
 
 For more details on the usage of each argument consult the [Vault GCP API documentation](https://www.vaultproject.io/api-docs/auth/gcp#configure).
 

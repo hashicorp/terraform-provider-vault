@@ -16,8 +16,6 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
-
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 type (
@@ -279,28 +277,6 @@ func SetResourceData(d *schema.ResourceData, data map[string]interface{}) error 
 	}
 
 	return nil
-}
-
-// NormalizeMountPath to be in a form valid for accessing values from api.MountOutput
-func NormalizeMountPath(path string) string {
-	return TrimSlashes(path) + consts.PathDelim
-}
-
-// TrimSlashes from path.
-func TrimSlashes(path string) string {
-	return strings.Trim(path, consts.PathDelim)
-}
-
-// CheckMountEnabled in Vault, path must contain a trailing '/',
-func CheckMountEnabled(client *api.Client, path string) (bool, error) {
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return false, err
-	}
-
-	_, ok := mounts[NormalizeMountPath(path)]
-
-	return ok, nil
 }
 
 // GetAPIRequestDataWithMap to pass to Vault from schema.ResourceData.

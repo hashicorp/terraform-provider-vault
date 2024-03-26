@@ -1,6 +1,11 @@
 name: Build
 
-on: push
+on:
+  push:
+    paths-ignore:
+      - 'website/**'
+      - 'CHANGELOG.md'
+  workflow_dispatch:
 
 permissions:
   # Permission for checking out code
@@ -26,9 +31,9 @@ jobs:
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.4.*'
+          terraform_version: '1.7.*'
           terraform_wrapper: false
 
       - name: Cache go build
@@ -60,9 +65,10 @@ jobs:
         image:
         - "vault-enterprise:1.11.12-ent"
         - "vault-enterprise:1.12.11-ent"
-        - "vault-enterprise:1.13.8-ent"
-        - "vault-enterprise:1.14.4-ent"
-        - "vault-enterprise:1.15.0-ent"
+        - "vault-enterprise:1.13.13-ent"
+        - "vault-enterprise:1.14.10-ent"
+        - "vault-enterprise:1.15.6-ent"
+        - "vault:latest"
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -153,9 +159,9 @@ jobs:
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.4.*'
+          terraform_version: '1.7.*'
           terraform_wrapper: false
       - name: Check Terraform CLI version
         run: terraform --version
@@ -193,7 +199,12 @@ jobs:
           LDAP_BINDPASS: "adminpassword"
           LDAP_URL: "ldap://openldap:1389"
         run: |
-          make testacc-ent TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
+          if [[ ${{ matrix.image }} =~ "-ent" ]]; then
+            target="testacc-ent"
+          else
+            target="testacc"
+          fi
+          make $target TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json

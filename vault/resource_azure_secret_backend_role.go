@@ -6,9 +6,11 @@ package vault
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
@@ -17,6 +19,12 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
+var azureSecretFields = []string{
+	consts.FieldMaxTTL,
+	consts.FieldTTL,
+	consts.FieldApplicationObjectID,
+}
+
 func azureSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: azureSecretBackendRoleCreate,
@@ -24,11 +32,11 @@ func azureSecretBackendRoleResource() *schema.Resource {
 		UpdateContext: azureSecretBackendRoleCreate,
 		DeleteContext: azureSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Unique name of the auth backend to configure.",
@@ -39,92 +47,105 @@ func azureSecretBackendRoleResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
-			"role": {
+			consts.FieldRole: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the role to create",
 				ForceNew:    true,
 			},
-			"description": {
+			consts.FieldDescription: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			"azure_roles": {
+			consts.FieldAzureRoles: {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"role_id": {
+						consts.FieldRoleID: {
 							Type:     schema.TypeString,
 							Computed: true,
 							Optional: true,
 						},
 
-						"role_name": {
+						consts.FieldRoleName: {
 							Type:     schema.TypeString,
 							Computed: true,
 							Optional: true,
 						},
 
-						"scope": {
+						consts.FieldScope: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 					},
 				},
 			},
-			"azure_groups": {
+			consts.FieldAzureGroups: {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"object_id": {
+						consts.FieldObjectID: {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
 
-						"group_name": {
+						consts.FieldGroupName: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 					},
 				},
 			},
-			"application_object_id": {
+			consts.FieldApplicationObjectID: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Application Object ID for an existing service principal that will be used instead of creating dynamic service principals.",
 			},
-			"permanently_delete": {
+			consts.FieldPermanentlyDelete: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Indicates whether the applications and service principals created by Vault will be permanently deleted when the corresponding leases expire.",
 			},
-			"ttl": {
+			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			"max_ttl": {
+			consts.FieldMaxTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
+			},
+			consts.FieldSignInAudience: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the security principal types that are allowed to sign in to the application. Valid values are: AzureADMyOrg, AzureADMultipleOrgs, AzureADandPersonalMicrosoftAccount, PersonalMicrosoftAccount",
+			},
+			consts.FieldTags: {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional:    true,
+				Description: "Comma-separated strings of Azure tags to attach to an application.",
 			},
 		},
 	}
 }
 
 func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceData, meta interface{}, data map[string]interface{}) diag.Diagnostics {
-	if v, ok := d.GetOk("azure_roles"); ok {
+	if v, ok := d.GetOk(consts.FieldAzureRoles); ok {
 		rawAzureList := v.(*schema.Set).List()
 
 		for _, element := range rawAzureList {
 			role := element.(map[string]interface{})
 
-			if (role["role_id"] == "") == (role["role_name"] == "") {
-				return diag.Errorf("must specify at most one of 'role_name' or 'role_id'")
+			if (role[consts.FieldRoleID] == "") && (role[consts.FieldRoleName] == "") {
+				return diag.Errorf("must specify one of 'role_name' or 'role_id'")
 			}
 		}
 
@@ -132,42 +153,52 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		// So we marshall and then change into a string
 		jsonAzureList, err := json.Marshal(rawAzureList)
 		if err != nil {
-			return diag.FromErr(fmt.Errorf("error marshaling JSON for azure_roles %q: %s", rawAzureList, err))
+			return diag.Errorf("error marshaling JSON for azure_roles %q: %s", rawAzureList, err)
 		}
 		jsonAzureListString := string(jsonAzureList)
 
 		log.Printf("[DEBUG] Azure RoleSet turned to escaped JSON: %s", jsonAzureListString)
-		data["azure_roles"] = jsonAzureListString
+		data[consts.FieldAzureRoles] = jsonAzureListString
 	}
 
-	if v, ok := d.GetOk("azure_groups"); ok {
+	if v, ok := d.GetOk(consts.FieldAzureGroups); ok {
 		rawAzureList := v.(*schema.Set).List()
 
 		// Vaults API requires we send the policy as an escaped string
 		// So we marshall and then change into a string
 		jsonAzureList, err := json.Marshal(rawAzureList)
 		if err != nil {
-			return diag.FromErr(fmt.Errorf("error marshaling JSON for azure_groups %q: %s", rawAzureList, err))
+			return diag.Errorf("error marshaling JSON for azure_groups %q: %s", rawAzureList, err)
 		}
 
 		jsonAzureListString := string(jsonAzureList)
 
 		log.Printf("[DEBUG] Azure GroupSet turned to escaped JSON: %s", jsonAzureListString)
-		data["azure_groups"] = jsonAzureListString
+		data[consts.FieldAzureGroups] = jsonAzureListString
 	}
 
-	for _, k := range []string{
-		"ttl",
-		"max_ttl",
-		"application_object_id",
-	} {
+	for _, k := range azureSecretFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v.(string)
 		}
 	}
 
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+	if useAPIVer116 {
+		if v, ok := d.GetOk(consts.FieldSignInAudience); ok && v != "" {
+			data[consts.FieldSignInAudience] = v
+		}
+		// handle comma separated string field
+		if v, ok := d.GetOk(consts.FieldTags); ok {
+			tags := util.ToStringArray(v.([]interface{}))
+			if len(tags) > 0 {
+				data[consts.FieldTags] = strings.Join(tags, ",")
+			}
+		}
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		data["permanently_delete"] = d.Get("permanently_delete").(bool)
+		data[consts.FieldPermanentlyDelete] = d.Get(consts.FieldPermanentlyDelete).(bool)
 	}
 
 	return nil
@@ -179,8 +210,8 @@ func azureSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	backend := d.Get("backend").(string)
-	role := d.Get("role").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	role := d.Get(consts.FieldRole).(string)
 
 	path := azureSecretRoleResourcePath(backend, role)
 
@@ -194,7 +225,7 @@ func azureSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, m
 	_, err = client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return diag.FromErr(fmt.Errorf("error writing Azure Secret role %q: %s", path, err))
+		return diag.Errorf("error writing Azure Secret role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote role %q to Azure Secret backend", path)
 
@@ -212,7 +243,7 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 	log.Printf("[DEBUG] Reading Azure Secret role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("error reading Azure Secret role %q: %s", path, err))
+		return diag.Errorf("error reading Azure Secret role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read Azure Secret role %q", path)
 
@@ -222,34 +253,45 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 		return nil
 	}
 
-	for _, k := range []string{
-		"ttl",
-		"max_ttl",
-		"application_object_id",
-		"permanently_delete",
-	} {
+	for _, k := range azureSecretFields {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
-				return diag.FromErr(fmt.Errorf("error reading %s for Azure Secret role Backend Role %q: %q", k, path, err))
+				return diag.Errorf("error reading %s for Azure Secret role Backend Role %q: %q", k, path, err)
 			}
 		}
 	}
 
-	if v, ok := resp.Data["azure_roles"]; ok {
-		log.Printf("[DEBUG] Role Data from Azure: %s", v)
-
-		err := d.Set("azure_roles", resp.Data["azure_roles"])
-		if err != nil {
-			return diag.FromErr(fmt.Errorf("error setting Azure roles: %s", err))
+	if v, ok := resp.Data[consts.FieldPermanentlyDelete]; ok {
+		if err := d.Set(consts.FieldPermanentlyDelete, v); err != nil {
+			return diag.Errorf("error setting permanently delete field: %s", err)
 		}
 	}
 
-	if v, ok := resp.Data["azure_groups"]; ok {
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+	if useAPIVer116 {
+		if err := d.Set(consts.FieldSignInAudience, resp.Data[consts.FieldSignInAudience]); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set(consts.FieldTags, resp.Data[consts.FieldTags]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if v, ok := resp.Data[consts.FieldAzureRoles]; ok {
+		log.Printf("[DEBUG] Role Data from Azure: %s", v)
+
+		err := d.Set(consts.FieldAzureRoles, resp.Data[consts.FieldAzureRoles])
+		if err != nil {
+			return diag.Errorf("error setting Azure roles: %s", err)
+		}
+	}
+
+	if v, ok := resp.Data[consts.FieldAzureGroups]; ok {
 		log.Printf("[DEBUG] Group Data from Azure: %s", v)
 
-		err := d.Set("azure_groups", resp.Data["azure_groups"])
+		err := d.Set(consts.FieldAzureGroups, resp.Data[consts.FieldAzureGroups])
 		if err != nil {
-			return diag.FromErr(fmt.Errorf("error setting Azure groups: %s", err))
+			return diag.Errorf("error setting Azure groups: %s", err)
 		}
 	}
 
@@ -267,7 +309,7 @@ func azureSecretBackendRoleDelete(_ context.Context, d *schema.ResourceData, met
 	log.Printf("[DEBUG] Deleting Azure Secret role %q", path)
 	_, err = client.Logical().Delete(path)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("Error deleting Azure Secret role %q", path))
+		return diag.Errorf("Error deleting Azure Secret role %q", path)
 	}
 	log.Printf("[DEBUG] Deleted Azure Secret role %q", path)
 

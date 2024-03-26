@@ -37,7 +37,7 @@ func GetTokenFileSchema(authField string) *schema.Schema {
 }
 
 // GetTokenFileSchemaResource for pre-authenticated token-from-file.
-func GetTokenFileSchemaResource(_ string) *schema.Resource {
+func GetTokenFileSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldFilename: {
@@ -48,7 +48,7 @@ func GetTokenFileSchemaResource(_ string) *schema.Resource {
 					"line that is a valid Vault token",
 			},
 		},
-	}, consts.MountTypeNone)
+	}, authField, consts.MountTypeNone)
 }
 
 var _ AuthLogin = (*AuthLoginTokenFile)(nil)

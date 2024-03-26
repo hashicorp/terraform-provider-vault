@@ -27,13 +27,21 @@ resource "vault_aws_secret_backend" "aws" {
 }
 ```
 
+```hcl
+resource "vault_aws_secret_backend" "aws" { 
+  identity_token_audience   = "<TOKEN_AUDIENCE>"
+  identity_token_ttl        = "<TOKEN_TTL>"
+  role_arn		    = "<AWS_ROLE_ARN>"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `access_key` - (Optional) The AWS Access Key ID this backend should use to
@@ -78,6 +86,14 @@ for credentials issued by this backend.
 * `username_template` - (Optional)  Template describing how dynamic usernames are generated. The username template is used to generate both IAM usernames (capped at 64 characters) and STS usernames (capped at 32 characters). If no template is provided the field defaults to the template:
 
 * `local` - (Optional) Specifies whether the secrets mount will be marked as local. Local mounts are not replicated to performance replicas.
+
+* `identity_token_audience` - (Optional) The audience claim value. Requires Vault 1.16+.
+
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault 1.16+.
+
+* `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault 1.16+.
+
+* `role_arn` - (Optional) Role ARN to assume for plugin identity token federation. Requires Vault 1.16+.
 
 ```
 {{ if (eq .Type "STS") }}

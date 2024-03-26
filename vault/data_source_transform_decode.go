@@ -1,0 +1,118 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+package vault
+
+import (
+	"fmt"
+	"log"
+	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
+)
+
+const transformDecodeRoleEndpoint = "/transform/decode/{role_name}"
+
+func transformDecodeDataSource() *schema.Resource {
+	return &schema.Resource{
+		Read: provider.ReadWrapper(readTransformDecodeRoleResource),
+		Schema: map[string]*schema.Schema{
+			"path": {
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Path to backend from which to retrieve data.",
+				StateFunc: func(v interface{}) string {
+					return strings.Trim(v.(string), "/")
+				},
+			},
+			"batch_input": {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeMap},
+				Optional:    true,
+				Description: "Specifies a list of items to be decoded in a single batch. If this parameter is set, the top-level parameters 'value', 'transformation' and 'tweak' will be ignored. Each batch item within the list can specify these parameters instead.",
+			},
+			"batch_results": {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeMap},
+				Optional:    true,
+				Computed:    true,
+				Description: "The result of decoding batch_input.",
+			},
+			"decoded_value": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "The result of decoding a value.",
+			},
+			"role_name": {
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the role.",
+			},
+			"transformation": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The transformation to perform. If no value is provided and the role contains a single transformation, this value will be inferred from the role.",
+			},
+			"tweak": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The tweak value to use. Only applicable for FPE transformations",
+			},
+			"value": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The value in which to decode.",
+			},
+		},
+	}
+}
+
+func readTransformDecodeRoleResource(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+	path := d.Get("path").(string)
+	vaultPath := util.ParsePath(path, transformDecodeRoleEndpoint, d)
+	log.Printf("[DEBUG] Writing %q", vaultPath)
+
+	data := make(map[string]interface{})
+	if val, ok := d.GetOkExists("batch_input"); ok {
+		data["batch_input"] = val
+	}
+	if val, ok := d.GetOkExists("role_name"); ok {
+		data["role_name"] = val
+	}
+	if val, ok := d.GetOkExists("transformation"); ok {
+		data["transformation"] = val
+	}
+	if val, ok := d.GetOkExists("tweak"); ok {
+		data["tweak"] = val
+	}
+	if val, ok := d.GetOkExists("value"); ok {
+		data["value"] = val
+	}
+	log.Printf("[DEBUG] Writing %q", vaultPath)
+	resp, err := client.Logical().Write(vaultPath, data)
+	if err != nil {
+		return fmt.Errorf("error writing %q: %s", vaultPath, err)
+	}
+	if resp == nil {
+		d.SetId("")
+		return nil
+	}
+	d.SetId(vaultPath)
+	if err := d.Set("batch_results", resp.Data["batch_results"]); err != nil {
+		return err
+	}
+	if err := d.Set("decoded_value", resp.Data["decoded_value"]); err != nil {
+		return err
+	}
+	return nil
+}

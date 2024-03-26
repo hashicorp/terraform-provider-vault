@@ -694,7 +694,7 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, secondaryRootUsername, secondaryRootPassword, 15),
 				PreConfig: func() {
 					path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					resp, err := client.Logical().Write(path, map[string]interface{}{})
 					if err != nil {
@@ -749,8 +749,27 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.%", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.password", password),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.tlsCA", tlsCA+"\n"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.tls_ca", tlsCA+"\n"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.tls_certificate_key", tlsCertificateKey+"\n"),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_aurora_tls(name, backend, connURL, password, tlsCA, tlsCertificateKey),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.%", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.password", password),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.tls_ca", tlsCA+"\n"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.tls_certificate_key", tlsCertificateKey+"\n"),
 				),
 			},
 		},
@@ -916,7 +935,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 					// because it will change the password and cause (future) tests to 401.
 
 					//path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
-					//client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					//client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 					//
 					//_, err := client.Logical().Write(path, map[string]interface{}{})
 					//if err != nil {
@@ -1010,7 +1029,7 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 					// because it will change the password and cause (future) tests to 401.
 
 					//path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
-					//client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					//client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 					//
 					//_, err := client.Logical().Write(path, map[string]interface{}{})
 					//if err != nil {
@@ -1493,6 +1512,36 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
 
   mysql {
+	  connection_url = "%s"
+	  tls_ca              = <<EOT
+%s
+EOT
+	  tls_certificate_key = <<EOT
+%s
+EOT
+  }
+
+  data = {
+	  password            = "%s"
+  }
+}
+`, path, name, connURL, tls_ca, tls_certificate_key, password)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_mysql_aurora_tls(name, path, connURL, password, tls_ca, tls_certificate_key string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  mysql_aurora {
 	  connection_url = "%s"
 	  tls_ca              = <<EOT
 %s

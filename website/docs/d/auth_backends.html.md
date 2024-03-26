@@ -18,6 +18,7 @@ data "vault_auth_backends" "example" {}
 data "vault_auth_backends" "example-filter" {
   type = "kubernetes"
 }
+```
 
 ## Argument Reference
 
@@ -25,7 +26,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace of the target resource.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
 * `type` - (Optional) The name of the auth method type. Allows filtering of backends returned by type.

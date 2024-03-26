@@ -56,7 +56,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace of the target resource.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
 * `mount` - (Required) Path where KV-V2 engine is mounted.
@@ -93,3 +93,5 @@ The following attributes are exported:
 * `deletion_time` - Deletion time for the secret.
 
 * `destroyed` - Indicates whether the secret has been destroyed.
+
+* `version` - Version of the secret.

@@ -40,7 +40,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Optional) The unique path this backend should be mounted at. Must
@@ -75,8 +75,6 @@ defaults to true.
 
 * `discoverdn` - (Optional) Use anonymous bind to discover the bind Distinguished Name of a user.
 
-* `formatter` - (Optional)  **Deprecated** use `password_policy`. Text to insert the password into, ex. "customPrefix{{PASSWORD}}customSuffix".
-
 * `groupattr` - (Optional) LDAP attribute to follow on objects returned by <groupfilter> in order to enumerate
 user group membership. Examples: `cn` or `memberOf`, etc. Defaults to `cn`.
 
@@ -90,9 +88,6 @@ Defaults to `false`.
 
 * `last_rotation_tolerance` - (Optional) The number of seconds after a Vault rotation where, if Active Directory
 shows a later rotation, it should be considered out-of-band
-
-* `length` - (Optional) **Deprecated** use `password_policy`. The desired length of passwords that Vault generates.
-  *Mutually exclusive with `password_policy` on vault-1.11+*
 
 * `local` - (Optional) Mark the secrets engine as local-only. Local engines are not replicated or removed by
 replication.Tolerance duration to use when checking the last rotation time.

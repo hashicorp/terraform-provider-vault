@@ -8,12 +8,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
@@ -22,9 +26,22 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
+// https://learn.microsoft.com/en-us/graph/sdks/national-clouds
+const (
+	azurePublicCloudEnvName = "AZUREPUBLICCLOUD"
+	azureChinaCloudEnvName  = "AZURECHINACLOUD"
+	azureUSGovCloudEnvName  = "AZUREUSGOVERNMENTCLOUD"
+)
+
+var azureCloudConfigMap = map[string]cloud.Configuration{
+	azureChinaCloudEnvName:  cloud.AzureChina,
+	azurePublicCloudEnvName: cloud.AzurePublic,
+	azureUSGovCloudEnvName:  cloud.AzureGovernment,
+}
+
 func azureAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: provider.ReadWrapper(azureAccessCredentialsDataSourceRead),
+		ReadContext: provider.ReadContextWrapper(azureAccessCredentialsDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -108,17 +125,17 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: `The Azure environment to use during credential validation.
-Defaults to the environment configured in the Vault backend.
+Defaults to the Azure Public Cloud.
 Some possible values: AzurePublicCloud, AzureUSGovernmentCloud`,
 			},
 		},
 	}
 }
 
-func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
+func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -128,12 +145,12 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 
 	secret, err := client.Logical().Read(credsPath)
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return diag.Errorf("error reading from Vault: %s", err)
 	}
 	log.Printf("[DEBUG] Read %q from Vault", credsPath)
 
 	if secret == nil {
-		return fmt.Errorf("no role found at credsPath %q", credsPath)
+		return diag.Errorf("no role found at credsPath %q", credsPath)
 	}
 
 	clientID := secret.Data["client_id"].(string)
@@ -179,7 +196,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	} else {
 		data, err := getConfigData()
 		if err != nil {
-			return err
+			return diag.FromErr(e)
 		}
 		if v, ok := data["subscription_id"]; ok {
 			subscriptionID = v.(string)
@@ -187,7 +204,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	}
 
 	if subscriptionID == "" {
-		return fmt.Errorf("subscription_id cannot be empty when validate_creds is true")
+		return diag.Errorf("subscription_id cannot be empty when validate_creds is true")
 	}
 
 	tenantID := ""
@@ -196,7 +213,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	} else {
 		data, err := getConfigData()
 		if err != nil {
-			return err
+			return diag.FromErr(e)
 		}
 		if v, ok := data["tenant_id"]; ok {
 			tenantID = v.(string)
@@ -204,86 +221,104 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	}
 
 	if tenantID == "" {
-		return fmt.Errorf("tenant_id cannot be empty when validate_creds is true")
+		return diag.Errorf("tenant_id cannot be empty when validate_creds is true")
 	}
 
 	creds, err := azidentity.NewClientSecretCredential(
 		tenantID, clientID, clientSecret, &azidentity.ClientSecretCredentialOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(e)
 	}
 
-	clientOptions := &arm.ClientOptions{}
 	var environment string
 	if v, ok := d.GetOk("environment"); ok {
 		environment = v.(string)
 	} else {
 		data, err := getConfigData()
 		if err != nil {
-			return err
+			return diag.FromErr(e)
 		}
 		if v, ok := data["environment"]; ok && v.(string) != "" {
 			environment = v.(string)
 		}
 	}
 
-	if environment != "" {
-		env, err := azure.EnvironmentFromName(environment)
-		if err != nil {
-			return err
-		}
-
-		switch env.Name {
-		case "AzurePublicCloud":
-			clientOptions.Endpoint = arm.AzurePublicCloud
-		case "AzureChinaCloud":
-			clientOptions.Endpoint = arm.AzureChina
-		case "AzureUSGovernmentCloud":
-			clientOptions.Endpoint = arm.AzureGovernment
-		case "AzureGermanCloud":
-			// AzureGermanCloud appears to have been removed,
-			// keeping this here to handle the case where the secret engine has
-			// been configured with this environment.
-			clientOptions.Endpoint = arm.Endpoint(env.ResourceManagerEndpoint)
-		}
+	cloudConfig, err := getAzureCloudConfigFromName(environment)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
-	providerClient := armresources.NewProvidersClient(subscriptionID, creds, clientOptions)
-	ctx := context.Background()
+	providerClient, err := armresources.NewProvidersClient(subscriptionID, creds,
+		&arm.ClientOptions{
+			ClientOptions: policy.ClientOptions{
+				Cloud: cloudConfig,
+			},
+		})
+	if err != nil {
+		return diag.Errorf("failed to create providers client: %s", err)
+	}
 	delay := time.Duration(d.Get("num_seconds_between_tests").(int)) * time.Second
-	endTime := time.Now().Add(
-		time.Duration(d.Get("max_cred_validation_seconds").(int)) * time.Second)
+	maxValidationSeconds := d.Get("max_cred_validation_seconds").(int)
+	endTime := time.Now().Add(time.Duration(maxValidationSeconds) * time.Second)
 	wantSuccessCount := d.Get("num_sequential_successes").(int)
 	var successCount int
+	// begin validate_creds retry loop
 	for {
-		pager := providerClient.List(&armresources.ProvidersClientListOptions{
+		pager := providerClient.NewListPager(&armresources.ProvidersClientListOptions{
 			Expand: pointerutil.StringPtr("metadata"),
 		})
 
-		for pager.NextPage(ctx) {
-			pr := pager.PageResponse()
-			if pr.RawResponse.StatusCode == http.StatusUnauthorized {
-				return fmt.Errorf("validation failed, unauthorized credentials from Vault, err=%w", pager.Err())
+		hasError := false
+		for pager.More() {
+			// capture raw response so we can get the status code
+			var rawResponse *http.Response
+			ctxWithResp := runtime.WithCaptureResponse(ctx, &rawResponse)
+
+			_, err := pager.NextPage(ctxWithResp)
+			if err != nil {
+				hasError = true
+				log.Printf("[WARN] Provider Client List request failed err=%s", err)
+				// ensure we don't loop forever
+				break
 			}
-			log.Printf("[DEBUG] Provider Client List response %+v", pr.RawResponse)
+
+			// log the response status code and headers
+			log.Printf("[DEBUG] Provider Client List response %+v", rawResponse)
 		}
 
-		if pager.Err() == nil {
+		if !hasError {
 			successCount++
-			log.Printf("[DEBUG] Credential validation succeeded try %d/%d", successCount, wantSuccessCount)
+			log.Printf("[DEBUG] Credential validation succeeded on try %d/%d", successCount, wantSuccessCount)
 			if successCount >= wantSuccessCount {
 				break
 			}
 		} else {
-			if time.Now().After(endTime) {
-				return fmt.Errorf("validation failed, giving up err=%w", pager.Err())
-			}
-
-			log.Printf("[WARN] Credential validation failed with %v, retrying in %s", pager.Err(), delay)
+			log.Printf("[WARN] Credential validation failed, retrying in %s", delay)
 			successCount = 0
 		}
+
+		if time.Now().After(endTime) {
+			return diag.Errorf(
+				"validation failed after max_cred_validation_seconds of %d, giving up; now=%s, endTime=%s",
+				maxValidationSeconds,
+				time.Now().String(),
+				endTime.String(),
+			)
+		}
+
 		time.Sleep(delay)
 	}
 
 	return nil
+}
+
+func getAzureCloudConfigFromName(name string) (cloud.Configuration, error) {
+	if name == "" {
+		return cloud.AzurePublic, nil
+	}
+	if c, ok := azureCloudConfigMap[strings.ToUpper(name)]; !ok {
+		return c, fmt.Errorf("unsupported Azure cloud name %q", name)
+	} else {
+		return c, nil
+	}
 }

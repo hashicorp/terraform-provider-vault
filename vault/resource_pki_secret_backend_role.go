@@ -49,6 +49,7 @@ var pkiSecretListFields = []string{
 	consts.FieldAllowedDomains,
 	consts.FieldAllowedSerialNumbers,
 	consts.FieldExtKeyUsage,
+	consts.FieldExtKeyUsageOIDs,
 }
 
 var pkiSecretBooleanFields = []string{
@@ -267,6 +268,15 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				Description: "Specify the allowed extended key usage constraint on issued certificates.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldExtKeyUsageOIDs: {
+				Type:        schema.TypeList,
+				Required:    false,
+				Optional:    true,
+				Description: "A list of extended key usage OIDs.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
