@@ -53,12 +53,12 @@ func namespacesDataSourceRead(ctx context.Context, d *schema.ResourceData, meta 
 	return nil
 }
 
-func flattenPaths(resp *api.Secret) []interface{} {
+func flattenPaths(resp *api.Secret) []string {
 	if resp == nil {
 		return nil
 	}
 
-	paths := []interface{}{}
+	var paths []string
 	if keys, ok := resp.Data["keys"]; ok {
 		for _, key := range keys.([]interface{}) {
 			paths = append(paths, mountutil.TrimSlashes(key.(string)))
