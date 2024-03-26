@@ -45,10 +45,11 @@ func TestVercelSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "deployment_environments.1", "preview"),
 					resource.TestCheckResourceAttr(resourceName, "deployment_environments.2", "production"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 				),
 			},
 			{
-				Config: testVercelSecretsSyncDestinationConfig_updated(accessToken, projectID, destName, updatedSecretsSyncTemplate),
+				Config: testVercelSecretsSyncDestinationConfig_updated(accessToken, projectID, destName, secretsKeyTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -58,7 +59,8 @@ func TestVercelSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "deployment_environments.0", "development"),
 					resource.TestCheckResourceAttr(resourceName, "deployment_environments.1", "preview"),
 					resource.TestCheckResourceAttr(resourceName, "deployment_environments.2", "production"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, secretsKeyTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-key"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,

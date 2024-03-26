@@ -58,6 +58,9 @@ The following arguments are supported:
 * `secret_name_template` - (Optional) Template describing how to generate external secret names.
   Supports a subset of the Go Template syntax.
 
+* `granularity` - (Optional) Determines what level of information is synced as a distinct resource
+  at the destination. Supports `secret-path` and `secret-key`.
+
 * `app_name` - (Optional) The user-defined name of the GitHub App configuration. This is a reference to the name used   
   on the new endpoint when configuring the GitHub app on the Vault Server. Can be modified. 
   Takes precedence over the `access_token` field.
