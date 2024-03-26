@@ -36,6 +36,7 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentials, credentials),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, gcpSyncType),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, "gcp-project-id"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
@@ -43,12 +44,13 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 				),
 			},
 			{
-				Config: testGCPSecretsSyncDestinationConfig_updated(credentials, destName, updatedSecretsSyncTemplate),
+				Config: testGCPSecretsSyncDestinationConfig_updated(credentials, destName, secretsKeyTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentials, credentials),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, secretsKeyTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-key"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, gcpSyncType),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, "gcp-project-id-updated"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "2"),

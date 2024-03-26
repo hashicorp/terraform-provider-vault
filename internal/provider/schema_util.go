@@ -80,6 +80,12 @@ func MustAddSecretsSyncCommonSchema(r *schema.Resource) *schema.Resource {
 			Computed:    true,
 			Description: "Template describing how to generate external secret names.",
 		},
+		consts.FieldGranularity: {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Determines what level of information is synced as a distinct resource at the destination. " +
+				"Can be 'secret-path' or 'secret-key'",
+		},
 	})
 
 	return r

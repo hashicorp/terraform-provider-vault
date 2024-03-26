@@ -15,6 +15,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+const secretsKeyTemplate = "VAULT_{{ .MountAccessor | uppercase }}_{{ .SecretKey | uppercase }}"
+
 func TestGithubSecretsSyncDestination(t *testing.T) {
 	destName := acctest.RandomWithPrefix("tf-sync-dest-gh")
 
@@ -45,22 +47,20 @@ func TestGithubSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldAccessToken, accessToken),
 					resource.TestCheckResourceAttr(resourceName, fieldRepositoryOwner, repoOwner),
 					resource.TestCheckResourceAttr(resourceName, fieldRepositoryName, repoName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldAppName, "test-app-name"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldInstallationID, "test-installation-id"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 				),
 			},
 			{
-				Config: testGithubSecretsSyncDestinationConfig_updated(accessToken, repoOwner, repoName, destName, updatedSecretsSyncTemplate),
+				Config: testGithubSecretsSyncDestinationConfig_updated(accessToken, repoOwner, repoName, destName, secretsKeyTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, fieldAccessToken, accessToken),
 					resource.TestCheckResourceAttr(resourceName, fieldRepositoryOwner, repoOwner),
 					resource.TestCheckResourceAttr(resourceName, fieldRepositoryName, repoName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldAppName, "test-app-name-updated"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldInstallationID, "test-installation-id-updated"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, secretsKeyTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-key"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
@@ -77,8 +77,6 @@ resource "vault_secrets_sync_gh_destination" "test" {
   access_token         = "%s"
   repository_owner     = "%s"
   repository_name      = "%s"
-  app_name             = "test-app-name"
-  installation_id      = "test-installation-id"
   %s
 }
 `, destName, accessToken, repoOwner, repoName, testSecretsSyncDestinationCommonConfig(templ, true, false, false))
@@ -93,8 +91,6 @@ resource "vault_secrets_sync_gh_destination" "test" {
   access_token         = "%s"
   repository_owner     = "%s"
   repository_name      = "%s"
-  app_name             = "test-app-name-updated"
-  installation_id      = "test-installation-id-updated"
   %s
 }
 `, destName, accessToken, repoOwner, repoName, testSecretsSyncDestinationCommonConfig(templ, true, false, true))

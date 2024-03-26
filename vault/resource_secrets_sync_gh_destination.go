@@ -26,6 +26,7 @@ var githubSyncWriteFields = []string{
 	fieldRepositoryOwner,
 	fieldRepositoryName,
 	consts.FieldSecretNameTemplate,
+	consts.FieldGranularity,
 	consts.FieldAppName,
 	consts.FieldInstallationID,
 }
@@ -40,6 +41,7 @@ var githubSyncUpdateFields = []string{
 var githubSyncReadFields = []string{
 	fieldRepositoryOwner,
 	fieldRepositoryName,
+	consts.FieldGranularity,
 	consts.FieldSecretNameTemplate,
 	consts.FieldAppName,
 	consts.FieldInstallationID,
@@ -100,7 +102,9 @@ func githubSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Res
 }
 
 func githubSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationRead(ctx, d, meta, ghSyncType, githubSyncReadFields)
+	return syncutil.SyncDestinationRead(ctx, d, meta, ghSyncType, githubSyncReadFields, map[string]string{
+		consts.FieldGranularity: consts.FieldGranularityLevel,
+	})
 }
 
 func githubSecretsSyncDestinationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

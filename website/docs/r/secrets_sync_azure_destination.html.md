@@ -70,6 +70,9 @@ The following arguments are supported:
 * `secret_name_template` - (Optional) Template describing how to generate external secret names.
   Supports a subset of the Go Template syntax.
 
+* `granularity` - (Optional) Determines what level of information is synced as a distinct resource
+  at the destination. Supports `secret-path` and `secret-key`.
+
 ## Attributes Reference
 
 The following attributes are exported in addition to the above:

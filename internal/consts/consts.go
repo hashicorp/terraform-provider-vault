@@ -413,6 +413,8 @@ const (
 	FieldStartTime                     = "start_time"
 	FieldEndTime                       = "end_time"
 	FieldLink                          = "link"
+	FieldGranularity                   = "granularity"
+	FieldGranularityLevel              = "granularity_level"
 
 	/*
 		common environment variables
