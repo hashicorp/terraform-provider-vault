@@ -41,7 +41,6 @@ func TestSecretsSyncAssociation_gh(t *testing.T) {
 			{
 				Config: testSecretsSyncAssociationConfig_gh(mount, accessToken, repoOwner, repoName, destName, secretName),
 				Check: resource.ComposeTestCheckFunc(
-
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, fieldSecretName, secretName),
