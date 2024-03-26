@@ -3,6 +3,7 @@
 FEATURES:
 * Add support for `allowed_kubernetes_namespace_selector` in `vault_kubernetes_secret_backend_role` ([#2180](https://github.com/hashicorp/terraform-provider-vault/pull/2180)).
 * Add new data source `vault_namespace`. Requires Vault Enterprise: ([#2208](https://github.com/hashicorp/terraform-provider-vault/pull/2208)).
+* Add new data source `vault_namespaces`. Requires Vault Enterprise: ([#2212](https://github.com/hashicorp/terraform-provider-vault/pull/2212)).
 
 BUGS:
 * fix `vault_approle_auth_backend_role_secret_id` regression to handle 404 errors ([#2204](https://github.com/hashicorp/terraform-provider-vault/pull/2204))
