@@ -2,11 +2,11 @@
 
 FEATURES:
 * Add `granularity` to Secrets Sync destination resources. Requires Vault 1.16+. ([#2202](https://github.com/hashicorp/terraform-provider-vault/pull/2202))
-
-IMPROVEMENTS:
 * Add support for `allowed_kubernetes_namespace_selector` in `vault_kubernetes_secret_backend_role` ([#2180](https://github.com/hashicorp/terraform-provider-vault/pull/2180)).
 * Add new data source `vault_namespace`. Requires Vault Enterprise: ([#2208](https://github.com/hashicorp/terraform-provider-vault/pull/2208)).
 * Add new data source `vault_namespaces`. Requires Vault Enterprise: ([#2212](https://github.com/hashicorp/terraform-provider-vault/pull/2212)).
+
+IMPROVEMENTS:
 * Enable Secrets Sync Association resource to track sync status across all subkeys of a secret ([#2202](https://github.com/hashicorp/terraform-provider-vault/pull/2202))
 
 BUGS:
