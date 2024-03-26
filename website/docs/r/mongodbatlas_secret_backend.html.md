@@ -27,7 +27,7 @@ resource "vault_mount" "mongo" {
 }
 
 resource "vault_mongodbatlas_secret_backend" "config" {
-  mount        = "vault_mount.mongo.path"
+  mount        = vault_mount.mongo.path
   private_key  = "privateKey"
   public_key   = "publicKey"
 }
