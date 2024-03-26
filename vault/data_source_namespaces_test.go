@@ -31,8 +31,10 @@ func TestAccDataSourceNamespaces(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceName+".test", consts.FieldPaths+".*", "test-0"),
 					resource.TestCheckTypeSetElemAttr(resourceName+".test", consts.FieldPaths+".*", "test-1"),
 					resource.TestCheckTypeSetElemAttr(resourceName+".test", consts.FieldPaths+".*", "test-2"),
-
+					resource.TestCheckResourceAttr(resourceName+".test", consts.FieldNamespace, ns),
+					// test nested which will not have any namespaces under it
 					resource.TestCheckResourceAttr(resourceName+".nested", consts.FieldPaths+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName+".nested", consts.FieldNamespace, ns+"/test-0/nested"),
 				),
 			},
 		},
@@ -51,6 +53,7 @@ resource "vault_namespace" "test" {
   path      = "test-${count.index}"
 }
 
+# this will create a namespace with the path "test/test-0/nested"
 resource "vault_namespace" "nested" {
   namespace = vault_namespace.test[0].path_fq
   path      = "nested"
