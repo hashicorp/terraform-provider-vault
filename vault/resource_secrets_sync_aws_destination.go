@@ -88,12 +88,6 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				Description: "Extra protection that must match the trust policy granting access to the AWS IAM role ARN.",
 			},
-			consts.FieldGranularity: {
-				Type:     schema.TypeString,
-				Optional: true,
-				Description: "Determines what level of information is synced as a distinct resource at the destination. " +
-					"Can be 'secret-path' or 'secret-key'",
-			},
 		},
 	})
 }

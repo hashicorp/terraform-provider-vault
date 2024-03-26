@@ -81,12 +81,6 @@ func vercelSecretsSyncDestinationResource() *schema.Resource {
 					"variables are available. Accepts 'development', " +
 					"'preview' & 'production'.",
 			},
-			consts.FieldGranularity: {
-				Type:     schema.TypeString,
-				Optional: true,
-				Description: "Determines what level of information is synced as a distinct resource at the destination. " +
-					"Can be 'secret-path' or 'secret-key'",
-			},
 		},
 	})
 }

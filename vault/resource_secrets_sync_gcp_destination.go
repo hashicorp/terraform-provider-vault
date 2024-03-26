@@ -62,12 +62,6 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "The target project to manage secrets in.",
 			},
-			consts.FieldGranularity: {
-				Type:     schema.TypeString,
-				Optional: true,
-				Description: "Determines what level of information is synced as a distinct resource at the destination. " +
-					"Can be 'secret-path' or 'secret-key'",
-			},
 		},
 	})
 }
