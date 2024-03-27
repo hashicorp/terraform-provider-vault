@@ -13,7 +13,8 @@ IMPROVEMENTS:
 
 BUGS:
 * fix `vault_approle_auth_backend_role_secret_id` regression to handle 404 errors ([#2204](https://github.com/hashicorp/terraform-provider-vault/pull/2204))
-* fix `vault_kv_secret` and `vault_kv_secret_v2` failure to update secret data modified outside terraform ([#1933](https://github.com/hashicorp/terraform-provider-vault/pull/1933))
+* fix `vault_kv_secret` and `vault_kv_secret_v2` failure to update secret data modified outside terraform ([#2207](https://github.com/hashicorp/terraform-provider-vault/pull/2207))
+* fix `vault_kv_secret_v2` failing on imported resource when data_json should be ignored ([#2207](https://github.com/hashicorp/terraform-provider-vault/pull/2207))
 
 ## 4.1.0 (Mar 20, 2024)
 
