@@ -82,6 +82,12 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 			Optional:    true,
 			Description: "Optional disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.",
 		},
+		consts.FieldUseAnnotationsAsAliasMetadata: {
+			Type:        schema.TypeBool,
+			Computed:    true,
+			Optional:    true,
+			Description: "Optional use annotations from the client token's associated service account as alias metadata for the Vault entity.",
+		},
 	}
 	return &schema.Resource{
 		Create: kubernetesAuthBackendConfigCreate,
@@ -177,6 +183,11 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 	if v, ok := d.GetOk(consts.FieldDisableLocalCAJWT); ok {
 		data[consts.FieldDisableLocalCAJWT] = v
 	}
+
+	if v, ok := d.GetOk(consts.FieldUseAnnotationsAsAliasMetadata); ok {
+		data[consts.FieldUseAnnotationsAsAliasMetadata] = v
+	}
+
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		return fmt.Errorf("error writing Kubernetes auth backend config %q: %s", path, err)
@@ -245,10 +256,23 @@ func kubernetesAuthBackendConfigRead(d *schema.ResourceData, meta interface{}) e
 		consts.FieldPEMKeys,
 	}
 
+	optionalParams := []string{
+		// only supported by Vault 1.16.0 and up
+		consts.FieldUseAnnotationsAsAliasMetadata,
+	}
+
 	for _, k := range params {
 		v := resp.Data[k]
 		if err := d.Set(k, v); err != nil {
 			return err
+		}
+	}
+
+	for _, k := range optionalParams {
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -300,6 +324,10 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 
 	if v, ok := d.GetOk(consts.FieldDisableLocalCAJWT); ok {
 		setData(consts.FieldDisableLocalCAJWT, v)
+	}
+
+	if v, ok := d.GetOk(consts.FieldUseAnnotationsAsAliasMetadata); ok {
+		setData(consts.FieldUseAnnotationsAsAliasMetadata, v)
 	}
 
 	_, err := client.Logical().Write(path, data)

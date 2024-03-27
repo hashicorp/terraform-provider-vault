@@ -399,6 +399,7 @@ const (
 	FieldTLSMaxVersion                 = "tls_max_version"
 	FieldCaseSensitiveNames            = "case_sensitive_names"
 	FieldMaxPageSize                   = "max_page_size"
+	FieldUseAnnotationsAsAliasMetadata = "use_annotations_as_alias_metadata"
 	FieldUserFilter                    = "userfilter"
 	FieldDiscoverDN                    = "discoverdn"
 	FieldDenyNullBind                  = "deny_null_bind"
