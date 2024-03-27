@@ -1,17 +1,20 @@
 ## Unreleased
 
+## 4.2.0 (Mar 27, 2024)
+
 FEATURES:
-* Add `granularity` to Secrets Sync destination resources. Requires Vault 1.16+. ([#2202](https://github.com/hashicorp/terraform-provider-vault/pull/2202))
+* Add `granularity` to Secrets Sync destination resources. Requires Vault 1.16+ Enterprise. ([#2202](https://github.com/hashicorp/terraform-provider-vault/pull/2202))
 * Add support for `allowed_kubernetes_namespace_selector` in `vault_kubernetes_secret_backend_role` ([#2180](https://github.com/hashicorp/terraform-provider-vault/pull/2180)).
 * Add new data source `vault_namespace`. Requires Vault Enterprise: ([#2208](https://github.com/hashicorp/terraform-provider-vault/pull/2208)).
 * Add new data source `vault_namespaces`. Requires Vault Enterprise: ([#2212](https://github.com/hashicorp/terraform-provider-vault/pull/2212)).
 
 IMPROVEMENTS:
-* Enable Secrets Sync Association resource to track sync status across all subkeys of a secret ([#2202](https://github.com/hashicorp/terraform-provider-vault/pull/2202))
+* Enable Secrets Sync Association resource to track sync status across all subkeys of a secret. Requires Vault 1.16+ Enterprise. ([#2202](https://github.com/hashicorp/terraform-provider-vault/pull/2202))
 
 BUGS:
 * fix `vault_approle_auth_backend_role_secret_id` regression to handle 404 errors ([#2204](https://github.com/hashicorp/terraform-provider-vault/pull/2204))
-* fix `vault_kv_secret` and `vault_kv_secret_v2` failure to update secret data modified outside terraform ([#1933](https://github.com/hashicorp/terraform-provider-vault/pull/1933))
+* fix `vault_kv_secret` and `vault_kv_secret_v2` failure to update secret data modified outside terraform ([#2207](https://github.com/hashicorp/terraform-provider-vault/pull/2207))
+* fix `vault_kv_secret_v2` failing on imported resource when data_json should be ignored ([#2207](https://github.com/hashicorp/terraform-provider-vault/pull/2207))
 
 ## 4.1.0 (Mar 20, 2024)
 
