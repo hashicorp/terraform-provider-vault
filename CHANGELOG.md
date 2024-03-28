@@ -24,7 +24,7 @@ CHANGES TO VAULT POLICY REQUIREMENTS:
 The v4.0.0 release required read permissions at `sys/auth/:path` which was a
 sudo endpoint. The v4.1.0 release changed that to instead require permissions
 at the `sys/mounts/auth/:path` level and sudo is no longer required. Please
-refer to the details in the [Terraform Vault Provider 4.0.0 Upgrade Guide](/docs/providers/vault/guides/version_4_upgrade.html).
+refer to the details in the [Terraform Vault Provider 4.0.0 Upgrade Guide](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_4_upgrade).
 
 FEATURES:
 * Add new resource `vault_config_ui_custom_message`. Requires Vault 1.16+ Enterprise: ([#2154](https://github.com/hashicorp/terraform-provider-vault/pull/2154)).
@@ -40,7 +40,7 @@ BUGS:
 **Important**: This release requires read policies to be set at the path level for mount metadata.
 For example, instead of permissions at `sys/auth` you must set permissions at
 the `sys/auth/:path` level. Please refer to the details in the
-[Terraform Vault Provider 4.0.0 Upgrade Guide](/docs/providers/vault/guides/version_4_upgrade.html).
+[Terraform Vault Provider 4.0.0 Upgrade Guide](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_4_upgrade).
 
 FEATURES:
 * Add support for PKI Secrets Engine cluster configuration with the `vault_pki_secret_backend_config_cluster` resource. Requires Vault 1.13+ ([#1949](https://github.com/hashicorp/terraform-provider-vault/pull/1949)).
