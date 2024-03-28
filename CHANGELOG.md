@@ -7,6 +7,7 @@ FEATURES:
 * Add support for `allowed_kubernetes_namespace_selector` in `vault_kubernetes_secret_backend_role` ([#2180](https://github.com/hashicorp/terraform-provider-vault/pull/2180)).
 * Add new data source `vault_namespace`. Requires Vault Enterprise: ([#2208](https://github.com/hashicorp/terraform-provider-vault/pull/2208)).
 * Add new data source `vault_namespaces`. Requires Vault Enterprise: ([#2212](https://github.com/hashicorp/terraform-provider-vault/pull/2212)).
+* Add `use_annotations_as_alias_metadata` to `vault_kubernetes_auth_backend_config`. Requires Vault 1.16+. ([#2213](https://github.com/hashicorp/terraform-provider-vault/pull/2213)).
 
 IMPROVEMENTS:
 * Enable Secrets Sync Association resource to track sync status across all subkeys of a secret. Requires Vault 1.16+ Enterprise. ([#2202](https://github.com/hashicorp/terraform-provider-vault/pull/2202))

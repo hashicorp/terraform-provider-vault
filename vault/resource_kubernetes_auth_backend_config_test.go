@@ -82,7 +82,7 @@ func TestAccKubernetesAuthBackendConfig_import(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, jwt, issuer,
-					false, false, false),
+					false, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -235,7 +235,7 @@ func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, jwt, issuer,
-					true, true, false),
+					true, true, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -275,7 +275,7 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, oldJWT, oldIssuer,
-					false, false, false),
+					false, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -301,7 +301,7 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 			},
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, newJWT, newIssuer,
-					true, true, false),
+					true, true, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -326,7 +326,7 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 			{
 				// ensure we can set disable_iss_validation to false
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, newJWT, newIssuer,
-					false, true, false),
+					false, true, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -429,7 +429,7 @@ resource "vault_kubernetes_auth_backend_config" "config" {
 }
 
 func testAccKubernetesAuthBackendConfigConfig_full(backend, caCert, jwt, issuer string,
-	disableIssValidation, disableLocalCaJwt, omitCA bool,
+	disableIssValidation, disableLocalCaJwt, omitCA, useAnnotationsAsAliasMetadata bool,
 ) string {
 	var caConfig string
 	if !omitCA {
@@ -451,12 +451,13 @@ resource "vault_kubernetes_auth_backend_config" "config" {
   issuer = %q
   disable_iss_validation = %t
   disable_local_ca_jwt = %t
-}`, backend, caConfig, jwt, kubernetesPEMfile, issuer, disableIssValidation, disableLocalCaJwt)
+  use_annotations_as_alias_metadata = %t
+}`, backend, caConfig, jwt, kubernetesPEMfile, issuer, disableIssValidation, disableLocalCaJwt, useAnnotationsAsAliasMetadata)
 
 	return config
 }
 
-func testAccKubernetesAuthBackendConfigConfig_fullUnsetCA(backend, jwt, issuer string, disableIssValidation, disableLocalCaJwt bool) string {
+func testAccKubernetesAuthBackendConfigConfig_fullUnsetCA(backend, jwt, issuer string, disableIssValidation, disableLocalCaJwt bool, useAnnotationsAsAliasMetadata bool) string {
 	config := fmt.Sprintf(`
 resource "vault_auth_backend" "kubernetes" {
   type = "kubernetes"
@@ -471,7 +472,8 @@ resource "vault_kubernetes_auth_backend_config" "config" {
   issuer = %q
   disable_iss_validation = %t
   disable_local_ca_jwt = %t
-}`, backend, jwt, kubernetesPEMfile, issuer, disableIssValidation, disableLocalCaJwt)
+  use_annotations_as_alis_metadata = %t
+}`, backend, jwt, kubernetesPEMfile, issuer, disableIssValidation, disableLocalCaJwt, useAnnotationsAsAliasMetadata)
 
 	return config
 }
@@ -494,7 +496,7 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, "", oldJWT, oldIssuer,
-					false, false, true),
+					false, false, true, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -516,11 +518,13 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 						consts.FieldDisableISSValidation, strconv.FormatBool(false)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						consts.FieldDisableLocalCAJWT, strconv.FormatBool(false)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						consts.FieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(true)),
 				),
 			},
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, oldJWT, oldIssuer,
-					false, false, false),
+					false, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -542,11 +546,13 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 						consts.FieldDisableISSValidation, strconv.FormatBool(false)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						consts.FieldDisableLocalCAJWT, strconv.FormatBool(false)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						consts.FieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(false)),
 				),
 			},
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, "", oldJWT, oldIssuer,
-					false, false, true),
+					false, false, true, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -568,11 +574,13 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 						consts.FieldDisableISSValidation, strconv.FormatBool(false)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						consts.FieldDisableLocalCAJWT, strconv.FormatBool(false)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						consts.FieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(false)),
 				),
 			},
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, "", oldJWT, oldIssuer,
-					false, false, false),
+					false, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -594,6 +602,8 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 						consts.FieldDisableISSValidation, strconv.FormatBool(false)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						consts.FieldDisableLocalCAJWT, strconv.FormatBool(false)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						consts.FieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(false)),
 				),
 			},
 			{
@@ -611,7 +621,7 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 					}
 				},
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, "", oldJWT, oldIssuer,
-					false, false, false),
+					false, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -633,11 +643,13 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 						consts.FieldDisableISSValidation, strconv.FormatBool(false)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						consts.FieldDisableLocalCAJWT, strconv.FormatBool(false)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						consts.FieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(false)),
 				),
 			},
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, oldJWT, oldIssuer,
-					false, false, false),
+					false, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -659,6 +671,8 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 						consts.FieldDisableISSValidation, strconv.FormatBool(false)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						consts.FieldDisableLocalCAJWT, strconv.FormatBool(false)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						consts.FieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(false)),
 				),
 			},
 		},
