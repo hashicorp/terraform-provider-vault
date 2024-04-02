@@ -41,6 +41,13 @@ func sshSecretBackendCAResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Whether Vault should generate the signing key pair internally.",
 			},
+			"key_type": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "ssh-rsa",
+				ForceNew:    true,
+				Description: "Specifies the desired key type for the generated SSH CA key when generate_signing_key is set to true.",
+			},
 			"private_key": {
 				Type:        schema.TypeString,
 				Optional:    true,

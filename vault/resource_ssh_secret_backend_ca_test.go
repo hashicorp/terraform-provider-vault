@@ -101,6 +101,7 @@ resource "vault_mount" "test" {
 resource "vault_ssh_secret_backend_ca" "test" {
   backend              = vault_mount.test.path
   generate_signing_key = true
+  key_type             = "ssh-ed25519"
 }`, backend)
 }
 
