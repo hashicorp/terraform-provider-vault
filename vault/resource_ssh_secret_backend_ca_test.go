@@ -31,6 +31,22 @@ func TestAccSSHSecretBackendCA_basic(t *testing.T) {
 	})
 }
 
+func TestAccSSHSecretBackendCA_generated(t *testing.T) {
+	backend := "ssh-" + acctest.RandString(10)
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testAccCheckSSHSecretBackendCADestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSSHSecretBackendCAConfigGeneratedWithParams(backend),
+				Check:  testAccSSHSecretBackendCACheck(backend),
+			},
+		},
+	})
+}
+
 func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 
@@ -101,6 +117,22 @@ resource "vault_mount" "test" {
 resource "vault_ssh_secret_backend_ca" "test" {
   backend              = vault_mount.test.path
   generate_signing_key = true
+}`, backend)
+}
+
+func testAccSSHSecretBackendCAConfigGeneratedWithParams(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  type = "ssh"
+  path = "%s"
+  description = "SSH Secret backend"
+}
+
+resource "vault_ssh_secret_backend_ca" "test" {
+  backend              = vault_mount.test.path
+  generate_signing_key = true
+  key_type             = "ec"
+  key_bits             = 256
 }`, backend)
 }
 
