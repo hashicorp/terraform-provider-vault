@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add `key_type` support in `vault_ssh_secret_backend_ca`. ([#2218](https://github.com/hashicorp/terraform-provider-vault/pull/2218))
+
 ## 4.2.0 (Mar 27, 2024)
 
 FEATURES:
