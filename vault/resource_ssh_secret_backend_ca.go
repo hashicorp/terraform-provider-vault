@@ -41,6 +41,19 @@ func sshSecretBackendCAResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Whether Vault should generate the signing key pair internally.",
 			},
+			"key_type": {
+				Type:        schema.TypeString,
+				Default:     "ssh-rsa",
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Specifies the desired key type for the generated SSH CA key when `generate_signing_key` is set to `true`.",
+			},
+			"key_bits": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Specifies the desired key bits for the generated SSH CA key when `generate_signing_key` is set to `true`.",
+			},
 			"private_key": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -77,6 +90,12 @@ func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	if publicKey, ok := d.Get("public_key").(string); ok {
 		data["public_key"] = publicKey
+	}
+	if keyType, ok := d.Get("key_type").(string); ok {
+		data["key_type"] = keyType
+	}
+	if keyBits, ok := d.Get("key_bits").(int); ok {
+		data["key_bits"] = keyBits
 	}
 
 	log.Printf("[DEBUG] Writing CA information on SSH backend %q", backend)
@@ -121,7 +140,7 @@ func sshSecretBackendCARead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("public_key", secret.Data["public_key"])
 	d.Set("backend", backend)
 
-	// the API doesn't return private_key and generate_signing_key
+	// the API doesn't return private_key, generate_signing_key, key_type, or key_bits.
 	// So... if they drift, they drift.
 
 	return nil
