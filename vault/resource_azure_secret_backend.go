@@ -53,6 +53,7 @@ func azureSecretBackendResource() *schema.Resource {
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"use_microsoft_graph_api": {
+				Deprecated:  "This field is not supported in Vault-1.12+ and is the default behavior. This field will be removed in future version of the provider.",
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
