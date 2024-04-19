@@ -227,6 +227,7 @@ func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
 	issuer := "api"
+	testResource := "vault_kubernetes_auth_backend_config.config"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
@@ -237,24 +238,16 @@ func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, jwt, issuer,
 					true, true, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"backend", backend),
-					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						consts.FieldKubernetesHost, "http://example.com:443"),
-					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						consts.FieldKubernetesCACert, kubernetesCAcert),
-					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"token_reviewer_jwt", jwt),
-					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"pem_keys.#", "1"),
-					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"pem_keys.0", kubernetesPEMfile),
-					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						consts.FieldIssuer, "api"),
-					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						consts.FieldDisableISSValidation, strconv.FormatBool(true)),
-					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						consts.FieldDisableLocalCAJWT, strconv.FormatBool(true)),
+					resource.TestCheckResourceAttr(testResource, "backend", backend),
+					resource.TestCheckResourceAttr(testResource, consts.FieldKubernetesHost, "http://example.com:443"),
+					resource.TestCheckResourceAttr(testResource, consts.FieldKubernetesCACert, kubernetesCAcert),
+					resource.TestCheckResourceAttr(testResource, "token_reviewer_jwt", jwt),
+					resource.TestCheckResourceAttr(testResource, "pem_keys.#", "1"),
+					resource.TestCheckResourceAttr(testResource, "pem_keys.0", kubernetesPEMfile),
+					resource.TestCheckResourceAttr(testResource, consts.FieldIssuer, "api"),
+					resource.TestCheckResourceAttr(testResource, consts.FieldDisableISSValidation, strconv.FormatBool(true)),
+					resource.TestCheckResourceAttr(testResource, consts.FieldDisableLocalCAJWT, strconv.FormatBool(true)),
+					resource.TestCheckResourceAttr(testResource, fieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(true)),
 				),
 			},
 		},
@@ -451,6 +444,7 @@ resource "vault_kubernetes_auth_backend_config" "config" {
   issuer = %q
   disable_iss_validation = %t
   disable_local_ca_jwt = %t
+  use_annotations_as_alias_metadata = true
 }`, backend, caConfig, jwt, kubernetesPEMfile, issuer, disableIssValidation, disableLocalCaJwt)
 
 	return config
