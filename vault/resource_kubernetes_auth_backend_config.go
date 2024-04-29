@@ -18,6 +18,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
+const fieldUseAnnotationsAsAliasMetadata = "use_annotations_as_alias_metadata"
+
 var (
 	kubernetesAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$")
 	// overrideKubernetesFieldsMap maps resource IDs to a slice of strings containing
@@ -81,6 +83,12 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 			Computed:    true,
 			Optional:    true,
 			Description: "Optional disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.",
+		},
+		fieldUseAnnotationsAsAliasMetadata: {
+			Type:        schema.TypeBool,
+			Computed:    true,
+			Optional:    true,
+			Description: "Use annotations from the client token's associated service account as alias metadata for the Vault entity.",
 		},
 	}
 	return &schema.Resource{
@@ -177,6 +185,13 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 	if v, ok := d.GetOk(consts.FieldDisableLocalCAJWT); ok {
 		data[consts.FieldDisableLocalCAJWT] = v
 	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion116) {
+		if v := d.Get(fieldUseAnnotationsAsAliasMetadata); v != nil {
+			data[fieldUseAnnotationsAsAliasMetadata] = v
+		}
+	}
+
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		return fmt.Errorf("error writing Kubernetes auth backend config %q: %s", path, err)
@@ -243,9 +258,13 @@ func kubernetesAuthBackendConfigRead(d *schema.ResourceData, meta interface{}) e
 		consts.FieldDisableISSValidation,
 		consts.FieldDisableLocalCAJWT,
 		consts.FieldPEMKeys,
+		fieldUseAnnotationsAsAliasMetadata,
 	}
 
 	for _, k := range params {
+		if k == fieldUseAnnotationsAsAliasMetadata && !provider.IsAPISupported(meta, provider.VaultVersion116) {
+			continue
+		}
 		v := resp.Data[k]
 		if err := d.Set(k, v); err != nil {
 			return err
@@ -300,6 +319,12 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 
 	if v, ok := d.GetOk(consts.FieldDisableLocalCAJWT); ok {
 		setData(consts.FieldDisableLocalCAJWT, v)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion116) {
+		if v := d.Get(fieldUseAnnotationsAsAliasMetadata); v != nil {
+			data[fieldUseAnnotationsAsAliasMetadata] = v
+		}
 	}
 
 	_, err := client.Logical().Write(path, data)

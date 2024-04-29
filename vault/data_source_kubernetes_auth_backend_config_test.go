@@ -62,6 +62,7 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 	issuer := "kubernetes/serviceaccount"
 	disableIssValidation := true
 	disableLocalCaJwt := true
+	useAnnotationsAsAliasMetadata := true
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
@@ -90,6 +91,8 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 						consts.FieldDisableISSValidation, strconv.FormatBool(disableIssValidation)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						consts.FieldDisableLocalCAJWT, strconv.FormatBool(disableLocalCaJwt)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						fieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(useAnnotationsAsAliasMetadata)),
 				),
 			},
 			{
@@ -113,6 +116,8 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 						consts.FieldDisableISSValidation, strconv.FormatBool(disableIssValidation)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						consts.FieldDisableLocalCAJWT, strconv.FormatBool(disableLocalCaJwt)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						fieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(useAnnotationsAsAliasMetadata)),
 				),
 			},
 		},

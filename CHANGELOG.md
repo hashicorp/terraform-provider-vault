@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add support for `use_annotations_as_alias_metadata` field for the `vault_kubernetes_auth_backend_config` resource ([#2206](https://github.com/hashicorp/terraform-provider-vault/pull/2206))
+
 ## 4.2.0 (Mar 27, 2024)
 
 FEATURES:
