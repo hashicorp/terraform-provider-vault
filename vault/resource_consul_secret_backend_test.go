@@ -140,8 +140,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 	resourceName := resourceType + ".test"
 	resourceRoleName := "vault_consul_secret_backend_role.test"
 
-	cleanup, consulConfig := testcontainer.PrepareTestContainer(t, "1.12.3", false, false)
-	t.Cleanup(cleanup)
+	consulConfig := testcontainer.PrepareConsulTestContainer(t)
 	consulAddr := consulConfig.Address()
 
 	resource.Test(t, resource.TestCase{
