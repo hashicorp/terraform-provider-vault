@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -26,6 +26,34 @@ const (
 	fieldOCIImage = "oci_image"
 	fieldRuntime  = "runtime"
 )
+
+var (
+	// Version regex is intentionally loose, its main purpose is to disallow
+	// slashes so they can be used to delineate from the name. Version segment
+	// is optional.
+	pluginIDRegex = regexp.MustCompile(`^(auth|secret|database)(?:/version/([0-9a-zA-Z.-]+?))?/name/(.+)$`)
+)
+
+func pluginFromID(id string) (typ string, name string, version string) {
+	matches := pluginIDRegex.FindStringSubmatch(id)
+	switch {
+	case matches == nil || len(matches) < 3:
+		return "", "", ""
+	case len(matches) == 3:
+		return matches[1], matches[2], ""
+	default:
+		return matches[1], matches[3], matches[2]
+	}
+}
+
+func idFromPlugin(typ, name, version string) string {
+	if version == "" {
+		return fmt.Sprintf("%s/name/%s", typ, name)
+
+	}
+
+	return fmt.Sprintf("%s/version/%s/name/%s", typ, version, name)
+}
 
 func pluginResource() *schema.Resource {
 	return &schema.Resource{
@@ -109,10 +137,7 @@ func pluginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 	}
 	name := d.Get(consts.FieldName).(string)
 	version := d.Get(consts.FieldVersion).(string)
-	id := fmt.Sprintf("%s/%s", pluginType, name)
-	if version != "" {
-		id = fmt.Sprintf("%s/%s", id, version)
-	}
+	id := idFromPlugin(pluginType.String(), name, version)
 
 	if diagErr := versionedPluginsSupported(meta, version); diagErr != nil {
 		return diagErr
@@ -152,16 +177,9 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 		return diag.FromErr(e)
 	}
 
-	var typ, name, version string
-	parts := strings.Split(d.Id(), "/")
-	lenParts := len(parts)
-	switch lenParts {
-	case 0, 1:
-		return diag.Errorf("invalid ID %q, must be of form <type>/<name> or <type>/<name>/<semantic-version>", d.Id())
-	case 2:
-		typ, name = parts[0], parts[1]
-	default:
-		typ, name, version = parts[0], strings.Join(parts[1:lenParts-1], "/"), parts[lenParts-1]
+	typ, name, version := pluginFromID(d.Id())
+	if typ == "" || name == "" {
+		diag.Errorf("invalid ID %q, must be of form :type/name/:name or :type/version/:version/name/:name", d.Id())
 	}
 
 	if diagErr := versionedPluginsSupported(meta, version); diagErr != nil {
