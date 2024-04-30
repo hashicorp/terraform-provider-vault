@@ -69,12 +69,12 @@ No additional attributes are exported by this resource.
 
 ## Import
 
-Plugins can be imported using `type/name` or `type/name/version` as the ID if the version is non-empty, e.g.
+Plugins can be imported using `:type/name/:name` or `:type/version/:version/name/:name` as the ID if the version is non-empty, e.g.
 
 ```
-$ terraform import vault_plugin.jwt auth/jwt
+$ terraform import vault_plugin.jwt auth/name/jwt
 ```
 
 ```
-$ terraform import vault_plugin.jwt auth/jwt/v0.17.0
+$ terraform import vault_plugin.jwt auth/version/v0.17.0/name/jwt
 ```
