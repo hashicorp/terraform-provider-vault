@@ -43,7 +43,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
 
 * `name` - (Required) Unique name of the Azure destination.
 
@@ -69,6 +69,9 @@ The following arguments are supported:
 
 * `secret_name_template` - (Optional) Template describing how to generate external secret names.
   Supports a subset of the Go Template syntax.
+
+* `granularity` - (Optional) Determines what level of information is synced as a distinct resource
+  at the destination. Supports `secret-path` and `secret-key`.
 
 ## Attributes Reference
 

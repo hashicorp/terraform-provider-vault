@@ -120,20 +120,10 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			Type:     schema.TypeString,
 			Required: true,
 		},
-		"allowed_user_key_lengths": {
-			Type:          schema.TypeMap,
-			Optional:      true,
-			ConflictsWith: []string{"allowed_user_key_config"},
-			Deprecated:    "Set in allowed_user_key_config",
-			Elem: &schema.Schema{
-				Type: schema.TypeInt,
-			},
-		},
 		"allowed_user_key_config": {
-			Type:          schema.TypeSet,
-			Optional:      true,
-			Description:   "Set of allowed public key types and their relevant configuration",
-			ConflictsWith: []string{"allowed_user_key_lengths"},
+			Type:        schema.TypeSet,
+			Optional:    true,
+			Description: "Set of allowed public key types and their relevant configuration",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"type": {
@@ -200,7 +190,6 @@ func sshSecretBackendRoleResource() *schema.Resource {
 		Read:   provider.ReadWrapper(sshSecretBackendRoleRead),
 		Update: sshSecretBackendRoleWrite,
 		Delete: sshSecretBackendRoleDelete,
-		Exists: sshSecretBackendRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -293,50 +282,20 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		data["not_before_duration"] = v.(string)
 	}
 
-	var isUserKeyConfig bool
 	if v, ok := d.GetOk("allowed_user_key_config"); ok {
 		// post vault-1.10
-		isUserKeyConfig = true
 		vals := make(map[string][]interface{})
 		for _, m := range v.(*schema.Set).List() {
 			val := m.(map[string]interface{})
 			vals[val["type"].(string)] = val["lengths"].([]interface{})
 		}
 		data["allowed_user_key_lengths"] = vals
-	} else if v, ok := d.GetOk("allowed_user_key_lengths"); ok {
-		// pre vault-1.10
-		data["allowed_user_key_lengths"] = v
 	}
 
 	log.Printf("[DEBUG] Writing role %q on SSH backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		// in the case where vault does not support a list of key lengths,
-		// we fall back to map[string]interface{}.
-		// TODO: once we support Vault API version semantics,
-		// we can use it rather than checking the error string.
-		if isUserKeyConfig && strings.Contains(err.Error(),
-			"error processing allowed_user_key_lengths") {
-			keyConfigs := make(map[string]interface{}, 0)
-			for k, v := range data["allowed_user_key_lengths"].(map[string][]interface{}) {
-				var l interface{}
-				count := len(v)
-				if count > 0 {
-					l = v[0]
-				}
-				if count > 1 {
-					log.Printf("[WARN] Only single key lengths are supported by the Vault server, "+
-						"but %d are configured for key type %q", count, k)
-				}
-				keyConfigs[k] = l
-			}
-			data["allowed_user_key_lengths"] = keyConfigs
-			_, err = client.Logical().Write(path, data)
-		}
-
-		if err != nil {
-			return fmt.Errorf("error writing role %q for backend %q: %s", name, backend, err)
-		}
+		return fmt.Errorf("error writing role %q for backend %q: %s", name, backend, err)
 	}
 	log.Printf("[DEBUG] Wrote role %q on SSH backend %q", name, backend)
 
@@ -422,35 +381,9 @@ func setSSHRoleKeyConfig(d *schema.ResourceData, role *api.Secret) error {
 		return err
 	}
 
-	newField := "allowed_user_key_config"
-	legacyField := "allowed_user_key_lengths"
-	// work around to support the allowed_user_key_lengths with Vault 1.10+
-	if _, ok := d.GetOk(legacyField); ok {
-		v := make(map[string]interface{})
-		for _, val := range keyConfigs {
-			keyType := val["type"].(string)
-			lengths := val["lengths"].([]interface{})
-			var l interface{}
-			count := len(lengths)
-			if count > 0 {
-				l = lengths[0]
-			}
-
-			if count > 1 {
-				log.Printf("[WARN] Vault 1.10+ returned more than one "+
-					"key length for key type %q, specify key lengths in a "+
-					"%q block instead of %q with values %v",
-					newField, keyType, legacyField, lengths)
-			}
-
-			v[keyType] = l
-		}
-
-		return d.Set(legacyField, v)
-	} else {
-		// set the key configuration
-		return d.Set(newField, keyConfigs)
-	}
+	field := "allowed_user_key_config"
+	// set the key configuration
+	return d.Set(field, keyConfigs)
 }
 
 func getSSHRoleKeyConfig(role *api.Secret) ([]map[string]interface{}, error) {
@@ -499,22 +432,6 @@ func sshSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Deleted role %q", path)
 
 	return nil
-}
-
-func sshSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if %q exists", path)
-	role, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if %q exists", path)
-	return role != nil, nil
 }
 
 func sshRoleResourcePath(backend, name string) string {

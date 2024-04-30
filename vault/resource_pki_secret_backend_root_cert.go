@@ -45,7 +45,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 		},
 		SchemaVersion: 1,
 		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
-			key := consts.FieldSerial
+			key := consts.FieldSerialNumber
 			o, _ := d.GetChange(key)
 			// skip on new resource
 			if o.(string) == "" {
@@ -274,12 +274,6 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Computed:    true,
 				Description: "The issuing CA.",
 			},
-			consts.FieldSerial: {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Deprecated:  "Use serial_number instead",
-				Description: "The serial number.",
-			},
 			consts.FieldSerialNumber: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -426,14 +420,10 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	}
 	log.Printf("[DEBUG] Created root cert on PKI secret backend %q", backend)
 
-	// helpful to consolidate code into single loop
-	// since 'serial' is deprecated, we read the 'serial_number'
-	// field from the response in order to set to the TF state
 	certFieldsMap := map[string]string{
 		consts.FieldCertificate:  consts.FieldCertificate,
 		consts.FieldIssuingCA:    consts.FieldIssuingCA,
 		consts.FieldSerialNumber: consts.FieldSerialNumber,
-		consts.FieldSerial:       consts.FieldSerialNumber,
 	}
 
 	// multi-issuer API fields that are set to TF state
@@ -550,6 +540,7 @@ func pkiSecretBackendDeleteRootPath(backend string) string {
 	return strings.Trim(backend, "/") + "/root"
 }
 
+// Deprecated — internal-only. Removed in next major version bump
 func pkiSecretSerialNumberResourceV0() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
@@ -562,6 +553,7 @@ func pkiSecretSerialNumberResourceV0() *schema.Resource {
 	}
 }
 
+// Deprecated — internal-only. Removed in next major version bump
 func pkiSecretSerialNumberUpgradeV0(
 	_ context.Context, rawState map[string]interface{}, _ interface{},
 ) (map[string]interface{}, error) {

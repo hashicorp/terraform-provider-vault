@@ -49,12 +49,13 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldKeyVaultURI, keyVaultURI),
 					resource.TestCheckResourceAttr(resourceName, fieldCloud, "cloud"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
 			},
 			{
-				Config: testAzureSecretsSyncDestinationConfig_initial(keyVaultURI, clientID, clientSecret, tenantID, destName, updatedSecretsSyncTemplate),
+				Config: testAzureSecretsSyncDestinationConfig_updated(keyVaultURI, clientID, clientSecret, tenantID, destName, secretsKeyTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -63,7 +64,8 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, tenantID),
 					resource.TestCheckResourceAttr(resourceName, fieldKeyVaultURI, keyVaultURI),
 					resource.TestCheckResourceAttr(resourceName, fieldCloud, "cloud"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, updatedSecretsSyncTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, secretsKeyTemplate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-key"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),

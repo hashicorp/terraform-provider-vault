@@ -8,6 +8,7 @@ description: |-
 
 # vault\_auth\_backend
 
+This resource enables a new auth method at the given path.
 
 ## Example Usage
 
@@ -28,7 +29,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `type` - (Required) The name of the auth method type.

@@ -305,7 +305,7 @@ func TestReadEntity(t *testing.T) {
 			expectedRetries: 5,
 			wantError: fmt.Errorf(`failed reading %q`,
 				entity.JoinEntityID("retry-exhausted-custom-max-412")),
-			retryWait: time.Millisecond,
+			retryWait: 500 * time.Millisecond,
 		},
 	}
 

@@ -103,6 +103,14 @@ func kvSecretRead(_ context.Context, d *schema.ResourceData, meta interface{}) d
 	log.Printf("[DEBUG] secret: %#v", secret)
 
 	data := secret.Data
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return diag.Errorf("error marshaling JSON for %q: %s", path, err)
+	}
+
+	if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
+		return diag.FromErr(err)
+	}
 
 	if err := d.Set(consts.FieldData, serializeDataMapToString(data)); err != nil {
 		return diag.FromErr(err)

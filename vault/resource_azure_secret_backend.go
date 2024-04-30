@@ -4,6 +4,8 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func azureSecretBackendResource() *schema.Resource {
@@ -50,6 +53,7 @@ func azureSecretBackendResource() *schema.Resource {
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"use_microsoft_graph_api": {
+				Deprecated:  "This field is not supported in Vault-1.12+ and is the default behavior. This field will be removed in future version of the provider.",
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
@@ -134,20 +138,19 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading Azure backend mount %q from Vault", path)
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return fmt.Errorf("error reading mount %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Read Azure backend mount %q from Vault", path)
 
-	// the API always returns the path with a trailing slash, so let's make
-	// sure we always specify it as a trailing slash.
-	mount, ok := mounts[strings.Trim(path, "/")+"/"]
-	if !ok {
-		log.Printf("[WARN] Mount %q not found, removing backend from state.", path)
+	mount, err := mountutil.GetMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
 	}
+
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[DEBUG] Read Azure backend mount %q from Vault", path)
 
 	log.Printf("[DEBUG] Read Azure secret Backend config %s", path)
 	resp, err := client.Logical().Read(azureSecretBackendPath(path))
@@ -244,13 +247,17 @@ func azureSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, e
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if Azure backend exists at %q", path)
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
+
+	_, err := mountutil.GetMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		return false, nil
 	}
-	log.Printf("[DEBUG] Checked if Azure backend exists at %q", path)
-	_, ok := mounts[strings.Trim(path, "/")+"/"]
-	return ok, nil
+
+	if err != nil {
+		return true, err
+	}
+
+	return true, nil
 }
 
 func azureSecretBackendPath(path string) string {

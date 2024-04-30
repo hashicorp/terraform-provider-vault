@@ -29,7 +29,6 @@ func transitSecretBackendKeyResource() *schema.Resource {
 		Read:   provider.ReadWrapper(transitSecretBackendKeyRead),
 		Update: transitSecretBackendKeyUpdate,
 		Delete: transitSecretBackendKeyDelete,
-		Exists: transitSecretBackendKeyExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -78,20 +77,11 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Description: "If set, enables taking backup of named key in the plaintext format. Once set, this cannot be disabled.",
 				Default:     false,
 			},
-			"auto_rotate_interval": {
-				Type:          schema.TypeInt,
-				Optional:      true,
-				Computed:      true,
-				Deprecated:    "Use auto_rotate_period instead",
-				Description:   "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
-				ConflictsWith: []string{"auto_rotate_period"},
-			},
 			"auto_rotate_period": {
-				Type:          schema.TypeInt,
-				Optional:      true,
-				Computed:      true,
-				Description:   "Amount of seconds the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
-				ConflictsWith: []string{"auto_rotate_interval"},
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "Amount of seconds the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
 			},
 			"type": {
 				Type:         schema.TypeString,
@@ -252,13 +242,7 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 func getTransitAutoRotatePeriod(d *schema.ResourceData) int {
 	var autoRotatePeriod int
 	v, ok := d.GetOkExists("auto_rotate_period")
-	if !ok {
-		if v, ok := d.GetOkExists("auto_rotate_interval"); ok {
-			log.Printf("[WARN] Using auto_rotate_internal to set auto_rotate_period, " +
-				"please use auto_rotate_period instead")
-			autoRotatePeriod = v.(int)
-		}
-	} else {
+	if ok {
 		autoRotatePeriod = v.(int)
 	}
 
@@ -390,32 +374,15 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		"deletion_allowed", "derived", "exportable",
 		"supports_decryption", "supports_derivation",
 		"supports_encryption", "supports_signing", "type",
-	}
-
-	set := func(f, k string) error {
-		v, ok := secret.Data[k]
-		if !ok {
-			log.Printf("[WARN] Expected key %q not found in response, path=%q", k, path)
-		}
-		if err := d.Set(f, v); err != nil {
-			return err
-		}
-		return nil
+		"auto_rotate_period",
 	}
 
 	for _, f := range fields {
-		if err := set(f, f); err != nil {
-			return err
+		if v, ok := secret.Data[f]; ok {
+			if err := d.Set(f, v); err != nil {
+				return err
+			}
 		}
-	}
-
-	autoRotatePeriodField := "auto_rotate_period"
-	if _, ok := d.GetOkExists("auto_rotate_interval"); ok {
-		autoRotatePeriodField = "auto_rotate_interval"
-	}
-
-	if err := set(autoRotatePeriodField, "auto_rotate_period"); err != nil {
-		return nil
 	}
 
 	return nil
@@ -463,22 +430,6 @@ func transitSecretBackendKeyDelete(d *schema.ResourceData, meta interface{}) err
 	}
 	log.Printf("[DEBUG] Deleted keyu %q", path)
 	return nil
-}
-
-func transitSecretBackendKeyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if key %q exists", path)
-	secret, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if key %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if key %q exists", path)
-	return secret != nil, nil
 }
 
 func transitSecretBackendKeyPath(backend string, name string) string {

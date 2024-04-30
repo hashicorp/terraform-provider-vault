@@ -4,6 +4,8 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func rabbitMQSecretBackendResource() *schema.Resource {
@@ -152,17 +155,17 @@ func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading RabbitMQ secret backend mount %q from Vault", path)
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return fmt.Errorf("error reading mount %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Read RabbitMQ secret backend mount %q from Vault", path)
-	mount, ok := mounts[strings.Trim(path, "/")+"/"]
-	if !ok {
-		log.Printf("[WARN] Mount %q not found, removing backend from state.", path)
+	mount, err := mountutil.GetMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
 	}
+
+	if err != nil {
+		return err
+	}
+
 	d.Set(consts.FieldPath, path)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
@@ -245,11 +248,15 @@ func rabbitMQSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if RabbitMQ backend exists at %q", path)
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
+
+	_, err := mountutil.GetMount(context.Background(), client, path)
+	if errors.Is(err, mountutil.ErrMountNotFound) {
+		return false, nil
 	}
-	log.Printf("[DEBUG] Checked if RabbitMQ backend exists at %q", path)
-	_, ok := mounts[strings.Trim(path, "/")+"/"]
-	return ok, nil
+
+	if err != nil {
+		return true, err
+	}
+
+	return true, nil
 }

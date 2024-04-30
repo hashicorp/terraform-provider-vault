@@ -5,7 +5,6 @@ package vault
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -109,21 +108,14 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 				Check:  getCheckFuncs(false),
 			},
 			{
-				Config: testAccSSHSecretBackendRoleConfig_updated(name, backend, false, true, extraFields),
+				Config: testAccSSHSecretBackendRoleConfig_updated(name, backend, false, extraFields),
 				Check: resource.ComposeTestCheckFunc(
 					getCheckFuncs(true),
-					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_lengths.rsa", "2048"),
 				),
 			},
 			{
 				Config: testAccSSHSecretBackendRoleConfig_updated(
-					name, backend, true, true, extraFields),
-				ExpectError: regexp.MustCompile(`"allowed_user_key_config": conflicts with allowed_user_key_lengths`),
-				Destroy:     false,
-			},
-			{
-				Config: testAccSSHSecretBackendRoleConfig_updated(
-					name, backend, true, false, extraFields),
+					name, backend, true, extraFields),
 				Check: resource.ComposeTestCheckFunc(
 					getCheckFuncs(true),
 					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.#", "2"),
@@ -259,8 +251,8 @@ resource "vault_ssh_secret_backend_role" "test_role" {
 	return config
 }
 
-func testAccSSHSecretBackendRoleConfig_updated(name, path string, withAllowedUserKeys,
-	withAllowedUserKeyLen bool, extraFields string,
+func testAccSSHSecretBackendRoleConfig_updated(name, path string, withAllowedUserKeys bool,
+	extraFields string,
 ) string {
 	fragments := []string{
 		fmt.Sprintf(`
@@ -320,14 +312,6 @@ resource "vault_ssh_secret_backend_role" "test_role" {
 				lengths = allowed_user_key_config.value["lengths"]
 			}
 		}
-`)
-	}
-
-	if withAllowedUserKeyLen {
-		fragments = append(fragments, `
-  allowed_user_key_lengths = {
-    "rsa" = 2048
-  }
 `)
 	}
 

@@ -14,12 +14,13 @@ import (
 )
 
 func TestSecretsSyncConfig(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "VAULT_SECRETS_SYNC_ENABLED")
 	resourceName := "vault_secrets_sync_config.test"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{

@@ -69,9 +69,19 @@ var (
 			Resource:      UpdateSchemaResource(ldapDynamicCredDataSource()),
 			PathInventory: []string{"/ldap/creds/{role}"},
 		},
+		"vault_namespace": {
+			Resource:       UpdateSchemaResource(namespaceDataSource()),
+			PathInventory:  []string{"/sys/namespaces/{path}"},
+			EnterpriseOnly: true,
+		},
 		"vault_ad_access_credentials": {
 			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},
+		},
+		"vault_namespaces": {
+			Resource:       UpdateSchemaResource(namespacesDataSource()),
+			PathInventory:  []string{"/sys/namespaces"},
+			EnterpriseOnly: true,
 		},
 		"vault_nomad_access_token": {
 			Resource:      UpdateSchemaResource(nomadAccessCredentialsDataSource()),
@@ -753,6 +763,10 @@ var (
 			Resource:      UpdateSchemaResource(githubSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/gh/{name}"},
 		},
+		"vault_secrets_sync_github_apps": {
+			Resource:      UpdateSchemaResource(githubAppsSecretsSyncResource()),
+			PathInventory: []string{"/sys/sync/github-apps/{name}"},
+		},
 		"vault_secrets_sync_vercel_destination": {
 			Resource:      UpdateSchemaResource(vercelSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/vercel-project/{name}"},
@@ -760,6 +774,10 @@ var (
 		"vault_secrets_sync_association": {
 			Resource:      UpdateSchemaResource(secretsSyncAssociationResource()),
 			PathInventory: []string{"/sys/sync/destinations/{type}/{name}/associations/set"},
+		},
+		"vault_config_ui_custom_message": {
+			Resource:      UpdateSchemaResource(configUICustomMessageResource()),
+			PathInventory: []string{"/sys/config/ui/custom-messages"},
 		},
 		"vault_plugin": {
 			Resource:      UpdateSchemaResource(pluginResource()),

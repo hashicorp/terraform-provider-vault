@@ -250,7 +250,9 @@ func approleAuthBackendRoleSecretIDRead(ctx context.Context, d *schema.ResourceD
 	})
 	if err != nil {
 		// We need to check if the secret_id has expired
-		if util.IsExpiredTokenErr(err) {
+		if util.IsExpiredTokenErr(err) || util.Is404(err) {
+			log.Printf("[WARN] AppRole auth backend role SecretID %q from %q not found, removing from state", id, path)
+			d.SetId("")
 			return nil
 		}
 		if isAppRoleDoesNotExistError(err, role) {

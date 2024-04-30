@@ -26,6 +26,7 @@ For more information on syncing secrets with GCP, please refer to the Vault
 ```hcl
 resource "vault_secrets_sync_gcp_destination" "gcp" {
   name                 = "gcp-dest"
+  project_id           = "gcp-project-id"
   credentials          = file(var.credentials_file)
   secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
   custom_tags          = {
@@ -40,7 +41,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
 
 * `name` - (Required) Unique name of the GCP destination.
 
@@ -52,6 +53,14 @@ The following arguments are supported:
 
 * `secret_name_template` - (Optional) Template describing how to generate external secret names.
   Supports a subset of the Go Template syntax.
+
+* `granularity` - (Optional) Determines what level of information is synced as a distinct resource
+  at the destination. Supports `secret-path` and `secret-key`.
+
+* `project_id` - (Optional) The target project to manage secrets in. If set,
+  overrides the project ID derived from the service account JSON credentials or application
+  default credentials. The service account must be [authorized](https://cloud.google.com/iam/docs/service-account-overview#locations)
+  to perform Secret Manager actions in the target project.
 
 ## Attributes Reference
 

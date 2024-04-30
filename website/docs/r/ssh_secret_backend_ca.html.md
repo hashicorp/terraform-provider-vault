@@ -29,12 +29,16 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Optional) The path where the SSH secret backend is mounted. Defaults to 'ssh'
 
 * `generate_signing_key` - (Optional) Whether Vault should generate the signing key pair internally. Defaults to true
+
+* `key_type` - (Optional) Specifies the desired key type for the generated SSH CA key when `generate_signing_key` is set to `true`.
+
+* `key_bits` - (Optional) Specifies the desired key bits for the generated SSH CA key when `generate_signing_key` is set to `true`.
 
 * `public_key` - (Optional) The public key part the SSH CA key pair; required if generate_signing_key is false.
 

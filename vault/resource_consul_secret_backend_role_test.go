@@ -343,7 +343,6 @@ resource "vault_consul_secret_backend_role" "test" {
   ttl = 120
   max_ttl = 240
   local = true
-  token_type = "client"
 `, path, token, name)
 
 	if useLegacyPolicies {

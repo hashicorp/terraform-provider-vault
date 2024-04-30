@@ -27,7 +27,7 @@ resource "vault_mount" "mongo" {
 }
 
 resource "vault_mongodbatlas_secret_backend" "config" {
-  mount        = "vault_mount.mongo.path"
+  mount        = vault_mount.mongo.path
   private_key  = "privateKey"
   public_key   = "publicKey"
 }
@@ -39,7 +39,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
 * `mount` - (Required) Path where the MongoDB Atlas Secrets Engine is mounted.

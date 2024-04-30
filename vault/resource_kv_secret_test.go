@@ -63,6 +63,49 @@ func TestAccKVSecret(t *testing.T) {
 		},
 	})
 }
+func TestAccKVSecret_UpdateOutsideTerraform(t *testing.T) {
+	t.Parallel()
+	resourceName := "vault_kv_secret.test"
+	mount := acctest.RandomWithPrefix("tf-kvv2")
+	name := acctest.RandomWithPrefix("tf-secret")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKVSecretConfig_basic(mount, name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s", mount, name)),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
+					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					assertKVV1Data(resourceName),
+				),
+			},
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+					// Simulate external change using Vault CLI for KV v1
+					path := fmt.Sprintf("%s/%s", mount, name)
+					_, err := client.Logical().Write(path, map[string]interface{}{"testkey3": "testvalue3"})
+					if err != nil {
+						t.Fatalf("error simulating external change; err=%s", err)
+					}
+				},
+				Config: testKVSecretConfig_basic(mount, name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s", mount, name)),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
+					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					assertKVV1Data(resourceName),
+				),
+			},
+		},
+	})
+}
 
 func kvV1MountConfig(path string) string {
 	ret := fmt.Sprintf(`
