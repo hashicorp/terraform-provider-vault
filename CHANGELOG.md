@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add support for `iam_tags` in `vault_aws_secret_backend_role` ([#2231](https://github.com/hashicorp/terraform-provider-vault/pull/2231)).
+
 ## 4.2.0 (Mar 27, 2024)
 
 FEATURES:
