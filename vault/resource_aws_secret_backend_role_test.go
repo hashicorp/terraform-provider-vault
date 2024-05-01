@@ -27,6 +27,10 @@ const (
 	testAccAWSSecretBackendRolePermissionsBoundaryArn_updated = "arn:aws:iam::123456789123:policy/boundary2"
 	testAccAWSSecretBackendRoleIamUserPath_basic              = "/path1/"
 	testAccAWSSecretBackendRoleIamUserPath_updated            = "/path2/"
+	testAccAWSSecretBackendRoleIamTag_key_basic               = "key1"
+	testAccAWSSecretBackendRoleIamTag_value_basic             = "value1"
+	testAccAWSSecretBackendRoleIamTag_key_updated             = "key2"
+	testAccAWSSecretBackendRoleIamTag_value_updated           = "value2"
 )
 
 func TestAccAWSSecretBackendRole_basic(t *testing.T) {
@@ -145,9 +149,6 @@ func testAccAWSSecretBackendRoleCheckBasicAttributes(name, backend string) resou
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "backend", backend),
 		testutil.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_policy_inline", "policy_document", testAccAWSSecretBackendRolePolicyInline_basic),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_groups.#", "0"),
-		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_tags.#", "0"),
-		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_tags.key1", "value1"),
-		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "iam_tags.key2", "value2"),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arns", "name", fmt.Sprintf("%s-policy-arn", name)),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arns", "backend", backend),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arns", "policy_arns.#", "1"),
@@ -170,6 +171,8 @@ func testAccAWSSecretBackendRoleCheckBasicAttributes(name, backend string) resou
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "policy_arns.0", testAccAWSSecretBackendRolePolicyArn_basic),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "permissions_boundary_arn", testAccAWSSecretBackendRolePermissionsBoundaryArn_basic),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "user_path", testAccAWSSecretBackendRoleIamUserPath_basic),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "iam_tags.%", "1"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", fmt.Sprintf("iam_tags.%s", testAccAWSSecretBackendRoleIamTag_key_basic), testAccAWSSecretBackendRoleIamTag_value_basic),
 	)
 }
 
@@ -208,6 +211,8 @@ func testAccAWSSecretBackendRoleCheckUpdatedAttributes(name, backend string) res
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "policy_arns.0", testAccAWSSecretBackendRolePolicyArn_updated),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "permissions_boundary_arn", testAccAWSSecretBackendRolePermissionsBoundaryArn_updated),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "user_path", testAccAWSSecretBackendRoleIamUserPath_updated),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "iam_tags.%", "1"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", fmt.Sprintf("iam_tags.%s", testAccAWSSecretBackendRoleIamTag_key_updated), testAccAWSSecretBackendRoleIamTag_value_updated),
 	)
 }
 
@@ -227,10 +232,6 @@ resource "vault_aws_secret_backend_role" "test_policy_inline" {
   policy_document = %q
   credential_type = "assumed_role"
   backend = vault_aws_secret_backend.test.path
-  iam_tags = {
-    "key1" = "value1"
-    "key2" = "value2"
-  }
 }
 `, name, testAccAWSSecretBackendRolePolicyInline_basic),
 
@@ -281,8 +282,17 @@ resource "vault_aws_secret_backend_role" "test_iam_user_type_optional_attributes
   backend = vault_aws_secret_backend.test.path
   permissions_boundary_arn = "%s"
   user_path = "%s"
+  iam_tags = {
+    %s = "%s"
+  }
 }
-`, name, testAccAWSSecretBackendRolePolicyArn_basic, testAccAWSSecretBackendRolePermissionsBoundaryArn_basic, testAccAWSSecretBackendRoleIamUserPath_basic),
+`,
+			name,
+			testAccAWSSecretBackendRolePolicyArn_basic,
+			testAccAWSSecretBackendRolePermissionsBoundaryArn_basic,
+			testAccAWSSecretBackendRoleIamUserPath_basic,
+			testAccAWSSecretBackendRoleIamTag_key_basic,
+			testAccAWSSecretBackendRoleIamTag_value_basic),
 	}
 
 	return strings.Join(resources, "\n")
@@ -367,8 +377,17 @@ resource "vault_aws_secret_backend_role" "test_iam_user_type_optional_attributes
   backend = vault_aws_secret_backend.test.path
   permissions_boundary_arn = "%s"
   user_path = "%s"
+  iam_tags = {
+	%s = "%s"
+  }
 }
-`, name, testAccAWSSecretBackendRolePolicyArn_updated, testAccAWSSecretBackendRolePermissionsBoundaryArn_updated, testAccAWSSecretBackendRoleIamUserPath_updated),
+`,
+			name,
+			testAccAWSSecretBackendRolePolicyArn_updated,
+			testAccAWSSecretBackendRolePermissionsBoundaryArn_updated,
+			testAccAWSSecretBackendRoleIamUserPath_updated,
+			testAccAWSSecretBackendRoleIamTag_key_updated,
+			testAccAWSSecretBackendRoleIamTag_value_updated),
 	}
 	return strings.Join(resources, "\n")
 }

@@ -252,6 +252,9 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := secret.Data["iam_groups"]; ok {
 		d.Set("iam_groups", v)
 	}
+	if v, ok := secret.Data["iam_tags"]; ok {
+		d.Set("iam_tags", v)
+	}
 	if v, ok := secret.Data["permissions_boundary_arn"]; ok {
 		d.Set("permissions_boundary_arn", v)
 	}
