@@ -1,5 +1,8 @@
 ## Unreleased
 
+IMPROVEMENTS:
+* return a useful error when delete fails for the `vault_jwt_auth_backend_role` resource: ([#2232](https://github.com/hashicorp/terraform-provider-vault/pull/2232))
+
 ## 4.2.0 (Mar 27, 2024)
 
 FEATURES:
