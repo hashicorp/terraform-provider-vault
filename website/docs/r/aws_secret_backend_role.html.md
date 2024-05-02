@@ -90,6 +90,9 @@ The following arguments are supported:
   policies from each group in `iam_groups` combined with the `policy_document`
   and `policy_arns` parameters.
 
+* `iam_tags` (Optional) - A map of strings representing key/value pairs
+  to be used as tags for any IAM user that is created by this role.
+
 * `default_sts_ttl` - (Optional) The default TTL in seconds for STS credentials.
   When a TTL is not specified when STS credentials are requested,
   and a default TTL is specified on the role,
