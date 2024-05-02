@@ -20,7 +20,7 @@ import (
 func TestPluginPinnedVersion(t *testing.T) {
 	const (
 		typ     = "auth"
-		version = "v1.0.0"
+		version = "1.0.0"
 	)
 
 	destName := acctest.RandomWithPrefix("tf-plugin-pinned-version")

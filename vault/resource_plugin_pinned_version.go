@@ -41,9 +41,11 @@ func pluginPinnedVersionResource() *schema.Resource {
 				ForceNew:    true,
 			},
 			consts.FieldVersion: {
-				Type:        schema.TypeString,
-				Description: "Semantic pinned plugin version.",
-				Required:    true,
+				Type:                  schema.TypeString,
+				Description:           "Semantic pinned plugin version.",
+				Required:              true,
+				DiffSuppressFunc:      diffSuppressEqualSemver,
+				DiffSuppressOnRefresh: true,
 			},
 		},
 	}

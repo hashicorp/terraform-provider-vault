@@ -53,7 +53,7 @@ func TestPlugin(t *testing.T) {
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
 					resource.TestCheckResourceAttr(resourceName, fieldSHA256, sha256),
 					resource.TestCheckResourceAttr(resourceName, fieldCommand, cmd),
 					testValidateList(resourceName, fieldArgs, []string{"--foo"}),
@@ -66,7 +66,7 @@ func TestPlugin(t *testing.T) {
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
 					resource.TestCheckResourceAttr(resourceName, fieldSHA256, sha256Updated),
 					resource.TestCheckResourceAttr(resourceName, fieldCommand, cmd),
 					testValidateList(resourceName, fieldArgs, []string{"--bar"}),

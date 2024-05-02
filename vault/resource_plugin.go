@@ -9,6 +9,7 @@ import (
 	"log"
 	"regexp"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -79,10 +80,12 @@ func pluginResource() *schema.Resource {
 				ForceNew:    true,
 			},
 			consts.FieldVersion: {
-				Type:        schema.TypeString,
-				Description: "Semantic version of the plugin.",
-				Optional:    true,
-				ForceNew:    true,
+				Type:                  schema.TypeString,
+				Description:           "Semantic version of the plugin.",
+				Optional:              true,
+				ForceNew:              true,
+				DiffSuppressFunc:      diffSuppressEqualSemver,
+				DiffSuppressOnRefresh: true,
 			},
 			fieldSHA256: {
 				Type:        schema.TypeString,
@@ -267,4 +270,22 @@ func containerizedPluginsSupported(meta interface{}, ociImage, runtime string) d
 	}
 
 	return nil
+}
+
+// diffSuppressEqualSemver is an implementation of schema.SchemaDiffSuppressFunc.
+// Vault normalizes plugin versions to have a leading v, so if users specify a
+// version without a leading v we use this to suppress the diff.
+func diffSuppressEqualSemver(_, oldValue, newValue string, _ *schema.ResourceData) bool {
+	oldVersion, err := version.NewSemver(oldValue)
+	if err != nil {
+		return false
+	}
+	newVersion, err := version.NewSemver(newValue)
+	if err != nil {
+		return false
+	}
+	if oldVersion.Equal(newVersion) {
+		return true
+	}
+	return false
 }
