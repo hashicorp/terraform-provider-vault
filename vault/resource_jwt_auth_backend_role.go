@@ -354,7 +354,7 @@ func jwtAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta in
 	log.Printf("[DEBUG] Deleting JWT auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil && !util.Is404(err) {
-		return diag.Errorf("error deleting JWT auth backend role %q", path)
+		return diag.Errorf("error deleting JWT auth backend role %q, err=%s", path, err)
 	} else if err != nil {
 		log.Printf("[DEBUG] JWT auth backend role %q not found, removing from state", path)
 		d.SetId("")
