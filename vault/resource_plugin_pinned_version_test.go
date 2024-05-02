@@ -41,7 +41,7 @@ func TestPluginPinnedVersion(t *testing.T) {
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, "v"+version),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),
