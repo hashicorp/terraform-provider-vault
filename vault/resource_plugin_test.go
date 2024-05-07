@@ -37,6 +37,8 @@ func TestPlugin(t *testing.T) {
 	resourceName := "vault_plugin.test"
 	sha256 := strings.Repeat("01234567", 8)
 	sha256Updated := strings.Repeat("12345678", 8)
+	// VAULT_PLUGIN_COMMAND should be set to the name of the plugin executable
+	// in the configured plugin_directory for Vault.
 	cmd := os.Getenv(envPluginCommand)
 
 	resource.Test(t, resource.TestCase{
