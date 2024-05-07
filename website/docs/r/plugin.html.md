@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_plugin resource"
-sidebar_current: "docs-vault-plugin"
+sidebar_current: "docs-vault-resource-plugin"
 description: |-
   Manage external plugins registered in the plugin catalog.
 ---
