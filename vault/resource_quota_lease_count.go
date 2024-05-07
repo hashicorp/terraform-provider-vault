@@ -167,8 +167,8 @@ func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
-		if d.HasChange("inheritable") {
-			data["inheritable"] = d.Get("inheritable")
+		if v, ok := d.GetOkExists("inheritable"); ok {
+			data["inheritable"] = v.(bool)
 		}
 	}
 
