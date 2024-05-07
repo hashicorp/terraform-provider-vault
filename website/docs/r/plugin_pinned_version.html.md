@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_plugin_pinned_version resource"
-sidebar_current: "docs-vault-plugin-pinned-version"
+sidebar_current: "docs-vault-resource-plugin-pinned-version"
 description: |-
   Manage pinned plugin version registered in the plugin catalog.
 ---
