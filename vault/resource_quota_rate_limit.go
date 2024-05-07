@@ -69,7 +69,6 @@ func quotaRateLimitResource() *schema.Resource {
 			"inheritable": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Computed:    true,
 				Description: "If set to true on a quota where path is set to a namespace, the same quota will be cumulatively applied to all child namespace. The inheritable parameter cannot be set to true if the path does not specify a namespace. Only the quotas associated with the root namespace are inheritable by default.",
 			},
 		},
@@ -100,10 +99,10 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 		data["block_interval"] = v
 	}
 
-	if data["path"] == "" && d.Get("inheritable") == nil {
-		data["inheritable"] = true
-	} else if v, ok := d.GetOkExists("inheritable"); ok {
-		data["inheritable"] = v.(bool)
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		if v, ok := d.GetOkExists("inheritable"); ok {
+			data["inheritable"] = v.(bool)
+		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
@@ -143,9 +142,15 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	fields := []string{"path", "rate", "interval", "block_interval", "name", "inheritable"}
+	fields := []string{"path", "rate", "interval", "block_interval", "name"}
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		fields = append(fields, consts.FieldRole)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		if _, ok := d.GetOkExists("inheritable"); ok {
+			fields = append(fields, "inheritable")
+		}
 	}
 
 	for _, k := range fields {
@@ -183,10 +188,10 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["block_interval"] = v
 	}
 
-	if data["path"] == "" && d.Get("inheritable") == nil {
-		data["inheritable"] = true
-	} else if v, ok := d.GetOkExists("inheritable"); ok {
-		data["inheritable"] = v.(bool)
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		if v, ok := d.GetOkExists("inheritable"); ok {
+			data["inheritable"] = v.(bool)
+		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
