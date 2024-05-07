@@ -52,6 +52,24 @@ func TestQuotaLeaseCount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "max_leases", newLeaseCount),
 				),
 			},
+		},
+	})
+}
+
+func TestQuotaLeaseCountRoot(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test")
+	leaseCount := "1001"
+	newLeaseCount := "2001"
+	resourceName := "vault_quota_lease_count.foobar"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		CheckDestroy: testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
+		Steps: []resource.TestStep{
 			{
 				Config: testQuotaLeaseCountConfigRootPath(name, "", newLeaseCount),
 				Check: resource.ComposeTestCheckFunc(
