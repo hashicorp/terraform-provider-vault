@@ -779,6 +779,16 @@ var (
 			Resource:      UpdateSchemaResource(configUICustomMessageResource()),
 			PathInventory: []string{"/sys/config/ui/custom-messages"},
 		},
+		"vault_plugin": {
+			// Only available in the root namespace, don't add namespace to the schema.
+			Resource:      pluginResource(),
+			PathInventory: []string{"/sys/plugins/catalog/{type}/{name}"},
+		},
+		"vault_plugin_pinned_version": {
+			// Only available in the root namespace, don't add namespace to the schema.
+			Resource:      pluginPinnedVersionResource(),
+			PathInventory: []string{"/sys/plugins/pins/{type}/{name}"},
+		},
 	}
 )
 
