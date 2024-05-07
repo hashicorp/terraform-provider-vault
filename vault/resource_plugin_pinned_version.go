@@ -99,7 +99,7 @@ func pluginPinnedVersionRead(ctx context.Context, d *schema.ResourceData, meta i
 	for k, v := range map[string]any{
 		consts.FieldType:    typ,
 		consts.FieldName:    name,
-		consts.FieldVersion: resp.Data["version"],
+		consts.FieldVersion: resp.Data[consts.FieldVersion],
 	} {
 		if err := d.Set(k, v); err != nil {
 			return diag.Errorf("error setting %q: %s", k, err)
