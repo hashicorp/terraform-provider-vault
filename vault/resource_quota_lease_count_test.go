@@ -56,8 +56,35 @@ func TestQuotaLeaseCount(t *testing.T) {
 	})
 }
 
+func TestQuotaLeaseCountRoot(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test")
+	leaseCount := "1001"
+	newLeaseCount := "2001"
+	resourceName := "vault_quota_lease_count.foobar"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		CheckDestroy: testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
+		Steps: []resource.TestStep{
+			{
+				Config: testQuotaLeaseCountConfigRootPath(name, "", newLeaseCount),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "path", ""),
+					resource.TestCheckResourceAttr(resourceName, "max_leases", newLeaseCount),
+				),
+			},
+		},
+	})
+}
+
 func TestQuotaLeaseCountWithRole(t *testing.T) {
 	name := acctest.RandomWithPrefix("lease-count")
+	ns := "ns-" + name
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 	leaseCount := "1001"
@@ -76,24 +103,131 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testQuotaLeaseCountWithRoleConfig(backend, role, name, leaseCount),
+				Config: testQuotaLeaseCountWithRoleConfig(ns, backend, role, name, leaseCount),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("auth/%s/", backend)),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/auth/%s/", ns, backend)),
 					resource.TestCheckResourceAttr(resourceName, "max_leases", leaseCount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, role),
 				),
 			},
 			{
-				Config: testQuotaLeaseCountWithRoleConfig(backend, role, name, newLeaseCount),
+				Config: testQuotaLeaseCountWithRoleConfig(ns, backend, role, name, newLeaseCount),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("auth/%s/", backend)),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/auth/%s/", ns, backend)),
 					resource.TestCheckResourceAttr(resourceName, "max_leases", newLeaseCount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, role),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),
+		},
+	})
+}
+
+func TestQuotaLeaseCountInheritable(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test")
+	ns := "ns-" + name
+	leaseCount := "1001"
+	newLeaseCount := "2001"
+	inheritable := false
+	resourceName := "vault_quota_lease_count.foobar"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+		},
+		CheckDestroy: testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
+		Steps: []resource.TestStep{
+			{
+				Config: testQuotaLeaseCountConfigInheritable(ns, name, "", leaseCount, inheritable),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, ns+"/"),
+					resource.TestCheckResourceAttr(resourceName, "max_leases", leaseCount),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", fmt.Sprintf("%t", inheritable)),
+				),
+			},
+			{
+				Config: testQuotaLeaseCountConfigInheritable(ns, name, "", newLeaseCount, inheritable),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, ns+"/"),
+					resource.TestCheckResourceAttr(resourceName, "max_leases", newLeaseCount),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", fmt.Sprintf("%t", inheritable)),
+				),
+			},
+			{
+				Config: testQuotaLeaseCountConfigInheritable(ns, name, "sys/", newLeaseCount, inheritable),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, ns+"/sys/"),
+					resource.TestCheckResourceAttr(resourceName, "max_leases", newLeaseCount),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", fmt.Sprintf("%t", inheritable)),
+				),
+			},
+			{
+				Config: testQuotaLeaseCountConfigInheritable(ns, name, "", newLeaseCount, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, ns+"/"),
+					resource.TestCheckResourceAttr(resourceName, "max_leases", newLeaseCount),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", "true"),
+				),
+			},
+		},
+	})
+}
+
+func TestQuotaLeaseCountWithRoleInheritable(t *testing.T) {
+	name := acctest.RandomWithPrefix("lease-count")
+	ns := "ns-" + name
+	backend := acctest.RandomWithPrefix("approle")
+	role := acctest.RandomWithPrefix("test-role")
+	leaseCount := "1001"
+	newLeaseCount := "2001"
+	inheritable := false
+	resourceName := "vault_quota_lease_count.foobar"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+		},
+		CheckDestroy: resource.ComposeTestCheckFunc(
+			testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
+			testAccCheckAppRoleAuthBackendRoleDestroy,
+		),
+		Steps: []resource.TestStep{
+			{
+				Config: testQuotaLeaseCountWithRoleConfigInheritable(ns, backend, role, name, leaseCount, inheritable),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/auth/%s/", ns, backend)),
+					resource.TestCheckResourceAttr(resourceName, "max_leases", leaseCount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, role),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", fmt.Sprintf("%t", inheritable)),
+				),
+			},
+			{
+				Config: testQuotaLeaseCountWithRoleConfigInheritable(ns, backend, role, name, newLeaseCount, inheritable),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/auth/%s/", ns, backend)),
+					resource.TestCheckResourceAttr(resourceName, "max_leases", newLeaseCount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, role),
+					resource.TestCheckResourceAttr(resourceName, "inheritable", fmt.Sprintf("%t", inheritable)),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"inheritable"},
+			},
 		},
 	})
 }
@@ -132,14 +266,30 @@ resource "vault_quota_lease_count" "foobar" {
 `, ns, name, path, maxLeases)
 }
 
-func testQuotaLeaseCountWithRoleConfig(backend, role, name, maxLeases string) string {
+func testQuotaLeaseCountConfigRootPath(name, path, maxLeases string) string {
 	return fmt.Sprintf(`
+resource "vault_quota_lease_count" "foobar" {
+  name       = "%s"
+  path       = "%s"
+  max_leases = %s
+}
+`, name, path, maxLeases)
+}
+
+func testQuotaLeaseCountWithRoleConfig(ns, backend, role, name, maxLeases string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+	path = "%s"
+	}
+
 resource "vault_auth_backend" "approle" {
+  namespace      = vault_namespace.test.path
   type = "approle"
   path = "%s"
 }
 
 resource "vault_approle_auth_backend_role" "role" {
+  namespace      = vault_namespace.test.path
   backend = vault_auth_backend.approle.path
   role_name = "%s"
   token_policies = ["default", "dev", "prod"]
@@ -147,9 +297,54 @@ resource "vault_approle_auth_backend_role" "role" {
 
 resource "vault_quota_lease_count" "foobar" {
   name = "%s"
-  path = "auth/${vault_auth_backend.approle.path}/"
+  path = "${vault_namespace.test.path}/auth/${vault_auth_backend.approle.path}/"
   role = vault_approle_auth_backend_role.role.role_name
   max_leases = %s
 }
-`, backend, role, name, maxLeases)
+`, ns, backend, role, name, maxLeases)
+}
+
+// Caution: Don't set test max_leases values too low or other tests running concurrently might fail
+func testQuotaLeaseCountConfigInheritable(ns, name, path, maxLeases string, inheritable bool) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+
+resource "vault_quota_lease_count" "foobar" {
+  name        = "%s"
+  path        = "${vault_namespace.test.path}/%s"
+  max_leases  = %s
+  inheritable  = %t
+}
+`, ns, name, path, maxLeases, inheritable)
+}
+
+func testQuotaLeaseCountWithRoleConfigInheritable(ns, backend, role, name, maxLeases string, inheritable bool) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+
+resource "vault_auth_backend" "approle" {
+  namespace      = vault_namespace.test.path
+  type = "approle"
+  path = "%s"
+}
+
+resource "vault_approle_auth_backend_role" "role" {
+  namespace      = vault_namespace.test.path
+  backend = vault_auth_backend.approle.path
+  role_name = "%s"
+  token_policies = ["default", "dev", "prod"]
+}
+
+resource "vault_quota_lease_count" "foobar" {
+  name = "%s"
+  path = "${vault_namespace.test.path}/auth/${vault_auth_backend.approle.path}/"
+  role = vault_approle_auth_backend_role.role.role_name
+  max_leases = %s
+  inheritable  = %t
+}
+`, ns, backend, role, name, maxLeases, inheritable)
 }
