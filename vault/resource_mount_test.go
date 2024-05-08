@@ -236,6 +236,64 @@ func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 	})
 }
 
+func TestResourceMount_IDTokenKey(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-pki")
+
+	resourceName := "vault_mount.test"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceMount_IDTokenKeyConfig(path, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "gcp"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "36000"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "plugin_version", "1.0.0"),
+					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "hidden"),
+				),
+			},
+			{
+				Config: testResourceMount_IDTokenKeyConfig(path, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "gcp"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "36000"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.2", "header3"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.2", "header3"),
+					resource.TestCheckResourceAttr(resourceName, "plugin_version", "1.2.3"),
+					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
+					resource.TestCheckResourceAttr(resourceName, "identity_token_key", "my-key"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+		},
+	})
+}
+
 func TestResourceMountMangedKeys(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-pki")
 	keyName := acctest.RandomWithPrefix("kms-key")
@@ -323,6 +381,41 @@ resource "vault_mount" "test" {
   default_lease_ttl_seconds = 7200
   max_lease_ttl_seconds     = 86400
   allowed_managed_keys      = vault_managed_keys.keys.aws[*].name
+}
+`, path)
+	}
+
+	return ret
+}
+
+func testResourceMount_IDTokenKeyConfig(path string, isUpdate bool) string {
+	ret := ""
+
+	if !isUpdate {
+		ret += fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                        = "%s"
+  type                        = "gcp"
+  default_lease_ttl_seconds   = 3600
+  max_lease_ttl_seconds       = 36000
+  passthrough_request_headers = ["header1", "header2"]
+  allowed_response_headers    = ["header1", "header2"]
+  delegated_auth_accessors    = ["header1", "header2"]
+  listing_visibility          = "hidden"
+}
+`, path)
+	} else {
+		ret += fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                        = "%s"
+  type                        = "gcp"
+  default_lease_ttl_seconds   = 3600
+  max_lease_ttl_seconds       = 36000
+  passthrough_request_headers = ["header1"]
+  allowed_response_headers    = ["header1", "header2", "header3"]
+  delegated_auth_accessors    = ["header1", "header2", "header3"]
+  listing_visibility          = "unauth"
+  identity_token_key          = "my-key"
 }
 `, path)
 	}
