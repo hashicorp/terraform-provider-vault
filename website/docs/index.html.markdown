@@ -103,7 +103,7 @@ variables in order to keep credential information out of the configuration.
   `VAULT_ADDR` in the Terraform process environment will be set to the
   value of the `address` argument from this provider. By default, this is false.
 
-* `token` - (Optional) Vault token that will be used by Terraform to
+* `token` - (Required) Vault token that will be used by Terraform to
   authenticate. May be set via the `VAULT_TOKEN` environment variable.
   If none is otherwise supplied, Terraform will attempt to read it from
   `~/.vault-token` (where the vault command stores its current token).
