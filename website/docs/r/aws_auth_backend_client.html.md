@@ -44,9 +44,9 @@ resource "vault_auth_backend" "example" {
 }
 
 resource "vault_aws_auth_backend_client" "example" { 
-  identity_token_audience   = "<TOKEN_AUDIENCE>"
-  identity_token_ttl        = "<TOKEN_TTL>"
-  role_arn		            = "<AWS_ROLE_ARN>"
+  identity_token_audience = "<TOKEN_AUDIENCE>"
+  identity_token_ttl      = "<TOKEN_TTL>"
+  role_arn                = "<AWS_ROLE_ARN>"
 }
 ```
 
