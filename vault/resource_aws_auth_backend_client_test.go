@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"regexp"
 	"testing"
 
@@ -96,6 +97,39 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 					testAccAWSAuthBackendClientCheck_attrs(backend),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "access_key", "AWSACCESSKEY"),
 					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", "secret_key"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAWSAuthBackend_wif(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resourceName := "vault_aws_auth_backend_client.client"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+		},
+		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClient_wifBasic(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn"),
+				),
+			},
+			{
+				Config: testAccAWSAuthBackendClient_wifUpdated(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn-updated"),
 				),
 			},
 		},
@@ -217,6 +251,28 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 		}
 		return nil
 	}
+}
+
+func testAccAWSAuthBackendClient_wifBasic(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+  identity_token_audience = "wif-audience"
+  identity_token_ttl = 600
+  role_arn = "test-role-arn"
+}`, backend)
+}
+
+func testAccAWSAuthBackendClient_wifUpdated(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+  identity_token_audience = "wif-audience-updated"
+  identity_token_ttl = 1800
+  role_arn = "test-role-arn-updated"
+}`, backend)
 }
 
 func testAccAWSAuthBackendClientConfig_basic(backend string) string {

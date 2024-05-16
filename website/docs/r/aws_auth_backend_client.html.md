@@ -38,6 +38,18 @@ resource "vault_aws_auth_backend_client" "example" {
 }
 ```
 
+```hcl
+resource "vault_auth_backend" "example" {
+  type = "aws"
+}
+
+resource "vault_aws_auth_backend_client" "example" { 
+  identity_token_audience   = "<TOKEN_AUDIENCE>"
+  identity_token_ttl        = "<TOKEN_TTL>"
+  role_arn		            = "<AWS_ROLE_ARN>"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -48,22 +60,30 @@ The following arguments are supported:
    *Available only for Vault Enterprise*.
 
 * `backend` - (Optional) The path the AWS auth backend being configured was
-	mounted at.  Defaults to `aws`.
+    mounted at.  Defaults to `aws`.
 
 * `access_key` - (Optional) The AWS access key that Vault should use for the
-	auth backend.
+    auth backend.
 
 * `secret_key` - (Optional) The AWS secret key that Vault should use for the
-	auth backend.
+    auth backend.
+
+* `identity_token_audience` - (Optional) The audience claim value. Requires Vault 1.17+.
+
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault Enterprise 1.17+.
+
+* `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault Enterprise 1.17+.
+
+* `role_arn` - (Optional) Role ARN to assume for plugin identity token federation. Requires Vault Enterprise 1.17+.
 
 * `ec2_endpoint` - (Optional) Override the URL Vault uses when making EC2 API
-	calls.
+    calls.
 
 * `iam_endpoint` - (Optional) Override the URL Vault uses when making IAM API
-	calls.
+    calls.
 
 * `sts_endpoint` - (Optional) Override the URL Vault uses when making STS API
-	calls.
+    calls.
 
 * `sts_region` - (Optional) Override the default region when making STS API 
     calls. The `sts_endpoint` argument must be set when using `sts_region`.
@@ -75,8 +95,8 @@ The following arguments are supported:
     regions and want flexibility in which regional STS API is used.
 
 * `iam_server_id_header_value` - (Optional) The value to require in the
-	`X-Vault-AWS-IAM-Server-ID` header as part of `GetCallerIdentity` requests
-	that are used in the IAM auth method.
+    `X-Vault-AWS-IAM-Server-ID` header as part of `GetCallerIdentity` requests
+    that are used in the IAM auth method.
 
 ## Attributes Reference
 

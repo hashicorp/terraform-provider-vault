@@ -415,6 +415,9 @@ const (
 	FieldLink                          = "link"
 	FieldGranularity                   = "granularity"
 	FieldGranularityLevel              = "granularity_level"
+	FieldEC2Endpoint                   = "ec2_endpoint"
+	FieldSTSRegion                     = "sts_region"
+	FieldIAMServerIDHeaderValue        = "iam_server_id_header_value"
 
 	/*
 		common environment variables
@@ -488,6 +491,7 @@ const (
 	VaultVersion114 = "1.14.0"
 	VaultVersion115 = "1.15.0"
 	VaultVersion116 = "1.16.0"
+	VaultVersion117 = "1.17.0-beta1"
 
 	/*
 		Vault auth methods
