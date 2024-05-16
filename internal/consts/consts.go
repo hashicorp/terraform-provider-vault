@@ -332,6 +332,7 @@ const (
 	FieldUseCSRValues                  = "use_csr_values"
 	FieldCertificateBundle             = "certificate_bundle"
 	FieldRevoke                        = "revoke"
+	FieldRevokeWithKey                 = "revoke_with_key"
 	FieldPrivateKeyType                = "private_key_type"
 	FieldAddBasicConstraints           = "add_basic_constraints"
 	FieldExported                      = "exported"

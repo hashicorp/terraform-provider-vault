@@ -18,6 +18,7 @@ FEATURES:
 * Update `vault_pki_secret_backend_role` to support the `cn_validations` role field ([#1820](https://github.com/hashicorp/terraform-provider-vault/pull/1820)).
 * Add new resource `vault_pki_secret_backend_acme_eab` to manage PKI ACME external account binding tokens. Requires Vault 1.14+. ([#2367](https://github.com/hashicorp/terraform-provider-vault/pull/2367))
 * Add new data source and resource `vault_pki_secret_backend_config_cmpv2`. Requires Vault 1.18+. *Available only for Vault Enterprise* ([#2330](https://github.com/hashicorp/terraform-provider-vault/pull/2330))
+* Add support for certificate revocation with `revoke_with_key` in `vault_pki_secret_backend_cert` ([#2242](https://github.com/hashicorp/terraform-provider-vault/pull/2242))
 IMPROVEMENTS:
 
 * Support the event `subscribe` policy capability for `vault_policy_document` data source ([#2293](https://github.com/hashicorp/terraform-provider-vault/pull/2293))

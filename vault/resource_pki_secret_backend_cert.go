@@ -171,6 +171,12 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				Default:     false,
 				Description: "Revoke the certificate upon resource destruction.",
 			},
+			consts.FieldRevokeWithKey: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Revoke the certificate with private key method",
+			},
 			consts.FieldIssuerRef: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -364,21 +370,33 @@ func pkiSecretBackendCertDelete(_ context.Context, d *schema.ResourceData, meta 
 		}
 
 		backend := d.Get(consts.FieldBackend).(string)
-		path := strings.Trim(backend, "/") + "/revoke"
 
+		privateKey := d.Get(consts.FieldPrivateKey).(string)
 		serialNumber := d.Get(consts.FieldSerialNumber).(string)
 		commonName := d.Get(consts.FieldCommonName).(string)
+		revokeWithKey := d.Get(consts.FieldRevokeWithKey).(bool)
 		data := map[string]interface{}{
 			consts.FieldSerialNumber: serialNumber,
+		}
+		if revokeWithKey {
+			data["private_key"] = privateKey
+		}
+		var path string
+		if revokeWithKey {
+			path = strings.Trim(backend, "/") + "/revoke-with-key"
+		} else {
+			path = strings.Trim(backend, "/") + "/revoke"
 		}
 
 		log.Printf("[DEBUG] Revoking certificate %q with serial number %q on PKI secret backend %q",
 			commonName, serialNumber, backend)
 		_, err := client.Logical().Write(path, data)
+		
 		if err != nil {
 			return diag.Errorf("error revoking certificate %q with serial number %q for PKI secret backend %q: %s",
 				commonName, serialNumber, backend, err)
 		}
+
 		log.Printf("[DEBUG] Successfully revoked certificate %q with serial number %q on PKI secret backend %q",
 			commonName,
 			serialNumber, backend)
