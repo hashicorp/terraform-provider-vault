@@ -120,6 +120,10 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 	stsRegion := d.Get("sts_region").(string)
 	stsRegionFromClient := d.Get("use_sts_region_from_client").(bool)
 
+	identityTokenAud := d.Get(consts.FieldIdentityTokenAudience).(string)
+	roleArn := d.Get(consts.FieldRoleArn).(string)
+	identityTokenTTL := d.Get(consts.FieldIdentityTokenTTL).(int)
+
 	iamServerIDHeaderValue := d.Get("iam_server_id_header_value").(string)
 
 	path := awsAuthBackendClientPath(backend)
@@ -132,19 +136,6 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		"iam_server_id_header_value": iamServerIDHeaderValue,
 	}
 
-	useAPIVer117 := provider.IsAPISupported(meta, provider.VaultVersion117)
-	if useAPIVer117 {
-		if v, ok := d.GetOk(consts.FieldIdentityTokenAudience); ok && v != "" {
-			data[consts.FieldIdentityTokenAudience] = v.(string)
-		}
-		if v, ok := d.GetOk(consts.FieldRoleArn); ok && v != "" {
-			data[consts.FieldRoleArn] = v.(string)
-		}
-		if v, ok := d.GetOk(consts.FieldIdentityTokenTTL); ok && v != 0 {
-			data[consts.FieldIdentityTokenTTL] = v.(int)
-		}
-	}
-
 	if d.HasChange("access_key") || d.HasChange("secret_key") {
 		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
 		data["access_key"] = d.Get("access_key").(string)
@@ -153,6 +144,12 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
 		data[useSTSRegionFromClient] = stsRegionFromClient
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		data[consts.FieldIdentityTokenAudience] = identityTokenAud
+		data[consts.FieldRoleArn] = roleArn
+		data[consts.FieldIdentityTokenTTL] = identityTokenTTL
 	}
 
 	// sts_endpoint and sts_region are required to be set together
