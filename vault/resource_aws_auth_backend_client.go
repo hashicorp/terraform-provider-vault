@@ -113,33 +113,33 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 
 	// if backend comes from the config, it won't have the StateFunc
 	// applied yet, so we need to apply it again.
-	backend := d.Get("backend").(string)
-	ec2Endpoint := d.Get("ec2_endpoint").(string)
-	iamEndpoint := d.Get("iam_endpoint").(string)
-	stsEndpoint := d.Get("sts_endpoint").(string)
-	stsRegion := d.Get("sts_region").(string)
-	stsRegionFromClient := d.Get("use_sts_region_from_client").(bool)
+	backend := d.Get(consts.FieldBackend).(string)
+	ec2Endpoint := d.Get(consts.FieldEC2Endpoint).(string)
+	iamEndpoint := d.Get(consts.FieldIAMEndpoint).(string)
+	stsEndpoint := d.Get(consts.FieldSTSEndpoint).(string)
+	stsRegion := d.Get(consts.FieldSTSRegion).(string)
+	stsRegionFromClient := d.Get(useSTSRegionFromClient).(bool)
 
 	identityTokenAud := d.Get(consts.FieldIdentityTokenAudience).(string)
 	roleArn := d.Get(consts.FieldRoleArn).(string)
 	identityTokenTTL := d.Get(consts.FieldIdentityTokenTTL).(int)
 
-	iamServerIDHeaderValue := d.Get("iam_server_id_header_value").(string)
+	iamServerIDHeaderValue := d.Get(consts.FieldIAMServerIDHeaderValue).(string)
 
 	path := awsAuthBackendClientPath(backend)
 
 	data := map[string]interface{}{
-		"endpoint":                   ec2Endpoint,
-		"iam_endpoint":               iamEndpoint,
-		"sts_endpoint":               stsEndpoint,
-		"sts_region":                 stsRegion,
-		"iam_server_id_header_value": iamServerIDHeaderValue,
+		"endpoint":                         ec2Endpoint,
+		consts.FieldIAMEndpoint:            iamEndpoint,
+		consts.FieldSTSEndpoint:            stsEndpoint,
+		consts.FieldSTSRegion:              stsRegion,
+		consts.FieldIAMServerIDHeaderValue: iamServerIDHeaderValue,
 	}
 
-	if d.HasChange("access_key") || d.HasChange("secret_key") {
+	if d.HasChange(consts.FieldAccessKey) || d.HasChange(consts.FieldSecretKey) {
 		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
-		data["access_key"] = d.Get("access_key").(string)
-		data["secret_key"] = d.Get("secret_key").(string)
+		data[consts.FieldAccessKey] = d.Get(consts.FieldAccessKey).(string)
+		data[consts.FieldSecretKey] = d.Get(consts.FieldSecretKey).(string)
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
@@ -195,26 +195,19 @@ func awsAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfac
 	}
 	d.Set("backend", re.FindStringSubmatch(d.Id())[1])
 
-	d.Set("access_key", secret.Data["access_key"])
-	d.Set("ec2_endpoint", secret.Data["endpoint"])
-	d.Set("iam_endpoint", secret.Data["iam_endpoint"])
-	d.Set("sts_endpoint", secret.Data["sts_endpoint"])
-	d.Set("sts_region", secret.Data["sts_region"])
-	d.Set("iam_server_id_header_value", secret.Data["iam_server_id_header_value"])
+	d.Set(consts.FieldAccessKey, secret.Data[consts.FieldAccessKey])
+	d.Set(consts.FieldEC2Endpoint, secret.Data["endpoint"])
+	d.Set(consts.FieldIAMEndpoint, secret.Data["iam_endpoint"])
+	d.Set(consts.FieldSTSEndpoint, secret.Data["sts_endpoint"])
+	d.Set(consts.FieldSTSRegion, secret.Data["sts_region"])
+	d.Set(consts.FieldIAMServerIDHeaderValue, secret.Data[consts.FieldIAMServerIDHeaderValue])
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
 		d.Set(useSTSRegionFromClient, secret.Data[useSTSRegionFromClient])
 	}
-	useAPIVer117 := provider.IsAPISupported(meta, provider.VaultVersion117)
-	if useAPIVer117 {
-		if err := d.Set(consts.FieldIdentityTokenAudience, secret.Data[consts.FieldIdentityTokenAudience]); err != nil {
-			return diag.Errorf("error reading AWS Auth Backend %s: %v", consts.FieldIdentityTokenAudience, err)
-		}
-		if err := d.Set(consts.FieldRoleArn, secret.Data[consts.FieldRoleArn]); err != nil {
-			return diag.Errorf("error reading AWS Auth Backend %s: %v", consts.FieldRoleArn, err)
-		}
-		if err := d.Set(consts.FieldIdentityTokenTTL, secret.Data[consts.FieldIdentityTokenTTL]); err != nil {
-			return diag.Errorf("error reading AWS Auth Backend %s: %v", consts.FieldIdentityTokenTTL, err)
-		}
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		d.Set(consts.FieldIdentityTokenAudience, secret.Data[consts.FieldIdentityTokenAudience])
+		d.Set(consts.FieldRoleArn, secret.Data[consts.FieldRoleArn])
+		d.Set(consts.FieldIdentityTokenTTL, secret.Data[consts.FieldIdentityTokenTTL])
 	}
 
 	return nil
