@@ -197,9 +197,9 @@ func awsAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfac
 
 	d.Set(consts.FieldAccessKey, secret.Data[consts.FieldAccessKey])
 	d.Set(consts.FieldEC2Endpoint, secret.Data["endpoint"])
-	d.Set(consts.FieldIAMEndpoint, secret.Data["iam_endpoint"])
-	d.Set(consts.FieldSTSEndpoint, secret.Data["sts_endpoint"])
-	d.Set(consts.FieldSTSRegion, secret.Data["sts_region"])
+	d.Set(consts.FieldIAMEndpoint, secret.Data[consts.FieldIAMEndpoint])
+	d.Set(consts.FieldSTSEndpoint, secret.Data[consts.FieldSTSEndpoint])
+	d.Set(consts.FieldSTSRegion, secret.Data[consts.FieldSTSRegion])
 	d.Set(consts.FieldIAMServerIDHeaderValue, secret.Data[consts.FieldIAMServerIDHeaderValue])
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
 		d.Set(useSTSRegionFromClient, secret.Data[useSTSRegionFromClient])
