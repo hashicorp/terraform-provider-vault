@@ -1749,6 +1749,10 @@ func writeDatabaseSecretConfig(d *schema.ResourceData, client *api.Client,
 		data["root_rotation_statements"] = v
 	}
 
+	if v, ok := d.GetOk("password_policy"); ok {
+		data["password_policy"] = v
+	}
+
 	if m, ok := d.GetOkExists(prefix + "data"); ok {
 		for k, v := range m.(map[string]interface{}) {
 			// Vault does not return the password in the API. If the root credentials have been rotated, sending
@@ -1885,6 +1889,7 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret,
 		"data":              d.Get(prefix + "data"),
 		"verify_connection": d.Get(prefix + "verify_connection"),
 		"plugin_name":       resp.Data["plugin_name"],
+		"password_policy":   resp.Data["password_policy"],
 	}
 
 	//"root_rotation_statements": resp.Data["root_credentials_rotate_statements"],

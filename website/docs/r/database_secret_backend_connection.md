@@ -60,6 +60,8 @@ The following arguments are supported:
 
 * `root_rotation_statements` - (Optional) A list of database statements to be executed to rotate the root user's credentials.
 
+* `password_policy` - (Optional) The name of the password policy to use when generating passwords for this database.
+
 * `data` - (Optional) A map of sensitive data to pass to the endpoint. Useful for templated connection strings.
 
 * `cassandra` - (Optional) A nested block containing configuration options for Cassandra connections.
