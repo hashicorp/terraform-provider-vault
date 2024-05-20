@@ -197,6 +197,11 @@ func getCommonDatabaseSchema() schemaMap {
 				Type: schema.TypeString,
 			},
 		},
+		"password_policy": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The name of the password policy to use when generating passwords for this database.",
+		},
 		"data": {
 			Type:        schema.TypeMap,
 			Optional:    true,
