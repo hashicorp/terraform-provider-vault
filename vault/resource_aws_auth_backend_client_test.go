@@ -233,8 +233,7 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			return fmt.Errorf("AWS auth client not configured at %q", endpoint)
 		}
 		attrs := map[string]string{
-			consts.FieldAccessKey: consts.FieldAccessKey,
-			//"secret_key":                 "secret_key",
+			consts.FieldAccessKey:              consts.FieldAccessKey,
 			consts.FieldEC2Endpoint:            "endpoint",
 			consts.FieldIAMEndpoint:            consts.FieldIAMEndpoint,
 			consts.FieldSTSEndpoint:            consts.FieldSTSEndpoint,
