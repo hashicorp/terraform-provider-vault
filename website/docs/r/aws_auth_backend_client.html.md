@@ -72,8 +72,6 @@ The following arguments are supported:
 
 * `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault Enterprise 1.17+.
 
-* `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault Enterprise 1.17+.
-
 * `role_arn` - (Optional) Role ARN to assume for plugin identity token federation. Requires Vault Enterprise 1.17+.
 
 * `ec2_endpoint` - (Optional) Override the URL Vault uses when making EC2 API
