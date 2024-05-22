@@ -258,10 +258,15 @@ func testAccAWSAuthBackendClient_wifBasic(backend string) string {
 resource "vault_auth_backend" "aws" {
   type = "aws"
   path = "%s"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
   identity_token_audience = "wif-audience"
   identity_token_ttl = 600
   role_arn = "test-role-arn"
-}`, backend)
+}
+`, backend)
 }
 
 func testAccAWSAuthBackendClient_wifUpdated(backend string) string {
@@ -269,10 +274,15 @@ func testAccAWSAuthBackendClient_wifUpdated(backend string) string {
 resource "vault_auth_backend" "aws" {
   type = "aws"
   path = "%s"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
   identity_token_audience = "wif-audience-updated"
   identity_token_ttl = 1800
   role_arn = "test-role-arn-updated"
-}`, backend)
+}
+`, backend)
 }
 
 func testAccAWSAuthBackendClientConfig_basic(backend string) string {
