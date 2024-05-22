@@ -87,16 +87,16 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 				Config: testAccAWSAuthBackendClientConfig_basicWithoutSecretKey(backend),
 				Check: resource.ComposeTestCheckFunc(
 					testAccAWSAuthBackendClientCheck_attrs(backend),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "access_key", "AWSACCESSKEY"),
-					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", "secret_key"),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", consts.FieldAccessKey, "AWSACCESSKEY"),
+					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", consts.FieldSecretKey),
 				),
 			},
 			{
 				Config: testAccAWSAuthBackendClientConfig_updatedWithoutSecretKey(backend),
 				Check: resource.ComposeTestCheckFunc(
 					testAccAWSAuthBackendClientCheck_attrs(backend),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "access_key", "AWSACCESSKEY"),
-					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", "secret_key"),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", consts.FieldAccessKey, "AWSACCESSKEY"),
+					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", consts.FieldSecretKey),
 				),
 			},
 		},
@@ -233,13 +233,13 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			return fmt.Errorf("AWS auth client not configured at %q", endpoint)
 		}
 		attrs := map[string]string{
-			"access_key": "access_key",
+			consts.FieldAccessKey: consts.FieldAccessKey,
 			//"secret_key":                 "secret_key",
-			"ec2_endpoint":               "endpoint",
-			"iam_endpoint":               "iam_endpoint",
-			"sts_endpoint":               "sts_endpoint",
-			"sts_region":                 "sts_region",
-			"iam_server_id_header_value": "iam_server_id_header_value",
+			consts.FieldEC2Endpoint:            "endpoint",
+			consts.FieldIAMEndpoint:            consts.FieldIAMEndpoint,
+			consts.FieldSTSEndpoint:            consts.FieldSTSEndpoint,
+			consts.FieldSTSRegion:              consts.FieldSTSRegion,
+			consts.FieldIAMServerIDHeaderValue: consts.FieldIAMServerIDHeaderValue,
 		}
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
