@@ -455,9 +455,11 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 	if err := d.Set(consts.FieldAllowedResponseHeaders, mount.Config.AllowedResponseHeaders); err != nil {
 		return err
 	}
-	if err := d.Set(consts.FieldDelegatedAuthAccessors, mount.Config.DelegatedAuthAccessors); err != nil {
-		return err
-	}
+
+	// @TODO add this back in when Vault 1.16.3 is released
+	//if err := d.Set(consts.FieldDelegatedAuthAccessors, mount.Config.DelegatedAuthAccessors); err != nil {
+	//	return err
+	//}
 	if err := d.Set(consts.FieldListingVisibility, mount.Config.ListingVisibility); err != nil {
 		return err
 	}
