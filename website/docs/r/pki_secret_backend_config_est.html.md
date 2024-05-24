@@ -52,7 +52,12 @@ resource "vault_pki_secret_backend_config_est" "example" {
 	userpass = { 
       "accessor" = "test2" 
     } 
-  }	
+  }
+  enable_sentinel_parsing = true
+  audit_fields = ["csr", "common_name", "alt_names", "ip_sans", "uri_sans", "other_sans",
+    "signature_bits", "exclude_cn_from_sans", "ou", "organization", "country",
+    "locality", "province", "street_address", "postal_code", "serial_number",
+    "use_pss", "key_type", "key_bits", "add_basic_constraints"]
 }
 ```
 
@@ -79,6 +84,8 @@ The following arguments are supported:
 * `enabled` - (Required) Is the EST feature enabled
 
 * `label_to_path_policy` - (Optional) A pairing of EST label to the configured EST behavior for it
+
+* `audit_fields` - (Optional) Fields parsed from the CSR that appear in the audit and can be used by sentinel policies
 
 <a id="nestedatt--authenticators"></a>
 ### Nested Schema for `authenticators`

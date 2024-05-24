@@ -68,6 +68,14 @@ func pkiSecretBackendConfigEstDataSource() *schema.Resource {
 				Computed:    true,
 				Description: "Are fields from the provided CSR parsed out for Sentinel policies",
 			},
+			consts.FieldAuditFields: {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "Fields parsed from the CSR that appear in the audit and can be used by sentinel policies",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -102,6 +110,7 @@ func readPKISecretBackendConfigEst(ctx context.Context, d *schema.ResourceData, 
 		consts.FieldDefaultPathPolicy,
 		consts.FieldLabelToPathPolicy,
 		consts.FieldEnableSentinelParsing,
+		consts.FieldAuditFields,
 	}
 
 	for _, k := range keyComputedFields {

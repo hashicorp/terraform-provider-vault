@@ -91,6 +91,14 @@ func pkiSecretBackendConfigEstResource() *schema.Resource {
 				Optional:    true,
 				Description: "Enable parsing of fields from the provided CSR for Sentinel policies",
 			},
+			consts.FieldAuditFields: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Fields parsed from the CSR that appear in the audit and can be used by sentinel policies",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -121,6 +129,7 @@ func pkiSecretBackendConfigEstWrite(ctx context.Context, d *schema.ResourceData,
 		consts.FieldLabelToPathPolicy:     d.Get(consts.FieldLabelToPathPolicy).(map[string]interface{}),
 		consts.FieldAuthenticators:        authenticator,
 		consts.FieldEnableSentinelParsing: d.Get(consts.FieldEnableSentinelParsing).(bool),
+		consts.FieldAuditFields:           d.Get(consts.FieldAuditFields).([]interface{}),
 	}
 
 	log.Printf("[DEBUG] Updating EST config on PKI secret backend %q:\n%v", backend, data)

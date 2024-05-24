@@ -426,6 +426,7 @@ const (
 	FieldLabelToPathPolicy             = "label_to_path_policy"
 	FieldAuthenticators                = "authenticators"
 	FieldEnableSentinelParsing         = "enable_sentinel_parsing"
+	FieldAuditFields                   = "audit_fields"
 
 	/*
 		common environment variables

@@ -50,6 +50,8 @@ func TestAccPKISecretBackendConfigEst_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.cert_role", "a-role"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass.%", "1"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass.accessor", "test2"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldEnableSentinelParsing, "true"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuditFields+".#", "20"),
 
 					// Validate that the data property can read back everything filled in
 					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
@@ -66,6 +68,8 @@ func TestAccPKISecretBackendConfigEst_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.cert_role", "a-role"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass.%", "1"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass.accessor", "test2"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldEnableSentinelParsing, "true"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuditFields+".#", "20"),
 				),
 			},
 			{
@@ -135,6 +139,11 @@ resource "vault_pki_secret_backend_config_est" "test" {
 	cert = { "accessor" = "test", "cert_role" = "a-role" } 
 	userpass = { "accessor" = "test2" } 
   }	
+  enable_sentinel_parsing = true
+  audit_fields = ["csr", "common_name", "alt_names", "ip_sans", "uri_sans", "other_sans",
+                  "signature_bits", "exclude_cn_from_sans", "ou", "organization", "country", 
+                  "locality", "province", "street_address", "postal_code", "serial_number",
+                  "use_pss", "key_type", "key_bits", "add_basic_constraints"]
 }
 
 data "vault_pki_secret_backend_config_est" "test" {
