@@ -11,8 +11,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -25,19 +23,7 @@ func pkiSecretBackendConfigEstResource() *schema.Resource {
 		ReadContext:   pkiSecretBackendConfigEstRead,
 		DeleteContext: pkiSecretBackendConfigEstDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: func(_ context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-				id := d.Id()
-				if id == "" {
-					return nil, fmt.Errorf("no path set for import, id=%q", id)
-				}
-
-				parts := strings.Split(mountutil.NormalizeMountPath(id), "/")
-				if err := d.Set("backend", parts[0]); err != nil {
-					return nil, err
-				}
-
-				return []*schema.ResourceData{d}, nil
-			},
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -49,7 +35,7 @@ func pkiSecretBackendConfigEstResource() *schema.Resource {
 			},
 			consts.FieldEnabled: {
 				Type:        schema.TypeBool,
-				Required:    true,
+				Optional:    true,
 				Description: "Is the EST feature enabled",
 			},
 			consts.FieldDefaultMount: {
@@ -145,37 +131,32 @@ func pkiSecretBackendConfigEstWrite(ctx context.Context, d *schema.ResourceData,
 }
 
 func pkiSecretBackendConfigEstRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return readPKISecretBackendConfigEst(ctx, d, meta)
-}
+	id := d.Id()
+	if id == "" {
+		return diag.FromErr(fmt.Errorf("no path set for import, id=%q", id))
+	}
 
-func pkiSecretBackendConfigEstDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	backend := strings.TrimRight(id, "/config/est")
+	if err := d.Set("backend", backend); err != nil {
+		return diag.FromErr(fmt.Errorf("failed setting field [%s] with value [%v]: %w", "backend", backend, err))
+	}
+
 	if err := verifyPkiEstFeatureSupported(meta); err != nil {
 		return diag.FromErr(err)
 	}
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return diag.FromErr(e)
-	}
 
-	backend := d.Get(consts.FieldBackend).(string)
-	path := pkiSecretBackendConfigEstPath(backend)
-
-	data := map[string]interface{}{
-		consts.FieldEnabled:               false,
-		consts.FieldDefaultMount:          "",
-		consts.FieldDefaultPathPolicy:     "",
-		consts.FieldLabelToPathPolicy:     map[string]interface{}{},
-		consts.FieldAuthenticators:        map[string]interface{}{},
-		consts.FieldEnableSentinelParsing: false,
-	}
-
-	log.Printf("[DEBUG] resetting EST config on PKI secret backend %q", backend)
-	_, err := client.Logical().WriteWithContext(ctx, path, data)
+	client, err := provider.GetClient(d, meta)
 	if err != nil {
-		return diag.Errorf("error resetting EST config for PKI secret backend %q: %s", backend, err)
+		return diag.FromErr(fmt.Errorf("failed getting client: %w", err))
 	}
-	log.Printf("[DEBUG] Reset EST config on PKI secret backend %q", backend)
 
-	d.SetId(path)
+	if err := readEstConfig(ctx, d, client, id); err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
+}
+
+func pkiSecretBackendConfigEstDelete(_ context.Context, _ *schema.ResourceData, _ interface{}) diag.Diagnostics {
+	// There isn't any delete API for the EST config.
 	return nil
 }

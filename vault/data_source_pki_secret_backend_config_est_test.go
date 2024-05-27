@@ -23,6 +23,8 @@ func TestAccDataSourcePKISecretConfigEst(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
+				// Note this is more thoroughly tested within TestAccPKISecretBackendConfigEst_basic
+				// we don't want to start having test failures if Vault changes default values.
 				Config: testPKISecretEmptyEstConfigDataSource(backend),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),

@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/vault/api"
 )
 
 func pkiSecretBackendConfigEstDataSource() *schema.Resource {
@@ -87,19 +87,26 @@ func readPKISecretBackendConfigEst(ctx context.Context, d *schema.ResourceData, 
 
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
-		return diag.FromErr(err)
+		return diag.FromErr(fmt.Errorf("failed getting client: %w", err))
 	}
 
 	backend := d.Get(consts.FieldBackend).(string)
 	path := pkiSecretBackendConfigEstPath(backend)
 
+	if err := readEstConfig(ctx, d, client, path); err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
+}
+
+func readEstConfig(ctx context.Context, d *schema.ResourceData, client *api.Client, path string) error {
 	resp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("error reading from Vault: %s", err))
+		return fmt.Errorf("error reading from Vault: %w", err)
 	}
-	log.Printf("[DEBUG] Read %q from Vault", path)
 	if resp == nil {
-		return diag.FromErr(fmt.Errorf("no key found at %q", path))
+		return fmt.Errorf("got nil response from Vault from path: %q", path)
 	}
 
 	d.SetId(path)
@@ -114,14 +121,17 @@ func readPKISecretBackendConfigEst(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	for _, k := range keyComputedFields {
-		if err := d.Set(k, resp.Data[k]); err != nil {
-			return diag.FromErr(err)
+		if fieldVal, ok := resp.Data[k]; ok {
+			if err := d.Set(k, fieldVal); err != nil {
+				return fmt.Errorf("failed setting field [%s] with val [%s]: %w", k, fieldVal, err)
+			}
 		}
 	}
 
-	authenticators := resp.Data[consts.FieldAuthenticators]
-	if err := d.Set(consts.FieldAuthenticators, []interface{}{authenticators}); err != nil {
-		return diag.FromErr(err)
+	if authenticators, authOk := resp.Data[consts.FieldAuthenticators]; authOk {
+		if err := d.Set(consts.FieldAuthenticators, []interface{}{authenticators}); err != nil {
+			return fmt.Errorf("failed setting field [%s] with val [%s]: %w", consts.FieldAuthenticators, authenticators, err)
+		}
 	}
 
 	return nil
