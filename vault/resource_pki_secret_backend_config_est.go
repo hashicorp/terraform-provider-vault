@@ -136,7 +136,7 @@ func pkiSecretBackendConfigEstRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(fmt.Errorf("no path set for import, id=%q", id))
 	}
 
-	backend := strings.TrimRight(id, "/config/est")
+	backend := strings.TrimSuffix(id, "/config/est")
 	if err := d.Set("backend", backend); err != nil {
 		return diag.FromErr(fmt.Errorf("failed setting field [%s] with value [%v]: %w", "backend", backend, err))
 	}
