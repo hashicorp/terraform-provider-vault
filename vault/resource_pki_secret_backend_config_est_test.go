@@ -44,6 +44,7 @@ func TestAccPKISecretBackendConfigEst_Empty(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.%", "2"),
 					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert"),
 					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass"),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
 
 					// Validate we read back the data back as we did upon creation
 					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
@@ -55,6 +56,7 @@ func TestAccPKISecretBackendConfigEst_Empty(t *testing.T) {
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.%", "2"),
 					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.cert"),
 					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass"),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
 				),
 			},
 			testutil.GetImportTestStep(resourceBackend, false, nil),
@@ -99,6 +101,7 @@ func TestAccPKISecretBackendConfigEst_AllFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass.accessor", "test2"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldEnableSentinelParsing, "true"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuditFields+".#", "20"),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
 
 					// Validate that the data property can read back everything filled in
 					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
@@ -117,6 +120,7 @@ func TestAccPKISecretBackendConfigEst_AllFields(t *testing.T) {
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass.accessor", "test2"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldEnableSentinelParsing, "true"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuditFields+".#", "20"),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
 				),
 			},
 			testutil.GetImportTestStep(resourceBackend, false, nil),

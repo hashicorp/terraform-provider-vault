@@ -427,6 +427,7 @@ const (
 	FieldAuthenticators                = "authenticators"
 	FieldEnableSentinelParsing         = "enable_sentinel_parsing"
 	FieldAuditFields                   = "audit_fields"
+	FieldLastUpdated                   = "last_updated"
 
 	/*
 		common environment variables

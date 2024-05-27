@@ -31,6 +31,7 @@ func TestAccDataSourcePKISecretConfigEst(t *testing.T) {
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldEnabled),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldDefaultMount),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldEnableSentinelParsing),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
 				),
 			},
 		},

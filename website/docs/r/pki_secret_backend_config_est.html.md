@@ -96,7 +96,7 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+* `last_updated` - A read-only timestamp representing the last time the configuration was updated
 
 ## Import
 

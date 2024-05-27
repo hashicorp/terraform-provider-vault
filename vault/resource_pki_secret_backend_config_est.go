@@ -86,6 +86,11 @@ func pkiSecretBackendConfigEstResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldLastUpdated: {
+				Type:        schema.TypeString,
+				Computed:    true, // read-only property
+				Description: "A read-only timestamp representing the last time the configuration was updated",
+			},
 		},
 	}
 }

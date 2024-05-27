@@ -59,6 +59,8 @@ The following arguments are supported:
 * `label_to_path_policy` - A pairing of EST label to the configured EST behavior for it
  
 * `audit_fields` - Fields parsed from the CSR that appear in the audit and can be used by sentinel policies
+ 
+* `last_updated` - A read-only timestamp representing the last time the configuration was updated
 
 <a id="nestedatt--authenticators"></a>
 ### Nested Schema for `authenticators`

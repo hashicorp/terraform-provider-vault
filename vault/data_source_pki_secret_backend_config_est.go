@@ -76,6 +76,11 @@ func pkiSecretBackendConfigEstDataSource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldLastUpdated: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "A read-only timestamp representing the last time the configuration was updated",
+			},
 		},
 	}
 }
@@ -118,6 +123,7 @@ func readEstConfig(ctx context.Context, d *schema.ResourceData, client *api.Clie
 		consts.FieldLabelToPathPolicy,
 		consts.FieldEnableSentinelParsing,
 		consts.FieldAuditFields,
+		consts.FieldLastUpdated,
 	}
 
 	for _, k := range keyComputedFields {
