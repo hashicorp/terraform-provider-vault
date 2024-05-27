@@ -15,11 +15,58 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccPKISecretBackendConfigEst_basic(t *testing.T) {
+func TestAccPKISecretBackendConfigEst_Empty(t *testing.T) {
 	t.Parallel()
 
 	backend := acctest.RandomWithPrefix("tf-test-pki")
-	backendDisabled := acctest.RandomWithPrefix("tf-test-pki")
+	resourceType := "vault_pki_secret_backend_config_est"
+	resourceBackend := resourceType + ".test"
+	dataName := "data.vault_pki_secret_backend_config_est.test"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPKISecretBackendConfigEstDisabled(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldEnabled, "false"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDefaultMount, "false"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDefaultPathPolicy, ""),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldLabelToPathPolicy+".%", "0"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".#", "1"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.%", "2"),
+					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert"),
+					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass"),
+
+					// Validate we read back the data back as we did upon creation
+					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(dataName, consts.FieldEnabled, "false"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultMount, "false"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultPathPolicy, ""),
+					resource.TestCheckResourceAttr(dataName, consts.FieldLabelToPathPolicy+".%", "0"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".#", "1"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.%", "2"),
+					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.cert"),
+					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass"),
+				),
+			},
+			testutil.GetImportTestStep(resourceBackend, false, nil),
+		},
+	})
+
+}
+
+func TestAccPKISecretBackendConfigEst_AllFields(t *testing.T) {
+	t.Parallel()
+
+	backend := acctest.RandomWithPrefix("tf-test-pki")
 	resourceType := "vault_pki_secret_backend_config_est"
 	resourceBackend := resourceType + ".test"
 	dataName := "data.vault_pki_secret_backend_config_est.test"
@@ -70,31 +117,6 @@ func TestAccPKISecretBackendConfigEst_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass.accessor", "test2"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldEnableSentinelParsing, "true"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuditFields+".#", "20"),
-				),
-			},
-			{
-				Config: testAccPKISecretBackendConfigEstDisabled(backendDisabled),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceBackend, consts.FieldBackend, backendDisabled),
-					resource.TestCheckResourceAttr(resourceBackend, consts.FieldEnabled, "false"),
-					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDefaultMount, "false"),
-					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDefaultPathPolicy, ""),
-					resource.TestCheckResourceAttr(resourceBackend, consts.FieldLabelToPathPolicy+".%", "0"),
-					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".#", "1"),
-					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.%", "2"),
-					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert"),
-					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass"),
-
-					// Validate we read back the data back as we did upon creation
-					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backendDisabled),
-					resource.TestCheckResourceAttr(dataName, consts.FieldEnabled, "false"),
-					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultMount, "false"),
-					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultPathPolicy, ""),
-					resource.TestCheckResourceAttr(dataName, consts.FieldLabelToPathPolicy+".%", "0"),
-					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".#", "1"),
-					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.%", "2"),
-					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.cert"),
-					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass"),
 				),
 			},
 			testutil.GetImportTestStep(resourceBackend, false, nil),
@@ -163,8 +185,6 @@ resource "vault_mount" "test" {
 
 resource "vault_pki_secret_backend_config_est" "test" {
   backend = vault_mount.test.path
-  enabled = false
-  default_mount = false
 }
 
 data "vault_pki_secret_backend_config_est" "test" {

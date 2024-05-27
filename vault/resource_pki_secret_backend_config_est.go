@@ -80,6 +80,7 @@ func pkiSecretBackendConfigEstResource() *schema.Resource {
 			consts.FieldAuditFields: {
 				Type:        schema.TypeList,
 				Optional:    true,
+				Computed:    true,
 				Description: "Fields parsed from the CSR that appear in the audit and can be used by sentinel policies",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -102,20 +103,30 @@ func pkiSecretBackendConfigEstWrite(ctx context.Context, d *schema.ResourceData,
 	backend := d.Get(consts.FieldBackend).(string)
 	path := pkiSecretBackendConfigEstPath(backend)
 
-	authenticators := d.Get(consts.FieldAuthenticators).([]interface{})
-	var authenticator interface{}
-	if len(authenticators) > 0 {
-		authenticator = authenticators[0]
+	fieldsToSet := []string{
+		consts.FieldEnabled,
+		consts.FieldDefaultMount,
+		consts.FieldDefaultPathPolicy,
+		consts.FieldLabelToPathPolicy,
+		consts.FieldEnableSentinelParsing,
+		consts.FieldAuditFields,
 	}
 
-	data := map[string]interface{}{
-		consts.FieldEnabled:               d.Get(consts.FieldEnabled).(bool),
-		consts.FieldDefaultMount:          d.Get(consts.FieldDefaultMount).(bool),
-		consts.FieldDefaultPathPolicy:     d.Get(consts.FieldDefaultPathPolicy).(string),
-		consts.FieldLabelToPathPolicy:     d.Get(consts.FieldLabelToPathPolicy).(map[string]interface{}),
-		consts.FieldAuthenticators:        authenticator,
-		consts.FieldEnableSentinelParsing: d.Get(consts.FieldEnableSentinelParsing).(bool),
-		consts.FieldAuditFields:           d.Get(consts.FieldAuditFields).([]interface{}),
+	data := map[string]interface{}{}
+	for _, field := range fieldsToSet {
+		if val, ok := d.GetOk(field); ok {
+			data[field] = val
+		}
+	}
+
+	if authenticatorsRaw, ok := d.GetOk(consts.FieldAuthenticators); ok {
+		authenticators := authenticatorsRaw.([]interface{})
+		var authenticator interface{}
+		if len(authenticators) > 0 {
+			authenticator = authenticators[0]
+		}
+
+		data[consts.FieldAuthenticators] = authenticator
 	}
 
 	log.Printf("[DEBUG] Updating EST config on PKI secret backend %q:\n%v", backend, data)
