@@ -418,6 +418,11 @@ const (
 	FieldEC2Endpoint                   = "ec2_endpoint"
 	FieldSTSRegion                     = "sts_region"
 	FieldIAMServerIDHeaderValue        = "iam_server_id_header_value"
+	FieldListingVisibility             = "listing_visibility"
+	FieldPassthroughRequestHeaders     = "passthrough_request_headers"
+	FieldAllowedResponseHeaders        = "allowed_response_headers"
+	FieldDelegatedAuthAccessors        = "delegated_auth_accessors"
+	FieldPluginVersion                 = "plugin_version"
 
 	/*
 		common environment variables
