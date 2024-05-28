@@ -61,7 +61,10 @@ func TestGCPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, "test"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldDisableRemount,
+				consts.FieldCredentials,
+			),
 		},
 	})
 }
