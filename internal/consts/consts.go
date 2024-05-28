@@ -415,6 +415,11 @@ const (
 	FieldLink                          = "link"
 	FieldGranularity                   = "granularity"
 	FieldGranularityLevel              = "granularity_level"
+	FieldListingVisibility             = "listing_visibility"
+	FieldPassthroughRequestHeaders     = "passthrough_request_headers"
+	FieldAllowedResponseHeaders        = "allowed_response_headers"
+	FieldDelegatedAuthAccessors        = "delegated_auth_accessors"
+	FieldPluginVersion                 = "plugin_version"
 
 	/*
 		common environment variables
