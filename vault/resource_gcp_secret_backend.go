@@ -231,7 +231,7 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 
 	// read and set config if needed
 	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
-		resp, err := client.Logical().Read(gcpSecretBackendConfigPath(path))
+		resp, err := client.Logical().ReadWithContext(ctx, gcpSecretBackendConfigPath(path))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -269,7 +269,7 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117Ent)
 
-	if d.HasChange(consts.FieldDefaultLeaseTTL) || d.HasChange(consts.FieldMaxLeaseTTL) || d.HasChange(consts.FieldIdentityTokenKey) {
+	if d.HasChanges(consts.FieldDefaultLeaseTTL, consts.FieldMaxLeaseTTL, consts.FieldIdentityTokenKey) {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
