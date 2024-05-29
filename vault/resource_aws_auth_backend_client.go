@@ -195,19 +195,39 @@ func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 	d.Set("backend", re.FindStringSubmatch(d.Id())[1])
 
-	d.Set(consts.FieldAccessKey, secret.Data[consts.FieldAccessKey])
-	d.Set(consts.FieldEC2Endpoint, secret.Data["endpoint"])
-	d.Set(consts.FieldIAMEndpoint, secret.Data[consts.FieldIAMEndpoint])
-	d.Set(consts.FieldSTSEndpoint, secret.Data[consts.FieldSTSEndpoint])
-	d.Set(consts.FieldSTSRegion, secret.Data[consts.FieldSTSRegion])
-	d.Set(consts.FieldIAMServerIDHeaderValue, secret.Data[consts.FieldIAMServerIDHeaderValue])
+	fields := []string{
+		consts.FieldAccessKey,
+		consts.FieldEC2Endpoint,
+		consts.FieldIAMEndpoint,
+		consts.FieldSTSEndpoint,
+		consts.FieldSTSRegion,
+		consts.FieldIAMServerIDHeaderValue,
+	}
+	for _, k := range fields {
+		if v, ok := secret.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
-		d.Set(useSTSRegionFromClient, secret.Data[useSTSRegionFromClient])
+		if err := d.Set(useSTSRegionFromClient, secret.Data[useSTSRegionFromClient]); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
-		d.Set(consts.FieldIdentityTokenAudience, secret.Data[consts.FieldIdentityTokenAudience])
-		d.Set(consts.FieldRoleArn, secret.Data[consts.FieldRoleArn])
-		d.Set(consts.FieldIdentityTokenTTL, secret.Data[consts.FieldIdentityTokenTTL])
+		wifFields := []string{
+			consts.FieldIdentityTokenAudience,
+			consts.FieldRoleArn,
+			consts.FieldIdentityTokenTTL,
+		}
+		for _, k := range wifFields {
+			if v, ok := secret.Data[k]; ok {
+				if err := d.Set(k, v); err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
 	}
 
 	return nil

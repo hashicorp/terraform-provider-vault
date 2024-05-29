@@ -132,6 +132,7 @@ func TestAccAWSAuthBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn-updated"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
