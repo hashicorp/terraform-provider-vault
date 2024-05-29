@@ -36,6 +36,16 @@ resource "vault_azure_secret_backend" "azure" {
 }
 ```
 
+```hcl
+resource "vault_azure_secret_backend" "azure" {
+  subscription_id         = "11111111-2222-3333-4444-111111111111"
+  tenant_id               = "11111111-2222-3333-4444-222222222222"
+  client_id               = "11111111-2222-3333-4444-333333333333"
+  identity_token_audience = "<TOKEN_AUDIENCE>"
+  identity_token_ttl      = "<TOKEN_TTL>"
+}
+```
+
 ## Example Usage: *vault-1.8 and below*
 
 ```hcl
@@ -73,6 +83,12 @@ The following arguments are supported:
 - `environment` (`string:""`) - The Azure environment.
 
 - `path` (`string: <optional>`) - The unique path this backend should be mounted at. Defaults to `azure`.
+
+- `identity_token_audience` - (Optional) The audience claim value. Requires Vault Enterprise 1.17+.
+
+- `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault Enterprise 1.17+.
+
+- `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault Enterprise 1.17+.
 
 - `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
   See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
