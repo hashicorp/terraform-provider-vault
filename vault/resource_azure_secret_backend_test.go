@@ -140,6 +140,7 @@ func TestAccAzureSecretBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }

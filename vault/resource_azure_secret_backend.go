@@ -224,13 +224,11 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
 			return diag.FromErr(err)
 		}
-	}
-	if useAPIVer117Ent {
 		if err := d.Set(consts.FieldIdentityTokenAudience, resp.Data[consts.FieldIdentityTokenAudience]); err != nil {
-			return diag.Errorf("error reading %s for Azure Secret Backend %q: %q", consts.FieldIdentityTokenAudience, path, err)
+			return diag.FromErr(err)
 		}
 		if err := d.Set(consts.FieldIdentityTokenTTL, resp.Data[consts.FieldIdentityTokenTTL]); err != nil {
-			return diag.Errorf("error reading %s for Azure Secret Backend %q: %q", consts.FieldIdentityTokenTTL, path, err)
+			return diag.FromErr(err)
 		}
 	}
 
