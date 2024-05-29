@@ -195,9 +195,11 @@ func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 	d.Set("backend", re.FindStringSubmatch(d.Id())[1])
 
+	if err := d.Set(consts.FieldEC2Endpoint, secret.Data["endpoint"]); err != nil {
+		return diag.FromErr(err)
+	}
 	fields := []string{
 		consts.FieldAccessKey,
-		consts.FieldEC2Endpoint,
 		consts.FieldIAMEndpoint,
 		consts.FieldSTSEndpoint,
 		consts.FieldSTSRegion,
