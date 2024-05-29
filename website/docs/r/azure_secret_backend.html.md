@@ -84,11 +84,14 @@ The following arguments are supported:
 
 - `path` (`string: <optional>`) - The unique path this backend should be mounted at. Defaults to `azure`.
 
-- `identity_token_audience` - (Optional) The audience claim value. Requires Vault Enterprise 1.17+.
+- `identity_token_audience` - (Optional) The audience claim value. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
 
-- `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault Enterprise 1.17+.
+- `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
 
-- `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault Enterprise 1.17+.
+- `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
 
 - `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
   See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
