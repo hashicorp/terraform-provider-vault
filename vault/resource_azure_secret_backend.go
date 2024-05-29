@@ -146,7 +146,7 @@ func azureSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta 
 
 	log.Printf("[DEBUG] Writing Azure configuration to %q", configPath)
 	data := azureSecretBackendRequestData(d, meta)
-	if _, err := client.Logical().Write(configPath, data); err != nil {
+	if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
 		return diag.Errorf("error writing Azure configuration for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote Azure configuration to %q", configPath)
@@ -155,7 +155,7 @@ func azureSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta 
 	return azureSecretBackendRead(ctx, d, meta)
 }
 
-func azureSecretBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -179,7 +179,7 @@ func azureSecretBackendRead(_ context.Context, d *schema.ResourceData, meta inte
 	log.Printf("[DEBUG] Read Azure backend mount %q from Vault", path)
 
 	log.Printf("[DEBUG] Read Azure secret Backend config %s", path)
-	resp, err := client.Logical().Read(azureSecretBackendPath(path))
+	resp, err := client.Logical().ReadWithContext(ctx, azureSecretBackendPath(path))
 	if err != nil {
 		return diag.Errorf("error reading from Vault: %s", err)
 	}
@@ -252,7 +252,7 @@ func azureSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta 
 
 	data := azureSecretBackendRequestData(d, meta)
 	if len(data) > 0 {
-		_, err := client.Logical().Write(azureSecretBackendPath(path), data)
+		_, err := client.Logical().WriteWithContext(ctx, azureSecretBackendPath(path), data)
 		if err != nil {
 			return diag.Errorf("error writing config for %q: %s", path, err)
 		}
