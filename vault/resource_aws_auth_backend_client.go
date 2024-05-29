@@ -158,7 +158,7 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	log.Printf("[DEBUG] Writing AWS auth backend client config to %q", path)
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return diag.Errorf("error writing to %q: %s", path, err)
 	}
@@ -169,14 +169,14 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 	return awsAuthBackendRead(ctx, d, meta)
 }
 
-func awsAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
 
 	log.Printf("[DEBUG] Reading AWS auth backend client config")
-	secret, err := client.Logical().Read(d.Id())
+	secret, err := client.Logical().ReadWithContext(ctx, d.Id())
 	if err != nil {
 		return diag.Errorf("error reading AWS auth backend client config from %q: %s", d.Id(), err)
 	}
@@ -213,14 +213,14 @@ func awsAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfac
 	return nil
 }
 
-func awsAuthBackendDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func awsAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
 
 	log.Printf("[DEBUG] Deleting AWS auth backend client config from %q", d.Id())
-	_, err := client.Logical().Delete(d.Id())
+	_, err := client.Logical().DeleteWithContext(ctx, d.Id())
 	if err != nil {
 		return diag.Errorf("error deleting AWS auth backend client config from %q: %s", d.Id(), err)
 	}
