@@ -146,7 +146,7 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		data[useSTSRegionFromClient] = stsRegionFromClient
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
 		data[consts.FieldIdentityTokenAudience] = identityTokenAud
 		data[consts.FieldRoleArn] = roleArn
 		data[consts.FieldIdentityTokenTTL] = identityTokenTTL
@@ -204,7 +204,7 @@ func awsAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfac
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
 		d.Set(useSTSRegionFromClient, secret.Data[useSTSRegionFromClient])
 	}
-	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
 		d.Set(consts.FieldIdentityTokenAudience, secret.Data[consts.FieldIdentityTokenAudience])
 		d.Set(consts.FieldRoleArn, secret.Data[consts.FieldRoleArn])
 		d.Set(consts.FieldIdentityTokenTTL, secret.Data[consts.FieldIdentityTokenTTL])

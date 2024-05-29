@@ -110,7 +110,7 @@ func TestAccAWSAuthBackend_wif(t *testing.T) {
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117Ent)
 		},
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
