@@ -68,14 +68,14 @@ The following arguments are supported:
 * `secret_key` - (Optional) The AWS secret key that Vault should use for the
     auth backend.
 
-* `identity_token_audience` - (Optional) The audience claim value. Mutually exclusive with `access_key`.
-  Requires Vault 1.17+. *Available only for Vault Enterprise*
+* `identity_token_audience` - (Optional) The audience claim value. Mutually exclusive with `access_key`. 
+    Requires Vault 1.17+. *Available only for Vault Enterprise*
 
 * `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault 1.17+.
-  *Available only for Vault Enterprise*
+    *Available only for Vault Enterprise*
 
 * `role_arn` - (Optional) Role ARN to assume for plugin identity token federation. Requires Vault 1.17+.
-  *Available only for Vault Enterprise*
+    *Available only for Vault Enterprise*
 
 * `ec2_endpoint` - (Optional) Override the URL Vault uses when making EC2 API
     calls.
