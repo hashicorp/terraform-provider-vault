@@ -165,7 +165,7 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 
 	log.Printf("[DEBUG] Reading Azure backend mount %q from Vault", path)
 
-	mount, err := mountutil.GetMount(context.Background(), client, path)
+	mount, err := mountutil.GetMount(ctx, client, path)
 	if errors.Is(err, mountutil.ErrMountNotFound) {
 		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
@@ -260,7 +260,7 @@ func azureSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta 
 	return azureSecretBackendRead(ctx, d, meta)
 }
 
-func azureSecretBackendDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func azureSecretBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -269,7 +269,7 @@ func azureSecretBackendDelete(_ context.Context, d *schema.ResourceData, meta in
 	path := d.Id()
 
 	log.Printf("[DEBUG] Unmounting Azure backend %q", path)
-	err := client.Sys().Unmount(path)
+	err := client.Sys().UnmountWithContext(ctx, path)
 	if err != nil {
 		return diag.Errorf("error unmounting Azure backend from %q: %s", path, err)
 	}

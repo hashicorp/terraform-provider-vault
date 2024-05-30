@@ -25,6 +25,17 @@ for more information. The example below demonstrates how to do this.
 
 ## Example Usage: *vault-1.9 and above*
 
+You can setup the Azure secrets engine with Workload Identity Federation (WIF) for a secret-less configuration:
+```hcl
+resource "vault_azure_secret_backend" "azure" {
+  subscription_id         = "11111111-2222-3333-4444-111111111111"
+  tenant_id               = "11111111-2222-3333-4444-222222222222"
+  client_id               = "11111111-2222-3333-4444-333333333333"
+  identity_token_audience = "<TOKEN_AUDIENCE>"
+  identity_token_ttl      = "<TOKEN_TTL>"
+}
+```
+
 ```hcl
 resource "vault_azure_secret_backend" "azure" {
   use_microsoft_graph_api = true
@@ -33,16 +44,6 @@ resource "vault_azure_secret_backend" "azure" {
   client_id               = "11111111-2222-3333-4444-333333333333"
   client_secret           = "12345678901234567890"
   environment             = "AzurePublicCloud"
-}
-```
-
-```hcl
-resource "vault_azure_secret_backend" "azure" {
-  subscription_id         = "11111111-2222-3333-4444-111111111111"
-  tenant_id               = "11111111-2222-3333-4444-222222222222"
-  client_id               = "11111111-2222-3333-4444-333333333333"
-  identity_token_audience = "<TOKEN_AUDIENCE>"
-  identity_token_ttl      = "<TOKEN_TTL>"
 }
 ```
 
