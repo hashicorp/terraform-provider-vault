@@ -394,8 +394,9 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	}
 
 	data := map[string]interface{}{}
+	rawConfig := d.GetRawConfig()
 	for _, k := range rootCertAPIFields {
-		if v, ok := d.GetOk(k); ok {
+		if v := d.Get(k); !rawConfig.GetAttr(k).IsNull() {
 			data[k] = v
 		}
 	}

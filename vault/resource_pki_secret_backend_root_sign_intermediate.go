@@ -263,8 +263,9 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 	}
 
 	data := map[string]interface{}{}
+	rawConfig := d.GetRawConfig()
 	for _, k := range intermediateSignAPIFields {
-		if v, ok := d.GetOk(k); ok {
+		if v := d.Get(k); !rawConfig.GetAttr(k).IsNull() {
 			data[k] = v
 		}
 	}

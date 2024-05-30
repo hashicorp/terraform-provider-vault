@@ -11,6 +11,7 @@ IMPROVEMENTS:
 
 BUGS:
 * add missing `custom_tags` and `secret_name_template` fields to `vault_secrets_sync_azure_destination` resource ([#2247](https://github.com/hashicorp/terraform-provider-vault/pull/2247))
+* fix handling of 0 value within field `max_path_length` in `vault_pki_secret_backend_root_cert` and `vault_pki_secret_backend_root_sign_intermediate` resources ([#2253](https://github.com/hashicorp/terraform-provider-vault/pull/2253))
 
 ## 4.2.0 (Mar 27, 2024)
 
