@@ -4,13 +4,16 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -18,17 +21,16 @@ var azureAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$
 
 func azureAuthBackendConfigResource() *schema.Resource {
 	return &schema.Resource{
-		Create: azureAuthBackendWrite,
-		Read:   provider.ReadWrapper(azureAuthBackendRead),
-		Update: azureAuthBackendWrite,
-		Delete: azureAuthBackendDelete,
-		Exists: azureAuthBackendExists,
+		CreateContext: azureAuthBackendWrite,
+		ReadContext:   provider.ReadContextWrapper(azureAuthBackendRead),
+		UpdateContext: azureAuthBackendWrite,
+		DeleteContext: azureAuthBackendDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Unique name of the auth backend to configure.",
@@ -39,73 +41,92 @@ func azureAuthBackendConfigResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
-			"tenant_id": {
+			consts.FieldTenantID: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The tenant id for the Azure Active Directory organization.",
 				Sensitive:   true,
 			},
-			"client_id": {
+			consts.FieldClientID: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The client id for credentials to query the Azure APIs. Currently read permissions to query compute resources are required.",
 				Sensitive:   true,
 			},
-			"client_secret": {
+			consts.FieldClientSecret: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The client secret for credentials to query the Azure APIs",
 				Sensitive:   true,
 			},
-			"resource": {
+			consts.FieldResource: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The configured URL for the application registered in Azure Active Directory.",
 			},
-			"environment": {
+			consts.FieldEnvironment: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The Azure cloud environment. Valid values: AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud, AzureGermanCloud.",
+			},
+			consts.FieldIdentityTokenAudience: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The audience claim value.",
+			},
+			consts.FieldIdentityTokenTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The TTL of generated identity tokens in seconds.",
 			},
 		},
 	}
 }
 
-func azureAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
+func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	config, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	// if backend comes from the config, it won't have the StateFunc
 	// applied yet, so we need to apply it again.
-	backend := d.Get("backend").(string)
-	tenantId := d.Get("tenant_id").(string)
-	clientId := d.Get("client_id").(string)
-	clientSecret := d.Get("client_secret").(string)
-	resource := d.Get("resource").(string)
-	environment := d.Get("environment").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	tenantId := d.Get(consts.FieldTenantID).(string)
+	clientId := d.Get(consts.FieldClientID).(string)
+	clientSecret := d.Get(consts.FieldClientSecret).(string)
+	resource := d.Get(consts.FieldResource).(string)
+	environment := d.Get(consts.FieldEnvironment).(string)
+	identityTokenAud := d.Get(consts.FieldIdentityTokenAudience).(string)
+	identityTokenTTL := d.Get(consts.FieldIdentityTokenTTL).(int)
 
 	path := azureAuthBackendConfigPath(backend)
 
 	data := map[string]interface{}{
-		"tenant_id":     tenantId,
-		"client_id":     clientId,
-		"client_secret": clientSecret,
-		"resource":      resource,
-		"environment":   environment,
+		consts.FieldTenantID:     tenantId,
+		consts.FieldClientID:     clientId,
+		consts.FieldClientSecret: clientSecret,
+		consts.FieldResource:     resource,
+		consts.FieldEnvironment:  environment,
+	}
+
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117Ent)
+	if useAPIVer117Ent {
+		data[consts.FieldIdentityTokenAudience] = identityTokenAud
+		data[consts.FieldIdentityTokenTTL] = identityTokenTTL
 	}
 
 	log.Printf("[DEBUG] Writing Azure auth backend config to %q", path)
-	_, err := config.Logical().Write(path, data)
+	_, err := config.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
-		return fmt.Errorf("error writing to %q: %s", path, err)
+		return diag.Errorf("error writing to %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote Azure auth backend config to %q", path)
 
 	d.SetId(path)
 
-	return azureAuthBackendRead(d, meta)
+	return azureAuthBackendRead(ctx, d, meta)
 }
 
 func azureAuthBackendConfigBackendFromPath(path string) (string, error) {
@@ -119,16 +140,16 @@ func azureAuthBackendConfigBackendFromPath(path string) (string, error) {
 	return res[1], nil
 }
 
-func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
+func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	config, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 	path := d.Id()
 	log.Printf("[DEBUG] Reading Azure auth backend config")
-	secret, err := config.Logical().Read(path)
+	secret, err := config.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error reading Azure auth backend config from %q: %s", path, err)
+		return diag.Errorf("error reading Azure auth backend config from %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read Azure auth backend config")
 
@@ -139,47 +160,56 @@ func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	backend, err := azureAuthBackendConfigBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for azure auth backend config: %s", path, err)
+		return diag.Errorf("invalid path %q for azure auth backend config: %s", path, err)
 	}
 
-	d.Set("backend", backend)
-	d.Set("tenant_id", secret.Data["tenant_id"])
-	d.Set("client_id", secret.Data["client_id"])
-	if v, ok := secret.Data["client_secret"]; ok {
-		d.Set("client_secret", v)
+	d.Set(consts.FieldBackend, backend)
+
+	fields := []string{
+		consts.FieldTenantID,
+		consts.FieldClientID,
+		consts.FieldClientSecret,
+		consts.FieldResource,
+		consts.FieldEnvironment,
 	}
-	d.Set("resource", secret.Data["resource"])
-	d.Set("environment", secret.Data["environment"])
+	for _, k := range fields {
+		if v, ok := secret.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117Ent)
+	if useAPIVer117Ent {
+		if v, ok := secret.Data[consts.FieldIdentityTokenAudience]; ok {
+			if err := d.Set(consts.FieldIdentityTokenAudience, v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		if v, ok := secret.Data[consts.FieldIdentityTokenTTL]; ok {
+			if err := d.Set(consts.FieldIdentityTokenTTL, v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
 	return nil
 }
 
-func azureAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func azureAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	config, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 	log.Printf("[DEBUG] Deleting Azure auth backend config from %q", d.Id())
-	_, err := config.Logical().Delete(d.Id())
+	_, err := config.Logical().DeleteWithContext(ctx, d.Id())
 	if err != nil {
-		return fmt.Errorf("error deleting Azure auth backend config from %q: %s", d.Id(), err)
+		return diag.Errorf("error deleting Azure auth backend config from %q: %s", d.Id(), err)
 	}
 	log.Printf("[DEBUG] Deleted Azure auth backend config from %q", d.Id())
 
 	return nil
-}
-
-func azureAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	config, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-	log.Printf("[DEBUG] Checking if Azure auth backend is configured at %q", d.Id())
-	secret, err := config.Logical().Read(d.Id())
-	if err != nil {
-		return true, fmt.Errorf("error checking if Azure auth backend is configured at %q: %s", d.Id(), err)
-	}
-	log.Printf("[DEBUG] Checked if Azure auth backend is configured at %q", d.Id())
-	return secret != nil, nil
 }
 
 func azureAuthBackendConfigPath(path string) string {

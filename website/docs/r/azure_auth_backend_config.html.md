@@ -26,6 +26,21 @@ for more details.
 
 ## Example Usage
 
+You can setup the Azure auth engine with Workload Identity Federation (WIF) for a secret-less configuration:
+```hcl
+resource "vault_auth_backend" "example" {
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "example" {
+  backend                 = vault_auth_backend.example.path
+  tenant_id               = "11111111-2222-3333-4444-555555555555"
+  client_id               = "11111111-2222-3333-4444-555555555555"
+  identity_token_audience = "<TOKEN_AUDIENCE>"
+  identity_token_ttl      = "<TOKEN_TTL>"
+}
+```
+
 ```hcl
 resource "vault_auth_backend" "example" {
   type = "azure"
@@ -68,6 +83,11 @@ The following arguments are supported:
 	AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud,
 	AzureGermanCloud.  Defaults to `AzurePublicCloud`.
 
+* `identity_token_audience` - (Optional) The audience claim value. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
+
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
 
 ## Attributes Reference
 
