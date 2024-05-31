@@ -201,12 +201,12 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_config" "config" {
-  backend 				  = vault_auth_backend.azure.path
-  subscription_id 		  = "11111111-2222-3333-4444-111111111111"
-  tenant_id       		  = "11111111-2222-3333-4444-222222222222"
-  client_id       		  = "11111111-2222-3333-4444-333333333333"
+  backend                 = vault_auth_backend.azure.path
+  subscription_id         = "11111111-2222-3333-4444-111111111111"
+  tenant_id               = "11111111-2222-3333-4444-222222222222"
+  client_id               = "11111111-2222-3333-4444-333333333333"
   identity_token_audience = "wif-audience"
-  identity_token_ttl 	  = 600
+  identity_token_ttl      = 600
 }`, backend)
 }
 
@@ -218,7 +218,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_config" "config" {
-  backend 				  = vault_auth_backend.azure.path
+  backend                 = vault_auth_backend.azure.path
   subscription_id         = "11111111-2222-3333-4444-111111111111"
   tenant_id               = "22222222-3333-4444-5555-333333333333"
   client_id               = "22222222-3333-4444-5555-444444444444"
