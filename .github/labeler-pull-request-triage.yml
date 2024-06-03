@@ -1,9 +1,0 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
-dependencies:
-  - .github/dependabot.yml
-  - go.mod
-  - go.sum
-documentation:
-  - website/**/*
