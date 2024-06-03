@@ -455,7 +455,8 @@ const (
 	// EnvVarTokenFilename for the TokenFile auth login.
 	EnvVarTokenFilename = "TERRAFORM_VAULT_TOKEN_FILENAME"
 
-	// EnvVarVaultConfigPath to override where the Vault configuration is.
+	// EnvVarVaultConfigPath to override where the Vault configuration is in tests.
+	// Note: only used in tests. not used by the provider to read the Vault config.
 	EnvVarVaultConfigPath = "VAULT_CONFIG_PATH"
 	/*
 		common mount types
