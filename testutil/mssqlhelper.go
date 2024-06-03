@@ -16,6 +16,11 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
+const (
+	mssqlNumRetries = 3
+	mssqlPassword   = "yourStrong(!)Password"
+)
+
 // PrepareMSSQLTestContainer sets up a test MSSQL docker container
 func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	if strings.Contains(runtime.GOARCH, "arm") {

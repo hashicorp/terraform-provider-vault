@@ -16,10 +16,8 @@ import (
 )
 
 // LatestConsulVersion is the most recent version of Consul which is used unless
-// another version is specified in the test config or environment. This will
-// probably go stale as we don't always update it on every release but we rarely
-// rely on specific new Consul functionality so that's probably not a problem.
-const LatestConsulVersion = "1.15.3"
+// another version is specified in the test config or environment.
+const LatestConsulVersion = "latest"
 
 type Config struct {
 	docker.ServiceHostPort

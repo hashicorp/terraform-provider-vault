@@ -43,9 +43,6 @@ import (
 const (
 	EnvVarSkipVaultNext = "SKIP_VAULT_NEXT_TESTS"
 	EnvVarTfAccEnt      = "TF_ACC_ENTERPRISE"
-
-	mssqlNumRetries = 3
-	mssqlPassword   = "yourStrong(!)Password"
 )
 
 func TestAccPreCheck(t *testing.T) {

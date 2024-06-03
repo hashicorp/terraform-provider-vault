@@ -11,12 +11,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/namespaces"
 )
 
 const (
 	fieldDisabled      = "disabled"
 	fieldQueueCapacity = "queue_capacity"
-	rootNamespaceID    = "root"
 )
 
 var syncConfigFields = []string{
@@ -57,7 +58,7 @@ func secretsSyncConfigWrite(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(e)
 	}
 
-	if client.Namespace() != rootNamespaceID && client.Namespace() != "" {
+	if client.Namespace() != namespaces.RootNamespaceID && client.Namespace() != "" {
 		return diag.Errorf("error writing sync config, this API is reserved to the root namespace and cannot be used with %q", client.Namespace())
 	}
 
