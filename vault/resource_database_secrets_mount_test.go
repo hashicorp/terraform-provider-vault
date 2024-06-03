@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -20,7 +19,7 @@ import (
 func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineMSSQL)
 
-	cleanupFunc, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	cleanupFunc, connURL := testutil.PrepareMSSQLTestContainer(t)
 
 	t.Cleanup(cleanupFunc)
 
@@ -112,10 +111,10 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 	testutil.SkipTestEnvSet(t, "SKIP_MSSQL_MULTI_CI")
 	MaybeSkipDBTests(t, dbEngineMSSQL)
 
-	cleanupFunc, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	cleanupFunc, connURL := testutil.PrepareMSSQLTestContainer(t)
 	t.Cleanup(cleanupFunc)
 
-	cleanupFunc2, connURL2 := mssqlhelper.PrepareMSSQLTestContainer(t)
+	cleanupFunc2, connURL2 := testutil.PrepareMSSQLTestContainer(t)
 	t.Cleanup(cleanupFunc2)
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
