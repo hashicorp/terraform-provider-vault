@@ -168,13 +168,22 @@ func TestGCPAuthBackend_WIF(t *testing.T) {
 		CheckDestroy:      testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPAuthBackend_WIFConfig(path),
+				Config: testGCPAuthBackend_WIFConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "test"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenKey, "test"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, "test"),
+				),
+			},
+			{
+				Config: testGCPAuthBackend_WIFConfig_updated(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "test-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenKey, "test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, "test-updated"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
@@ -355,7 +364,19 @@ resource "vault_gcp_auth_backend" "test" {
 `, credentials, path)
 }
 
-func testGCPAuthBackend_WIFConfig(path string) string {
+func testGCPAuthBackend_WIFConfig_basic(path string) string {
+	return fmt.Sprintf(
+		`
+resource "vault_gcp_auth_backend" "test" {
+ path                    = "%s"
+ service_account_email   = "test"
+ identity_token_audience = "test"
+ identity_token_ttl      = 30
+}
+`, path)
+}
+
+func testGCPAuthBackend_WIFConfig_updated(path string) string {
 	return fmt.Sprintf(
 		`
 resource "vault_identity_oidc_key" "test" {
@@ -365,9 +386,9 @@ resource "vault_identity_oidc_key" "test" {
 
 resource "vault_gcp_auth_backend" "test" {
  path                    = "%s"
- service_account_email   = "test"
- identity_token_audience = "test"
- identity_token_ttl      = 30
+ service_account_email   = "test-updated"
+ identity_token_audience = "test-updated"
+ identity_token_ttl      = 1800
  identity_token_key      = vault_identity_oidc_key.test.name
 }
 `, path)

@@ -45,6 +45,20 @@ The following arguments are supported:
 
 * `local` - (Optional) Specifies if the auth method is local only.
 
+* `service_account_email` – (Optional) Service Account to impersonate for plugin workload identity federation.
+  Required with `identity_token_audience`. Requires Vault 1.17+. *Available only for Vault Enterprise*.
+
+* `identity_token_audience` - (Optional) The audience claim value for plugin identity
+  tokens. Must match an allowed audience configured for the target [Workload Identity Pool](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#prepare).
+  Mutually exclusive with `credentials`.  Requires Vault 1.17+. *Available only for Vault Enterprise*.
+
+* `identity_token_ttl` - (Optional) The TTL of generated tokens. Defaults to
+  1 hour. Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
+  Requires Vault 1.17+. *Available only for Vault Enterprise*.
+
+* `identity_token_key` - (Optional) The key to use for signing plugin identity
+  tokens. Requires Vault 1.17+. *Available only for Vault Enterprise*.
+
 * `custom_endpoint` - (Optional) Specifies overrides to
   [service endpoints](https://cloud.google.com/apis/design/glossary#api_service_endpoint)
   used when making API requests. This allows specific requests made during authentication
