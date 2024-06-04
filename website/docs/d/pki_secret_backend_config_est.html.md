@@ -46,25 +46,25 @@ The following arguments are supported:
  
 ## Attributes Reference
 
-* `authenticators` - Lists the mount accessors EST should delegate authentication requests towards (see [below for nested schema](#nestedatt--authenticators))
+* `authenticators` - Lists the mount accessors EST should delegate authentication requests towards (see [below for nested schema](#nestedatt--authenticators)).
  
-* `default_mount` - Is this mount providing the cluster's default EST mount
+* `default_mount` -  If set, this mount is registered as the default `.well-known/est` URL path. Only a single mount can enable this across a Vault cluster.
  
-* `default_path_policy` - The behavior of the default_mount when enabled
+* `default_path_policy` - Required to be set if default_mount is enabled. Specifies the behavior for requests using the default EST label. Can be sign-verbatim or a role given by role:<role_name>.
  
-* `enable_sentinel_parsing` - Are fields from the provided CSR parsed out for Sentinel policies
+* `enable_sentinel_parsing` - If set, parse out fields from the provided CSR making them available for Sentinel policies.
+
+* `enabled` - Specifies whether EST is enabled.
  
-* `enabled` - Is the EST feature enabled
+* `label_to_path_policy` - A pairing of an EST label with the redirected behavior for requests hitting that role. The path policy can be sign-verbatim or a role given by role:<role_name>. Labels must be unique across Vault cluster, and will register .well-known/est/<label> URL paths.
  
-* `label_to_path_policy` - A pairing of EST label to the configured EST behavior for it
+* `audit_fields` - Fields parsed from the CSR that appear in the audit and can be used by sentinel policies.
  
-* `audit_fields` - Fields parsed from the CSR that appear in the audit and can be used by sentinel policies
- 
-* `last_updated` - A read-only timestamp representing the last time the configuration was updated
+* `last_updated` - A read-only timestamp representing the last time the configuration was updated.
 
 <a id="nestedatt--authenticators"></a>
 ### Nested Schema for `authenticators`
 
-* `cert` - "The accessor and cert_role properties for cert auth backends"
+* `cert` - "The accessor and cert_role properties for cert auth backends".
  
-* `userpass` - "The accessor property for user pass auth backends"
+* `userpass` - "The accessor property for user pass auth backends".

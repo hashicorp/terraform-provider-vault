@@ -177,8 +177,7 @@ resource "vault_pki_secret_backend_config_est" "test" {
 }
 
 data "vault_pki_secret_backend_config_est" "test" {
-  depends_on = [vault_pki_secret_backend_config_est.test]
-  backend = vault_mount.test.path
+  backend = vault_pki_secret_backend_config_est.test.backend	
 }
 `, pkiPath)
 }
@@ -196,8 +195,7 @@ resource "vault_pki_secret_backend_config_est" "test" {
 }
 
 data "vault_pki_secret_backend_config_est" "test" {
-  depends_on = [vault_pki_secret_backend_config_est.test]
-  backend = vault_mount.test.path
+  backend = vault_pki_secret_backend_config_est.test.backend	
 }
 `, path)
 }

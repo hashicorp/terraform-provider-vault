@@ -30,28 +30,28 @@ func pkiSecretBackendConfigEstResource() *schema.Resource {
 			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The PKI secret backend the resource belongs to.",
+				Description: "The PKI secret backend the resource belongs to",
 				ForceNew:    true,
 			},
 			consts.FieldEnabled: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Is the EST feature enabled",
+				Description: "Specifies whether EST is enabled",
 			},
 			consts.FieldDefaultMount: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Is this the cluster's default EST mount",
+				Description: "If set, this mount will register the default `.well-known/est` URL path. Only a single mount can enable this across a Vault cluster",
 			},
 			consts.FieldDefaultPathPolicy: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The behavior of the default_mount when enabled",
+				Description: "Required to be set if default_mount is enabled. Specifies the behavior for requests using the default EST label. Can be sign-verbatim or a role given by role:<role_name>",
 			},
 			consts.FieldLabelToPathPolicy: {
 				Type:        schema.TypeMap,
 				Optional:    true,
-				Description: "A pairing of EST label to the configured EST behavior for it",
+				Description: "Configures a pairing of an EST label with the redirected behavior for requests hitting that role. The path policy can be sign-verbatim or a role given by role:<role_name>. Labels must be unique across Vault cluster, and will register .well-known/est/<label> URL paths",
 			},
 			consts.FieldAuthenticators: {
 				Type:        schema.TypeList,
@@ -75,7 +75,7 @@ func pkiSecretBackendConfigEstResource() *schema.Resource {
 			consts.FieldEnableSentinelParsing: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Enable parsing of fields from the provided CSR for Sentinel policies",
+				Description: "If set, parse out fields from the provided CSR making them available for Sentinel policies",
 			},
 			consts.FieldAuditFields: {
 				Type:        schema.TypeList,
