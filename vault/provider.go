@@ -167,6 +167,10 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_config_est": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstDataSource()),
+			PathInventory: []string{"/pki/config/est"},
+		},
 		"vault_pki_secret_backend_issuer": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
 			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
@@ -582,6 +586,10 @@ var (
 		"vault_pki_secret_backend_config_cluster": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigClusterResource()),
 			PathInventory: []string{"/pki/config/cluster"},
+		},
+		"vault_pki_secret_backend_config_est": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstResource()),
+			PathInventory: []string{"/pki/config/est"},
 		},
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),

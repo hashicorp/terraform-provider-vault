@@ -424,6 +424,14 @@ const (
 	FieldDelegatedAuthAccessors        = "delegated_auth_accessors"
 	FieldPluginVersion                 = "plugin_version"
 	FieldUseMSGraphAPI                 = "use_microsoft_graph_api"
+	FieldEnabled                       = "enabled"
+	FieldDefaultMount                  = "default_mount"
+	FieldDefaultPathPolicy             = "default_path_policy"
+	FieldLabelToPathPolicy             = "label_to_path_policy"
+	FieldAuthenticators                = "authenticators"
+	FieldEnableSentinelParsing         = "enable_sentinel_parsing"
+	FieldAuditFields                   = "audit_fields"
+	FieldLastUpdated                   = "last_updated"
 
 	/*
 		common environment variables
