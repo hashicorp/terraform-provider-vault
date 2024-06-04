@@ -111,6 +111,11 @@ func gcpAuthBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "The TTL of generated tokens.",
 			},
+			consts.FieldIdentityTokenKey: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The key to use for signing identity tokens.",
+			},
 			consts.FieldServiceAccountEmail: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -196,11 +201,20 @@ func gcpAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 	desc := d.Get(consts.FieldDescription).(string)
 	local := d.Get(consts.FieldLocal).(bool)
 
+	config := &api.MountConfigInput{}
+	useAPIver117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	if useAPIver117Ent {
+		if v, ok := d.GetOk(consts.FieldIdentityTokenKey); ok {
+			config.IdentityTokenKey = v.(string)
+		}
+	}
+
 	log.Printf("[DEBUG] Enabling gcp auth backend %q", path)
 	err := client.Sys().EnableAuthWithOptionsWithContext(ctx, path, &api.EnableAuthOptions{
 		Type:        authType,
 		Description: desc,
 		Local:       local,
+		Config:      *config,
 	})
 	if err != nil {
 		return diag.Errorf("error enabling gcp auth backend %q: %s", path, err)
@@ -271,7 +285,8 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
+	useAPIver117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	if useAPIver117Ent {
 		fields := []string{
 			consts.FieldIdentityTokenAudience,
 			consts.FieldIdentityTokenTTL,
@@ -328,7 +343,8 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		consts.FieldLocal,
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
+	useAPIver117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	if useAPIver117Ent {
 		params = append(params,
 			consts.FieldIdentityTokenAudience,
 			consts.FieldIdentityTokenTTL,
@@ -366,7 +382,7 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	log.Printf("[DEBUG] Reading %s auth tune from '%s/tune'", gcpAuthType, gcpAuthPath)
 	rawTune, err := authMountTuneGet(client, gcpAuthPath)
 	if err != nil {
-		return diag.Errorf("error reading tune information from Vault: %w", err)
+		return diag.Errorf("error reading tune information from Vault: %s", err)
 	}
 	data := map[string]interface{}{}
 	data[consts.FieldTune] = []map[string]interface{}{rawTune}
