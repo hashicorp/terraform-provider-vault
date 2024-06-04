@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-	consulhelper "github.com/hashicorp/vault/helper/testhelpers/consul"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -140,7 +139,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 	resourceName := resourceType + ".test"
 	resourceRoleName := "vault_consul_secret_backend_role.test"
 
-	cleanup, consulConfig := consulhelper.PrepareTestContainer(t, "1.12.3", false, false)
+	cleanup, consulConfig := testutil.PrepareTestContainer(t, "1.12.3", false, false)
 	t.Cleanup(cleanup)
 	consulAddr := consulConfig.Address()
 

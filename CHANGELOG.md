@@ -3,7 +3,10 @@
 FEATURES:
 * Add support for `iam_tags` in `vault_aws_secret_backend_role` ([#2231](https://github.com/hashicorp/terraform-provider-vault/pull/2231)).
 * Add support for `inheritable` on `vault_quota_rate_limit` and `vault_quota_lease_count`. Requires Vault 1.15+.: ([#2133](https://github.com/hashicorp/terraform-provider-vault/pull/2133)).
-* Add support for new WIF fields in `vault_gcp_secret_backend` ([#2249](https://github.com/hashicorp/terraform-provider-vault/pull/2249))
+* Add support for new WIF fields in `vault_gcp_secret_backend`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2249](https://github.com/hashicorp/terraform-provider-vault/pull/2249)). 
+* Add support for new WIF fields in `vault_aws_auth_backend_client`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2243](https://github.com/hashicorp/terraform-provider-vault/pull/2243)).
+* Add support for new WIF fields in `vault_azure_secret_backend`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2250](https://github.com/hashicorp/terraform-provider-vault/pull/2250))
+* Add new data source and resource `vault_pki_secret_backend_config_est`. Requires Vault 1.16+. *Available only for Vault Enterprise* ([#2246](https://github.com/hashicorp/terraform-provider-vault/pull/2246))
 
 IMPROVEMENTS:
 * return a useful error when delete fails for the `vault_jwt_auth_backend_role` resource: ([#2232](https://github.com/hashicorp/terraform-provider-vault/pull/2232))

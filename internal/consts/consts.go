@@ -415,11 +415,23 @@ const (
 	FieldLink                          = "link"
 	FieldGranularity                   = "granularity"
 	FieldGranularityLevel              = "granularity_level"
+	FieldEC2Endpoint                   = "ec2_endpoint"
+	FieldSTSRegion                     = "sts_region"
+	FieldIAMServerIDHeaderValue        = "iam_server_id_header_value"
 	FieldListingVisibility             = "listing_visibility"
 	FieldPassthroughRequestHeaders     = "passthrough_request_headers"
 	FieldAllowedResponseHeaders        = "allowed_response_headers"
 	FieldDelegatedAuthAccessors        = "delegated_auth_accessors"
 	FieldPluginVersion                 = "plugin_version"
+	FieldUseMSGraphAPI                 = "use_microsoft_graph_api"
+	FieldEnabled                       = "enabled"
+	FieldDefaultMount                  = "default_mount"
+	FieldDefaultPathPolicy             = "default_path_policy"
+	FieldLabelToPathPolicy             = "label_to_path_policy"
+	FieldAuthenticators                = "authenticators"
+	FieldEnableSentinelParsing         = "enable_sentinel_parsing"
+	FieldAuditFields                   = "audit_fields"
+	FieldLastUpdated                   = "last_updated"
 	FieldCustomEndpoint                = "custom_endpoint"
 	FieldPrivateKeyID                  = "private_key_id"
 	FieldTune                          = "tune"
@@ -457,6 +469,10 @@ const (
 	EnvVarRadiusPassword = "RADIUS_PASSWORD"
 	// EnvVarTokenFilename for the TokenFile auth login.
 	EnvVarTokenFilename = "TERRAFORM_VAULT_TOKEN_FILENAME"
+
+	// EnvVarVaultConfigPath to override where the Vault configuration is in tests.
+	// Note: only used in tests. not used by the provider to read the Vault config.
+	EnvVarVaultConfigPath = "VAULT_CONFIG_PATH"
 	/*
 		common mount types
 	*/
