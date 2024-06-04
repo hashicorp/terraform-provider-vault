@@ -11,7 +11,6 @@ import (
 
 	"github.com/hashicorp/vault/api"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -45,9 +44,6 @@ func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
 	}
 	if v, ok := raw["token_type"]; ok {
 		data.TokenType = v.(string)
-	}
-	if v, ok := raw[consts.FieldIdentityTokenKey]; ok {
-		data.IdentityTokenKey = v.(string)
 	}
 	return data
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -71,11 +70,6 @@ func authMountTuneSchema() *schema.Schema {
 					Optional:     true,
 					Description:  "Specifies the type of tokens that should be returned by the mount.",
 					ValidateFunc: validation.StringInSlice([]string{"default-service", "default-batch", "service", "batch"}, false),
-				},
-				consts.FieldIdentityTokenKey: {
-					Type:        schema.TypeString,
-					Optional:    true,
-					Description: "The key to use for signing identity tokens.",
 				},
 			},
 		},
