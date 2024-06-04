@@ -25,6 +25,17 @@ for more information. The example below demonstrates how to do this.
 
 ## Example Usage: *vault-1.9 and above*
 
+You can setup the Azure secrets engine with Workload Identity Federation (WIF) for a secret-less configuration:
+```hcl
+resource "vault_azure_secret_backend" "azure" {
+  subscription_id         = "11111111-2222-3333-4444-111111111111"
+  tenant_id               = "11111111-2222-3333-4444-222222222222"
+  client_id               = "11111111-2222-3333-4444-333333333333"
+  identity_token_audience = "<TOKEN_AUDIENCE>"
+  identity_token_ttl      = "<TOKEN_TTL>"
+}
+```
+
 ```hcl
 resource "vault_azure_secret_backend" "azure" {
   use_microsoft_graph_api = true
@@ -73,6 +84,15 @@ The following arguments are supported:
 - `environment` (`string:""`) - The Azure environment.
 
 - `path` (`string: <optional>`) - The unique path this backend should be mounted at. Defaults to `azure`.
+
+- `identity_token_audience` - (Optional) The audience claim value. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
+
+- `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
+
+- `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
 
 - `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
   See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)

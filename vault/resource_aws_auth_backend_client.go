@@ -4,13 +4,15 @@
 package vault
 
 import (
-	"fmt"
+	"context"
+
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -20,17 +22,16 @@ const (
 
 func awsAuthBackendClientResource() *schema.Resource {
 	return &schema.Resource{
-		Create: awsAuthBackendWrite,
-		Read:   provider.ReadWrapper(awsAuthBackendRead),
-		Update: awsAuthBackendWrite,
-		Delete: awsAuthBackendDelete,
-		Exists: awsAuthBackendExists,
+		CreateContext: awsAuthBackendWrite,
+		ReadContext:   provider.ReadContextWrapper(awsAuthBackendRead),
+		UpdateContext: awsAuthBackendWrite,
+		DeleteContext: awsAuthBackendDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Unique name of the auth backend to configure.",
@@ -41,34 +42,34 @@ func awsAuthBackendClientResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
-			"access_key": {
+			consts.FieldAccessKey: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "AWS Access key with permissions to query AWS APIs.",
 				Sensitive:   true,
 			},
-			"secret_key": {
+			consts.FieldSecretKey: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "AWS Secret key with permissions to query AWS APIs.",
 				Sensitive:   true,
 			},
-			"ec2_endpoint": {
+			consts.FieldEC2Endpoint: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "URL to override the default generated endpoint for making AWS EC2 API calls.",
 			},
-			"iam_endpoint": {
+			consts.FieldIAMEndpoint: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "URL to override the default generated endpoint for making AWS IAM API calls.",
 			},
-			"sts_endpoint": {
+			consts.FieldSTSEndpoint: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "URL to override the default generated endpoint for making AWS STS API calls.",
 			},
-			"sts_region": {
+			consts.FieldSTSRegion: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Region to override the default region for making AWS STS API calls.",
@@ -79,79 +80,105 @@ func awsAuthBackendClientResource() *schema.Resource {
 				Computed:    true,
 				Description: "If set, will override sts_region and use the region from the client request's header",
 			},
-			"iam_server_id_header_value": {
+			consts.FieldIAMServerIDHeaderValue: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The value to require in the X-Vault-AWS-IAM-Server-ID header as part of GetCallerIdentity requests that are used in the iam auth method.",
+			},
+			consts.FieldRoleArn: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Role ARN to assume for plugin identity token federation.",
+			},
+			consts.FieldIdentityTokenAudience: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The audience claim value.",
+			},
+			consts.FieldIdentityTokenTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The TTL of generated identity tokens in seconds.",
 			},
 		},
 	}
 }
 
-func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
+func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	// if backend comes from the config, it won't have the StateFunc
 	// applied yet, so we need to apply it again.
-	backend := d.Get("backend").(string)
-	ec2Endpoint := d.Get("ec2_endpoint").(string)
-	iamEndpoint := d.Get("iam_endpoint").(string)
-	stsEndpoint := d.Get("sts_endpoint").(string)
-	stsRegion := d.Get("sts_region").(string)
-	stsRegionFromClient := d.Get("use_sts_region_from_client").(bool)
+	backend := d.Get(consts.FieldBackend).(string)
+	ec2Endpoint := d.Get(consts.FieldEC2Endpoint).(string)
+	iamEndpoint := d.Get(consts.FieldIAMEndpoint).(string)
+	stsEndpoint := d.Get(consts.FieldSTSEndpoint).(string)
+	stsRegion := d.Get(consts.FieldSTSRegion).(string)
+	stsRegionFromClient := d.Get(useSTSRegionFromClient).(bool)
 
-	iamServerIDHeaderValue := d.Get("iam_server_id_header_value").(string)
+	identityTokenAud := d.Get(consts.FieldIdentityTokenAudience).(string)
+	roleArn := d.Get(consts.FieldRoleArn).(string)
+	identityTokenTTL := d.Get(consts.FieldIdentityTokenTTL).(int)
+
+	iamServerIDHeaderValue := d.Get(consts.FieldIAMServerIDHeaderValue).(string)
 
 	path := awsAuthBackendClientPath(backend)
 
 	data := map[string]interface{}{
-		"endpoint":                   ec2Endpoint,
-		"iam_endpoint":               iamEndpoint,
-		"sts_endpoint":               stsEndpoint,
-		"sts_region":                 stsRegion,
-		"iam_server_id_header_value": iamServerIDHeaderValue,
+		"endpoint":                         ec2Endpoint,
+		consts.FieldIAMEndpoint:            iamEndpoint,
+		consts.FieldSTSEndpoint:            stsEndpoint,
+		consts.FieldSTSRegion:              stsRegion,
+		consts.FieldIAMServerIDHeaderValue: iamServerIDHeaderValue,
 	}
 
-	if d.HasChange("access_key") || d.HasChange("secret_key") {
+	if d.HasChange(consts.FieldAccessKey) || d.HasChange(consts.FieldSecretKey) {
 		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
-		data["access_key"] = d.Get("access_key").(string)
-		data["secret_key"] = d.Get("secret_key").(string)
+		data[consts.FieldAccessKey] = d.Get(consts.FieldAccessKey).(string)
+		data[consts.FieldSecretKey] = d.Get(consts.FieldSecretKey).(string)
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
 		data[useSTSRegionFromClient] = stsRegionFromClient
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
+		data[consts.FieldIdentityTokenAudience] = identityTokenAud
+		data[consts.FieldRoleArn] = roleArn
+		data[consts.FieldIdentityTokenTTL] = identityTokenTTL
+	}
+
 	// sts_endpoint and sts_region are required to be set together
 	if (stsEndpoint == "") != (stsRegion == "") {
-		return fmt.Errorf("both sts_endpoint and sts_region need to be set")
+		return diag.Errorf("both sts_endpoint and sts_region need to be set")
 	}
 
 	log.Printf("[DEBUG] Writing AWS auth backend client config to %q", path)
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
-		return fmt.Errorf("error writing to %q: %s", path, err)
+		return diag.Errorf("error writing to %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote AWS auth backend client config to %q", path)
 
 	d.SetId(path)
 
-	return awsAuthBackendRead(d, meta)
+	return awsAuthBackendRead(ctx, d, meta)
 }
 
-func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
+func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	log.Printf("[DEBUG] Reading AWS auth backend client config")
-	secret, err := client.Logical().Read(d.Id())
+	secret, err := client.Logical().ReadWithContext(ctx, d.Id())
 	if err != nil {
-		return fmt.Errorf("error reading AWS auth backend client config from %q: %s", d.Id(), err)
+		return diag.Errorf("error reading AWS auth backend client config from %q: %s", d.Id(), err)
 	}
 	log.Printf("[DEBUG] Read AWS auth backend client config")
 
@@ -164,52 +191,64 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	// set the backend to the original passed path (without config/client at the end)
 	re := regexp.MustCompile(`^auth/(.*)/config/client$`)
 	if !re.MatchString(d.Id()) {
-		return fmt.Errorf("`config/client` has not been appended to the ID (%s)", d.Id())
+		return diag.Errorf("`config/client` has not been appended to the ID (%s)", d.Id())
 	}
 	d.Set("backend", re.FindStringSubmatch(d.Id())[1])
 
-	d.Set("access_key", secret.Data["access_key"])
-	d.Set("ec2_endpoint", secret.Data["endpoint"])
-	d.Set("iam_endpoint", secret.Data["iam_endpoint"])
-	d.Set("sts_endpoint", secret.Data["sts_endpoint"])
-	d.Set("sts_region", secret.Data["sts_region"])
-	d.Set("iam_server_id_header_value", secret.Data["iam_server_id_header_value"])
+	if err := d.Set(consts.FieldEC2Endpoint, secret.Data["endpoint"]); err != nil {
+		return diag.FromErr(err)
+	}
+	fields := []string{
+		consts.FieldAccessKey,
+		consts.FieldIAMEndpoint,
+		consts.FieldSTSEndpoint,
+		consts.FieldSTSRegion,
+		consts.FieldIAMServerIDHeaderValue,
+	}
+	for _, k := range fields {
+		if v, ok := secret.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
-		d.Set(useSTSRegionFromClient, secret.Data[useSTSRegionFromClient])
+		if err := d.Set(useSTSRegionFromClient, secret.Data[useSTSRegionFromClient]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
+		wifFields := []string{
+			consts.FieldIdentityTokenAudience,
+			consts.FieldRoleArn,
+			consts.FieldIdentityTokenTTL,
+		}
+		for _, k := range wifFields {
+			if v, ok := secret.Data[k]; ok {
+				if err := d.Set(k, v); err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
 	}
 
 	return nil
 }
 
-func awsAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func awsAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	log.Printf("[DEBUG] Deleting AWS auth backend client config from %q", d.Id())
-	_, err := client.Logical().Delete(d.Id())
+	_, err := client.Logical().DeleteWithContext(ctx, d.Id())
 	if err != nil {
-		return fmt.Errorf("error deleting AWS auth backend client config from %q: %s", d.Id(), err)
+		return diag.Errorf("error deleting AWS auth backend client config from %q: %s", d.Id(), err)
 	}
 	log.Printf("[DEBUG] Deleted AWS auth backend client config from %q", d.Id())
 
 	return nil
-}
-
-func awsAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	log.Printf("[DEBUG] Checking if AWS auth backend client is configured at %q", d.Id())
-	secret, err := client.Logical().Read(d.Id())
-	if err != nil {
-		return true, fmt.Errorf("error checking if AWS auth backend client is configured at %q: %s", d.Id(), err)
-	}
-	log.Printf("[DEBUG] Checked if AWS auth backend client is configured at %q", d.Id())
-	return secret != nil, nil
 }
 
 func awsAuthBackendClientPath(path string) string {

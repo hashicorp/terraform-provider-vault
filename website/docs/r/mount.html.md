@@ -88,6 +88,25 @@ The following arguments are supported:
 
 * `allowed_managed_keys` - (Optional) Set of managed key registry entry names that the mount in question is allowed to access
 
+* `listing_availability` - (Optional) Specifies whether to show this mount in the UI-specific
+  listing endpoint. Valid values are `unauth` or `hidden`. If not set, behaves like `hidden`.
+
+* `passthrough_request_headers` - (Optional) List of headers to allow and pass from the request to
+  the plugin.
+
+* `allowed_response_headers` - (Optional) List of headers to allow, allowing a plugin to include
+  them in the response.
+
+* `delegated_auth_accessors` - (Optional)  List of allowed authentication mount accessors the
+  backend can request delegated authentication for.
+
+* `plugin_version` - (Optional) Specifies the semantic version of the plugin to use, e.g. "v1.0.0".
+  If unspecified, the server will select any matching unversioned plugin that may have been
+  registered, the latest versioned plugin registered, or a built-in plugin in that order of precedence.
+
+* `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
+  not provided, this will default to Vault's OIDC default key.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:

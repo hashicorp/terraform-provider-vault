@@ -58,7 +58,7 @@ jobs:
           make test
   acceptance:
     needs: [go-version, build]
-    runs-on: [custom, linux, custom-linux-large]
+    runs-on: custom-linux-large
     strategy:
       fail-fast: false
       matrix:

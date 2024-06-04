@@ -24,6 +24,8 @@ var azureSyncWriteFields = []string{
 	fieldKeyVaultURI,
 	fieldCloud,
 	consts.FieldGranularity,
+	consts.FieldSecretNameTemplate,
+	consts.FieldCustomTags,
 	consts.FieldClientSecret,
 	consts.FieldClientID,
 	consts.FieldTenantID,
@@ -33,6 +35,8 @@ var azureSyncReadFields = []string{
 	fieldKeyVaultURI,
 	fieldCloud,
 	consts.FieldGranularity,
+	consts.FieldSecretNameTemplate,
+	consts.FieldCustomTags,
 	consts.FieldClientID,
 	consts.FieldTenantID,
 }
