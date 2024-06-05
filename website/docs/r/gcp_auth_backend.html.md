@@ -11,6 +11,15 @@ description: |-
 Provides a resource to configure the [GCP auth backend within Vault](https://www.vaultproject.io/docs/auth/gcp.html).
 
 ## Example Usage
+You can setup the GCP auth backend with Workload Identity Federation (WIF) for a secret-less configuration:
+```hcl
+resource "vault_gcp_auth_backend" "gcp" {
+  identity_token_key      = "example-key"
+  identity_token_ttl      = 1800
+  identity_token_audience = "<TOKEN_AUDIENCE>"
+  service_account_email   = "<SERVICE_ACCOUNT_EMAIL>"
+}
+```
 
 ```hcl
 resource "vault_gcp_auth_backend" "gcp" { 
