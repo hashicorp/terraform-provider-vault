@@ -244,6 +244,20 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 
 		gcpAuthPath = "auth/" + newMount
 		path = gcpAuthBackendConfigPath(newMount)
+
+		if d.HasChanges(consts.FieldIdentityTokenKey, consts.FieldDescription) {
+			desc := d.Get(consts.FieldDescription).(string)
+			config := api.MountConfigInput{
+				Description: &desc,
+			}
+			useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+			if useAPIVer117Ent {
+				config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
+			}
+			if err := client.Sys().TuneMountWithContext(ctx, path, config); err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	}
 
 	data := map[string]interface{}{}
@@ -268,6 +282,7 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		log.Printf("[INFO] %s Auth %q tune configuration changed", gcpAuthType, gcpAuthPath)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing %s auth tune to %q", gcpAuthType, gcpAuthPath)
+			// @TODO refactor to pass in context to tune in follow-up PR
 			err := authMountTune(client, gcpAuthPath, raw)
 			if err != nil {
 				return nil
