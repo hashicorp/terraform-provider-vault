@@ -199,7 +199,7 @@ func githubAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta int
 	log.Printf("[DEBUG] Reading github auth config from '%q'", configPath)
 	resp, err := client.Logical().ReadWithContext(ctx, configPath)
 	if err != nil {
-		return diag.Errorf("error reading github auth config from '%q': %w", configPath, err)
+		return diag.Errorf("error reading github auth config from '%q': %s", configPath, err)
 	}
 	log.Printf("[INFO] Read github auth config from '%q'", configPath)
 
@@ -212,7 +212,7 @@ func githubAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta int
 	log.Printf("[DEBUG] Reading github auth tune from '%q/tune'", path)
 	rawTune, err := authMountTuneGet(ctx, client, path)
 	if err != nil {
-		return diag.Errorf("error reading tune information from Vault: %w", err)
+		return diag.Errorf("error reading tune information from Vault: %s", err)
 	}
 
 	data := getCommonTokenFieldMap(resp)
