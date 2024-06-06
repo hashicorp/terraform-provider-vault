@@ -111,7 +111,7 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 		consts.FieldEnvironment:  environment,
 	}
 
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117Ent)
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
 		data[consts.FieldIdentityTokenAudience] = identityTokenAud
 		data[consts.FieldIdentityTokenTTL] = identityTokenTTL
@@ -180,7 +180,7 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		}
 	}
 
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117Ent)
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
 		if v, ok := secret.Data[consts.FieldIdentityTokenAudience]; ok {
 			if err := d.Set(consts.FieldIdentityTokenAudience, v); err != nil {
