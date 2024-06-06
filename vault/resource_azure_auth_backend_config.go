@@ -163,7 +163,9 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.Errorf("invalid path %q for azure auth backend config: %s", path, err)
 	}
 
-	d.Set(consts.FieldBackend, backend)
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		return diag.FromErr(err)
+	}
 
 	fields := []string{
 		consts.FieldTenantID,

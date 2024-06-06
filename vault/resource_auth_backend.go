@@ -6,7 +6,7 @@ package vault
 import (
 	"context"
 	"errors"
-	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -22,18 +22,18 @@ func AuthBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		SchemaVersion: 1,
 
-		Create: authBackendWrite,
-		Delete: authBackendDelete,
-		Read:   provider.ReadWrapper(authBackendRead),
-		Update: authBackendUpdate,
+		CreateContext: authBackendWrite,
+		DeleteContext: authBackendDelete,
+		ReadContext:   provider.ReadContextWrapper(authBackendRead),
+		UpdateContext: authBackendUpdate,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		MigrateState:  resourceAuthBackendMigrateState,
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 
 		Schema: map[string]*schema.Schema{
-			"type": {
+			consts.FieldType: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
@@ -51,85 +51,100 @@ func AuthBackendResource() *schema.Resource {
 				},
 			},
 
-			"description": {
+			consts.FieldDescription: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The description of the auth backend",
 			},
 
-			"local": {
+			consts.FieldLocal: {
 				Type:        schema.TypeBool,
 				ForceNew:    true,
 				Optional:    true,
 				Description: "Specifies if the auth method is local only",
 			},
 
-			"accessor": {
+			consts.FieldAccessor: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The accessor of the auth backend",
 			},
 
-			"tune": authMountTuneSchema(),
+			consts.FieldIdentityTokenKey: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The key to use for signing identity tokens.",
+			},
+
+			consts.FieldTune: authMountTuneSchema(),
 		},
 	}, false)
 }
 
-func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
+func authBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	mountType := d.Get("type").(string)
+	mountType := d.Get(consts.FieldType).(string)
 	path := d.Get(consts.FieldPath).(string)
 
 	if path == "" {
 		path = mountType
 	}
 
+	config := &api.MountConfigInput{}
+	useAPIver117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	if useAPIver117Ent {
+		if v, ok := d.GetOk(consts.FieldIdentityTokenKey); ok {
+			config.IdentityTokenKey = v.(string)
+		}
+	}
+
 	options := &api.EnableAuthOptions{
 		Type:        mountType,
-		Description: d.Get("description").(string),
-		Local:       d.Get("local").(bool),
+		Description: d.Get(consts.FieldDescription).(string),
+		Local:       d.Get(consts.FieldLocal).(bool),
+		Config:      *config,
 	}
 
 	log.Printf("[DEBUG] Writing auth %q to Vault", path)
-	if err := client.Sys().EnableAuthWithOptions(path, options); err != nil {
-		return fmt.Errorf("error writing to Vault: %s", err)
+	if err := client.Sys().EnableAuthWithOptionsWithContext(ctx, path, options); err != nil {
+		return diag.Errorf("error writing to Vault: %s", err)
 	}
 
 	d.SetId(path)
 
-	return authBackendUpdate(d, meta)
+	return authBackendUpdate(ctx, d, meta)
 }
 
-func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func authBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
 
-	if err := client.Sys().DisableAuth(path); err != nil {
-		return fmt.Errorf("error disabling auth from Vault: %s", err)
+	if err := client.Sys().DisableAuthWithContext(ctx, path); err != nil {
+		return diag.Errorf("error disabling auth from Vault: %s", err)
 	}
 
 	return nil
 }
 
-func authBackendRead(d *schema.ResourceData, meta interface{}) error {
+func authBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
-	mount, err := mountutil.GetAuthMount(context.Background(), client, path)
+	mount, err := mountutil.GetAuthMount(ctx, client, path)
 	if errors.Is(err, mountutil.ErrMountNotFound) {
 		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
@@ -137,32 +152,35 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	if err := d.Set("type", mount.Type); err != nil {
-		return err
+	if err := d.Set(consts.FieldType, mount.Type); err != nil {
+		return diag.FromErr(err)
 	}
 	if err := d.Set(consts.FieldPath, path); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	if err := d.Set("description", mount.Description); err != nil {
-		return err
+	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
+		return diag.FromErr(err)
 	}
-	if err := d.Set("local", mount.Local); err != nil {
-		return err
+	if err := d.Set(consts.FieldLocal, mount.Local); err != nil {
+		return diag.FromErr(err)
 	}
-	if err := d.Set("accessor", mount.Accessor); err != nil {
-		return err
+	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+func authBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -171,38 +189,44 @@ func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	if !d.IsNewResource() {
 		path, e = util.Remount(d, client, consts.FieldPath, true)
 		if e != nil {
-			return e
+			return diag.FromErr(e)
 		}
 	}
 
-	backendType := d.Get("type").(string)
-	var input api.MountConfigInput
+	backendType := d.Get(consts.FieldType).(string)
+	var config api.MountConfigInput
 	var callTune bool
 
-	if d.HasChange("tune") {
+	if d.HasChange(consts.FieldTune) {
 		log.Printf("[INFO] Auth '%q' tune configuration changed", path)
 
-		if raw, ok := d.GetOk("tune"); ok {
+		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
-			input = expandAuthMethodTune(raw.(*schema.Set).List())
+			config = expandAuthMethodTune(raw.(*schema.Set).List())
 		}
 		callTune = true
 	}
 
-	if d.HasChange("description") && !d.IsNewResource() {
-		desc := d.Get("description").(string)
-		input.Description = &desc
+	if d.HasChanges(consts.FieldIdentityTokenKey, consts.FieldDescription) && !d.IsNewResource() {
+		desc := d.Get(consts.FieldDescription).(string)
+		config.Description = &desc
+
+		useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+		if useAPIVer117Ent {
+			config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
+		}
+
 		callTune = true
 	}
 
 	if callTune {
-		if err := tuneMount(client, "auth/"+path, input); err != nil {
-			return err
+		if err := tuneMount(client, "auth/"+path, config); err != nil {
+			return diag.FromErr(e)
 		}
 
 		log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
 	}
 
-	return authBackendRead(d, meta)
+	return authBackendRead(ctx, d, meta)
 }
