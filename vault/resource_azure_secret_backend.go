@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"log"
 	"strings"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -125,7 +125,7 @@ func azureSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta 
 	log.Printf("[DEBUG] Mounting Azure backend at %q", path)
 
 	mountConfig := api.MountConfigInput{}
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117Ent)
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
 		identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
 		if identityTokenKey != "" {
@@ -219,7 +219,7 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(err)
 	}
 
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117Ent)
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
 		if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
 			return diag.FromErr(err)
@@ -311,7 +311,7 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 		}
 	}
 
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117Ent)
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
 		if v, ok := d.GetOk(consts.FieldIdentityTokenAudience); ok && v != "" {
 			data[consts.FieldIdentityTokenAudience] = v.(string)
