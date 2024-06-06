@@ -282,8 +282,7 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		log.Printf("[INFO] %s Auth %q tune configuration changed", gcpAuthType, gcpAuthPath)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing %s auth tune to %q", gcpAuthType, gcpAuthPath)
-			// @TODO refactor to pass in context to tune in follow-up PR
-			err := authMountTune(client, gcpAuthPath, raw)
+			err := authMountTune(ctx, client, gcpAuthPath, raw)
 			if err != nil {
 				return nil
 			}
@@ -395,7 +394,7 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	log.Printf("[DEBUG] Reading %s auth tune from '%s/tune'", gcpAuthType, gcpAuthPath)
-	rawTune, err := authMountTuneGet(client, gcpAuthPath)
+	rawTune, err := authMountTuneGet(ctx, client, gcpAuthPath)
 	if err != nil {
 		return diag.Errorf("error reading tune information from Vault: %s", err)
 	}

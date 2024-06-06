@@ -222,7 +222,7 @@ func authBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	}
 
 	if callTune {
-		if err := tuneMount(client, "auth/"+path, config); err != nil {
+		if err := tuneMount(ctx, client, "auth/"+path, config); err != nil {
 			return diag.FromErr(e)
 		}
 
