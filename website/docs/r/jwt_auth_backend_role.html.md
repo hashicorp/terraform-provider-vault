@@ -67,9 +67,8 @@ The following arguments are supported:
 
 * `role_type` - (Optional) Type of role, either "oidc" (default) or "jwt".
 
-* `bound_audiences` - (For "jwt" roles, at least one of `bound_audiences`, `bound_subject`, `bound_claims`
-  or `token_bound_cidrs` is required. Optional for "oidc" roles.) List of `aud` claims to match against.
-  Any match is sufficient.
+* `bound_audiences` - (Required for roles of type `jwt`, optional for roles of
+  type `oidc`) List of `aud` claims to match against. Any match is sufficient.
 
 * `user_claim` - (Required) The claim to use to uniquely identify
   the user; this will be used as the name for the Identity entity alias created
