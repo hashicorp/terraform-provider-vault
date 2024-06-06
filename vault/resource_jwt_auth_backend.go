@@ -7,18 +7,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
 	"log"
 	"strconv"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
+	"github.com/hashicorp/vault/api"
 )
 
 func jwtAuthBackendResource() *schema.Resource {
