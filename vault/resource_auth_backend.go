@@ -170,9 +170,10 @@ func authBackendRead(ctx context.Context, d *schema.ResourceData, meta interface
 	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
-		return diag.FromErr(err)
-	}
+	// TODO: uncomment when identity token key is being returned on the read mount endpoint
+	//if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
+	//	return diag.FromErr(err)
+	//}
 
 	return nil
 }

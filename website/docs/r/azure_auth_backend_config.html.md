@@ -30,6 +30,7 @@ You can setup the Azure auth engine with Workload Identity Federation (WIF) for 
 ```hcl
 resource "vault_auth_backend" "example" {
   type = "azure"
+  identity_token_key = "example-key"
 }
 
 resource "vault_azure_auth_backend_config" "example" {
@@ -83,11 +84,12 @@ The following arguments are supported:
 	AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud,
 	AzureGermanCloud.  Defaults to `AzurePublicCloud`.
 
-* `identity_token_audience` - (Optional) The audience claim value. Requires Vault 1.17+.
-  *Available only for Vault Enterprise*
+* `identity_token_audience` - (Optional) The audience claim value for plugin identity tokens. Requires Vault 1.17+.
+    *Available only for Vault Enterprise*
 
-* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault 1.17+.
-  *Available only for Vault Enterprise*
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds.
+    Defaults to 1 hour. Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
+    Requires Vault 1.17+. *Available only for Vault Enterprise*
 
 ## Attributes Reference
 
