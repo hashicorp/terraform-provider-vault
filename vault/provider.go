@@ -69,9 +69,19 @@ var (
 			Resource:      UpdateSchemaResource(ldapDynamicCredDataSource()),
 			PathInventory: []string{"/ldap/creds/{role}"},
 		},
+		"vault_namespace": {
+			Resource:       UpdateSchemaResource(namespaceDataSource()),
+			PathInventory:  []string{"/sys/namespaces/{path}"},
+			EnterpriseOnly: true,
+		},
 		"vault_ad_access_credentials": {
 			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},
+		},
+		"vault_namespaces": {
+			Resource:       UpdateSchemaResource(namespacesDataSource()),
+			PathInventory:  []string{"/sys/namespaces"},
+			EnterpriseOnly: true,
 		},
 		"vault_nomad_access_token": {
 			Resource:      UpdateSchemaResource(nomadAccessCredentialsDataSource()),
@@ -156,6 +166,10 @@ var (
 		"vault_raft_autopilot_state": {
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
+		},
+		"vault_pki_secret_backend_config_est": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstDataSource()),
+			PathInventory: []string{"/pki/config/est"},
 		},
 		"vault_pki_secret_backend_issuer": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
@@ -573,6 +587,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigClusterResource()),
 			PathInventory: []string{"/pki/config/cluster"},
 		},
+		"vault_pki_secret_backend_config_est": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstResource()),
+			PathInventory: []string{"/pki/config/est"},
+		},
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),
 			PathInventory: []string{"/pki/config/urls"},
@@ -768,6 +786,16 @@ var (
 		"vault_config_ui_custom_message": {
 			Resource:      UpdateSchemaResource(configUICustomMessageResource()),
 			PathInventory: []string{"/sys/config/ui/custom-messages"},
+		},
+		"vault_plugin": {
+			// Only available in the root namespace, don't add namespace to the schema.
+			Resource:      pluginResource(),
+			PathInventory: []string{"/sys/plugins/catalog/{type}/{name}"},
+		},
+		"vault_plugin_pinned_version": {
+			// Only available in the root namespace, don't add namespace to the schema.
+			Resource:      pluginPinnedVersionResource(),
+			PathInventory: []string{"/sys/plugins/pins/{type}/{name}"},
 		},
 	}
 )

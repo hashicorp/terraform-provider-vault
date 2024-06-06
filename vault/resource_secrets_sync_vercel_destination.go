@@ -26,6 +26,7 @@ var vercelSyncWriteFields = []string{
 	fieldProjectID,
 	fieldTeamID,
 	fieldDeploymentEnvironments,
+	consts.FieldGranularity,
 	consts.FieldSecretNameTemplate,
 }
 
@@ -33,6 +34,7 @@ var vercelSyncReadFields = []string{
 	fieldProjectID,
 	fieldTeamID,
 	fieldDeploymentEnvironments,
+	consts.FieldGranularity,
 	consts.FieldSecretNameTemplate,
 }
 
@@ -88,7 +90,9 @@ func vercelSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Res
 }
 
 func vercelSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationRead(ctx, d, meta, vercelSyncType, vercelSyncReadFields)
+	return syncutil.SyncDestinationRead(ctx, d, meta, vercelSyncType, vercelSyncReadFields, map[string]string{
+		consts.FieldGranularity: consts.FieldGranularityLevel,
+	})
 }
 
 func vercelSecretsSyncDestinationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

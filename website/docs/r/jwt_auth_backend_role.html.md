@@ -113,11 +113,11 @@ The following arguments are supported:
   Only applicable with "jwt" roles.
 
 * `expiration_leeway` - (Optional) The amount of leeway to add to expiration (`exp`) claims to account for
-  clock skew, in seconds. Defaults to `60` seconds if set to `0` and can be disabled if set to `-1`.
+  clock skew, in seconds. Defaults to `150` seconds if set to `0` and can be disabled if set to `-1`.
   Only applicable with "jwt" roles.
 
 * `not_before_leeway` - (Optional) The amount of leeway to add to not before (`nbf`) claims to account for
-  clock skew, in seconds. Defaults to `60` seconds if set to `0` and can be disabled if set to `-1`.
+  clock skew, in seconds. Defaults to `150` seconds if set to `0` and can be disabled if set to `-1`.
   Only applicable with "jwt" roles.
 
 * `verbose_oidc_logging` - (Optional) Log received OIDC tokens and claims when debug-level

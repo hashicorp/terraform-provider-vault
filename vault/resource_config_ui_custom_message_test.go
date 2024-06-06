@@ -52,7 +52,7 @@ func TestAccConfigUICustomMessage(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		Steps: []resource.TestStep{
@@ -88,5 +88,4 @@ func TestAccConfigUICustomMessage(t *testing.T) {
 			},
 		},
 	})
-
 }

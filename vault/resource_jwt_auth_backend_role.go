@@ -60,7 +60,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Default:     0,
-			Description: "The amount of leeway to add to expiration (exp) claims to account for clock skew, in seconds. Defaults to 60 seconds if set to 0 and can be disabled if set to -1. Only applicable with 'jwt' roles.",
+			Description: "The amount of leeway to add to expiration (exp) claims to account for clock skew, in seconds. Defaults to 150 seconds if set to 0 and can be disabled if set to -1. Only applicable with 'jwt' roles.",
 		},
 		"not_before_leeway": {
 			Type:        schema.TypeInt,
@@ -354,7 +354,7 @@ func jwtAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta in
 	log.Printf("[DEBUG] Deleting JWT auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil && !util.Is404(err) {
-		return diag.Errorf("error deleting JWT auth backend role %q", path)
+		return diag.Errorf("error deleting JWT auth backend role %q, err=%s", path, err)
 	} else if err != nil {
 		log.Printf("[DEBUG] JWT auth backend role %q not found, removing from state", path)
 		d.SetId("")

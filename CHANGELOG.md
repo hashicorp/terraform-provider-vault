@@ -1,10 +1,35 @@
 ## Unreleased
 
 FEATURES:
+* Add support for `iam_tags` in `vault_aws_secret_backend_role` ([#2231](https://github.com/hashicorp/terraform-provider-vault/pull/2231)).
+* Add support for `inheritable` on `vault_quota_rate_limit` and `vault_quota_lease_count`. Requires Vault 1.15+.: ([#2133](https://github.com/hashicorp/terraform-provider-vault/pull/2133)).
+* Add support for new WIF fields in `vault_gcp_secret_backend`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2249](https://github.com/hashicorp/terraform-provider-vault/pull/2249)). 
+* Add support for new WIF fields in `vault_azure_secret_backend`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2250](https://github.com/hashicorp/terraform-provider-vault/pull/2250))
+* Add support for new WIF fields in `vault_aws_auth_backend_client`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2243](https://github.com/hashicorp/terraform-provider-vault/pull/2243)).
+* Add support for new WIF fields in `vault_gcp_auth_backend` ([#2256](https://github.com/hashicorp/terraform-provider-vault/pull/2256))
+* Add new data source and resource `vault_pki_secret_backend_config_est`. Requires Vault 1.16+. *Available only for Vault Enterprise* ([#2246](https://github.com/hashicorp/terraform-provider-vault/pull/2246))
+
+IMPROVEMENTS:
+* return a useful error when delete fails for the `vault_jwt_auth_backend_role` resource: ([#2232](https://github.com/hashicorp/terraform-provider-vault/pull/2232))
+
+BUGS:
+* add missing `custom_tags` and `secret_name_template` fields to `vault_secrets_sync_azure_destination` resource ([#2247](https://github.com/hashicorp/terraform-provider-vault/pull/2247))
+
+## 4.2.0 (Mar 27, 2024)
+
+FEATURES:
+* Add `granularity` to Secrets Sync destination resources. Requires Vault 1.16+ Enterprise. ([#2202](https://github.com/hashicorp/terraform-provider-vault/pull/2202))
 * Add support for `allowed_kubernetes_namespace_selector` in `vault_kubernetes_secret_backend_role` ([#2180](https://github.com/hashicorp/terraform-provider-vault/pull/2180)).
+* Add new data source `vault_namespace`. Requires Vault Enterprise: ([#2208](https://github.com/hashicorp/terraform-provider-vault/pull/2208)).
+* Add new data source `vault_namespaces`. Requires Vault Enterprise: ([#2212](https://github.com/hashicorp/terraform-provider-vault/pull/2212)).
+
+IMPROVEMENTS:
+* Enable Secrets Sync Association resource to track sync status across all subkeys of a secret. Requires Vault 1.16+ Enterprise. ([#2202](https://github.com/hashicorp/terraform-provider-vault/pull/2202))
 
 BUGS:
 * fix `vault_approle_auth_backend_role_secret_id` regression to handle 404 errors ([#2204](https://github.com/hashicorp/terraform-provider-vault/pull/2204))
+* fix `vault_kv_secret` and `vault_kv_secret_v2` failure to update secret data modified outside terraform ([#2207](https://github.com/hashicorp/terraform-provider-vault/pull/2207))
+* fix `vault_kv_secret_v2` failing on imported resource when data_json should be ignored ([#2207](https://github.com/hashicorp/terraform-provider-vault/pull/2207))
 
 ## 4.1.0 (Mar 20, 2024)
 
@@ -14,7 +39,7 @@ CHANGES TO VAULT POLICY REQUIREMENTS:
 The v4.0.0 release required read permissions at `sys/auth/:path` which was a
 sudo endpoint. The v4.1.0 release changed that to instead require permissions
 at the `sys/mounts/auth/:path` level and sudo is no longer required. Please
-refer to the details in the [Terraform Vault Provider 4.0.0 Upgrade Guide](/docs/providers/vault/guides/version_4_upgrade.html).
+refer to the details in the [Terraform Vault Provider 4.0.0 Upgrade Guide](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_4_upgrade).
 
 FEATURES:
 * Add new resource `vault_config_ui_custom_message`. Requires Vault 1.16+ Enterprise: ([#2154](https://github.com/hashicorp/terraform-provider-vault/pull/2154)).
@@ -30,13 +55,14 @@ BUGS:
 **Important**: This release requires read policies to be set at the path level for mount metadata.
 For example, instead of permissions at `sys/auth` you must set permissions at
 the `sys/auth/:path` level. Please refer to the details in the
-[Terraform Vault Provider 4.0.0 Upgrade Guide](/docs/providers/vault/guides/version_4_upgrade.html).
+[Terraform Vault Provider 4.0.0 Upgrade Guide](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_4_upgrade).
 
 FEATURES:
 * Add support for PKI Secrets Engine cluster configuration with the `vault_pki_secret_backend_config_cluster` resource. Requires Vault 1.13+ ([#1949](https://github.com/hashicorp/terraform-provider-vault/pull/1949)).
 * Add support to `enable_templating` in `vault_pki_secret_backend_config_urls` ([#2147](https://github.com/hashicorp/terraform-provider-vault/pull/2147)).
 * Add support for `skip_import_rotation` and `skip_static_role_import_rotation` in `ldap_secret_backend_static_role` and `ldap_secret_backend` respectively. Requires Vault 1.16+ ([#2128](https://github.com/hashicorp/terraform-provider-vault/pull/2128)).
 * Improve logging to track full API exchanges between the provider and Vault ([#2139](https://github.com/hashicorp/terraform-provider-vault/pull/2139))
+* Add new `vault_plugin` and `vault_plugin_pinned_version` resources for managing external plugins ([#2159](https://github.com/hashicorp/terraform-provider-vault/pull/2159))
 
 IMPROVEMENTS:
 * Improve performance of READ operations across many resources: ([#2145](https://github.com/hashicorp/terraform-provider-vault/pull/2145)), ([#2152](https://github.com/hashicorp/terraform-provider-vault/pull/2152))

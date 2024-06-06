@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -86,18 +87,52 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 				Config: testAccAWSAuthBackendClientConfig_basicWithoutSecretKey(backend),
 				Check: resource.ComposeTestCheckFunc(
 					testAccAWSAuthBackendClientCheck_attrs(backend),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "access_key", "AWSACCESSKEY"),
-					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", "secret_key"),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", consts.FieldAccessKey, "AWSACCESSKEY"),
+					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", consts.FieldSecretKey),
 				),
 			},
 			{
 				Config: testAccAWSAuthBackendClientConfig_updatedWithoutSecretKey(backend),
 				Check: resource.ComposeTestCheckFunc(
 					testAccAWSAuthBackendClientCheck_attrs(backend),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "access_key", "AWSACCESSKEY"),
-					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", "secret_key"),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", consts.FieldAccessKey, "AWSACCESSKEY"),
+					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", consts.FieldSecretKey),
 				),
 			},
+		},
+	})
+}
+
+func TestAccAWSAuthBackend_wif(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resourceName := "vault_aws_auth_backend_client.client"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+		},
+		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClient_wifBasic(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn"),
+				),
+			},
+			{
+				Config: testAccAWSAuthBackendClient_wifUpdated(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn-updated"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
@@ -199,13 +234,12 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			return fmt.Errorf("AWS auth client not configured at %q", endpoint)
 		}
 		attrs := map[string]string{
-			"access_key": "access_key",
-			//"secret_key":                 "secret_key",
-			"ec2_endpoint":               "endpoint",
-			"iam_endpoint":               "iam_endpoint",
-			"sts_endpoint":               "sts_endpoint",
-			"sts_region":                 "sts_region",
-			"iam_server_id_header_value": "iam_server_id_header_value",
+			consts.FieldAccessKey:              consts.FieldAccessKey,
+			consts.FieldEC2Endpoint:            "endpoint",
+			consts.FieldIAMEndpoint:            consts.FieldIAMEndpoint,
+			consts.FieldSTSEndpoint:            consts.FieldSTSEndpoint,
+			consts.FieldSTSRegion:              consts.FieldSTSRegion,
+			consts.FieldIAMServerIDHeaderValue: consts.FieldIAMServerIDHeaderValue,
 		}
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
@@ -217,6 +251,38 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 		}
 		return nil
 	}
+}
+
+func testAccAWSAuthBackendClient_wifBasic(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  identity_token_audience = "wif-audience"
+  identity_token_ttl = 600
+  role_arn = "test-role-arn"
+}
+`, backend)
+}
+
+func testAccAWSAuthBackendClient_wifUpdated(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  identity_token_audience = "wif-audience-updated"
+  identity_token_ttl = 1800
+  role_arn = "test-role-arn-updated"
+}
+`, backend)
 }
 
 func testAccAWSAuthBackendClientConfig_basic(backend string) string {

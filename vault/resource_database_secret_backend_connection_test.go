@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -377,7 +376,7 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineMSSQL)
 
-	cleanupFunc, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	cleanupFunc, connURL := testutil.PrepareMSSQLTestContainer(t)
 	t.Cleanup(cleanupFunc)
 
 	backend := acctest.RandomWithPrefix("tf-test-db")

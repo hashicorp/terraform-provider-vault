@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/config"
+	config "github.com/hashicorp/vault/api/cliconfig"
 	"k8s.io/utils/pointer"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
@@ -42,6 +42,7 @@ var (
 	VaultVersion114 = version.Must(version.NewSemver(consts.VaultVersion114))
 	VaultVersion115 = version.Must(version.NewSemver(consts.VaultVersion115))
 	VaultVersion116 = version.Must(version.NewSemver(consts.VaultVersion116))
+	VaultVersion117 = version.Must(version.NewSemver(consts.VaultVersion117))
 
 	TokenTTLMinRecommended = time.Minute * 15
 )

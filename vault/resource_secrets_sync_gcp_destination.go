@@ -20,6 +20,7 @@ const (
 
 var gcpSyncWriteFields = []string{
 	consts.FieldCredentials,
+	consts.FieldGranularity,
 	consts.FieldSecretNameTemplate,
 	consts.FieldCustomTags,
 	consts.FieldProjectID,
@@ -27,6 +28,7 @@ var gcpSyncWriteFields = []string{
 
 var gcpSyncReadFields = []string{
 	consts.FieldSecretNameTemplate,
+	consts.FieldGranularity,
 	consts.FieldCustomTags,
 	consts.FieldProjectID,
 }
@@ -69,7 +71,9 @@ func gcpSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Resour
 }
 
 func gcpSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationRead(ctx, d, meta, gcpSyncType, gcpSyncReadFields)
+	return syncutil.SyncDestinationRead(ctx, d, meta, gcpSyncType, gcpSyncReadFields, map[string]string{
+		consts.FieldGranularity: consts.FieldGranularityLevel,
+	})
 }
 
 func gcpSecretsSyncDestinationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
