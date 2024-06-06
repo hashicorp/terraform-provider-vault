@@ -7,6 +7,7 @@ FEATURES:
 * Add support for new WIF fields in `vault_azure_secret_backend`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2250](https://github.com/hashicorp/terraform-provider-vault/pull/2250))
 * Add support for new WIF fields in `vault_aws_auth_backend_client`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2243](https://github.com/hashicorp/terraform-provider-vault/pull/2243)).
 * Add support for new WIF fields in `vault_gcp_auth_backend` ([#2256](https://github.com/hashicorp/terraform-provider-vault/pull/2256))
+* Add support for new WIF fields in `vault_azure_auth_backend_config`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2254](https://github.com/hashicorp/terraform-provider-vault/pull/2254)).
 * Add new data source and resource `vault_pki_secret_backend_config_est`. Requires Vault 1.16+. *Available only for Vault Enterprise* ([#2246](https://github.com/hashicorp/terraform-provider-vault/pull/2246))
 
 IMPROVEMENTS:

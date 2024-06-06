@@ -137,7 +137,7 @@ func azureSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta 
 		Description: description,
 		Config:      mountConfig,
 	}
-	if err := client.Sys().Mount(path, input); err != nil {
+	if err := client.Sys().MountWithContext(ctx, path, input); err != nil {
 		return diag.Errorf("error mounting to %q: %s", path, err)
 	}
 
@@ -246,6 +246,20 @@ func azureSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta 
 	path, err := util.Remount(d, client, consts.FieldPath, false)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	if d.HasChanges(consts.FieldIdentityTokenKey, consts.FieldDescription) {
+		desc := d.Get(consts.FieldDescription).(string)
+		config := api.MountConfigInput{
+			Description: &desc,
+		}
+		useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+		if useAPIVer117Ent {
+			config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
+		}
+		if err := client.Sys().TuneMountWithContext(ctx, path, config); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	data := azureSecretBackendRequestData(d, meta)
