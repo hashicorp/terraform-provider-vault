@@ -6,17 +6,17 @@ package vault
 import (
 	"context"
 	"errors"
-	"fmt"
+
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
+	"github.com/hashicorp/vault/api"
 )
 
 func githubAuthBackendResource() *schema.Resource {
@@ -64,22 +64,22 @@ func githubAuthBackendResource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
-		Create: githubAuthBackendCreate,
-		Read:   provider.ReadWrapper(githubAuthBackendRead),
-		Update: githubAuthBackendUpdate,
-		Delete: githubAuthBackendDelete,
+		CreateContext: githubAuthBackendCreate,
+		ReadContext:   provider.ReadContextWrapper(githubAuthBackendRead),
+		UpdateContext: githubAuthBackendUpdate,
+		DeleteContext: githubAuthBackendDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema:        fields,
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 	}, false)
 }
 
-func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
+func githubAuthBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 	var description string
 
@@ -90,25 +90,25 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Enabling github auth backend at '%s'", path)
-	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
+	err := client.Sys().EnableAuthWithOptionsWithContext(ctx, path, &api.EnableAuthOptions{
 		Type:        consts.MountTypeGitHub,
 		Description: description,
 	})
 	if err != nil {
-		return fmt.Errorf("error enabling github auth backend at '%s': %s", path, err)
+		return diag.Errorf("error enabling github auth backend at '%s': %s", path, err)
 	}
 	log.Printf("[INFO] Enabled github auth backend at '%s'", path)
 
 	d.SetId(path)
 	d.MarkNewResource()
 	d.Partial(true)
-	return githubAuthBackendUpdate(d, meta)
+	return githubAuthBackendUpdate(ctx, d, meta)
 }
 
-func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+func githubAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
@@ -116,7 +116,7 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	if !d.IsNewResource() {
 		mount, err := util.Remount(d, client, consts.FieldPath, true)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		path = "auth/" + mount
@@ -138,10 +138,10 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	updateTokenFields(d, data, false)
 
 	log.Printf("[DEBUG] Writing github auth config to '%q'", configPath)
-	_, err := client.Logical().Write(configPath, data)
+	_, err := client.Logical().WriteWithContext(ctx, configPath, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("error writing github config to '%q': %s", configPath, err)
+		return diag.Errorf("error writing github config to '%q': %s", configPath, err)
 	}
 	log.Printf("[INFO] Github auth config successfully written to '%q'", configPath)
 
@@ -150,7 +150,7 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		if raw, ok := d.GetOk("tune"); ok {
 			log.Printf("[DEBUG] Writing github auth tune to '%q'", path)
 
-			err := authMountTune(client, path, raw)
+			err := authMountTune(ctx, client, path, raw)
 			if err != nil {
 				return nil
 			}
@@ -162,21 +162,21 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("description") {
 		description := d.Get("description").(string)
 		tune := api.MountConfigInput{Description: &description}
-		err := client.Sys().TuneMount(path, tune)
+		err := client.Sys().TuneMountWithContext(ctx, path, tune)
 		if err != nil {
 			log.Printf("[ERROR] Error updating github auth description to '%q'", path)
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	d.Partial(false)
-	return githubAuthBackendRead(d, meta)
+	return githubAuthBackendRead(ctx, d, meta)
 }
 
-func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
+func githubAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := "auth/" + d.Id()
@@ -191,15 +191,15 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Read github auth mount from '%q'", path)
 
 	log.Printf("[DEBUG] Reading github auth config from '%q'", configPath)
-	resp, err := client.Logical().Read(configPath)
+	resp, err := client.Logical().ReadWithContext(ctx, configPath)
 	if err != nil {
-		return fmt.Errorf("error reading github auth config from '%q': %w", configPath, err)
+		return diag.Errorf("error reading github auth config from '%q': %s", configPath, err)
 	}
 	log.Printf("[INFO] Read github auth config from '%q'", configPath)
 
@@ -210,9 +210,9 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Reading github auth tune from '%q/tune'", path)
-	rawTune, err := authMountTuneGet(client, path)
+	rawTune, err := authMountTuneGet(ctx, client, path)
 	if err != nil {
-		return fmt.Errorf("error reading tune information from Vault: %w", err)
+		return diag.Errorf("error reading tune information from Vault: %s", err)
 	}
 
 	data := getCommonTokenFieldMap(resp)
@@ -228,16 +228,16 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if err := util.SetResourceData(d, data); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func githubAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func githubAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
-	return authMountDisable(client, d.Id())
+	return authMountDisable(ctx, client, d.Id())
 }
