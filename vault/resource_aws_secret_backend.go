@@ -184,14 +184,14 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
 		MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
 	}
-	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer116 {
 		identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
 		if identityTokenKey != "" {
 			mountConfig.IdentityTokenKey = identityTokenKey
 		}
 	}
-	err := client.Sys().Mount(path, &api.MountInput{
+	err := client.Sys().MountWithContext(ctx, path, &api.MountInput{
 		Type:        consts.MountTypeAWS,
 		Description: description,
 		Local:       local,
@@ -230,7 +230,7 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		data[consts.FieldRegion] = region
 	}
 
-	_, err = client.Logical().Write(path+"/config/root", data)
+	_, err = client.Logical().WriteWithContext(ctx, path+"/config/root", data)
 	if err != nil {
 		return diag.Errorf("error configuring root credentials for %q: %s", path, err)
 	}
@@ -244,7 +244,7 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 }
 
 func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -269,7 +269,7 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 	log.Printf("[DEBUG] Read AWS backend mount %q from Vault", path)
 
 	log.Printf("[DEBUG] Read AWS secret backend config/root %s", path)
-	resp, err := client.Logical().Read(path + "/config/root")
+	resp, err := client.Logical().ReadWithContext(ctx, path+"/config/root")
 	if err != nil {
 		// This is here to support backwards compatibility with Vault. Read operations on the config/root
 		// endpoint were just added and haven't been released yet, and so in currently released versions
@@ -319,19 +319,33 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		}
 	}
 
-	d.Set(consts.FieldPath, path)
-	d.Set(consts.FieldDescription, mount.Description)
-	d.Set(consts.FieldDefaultLeaseTTL, mount.Config.DefaultLeaseTTL)
-	d.Set(consts.FieldMaxLeaseTTL, mount.Config.MaxLeaseTTL)
-	d.Set(consts.FieldLocal, mount.Local)
+	if err := d.Set(consts.FieldPath, path); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldDefaultLeaseTTL, mount.Config.DefaultLeaseTTL); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldMaxLeaseTTL, mount.Config.MaxLeaseTTL); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldLocal, mount.Local); err != nil {
+		return diag.FromErr(err)
+	}
 	if useAPIVer116 {
-		d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey)
+		if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil
 }
 
 func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -352,7 +366,6 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
 		}
 
-		useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
 		if useAPIVer116 {
 			identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
 			if identityTokenKey != "" {
@@ -360,7 +373,7 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 			}
 		}
 		log.Printf("[DEBUG] Updating mount config input for %q", path)
-		err := client.Sys().TuneMount(path, config)
+		err := client.Sys().TuneMountWithContext(ctx, path, config)
 		if err != nil {
 			return diag.Errorf("error updating mount config input for %q: %s", path, err)
 		}
@@ -379,7 +392,6 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 			}
 		}
 
-		useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
 		if useAPIVer116 {
 			identityTokenAudience := d.Get(consts.FieldIdentityTokenAudience).(string)
 			if identityTokenAudience != "" {
@@ -400,7 +412,7 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 			data[consts.FieldRegion] = region
 		}
 
-		_, err := client.Logical().Write(path+"/config/root", data)
+		_, err := client.Logical().WriteWithContext(ctx, path+"/config/root", data)
 		if err != nil {
 			return diag.Errorf("error configuring root credentials for %q: %s", path, err)
 		}
@@ -413,7 +425,7 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	return awsSecretBackendRead(ctx, d, meta)
 }
 
-func awsSecretBackendDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func awsSecretBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -422,7 +434,7 @@ func awsSecretBackendDelete(_ context.Context, d *schema.ResourceData, meta inte
 	path := d.Id()
 
 	log.Printf("[DEBUG] Unmounting AWS backend %q", path)
-	err := client.Sys().Unmount(path)
+	err := client.Sys().UnmountWithContext(ctx, path)
 	if err != nil {
 		return diag.Errorf("error unmounting AWS backend from %q: %s", path, err)
 	}

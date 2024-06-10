@@ -19,6 +19,15 @@ artifacts accordingly. See
 for more details.
 
 ## Example Usage
+You can setup the GCP secret backend with Workload Identity Federation (WIF) for a secret-less configuration:
+```hcl
+resource "vault_gcp_secret_backend" "gcp" {
+  identity_token_key      = "example-key"
+  identity_token_ttl      = 1800
+  identity_token_audience = "<TOKEN_AUDIENCE>"
+  service_account_email   = "<SERVICE_ACCOUNT_EMAIL>"
+}
+```
 
 ```hcl
 resource "vault_gcp_secret_backend" "gcp" {
