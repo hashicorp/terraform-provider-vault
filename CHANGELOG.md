@@ -8,6 +8,7 @@ FEATURES:
 * Add support for new WIF fields in `vault_aws_auth_backend_client`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2243](https://github.com/hashicorp/terraform-provider-vault/pull/2243)).
 * Add support for new WIF fields in `vault_gcp_auth_backend` ([#2256](https://github.com/hashicorp/terraform-provider-vault/pull/2256))
 * Add new data source and resource `vault_pki_secret_backend_config_est`. Requires Vault 1.16+. *Available only for Vault Enterprise* ([#2246](https://github.com/hashicorp/terraform-provider-vault/pull/2246))
+* Support missing token parameters on `vault_okta_auth_backend` resource: ([#2210](https://github.com/hashicorp/terraform-provider-vault/pull/2210))
 
 IMPROVEMENTS:
 * return a useful error when delete fails for the `vault_jwt_auth_backend_role` resource: ([#2232](https://github.com/hashicorp/terraform-provider-vault/pull/2232))

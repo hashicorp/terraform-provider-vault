@@ -25,6 +25,13 @@ import (
 
 var oktaAuthType = "okta"
 
+const (
+	fieldBypassOktaMFA = "bypass_okta_mfa"
+	fieldUser          = "user"
+	fieldGroup         = "group"
+	fieldGroups        = "groups"
+)
+
 func oktaAuthBackendResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		consts.FieldPath: {
@@ -41,21 +48,21 @@ func oktaAuthBackendResource() *schema.Resource {
 			},
 		},
 
-		"description": {
+		consts.FieldDescription: {
 			Type:        schema.TypeString,
 			Required:    false,
 			Optional:    true,
 			Description: "The description of the auth backend",
 		},
 
-		"organization": {
+		consts.FieldOrganization: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Optional:    false,
 			Description: "The Okta organization. This will be the first part of the url https://XXX.okta.com.",
 		},
 
-		"token": {
+		consts.FieldToken: {
 			Type:        schema.TypeString,
 			Required:    false,
 			Optional:    true,
@@ -63,21 +70,21 @@ func oktaAuthBackendResource() *schema.Resource {
 			Sensitive:   true,
 		},
 
-		"base_url": {
+		consts.FieldBaseURL: {
 			Type:        schema.TypeString,
 			Required:    false,
 			Optional:    true,
 			Description: "The Okta url. Examples: oktapreview.com, okta.com (default)",
 		},
 
-		"bypass_okta_mfa": {
+		fieldBypassOktaMFA: {
 			Type:        schema.TypeBool,
 			Required:    false,
 			Optional:    true,
 			Description: "When true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.",
 		},
 
-		"ttl": {
+		consts.FieldTTL: {
 			Type:         schema.TypeString,
 			Required:     false,
 			Optional:     true,
@@ -88,7 +95,7 @@ func oktaAuthBackendResource() *schema.Resource {
 			Deprecated:   "Deprecated. Please use `token_ttl` instead.",
 		},
 
-		"max_ttl": {
+		consts.FieldMaxTTL: {
 			Type:         schema.TypeString,
 			Required:     false,
 			Optional:     true,
@@ -99,7 +106,7 @@ func oktaAuthBackendResource() *schema.Resource {
 			Deprecated:   "Deprecated. Please use `token_max_ttl` instead.",
 		},
 
-		"group": {
+		fieldGroup: {
 			Type:       schema.TypeSet,
 			Required:   false,
 			Optional:   true,
@@ -107,7 +114,7 @@ func oktaAuthBackendResource() *schema.Resource {
 			ConfigMode: schema.SchemaConfigModeAttr,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"group_name": {
+					consts.FieldGroupName: {
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "Name of the Okta group",
@@ -121,7 +128,7 @@ func oktaAuthBackendResource() *schema.Resource {
 						},
 					},
 
-					"policies": {
+					consts.FieldPolicies: {
 						Type:        schema.TypeSet,
 						Required:    true,
 						Description: "Policies to associate with this group",
@@ -143,7 +150,7 @@ func oktaAuthBackendResource() *schema.Resource {
 			Set: resourceOktaGroupHash,
 		},
 
-		"user": {
+		fieldUser: {
 			Type:       schema.TypeSet,
 			Required:   false,
 			Optional:   true,
@@ -151,7 +158,7 @@ func oktaAuthBackendResource() *schema.Resource {
 			ConfigMode: schema.SchemaConfigModeAttr,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"groups": {
+					fieldGroups: {
 						Type:        schema.TypeSet,
 						Optional:    true,
 						Description: "Groups within the Okta auth backend to associate with this user",
@@ -169,7 +176,7 @@ func oktaAuthBackendResource() *schema.Resource {
 						Set: schema.HashString,
 					},
 
-					"username": {
+					consts.FieldUsername: {
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "Name of the user within Okta",
@@ -182,7 +189,7 @@ func oktaAuthBackendResource() *schema.Resource {
 						},
 					},
 
-					"policies": {
+					consts.FieldPolicies: {
 						Type:        schema.TypeSet,
 						Required:    false,
 						Optional:    true,
@@ -205,7 +212,7 @@ func oktaAuthBackendResource() *schema.Resource {
 			Set: resourceOktaUserHash,
 		},
 
-		"accessor": {
+		consts.FieldAccessor: {
 			Type:        schema.TypeString,
 			Computed:    true,
 			Description: "The mount accessor related to the auth mount.",
@@ -262,7 +269,7 @@ func oktaAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	authType := oktaAuthType
-	desc := d.Get("description").(string)
+	desc := d.Get(consts.FieldDescription).(string)
 	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
@@ -290,7 +297,7 @@ func oktaAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta int
 
 	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
 
-	err := client.Sys().DisableAuth(path)
+	err := client.Sys().DisableAuthWithContext(ctx, path)
 	if err != nil {
 		return diag.Errorf("error disabling auth from Vault: %s", err)
 	}
@@ -322,10 +329,10 @@ func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set("accessor", mount.Accessor); err != nil {
+	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("description", mount.Description); err != nil {
+	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -334,7 +341,7 @@ func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("group", groups); err != nil {
+	if err := d.Set(fieldGroup, groups); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -343,7 +350,7 @@ func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("user", users); err != nil {
+	if err := d.Set(fieldUser, users); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -366,9 +373,9 @@ func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData)
 	}
 
 	params := []string{
-		"base_url",
-		"bypass_okta_mfa",
-		"organization",
+		consts.FieldBaseURL,
+		fieldBypassOktaMFA,
+		consts.FieldOrganization,
 	}
 	for _, param := range params {
 		if err := d.Set(param, config.Data[param]); err != nil {
@@ -397,32 +404,32 @@ func oktaAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
 	configuration := map[string]interface{}{
-		"base_url":        d.Get("base_url"),
-		"bypass_okta_mfa": d.Get("bypass_okta_mfa"),
-		"organization":    d.Get("organization"),
-		"token":           d.Get("token"),
+		consts.FieldBaseURL:      d.Get(consts.FieldBaseURL),
+		fieldBypassOktaMFA:       d.Get(fieldBypassOktaMFA),
+		consts.FieldOrganization: d.Get(consts.FieldOrganization),
+		consts.FieldToken:        d.Get(consts.FieldToken),
 	}
 
 	updateTokenFields(d, configuration, false)
 
-	_, err := client.Logical().Write(oktaConfigEndpoint(path), configuration)
+	_, err := client.Logical().WriteWithContext(ctx, oktaConfigEndpoint(path), configuration)
 	if err != nil {
 		return diag.Errorf("error updating configuration to Vault for path %s: %s", path, err)
 	}
 
-	if d.HasChange("group") {
-		oldValue, newValue := d.GetChange("group")
+	if d.HasChange(fieldGroup) {
+		oldValue, newValue := d.GetChange(fieldGroup)
 
-		err = oktaAuthUpdateGroups(d, client, path, oldValue, newValue)
+		err = oktaAuthUpdateGroups(client, path, oldValue, newValue)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
-	if d.HasChange("user") {
-		oldValue, newValue := d.GetChange("user")
+	if d.HasChange(fieldUser) {
+		oldValue, newValue := d.GetChange(fieldUser)
 
-		err = oktaAuthUpdateUsers(d, client, path, oldValue, newValue)
+		err = oktaAuthUpdateUsers(client, path, oldValue, newValue)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -450,8 +457,8 @@ func oktaReadAllGroups(client *api.Client, path string) (*schema.Set, error) {
 		}
 
 		m := make(map[string]interface{})
-		m["policies"] = policies
-		m["group_name"] = group.Name
+		m[consts.FieldPolicies] = policies
+		m[consts.FieldGroupName] = group.Name
 
 		groups.Add(m)
 	}
@@ -483,9 +490,9 @@ func oktaReadAllUsers(client *api.Client, path string) (*schema.Set, error) {
 		}
 
 		m := make(map[string]interface{})
-		m["policies"] = policies
-		m["groups"] = groups
-		m["username"] = user.Username
+		m[consts.FieldPolicies] = policies
+		m[fieldGroups] = groups
+		m[consts.FieldUsername] = user.Username
 
 		users.Add(m)
 	}
@@ -493,12 +500,12 @@ func oktaReadAllUsers(client *api.Client, path string) (*schema.Set, error) {
 	return users, nil
 }
 
-func oktaAuthUpdateGroups(d *schema.ResourceData, client *api.Client, path string, oldValue, newValue interface{}) error {
+func oktaAuthUpdateGroups(client *api.Client, path string, oldValue, newValue interface{}) error {
 	groupsToDelete := oldValue.(*schema.Set).Difference(newValue.(*schema.Set))
 	newGroups := newValue.(*schema.Set).Difference(oldValue.(*schema.Set))
 
 	for _, group := range groupsToDelete.List() {
-		groupName := group.(map[string]interface{})["group_name"].(string)
+		groupName := group.(map[string]interface{})[consts.FieldGroupName].(string)
 		log.Printf("[DEBUG] Removing Okta group %s from Vault", groupName)
 		if err := deleteOktaGroup(client, path, groupName); err != nil {
 			return fmt.Errorf("error removing group %s to Vault for path %s: %s", groupName, path, err)
@@ -509,13 +516,13 @@ func oktaAuthUpdateGroups(d *schema.ResourceData, client *api.Client, path strin
 
 	for _, v := range newGroups.List() {
 		groupMapping := v.(map[string]interface{})
-		groupName := groupMapping["group_name"].(string)
+		groupName := groupMapping[consts.FieldGroupName].(string)
 
 		log.Printf("[DEBUG] Adding Okta group %s to Vault", groupName)
 
 		group := oktaGroup{
 			Name:     groupName,
-			Policies: util.ToStringArray(groupMapping["policies"].(*schema.Set).List()),
+			Policies: util.ToStringArray(groupMapping[consts.FieldPolicies].(*schema.Set).List()),
 		}
 
 		if err := updateOktaGroup(client, path, group); err != nil {
@@ -528,12 +535,12 @@ func oktaAuthUpdateGroups(d *schema.ResourceData, client *api.Client, path strin
 	return nil
 }
 
-func oktaAuthUpdateUsers(d *schema.ResourceData, client *api.Client, path string, oldValue, newValue interface{}) error {
+func oktaAuthUpdateUsers(client *api.Client, path string, oldValue, newValue interface{}) error {
 	usersToDelete := oldValue.(*schema.Set).Difference(newValue.(*schema.Set))
 	newUsers := newValue.(*schema.Set).Difference(oldValue.(*schema.Set))
 
 	for _, user := range usersToDelete.List() {
-		userName := user.(map[string]interface{})["username"].(string)
+		userName := user.(map[string]interface{})[consts.FieldUsername].(string)
 		log.Printf("[DEBUG] Removing Okta user %s from Vault", userName)
 		if err := deleteOktaUser(client, path, userName); err != nil {
 			return fmt.Errorf("error removing user %s mapping to Vault for path %s: %s", userName, path, err)
@@ -544,14 +551,14 @@ func oktaAuthUpdateUsers(d *schema.ResourceData, client *api.Client, path string
 
 	for _, v := range newUsers.List() {
 		userMapping := v.(map[string]interface{})
-		userName := userMapping["username"].(string)
+		userName := userMapping[consts.FieldUsername].(string)
 
 		log.Printf("[DEBUG] Adding Okta user %s to Vault", userName)
 
 		user := oktaUser{
 			Username: userName,
-			Policies: util.ToStringArray(userMapping["policies"].(*schema.Set).List()),
-			Groups:   util.ToStringArray(userMapping["groups"].(*schema.Set).List()),
+			Policies: util.ToStringArray(userMapping[consts.FieldPolicies].(*schema.Set).List()),
+			Groups:   util.ToStringArray(userMapping[fieldGroups].(*schema.Set).List()),
 		}
 
 		if err := updateOktaUser(client, path, user); err != nil {
@@ -569,7 +576,7 @@ func resourceOktaGroupHash(v interface{}) int {
 	if !castOk {
 		return 0
 	}
-	if v, ok := m["group_name"]; ok {
+	if v, ok := m[consts.FieldGroupName]; ok {
 		return helper.HashCodeString(v.(string))
 	}
 
@@ -581,7 +588,7 @@ func resourceOktaUserHash(v interface{}) int {
 	if !castOk {
 		return 0
 	}
-	if v, ok := m["username"]; ok {
+	if v, ok := m[consts.FieldUsername]; ok {
 		return helper.HashCodeString(v.(string))
 	}
 
