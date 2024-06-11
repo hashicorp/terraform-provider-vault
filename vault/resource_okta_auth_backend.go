@@ -85,6 +85,7 @@ func oktaAuthBackendResource() *schema.Resource {
 			Description:  "Duration after which authentication will be expired",
 			ValidateFunc: validateOktaTTL,
 			StateFunc:    normalizeOktaTTL,
+			Deprecated:   "Deprecated. Please use `token_ttl` instead.",
 		},
 
 		"max_ttl": {
@@ -95,6 +96,7 @@ func oktaAuthBackendResource() *schema.Resource {
 			Default:      "0",
 			ValidateFunc: validateOktaTTL,
 			StateFunc:    normalizeOktaTTL,
+			Deprecated:   "Deprecated. Please use `token_max_ttl` instead.",
 		},
 
 		"group": {
@@ -305,7 +307,7 @@ func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	path := d.Id()
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
 
-	mount, err := mountutil.GetAuthMount(context.Background(), client, path)
+	mount, err := mountutil.GetAuthMount(ctx, client, path)
 	if errors.Is(err, mountutil.ErrMountNotFound) {
 		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
@@ -363,24 +365,6 @@ func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData)
 		return err
 	}
 
-	// map schema config TTL strings to okta auth TTL params.
-	// the provider input type of string does not match Vault's API of int64
-	ttlFieldMap := map[string]string{
-		"ttl":     "token_ttl",
-		"max_ttl": "token_max_ttl",
-	}
-	for k, v := range ttlFieldMap {
-		if v, ok := config.Data[v]; ok {
-			s, err := parseutil.ParseString(v)
-			if err != nil {
-				return err
-			}
-			if err := d.Set(k, s); err != nil {
-				return err
-			}
-		}
-	}
-
 	params := []string{
 		"base_url",
 		"bypass_okta_mfa",
@@ -417,14 +401,6 @@ func oktaAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		"bypass_okta_mfa": d.Get("bypass_okta_mfa"),
 		"organization":    d.Get("organization"),
 		"token":           d.Get("token"),
-	}
-
-	if ttl, ok := d.GetOk("ttl"); ok {
-		configuration["ttl"] = ttl
-	}
-
-	if maxTtl, ok := d.GetOk("max_ttl"); ok {
-		configuration["max_ttl"] = maxTtl
 	}
 
 	updateTokenFields(d, configuration, false)

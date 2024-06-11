@@ -75,6 +75,7 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		Type:          schema.TypeInt,
 		Description:   "The maximum lifetime of the generated token",
 		Optional:      true,
+		Computed:      true,
 		ConflictsWith: config.TokenMaxTTLConflict,
 	}
 
@@ -112,6 +113,7 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		Type:          schema.TypeInt,
 		Description:   "The initial ttl of the token to generate in seconds",
 		Optional:      true,
+		Computed:      true,
 		ConflictsWith: config.TokenTTLConflict,
 	}
 
