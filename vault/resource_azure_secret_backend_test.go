@@ -114,7 +114,7 @@ func TestAccAzureSecretBackend_wif(t *testing.T) {
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117Ent)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -140,7 +140,7 @@ func TestAccAzureSecretBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),
 		},
 	})
 }

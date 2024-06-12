@@ -424,6 +424,17 @@ const (
 	FieldDelegatedAuthAccessors        = "delegated_auth_accessors"
 	FieldPluginVersion                 = "plugin_version"
 	FieldUseMSGraphAPI                 = "use_microsoft_graph_api"
+	FieldEnabled                       = "enabled"
+	FieldDefaultMount                  = "default_mount"
+	FieldDefaultPathPolicy             = "default_path_policy"
+	FieldLabelToPathPolicy             = "label_to_path_policy"
+	FieldAuthenticators                = "authenticators"
+	FieldEnableSentinelParsing         = "enable_sentinel_parsing"
+	FieldAuditFields                   = "audit_fields"
+	FieldLastUpdated                   = "last_updated"
+	FieldCustomEndpoint                = "custom_endpoint"
+	FieldPrivateKeyID                  = "private_key_id"
+	FieldTune                          = "tune"
 	FieldMaxRetries                    = "max_retries"
 
 	/*
@@ -494,17 +505,15 @@ const (
 	/*
 		Vault version constants
 	*/
-	VaultVersion190    = "1.9.0"
-	VaultVersion110    = "1.10.0"
-	VaultVersion111    = "1.11.0"
-	VaultVersion112    = "1.12.0"
-	VaultVersion113    = "1.13.0"
-	VaultVersion114    = "1.14.0"
-	VaultVersion115    = "1.15.0"
-	VaultVersion116    = "1.16.0"
-	VaultVersion116Ent = "1.16.0+ent"
-	VaultVersion117    = "1.17.0"
-	VaultVersion117Ent = "1.17.0+ent"
+	VaultVersion190 = "1.9.0"
+	VaultVersion110 = "1.10.0"
+	VaultVersion111 = "1.11.0"
+	VaultVersion112 = "1.12.0"
+	VaultVersion113 = "1.13.0"
+	VaultVersion114 = "1.14.0"
+	VaultVersion115 = "1.15.0"
+	VaultVersion116 = "1.16.0"
+	VaultVersion117 = "1.17.0"
 
 	/*
 		Vault auth methods

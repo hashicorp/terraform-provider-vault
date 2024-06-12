@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -150,6 +151,46 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 					"disable_remount",
 				},
 			},
+		},
+	})
+}
+
+func TestGCPAuthBackend_WIF(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-gcp-auth")
+	resourceType := "vault_gcp_auth_backend"
+	resourceName := resourceType + ".test"
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+		},
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testGCPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPAuthBackend_WIFConfig_basic(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, "test"),
+				),
+			},
+			{
+				Config: testGCPAuthBackend_WIFConfig_updated(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "test-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenKey, "test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, "test-updated"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldCredentials,
+				consts.FieldDisableRemount,
+				consts.FieldIdentityTokenKey,
+			),
 		},
 	})
 }
@@ -321,4 +362,34 @@ resource "vault_gcp_auth_backend" "test" {
   }
 }
 `, credentials, path)
+}
+
+func testGCPAuthBackend_WIFConfig_basic(path string) string {
+	return fmt.Sprintf(
+		`
+resource "vault_gcp_auth_backend" "test" {
+ path                    = "%s"
+ service_account_email   = "test"
+ identity_token_audience = "test"
+ identity_token_ttl      = 30
+}
+`, path)
+}
+
+func testGCPAuthBackend_WIFConfig_updated(path string) string {
+	return fmt.Sprintf(
+		`
+resource "vault_identity_oidc_key" "test" {
+ name               = "test"
+ allowed_client_ids = ["*"]
+}
+
+resource "vault_gcp_auth_backend" "test" {
+ path                    = "%s"
+ service_account_email   = "test-updated"
+ identity_token_audience = "test-updated"
+ identity_token_ttl      = 1800
+ identity_token_key      = vault_identity_oidc_key.test.name
+}
+`, path)
 }

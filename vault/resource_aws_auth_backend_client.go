@@ -5,13 +5,13 @@ package vault
 
 import (
 	"context"
-
 	"log"
 	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -152,7 +152,7 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		data[useSTSRegionFromClient] = stsRegionFromClient
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
+	if provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta) {
 		data[consts.FieldIdentityTokenAudience] = identityTokenAud
 		data[consts.FieldRoleArn] = roleArn
 		data[consts.FieldIdentityTokenTTL] = identityTokenTTL
@@ -224,7 +224,7 @@ func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			return diag.FromErr(err)
 		}
 	}
-	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
+	if provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta) {
 		wifFields := []string{
 			consts.FieldIdentityTokenAudience,
 			consts.FieldRoleArn,
