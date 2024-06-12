@@ -6,6 +6,7 @@ FEATURES:
 * Add support for new WIF fields in `vault_gcp_secret_backend`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2249](https://github.com/hashicorp/terraform-provider-vault/pull/2249)). 
 * Add support for new WIF fields in `vault_aws_auth_backend_client`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2243](https://github.com/hashicorp/terraform-provider-vault/pull/2243)).
 * Add support for new WIF fields in `vault_azure_secret_backend`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2250](https://github.com/hashicorp/terraform-provider-vault/pull/2250))
+* Add support for `max_retries` in `vault_aws_auth_backend_client`: ([#2270](https://github.com/hashicorp/terraform-provider-vault/pull/2270))
 
 IMPROVEMENTS:
 * return a useful error when delete fails for the `vault_jwt_auth_backend_role` resource: ([#2232](https://github.com/hashicorp/terraform-provider-vault/pull/2232))
