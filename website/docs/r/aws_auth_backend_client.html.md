@@ -100,6 +100,9 @@ The following arguments are supported:
     `X-Vault-AWS-IAM-Server-ID` header as part of `GetCallerIdentity` requests
     that are used in the IAM auth method.
 
+* `max_retries` - (Optional) Number of max retries the client should use for recoverable errors. 
+    The default `-1` falls back to the AWS SDK's default behavior.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

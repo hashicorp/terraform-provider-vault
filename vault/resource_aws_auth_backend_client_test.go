@@ -4,8 +4,8 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
-
 	"regexp"
 	"testing"
 
@@ -240,13 +240,20 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			consts.FieldSTSEndpoint:            consts.FieldSTSEndpoint,
 			consts.FieldSTSRegion:              consts.FieldSTSRegion,
 			consts.FieldIAMServerIDHeaderValue: consts.FieldIAMServerIDHeaderValue,
+			consts.FieldMaxRetries:             consts.FieldMaxRetries,
 		}
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
 				continue
 			}
-			if resp.Data[apiAttr] != instanceState.Attributes[stateAttr] {
-				return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
+			if apiAttr == consts.FieldMaxRetries {
+				if resp.Data[apiAttr].(json.Number).String() != instanceState.Attributes[stateAttr] {
+					return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr].(json.Number).String())
+				}
+			} else {
+				if resp.Data[apiAttr] != instanceState.Attributes[stateAttr] {
+					return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
+				}
 			}
 		}
 		return nil
@@ -302,6 +309,7 @@ resource "vault_aws_auth_backend_client" "client" {
   sts_endpoint = "http://vault.test/sts"
   sts_region = "vault-test"
   iam_server_id_header_value = "vault.test"
+  max_retries = "-1"
 }
 `, backend)
 }
@@ -323,6 +331,7 @@ resource "vault_aws_auth_backend_client" "client" {
   sts_endpoint = "http://updated.vault.test/sts"
   sts_region = "updated-vault-test"
   iam_server_id_header_value = "updated.vault.test"
+  max_retries = "0"
 }`, backend)
 }
 

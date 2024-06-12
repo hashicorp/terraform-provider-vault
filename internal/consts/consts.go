@@ -424,6 +424,7 @@ const (
 	FieldDelegatedAuthAccessors        = "delegated_auth_accessors"
 	FieldPluginVersion                 = "plugin_version"
 	FieldUseMSGraphAPI                 = "use_microsoft_graph_api"
+	FieldMaxRetries                    = "max_retries"
 
 	/*
 		common environment variables
