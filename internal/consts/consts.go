@@ -500,6 +500,7 @@ const (
 	MountTypeTerraform    = "terraform"
 	MountTypeNone         = "none"
 	MountTypeSAML         = "saml"
+	MountTypeOkta         = "okta"
 
 	/*
 		Vault version constants

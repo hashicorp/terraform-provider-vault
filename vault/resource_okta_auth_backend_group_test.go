@@ -21,6 +21,7 @@ func TestAccOktaAuthBackendGroup_basic(t *testing.T) {
 	t.Parallel()
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
 	organization := "dummy"
+	resourceName := "vault_okta_auth_backend_group.test"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -31,7 +32,11 @@ func TestAccOktaAuthBackendGroup_basic(t *testing.T) {
 				Config: testAccOktaAuthGroupConfig_basic(path, organization),
 				Check: resource.ComposeTestCheckFunc(
 					testAccOktaAuthBackendGroup_InitialCheck,
-					testAccOktaAuthBackend_GroupsCheck(path, "foo", []string{"one", "two", "default"}),
+					resource.TestCheckResourceAttr(resourceName, "group_name", "foo"),
+					resource.TestCheckResourceAttr(resourceName, "policies.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "policies.0", "default"),
+					resource.TestCheckResourceAttr(resourceName, "policies.1", "one"),
+					resource.TestCheckResourceAttr(resourceName, "policies.2", "two"),
 				),
 			},
 			{
@@ -48,6 +53,7 @@ func TestAccOktaAuthBackendGroup_specialChar(t *testing.T) {
 	t.Parallel()
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
 	organization := "dummy"
+	resourceName := "vault_okta_auth_backend_group.test"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -58,7 +64,11 @@ func TestAccOktaAuthBackendGroup_specialChar(t *testing.T) {
 				Config: testAccOktaAuthGroupConfig_specialChar(path, organization),
 				Check: resource.ComposeTestCheckFunc(
 					testAccOktaAuthBackendGroup_InitialCheck,
-					testAccOktaAuthBackend_GroupsCheck(path, "foo/bar", []string{"one", "two", "default"}),
+					resource.TestCheckResourceAttr(resourceName, "group_name", "foo/bar"),
+					resource.TestCheckResourceAttr(resourceName, "policies.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "policies.0", "default"),
+					resource.TestCheckResourceAttr(resourceName, "policies.1", "one"),
+					resource.TestCheckResourceAttr(resourceName, "policies.2", "two"),
 				),
 			},
 			{
