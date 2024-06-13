@@ -435,6 +435,7 @@ const (
 	FieldCustomEndpoint                = "custom_endpoint"
 	FieldPrivateKeyID                  = "private_key_id"
 	FieldTune                          = "tune"
+	FieldMaxRetries                    = "max_retries"
 
 	/*
 		common environment variables
