@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 4.3.0 (Jun 17, 2024)
+
 FEATURES:
 * Add support for `iam_tags` in `vault_aws_secret_backend_role` ([#2231](https://github.com/hashicorp/terraform-provider-vault/pull/2231)).
 * Add support for `inheritable` on `vault_quota_rate_limit` and `vault_quota_lease_count`. Requires Vault 1.15+.: ([#2133](https://github.com/hashicorp/terraform-provider-vault/pull/2133)).
@@ -11,12 +13,13 @@ FEATURES:
 * Add new data source and resource `vault_pki_secret_backend_config_est`. Requires Vault 1.16+. *Available only for Vault Enterprise* ([#2246](https://github.com/hashicorp/terraform-provider-vault/pull/2246))
 * Support missing token parameters on `vault_okta_auth_backend` resource: ([#2210](https://github.com/hashicorp/terraform-provider-vault/pull/2210))
 * Add support for `max_retries` in `vault_aws_auth_backend_client`: ([#2270](https://github.com/hashicorp/terraform-provider-vault/pull/2270))
+* Add new resources `vault_plugin` and `vault_plugin_pinned_version`: ([#2159](https://github.com/hashicorp/terraform-provider-vault/pull/2159))
+* Add `key_type` and `key_bits` to `vault_ssh_secret_backend_ca`: ([#1454](https://github.com/hashicorp/terraform-provider-vault/pull/1454))
 
 IMPROVEMENTS:
 * return a useful error when delete fails for the `vault_jwt_auth_backend_role` resource: ([#2232](https://github.com/hashicorp/terraform-provider-vault/pull/2232))
-
-BUGS:
-* add missing `custom_tags` and `secret_name_template` fields to `vault_secrets_sync_azure_destination` resource ([#2247](https://github.com/hashicorp/terraform-provider-vault/pull/2247))
+* Remove dependency on `github.com/hashicorp/vault` package: ([#2251](https://github.com/hashicorp/terraform-provider-vault/pull/2251))
+* Add missing `custom_tags` and `secret_name_template` fields to `vault_secrets_sync_azure_destination` resource ([#2247](https://github.com/hashicorp/terraform-provider-vault/pull/2247))
 
 ## 4.2.0 (Mar 27, 2024)
 
