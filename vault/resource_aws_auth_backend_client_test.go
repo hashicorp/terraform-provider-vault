@@ -245,11 +245,16 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 		}
 		for stateAttr, apiAttr := range attrs {
 			respApiAttr := resp.Data[apiAttr]
-			if apiAttr == consts.FieldMaxRetries {
-				respApiAttr = resp.Data[apiAttr].(json.Number).String()
+			if respApiAttr == nil {
+				return fmt.Errorf("expected non-nil value for %s (%s) of %q", apiAttr, stateAttr, endpoint)
 			}
-			if respApiAttr != instanceState.Attributes[stateAttr] {
-				return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], respApiAttr)
+			if respApiAttr != nil {
+				if apiAttr == consts.FieldMaxRetries {
+					respApiAttr = respApiAttr.(json.Number).String()
+				}
+				if respApiAttr != instanceState.Attributes[stateAttr] {
+					return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], respApiAttr)
+				}
 			}
 		}
 		return nil
