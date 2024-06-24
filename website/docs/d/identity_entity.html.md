@@ -52,7 +52,7 @@ The lookup criteria can be `entity_name`, `entity_id`, `alias_id`, or a combinat
 
 ## Required Vault Capabilities
 
-Use of this resource requires the `create` capability on `/identity/lookup/entity`.
+Use of this resource requires the `update` capability on `/identity/lookup/entity`.
 
 ## Attributes Reference
 
