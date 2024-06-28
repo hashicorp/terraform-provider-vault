@@ -30,6 +30,7 @@ type testPKICertStore struct {
 	expiration       int64
 	expirationWindow int64
 	expectRevoked    bool
+	revokeWithKey    bool
 }
 
 func TestPkiSecretBackendCert_basic(t *testing.T) {
@@ -54,7 +55,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
@@ -65,7 +66,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// revoke the cert, expect a new one is re-issued
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, true),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, true, false),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, "revoke", "true"),
@@ -76,7 +77,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// remove the cert to test revocation flow (expect no revocation)
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					testPKICertRevocation(intermediatePath, store),
 				),
@@ -86,17 +87,28 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion113), nil
 				},
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "user_ids.0", "foo"),
 					resource.TestCheckResourceAttr(resourceName, "user_ids.1", "bar"),
+				),
+			},
+			{
+				// revoke the cert with key
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, true, true),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						resource.TestCheckResourceAttr(resourceName, "revoke", "true"),
+						testPKICertRevocation(intermediatePath, store),
+						testCapturePKICert(resourceName, store),
+					)...,
 				),
 			},
 		},
 	})
 }
 
-func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, withCert, revoke bool) string {
+func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, withCert, revoke bool, revokeWithKey bool) string {
 	fragments := []string{
 		fmt.Sprintf(`
 resource "vault_mount" "test-root" {
@@ -178,8 +190,9 @@ resource "vault_pki_secret_backend_cert" "test" {
   ttl                   = "720h"
   min_seconds_remaining = 60
   revoke                = %t
+  revoke_with_key       = %t
 }
-`, revoke))
+`, revoke, revokeWithKey))
 	}
 
 	return strings.Join(fragments, "\n")
