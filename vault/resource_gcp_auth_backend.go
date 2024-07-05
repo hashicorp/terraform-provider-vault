@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -383,13 +382,12 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	mount, err := mountutil.GetAuthMount(ctx, client, gcpPath)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", gcpPath)
-		d.SetId("")
-		return nil
-	}
-
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", gcpPath)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

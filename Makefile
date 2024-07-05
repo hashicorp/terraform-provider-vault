@@ -17,11 +17,20 @@ build: go-version-check fmtcheck
 test: go-version-check fmtcheck
 	TF_ACC= VAULT_TOKEN= go test $(TESTARGS) -timeout 10m $(TEST_PATH)
 
+testsum: go-version-check fmtcheck
+	TF_ACC= VAULT_TOKEN= gotestsum $(TEST_PATH) $(TESTARGS) -test.timeout 10m
+
 testacc: fmtcheck
 	TF_ACC=1 go test $(TESTARGS) -timeout 30m $(TEST_PATH)
 
+testaccsum: fmtcheck
+	TF_ACC=1 gotestsum $(TEST_PATH) $(TESTARGS) -timeout 30m
+
 testacc-ent:
 	make testacc TF_ACC_ENTERPRISE=1
+
+testaccsum-ent:
+	make testaccsum TF_ACC_ENTERPRISE=1
 
 dev: go-version-check fmtcheck
 	go build -o terraform-provider-vault
@@ -71,4 +80,4 @@ ifeq (,$(wildcard $(GOPATH)/src/$(WEBSITE_REPO)))
 endif
 	@$(MAKE) -C $(GOPATH)/src/$(WEBSITE_REPO) website-provider-test PROVIDER_PATH=$(shell pwd) PROVIDER_NAME=$(PKG_NAME)
 
-.PHONY: build test testacc testacc-ent vet fmt fmtcheck errcheck test-compile website website-test go-version-check
+.PHONY: build test testacc testacc-ent vet fmt fmtcheck errcheck test-compile website website-test go-version-check testaccsum testaccsum-ent

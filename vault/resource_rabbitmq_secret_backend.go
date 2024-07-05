@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -155,14 +154,14 @@ func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading RabbitMQ secret backend mount %q from Vault", path)
-	mount, err := mountutil.GetMount(context.Background(), client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
+	ctx := context.Background()
+	mount, err := mountutil.GetMount(ctx, client, path)
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 
@@ -249,12 +248,12 @@ func rabbitMQSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if RabbitMQ backend exists at %q", path)
 
-	_, err := mountutil.GetMount(context.Background(), client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		return false, nil
-	}
+	if _, err := mountutil.GetMount(context.Background(), client, path); err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			return false, nil
+		}
 
-	if err != nil {
+		// TODO: returning true here is probably wrong. We should move existence checks to the Read function.
 		return true, err
 	}
 

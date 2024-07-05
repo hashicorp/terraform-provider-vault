@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -150,14 +149,14 @@ func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[DEBUG] Reading Terraform Cloud backend mount %q from Vault", backend)
 
-	mount, err := mountutil.GetMount(context.Background(), client, backend)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", backend)
-		d.SetId("")
-		return nil
-	}
-
+	ctx := context.Background()
+	mount, err := mountutil.GetMount(ctx, client, backend)
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", backend)
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 
@@ -257,11 +256,11 @@ func terraformCloudSecretBackendExists(d *schema.ResourceData, meta interface{})
 	log.Printf("[DEBUG] Checking if Terraform Cloud backend exists at %q", backend)
 
 	_, err := mountutil.GetMount(context.Background(), client, backend)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		return false, nil
-	}
-
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			return false, nil
+		}
+
 		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
 	}
 

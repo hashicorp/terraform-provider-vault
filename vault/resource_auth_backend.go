@@ -5,17 +5,16 @@ package vault
 
 import (
 	"context"
-	"errors"
-
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
-	"github.com/hashicorp/vault/api"
 )
 
 func AuthBackendResource() *schema.Resource {
@@ -145,13 +144,12 @@ func authBackendRead(ctx context.Context, d *schema.ResourceData, meta interface
 	path := d.Id()
 
 	mount, err := mountutil.GetAuthMount(ctx, client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 
@@ -171,9 +169,9 @@ func authBackendRead(ctx context.Context, d *schema.ResourceData, meta interface
 		return diag.FromErr(err)
 	}
 	// TODO: uncomment when identity token key is being returned on the read mount endpoint
-	//if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
+	// if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
 	//	return diag.FromErr(err)
-	//}
+	// }
 
 	return nil
 }

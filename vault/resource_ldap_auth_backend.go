@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"log"
 	"strings"
 
@@ -319,21 +318,20 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 
 	path := d.Id()
 
-	authMount, err := mountutil.GetAuthMount(ctx, client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
+	mount, err := mountutil.GetAuthMount(ctx, client, path)
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 
 	d.Set(consts.FieldPath, path)
-	d.Set(consts.FieldDescription, authMount.Description)
-	d.Set(consts.FieldAccessor, authMount.Accessor)
-	d.Set(consts.FieldLocal, authMount.Local)
+	d.Set(consts.FieldDescription, mount.Description)
+	d.Set(consts.FieldAccessor, mount.Accessor)
+	d.Set(consts.FieldLocal, mount.Local)
 
 	path = ldapAuthBackendConfigPath(path)
 
