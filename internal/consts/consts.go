@@ -436,6 +436,7 @@ const (
 	FieldPrivateKeyID                  = "private_key_id"
 	FieldTune                          = "tune"
 	FieldMaxRetries                    = "max_retries"
+	FieldSessionTags                   = "session_tags"
 
 	/*
 		common environment variables

@@ -27,10 +27,6 @@ const (
 	testAccAWSSecretBackendRolePermissionsBoundaryArn_updated = "arn:aws:iam::123456789123:policy/boundary2"
 	testAccAWSSecretBackendRoleIamUserPath_basic              = "/path1/"
 	testAccAWSSecretBackendRoleIamUserPath_updated            = "/path2/"
-	testAccAWSSecretBackendRoleIamTag_key_basic               = "key1"
-	testAccAWSSecretBackendRoleIamTag_value_basic             = "value1"
-	testAccAWSSecretBackendRoleIamTag_key_updated             = "key2"
-	testAccAWSSecretBackendRoleIamTag_value_updated           = "value2"
 )
 
 func TestAccAWSSecretBackendRole_basic(t *testing.T) {
@@ -43,15 +39,15 @@ func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 		CheckDestroy:      testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSSecretBackendRoleConfig_basic(name, backend, accessKey, secretKey),
+				Config: testAccAWSSecretBackendRoleConfigBasic(name, backend, accessKey, secretKey),
 				Check:  testAccAWSSecretBackendRoleCheckBasicAttributes(name, backend),
 			},
 			{
-				Config: testAccAWSSecretBackendRoleConfig_updated(name, backend, accessKey, secretKey),
+				Config: testAccAWSSecretBackendRoleConfigUpdated(name, backend, accessKey, secretKey),
 				Check:  testAccAWSSecretBackendRoleCheckUpdatedAttributes(name, backend),
 			},
 			{
-				Config: testAccAWSSecretBackendRoleConfig_basic(name, backend, accessKey, secretKey),
+				Config: testAccAWSSecretBackendRoleConfigBasic(name, backend, accessKey, secretKey),
 				Check:  testAccAWSSecretBackendRoleCheckBasicAttributes(name, backend),
 			},
 		},
@@ -68,7 +64,7 @@ func TestAccAWSSecretBackendRole_import(t *testing.T) {
 		CheckDestroy:      testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSSecretBackendRoleConfig_basic(name, backend, accessKey, secretKey),
+				Config: testAccAWSSecretBackendRoleConfigBasic(name, backend, accessKey, secretKey),
 				Check:  testAccAWSSecretBackendRoleCheckBasicAttributes(name, backend),
 			},
 			{
@@ -110,11 +106,11 @@ func TestAccAWSSecretBackendRole_nested(t *testing.T) {
 		CheckDestroy:      testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSSecretBackendRoleConfig_basic(name, backend, accessKey, secretKey),
+				Config: testAccAWSSecretBackendRoleConfigBasic(name, backend, accessKey, secretKey),
 				Check:  testAccAWSSecretBackendRoleCheckBasicAttributes(name, backend),
 			},
 			{
-				Config: testAccAWSSecretBackendRoleConfig_updated(name, backend, accessKey, secretKey),
+				Config: testAccAWSSecretBackendRoleConfigUpdated(name, backend, accessKey, secretKey),
 				Check:  testAccAWSSecretBackendRoleCheckUpdatedAttributes(name, backend),
 			},
 		},
@@ -172,7 +168,14 @@ func testAccAWSSecretBackendRoleCheckBasicAttributes(name, backend string) resou
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "permissions_boundary_arn", testAccAWSSecretBackendRolePermissionsBoundaryArn_basic),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "user_path", testAccAWSSecretBackendRoleIamUserPath_basic),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "iam_tags.%", "1"),
-		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", fmt.Sprintf("iam_tags.%s", testAccAWSSecretBackendRoleIamTag_key_basic), testAccAWSSecretBackendRoleIamTag_value_basic),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "iam_tags.key1", "value1"),
+		// assume  role with session tags
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "name", fmt.Sprintf("%s-session-tags", name)),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "backend", backend),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "external_id", "ext1"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "session_tags.%", "2"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "session_tags.key1", "value1"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "session_tags.key2", "value2"),
 	)
 }
 
@@ -212,11 +215,17 @@ func testAccAWSSecretBackendRoleCheckUpdatedAttributes(name, backend string) res
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "permissions_boundary_arn", testAccAWSSecretBackendRolePermissionsBoundaryArn_updated),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "user_path", testAccAWSSecretBackendRoleIamUserPath_updated),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "iam_tags.%", "1"),
-		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", fmt.Sprintf("iam_tags.%s", testAccAWSSecretBackendRoleIamTag_key_updated), testAccAWSSecretBackendRoleIamTag_value_updated),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "iam_tags.key2", "value2"),
+		// assume  role with session tags
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "name", fmt.Sprintf("%s-session-tags", name)),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "backend", backend),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "external_id", "ext2"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "session_tags.%", "1"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "session_tags.key1", "value1"),
 	)
 }
 
-func testAccAWSSecretBackendRoleConfig_basic(name, path, accessKey, secretKey string) string {
+func testAccAWSSecretBackendRoleConfigBasic(name, path, accessKey, secretKey string) string {
 	resources := []string{
 		fmt.Sprintf(`
 resource "vault_aws_secret_backend" "test" {
@@ -291,14 +300,28 @@ resource "vault_aws_secret_backend_role" "test_iam_user_type_optional_attributes
 			testAccAWSSecretBackendRolePolicyArn_basic,
 			testAccAWSSecretBackendRolePermissionsBoundaryArn_basic,
 			testAccAWSSecretBackendRoleIamUserPath_basic,
-			testAccAWSSecretBackendRoleIamTag_key_basic,
-			testAccAWSSecretBackendRoleIamTag_value_basic),
+			"key1",
+			"value1"),
+
+		fmt.Sprintf(`
+resource "vault_aws_secret_backend_role" "test_assumed_role_session_tags" {
+  name = "%s-session-tags"
+  role_arns = ["%s"]
+  credential_type = "assumed_role"
+  backend = vault_aws_secret_backend.test.path
+  external_id = "ext1"
+  session_tags = {
+	"key1" = "value1"
+	"key2" = "value2"
+  }
+}
+`, name, testAccAWSSecretBackendRoleRoleArn_basic),
 	}
 
 	return strings.Join(resources, "\n")
 }
 
-func testAccAWSSecretBackendRoleConfig_updated(name, path, accessKey, secretKey string) string {
+func testAccAWSSecretBackendRoleConfigUpdated(name, path, accessKey, secretKey string) string {
 	resources := []string{
 		fmt.Sprintf(`
 resource "vault_aws_secret_backend" "test" {
@@ -386,8 +409,20 @@ resource "vault_aws_secret_backend_role" "test_iam_user_type_optional_attributes
 			testAccAWSSecretBackendRolePolicyArn_updated,
 			testAccAWSSecretBackendRolePermissionsBoundaryArn_updated,
 			testAccAWSSecretBackendRoleIamUserPath_updated,
-			testAccAWSSecretBackendRoleIamTag_key_updated,
-			testAccAWSSecretBackendRoleIamTag_value_updated),
+			"key2",
+			"value2"),
+		fmt.Sprintf(`
+resource "vault_aws_secret_backend_role" "test_assumed_role_session_tags" {
+  name = "%s-session-tags"
+  role_arns = ["%s"]
+  credential_type = "assumed_role"
+  backend = vault_aws_secret_backend.test.path
+  external_id = "ext2"
+  session_tags = {
+	"key1" = "value1"
+  }
+}
+`, name, testAccAWSSecretBackendRoleRoleArn_basic),
 	}
 	return strings.Join(resources, "\n")
 }
