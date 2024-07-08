@@ -315,13 +315,12 @@ func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
 
 	mount, err := mountutil.GetAuthMount(ctx, client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

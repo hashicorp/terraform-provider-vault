@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -383,14 +382,14 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 
 	log.Printf("[DEBUG] Reading mount %s from Vault", path)
 
-	mount, err := mountutil.GetMount(context.Background(), client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
+	ctx := context.Background()
+	mount, err := mountutil.GetMount(ctx, client, path)
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 
@@ -457,9 +456,9 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 	}
 
 	// @TODO add this back in when Vault 1.16.3 is released
-	//if err := d.Set(consts.FieldDelegatedAuthAccessors, mount.Config.DelegatedAuthAccessors); err != nil {
+	// if err := d.Set(consts.FieldDelegatedAuthAccessors, mount.Config.DelegatedAuthAccessors); err != nil {
 	//	return err
-	//}
+	// }
 	if err := d.Set(consts.FieldListingVisibility, mount.Config.ListingVisibility); err != nil {
 		return err
 	}

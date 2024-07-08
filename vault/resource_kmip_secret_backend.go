@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -157,6 +158,7 @@ func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error remounting in Vault: %s", err)
 		}
 
+		ctx := context.Background()
 		// There is something similar in resource_mount.go, but in the call to TuneMount().
 		var tries int
 		for {
@@ -165,7 +167,7 @@ func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 					"mount %q did did not become available after %d tries, interval=1s", dest, tries)
 			}
 
-			enabled, err := mountutil.CheckMountEnabled(client, dest)
+			enabled, err := mountutil.CheckMountEnabled(ctx, client, dest)
 			if err != nil {
 				return err
 			}
