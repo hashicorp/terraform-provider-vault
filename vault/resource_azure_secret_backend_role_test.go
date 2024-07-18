@@ -98,6 +98,23 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName+".test_azure_roles", "azure_roles.0.role_id"),
 				),
 			},
+			{
+				// persist application registration when true
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion116), nil
+				},
+				Config: testAzureSecretBackendRolePersistApp_azureRoles(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "role", role+"-azure-roles"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "description", "Test for Vault Provider"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "persist_app", "false"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.#", "1"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "azure_roles.0.role_name", "Reader"),
+					resource.TestCheckResourceAttrSet(resourceName+".test_azure_roles", "azure_roles.0.scope"),
+					resource.TestCheckResourceAttrSet(resourceName+".test_azure_roles", "azure_roles.0.role_id"),
+				),
+			},
 		},
 	})
 }
@@ -157,6 +174,22 @@ func TestAzureSecretBackendRole_AzureGroups(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "role", role+"-azure-groups"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "description", "Test for Vault Provider"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "permanently_delete", "true"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "azure_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "azure_groups.0.group_name", "foobar"),
+					resource.TestCheckResourceAttrSet(resourceName+".test_azure_groups", "azure_groups.0.object_id"),
+				),
+			},
+			{
+				// persist application registration when true
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion116), nil
+				},
+				Config: testAzureSecretBackendRolePersistApp_azureGroups(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "role", role+"-azure-groups"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "description", "Test for Vault Provider"),
+					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "persist_app", "true"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "azure_groups.#", "1"),
 					resource.TestCheckResourceAttr(resourceName+".test_azure_groups", "azure_groups.0.group_name", "foobar"),
 					resource.TestCheckResourceAttrSet(resourceName+".test_azure_groups", "azure_groups.0.object_id"),
@@ -337,6 +370,56 @@ resource "vault_azure_secret_backend_role" "test_azure_groups" {
   max_ttl            = 600
   description        = "Test for Vault Provider"
   permanently_delete = true
+
+  azure_groups {
+    group_name = "foobar"
+  }
+}
+`, subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup)
+}
+
+func testAzureSecretBackendRolePersistApp_azureRoles(subscriptionID string, tenantID string, clientID string, clientSecret string, path string, role string, resourceGroup string) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "azure" {
+  subscription_id = "%s"
+  tenant_id       = "%s"
+  client_id       = "%s"
+  client_secret   = "%s"
+  path            = "%s"
+}
+
+resource "vault_azure_secret_backend_role" "test_azure_roles" {
+  backend     = vault_azure_secret_backend.azure.path
+  role        = "%[6]s-azure-roles"
+  ttl         = 300
+  max_ttl     = 600
+  description = "Test for Vault Provider"
+
+  azure_roles {
+    role_name = "Reader"
+    scope =  "/subscriptions/%[1]s/resourceGroups/%[7]s"
+  }
+}
+`, subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup)
+}
+
+func testAzureSecretBackendRolePersistApp_azureGroups(subscriptionID string, tenantID string, clientID string, clientSecret string, path string, role string, resourceGroup string) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "azure" {
+  subscription_id = "%s"
+  tenant_id       = "%s"
+  client_id       = "%s"
+  client_secret   = "%s"
+  path            = "%s"
+}
+
+resource "vault_azure_secret_backend_role" "test_azure_groups" {
+  backend            = vault_azure_secret_backend.azure.path
+  role               = "%[6]s-azure-groups"
+  ttl                = 300
+  max_ttl            = 600
+  description        = "Test for Vault Provider"
+  persist_app        = true
 
   azure_groups {
     group_name = "foobar"
