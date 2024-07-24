@@ -15,6 +15,7 @@ FEATURES:
 * Add support for `max_retries` in `vault_aws_auth_backend_client`: ([#2270](https://github.com/hashicorp/terraform-provider-vault/pull/2270))
 * Add new resources `vault_plugin` and `vault_plugin_pinned_version`: ([#2159](https://github.com/hashicorp/terraform-provider-vault/pull/2159))
 * Add `key_type` and `key_bits` to `vault_ssh_secret_backend_ca`: ([#1454](https://github.com/hashicorp/terraform-provider-vault/pull/1454))
+* Add support for `password_policy` in `vault_database_secret_backend_connection` ([#2244](https://github.com/hashicorp/terraform-provider-vault/pull/2244)).
 
 IMPROVEMENTS:
 * return a useful error when delete fails for the `vault_jwt_auth_backend_role` resource: ([#2232](https://github.com/hashicorp/terraform-provider-vault/pull/2232))
