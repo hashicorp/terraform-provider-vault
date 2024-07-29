@@ -88,7 +88,7 @@ The following arguments are supported:
 
 * `allowed_managed_keys` - (Optional) Set of managed key registry entry names that the mount in question is allowed to access
 
-* `listing_availability` - (Optional) Specifies whether to show this mount in the UI-specific
+* `listing_visibility` - (Optional) Specifies whether to show this mount in the UI-specific
   listing endpoint. Valid values are `unauth` or `hidden`. If not set, behaves like `hidden`.
 
 * `passthrough_request_headers` - (Optional) List of headers to allow and pass from the request to
