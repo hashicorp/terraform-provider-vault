@@ -15,6 +15,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
+const defaultKeyTypeSSH = "ssh-rsa"
+
 func sshSecretBackendCAResource() *schema.Resource {
 	return &schema.Resource{
 		Create: sshSecretBackendCACreate,
@@ -52,7 +54,7 @@ func sshSecretBackendCAResource() *schema.Resource {
 			},
 			"key_type": {
 				Type:        schema.TypeString,
-				Default:     "ssh-rsa",
+				Default:     defaultKeyTypeSSH,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "Specifies the desired key type for the generated SSH CA key when `generate_signing_key` is set to `true`.",
@@ -177,7 +179,7 @@ func sshSecretBackendCAResourceV0() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"key_type": {
 				Type:        schema.TypeString,
-				Default:     "ssh-rsa",
+				Default:     defaultKeyTypeSSH,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "Specifies the desired key type for the generated SSH CA key when `generate_signing_key` is set to `true`.",
@@ -196,7 +198,7 @@ func sshSecretBackendCAResourceV0() *schema.Resource {
 // See https://github.com/hashicorp/terraform-provider-vault/issues/2281
 func sshSecretBackendCAUpgradeV0(_ context.Context, rawState map[string]interface{}, _ interface{}) (map[string]interface{}, error) {
 	if rawState["key_type"] == nil {
-		rawState["key_type"] = "ssh-rsa"
+		rawState["key_type"] = defaultKeyTypeSSH
 	}
 
 	return rawState, nil
