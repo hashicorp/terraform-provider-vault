@@ -1,5 +1,9 @@
 ## Unreleased
 
+BUGS:
+* fix `vault_ssh_secret_backend_ca` where a schema change forced the resource to be replaced ([#2308](https://github.com/hashicorp/terraform-provider-vault/pull/2308))
+* fix a bug where a read on non-existent auth or secret mount resulted in an error that prevented the provider from completing successfully ([#2289](https://github.com/hashicorp/terraform-provider-vault/pull/2289))
+
 ## 4.3.0 (Jun 17, 2024)
 
 FEATURES:
