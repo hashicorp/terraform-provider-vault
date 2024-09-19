@@ -195,6 +195,10 @@ var (
 			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
 			PathInventory: []string{"/transform/decode/{role_name}"},
 		},
+		"vault_transit_secret_backend_key": {
+			Resource:      UpdateSchemaResource(transitSecretBackendKeyDataSource()),
+			PathInventory: []string{"/transit/keys/{key_name}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*provider.Description{
