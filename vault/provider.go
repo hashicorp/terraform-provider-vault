@@ -167,13 +167,13 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
-		"vault_pki_secret_backend_config_est": {
-			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstDataSource()),
-			PathInventory: []string{"/pki/config/est"},
-		},
 		"vault_pki_secret_backend_config_cmpv2": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCMPV2DataSource()),
 			PathInventory: []string{"/pki/config/cmp"},
+		},
+		"vault_pki_secret_backend_config_est": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstDataSource()),
+			PathInventory: []string{"/pki/config/est"},
 		},
 		"vault_pki_secret_backend_issuer": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
@@ -591,13 +591,13 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigClusterResource()),
 			PathInventory: []string{"/pki/config/cluster"},
 		},
-		"vault_pki_secret_backend_config_est": {
-			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstResource()),
-			PathInventory: []string{"/pki/config/est"},
-		},
 		"vault_pki_secret_backend_config_cmpv2": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCMPV2Resource()),
 			PathInventory: []string{"/pki/config/cmp"},
+		},
+		"vault_pki_secret_backend_config_est": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstResource()),
+			PathInventory: []string{"/pki/config/est"},
 		},
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),

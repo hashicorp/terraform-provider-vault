@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* Add new data source and resource `vault_pki_secret_backend_config_cmpv2`. Requires Vault 1.18+. *Available only for Vault Enterprise* ([#2330](https://github.com/hashicorp/terraform-provider-vault/pull/2330))
+
 ## 4.4.0 (Aug 7, 2024)
 
 FEATURES:
