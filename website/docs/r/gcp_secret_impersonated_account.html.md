@@ -46,6 +46,9 @@ The following arguments are supported:
 
 * `token_scopes` - (Required) List of OAuth scopes to assign to access tokens generated under this impersonated account.
 
+* `ttl` - (Optional) Specifies the default TTL for service principals generated using this role.
+  Accepts time suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine default TTL time.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are also exposed:
