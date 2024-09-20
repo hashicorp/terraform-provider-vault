@@ -14,6 +14,7 @@ BUGS:
 ## 4.3.0 (Jun 17, 2024)
 
 FEATURES:
+* Add support for certificate revocation with `revoke_with_key` in `vault_pki_secret_backend_cert`
 * Add support for `iam_tags` in `vault_aws_secret_backend_role` ([#2231](https://github.com/hashicorp/terraform-provider-vault/pull/2231)).
 * Add support for `inheritable` on `vault_quota_rate_limit` and `vault_quota_lease_count`. Requires Vault 1.15+.: ([#2133](https://github.com/hashicorp/terraform-provider-vault/pull/2133)).
 * Add support for new WIF fields in `vault_gcp_secret_backend`. Requires Vault 1.17+. *Available only for Vault Enterprise* ([#2249](https://github.com/hashicorp/terraform-provider-vault/pull/2249)). 
