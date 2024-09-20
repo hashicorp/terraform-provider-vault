@@ -41,6 +41,7 @@ var allowedCapabilities = []string{
 	"sudo",
 	"deny",
 	"patch",
+	"subscribe",
 }
 
 func policyDocumentDataSource() *schema.Resource {
