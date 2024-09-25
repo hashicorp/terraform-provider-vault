@@ -52,7 +52,7 @@ The following arguments are supported:
 
 * `enable_sentinel_parsing` - If set, parse out fields from the provided CSR making them available for Sentinel policies.
 
-* `enabled` - Specifies whether EST is enabled.
+* `enabled` - Specifies whether CMPv2 is enabled.
 
 * `audit_fields` - Fields parsed from the CSR that appear in the audit and can be used by sentinel policies.
 
