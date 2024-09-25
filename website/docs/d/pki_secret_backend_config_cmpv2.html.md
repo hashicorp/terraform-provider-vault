@@ -42,7 +42,7 @@ The following arguments are supported:
   *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path to the PKI secret backend to
-  read the EST configuration from, with no leading or trailing `/`s.
+  read the CMPv2 configuration from, with no leading or trailing `/`s.
 
 # Attributes Reference
 
