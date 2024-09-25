@@ -48,7 +48,7 @@ The following arguments are supported:
 
 * `authenticators` - Lists the mount accessors CMPv2 should delegate authentication requests towards (see [below for nested schema](#nestedatt--authenticators)).
 
-* `default_path_policy` - Required to be set if default_mount is enabled. Specifies the behavior for requests using the default EST label. Can be sign-verbatim or a role given by role:<role_name>.
+* `default_path_policy` - Specifies the behavior for requests using the non-role-qualified CMPv2 requests. Can be sign-verbatim or a role given by role:<role_name>.
 
 * `enable_sentinel_parsing` - If set, parse out fields from the provided CSR making them available for Sentinel policies.
 
