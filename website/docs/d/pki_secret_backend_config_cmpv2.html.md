@@ -46,7 +46,7 @@ The following arguments are supported:
 
 # Attributes Reference
 
-* `authenticators` - Lists the mount accessors EST should delegate authentication requests towards (see [below for nested schema](#nestedatt--authenticators)).
+* `authenticators` - Lists the mount accessors CMPv2 should delegate authentication requests towards (see [below for nested schema](#nestedatt--authenticators)).
 
 * `default_path_policy` - Required to be set if default_mount is enabled. Specifies the behavior for requests using the default EST label. Can be sign-verbatim or a role given by role:<role_name>.
 
