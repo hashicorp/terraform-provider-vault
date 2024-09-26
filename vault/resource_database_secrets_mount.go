@@ -223,7 +223,7 @@ func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}
 	var root string
 	if d.IsNewResource() {
 		root = d.Get("path").(string)
-		if err := createMount(d, client, root, consts.MountTypeDatabase); err != nil {
+		if err := createMount(d, meta, client, root, consts.MountTypeDatabase); err != nil {
 			return err
 		}
 	} else {

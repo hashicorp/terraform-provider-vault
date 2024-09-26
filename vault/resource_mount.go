@@ -192,7 +192,7 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	path := d.Get(consts.FieldPath).(string)
-	if err := createMount(d, client, path, d.Get(consts.FieldType).(string)); err != nil {
+	if err := createMount(d, meta, client, path, d.Get(consts.FieldType).(string)); err != nil {
 		return err
 	}
 
@@ -201,7 +201,7 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 	return mountRead(d, meta)
 }
 
-func createMount(d *schema.ResourceData, client *api.Client, path string, mountType string) error {
+func createMount(d *schema.ResourceData, meta interface{}, client *api.Client, path string, mountType string) error {
 	input := &api.MountInput{
 		Type:        mountType,
 		Description: d.Get(consts.FieldDescription).(string),
@@ -246,8 +246,11 @@ func createMount(d *schema.ResourceData, client *api.Client, path string, mountT
 		input.Config.PluginVersion = v.(string)
 	}
 
-	if v, ok := d.GetOk(consts.FieldIdentityTokenKey); ok {
-		input.Config.IdentityTokenKey = v.(string)
+	useAPIVer116Ent := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer116Ent {
+		if d.HasChange(consts.FieldIdentityTokenKey) {
+			input.Config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
+		}
 	}
 
 	log.Printf("[DEBUG] Creating mount %s in Vault", path)
@@ -328,8 +331,11 @@ func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) err
 		config.PluginVersion = d.Get(consts.FieldPluginVersion).(string)
 	}
 
-	if d.HasChange(consts.FieldIdentityTokenKey) {
-		config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
+	useAPIVer116Ent := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer116Ent {
+		if d.HasChange(consts.FieldIdentityTokenKey) {
+			config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
+		}
 	}
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)
@@ -454,11 +460,9 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 	if err := d.Set(consts.FieldAllowedResponseHeaders, mount.Config.AllowedResponseHeaders); err != nil {
 		return err
 	}
-
-	// @TODO add this back in when Vault 1.16.3 is released
-	// if err := d.Set(consts.FieldDelegatedAuthAccessors, mount.Config.DelegatedAuthAccessors); err != nil {
-	//	return err
-	// }
+	if err := d.Set(consts.FieldDelegatedAuthAccessors, mount.Config.DelegatedAuthAccessors); err != nil {
+		return err
+	}
 	if err := d.Set(consts.FieldListingVisibility, mount.Config.ListingVisibility); err != nil {
 		return err
 	}

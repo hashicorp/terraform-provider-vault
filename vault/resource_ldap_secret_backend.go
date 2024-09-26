@@ -142,7 +142,7 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 	path := d.Get(consts.FieldPath).(string)
 	log.Printf("[DEBUG] Mounting LDAP mount at %q", path)
 	if d.IsNewResource() {
-		if err := createMount(d, client, path, consts.MountTypeLDAP); err != nil {
+		if err := createMount(d, meta, client, path, consts.MountTypeLDAP); err != nil {
 			return diag.FromErr(err)
 		}
 	} else {

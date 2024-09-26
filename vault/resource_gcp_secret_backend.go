@@ -11,16 +11,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func gcpSecretBackendResource(name string) *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: gcpSecretBackendCreate,
 		ReadContext:   provider.ReadContextWrapper(gcpSecretBackendRead),
 		UpdateContext: gcpSecretBackendUpdate,
@@ -111,6 +108,20 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 			},
 		},
 	}, false)
+
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldDefaultLeaseTTL,
+		consts.FieldMaxLeaseTTL,
+		consts.FieldIdentityTokenKey,
+		consts.FieldAccessor,
+		consts.FieldLocal,
+	))
+
+	return r
 }
 
 func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -120,37 +131,16 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 	}
 
 	path := d.Get(consts.FieldPath).(string)
-	description := d.Get(consts.FieldDescription).(string)
-	defaultTTL := d.Get(consts.FieldDefaultLeaseTTL).(int)
-	maxTTL := d.Get(consts.FieldMaxLeaseTTL).(int)
-	local := d.Get(consts.FieldLocal).(bool)
-	identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
 
 	configPath := gcpSecretBackendConfigPath(path)
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting GCP backend at %q", path)
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 
-	mountConfig := api.MountConfigInput{
-		DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
-		MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
+	if err := createMount(d, meta, client, path, consts.MountTypeGCP); err != nil {
+		return diag.FromErr(err)
 	}
 
-	// ID Token Key is only used in GCP mounts for 1.17+
-	if useAPIVer117Ent {
-		mountConfig.IdentityTokenKey = identityTokenKey
-	}
-
-	err := client.Sys().Mount(path, &api.MountInput{
-		Type:        consts.MountTypeGCP,
-		Description: description,
-		Config:      mountConfig,
-		Local:       local,
-	})
-	if err != nil {
-		return diag.Errorf("error mounting to %q: %s", path, err)
-	}
 	log.Printf("[DEBUG] Mounted GCP backend at %q", path)
 	d.SetId(path)
 
@@ -161,6 +151,7 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		consts.FieldCredentials,
 	}
 
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
 		fields = append(fields,
 			consts.FieldIdentityTokenAudience,
@@ -193,37 +184,11 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 
 	path := d.Id()
 
-	log.Printf("[DEBUG] Reading GCP backend mount %q from Vault", path)
-
-	mount, err := mountutil.GetMount(ctx, client, path)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", path)
-			d.SetId("")
-			return nil
-		}
-		return diag.FromErr(err)
-	}
-
-	log.Printf("[DEBUG] Read GCP backend mount %q from Vault", path)
-
 	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldDefaultLeaseTTL, mount.Config.DefaultLeaseTTL); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldMaxLeaseTTL, mount.Config.MaxLeaseTTL); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldLocal, mount.Local); err != nil {
-		return diag.FromErr(err)
-	}
 
-	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
+	if err := readMount(d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -266,24 +231,8 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(err)
 	}
 
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-
-	if d.HasChanges(consts.FieldDefaultLeaseTTL, consts.FieldMaxLeaseTTL, consts.FieldIdentityTokenKey) {
-		config := api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
-		}
-
-		if useAPIVer117Ent {
-			config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
-		}
-
-		log.Printf("[DEBUG] Updating mount config for %q", path)
-		err := client.Sys().TuneMountWithContext(ctx, path, config)
-		if err != nil {
-			return diag.Errorf("error updating mount config for %q: %s", path, err)
-		}
-		log.Printf("[DEBUG] Updated mount config for %q", path)
+	if err := updateMount(d, meta, true); err != nil {
+		return diag.FromErr(err)
 	}
 
 	data := make(map[string]interface{})
@@ -291,6 +240,8 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	if d.HasChange(consts.FieldCredentials) {
 		data[consts.FieldCredentials] = d.Get(consts.FieldCredentials)
 	}
+
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
 		if d.HasChange(consts.FieldIdentityTokenAudience) {
 			data[consts.FieldIdentityTokenAudience] = d.Get(consts.FieldIdentityTokenAudience)

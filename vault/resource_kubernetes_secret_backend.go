@@ -71,7 +71,7 @@ func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.Resource
 	var path string
 	if d.IsNewResource() {
 		path = d.Get(consts.FieldPath).(string)
-		if err := createMount(d, client, path, consts.MountTypeKubernetes); err != nil {
+		if err := createMount(d, meta, client, path, consts.MountTypeKubernetes); err != nil {
 			return diag.FromErr(err)
 		}
 	} else {

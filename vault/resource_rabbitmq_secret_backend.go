@@ -5,26 +5,22 @@ package vault
 
 import (
 	"context"
-	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func rabbitMQSecretBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
-		Create:        rabbitMQSecretBackendCreate,
-		Read:          provider.ReadWrapper(rabbitMQSecretBackendRead),
-		Update:        rabbitMQSecretBackendUpdate,
-		Delete:        rabbitMQSecretBackendDelete,
-		Exists:        rabbitMQSecretBackendExists,
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
+		CreateContext: rabbitMQSecretBackendCreate,
+		ReadContext:   provider.ReadContextWrapper(rabbitMQSecretBackendRead),
+		UpdateContext: rabbitMQSecretBackendUpdate,
+		DeleteContext: rabbitMQSecretBackendDelete,
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
@@ -94,18 +90,26 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 			},
 		},
 	}, false)
+
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldDefaultLeaseTTL,
+		consts.FieldMaxLeaseTTL,
+	))
+
+	return r
 }
 
-func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Get(consts.FieldPath).(string)
-	description := d.Get("description").(string)
-	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
-	maxTTL := d.Get("max_lease_ttl_seconds").(int)
 	connectionUri := d.Get("connection_uri").(string)
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
@@ -113,17 +117,10 @@ func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Rabbitmq backend at %q", path)
-	err := client.Sys().Mount(path, &api.MountInput{
-		Type:        consts.MountTypeRabbitMQ,
-		Description: description,
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("error mounting to %q: %s", path, err)
+	if err := createMount(d, meta, client, path, consts.MountTypeRabbitMQ); err != nil {
+		return diag.FromErr(err)
 	}
+
 	log.Printf("[DEBUG] Mounted Rabbitmq backend at %q", path)
 	d.SetId(path)
 
@@ -136,51 +133,35 @@ func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 		"username_template": d.Get("username_template").(string),
 		"password_policy":   d.Get("password_policy").(string),
 	}
-	_, err = client.Logical().Write(path+"/config/connection", data)
+	_, err := client.Logical().Write(path+"/config/connection", data)
 	if err != nil {
-		return fmt.Errorf("error configuring connection credentials for %q: %s", path, err)
+		return diag.Errorf("error configuring connection credentials for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote connection credentials to %q", path+"/config/connection")
 	d.Partial(false)
-	return rabbitMQSecretBackendRead(d, meta)
+	return rabbitMQSecretBackendRead(ctx, d, meta)
 }
 
-func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return e
-	}
-
+func rabbitMQSecretBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading RabbitMQ secret backend mount %q from Vault", path)
-	ctx := context.Background()
-	mount, err := mountutil.GetMount(ctx, client, path)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", path)
-			d.SetId("")
-			return nil
-		}
-		return err
+	if err := d.Set(consts.FieldPath, path); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := readMount(d, meta, true); err != nil {
+		return diag.FromErr(err)
 	}
 
-	d.Set(consts.FieldPath, path)
-	d.Set("description", mount.Description)
-	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
-
-	// access key, secret key, and region, sadly, we can't read out
-	// the API doesn't support it
-	// So... if they drift, they drift.
+	// the API can't serve the remaining fields
 
 	return nil
 }
 
-func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -188,20 +169,11 @@ func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 
 	path, err := util.Remount(d, client, consts.FieldPath, false)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	if d.HasChanges("default_lease_ttl_seconds", "max_lease_ttl_seconds") {
-		config := api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
-		}
-		log.Printf("[DEBUG] Updating lease TTLs for %q", path)
-		err := client.Sys().TuneMount(path, config)
-		if err != nil {
-			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
-		}
-		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
+	if err := updateMount(d, meta, true); err != nil {
+		return diag.FromErr(err)
 	}
 	if d.HasChanges("connection_uri", "username", "password", "verify_connection", "username_template", "password_policy") {
 		log.Printf("[DEBUG] Updating connection credentials at %q", path+"/config/connection")
@@ -215,47 +187,26 @@ func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 		}
 		_, err := client.Logical().Write(path+"/config/connection", data)
 		if err != nil {
-			return fmt.Errorf("error configuring connection credentials for %q: %s", path, err)
+			return diag.Errorf("error configuring connection credentials for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated root credentials at %q", path+"/config/connection")
 	}
 	d.Partial(false)
-	return rabbitMQSecretBackendRead(d, meta)
+	return rabbitMQSecretBackendRead(ctx, d, meta)
 }
 
-func rabbitMQSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Unmounting RabbitMQ backend %q", path)
-	err := client.Sys().Unmount(path)
+	err := client.Sys().UnmountWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error unmounting RabbitMQ backend from %q: %s", path, err)
+		return diag.Errorf("error unmounting RabbitMQ backend from %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Unmounted RabbitMQ backend %q", path)
 	return nil
-}
-
-func rabbitMQSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if RabbitMQ backend exists at %q", path)
-
-	if _, err := mountutil.GetMount(context.Background(), client, path); err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			return false, nil
-		}
-
-		// TODO: returning true here is probably wrong. We should move existence checks to the Read function.
-		return true, err
-	}
-
-	return true, nil
 }
