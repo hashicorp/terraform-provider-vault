@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"time"
 
@@ -174,34 +175,34 @@ func getMountSchema(excludes ...string) schemaMap {
 
 func MountResource() *schema.Resource {
 	return &schema.Resource{
-		Create: mountWrite,
-		Update: mountUpdate,
-		Delete: mountDelete,
-		Read:   provider.ReadWrapper(mountRead),
+		CreateContext: mountWrite,
+		UpdateContext: mountUpdate,
+		DeleteContext: mountDelete,
+		ReadContext:   provider.ReadContextWrapper(mountRead),
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: getMountSchema(),
 	}
 }
 
-func mountWrite(d *schema.ResourceData, meta interface{}) error {
+func mountWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	path := d.Get(consts.FieldPath).(string)
-	if err := createMount(d, meta, client, path, d.Get(consts.FieldType).(string)); err != nil {
-		return err
+	if err := createMount(ctx, d, meta, client, path, d.Get(consts.FieldType).(string)); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.SetId(path)
 
-	return mountRead(d, meta)
+	return mountRead(ctx, d, meta)
 }
 
-func createMount(d *schema.ResourceData, meta interface{}, client *api.Client, path string, mountType string) error {
+func createMount(ctx context.Context, d *schema.ResourceData, meta interface{}, client *api.Client, path string, mountType string) error {
 	input := &api.MountInput{
 		Type:        mountType,
 		Description: d.Get(consts.FieldDescription).(string),
@@ -255,18 +256,23 @@ func createMount(d *schema.ResourceData, meta interface{}, client *api.Client, p
 
 	log.Printf("[DEBUG] Creating mount %s in Vault", path)
 
-	if err := client.Sys().Mount(path, input); err != nil {
+	if err := client.Sys().MountWithContext(ctx, path, input); err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
 
 	return nil
 }
 
-func mountUpdate(d *schema.ResourceData, meta interface{}) error {
-	return updateMount(d, meta, false)
+func mountUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	err := updateMount(ctx, d, meta, false)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }
 
-func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
+func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool) error {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return err
@@ -298,7 +304,7 @@ func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) err
 
 		log.Printf("[DEBUG] Remount %s to %s in Vault", path, newPath)
 
-		err := client.Sys().Remount(d.Id(), newPath)
+		err := client.Sys().RemountWithContext(ctx, d.Id(), newPath)
 		if err != nil {
 			return fmt.Errorf("error remounting in Vault: %s", err)
 		}
@@ -354,31 +360,36 @@ func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) err
 		break
 	}
 
-	return readMount(d, meta, excludeType)
+	return readMount(ctx, d, meta, excludeType)
 }
 
-func mountDelete(d *schema.ResourceData, meta interface{}) error {
+func mountDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	path := d.Id()
 
 	log.Printf("[DEBUG] Unmounting %s from Vault", path)
 
-	if err := client.Sys().Unmount(path); err != nil {
-		return fmt.Errorf("error deleting from Vault: %s", err)
+	if err := client.Sys().UnmountWithContext(ctx, path); err != nil {
+		return diag.Errorf("error deleting from Vault: %s", err)
 	}
 
 	return nil
 }
 
-func mountRead(d *schema.ResourceData, meta interface{}) error {
-	return readMount(d, meta, false)
+func mountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	err := readMount(ctx, d, meta, false)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }
 
-func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
+func readMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -388,7 +399,6 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 
 	log.Printf("[DEBUG] Reading mount %s from Vault", path)
 
-	ctx := context.Background()
 	mount, err := mountutil.GetMount(ctx, client, path)
 	if err != nil {
 		if mountutil.IsMountNotFoundError(err) {

@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"sync"
 
@@ -107,13 +108,13 @@ func databaseSecretsMountCustomizeDiff(ctx context.Context, d *schema.ResourceDi
 
 func databaseSecretsMountResource() *schema.Resource {
 	return &schema.Resource{
-		Create:        databaseSecretsMountCreateOrUpdate,
-		Read:          provider.ReadWrapper(databaseSecretsMountRead),
-		Update:        databaseSecretsMountCreateOrUpdate,
-		Delete:        databaseSecretsMountDelete,
+		CreateContext: databaseSecretsMountCreateOrUpdate,
+		ReadContext:   provider.ReadContextWrapper(databaseSecretsMountRead),
+		UpdateContext: databaseSecretsMountCreateOrUpdate,
+		DeleteContext: databaseSecretsMountDelete,
 		CustomizeDiff: databaseSecretsMountCustomizeDiff,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: getDatabaseSecretsMountSchema(),
 	}
@@ -214,20 +215,20 @@ func setCommonDatabaseSchema(s schemaMap) schemaMap {
 	return s
 }
 
-func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretsMountCreateOrUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	var root string
 	if d.IsNewResource() {
 		root = d.Get("path").(string)
-		if err := createMount(d, meta, client, root, consts.MountTypeDatabase); err != nil {
-			return err
+		if err := createMount(ctx, d, meta, client, root, consts.MountTypeDatabase); err != nil {
+			return diag.FromErr(err)
 		}
 	} else {
-		if err := mountUpdate(d, meta); err != nil {
+		if err := mountUpdate(ctx, d, meta); err != nil {
 			return err
 		}
 		root = d.Id()
@@ -243,19 +244,19 @@ func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}
 				name := d.Get(prefix + "name").(string)
 				path := databaseSecretBackendConnectionPath(root, name)
 				if _, ok := seen[name]; ok {
-					return fmt.Errorf("duplicate name %q for engine %#v", name, engine)
+					return diag.Errorf("duplicate name %q for engine %#v", name, engine)
 				}
 				seen[name] = true
 				if err := writeDatabaseSecretConfig(d, client, engine, i, true, path, meta); err != nil {
-					return err
+					return diag.FromErr(err)
 				}
 				count++
 			}
 		}
 	}
 
-	if err := databaseSecretsMountRead(d, meta); err != nil {
-		return err
+	if diagErr := databaseSecretsMountRead(ctx, d, meta); diagErr != nil {
+		return diagErr
 	}
 
 	action := "Created"
@@ -267,14 +268,14 @@ func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}
 	return nil
 }
 
-func databaseSecretsMountRead(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretsMountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	if err := readMount(d, meta, true); err != nil {
-		return err
+	if e := readMount(ctx, d, meta, true); e != nil {
+		return diag.FromErr(e)
 	}
 
 	root := d.Id()
@@ -286,7 +287,7 @@ func databaseSecretsMountRead(d *schema.ResourceData, meta interface{}) error {
 
 	resp, err := client.Logical().List(root + "/config")
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if resp == nil {
@@ -297,13 +298,13 @@ func databaseSecretsMountRead(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := resp.Data["keys"]; ok {
 		for _, v := range v.([]interface{}) {
 			if err := readDBEngineConfig(d, client, store, v.(string), meta); err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 
 		for k, v := range store.Result() {
 			if err := d.Set(k, v); err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
@@ -311,8 +312,8 @@ func databaseSecretsMountRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func databaseSecretsMountDelete(d *schema.ResourceData, meta interface{}) error {
-	return mountDelete(d, meta)
+func databaseSecretsMountDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return mountDelete(ctx, d, meta)
 }
 
 func readDBEngineConfig(d *schema.ResourceData, client *api.Client, store *dbConfigStore, name string, meta interface{}) error {

@@ -143,7 +143,7 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	log.Printf("[DEBUG] Mounting Consul backend at %q", path)
 
-	if err := createMount(d, meta, client, path, consts.MountTypeConsul); err != nil {
+	if err := createMount(ctx, d, meta, client, path, consts.MountTypeConsul); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -203,7 +203,7 @@ func consulSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta i
 	if err := d.Set("path", path); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := readMount(d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -231,7 +231,7 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 		return diag.FromErr(err)
 	}
 
-	if err := updateMount(d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 

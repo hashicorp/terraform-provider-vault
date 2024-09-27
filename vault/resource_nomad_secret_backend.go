@@ -131,7 +131,7 @@ func createNomadAccessConfigResource(ctx context.Context, d *schema.ResourceData
 	backend := d.Get("backend").(string)
 
 	log.Printf("[DEBUG] Mounting Nomad backend at %q", backend)
-	if err := createMount(d, meta, client, backend, consts.MountTypeNomad); err != nil {
+	if err := createMount(ctx, d, meta, client, backend, consts.MountTypeNomad); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -197,7 +197,7 @@ func readNomadAccessConfigResource(ctx context.Context, d *schema.ResourceData, 
 	backend := d.Id()
 
 	d.Set("backend", backend)
-	if err := readMount(d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -289,7 +289,7 @@ func updateNomadAccessConfigResource(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(e)
 	}
 
-	if err := updateMount(d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 

@@ -188,7 +188,7 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting AWS backend at %q", path)
 
-	if err := createMount(d, meta, client, path, consts.MountTypeAWS); err != nil {
+	if err := createMount(ctx, d, meta, client, path, consts.MountTypeAWS); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -301,7 +301,7 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.FromErr(err)
 	}
 
-	if err := readMount(d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -323,7 +323,7 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if err := updateMount(d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 	if d.HasChanges(consts.FieldAccessKey, consts.FieldSecretKey, consts.FieldRegion, consts.FieldIAMEndpoint, consts.FieldSTSEndpoint, consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn) {

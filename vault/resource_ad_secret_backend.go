@@ -233,7 +233,7 @@ func createConfigResource(ctx context.Context, d *schema.ResourceData, meta inte
 
 	log.Printf("[DEBUG] Mounting AD backend at %q", backend)
 
-	if err := createMount(d, meta, client, backend, consts.MountTypeAD); err != nil {
+	if err := createMount(ctx, d, meta, client, backend, consts.MountTypeAD); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -343,7 +343,7 @@ func readConfigResource(ctx context.Context, d *schema.ResourceData, meta interf
 
 	d.Set("backend", d.Id())
 
-	if err := readMount(d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 

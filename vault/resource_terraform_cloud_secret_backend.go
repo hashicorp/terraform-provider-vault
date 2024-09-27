@@ -104,7 +104,7 @@ func terraformCloudSecretBackendCreate(ctx context.Context, d *schema.ResourceDa
 
 	log.Printf("[DEBUG] Mounting Terraform Cloud backend at %q", backend)
 
-	if err := createMount(d, meta, client, backend, consts.MountTypeTerraform); err != nil {
+	if err := createMount(ctx, d, meta, client, backend, consts.MountTypeTerraform); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -137,7 +137,7 @@ func terraformCloudSecretBackendRead(ctx context.Context, d *schema.ResourceData
 	if err := d.Set("backend", backend); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := readMount(d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -172,7 +172,7 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(e)
 	}
 
-	if err := updateMount(d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 	if d.HasChange("address") || d.HasChange("token") || d.HasChange("base_path") {

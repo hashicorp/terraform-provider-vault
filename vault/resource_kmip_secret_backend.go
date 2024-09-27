@@ -132,7 +132,7 @@ func kmipSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta i
 	path := d.Get("path").(string)
 
 	log.Printf("[DEBUG] Mounting KMIP backend at %q", path)
-	if err := createMount(d, meta, client, path, consts.MountTypeKMIP); err != nil {
+	if err := createMount(ctx, d, meta, client, path, consts.MountTypeKMIP); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -156,7 +156,7 @@ func kmipSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta i
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)
 
-	if err := updateMount(d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -216,7 +216,7 @@ func kmipSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta int
 		return diag.FromErr(err)
 	}
 
-	if err := readMount(d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 

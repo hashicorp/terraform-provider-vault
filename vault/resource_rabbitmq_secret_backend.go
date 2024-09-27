@@ -117,7 +117,7 @@ func rabbitMQSecretBackendCreate(ctx context.Context, d *schema.ResourceData, me
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Rabbitmq backend at %q", path)
-	if err := createMount(d, meta, client, path, consts.MountTypeRabbitMQ); err != nil {
+	if err := createMount(ctx, d, meta, client, path, consts.MountTypeRabbitMQ); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -142,14 +142,14 @@ func rabbitMQSecretBackendCreate(ctx context.Context, d *schema.ResourceData, me
 	return rabbitMQSecretBackendRead(ctx, d, meta)
 }
 
-func rabbitMQSecretBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func rabbitMQSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading RabbitMQ secret backend mount %q from Vault", path)
 	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := readMount(d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -172,7 +172,7 @@ func rabbitMQSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	if err := updateMount(d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 	if d.HasChanges("connection_uri", "username", "password", "verify_connection", "username_template", "password_policy") {

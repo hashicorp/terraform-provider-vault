@@ -137,7 +137,7 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting GCP backend at %q", path)
 
-	if err := createMount(d, meta, client, path, consts.MountTypeGCP); err != nil {
+	if err := createMount(ctx, d, meta, client, path, consts.MountTypeGCP); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -188,7 +188,7 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.FromErr(err)
 	}
 
-	if err := readMount(d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -231,7 +231,7 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(err)
 	}
 
-	if err := updateMount(d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 

@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func azureSecretBackendResource() *schema.Resource {
@@ -129,7 +128,7 @@ func azureSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Azure backend at %q", path)
 
-	if err := createMount(d, meta, client, path, consts.MountTypeAzure); err != nil {
+	if err := createMount(ctx, d, meta, client, path, consts.MountTypeAzure); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -154,20 +153,6 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 	}
 
 	path := d.Id()
-
-	log.Printf("[DEBUG] Reading Azure backend mount %q from Vault", path)
-
-	mount, err := mountutil.GetMount(ctx, client, path)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", path)
-			d.SetId("")
-			return nil
-		}
-		return diag.FromErr(err)
-	}
-
-	log.Printf("[DEBUG] Read Azure backend mount %q from Vault", path)
 
 	log.Printf("[DEBUG] Read Azure secret Backend config %s", path)
 	resp, err := client.Logical().ReadWithContext(ctx, azureSecretBackendPath(path))
@@ -206,10 +191,6 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
-		return diag.FromErr(err)
-	}
-
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
 		if err := d.Set(consts.FieldIdentityTokenAudience, resp.Data[consts.FieldIdentityTokenAudience]); err != nil {
@@ -220,7 +201,7 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
-	if err := readMount(d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -240,7 +221,7 @@ func azureSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.FromErr(err)
 	}
 
-	if err := updateMount(d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
