@@ -349,7 +349,7 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 	// TODO: remove this work-around once VAULT-5521 is fixed
 	var tries int
 	for {
-		if err := client.Sys().TuneMount(path, config); err != nil {
+		if err := client.Sys().TuneMountWithContext(ctx, path, config); err != nil {
 			if tries > 10 {
 				return fmt.Errorf("error updating Vault: %s", err)
 			}
