@@ -10,8 +10,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -45,7 +43,7 @@ var (
 )
 
 func samlAuthBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(samlAuthBackendWrite, provider.VaultVersion115),
 		ReadContext:   provider.ReadContextWrapper(samlAuthBackendRead),
 		UpdateContext: samlAuthBackendUpdate,
@@ -119,6 +117,14 @@ func samlAuthBackendResource() *schema.Resource {
 			},
 		},
 	}, true)
+
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getAuthMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+	))
+
+	return r
 }
 
 func samlAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -130,12 +136,10 @@ func samlAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inte
 	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Enabling SAML auth backend %q", path)
-	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
-		Type: consts.MountTypeSAML,
-	})
-	if err != nil {
-		return diag.Errorf("error enabling SAML auth backend %q: %s", path, err)
+	if err := createAuthMount(ctx, d, meta, client, path, consts.MountTypeSAML); err != nil {
+		return diag.FromErr(err)
 	}
+
 	log.Printf("[DEBUG] Enabled SAML auth backend %q", path)
 
 	// set ID to where engine is mounted
@@ -159,6 +163,11 @@ func samlAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		}
 
 		path = newMount
+
+		// tune auth mount if needed
+		if err := updateAuthMount(ctx, d, meta, true); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	configPath := samlAuthBackendConfigPath(path)
@@ -207,7 +216,7 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return nil
 	}
 
-	if err := d.Set(consts.FieldPath, id); err != nil {
+	if err := readAuthMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -229,17 +238,7 @@ func samlAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta int
 	if e != nil {
 		return diag.FromErr(e)
 	}
-
-	path := d.Id()
-
-	log.Printf("[DEBUG] Deleting SAML auth backend %q", path)
-	err := client.Sys().DisableAuth(path)
-	if err != nil {
-		return diag.Errorf("error deleting SAML auth backend %q: %q", path, err)
-	}
-	log.Printf("[DEBUG] Deleted SAML auth backend %q", path)
-
-	return nil
+	return authMountDisable(ctx, client, d.Id())
 }
 
 func samlAuthBackendConfigPath(path string) string {

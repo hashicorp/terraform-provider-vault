@@ -12,12 +12,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 const (
@@ -31,7 +28,7 @@ const (
 )
 
 func gcpAuthBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: gcpAuthBackendWrite,
 		UpdateContext: gcpAuthBackendUpdate,
 		ReadContext:   provider.ReadContextWrapper(gcpAuthBackendRead),
@@ -123,6 +120,18 @@ func gcpAuthBackendResource() *schema.Resource {
 			consts.FieldTune: authMountTuneSchema(),
 		},
 	}, false)
+
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getAuthMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldAccessor,
+		consts.FieldLocal,
+		consts.FieldIdentityTokenKey,
+	))
+
+	return r
 }
 
 func gcpAuthCustomEndpointSchema() map[string]*schema.Schema {
@@ -195,28 +204,11 @@ func gcpAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(e)
 	}
 
-	authType := gcpAuthType
 	path := d.Get(consts.FieldPath).(string)
-	desc := d.Get(consts.FieldDescription).(string)
-	local := d.Get(consts.FieldLocal).(bool)
-
-	config := &api.MountConfigInput{}
-	useAPIver117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-	if useAPIver117Ent {
-		if v, ok := d.GetOk(consts.FieldIdentityTokenKey); ok {
-			config.IdentityTokenKey = v.(string)
-		}
-	}
 
 	log.Printf("[DEBUG] Enabling gcp auth backend %q", path)
-	err := client.Sys().EnableAuthWithOptionsWithContext(ctx, path, &api.EnableAuthOptions{
-		Type:        authType,
-		Description: desc,
-		Local:       local,
-		Config:      *config,
-	})
-	if err != nil {
-		return diag.Errorf("error enabling gcp auth backend %q: %s", path, err)
+	if err := createAuthMount(ctx, d, meta, client, path, gcpAuthType); err != nil {
+		return diag.FromErr(err)
 	}
 	log.Printf("[DEBUG] Enabled gcp auth backend %q", path)
 
@@ -232,7 +224,6 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	gcpPath := d.Id()
-	gcpAuthPath := "auth/" + gcpPath
 	path := gcpAuthBackendConfigPath(gcpPath)
 
 	if !d.IsNewResource() {
@@ -241,21 +232,11 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 			return diag.FromErr(err)
 		}
 
-		gcpAuthPath = "auth/" + newMount
 		path = gcpAuthBackendConfigPath(newMount)
 
-		if d.HasChanges(consts.FieldIdentityTokenKey, consts.FieldDescription) {
-			desc := d.Get(consts.FieldDescription).(string)
-			config := api.MountConfigInput{
-				Description: &desc,
-			}
-			useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-			if useAPIVer117Ent {
-				config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
-			}
-			if err := client.Sys().TuneMountWithContext(ctx, path, config); err != nil {
-				return diag.FromErr(err)
-			}
+		// tune auth mount if needed
+		if err := updateAuthMount(ctx, d, meta, true); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 
@@ -275,27 +256,6 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 			}
 		}
 		data[consts.FieldCustomEndpoint] = endpoints
-	}
-
-	if d.HasChange(consts.FieldTune) {
-		log.Printf("[INFO] %s Auth %q tune configuration changed", gcpAuthType, gcpAuthPath)
-		if raw, ok := d.GetOk(consts.FieldTune); ok {
-			log.Printf("[DEBUG] Writing %s auth tune to %q", gcpAuthType, gcpAuthPath)
-			err := authMountTune(ctx, client, gcpAuthPath, raw)
-			if err != nil {
-				return nil
-			}
-		}
-	}
-
-	if d.HasChange(consts.FieldDescription) {
-		description := d.Get(consts.FieldDescription).(string)
-		tune := api.MountConfigInput{Description: &description}
-		err := client.Sys().TuneMountWithContext(ctx, gcpAuthPath, tune)
-		if err != nil {
-			log.Printf("[ERROR] Error updating %s auth description at %q", gcpAuthType, gcpAuthPath)
-			return diag.FromErr(err)
-		}
 	}
 
 	useAPIver117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
@@ -332,7 +292,6 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	gcpPath := d.Id()
-	gcpAuthPath := "auth/" + gcpPath
 	path := gcpAuthBackendConfigPath(gcpPath)
 
 	log.Printf("[DEBUG] Reading gcp auth backend config %q", path)
@@ -381,35 +340,7 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		}
 	}
 
-	mount, err := mountutil.GetAuthMount(ctx, client, gcpPath)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", gcpPath)
-			d.SetId("")
-			return nil
-		}
-		return diag.FromErr(err)
-	}
-
-	log.Printf("[DEBUG] Reading %s auth tune from '%s/tune'", gcpAuthType, gcpAuthPath)
-	rawTune, err := authMountTuneGet(ctx, client, gcpAuthPath)
-	if err != nil {
-		return diag.Errorf("error reading tune information from Vault: %s", err)
-	}
-	data := map[string]interface{}{}
-	data[consts.FieldTune] = []map[string]interface{}{rawTune}
-	if err := util.SetResourceData(d, data); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
-		return diag.FromErr(err)
-	}
-	// set the auth backend's path
-	if err := d.Set(consts.FieldPath, gcpPath); err != nil {
+	if err := readAuthMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -421,15 +352,5 @@ func gcpAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta inte
 	if e != nil {
 		return diag.FromErr(e)
 	}
-
-	path := d.Id()
-
-	log.Printf("[DEBUG] Deleting gcp auth backend %q", path)
-	err := client.Sys().DisableAuthWithContext(ctx, path)
-	if err != nil {
-		return diag.Errorf("error deleting gcp auth backend %q: %q", path, err)
-	}
-	log.Printf("[DEBUG] Deleted gcp auth backend %q", path)
-
-	return nil
+	return authMountDisable(ctx, client, d.Id())
 }

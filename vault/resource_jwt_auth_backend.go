@@ -13,16 +13,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func jwtAuthBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -170,6 +167,17 @@ func jwtAuthBackendResource() *schema.Resource {
 			"tune": authMountTuneSchema(),
 		},
 	}, false)
+
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getAuthMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldAccessor,
+		consts.FieldLocal,
+	))
+
+	return r
 }
 
 func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
@@ -220,19 +228,10 @@ func jwtAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(e)
 	}
 
-	authType := d.Get("type").(string)
 	path := getJwtPath(d)
-	options := &api.EnableAuthOptions{
-		Type:        authType,
-		Description: d.Get("description").(string),
-		Local:       d.Get("local").(bool),
-	}
 
-	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
-
-	err := client.Sys().EnableAuthWithOptionsWithContext(ctx, path, options)
-	if err != nil {
-		return diag.Errorf("error writing to Vault: %s", err)
+	if err := createAuthMount(ctx, d, meta, client, path, d.Get(consts.FieldType).(string)); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.SetId(path)
@@ -245,17 +244,7 @@ func jwtAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta inte
 	if e != nil {
 		return diag.FromErr(e)
 	}
-
-	path := getJwtPath(d)
-
-	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
-
-	err := client.Sys().DisableAuthWithContext(ctx, path)
-	if err != nil {
-		return diag.Errorf("error disabling auth from Vault: %s", err)
-	}
-
-	return nil
+	return authMountDisable(ctx, client, d.Id())
 }
 
 func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -274,15 +263,8 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		// use the ID value
 		path = d.Id()
 	}
-	d.Set("path", path)
 
-	mount, err := mountutil.GetAuthMount(ctx, client, path)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", path)
-			d.SetId("")
-			return nil
-		}
+	if err := readAuthMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -297,10 +279,6 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return nil
 	}
 
-	d.Set("type", mount.Type)
-	d.Set("local", mount.Local)
-
-	d.Set("accessor", mount.Accessor)
 	for _, configOption := range matchingJwtMountConfigOptions {
 		// The oidc_client_secret is sensitive so it will not be in the response
 		// Our options are to always assume it must be updated or always assume it
@@ -314,17 +292,9 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		if configOption == "oidc_client_secret" {
 			continue
 		}
-		d.Set(configOption, config.Data[configOption])
-	}
-
-	log.Printf("[DEBUG] Reading jwt auth tune from %q", path+"/tune")
-	rawTune, err := authMountTuneGet(ctx, client, "auth/"+path)
-	if err != nil {
-		return diag.Errorf("error reading tune information from Vault: %s", err)
-	}
-	if err := d.Set("tune", []map[string]interface{}{rawTune}); err != nil {
-		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
-		return diag.FromErr(err)
+		if err := d.Set(configOption, config.Data[configOption]); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil
@@ -368,6 +338,11 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		if e != nil {
 			return diag.FromErr(e)
 		}
+
+		// tune auth mount if needed
+		if err := updateAuthMount(ctx, d, meta, true); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	configuration := map[string]interface{}{}
@@ -389,21 +364,6 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	_, err := client.Logical().WriteWithContext(ctx, jwtConfigEndpoint(path), configuration)
 	if err != nil {
 		return diag.Errorf("error updating configuration to Vault for path %s: %s", path, err)
-	}
-
-	if d.HasChange("tune") {
-		log.Printf("[INFO] JWT/OIDC Auth '%q' tune configuration changed", d.Id())
-		if raw, ok := d.GetOk("tune"); ok {
-			backendType := d.Get("type")
-			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
-
-			err := authMountTune(ctx, client, "auth/"+path, raw)
-			if err != nil {
-				return nil
-			}
-
-			log.Printf("[INFO] Written %s auth tune to %q", backendType, path)
-		}
 	}
 
 	return jwtAuthBackendRead(ctx, d, meta)

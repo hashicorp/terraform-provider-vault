@@ -10,12 +10,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func githubAuthBackendResource() *schema.Resource {
@@ -62,7 +59,7 @@ func githubAuthBackendResource() *schema.Resource {
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: githubAuthBackendCreate,
 		ReadContext:   provider.ReadContextWrapper(githubAuthBackendRead),
 		UpdateContext: githubAuthBackendUpdate,
@@ -73,6 +70,17 @@ func githubAuthBackendResource() *schema.Resource {
 		Schema:        fields,
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 	}, false)
+
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getAuthMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldAccessor,
+		consts.FieldTokenType,
+	))
+
+	return r
 }
 
 func githubAuthBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -80,21 +88,12 @@ func githubAuthBackendCreate(ctx context.Context, d *schema.ResourceData, meta i
 	if e != nil {
 		return diag.FromErr(e)
 	}
-	var description string
 
 	path := strings.Trim(d.Get(consts.FieldPath).(string), "/")
 
-	if v, ok := d.GetOk("description"); ok {
-		description = v.(string)
-	}
-
 	log.Printf("[DEBUG] Enabling github auth backend at '%s'", path)
-	err := client.Sys().EnableAuthWithOptionsWithContext(ctx, path, &api.EnableAuthOptions{
-		Type:        consts.MountTypeGitHub,
-		Description: description,
-	})
-	if err != nil {
-		return diag.Errorf("error enabling github auth backend at '%s': %s", path, err)
+	if err := createAuthMount(ctx, d, meta, client, path, consts.MountTypeGitHub); err != nil {
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Enabled github auth backend at '%s'", path)
 
@@ -120,6 +119,11 @@ func githubAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta i
 
 		path = "auth/" + mount
 		configPath = path + "/config"
+
+		// tune auth mount if needed
+		if err := updateAuthMount(ctx, d, meta, true); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	data := map[string]interface{}{}
@@ -144,30 +148,6 @@ func githubAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta i
 	}
 	log.Printf("[INFO] Github auth config successfully written to '%q'", configPath)
 
-	if d.HasChange("tune") {
-		log.Printf("[INFO] Github Auth '%q' tune configuration changed", d.Id())
-		if raw, ok := d.GetOk("tune"); ok {
-			log.Printf("[DEBUG] Writing github auth tune to '%q'", path)
-
-			err := authMountTune(ctx, client, path, raw)
-			if err != nil {
-				return nil
-			}
-
-			log.Printf("[INFO] Written github auth tune to '%q'", path)
-		}
-	}
-
-	if d.HasChange("description") {
-		description := d.Get("description").(string)
-		tune := api.MountConfigInput{Description: &description}
-		err := client.Sys().TuneMountWithContext(ctx, path, tune)
-		if err != nil {
-			log.Printf("[ERROR] Error updating github auth description to '%q'", path)
-			return diag.FromErr(err)
-		}
-	}
-
 	d.Partial(false)
 	return githubAuthBackendRead(ctx, d, meta)
 }
@@ -182,13 +162,7 @@ func githubAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta int
 	configPath := path + "/config"
 
 	log.Printf("[DEBUG] Reading github auth mount from '%q'", path)
-	mount, err := mountutil.GetAuthMount(ctx, client, d.Id())
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", path)
-			d.SetId("")
-			return nil
-		}
+	if err := readAuthMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -207,19 +181,10 @@ func githubAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta int
 		return nil
 	}
 
-	log.Printf("[DEBUG] Reading github auth tune from '%q/tune'", path)
-	rawTune, err := authMountTuneGet(ctx, client, path)
-	if err != nil {
-		return diag.Errorf("error reading tune information from Vault: %s", err)
-	}
-
 	data := getCommonTokenFieldMap(resp)
 	data["path"] = d.Id()
 	data["organization"] = resp.Data["organization"]
 	data["base_url"] = resp.Data["base_url"]
-	data["description"] = mount.Description
-	data["accessor"] = mount.Accessor
-	data["tune"] = []map[string]interface{}{rawTune}
 
 	if orgID, ok := resp.Data["organization_id"]; ok {
 		data["organization_id"] = orgID
