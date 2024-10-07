@@ -268,7 +268,7 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		path = d.Id()
 	}
 
-	if err := readAuthMount(ctx, d, meta, true, false); err != nil {
+	if err := readAuthMount(ctx, d, meta, false, false); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -344,7 +344,7 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		}
 
 		// tune auth mount if needed
-		if err := updateAuthMount(ctx, d, meta, true, false); err != nil {
+		if err := updateAuthMount(ctx, d, meta, false, false); err != nil {
 			return diag.FromErr(err)
 		}
 	}

@@ -172,7 +172,7 @@ func TestLDAPAuthBackend_authMountSchema(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
 				),
 			},
-			// TODO
+			// TODO user_lockout_config can not be read
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldDisableRemount,
 				"user_lockout_config.%",

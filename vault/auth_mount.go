@@ -97,9 +97,9 @@ type createMountRequestParams struct {
 func getAuthMountSchema(excludes ...string) schemaMap {
 	s := schemaMap{
 		consts.FieldTokenType: {
-			Type:     schema.TypeString,
-			Optional: true,
-			//Computed:     true,
+			Type:         schema.TypeString,
+			Optional:     true,
+			Computed:     true,
 			Description:  "Specifies the type of tokens that should be returned by the mount.",
 			ValidateFunc: validation.StringInSlice([]string{"default-service", "default-batch", "service", "batch"}, false),
 		},
@@ -333,7 +333,6 @@ func readAuthMount(ctx context.Context, d *schema.ResourceData, meta interface{}
 	}
 
 	// TODO uncomment after fixing bug in vault/api package — user_lockout_config can not be read
-	// drifts currently can not be managed
 	//if err := d.Set(consts.FieldUserLockoutConfig, flattenUserLockoutConfig(mount.Config.UserLockoutConfig)); err != nil {
 	//	return err
 	//}
