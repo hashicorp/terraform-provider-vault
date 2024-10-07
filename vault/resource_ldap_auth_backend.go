@@ -240,7 +240,11 @@ func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inte
 
 	path := d.Get("path").(string)
 	log.Printf("[DEBUG] Enabling LDAP auth backend %q", path)
-	if err := createAuthMount(ctx, d, meta, client, path, ldapAuthType); err != nil {
+	if err := createAuthMount(ctx, d, meta, client, &createMountRequestParams{
+		Path:          path,
+		MountType:     ldapAuthType,
+		SkipTokenType: true,
+	}); err != nil {
 		return diag.FromErr(err)
 	}
 	log.Printf("[DEBUG] Enabled LDAP auth backend %q", path)
@@ -272,7 +276,7 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	// we always check if we need to tune the mount, even if it's a new resource
 
 	// tune auth mount if needed
-	if err := updateAuthMount(ctx, d, meta, true); err != nil {
+	if err := updateAuthMount(ctx, d, meta, true, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -329,7 +333,7 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 
 	path := d.Id()
 
-	if err := readAuthMount(ctx, d, meta, true); err != nil {
+	if err := readAuthMount(ctx, d, meta, true, true); err != nil {
 		return diag.FromErr(err)
 	}
 

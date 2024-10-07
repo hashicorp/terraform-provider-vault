@@ -103,7 +103,11 @@ func authBackendWrite(ctx context.Context, d *schema.ResourceData, meta interfac
 	}
 
 	log.Printf("[DEBUG] Writing auth %q to Vault", path)
-	if err := createAuthMount(ctx, d, meta, client, path, mountType); err != nil {
+	if err := createAuthMount(ctx, d, meta, client, &createMountRequestParams{
+		Path:          path,
+		MountType:     mountType,
+		SkipTokenType: false,
+	}); err != nil {
 		return diag.FromErr(err)
 	}
 	d.SetId(path)
@@ -120,7 +124,7 @@ func authBackendDelete(ctx context.Context, d *schema.ResourceData, meta interfa
 }
 
 func authBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if err := readAuthMount(ctx, d, meta, true); err != nil {
+	if err := readAuthMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
@@ -142,7 +146,7 @@ func authBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 		}
 
 		// tune auth mount if needed
-		if err := updateAuthMount(ctx, d, meta, true); err != nil {
+		if err := updateAuthMount(ctx, d, meta, true, false); err != nil {
 			return diag.FromErr(err)
 		}
 	}

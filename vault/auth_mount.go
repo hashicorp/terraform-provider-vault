@@ -87,11 +87,11 @@ func authMountTuneSchema() *schema.Schema {
 }
 
 type createMountRequestParams struct {
-	path      string
-	mountType string
+	Path      string
+	MountType string
 
 	// some auth engines manage the token type separately
-	skipTokenType bool
+	SkipTokenType bool
 }
 
 func getAuthMountSchema(excludes ...string) schemaMap {
@@ -128,7 +128,7 @@ func getAuthMountSchema(excludes ...string) schemaMap {
 
 func createAuthMount(ctx context.Context, d *schema.ResourceData, meta interface{}, client *api.Client, params *createMountRequestParams) error {
 	options := &api.EnableAuthOptions{
-		Type:        params.mountType,
+		Type:        params.MountType,
 		Description: d.Get(consts.FieldDescription).(string),
 		Local:       d.Get(consts.FieldLocal).(bool),
 		SealWrap:    d.Get(consts.FieldSealWrap).(bool),
@@ -161,8 +161,10 @@ func createAuthMount(ctx context.Context, d *schema.ResourceData, meta interface
 		options.Config.PluginVersion = v.(string)
 	}
 
-	if v, ok := d.GetOk(consts.FieldTokenType); ok {
-		options.Config.TokenType = v.(string)
+	if !params.SkipTokenType {
+		if v, ok := d.GetOk(consts.FieldTokenType); ok {
+			options.Config.TokenType = v.(string)
+		}
 	}
 
 	useAPIVer116Ent := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
@@ -172,9 +174,9 @@ func createAuthMount(ctx context.Context, d *schema.ResourceData, meta interface
 		}
 	}
 
-	log.Printf("[DEBUG] Creating auth mount %s in Vault", params.path)
+	log.Printf("[DEBUG] Creating auth mount %s in Vault", params.Path)
 
-	err := client.Sys().EnableAuthWithOptionsWithContext(ctx, params.path, options)
+	err := client.Sys().EnableAuthWithOptionsWithContext(ctx, params.Path, options)
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -182,7 +184,7 @@ func createAuthMount(ctx context.Context, d *schema.ResourceData, meta interface
 	return nil
 }
 
-func updateAuthMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool) error {
+func updateAuthMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool, skipTokenType bool) error {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return err
@@ -225,8 +227,10 @@ func updateAuthMount(ctx context.Context, d *schema.ResourceData, meta interface
 		config.PluginVersion = d.Get(consts.FieldPluginVersion).(string)
 	}
 
-	if d.HasChange(consts.FieldTokenType) {
-		config.TokenType = d.Get(consts.FieldTokenType).(string)
+	if !skipTokenType {
+		if d.HasChange(consts.FieldTokenType) {
+			config.TokenType = d.Get(consts.FieldTokenType).(string)
+		}
 	}
 
 	if d.HasChange(consts.FieldUserLockoutConfig) {
@@ -251,10 +255,10 @@ func updateAuthMount(ctx context.Context, d *schema.ResourceData, meta interface
 		return fmt.Errorf("error updating Vault: %s", err)
 	}
 
-	return readAuthMount(ctx, d, meta, excludeType)
+	return readAuthMount(ctx, d, meta, excludeType, skipTokenType)
 }
 
-func readAuthMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool) error {
+func readAuthMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool, skipTokenType bool) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -322,8 +326,10 @@ func readAuthMount(ctx context.Context, d *schema.ResourceData, meta interface{}
 		return err
 	}
 
-	if err := d.Set(consts.FieldTokenType, mount.Config.TokenType); err != nil {
-		return err
+	if !skipTokenType {
+		if err := d.Set(consts.FieldTokenType, mount.Config.TokenType); err != nil {
+			return err
+		}
 	}
 
 	// TODO uncomment after fixing bug in vault/api package — user_lockout_config can not be read

@@ -92,7 +92,11 @@ func githubAuthBackendCreate(ctx context.Context, d *schema.ResourceData, meta i
 	path := strings.Trim(d.Get(consts.FieldPath).(string), "/")
 
 	log.Printf("[DEBUG] Enabling github auth backend at '%s'", path)
-	if err := createAuthMount(ctx, d, meta, client, path, consts.MountTypeGitHub); err != nil {
+	if err := createAuthMount(ctx, d, meta, client, &createMountRequestParams{
+		Path:          path,
+		MountType:     consts.MountTypeGitHub,
+		SkipTokenType: true,
+	}); err != nil {
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Enabled github auth backend at '%s'", path)
@@ -121,7 +125,7 @@ func githubAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta i
 		configPath = path + "/config"
 
 		// tune auth mount if needed
-		if err := updateAuthMount(ctx, d, meta, true); err != nil {
+		if err := updateAuthMount(ctx, d, meta, true, true); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -162,7 +166,7 @@ func githubAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta int
 	configPath := path + "/config"
 
 	log.Printf("[DEBUG] Reading github auth mount from '%q'", path)
-	if err := readAuthMount(ctx, d, meta, true); err != nil {
+	if err := readAuthMount(ctx, d, meta, true, true); err != nil {
 		return diag.FromErr(err)
 	}
 

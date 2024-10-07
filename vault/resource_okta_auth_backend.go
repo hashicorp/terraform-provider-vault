@@ -283,7 +283,11 @@ func oktaAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inte
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
-	if err := createAuthMount(ctx, d, meta, client, path, oktaAuthType); err != nil {
+	if err := createAuthMount(ctx, d, meta, client, &createMountRequestParams{
+		Path:          path,
+		MountType:     oktaAuthType,
+		SkipTokenType: false,
+	}); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -310,7 +314,7 @@ func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	path := d.Id()
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
 
-	if err := readAuthMount(ctx, d, meta, true); err != nil {
+	if err := readAuthMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -379,7 +383,7 @@ func oktaAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		}
 
 		// tune auth mount if needed
-		if err := updateAuthMount(ctx, d, meta, true); err != nil {
+		if err := updateAuthMount(ctx, d, meta, true, false); err != nil {
 			return diag.FromErr(err)
 		}
 	}

@@ -136,7 +136,11 @@ func samlAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inte
 	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Enabling SAML auth backend %q", path)
-	if err := createAuthMount(ctx, d, meta, client, path, consts.MountTypeSAML); err != nil {
+	if err := createAuthMount(ctx, d, meta, client, &createMountRequestParams{
+		Path:          path,
+		MountType:     consts.MountTypeSAML,
+		SkipTokenType: false,
+	}); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -165,7 +169,7 @@ func samlAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		path = newMount
 
 		// tune auth mount if needed
-		if err := updateAuthMount(ctx, d, meta, true); err != nil {
+		if err := updateAuthMount(ctx, d, meta, true, false); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -216,7 +220,7 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return nil
 	}
 
-	if err := readAuthMount(ctx, d, meta, true); err != nil {
+	if err := readAuthMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 

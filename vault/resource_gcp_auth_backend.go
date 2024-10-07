@@ -207,7 +207,11 @@ func gcpAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Enabling gcp auth backend %q", path)
-	if err := createAuthMount(ctx, d, meta, client, path, gcpAuthType); err != nil {
+	if err := createAuthMount(ctx, d, meta, client, &createMountRequestParams{
+		Path:          path,
+		MountType:     gcpAuthType,
+		SkipTokenType: false,
+	}); err != nil {
 		return diag.FromErr(err)
 	}
 	log.Printf("[DEBUG] Enabled gcp auth backend %q", path)
@@ -235,7 +239,7 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		path = gcpAuthBackendConfigPath(newMount)
 
 		// tune auth mount if needed
-		if err := updateAuthMount(ctx, d, meta, true); err != nil {
+		if err := updateAuthMount(ctx, d, meta, true, false); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -340,7 +344,7 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		}
 	}
 
-	if err := readAuthMount(ctx, d, meta, true); err != nil {
+	if err := readAuthMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
