@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/mapstructure"
 	"log"
 )
 
@@ -87,12 +86,20 @@ func authMountTuneSchema() *schema.Schema {
 	}
 }
 
+type createMountRequestParams struct {
+	path      string
+	mountType string
+
+	// some auth engines manage the token type separately
+	skipTokenType bool
+}
+
 func getAuthMountSchema(excludes ...string) schemaMap {
 	s := schemaMap{
 		consts.FieldTokenType: {
-			Type:         schema.TypeString,
-			Optional:     true,
-			Computed:     true,
+			Type:     schema.TypeString,
+			Optional: true,
+			//Computed:     true,
 			Description:  "Specifies the type of tokens that should be returned by the mount.",
 			ValidateFunc: validation.StringInSlice([]string{"default-service", "default-batch", "service", "batch"}, false),
 		},
@@ -119,9 +126,9 @@ func getAuthMountSchema(excludes ...string) schemaMap {
 	return s
 }
 
-func createAuthMount(ctx context.Context, d *schema.ResourceData, meta interface{}, client *api.Client, path string, mountType string) error {
+func createAuthMount(ctx context.Context, d *schema.ResourceData, meta interface{}, client *api.Client, params *createMountRequestParams) error {
 	options := &api.EnableAuthOptions{
-		Type:        mountType,
+		Type:        params.mountType,
 		Description: d.Get(consts.FieldDescription).(string),
 		Local:       d.Get(consts.FieldLocal).(bool),
 		SealWrap:    d.Get(consts.FieldSealWrap).(bool),
@@ -154,17 +161,8 @@ func createAuthMount(ctx context.Context, d *schema.ResourceData, meta interface
 		options.Config.PluginVersion = v.(string)
 	}
 
-	if d.HasChange(consts.FieldTokenType) {
-		options.Config.TokenType = d.Get(consts.FieldTokenType).(string)
-	}
-
-	if d.HasChange(consts.FieldUserLockoutConfig) {
-		userLockoutCfg, err := getUserLockoutConfig(d.Get(consts.FieldUserLockoutConfig).(map[string]string))
-		if err != nil {
-			return fmt.Errorf("error reading '%s': %s", consts.FieldUserLockoutConfig, err)
-		}
-
-		options.Config.UserLockoutConfig = userLockoutCfg
+	if v, ok := d.GetOk(consts.FieldTokenType); ok {
+		options.Config.TokenType = v.(string)
 	}
 
 	useAPIVer116Ent := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
@@ -174,9 +172,9 @@ func createAuthMount(ctx context.Context, d *schema.ResourceData, meta interface
 		}
 	}
 
-	log.Printf("[DEBUG] Creating auth mount %s in Vault", path)
+	log.Printf("[DEBUG] Creating auth mount %s in Vault", params.path)
 
-	err := client.Sys().EnableAuthWithOptionsWithContext(ctx, path, options)
+	err := client.Sys().EnableAuthWithOptionsWithContext(ctx, params.path, options)
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -232,7 +230,7 @@ func updateAuthMount(ctx context.Context, d *schema.ResourceData, meta interface
 	}
 
 	if d.HasChange(consts.FieldUserLockoutConfig) {
-		userLockoutCfg, err := getUserLockoutConfig(d.Get(consts.FieldUserLockoutConfig).(map[string]string))
+		userLockoutCfg, err := getUserLockoutConfig(d.Get(consts.FieldUserLockoutConfig).(map[string]interface{}))
 		if err != nil {
 			return fmt.Errorf("error reading '%s': %s", consts.FieldUserLockoutConfig, err)
 		}
@@ -328,17 +326,32 @@ func readAuthMount(ctx context.Context, d *schema.ResourceData, meta interface{}
 		return err
 	}
 
-	if err := d.Set(consts.FieldUserLockoutConfig, flattenUserLockoutConfig(mount.Config.UserLockoutConfig)); err != nil {
-		return err
-	}
+	// TODO uncomment after fixing bug in vault/api package — user_lockout_config can not be read
+	// drifts currently can not be managed
+	//if err := d.Set(consts.FieldUserLockoutConfig, flattenUserLockoutConfig(mount.Config.UserLockoutConfig)); err != nil {
+	//	return err
+	//}
 
 	return nil
 }
 
-func getUserLockoutConfig(m map[string]string) (*api.UserLockoutConfigInput, error) {
+func getUserLockoutConfig(m map[string]interface{}) (*api.UserLockoutConfigInput, error) {
 	result := &api.UserLockoutConfigInput{}
-	if err := mapstructure.Decode(m, result); err != nil {
-		return nil, fmt.Errorf("invalid format for user_lockout_config: %s", err)
+
+	if v, ok := m[fieldLockoutDuration]; ok && v != nil {
+		result.LockoutDuration = v.(string)
+	}
+
+	if v, ok := m[fieldLockoutCounterResetDuration]; ok && v != nil {
+		result.LockoutCounterResetDuration = v.(string)
+	}
+
+	if v, ok := m[fieldLockoutThreshold]; ok && v != nil {
+		result.LockoutThreshold = v.(string)
+	}
+
+	if v, ok := m[fieldLockoutDisable]; ok && v != nil {
+		result.DisableLockout = v.(*bool)
 	}
 
 	return result, nil

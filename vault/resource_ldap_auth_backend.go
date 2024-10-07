@@ -266,10 +266,14 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 
 		path = ldapAuthBackendConfigPath(newMount)
 
-		// tune auth mount if needed
-		if err := updateAuthMount(ctx, d, meta, true); err != nil {
-			return diag.FromErr(err)
-		}
+	}
+
+	// for LDAP, user_lockout_config can only be configured on tune calls
+	// we always check if we need to tune the mount, even if it's a new resource
+
+	// tune auth mount if needed
+	if err := updateAuthMount(ctx, d, meta, true); err != nil {
+		return diag.FromErr(err)
 	}
 
 	data := map[string]interface{}{}

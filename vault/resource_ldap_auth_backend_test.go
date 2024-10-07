@@ -117,6 +117,99 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 	})
 }
 
+func TestLDAPAuthBackend_authMountSchema(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-auth-ldap")
+
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccLDAPAuthBackendConfig_authMountSchema(path, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "test desc"),
+					resource.TestCheckResourceAttr(resourceName, "url", "ldaps://example.org"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "36000"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "user_lockout_config.lockout_threshold", "20"),
+					resource.TestCheckResourceAttr(resourceName, "user_lockout_config.lockout_duration", "5m"),
+					resource.TestCheckResourceAttr(resourceName, "user_lockout_config.lockout_counter_reset_duration", "5m"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "hidden"),
+				),
+			},
+			//{
+			//	Config: testAccJWTAuthBackendConfig_authMountSchema(path, true),
+			//	Check: resource.ComposeTestCheckFunc(
+			//		resource.TestCheckResourceAttr(resourceName, "path", path),
+			//		resource.TestCheckResourceAttr(resourceName, "description", "ldap backend"),
+			//		resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+			//		resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "7200"),
+			//		resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "48000"),
+			//		resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "2"),
+			//		resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+			//		resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.1", "header2"),
+			//		resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "3"),
+			//		resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+			//		resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+			//		resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+			//		resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.2", "header3"),
+			//		resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
+			//	),
+			//},
+			//testutil.GetImportTestStep(resourceName, false, nil, "description", "disable_remount"),
+		},
+	})
+}
+
+func testAccLDAPAuthBackendConfig_authMountSchema(path string, isUpdate bool) string {
+	if !isUpdate {
+
+		return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+  path 					      = "%s"
+  description 			      = "test desc"
+  url                         = "ldaps://example.org"
+  default_lease_ttl_seconds   = 3600
+  max_lease_ttl_seconds       = 36000
+  passthrough_request_headers = ["header1", "header2"]
+  allowed_response_headers    = ["header1", "header2"]
+  listing_visibility          = "hidden"
+  user_lockout_config         = {
+    lockout_threshold = "20",
+    lockout_duration = "5m",
+    lockout_counter_reset_duration = "5m"  
+  }
+}`, path)
+	} else {
+		return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+  path 					      = "%s"
+  description 			      = "test desc updated"
+  url                         = "ldaps://example.org"
+  default_lease_ttl_seconds   = 7200
+  max_lease_ttl_seconds       = 48000
+  passthrough_request_headers = ["header1", "header2"]
+  allowed_response_headers    = ["header1", "header2", "header3"]
+  listing_visibility          = "unauth"
+  user_lockout_config         = {
+    lockout_threshold = "30",
+    lockout_duration = "10m",
+    lockout_counter_reset_duration = "10m"  
+  }
+}`, path)
+	}
+}
+
 func testLDAPAuthBackendDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ldap_auth_backend" {
