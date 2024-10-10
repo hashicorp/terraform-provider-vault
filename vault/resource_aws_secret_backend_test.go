@@ -166,6 +166,95 @@ func TestAccAWSSecretBackend_remount(t *testing.T) {
 	})
 }
 
+func TestAccAWSSecretBackendRole_MountConfig(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+
+	resourceType := "vault_aws_secret_backend"
+	resourceName := resourceType + ".test"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSSecretBackendConfig_MountConfig(path, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, "access-key-test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, "secret-key-test"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "36000"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "hidden"),
+				),
+			},
+			{
+				Config: testAccAWSSecretBackendConfig_MountConfig(path, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, "access-key-test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, "secret-key-test"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "48000"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.2", "header3"),
+					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldDisableRemount,
+				consts.FieldSecretKey),
+		},
+	})
+}
+
+func testAccAWSSecretBackendConfig_MountConfig(path string, isUpdate bool) string {
+	if !isUpdate {
+
+		return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path 					      = "%s"
+  description 			      = "test desc"
+  access_key                  = "access-key-test"
+  secret_key                  = "secret-key-test"
+  default_lease_ttl_seconds   = 3600
+  max_lease_ttl_seconds       = 36000
+  passthrough_request_headers = ["header1", "header2"]
+  allowed_response_headers    = ["header1", "header2"]
+  delegated_auth_accessors    = ["header1", "header2"]
+  listing_visibility          = "hidden"
+}`, path)
+	} else {
+		return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path 					      = "%s"
+  description 			      = "test desc updated"
+  access_key                  = "access-key-test"
+  secret_key                  = "secret-key-test"
+  default_lease_ttl_seconds   = 7200
+  max_lease_ttl_seconds       = 48000
+  passthrough_request_headers = ["header1", "header2"]
+  allowed_response_headers    = ["header1", "header2", "header3"]
+  delegated_auth_accessors    = ["header1", "header2"]
+  listing_visibility          = "unauth"
+}`, path)
+	}
+}
+
 func testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
 resource "vault_aws_secret_backend" "test" {
