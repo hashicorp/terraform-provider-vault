@@ -836,7 +836,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_postgresql_tls(t *testing.T) {
-	testResource := "vault_database_secret_backend_connection.test"
+	resourceName := "vault_database_secret_backend_connection.test"
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEnginePostgres.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
@@ -852,11 +852,13 @@ func TestAccDatabaseSecretBackendConnection_postgresql_tls(t *testing.T) {
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql_tls(name, backend, testPostgresCACert, testPostgresClientCert, testPostgresClientKey),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
-					resource.TestCheckResourceAttr(testResource, "postgresql.0.tls_ca", testPostgresCACert),
-					resource.TestCheckResourceAttr(testResource, "postgresql.0.tls_certificate", testPostgresClientCert),
-					resource.TestCheckResourceAttr(testResource, "postgresql.0.private_key", testPostgresClientKey),
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.tls_ca", testPostgresCACert),
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.tls_certificate", testPostgresClientCert),
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.private_key", testPostgresClientKey),
 				),
 			},
+			// the private key is a secret that is never revealed by Vault
+			testutil.GetImportTestStep(resourceName, false, nil, "postgresql.0.private_key"),
 		},
 	})
 }
@@ -1757,7 +1759,6 @@ resource "vault_database_secret_backend_connection" "test" {
   postgresql {
 	connection_url = "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=verify-full"
 	username       = "user1"
-	password       = "pass1"
 
 	tls_ca          = %q
 	tls_certificate = %q
