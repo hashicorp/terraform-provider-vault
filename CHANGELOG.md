@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* Update `vault_database_secret_backend_connection` to support inline TLS config for PostgreSQL ([#2339](https://github.com/hashicorp/terraform-provider-vault/pull/2339))
+
 ## 4.4.0 (Aug 7, 2024)
 
 FEATURES:
