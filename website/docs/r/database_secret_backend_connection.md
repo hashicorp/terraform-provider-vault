@@ -325,6 +325,15 @@ See the [Vault
 
 * `password` - (Optional) The root credential password used in the connection URL.
 
+* `tls_ca` - (Optional) The x509 CA file for validating the certificate
+  presented by the PostgreSQL server. Must be PEM encoded.
+
+* `tls_certificate` - (Optional) The x509 client certificate for connecting to
+  the database. Must be PEM encoded.
+
+* `private_key` - (Optional) The secret key used for the x509 client
+  certificate. Must be PEM encoded.
+
 * `auth_type` - (Optional) Enable IAM authentication to a Google Cloud instance when set to `gcp_iam`
 
 * `service_account_json` - (Optional) JSON encoding of an IAM access key. Requires `auth_type` to be `gcp_iam`.

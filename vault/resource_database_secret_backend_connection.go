@@ -558,14 +558,10 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLLegacy.Name(), dbEngineTypes),
 		},
 		dbEnginePostgres.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the postgresql-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass:        true,
-				includeDisableEscaping: true,
-				isCloud:                true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the postgresql-database-plugin plugin.",
+			Elem:          postgresConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
 		},
@@ -789,7 +785,46 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 		}
 	}
 
+	if config.isCloud {
+		res.Schema["auth_type"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Specify alternative authorization type. (Only 'gcp_iam' is valid currently)",
+		}
+		res.Schema["service_account_json"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "A JSON encoded credential for use with IAM authorization",
+			Sensitive:   true,
+		}
+	}
+
 	return res
+}
+
+func postgresConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass:        true,
+		includeDisableEscaping: true,
+		isCloud:                true,
+	})
+	r.Schema["tls_ca"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 CA file for validating the certificate presented by the PostgreSQL server. Must be PEM encoded.",
+	}
+	r.Schema["tls_certificate"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 client certificate for connecting to the database. Must be PEM encoded.",
+	}
+	r.Schema["private_key"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The secret key used for the x509 client certificate. Must be PEM encoded.",
+		Sensitive:   true,
+	}
+	return r
 }
 
 func mysqlConnectionStringResource() *schema.Resource {
@@ -1097,6 +1132,17 @@ func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 				result["service_account_json"] = v.(string)
 			}
 		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+		if v, ok := data["tls_ca"]; ok {
+			result["tls_ca"] = v.(string)
+		}
+		if v, ok := data["tls_certificate"]; ok {
+			result["tls_certificate"] = v.(string)
+		}
+		// the private key is a secret that is never revealed by Vault
+		result["private_key"] = d.Get(prefix + "private_key")
 	}
 
 	return result
@@ -1491,6 +1537,18 @@ func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
 	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	setCloudDatabaseConnectionData(d, prefix, data, meta)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+		if v, ok := d.GetOk(prefix + "tls_ca"); ok {
+			data["tls_ca"] = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + "tls_certificate"); ok {
+			data["tls_certificate"] = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + "private_key"); ok {
+			data["private_key"] = v.(string)
+		}
+	}
 }
 
 func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
