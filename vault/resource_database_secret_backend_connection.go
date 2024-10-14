@@ -824,6 +824,13 @@ func postgresConnectionStringResource() *schema.Resource {
 		Description: "The secret key used for the x509 client certificate. Must be PEM encoded.",
 		Sensitive:   true,
 	}
+
+	r.Schema["self_managed"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "If set, allows onboarding static roles with a rootless connection configuration.",
+	}
+
 	return r
 }
 
@@ -1145,6 +1152,11 @@ func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 		result["private_key"] = d.Get(prefix + "private_key")
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := data["self_managed"]; ok {
+			result["self_managed"] = v.(bool)
+		}
+	}
 	return result
 }
 
@@ -1547,6 +1559,12 @@ func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 		}
 		if v, ok := d.GetOk(prefix + "private_key"); ok {
 			data["private_key"] = v.(string)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOk(prefix + "self_managed"); ok {
+			data["self_managed"] = v.(bool)
 		}
 	}
 }
