@@ -437,6 +437,7 @@ const (
 	FieldTune                          = "tune"
 	FieldMaxRetries                    = "max_retries"
 	FieldSessionTags                   = "session_tags"
+	FieldSelfManagedPassword           = "self_managed_password"
 
 	/*
 		common environment variables

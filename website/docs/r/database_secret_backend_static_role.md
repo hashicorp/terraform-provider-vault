@@ -69,6 +69,10 @@ The following arguments are supported:
 
 * `username` - (Required) The database username that this static role corresponds to.
 
+* `self_managed_password` - (Optional) The password corresponding to the username in the database.
+  Required when using the Rootless Password Rotation workflow for static roles. Only enabled for
+  select DB engines (Postgres). Requires Vault 1.18+ Enterprise.
+
 * `rotation_period` - The amount of time Vault should wait before rotating the password, in seconds.
   Mutually exclusive with `rotation_schedule`.
 
