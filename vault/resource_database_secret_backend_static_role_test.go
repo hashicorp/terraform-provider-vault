@@ -173,8 +173,11 @@ CREATE ROLE "{{name}}" WITH
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, dbName, backend, connURL, "testpassword"),
