@@ -7,9 +7,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -164,13 +165,16 @@ CREATE ROLE "{{name}}" WITH
 `
 
 	cleanup, pgxURL := testutil.PrepareTestContainerSelfManaged(t)
+	fmt.Println("pgxURL", pgxURL)
 	defer cleanup()
 
 	connURL := fmt.Sprintf("postgresql://{{username}}:{{password}}@%s/postgres?sslmode=disable", pgxURL.Host)
+	fmt.Println("connURL ", connURL)
 
 	// create static database user
 	testutil.CreateTestPGUser(t, pgxURL.String(), username, "testpassword", testRoleStaticCreate)
 
+	fmt.Println(testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, dbName, backend, connURL, "testpassword"))
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
