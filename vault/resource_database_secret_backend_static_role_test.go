@@ -166,7 +166,7 @@ CREATE ROLE "{{name}}" WITH
 
 	cleanup, pgxURL := testutil.PrepareTestContainerSelfManaged(t)
 	t.Logf("pgxURL", pgxURL)
-	t.Cleanup(cleanup())
+	t.Cleanup(cleanup)
 
 	connURL := fmt.Sprintf("postgresql://{{username}}:{{password}}@%s/postgres?sslmode=disable", pgxURL.Host)
 	t.Logf("connURL ", connURL)
