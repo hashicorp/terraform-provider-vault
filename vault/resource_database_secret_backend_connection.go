@@ -767,6 +767,12 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 			Description: "A JSON encoded credential for use with IAM authorization",
 			Sensitive:   true,
 		}
+		res.Schema["use_private_ip"] = &schema.Schema{
+			Type:        schema.TypeBool,
+			Default:     false,
+			Optional:    true,
+			Description: "Specify if need to connect with a PrivateIP for CloudSQL",
+		}
 	}
 
 	if !config.excludeUsernameTemplate {
@@ -1131,6 +1137,9 @@ func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 			if v, ok := data["service_account_json"]; ok {
 				result["service_account_json"] = v.(string)
 			}
+		}
+		if v, ok := d.GetOk(prefix + "use_private_ip"); ok {
+			result["use_private_ip"] = v.(bool)
 		}
 	}
 
@@ -1509,6 +1518,9 @@ func setCloudDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	}
 	if v, ok := d.GetOk(prefix + "service_account_json"); ok {
 		data["service_account_json"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "use_private_ip"); ok {
+		data["use_private_ip"] = v.(bool)
 	}
 }
 
