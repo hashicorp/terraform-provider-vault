@@ -171,7 +171,10 @@ CREATE ROLE "{{name}}" WITH
 	t.Log("pgxURL.Host", pgxURL.Host)
 	t.Log("pgxURL.Path", pgxURL.Path)
 	t.Log("pgxURL.Path", pgxURL.Path)
-	t.Cleanup(cleanup)
+	t.Cleanup(func() {
+		t.Log("===> running cleanup")
+		cleanup()
+	})
 
 	connURL := fmt.Sprintf("postgres://{{username}}:{{password}}@%s/postgres?sslmode=disable", pgxURL.Host)
 	// connURL := "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable"
