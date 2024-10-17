@@ -45,7 +45,7 @@ func defaultRunOpts(t *testing.T) docker.RunOptions {
 
 func CheckTestPGUser(t *testing.T, connURL string, username, password string) {
 	t.Helper()
-	t.Logf("[TRACE] CheckTestPGUser Querying for test user %q, password %q", username, password, connURL)
+	t.Logf("[TRACE] CheckTestPGUser Querying for test user %q, password %q, connURL %q", username, password, connURL)
 
 	db, err := sql.Open("pgx", connURL)
 	defer db.Close()
@@ -58,7 +58,7 @@ func CheckTestPGUser(t *testing.T, connURL string, username, password string) {
 	err = db.QueryRowContext(ctx, "SELECT exists (SELECT rolname FROM pg_roles WHERE rolname=$1);", username).Scan(&exists)
 	t.Logf("[TRACE] CheckTestPGUser exists: %v", exists)
 	if err != nil && err != sql.ErrNoRows {
-		t.Fatalf("user does not appear to exist: %w", err)
+		t.Fatalf("user does not appear to exist: %s", err)
 	}
 	t.Logf("[TRACE] CheckTestPGUser found user")
 }
