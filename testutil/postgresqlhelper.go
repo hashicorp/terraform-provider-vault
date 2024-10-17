@@ -59,6 +59,8 @@ func CheckTestPGUser(t *testing.T, connURL string, username, password string) {
 	t.Logf("[TRACE] CheckTestPGUser exists: %v", exists)
 	if err != nil && err != sql.ErrNoRows {
 		t.Fatalf("user does not appear to exist: %s", err)
+	} else if err != nil {
+		t.Fatalf("unkown error: %s", err)
 	}
 	t.Logf("[TRACE] CheckTestPGUser found user")
 }
