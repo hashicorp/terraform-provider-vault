@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
 	"testing"
 
@@ -164,23 +165,19 @@ CREATE ROLE "{{name}}" WITH
   PASSWORD '{{password}}';
 `
 
-	cleanup, pgxURL := testutil.PrepareTestContainerSelfManaged(t)
-	t.Log("pgxURL", pgxURL)
-	t.Log("pgxURL.Scheme", pgxURL.Scheme)
-	t.Log("pgxURL.User", pgxURL.User)
-	t.Log("pgxURL.Host", pgxURL.Host)
-	t.Log("pgxURL.Path", pgxURL.Path)
-	t.Log("pgxURL.Path", pgxURL.Path)
-	t.Cleanup(func() {
-		t.Log("===> running cleanup")
-		cleanup()
-	})
-
-	connURL := fmt.Sprintf("postgres://{{username}}:{{password}}@%s/postgres?sslmode=disable", pgxURL.Host)
-	// connURL := "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable"
+	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
+	connURL := values[0]
 	t.Log("connURL ", connURL)
 
-	fmt.Println(testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, dbName, backend, connURL, "testpassword"))
+	parsedURL, err := url.Parse(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connURLTemplate := fmt.Sprintf("postgres://{{username}}:{{password}}@%s/postgres?sslmode=disable", parsedURL.Host)
+	connURLRootless := fmt.Sprintf("postgres://%s:testpassword@%s/postgres?sslmode=disable", username, parsedURL.Host)
+
+	fmt.Println(testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, dbName, backend, connURLTemplate, "testpassword"))
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
@@ -192,10 +189,10 @@ CREATE ROLE "{{name}}" WITH
 			{
 				PreConfig: func() {
 					// create static database user
-					testutil.CreateTestPGUser(t, pgxURL.String(), username, "testpassword", testRoleStaticCreate)
-					testutil.CheckTestPGUser(t, pgxURL.String(), username, "testpassword")
+					testutil.CreateTestPGUser(t, connURL, username, "testpassword", testRoleStaticCreate)
+					testutil.CheckTestPGUser(t, connURLRootless, username)
 				},
-				Config: testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, dbName, backend, connURL, "testpassword"),
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, dbName, backend, connURLTemplate, "testpassword"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),

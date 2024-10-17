@@ -43,9 +43,9 @@ func defaultRunOpts(t *testing.T) docker.RunOptions {
 	}
 }
 
-func CheckTestPGUser(t *testing.T, connURL string, username, password string) {
+func CheckTestPGUser(t *testing.T, username, connURL string) {
 	t.Helper()
-	t.Logf("[TRACE] CheckTestPGUser Querying for test user %q, password %q, connURL %q", username, password, connURL)
+	t.Logf("[TRACE] CheckTestPGUser Querying for username: %s connURL %q", username, connURL)
 
 	db, err := sql.Open("pgx", connURL)
 	defer db.Close()
