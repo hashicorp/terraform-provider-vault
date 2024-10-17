@@ -165,11 +165,11 @@ CREATE ROLE "{{name}}" WITH
 `
 
 	cleanup, pgxURL := testutil.PrepareTestContainerSelfManaged(t)
-	t.Logf("pgxURL", pgxURL)
+	t.Log("pgxURL", pgxURL)
 	t.Cleanup(cleanup)
 
 	connURL := fmt.Sprintf("postgresql://{{username}}:{{password}}@%s/postgres?sslmode=disable", pgxURL.Host)
-	t.Logf("connURL ", connURL)
+	t.Log("connURL ", connURL)
 
 	// create static database user
 	testutil.CreateTestPGUser(t, pgxURL.String(), username, "testpassword", testRoleStaticCreate)
