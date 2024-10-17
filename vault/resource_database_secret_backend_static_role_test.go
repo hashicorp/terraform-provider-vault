@@ -166,6 +166,11 @@ CREATE ROLE "{{name}}" WITH
 
 	cleanup, pgxURL := testutil.PrepareTestContainerSelfManaged(t)
 	t.Log("pgxURL", pgxURL)
+	t.Log("pgxURL.Scheme", pgxURL.Scheme)
+	t.Log("pgxURL.User", pgxURL.User)
+	t.Log("pgxURL.Host", pgxURL.Host)
+	t.Log("pgxURL.Path", pgxURL.Path)
+	t.Log("pgxURL.Path", pgxURL.Path)
 	t.Cleanup(cleanup)
 
 	connURL := fmt.Sprintf("postgres://{{username}}:{{password}}@%s/postgres?sslmode=disable", pgxURL.Host)
@@ -185,6 +190,7 @@ CREATE ROLE "{{name}}" WITH
 				PreConfig: func() {
 					// create static database user
 					testutil.CreateTestPGUser(t, pgxURL.String(), username, "testpassword", testRoleStaticCreate)
+					testutil.CheckTestPGUser(t, pgxURL.String(), username, "testpassword")
 				},
 				Config: testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, dbName, backend, connURL, "testpassword"),
 				Check: resource.ComposeTestCheckFunc(
