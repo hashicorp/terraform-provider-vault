@@ -168,8 +168,8 @@ CREATE ROLE "{{name}}" WITH
 	t.Log("pgxURL", pgxURL)
 	t.Cleanup(cleanup)
 
-	// connURL := fmt.Sprintf("postgresql://{{username}}:{{password}}@%s/postgres?sslmode=disable", pgxURL.Host)
-	connURL := "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable"
+	connURL := fmt.Sprintf("postgres://{{username}}:{{password}}@%s/postgres?sslmode=disable", pgxURL.Host)
+	// connURL := "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable"
 	t.Log("connURL ", connURL)
 
 	fmt.Println(testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, dbName, backend, connURL, "testpassword"))
