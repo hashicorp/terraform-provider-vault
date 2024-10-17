@@ -7,11 +7,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/hashicorp/vault/sdk/helper/docker"
 	"net/url"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
@@ -44,7 +45,7 @@ func defaultRunOpts(t *testing.T) docker.RunOptions {
 
 func CreateTestPGUser(t *testing.T, connURL string, username, password, query string) {
 	t.Helper()
-	t.Logf("[TRACE] Creating test user")
+	t.Logf("[TRACE] Creating test user %q, password %q", username, password)
 
 	db, err := sql.Open("pgx", connURL)
 	defer db.Close()
