@@ -171,9 +171,6 @@ CREATE ROLE "{{name}}" WITH
 	connURL := fmt.Sprintf("postgresql://{{username}}:{{password}}@%s/postgres?sslmode=disable", pgxURL.Host)
 	t.Log("connURL ", connURL)
 
-	// create static database user
-	testutil.CreateTestPGUser(t, pgxURL.String(), username, "testpassword", testRoleStaticCreate)
-
 	fmt.Println(testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, dbName, backend, connURL, "testpassword"))
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -184,6 +181,10 @@ CREATE ROLE "{{name}}" WITH
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
+				PreConfig: func() {
+					// create static database user
+					testutil.CreateTestPGUser(t, pgxURL.String(), username, "testpassword", testRoleStaticCreate)
+				},
 				Config: testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, dbName, backend, connURL, "testpassword"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),

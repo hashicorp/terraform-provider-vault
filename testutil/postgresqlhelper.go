@@ -77,10 +77,10 @@ func CreateTestPGUser(t *testing.T, connURL string, username, password, query st
 }
 
 func PrepareTestContainerSelfManaged(t *testing.T) (func(), *url.URL) {
-	return prepareTestContainerSelfManaged(t, defaultRunOpts(t), defaultPGPass, true, false, false)
+	return prepareTestContainerSelfManaged(t, defaultRunOpts(t), defaultPGPass, true, false)
 }
 
-func prepareTestContainerSelfManaged(t *testing.T, runOpts docker.RunOptions, password string, addSuffix, forceLocalAddr, useFallback bool,
+func prepareTestContainerSelfManaged(t *testing.T, runOpts docker.RunOptions, password string, addSuffix, forceLocalAddr bool,
 ) (func(), *url.URL) {
 	if os.Getenv("PG_URL") != "" {
 		return func() {}, nil
@@ -91,7 +91,7 @@ func prepareTestContainerSelfManaged(t *testing.T, runOpts docker.RunOptions, pa
 		t.Fatalf("Could not start docker Postgres: %s", err)
 	}
 
-	svc, _, err := runner.StartNewService(context.Background(), addSuffix, forceLocalAddr, connectPostgres(password, runOpts.ImageRepo, useFallback))
+	svc, _, err := runner.StartNewService(context.Background(), addSuffix, forceLocalAddr, connectPostgres(password))
 	if err != nil {
 		t.Fatalf("Could not start docker Postgres: %s", err)
 	}
@@ -99,13 +99,9 @@ func prepareTestContainerSelfManaged(t *testing.T, runOpts docker.RunOptions, pa
 	return svc.Cleanup, svc.Config.URL()
 }
 
-func connectPostgres(password, repo string, useFallback bool) docker.ServiceAdapter {
+func connectPostgres(password string) docker.ServiceAdapter {
 	return func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		hostAddr := fmt.Sprintf("%s:%d", host, port)
-		if useFallback {
-			// set the first host to a bad address so we can test the fallback logic
-			hostAddr = "localhost:55," + hostAddr
-		}
 		u := url.URL{
 			Scheme:   "postgres",
 			User:     url.UserPassword("postgres", password),
