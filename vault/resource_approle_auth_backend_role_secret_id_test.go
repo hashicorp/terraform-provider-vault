@@ -192,7 +192,7 @@ func TestAccAppRoleAuthBackendRoleSecretID_full(t *testing.T) {
 					resource.TestCheckResourceAttr(secretIDResource, consts.FieldMetadata, `{"hello":"world"}`),
 					//fadia
 					resource.TestCheckResourceAttr(secretIDResource, "ttl", "700"),
-					resource.TestCheckResourceAttr(secretIDResource, "num_uses", ""),
+					resource.TestCheckResourceAttr(secretIDResource, "num_uses", "2"),
 				),
 			},
 		},
