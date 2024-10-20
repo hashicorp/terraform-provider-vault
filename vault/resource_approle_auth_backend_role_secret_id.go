@@ -71,6 +71,22 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 					return false
 				},
 			},
+			//Fadia u have added this
+			consts.FieldTTL: {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The TTL duration of the SecretID.",
+			},
+			//fadia u have added this
+			consts.FieldNumUses: {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The number of uses for the secret-id.",
+			},
 
 			consts.FieldBackend: {
 				Type:        schema.TypeString,
@@ -161,6 +177,14 @@ func approleAuthBackendRoleSecretIDCreate(ctx context.Context, d *schema.Resourc
 		data["metadata"] = result
 	} else {
 		data["metadata"] = ""
+	}
+	//Fadia you just need to check weither the ttl was specified because it is optional.
+	if v, ok := d.GetOk(consts.FieldTTL); ok {
+		data["ttl"] = v
+	}
+	//Fadia you just need to check weither the num uses was specified because it is optional.
+	if v, ok := d.GetOk(consts.FieldNumUses); ok {
+		data["num_uses"] = v
 	}
 	withWrappedAccessor := d.Get(consts.FieldWithWrappedAccessor).(bool)
 
@@ -292,13 +316,17 @@ func approleAuthBackendRoleSecretIDRead(ctx context.Context, d *schema.ResourceD
 	if err != nil {
 		return diag.Errorf("error encoding metadata for SecretID %q to JSON: %s", id, err)
 	}
-
+	//fadia you have added this.
+	ttl := resp.Data["secret_id_ttl"]
+	numUses := resp.Data["secret_id_num_uses"]
 	fields := map[string]interface{}{
 		consts.FieldBackend:  backend,
 		consts.FieldRoleName: role,
 		consts.FieldCIDRList: cidrs,
 		consts.FieldMetadata: string(metadata),
 		consts.FieldAccessor: accessor,
+		consts.FieldTTL:      ttl,
+		consts.FieldNumUses:  numUses,
 	}
 
 	for k, v := range fields {

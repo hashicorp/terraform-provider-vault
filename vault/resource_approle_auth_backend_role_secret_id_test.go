@@ -190,6 +190,9 @@ func TestAccAppRoleAuthBackendRoleSecretID_full(t *testing.T) {
 					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
 					resource.TestCheckResourceAttr(secretIDResource, "cidr_list.#", "2"),
 					resource.TestCheckResourceAttr(secretIDResource, consts.FieldMetadata, `{"hello":"world"}`),
+					//fadia
+					resource.TestCheckResourceAttr(secretIDResource, "ttl", "700"),
+					resource.TestCheckResourceAttr(secretIDResource, "num_uses", ""),
 				),
 			},
 		},
@@ -254,6 +257,8 @@ resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
   role_name = vault_approle_auth_backend_role.role.role_name
   backend = vault_auth_backend.approle.path
   cidr_list = ["10.148.0.0/20", "10.150.0.0/20"]
+  ttl = 700
+  num_uses = 2
   metadata = <<EOF
 {
   "hello": "world"
