@@ -2079,6 +2079,9 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 			}
 			result["connect_timeout"] = timeout
 		}
+		if v, ok := data["skip_verification"]; ok {
+			result["skip_verification"] = v.(bool)
+		}
 		return result, nil
 	}
 	return nil, nil
