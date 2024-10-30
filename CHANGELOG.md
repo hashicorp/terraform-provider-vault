@@ -4,6 +4,7 @@ FEATURES:
 
 * Update `vault_database_secret_backend_connection` to support inline TLS config for PostgreSQL ([#2339](https://github.com/hashicorp/terraform-provider-vault/pull/2339))
 * Update `vault_database_secret_backend_connection` to support skip_verification config for Cassandra ([#2346](https://github.com/hashicorp/terraform-provider-vault/pull/2346))
+* Update `vault_approle_auth_backend_role_secret_id` to support `num_uses` and `ttl` fields ([#2345](https://github.com/hashicorp/terraform-provider-vault/pull/2345))
 
 ## 4.4.0 (Aug 7, 2024)
 
