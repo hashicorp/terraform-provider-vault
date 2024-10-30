@@ -319,6 +319,7 @@ func approleAuthBackendRoleSecretIDRead(ctx context.Context, d *schema.ResourceD
 
 	ttl := resp.Data["secret_id_ttl"]
 	numUses := resp.Data["secret_id_num_uses"]
+
 	fields := map[string]interface{}{
 		consts.FieldBackend:  backend,
 		consts.FieldRoleName: role,
