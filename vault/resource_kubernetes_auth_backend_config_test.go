@@ -247,6 +247,15 @@ func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 					resource.TestCheckResourceAttr(testResource, consts.FieldIssuer, "api"),
 					resource.TestCheckResourceAttr(testResource, consts.FieldDisableISSValidation, strconv.FormatBool(true)),
 					resource.TestCheckResourceAttr(testResource, consts.FieldDisableLocalCAJWT, strconv.FormatBool(true)),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion116), nil
+				},
+				Config: testAccKubernetesAuthBackendConfig_useAnnotations(backend, jwt),
+				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(testResource, fieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(true)),
 				),
 			},
@@ -421,6 +430,22 @@ resource "vault_kubernetes_auth_backend_config" "config" {
 	return config + "}"
 }
 
+func testAccKubernetesAuthBackendConfig_useAnnotations(backend, jwt string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "kubernetes" {
+  type = "kubernetes"
+  path = "%s"
+}
+
+resource "vault_kubernetes_auth_backend_config" "config" {
+  backend = vault_auth_backend.kubernetes.path
+  kubernetes_host = "http://example.com:443"
+  token_reviewer_jwt = %q
+  use_annotations_as_alias_metadata = true
+}
+`, backend, jwt)
+}
+
 func testAccKubernetesAuthBackendConfigConfig_full(backend, caCert, jwt, issuer string,
 	disableIssValidation, disableLocalCaJwt, omitCA bool,
 ) string {
@@ -444,7 +469,6 @@ resource "vault_kubernetes_auth_backend_config" "config" {
   issuer = %q
   disable_iss_validation = %t
   disable_local_ca_jwt = %t
-  use_annotations_as_alias_metadata = true
 }`, backend, caConfig, jwt, kubernetesPEMfile, issuer, disableIssValidation, disableLocalCaJwt)
 
 	return config

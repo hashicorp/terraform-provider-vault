@@ -112,7 +112,10 @@ func kubernetesAuthBackendConfigDataSourceRead(d *schema.ResourceData, meta inte
 	d.Set(consts.FieldDisableLocalCAJWT, resp.Data[consts.FieldDisableLocalCAJWT])
 
 	if provider.IsAPISupported(meta, provider.VaultVersion116) {
-		d.Set(fieldUseAnnotationsAsAliasMetadata, resp.Data[fieldUseAnnotationsAsAliasMetadata])
+		err := d.Set(fieldUseAnnotationsAsAliasMetadata, resp.Data[fieldUseAnnotationsAsAliasMetadata])
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -91,8 +92,6 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 						consts.FieldDisableISSValidation, strconv.FormatBool(disableIssValidation)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						consts.FieldDisableLocalCAJWT, strconv.FormatBool(disableLocalCaJwt)),
-					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						fieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(useAnnotationsAsAliasMetadata)),
 				),
 			},
 			{
@@ -116,6 +115,15 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 						consts.FieldDisableISSValidation, strconv.FormatBool(disableIssValidation)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						consts.FieldDisableLocalCAJWT, strconv.FormatBool(disableLocalCaJwt)),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion116), nil
+				},
+				Config: testAccKubernetesAuthBackendConfig_useAnnotations(backend, jwt),
+				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						fieldUseAnnotationsAsAliasMetadata, strconv.FormatBool(useAnnotationsAsAliasMetadata)),
 				),
