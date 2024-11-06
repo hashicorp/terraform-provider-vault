@@ -122,11 +122,7 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.1.lengths.0", "256"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "allow_empty_principals"),
 		}
 	}
 
@@ -134,7 +130,6 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
 		Steps:        getSteps(""),
@@ -185,7 +180,7 @@ func TestAccSSHSecretBackendRole_template(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "default_user_template", "true"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			testutil.GetImportTestStep(resourceName, false, nil, "allow_empty_principals"),
 		},
 	})
 }
