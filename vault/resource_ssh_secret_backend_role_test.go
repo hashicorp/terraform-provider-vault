@@ -50,6 +50,7 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		// 30s is the default value vault uese.
 		// https://developer.hashicorp.com/vault/api-docs/secret/ssh#not_before_duration
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "30"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "false"),
 	)
 
 	updateCheckFuncs := append(commonCheckFuncs,
@@ -73,6 +74,7 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "ttl", "43200"),
 		// 50m (3000 seconds)
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "3000"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
 	)
 
 	getCheckFuncs := func(isUpdate bool) resource.TestCheckFunc {
@@ -84,19 +86,10 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 				checks = append(checks, initialCheckFuncs...)
 			}
 
-			meta := testProvider.Meta().(*provider.ProviderMeta)
-			isVaultVersion112 := meta.IsAPISupported(provider.VaultVersion112)
-			if isVaultVersion112 {
-				if isUpdate {
-					checks = append(checks,
-						resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
-					)
-				} else {
-					checks = append(checks,
-						resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "false"),
-					)
-				}
-			}
+			// can append version-dependent checks here:
+			// meta := testProvider.Meta().(*provider.ProviderMeta)
+			// isVaultVersion117 := meta.IsAPISupported(provider.VaultVersion117)
+
 			return resource.ComposeAggregateTestCheckFunc(checks...)(state)
 		}
 	}
@@ -137,27 +130,14 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		}
 	}
 
-	t.Run("vault-1.11-and-below", func(t *testing.T) {
-		resource.Test(t, resource.TestCase{
-			ProviderFactories: providerFactories,
-			PreCheck: func() {
-				testutil.TestAccPreCheck(t)
-				SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion112)
-			},
-			CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
-			Steps:        getSteps(""),
-		})
-	})
-	t.Run("vault-1.12-and-up", func(t *testing.T) {
-		resource.Test(t, resource.TestCase{
-			ProviderFactories: providerFactories,
-			PreCheck: func() {
-				testutil.TestAccPreCheck(t)
-				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
-			},
-			CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
-			Steps:        getSteps("allowed_domains_template = true"),
-		})
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+		},
+		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
+		Steps:        getSteps(""),
 	})
 }
 
@@ -289,6 +269,7 @@ resource "vault_ssh_secret_backend_role" "test_role" {
   allow_user_key_ids       = true
   allowed_critical_options = "foo,bar"
   allowed_domains          = "example.com,foo.com"
+  allowed_domains_template = true
   allowed_extensions       = "ext1,ext2"
   default_extensions       = { "ext1" = "" }
   default_critical_options = { "opt1" = "" }
