@@ -142,7 +142,7 @@ func gcpSecretImpersonatedAccountRead(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	for _, k := range []string{consts.FieldTokenScopes, consts.FieldServiceAccountEmail, consts.FieldServiceAccountProject} {
+	for _, k := range []string{consts.FieldTokenScopes, consts.FieldServiceAccountEmail, consts.FieldServiceAccountProject, consts.FieldTTL} {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
