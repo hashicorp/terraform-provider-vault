@@ -86,10 +86,6 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 				checks = append(checks, initialCheckFuncs...)
 			}
 
-			// can append version-dependent checks here:
-			// meta := testProvider.Meta().(*provider.ProviderMeta)
-			// isVaultVersion117 := meta.IsAPISupported(provider.VaultVersion117)
-
 			return resource.ComposeAggregateTestCheckFunc(checks...)(state)
 		}
 	}
