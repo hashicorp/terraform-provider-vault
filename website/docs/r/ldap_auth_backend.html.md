@@ -88,6 +88,8 @@ The following arguments are supported:
 
 * `local` - (Optional) Specifies if the auth method is local only.
 
+* `connection_timeout` - (Optional) Timeout when connecting to LDAP before attempting to connect to the next server in the URL provided in `url` (integer: 30 or string: "30s")
+
 ### Common Token Arguments
 
 These arguments are common across several Authentication Token resources since Vault 1.2.
