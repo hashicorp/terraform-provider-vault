@@ -71,7 +71,6 @@ func gcpSecretImpersonatedAccountResource() *schema.Resource {
 			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    false,
 				Description: "Time to live.",
 				Computed:    true,
 			},
