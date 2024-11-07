@@ -73,6 +73,7 @@ func gcpSecretImpersonatedAccountResource() *schema.Resource {
 				Optional:    true,
 				ForceNew:    false,
 				Description: "Time to live.",
+				Computed:    true,
 			},
 		},
 	}
