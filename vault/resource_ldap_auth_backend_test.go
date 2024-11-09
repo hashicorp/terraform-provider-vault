@@ -280,7 +280,7 @@ resource "vault_ldap_auth_backend" "test" {
     userfilter             = "({{.UserAttr}}={{.Username}})"
     username_as_alias      = true
     use_token_groups       = %s
-    connection_timeout     = "30s"
+    connection_timeout     = 30
 }
 `, path, local, use_token_groups)
 }

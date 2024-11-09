@@ -34,7 +34,6 @@ var ldapAuthBackendFields = []string{
 	consts.FieldGroupFilter,
 	consts.FieldGroupDN,
 	consts.FieldGroupAttr,
-	consts.FieldConnectionTimeout,
 }
 
 var ldapAuthBackendBooleanFields = []string{
@@ -195,7 +194,7 @@ func ldapAuthBackendResource() *schema.Resource {
 			Sensitive: true,
 		},
 		consts.FieldConnectionTimeout: {
-			Type:     schema.TypeString,
+			Type:     schema.TypeInt,
 			Optional: true,
 			Computed: true,
 		},
@@ -304,7 +303,7 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	}
 
 	if v, ok := d.GetOk(consts.FieldConnectionTimeout); ok {
-		data[consts.FieldConnectionTimeout] = v.(string)
+		data[consts.FieldConnectionTimeout] = v
 	}
 
 	updateTokenFields(d, data, false)
