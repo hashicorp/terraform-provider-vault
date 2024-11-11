@@ -507,6 +507,7 @@ const (
 	/*
 		Vault version constants
 	*/
+	VaultVersion180 = "1.8.0"
 	VaultVersion190 = "1.9.0"
 	VaultVersion110 = "1.10.0"
 	VaultVersion111 = "1.11.0"

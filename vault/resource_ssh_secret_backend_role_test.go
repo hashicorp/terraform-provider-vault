@@ -47,7 +47,7 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "algorithm_signer", "default"),
 		resource.TestCheckResourceAttr(resourceName, "max_ttl", "0"),
 		resource.TestCheckResourceAttr(resourceName, "ttl", "0"),
-		// 30s is the default value vault uese.
+		// 30s is the default value vault uses.
 		// https://developer.hashicorp.com/vault/api-docs/secret/ssh#not_before_duration
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "30"),
 	)
@@ -210,6 +210,33 @@ func TestAccSSHSecretBackendRole_template(t *testing.T) {
 	})
 }
 
+func TestAccSSHSecretBackendRole_extensionsTemplate(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test/ssh")
+	name := acctest.RandomWithPrefix("tf-test-role")
+	resourceName := "vault_ssh_secret_backend_role.test_role"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
+		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSSHSecretBackendRoleConfig_extensionsTemplate(name, backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "default_extensions.test_extension", "ssh-{{identity.entity.id}}-user"),
+					resource.TestCheckResourceAttr(resourceName, "default_extensions_template", "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+		},
+	})
+}
+
 func testAccSSHSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ssh_secret_backend_role" {
@@ -280,27 +307,28 @@ resource "vault_mount" "example" {
 	}
 	fragments = append(fragments, fmt.Sprintf(`
 resource "vault_ssh_secret_backend_role" "test_role" {
-  name                     = "%s"
-  backend                  = vault_mount.example.path
-  allow_bare_domains       = true
-  allow_host_certificates  = true
-  allow_subdomains         = true
-  allow_user_certificates  = false
-  allow_user_key_ids       = true
-  allowed_critical_options = "foo,bar"
-  allowed_domains          = "example.com,foo.com"
-  allowed_extensions       = "ext1,ext2"
-  default_extensions       = { "ext1" = "" }
-  default_critical_options = { "opt1" = "" }
-  allowed_users_template   = true
-  allowed_users            = "usr1,usr2"
-  default_user             = "usr"
-  key_id_format            = "{{role_name}}-test"
-  key_type                 = "ca"
-  algorithm_signer         = "rsa-sha2-256"
-  max_ttl                  = "86400"
-  ttl                      = "43200"
-  not_before_duration      = "3000"
+  name                        = "%s"
+  backend                     = vault_mount.example.path
+  allow_bare_domains          = true
+  allow_host_certificates     = true
+  allow_subdomains            = true
+  allow_user_certificates     = false
+  allow_user_key_ids          = true
+  allowed_critical_options    = "foo,bar"
+  allowed_domains             = "example.com,foo.com"
+  allowed_extensions          = "ext1,ext2"
+  default_extensions          = { "ext1" = "" }
+  default_extensions_template = true
+  default_critical_options    = { "opt1" = "" }
+  allowed_users_template      = true
+  allowed_users               = "usr1,usr2"
+  default_user                = "usr"
+  key_id_format               = "{{role_name}}-test"
+  key_type                    = "ca"
+  algorithm_signer            = "rsa-sha2-256"
+  max_ttl                     = "86400"
+  ttl                         = "43200"
+  not_before_duration         = "3000"
   %s
 `, name, extraFields))
 
@@ -352,6 +380,30 @@ resource "vault_ssh_secret_backend_role" "test_role" {
   default_user            = "ssh-{{identity.entity.id}}-user"
   key_type                = "ca"
   allow_user_certificates = true
+}
+
+`, path, name)
+
+	return config
+}
+
+func testAccSSHSecretBackendRoleConfig_extensionsTemplate(name, path string) string {
+	config := fmt.Sprintf(`
+resource "vault_mount" "example" {
+  path = "%s"
+  type = "ssh"
+}
+
+resource "vault_ssh_secret_backend_role" "test_role" {
+  name    = "%s"
+  backend = vault_mount.example.path
+  default_extensions = {
+	"test_extension" = "ssh-{{identity.entity.id}}-user"
+  }
+  default_extensions_template   = true
+  default_user                  = "ssh-user"
+  key_type                      = "ca"
+  allow_user_certificates       = true
 }
 
 `, path, name)

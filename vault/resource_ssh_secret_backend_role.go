@@ -91,6 +91,11 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			Type:     schema.TypeMap,
 			Optional: true,
 		},
+		"default_extensions_template": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+		},
 		"default_critical_options": {
 			Type:     schema.TypeMap,
 			Optional: true,
@@ -238,6 +243,12 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		data["default_extensions"] = v
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion180) {
+		if v, ok := d.GetOk("default_extensions_template"); ok {
+			data["default_extensions_template"] = v.(bool)
+		}
+	}
+
 	if v, ok := d.GetOk("default_critical_options"); ok {
 		data["default_critical_options"] = v
 	}
@@ -354,6 +365,10 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		"default_critical_options", "allowed_users_template",
 		"allowed_users", "default_user", "key_id_format",
 		"max_ttl", "ttl", "algorithm_signer", "not_before_duration",
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion180) {
+		fields = append(fields, []string{"default_extensions_template"}...)
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
