@@ -124,6 +124,9 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
 
+* `skip_verification` - (Optional) Skip permissions checks when a connection to Cassandra is first created. 
+  These checks ensure that Vault is able to create roles, but can be resource intensive in clusters with many roles.
+
 ### Couchbase Configuration Options
 
 * `hosts` - (Required) A set of Couchbase URIs to connect to. Must use `couchbases://` scheme if `tls` is `true`.

@@ -335,6 +335,12 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Default:     5,
 						Description: "The number of seconds to use as a connection timeout.",
 					},
+					"skip_verification": {
+						Type:        schema.TypeBool,
+						Optional:    true,
+						Default:     false,
+						Description: "Skip permissions checks when a connection to Cassandra is first created. These checks ensure that Vault is able to create roles, but can be resource intensive in clusters with many roles.",
+					},
 				},
 			},
 			MaxItems:      1,
@@ -1047,6 +1053,9 @@ func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	}
 	if v, ok := d.GetOkExists(prefix + "connect_timeout"); ok {
 		data["connect_timeout"] = v.(int)
+	}
+	if v, ok := d.GetOkExists(prefix + "skip_verification"); ok {
+		data["skip_verification"] = v.(bool)
 	}
 }
 
@@ -2087,6 +2096,9 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 				return nil, fmt.Errorf("unexpected non-number %q returned as connect_timeout from Vault: %s", v, err)
 			}
 			result["connect_timeout"] = timeout
+		}
+		if v, ok := data["skip_verification"]; ok {
+			result["skip_verification"] = v.(bool)
 		}
 		return result, nil
 	}
