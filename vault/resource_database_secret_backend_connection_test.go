@@ -865,6 +865,31 @@ func TestAccDatabaseSecretBackendConnection_postgresql_tls(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_postgresql_rootlessConfig(t *testing.T) {
+	resourceName := "vault_database_secret_backend_connection.test"
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEnginePostgres.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql_rootless(name, backend),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.self_managed", "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, ""),
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 	// wanted this to be the included with the following test, but the env-var check is different
 	values := testutil.SkipTestEnvUnset(t, "POSTGRES_CLOUD_URL", "POSTGRES_CLOUD_SERVICE_ACCOUNT_JSON")
@@ -1768,6 +1793,25 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, tlsCA, tlsCert, privateKey)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_postgresql_rootless(name, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+
+  postgresql {
+	connection_url = "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=verify-full"
+	self_managed   = true
+  }
+}
+`, path, name)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_postgres_cloud(name, path, connURL, authType, serviceAccountJSON string) string {

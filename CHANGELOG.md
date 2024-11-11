@@ -8,6 +8,7 @@ FEATURES:
 * Add support for `use_annotations_as_alias_metadata` field for the `vault_kubernetes_auth_backend_config` resource ([#2206](https://github.com/hashicorp/terraform-provider-vault/pull/2206))
 * Add support for `allow_empty_principals` field for the `vault_ssh_secret_backend_role` resource ([#2354](https://github.com/hashicorp/terraform-provider-vault/pull/2354))
 * Add support for `connection_timeout` field for the `vault_ldap_auth_backend` resource ([#2358](https://github.com/hashicorp/terraform-provider-vault/pull/2358))
+* Add support for Rootless Configuration for Static Roles to Postgres DB ([#2341](https://github.com/hashicorp/terraform-provider-vault/pull/2341))
 
 ## 4.4.0 (Aug 7, 2024)
 
