@@ -150,7 +150,16 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 	})
 }
 
+// TestAccDatabaseSecretBackendStaticRole_Rootless tests the
+// Rootless Config and Rotation flow for Static Roles.
+// This test sets up a PGX container and creates static users
+// in the DB to test the workflow.
+// Currently only runs locally; Vault CI is unable to talk
+// to the PGX Docker container due to network issues.
 func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
+	// TODO enable test to run in CI
+	testutil.SkipTestEnvUnset(t, "PGX_ROOTLESS_ROTATION")
+
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	username := acctest.RandomWithPrefix("user")
 	dbName := acctest.RandomWithPrefix("db")
