@@ -62,7 +62,7 @@ func GetTestPGUser(t *testing.T, connURL string, username, password, query strin
 	if err != nil && err != sql.ErrNoRows {
 		t.Fatalf("user does not appear to exist: %s", err.Error())
 	}
-	t.Logf("exists: %b", exists)
+	t.Logf("exists: %#v", exists)
 }
 
 func CreateTestPGUser(t *testing.T, connURL string, username, password, query string) {
