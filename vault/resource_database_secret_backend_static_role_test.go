@@ -7,9 +7,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"

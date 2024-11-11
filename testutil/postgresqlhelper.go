@@ -51,6 +51,11 @@ func CreateTestPGUser(t *testing.T, connURL string, username, password, query st
 		t.Fatal(err)
 	}
 
+	_, err = db.ExecContext(context.Background(), `SELECT set_config('log_statement', 'all', false);`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Start a transaction
 	ctx := context.Background()
 	tx, err := db.BeginTx(ctx, nil)
@@ -117,6 +122,11 @@ func connectPostgres(password, repo string, useFallback bool) docker.ServiceAdap
 			return nil, err
 		}
 		defer db.Close()
+
+		_, err = db.ExecContext(context.Background(), `SELECT set_config('log_statement', 'all', false);`)
+		if err != nil {
+			return nil, err
+		}
 
 		if err = db.Ping(); err != nil {
 			return nil, err
