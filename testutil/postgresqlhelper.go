@@ -7,11 +7,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/hashicorp/vault/sdk/helper/docker"
 	"net/url"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
@@ -35,9 +36,7 @@ func defaultRunOpts(t *testing.T) docker.RunOptions {
 		DoNotAutoRemove:   false,
 		OmitLogTimestamps: true,
 		LogConsumer: func(s string) {
-			if t.Failed() {
-				t.Logf("container logs: %s", s)
-			}
+			t.Logf("container logs: %s", s)
 		},
 	}
 }
