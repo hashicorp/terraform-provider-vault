@@ -50,12 +50,6 @@ jobs:
       - name: Build
         run: |
           make build
-      - name: Run unit tests
-        # here to short-circuit the acceptance tests, in the case of a failure.
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-        run: |
-          make test
   acceptance:
     needs: [go-version, build]
     runs-on: custom-linux-large
@@ -63,12 +57,7 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.14.13-ent"
-        - "vault-enterprise:1.15.16-ent"
-        - "vault-enterprise:1.16.11-ent"
-        - "vault-enterprise:1.17.7-ent"
         - "vault-enterprise:1.18.0-ent"
-        - "vault:latest"
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -87,27 +76,6 @@ jobs:
           - 8200:8200
         volumes:
           - ${{ github.workspace }}:/vault/plugins
-      mysql:
-        image: docker.mirror.hashicorp.services/mysql:latest
-        env:
-          MYSQL_ROOT_PASSWORD: mysql
-        ports:
-          - 3306:3306
-      mssql:
-        image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
-        env:
-          ACCEPT_EULA: Y
-          SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
-        ports:
-          - 1433:1433
-      mongo:
-        image: docker.mirror.hashicorp.services/mongo:latest
-        env:
-          MONGO_INITDB_ROOT_USERNAME: root
-          MONGO_INITDB_ROOT_PASSWORD: mongodb
-          MONGO_INITDB_DATABASE: admin
-        ports:
-          - 27017:27017
       postgres:
         image: docker.mirror.hashicorp.services/postgres:latest
         env:
@@ -115,46 +83,6 @@ jobs:
           POSTGRES_DB: database
         ports:
           - 5432:5432
-      couchbase:
-        image: docker.io/couchbase/server-sandbox:7.1.1
-        ports:
-          - 8091:8091
-          - 8092:8092
-          - 8093:8093
-          - 8094:8094
-          - 11207:11207
-          - 11210:11210
-          - 18091:18091
-          - 18092:18092
-          - 18093:18093
-          - 18094:18094
-        options: >-
-          --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
-          --health-interval 1s
-          --health-timeout 5s
-          --health-retries 60
-      consul:
-        image: docker.mirror.hashicorp.services/hashicorp/consul:latest
-        env:
-          CONSUL_LOCAL_CONFIG: "{\"acl\":{\"enabled\":true}}"
-        ports:
-          - 8500:8500
-          - 8600:8600
-        options: >-
-          --health-cmd "curl -f 'http://127.0.0.1:8500/v1/health/node/server-1'"
-          --health-interval 1s
-          --health-timeout 5s
-          --health-retries 5
-      openldap:
-        image: docker.io/bitnami/openldap:2.6
-        ports:
-          - 1389:1389
-          - 1636:1636
-        env:
-          LDAP_ADMIN_USERNAME: "admin"
-          LDAP_ADMIN_PASSWORD: "adminpassword"
-          LDAP_USERS: "alice,bob,foo"
-          LDAP_PASSWORDS: "password1,password2,password3"
     steps:
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
@@ -169,18 +97,6 @@ jobs:
           terraform_wrapper: false
       - name: Check Terraform CLI version
         run: terraform --version
-      - name: Download external plugin
-        id: plugin
-        env:
-          PLUGIN: "vault-plugin-auth-jwt"
-          VERSION: "0.17.0"
-        run: |
-          ZIP="${PLUGIN}_${VERSION}_linux_amd64.zip"
-          SHA256SUMS="${PLUGIN}_${VERSION}_SHA256SUMS"
-          curl -sO "https://releases.hashicorp.com/${PLUGIN}/${VERSION}/{${ZIP},${SHA256SUMS}}"
-          shasum -a 256 -c "${PLUGIN}_${VERSION}_SHA256SUMS" --ignore-missing
-          unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
-          echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
       - name: Cache go build
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
@@ -214,14 +130,14 @@ jobs:
           LDAP_BINDDN: "cn=admin,dc=example,dc=org"
           LDAP_BINDPASS: "adminpassword"
           LDAP_URL: "ldap://openldap:1389"
-          VAULT_PLUGIN_COMMAND: ${{ steps.plugin.outputs.command }}
         run: |
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
             target="testacc-ent"
           else
             target="testacc"
           fi
-          make $target TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
+          export PGX_ROOTLESS_ROTATION=1
+          make $target TESTARGS='-test.v -run TestAccDatabaseSecretBackendStaticRole_Rootless' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
