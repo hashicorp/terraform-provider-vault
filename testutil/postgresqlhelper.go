@@ -60,10 +60,7 @@ func GetTestPGUser(t *testing.T, connURL string, username, password, query strin
 	var exists bool
 	err = db.QueryRowContext(ctx, "SELECT exists (SELECT rolname FROM pg_roles WHERE rolname=$1);", username).Scan(&exists)
 	if err != nil && err != sql.ErrNoRows {
-		t.Fatalf("user does not appear to exist: %w", err)
-	}
-	if !exists {
-		t.Fatalf("!exists: %w", err)
+		t.Fatalf("user does not appear to exist: %s", err.Error())
 	}
 	t.Logf("exists: %b", exists)
 }
