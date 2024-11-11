@@ -50,6 +50,7 @@ func TestGCPSecretImpersonatedAccount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "service_account_project", project),
 					resource.TestCheckResourceAttr(resourceName, "token_scopes.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "token_scopes.0", "https://www.googleapis.com/auth/cloud-platform"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "700"),
 				),
 			},
 			{
@@ -62,6 +63,7 @@ func TestGCPSecretImpersonatedAccount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "token_scopes.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "token_scopes.0", "https://www.googleapis.com/auth/cloud-platform"),
 					resource.TestCheckResourceAttr(resourceName, "token_scopes.1", "https://www.googleapis.com/auth/cloud-platform.read-only"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "700"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),
@@ -96,6 +98,7 @@ resource "vault_gcp_secret_impersonated_account" "test" {
 	impersonated_account = "%s"
 	token_scopes   = ["https://www.googleapis.com/auth/cloud-platform"]
 	service_account_email = "%s"
+	ttl = 700
 }
 `, testGCPSecretImpersonatedAccount_backend(backend, credentials), impersonatedAccount, serviceAccountEmail)
 }
@@ -112,6 +115,7 @@ resource "vault_gcp_secret_impersonated_account" "test" {
         "https://www.googleapis.com/auth/cloud-platform",
     ]
 	service_account_email = "%s"
+	ttl = 700
 }
 `, testGCPSecretImpersonatedAccount_backend(backend, credentials), impersonatedAccount, serviceAccountEmail)
 }
