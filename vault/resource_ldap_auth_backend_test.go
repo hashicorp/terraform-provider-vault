@@ -230,6 +230,7 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 			"groupdn":              "groupdn",
 			"groupattr":            "groupattr",
 			"use_token_groups":     "use_token_groups",
+			"connection_timeout":   "connection_timeout",
 		}
 
 		isVaultVersion111 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion111)
@@ -278,7 +279,8 @@ resource "vault_ldap_auth_backend" "test" {
     description            = "example"
     userfilter             = "({{.UserAttr}}={{.Username}})"
     username_as_alias      = true
-    use_token_groups = %s
+    use_token_groups       = %s
+    connection_timeout     = 30
 }
 `, path, local, use_token_groups)
 }
