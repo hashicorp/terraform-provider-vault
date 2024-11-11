@@ -41,6 +41,33 @@ func defaultRunOpts(t *testing.T) docker.RunOptions {
 	}
 }
 
+func GetTestPGUser(t *testing.T, connURL string, username, password, query string) {
+	t.Helper()
+	t.Logf("[TRACE] Creating test user")
+
+	db, err := sql.Open("pgx", connURL)
+	defer db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	_, err = db.ExecContext(ctx, `SELECT set_config('log_statement', 'all', false);`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var exists bool
+	err = db.QueryRowContext(ctx, "SELECT exists (SELECT rolname FROM pg_roles WHERE rolname=$1);", username).Scan(&exists)
+	if err != nil && err != sql.ErrNoRows {
+		t.Fatalf("user does not appear to exist: %w", err)
+	}
+	if !exists {
+		t.Fatalf("!exists: %w", err)
+	}
+	t.Logf("exists: %b", exists)
+}
+
 func CreateTestPGUser(t *testing.T, connURL string, username, password, query string) {
 	t.Helper()
 	t.Logf("[TRACE] Creating test user")

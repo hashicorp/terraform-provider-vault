@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
@@ -181,7 +180,7 @@ CREATE ROLE "{{name}}" WITH
 
 	// create static database user
 	testutil.CreateTestPGUser(t, pgxURL.String(), username, "testpassword", testRoleStaticCreate)
-	time.Sleep(5)
+	testutil.GetTestPGUser(t, pgxURL.String(), username, "testpassword", testRoleStaticCreate)
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -209,6 +208,7 @@ CREATE ROLE "{{name}}" WITH
 			},
 		},
 	})
+	testutil.GetTestPGUser(t, pgxURL.String(), username, "testpassword", testRoleStaticCreate)
 }
 
 func testAccDatabaseSecretBackendStaticRoleCheckDestroy(s *terraform.State) error {
