@@ -68,6 +68,12 @@ func gcpSecretImpersonatedAccountResource() *schema.Resource {
 				Computed:    true,
 				Description: "Project of the GCP Service Account managed by this impersonated account",
 			},
+			consts.FieldTTL: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Time to live.",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -136,7 +142,7 @@ func gcpSecretImpersonatedAccountRead(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	for _, k := range []string{consts.FieldTokenScopes, consts.FieldServiceAccountEmail, consts.FieldServiceAccountProject} {
+	for _, k := range []string{consts.FieldTokenScopes, consts.FieldServiceAccountEmail, consts.FieldServiceAccountProject, consts.FieldTTL} {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
@@ -199,6 +205,10 @@ func gcpSecretImpersonatedAccountUpdateFields(d *schema.ResourceData, data map[s
 
 	if v, ok := d.GetOk(consts.FieldTokenScopes); ok {
 		data[consts.FieldTokenScopes] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk(consts.FieldTTL); ok {
+		data[consts.FieldTTL] = v.(string)
 	}
 }
 

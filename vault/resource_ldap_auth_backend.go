@@ -193,6 +193,11 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed:  true,
 			Sensitive: true,
 		},
+		consts.FieldConnectionTimeout: {
+			Type:     schema.TypeInt,
+			Optional: true,
+			Computed: true,
+		},
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
@@ -297,6 +302,10 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		data[consts.FieldClientTLSKey] = v.(string)
 	}
 
+	if v, ok := d.GetOk(consts.FieldConnectionTimeout); ok {
+		data[consts.FieldConnectionTimeout] = v
+	}
+
 	updateTokenFields(d, data, false)
 
 	log.Printf("[DEBUG] Writing LDAP config %q", path)
@@ -373,6 +382,12 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	if useAPIVer111 {
 		if err := d.Set(consts.FieldMaxPageSize, resp.Data[consts.FieldMaxPageSize]); err != nil {
 			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldMaxPageSize, path, err)
+		}
+	}
+
+	if v, ok := resp.Data[consts.FieldConnectionTimeout]; ok {
+		if err := d.Set(consts.FieldConnectionTimeout, v); err != nil {
+			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldConnectionTimeout, path, err)
 		}
 	}
 

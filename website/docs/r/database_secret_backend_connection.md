@@ -328,6 +328,10 @@ See the [Vault
 
 * `password` - (Optional) The root credential password used in the connection URL.
 
+* `self_managed` - (Optional)  If set, allows onboarding static roles with a rootless 
+  connection configuration. Mutually exclusive with `username` and `password`. 
+  If set, will force `verify_connection` to be false. Requires Vault 1.18+ Enterprise.
+
 * `tls_ca` - (Optional) The x509 CA file for validating the certificate
   presented by the PostgreSQL server. Must be PEM encoded.
 

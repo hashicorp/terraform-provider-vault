@@ -10,16 +10,18 @@ description: |-
 
 Manages a UI custom message in Vault. Custom messages are displayed in the Vault UI either on the login page or immediately after succesfully logging in.
 
+**Note** this feature is available only with Vault Enterprise.
+
 ## Example Usage
 
 ```hcl
 resource "vault_config_ui_custom_message" "maintenance" {
-  title         = "Upcoming maintenance"
-  message       = base64encode("Vault will be offline for planned maintenance on February 1st, 2024 from 05:00Z to 08:00Z")
-  type          = "banner"
-  authenticated = true
-  start_time    = "2024-01-01T00:00:00.000Z"
-  end_time      = "2024-02-01T05:00:00.000Z"
+  title          = "Upcoming maintenance"
+  message_base64 = base64encode("Vault will be offline for planned maintenance on February 1st, 2024 from 05:00Z to 08:00Z")
+  type           = "banner"
+  authenticated  = true
+  start_time     = "2024-01-01T00:00:00.000Z"
+  end_time       = "2024-02-01T05:00:00.000Z"
 }
 ```
 
@@ -34,7 +36,7 @@ The following arguments are supported:
 
 * `title` - (Required) The title of the custom message to create.
 
-* `message` - (Required) The base64-encoded content of the custom message.
+* `message_base64` - (Required) The base64-encoded content of the custom message.
 
 * `start_time` - (Required) The time when the custom message begins to be active. This value can be set to a future time, but cannot
    occur on or after the `end_time` value.
