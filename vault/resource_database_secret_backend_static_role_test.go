@@ -175,13 +175,14 @@ CREATE ROLE "{{name}}" WITH
 
 	// fmt.Printf("\npgxURL.Host: %s\n", pgxURL.Host)
 	// connURL := fmt.Sprintf("postgresql://{{username}}:{{password}}@%s/postgres?sslmode=disable", pgxURL.Host)
-	connURLRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")[0]
+	// connURLRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")[0]
+	connURLTestRoot := "postgres://postgres:secret@localhost:5432/database?sslmode=disable"
 	connURL := fmt.Sprintf("postgres://{{username}}:{{password}}@postgres:5432/database?sslmode=disable")
 	// postgres://postgres:secret@postgres:5432/database?sslmode=disable
 
 	// create static database user
-	testutil.CreateTestPGUser(t, connURLRoot, username, "testpassword", testRoleStaticCreate)
-	testutil.GetTestPGUser(t, connURLRoot, username, "testpassword", testRoleStaticCreate)
+	testutil.CreateTestPGUser(t, connURLTestRoot, username, "testpassword", testRoleStaticCreate)
+	testutil.GetTestPGUser(t, connURLTestRoot, username, "testpassword", testRoleStaticCreate)
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -209,7 +210,7 @@ CREATE ROLE "{{name}}" WITH
 			},
 		},
 	})
-	testutil.GetTestPGUser(t, connURLRoot, username, "testpassword", testRoleStaticCreate)
+	testutil.GetTestPGUser(t, connURLTestRoot, username, "testpassword", testRoleStaticCreate)
 }
 
 func testAccDatabaseSecretBackendStaticRoleCheckDestroy(s *terraform.State) error {
