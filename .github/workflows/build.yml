@@ -76,12 +76,12 @@ jobs:
           - 8200:8200
         volumes:
           - ${{ github.workspace }}:/vault/plugins
-    postgres:
-      image: docker.mirror.hashicorp.services/postgres:latest
-      env:
-        POSTGRES_PASSWORD: secret
-        POSTGRES_DB: database
-      ports:
+      postgres:
+        image: docker.mirror.hashicorp.services/postgres:latest
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: database
+        ports:
           - 5432:5432
     steps:
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
