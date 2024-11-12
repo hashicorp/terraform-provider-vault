@@ -146,7 +146,15 @@ type dbEngine struct {
 // otherwise return the default plugin name.
 // Return an error if no plugin name can be found.
 func (i *dbEngine) GetPluginName(d *schema.ResourceData, prefix string) (string, error) {
+	// first attempt to get the name from DB-specific nested block
 	if val, ok := d.GetOk(prefix + "plugin_name"); ok {
+		return val.(string), nil
+	}
+
+	// next try to see if plugin_name is set as a top-level key
+	// vault_database_secret_backend_connection allows plugin_name to be a
+	// top-level key
+	if val, ok := d.GetOk("plugin_name"); ok {
 		return val.(string), nil
 	}
 
