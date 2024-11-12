@@ -287,6 +287,7 @@ resource "vault_ssh_secret_backend_role" "test_role" {
   allow_user_key_ids          = true
   allowed_critical_options    = "foo,bar"
   allowed_domains             = "example.com,foo.com"
+  allowed_domains_template    = true
   allowed_extensions          = "ext1,ext2"
   default_extensions          = { "ext1" = "" }
   default_extensions_template = true
