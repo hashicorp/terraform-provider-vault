@@ -10,6 +10,7 @@ FEATURES:
 * Update `vault_gcp_secret_impersonated_account` to support setting `ttl` ([#2318](https://github.com/hashicorp/terraform-provider-vault/pull/2318))
 * Add support for `connection_timeout` field for the `vault_ldap_auth_backend` resource ([#2358](https://github.com/hashicorp/terraform-provider-vault/pull/2358))
 * Add support for Rootless Configuration for Static Roles to Postgres DB ([#2341](https://github.com/hashicorp/terraform-provider-vault/pull/2341))
+* Add support for `default_extensions_template` field for the `vault_ssh_secret_backend_role` resource ([#2361](https://github.com/hashicorp/terraform-provider-vault/pull/2361))
 
 ## 4.4.0 (Aug 7, 2024)
 

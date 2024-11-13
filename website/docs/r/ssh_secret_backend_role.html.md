@@ -73,6 +73,8 @@ The following arguments are supported:
 
 * `default_extensions` - (Optional) Specifies a map of extensions that certificates have when signed.
 
+* `default_extensions_template` - (Optional) If set, `default_extensions` can be specified using identity template values. A non-templated user is also permitted.
+
 * `default_critical_options` - (Optional) Specifies a map of critical options that certificates have when signed.
 
 * `allowed_users_template` - (Optional) Specifies if `allowed_users` can be declared using identity template policies. Non-templated users are also permitted.
