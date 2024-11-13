@@ -7,9 +7,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -152,13 +153,12 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 
 // TestAccDatabaseSecretBackendStaticRole_Rootless tests the
 // Rootless Config and Rotation flow for Static Roles.
-// This test sets up a PGX container and creates static users
-// in the DB to test the workflow.
-// Currently only runs locally; Vault CI is unable to talk
-// to the PGX Docker container due to network issues.
+// To run locally you will need to set the following env vars:
+//   - POSTGRES_URL_TEST
+//   - POSTGRES_URL_ROOTLESS
 func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
-	// TODO enable test to run in CI
-	testutil.SkipTestEnvUnset(t, "PGX_ROOTLESS_ROTATION")
+	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
+	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_ROOTLESS")[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	username := acctest.RandomWithPrefix("user")
@@ -172,13 +172,8 @@ CREATE ROLE "{{name}}" WITH
   PASSWORD '{{password}}';
 `
 
-	cleanup, pgxURL := testutil.PrepareTestContainerSelfManaged(t)
-	defer cleanup()
-
-	connURL := fmt.Sprintf("postgresql://{{username}}:{{password}}@%s/postgres?sslmode=disable", pgxURL.Host)
-
 	// create static database user
-	testutil.CreateTestPGUser(t, pgxURL.String(), username, "testpassword", testRoleStaticCreate)
+	testutil.CreateTestPGUser(t, connURLTestRoot, username, "testpassword", testRoleStaticCreate)
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
