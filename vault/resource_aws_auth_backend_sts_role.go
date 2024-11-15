@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -52,6 +53,11 @@ func awsAuthBackendSTSRoleResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
+			consts.FieldExternalID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "External ID expected by the STS role.",
+			},
 		},
 	}
 }
@@ -65,13 +71,17 @@ func awsAuthBackendSTSRoleCreate(d *schema.ResourceData, meta interface{}) error
 	backend := d.Get("backend").(string)
 	accountID := d.Get("account_id").(string)
 	stsRole := d.Get("sts_role").(string)
+	externalID := d.Get(consts.FieldExternalID).(string)
 
 	path := awsAuthBackendSTSRolePath(backend, accountID)
 
+	data := map[string]interface{}{
+		"sts_role":             stsRole,
+		consts.FieldExternalID: externalID,
+	}
+
 	log.Printf("[DEBUG] Writing STS role %q to AWS auth backend", path)
-	_, err := client.Logical().Write(path, map[string]interface{}{
-		"sts_role": stsRole,
-	})
+	_, err := client.Logical().Write(path, data)
 
 	d.SetId(path)
 
@@ -117,6 +127,11 @@ func awsAuthBackendSTSRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("backend", backend)
 	d.Set("account_id", accountID)
 	d.Set("sts_role", resp.Data["sts_role"])
+
+	if v, ok := resp.Data[consts.FieldExternalID]; ok {
+		d.Set(consts.FieldExternalID, v)
+	}
+
 	return nil
 }
 
@@ -127,12 +142,17 @@ func awsAuthBackendSTSRoleUpdate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	stsRole := d.Get("sts_role").(string)
+	externalID := d.Get(consts.FieldExternalID).(string)
+
 	path := d.Id()
 
+	data := map[string]interface{}{
+		"sts_role":             stsRole,
+		consts.FieldExternalID: externalID,
+	}
+
 	log.Printf("[DEBUG] Updating STS role %q in AWS auth backend", path)
-	_, err := client.Logical().Write(path, map[string]interface{}{
-		"sts_role": stsRole,
-	})
+	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		return fmt.Errorf("error updating STS role %q in AWS auth backend", path)
 	}
