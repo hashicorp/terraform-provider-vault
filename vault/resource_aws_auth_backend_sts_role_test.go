@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -20,13 +21,14 @@ func TestAccAWSAuthBackendSTSRole_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	accountID := strconv.Itoa(acctest.RandInt())
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
+	externalID := "external-id"
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		ProviderFactories: providerFactories,
 		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn),
+				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn, externalID),
 				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, arn),
 			},
 			{
@@ -43,17 +45,30 @@ func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
 	accountID := strconv.Itoa(acctest.RandInt())
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
 	updatedArn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
+	externalID := "external-id"
+	updatedExternalID := "external-id-updated"
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		ProviderFactories: providerFactories,
 		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn),
+				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn, ""),
 				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, arn),
 			},
 			{
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, updatedArn),
+				// Add external ID.
+				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn, externalID),
+				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, arn),
+			},
+			{
+				// Update ARN and external ID.
+				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, updatedArn, updatedExternalID),
+				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, updatedArn),
+			},
+			{
+				// Remove external ID.
+				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, updatedArn, ""),
 				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, updatedArn),
 			},
 		},
@@ -115,7 +130,8 @@ func testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, stsRole string)
 		}
 
 		attrs := map[string]string{
-			"sts_role": "sts_role",
+			"sts_role":             "sts_role",
+			consts.FieldExternalID: consts.FieldExternalID,
 		}
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
@@ -129,17 +145,31 @@ func testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, stsRole string)
 	}
 }
 
-func testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, stsRole string) string {
+func testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, stsRole, externalID string) string {
+	roleResource := fmt.Sprintf(`
+resource "vault_aws_auth_backend_sts_role" "role" {
+	backend = vault_auth_backend.aws.path
+	account_id = "%s"
+	sts_role = "%s"
+}
+`, accountID, stsRole)
+
+	if externalID != "" {
+		roleResource = fmt.Sprintf(`
+resource "vault_aws_auth_backend_sts_role" "role" {
+	backend = vault_auth_backend.aws.path
+	account_id = "%s"
+	sts_role = "%s"
+	external_id = "%s"
+}
+`, accountID, stsRole, externalID)
+	}
+
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "aws" {
   type = "aws"
   path = "%s"
 }
-
-resource "vault_aws_auth_backend_sts_role" "role" {
-  backend = vault_auth_backend.aws.path
-  account_id = "%s"
-  sts_role = "%s"
-}
-`, backend, accountID, stsRole)
+%s
+`, backend, roleResource)
 }
