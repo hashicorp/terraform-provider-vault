@@ -335,6 +335,12 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Default:     5,
 						Description: "The number of seconds to use as a connection timeout.",
 					},
+					"skip_verification": {
+						Type:        schema.TypeBool,
+						Optional:    true,
+						Default:     false,
+						Description: "Skip permissions checks when a connection to Cassandra is first created. These checks ensure that Vault is able to create roles, but can be resource intensive in clusters with many roles.",
+					},
 				},
 			},
 			MaxItems:      1,
@@ -824,6 +830,13 @@ func postgresConnectionStringResource() *schema.Resource {
 		Description: "The secret key used for the x509 client certificate. Must be PEM encoded.",
 		Sensitive:   true,
 	}
+
+	r.Schema["self_managed"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "If set, allows onboarding static roles with a rootless connection configuration.",
+	}
+
 	return r
 }
 
@@ -1041,6 +1054,9 @@ func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOkExists(prefix + "connect_timeout"); ok {
 		data["connect_timeout"] = v.(int)
 	}
+	if v, ok := d.GetOkExists(prefix + "skip_verification"); ok {
+		data["skip_verification"] = v.(bool)
+	}
 }
 
 func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
@@ -1145,6 +1161,11 @@ func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 		result["private_key"] = d.Get(prefix + "private_key")
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := data["self_managed"]; ok {
+			result["self_managed"] = v.(bool)
+		}
+	}
 	return result
 }
 
@@ -1547,6 +1568,12 @@ func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 		}
 		if v, ok := d.GetOk(prefix + "private_key"); ok {
 			data["private_key"] = v.(string)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOk(prefix + "self_managed"); ok {
+			data["self_managed"] = v.(bool)
 		}
 	}
 }
@@ -2069,6 +2096,9 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 				return nil, fmt.Errorf("unexpected non-number %q returned as connect_timeout from Vault: %s", v, err)
 			}
 			result["connect_timeout"] = timeout
+		}
+		if v, ok := data["skip_verification"]; ok {
+			result["skip_verification"] = v.(bool)
 		}
 		return result, nil
 	}
