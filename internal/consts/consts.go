@@ -438,6 +438,10 @@ const (
 	FieldMaxRetries                    = "max_retries"
 	FieldSessionTags                   = "session_tags"
 	FieldSelfManagedPassword           = "self_managed_password"
+	FieldsCreatedOn                    = "created_on"
+	FieldEabKey                        = "key"
+	FieldAcmeDirectory                 = "acme_directory"
+	FieldEabId                         = "eab_id"
 
 	/*
 		common environment variables

@@ -631,6 +631,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigIssuers()),
 			PathInventory: []string{"/pki/config/issuers"},
 		},
+		"vault_pki_secret_backend_acme_eab": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendAcmeEabResource()),
+			PathInventory: []string{"/pki/acme/new-eab"},
+		},
 		"vault_quota_lease_count": {
 			Resource:      UpdateSchemaResource(quotaLeaseCountResource()),
 			PathInventory: []string{"/sys/quotas/lease-count/{name}"},
