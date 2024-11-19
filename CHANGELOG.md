@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* Add new resource `vault_pki_secret_backend_acme_eab` to manage PKI ACME external account binding tokens. Requires Vault 1.14+. ([#2367](https://github.com/hashicorp/terraform-provider-vault/pull/2367))
+
 ## 4.5.0 (Nov 19, 2024)
 
 FEATURES:
