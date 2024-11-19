@@ -1,6 +1,6 @@
 ## Unreleased
 
-## 4.4.0 (Aug 7, 2024)
+## 4.5.0 (Nov 19, 2024)
 
 FEATURES:
 
