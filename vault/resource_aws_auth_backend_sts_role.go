@@ -76,8 +76,11 @@ func awsAuthBackendSTSRoleCreate(d *schema.ResourceData, meta interface{}) error
 	path := awsAuthBackendSTSRolePath(backend, accountID)
 
 	data := map[string]interface{}{
-		"sts_role":             stsRole,
-		consts.FieldExternalID: externalID,
+		"sts_role": stsRole,
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		data[consts.FieldExternalID] = externalID
 	}
 
 	log.Printf("[DEBUG] Writing STS role %q to AWS auth backend", path)
@@ -128,8 +131,10 @@ func awsAuthBackendSTSRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("account_id", accountID)
 	d.Set("sts_role", resp.Data["sts_role"])
 
-	if v, ok := resp.Data[consts.FieldExternalID]; ok {
-		d.Set(consts.FieldExternalID, v)
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		if v, ok := resp.Data[consts.FieldExternalID]; ok {
+			d.Set(consts.FieldExternalID, v)
+		}
 	}
 
 	return nil
@@ -147,8 +152,11 @@ func awsAuthBackendSTSRoleUpdate(d *schema.ResourceData, meta interface{}) error
 	path := d.Id()
 
 	data := map[string]interface{}{
-		"sts_role":             stsRole,
-		consts.FieldExternalID: externalID,
+		"sts_role": stsRole,
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		data[consts.FieldExternalID] = externalID
 	}
 
 	log.Printf("[DEBUG] Updating STS role %q in AWS auth backend", path)
