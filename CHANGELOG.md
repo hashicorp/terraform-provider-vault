@@ -12,6 +12,7 @@ FEATURES:
 * Add support for `connection_timeout` field for the `vault_ldap_auth_backend` resource ([#2358](https://github.com/hashicorp/terraform-provider-vault/pull/2358))
 * Add support for Rootless Configuration for Static Roles to Postgres DB ([#2341](https://github.com/hashicorp/terraform-provider-vault/pull/2341))
 * Add support for `use_annotations_as_alias_metadata` field for the `vault_kubernetes_auth_backend_config` resource ([#2226](https://github.com/hashicorp/terraform-provider-vault/pull/2226))
+* Add support for `external_id` field for the `vault_aws_auth_backend_sts_role` resource ([#2370](https://github.com/hashicorp/terraform-provider-vault/pull/2370))
 
 BUGS:
 
