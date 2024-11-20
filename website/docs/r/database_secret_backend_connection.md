@@ -124,6 +124,9 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
 
+* `skip_verification` - (Optional) Skip permissions checks when a connection to Cassandra is first created. 
+  These checks ensure that Vault is able to create roles, but can be resource intensive in clusters with many roles.
+
 ### Couchbase Configuration Options
 
 * `hosts` - (Required) A set of Couchbase URIs to connect to. Must use `couchbases://` scheme if `tls` is `true`.
@@ -324,6 +327,10 @@ See the [Vault
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+
+* `self_managed` - (Optional)  If set, allows onboarding static roles with a rootless 
+  connection configuration. Mutually exclusive with `username` and `password`. 
+  If set, will force `verify_connection` to be false. Requires Vault 1.18+ Enterprise.
 
 * `tls_ca` - (Optional) The x509 CA file for validating the certificate
   presented by the PostgreSQL server. Must be PEM encoded.

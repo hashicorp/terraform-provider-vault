@@ -63,11 +63,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.13.13-ent"
         - "vault-enterprise:1.14.13-ent"
-        - "vault-enterprise:1.15.12-ent"
-        - "vault-enterprise:1.16.6-ent"
-        - "vault-enterprise:1.17.2-ent"
+        - "vault-enterprise:1.15.16-ent"
+        - "vault-enterprise:1.16.12-ent"
+        - "vault-enterprise:1.17.8-ent"
+        - "vault-enterprise:1.18.1-ent"
         - "vault:latest"
     services:
       vault:
@@ -205,7 +205,14 @@ jobs:
           MYSQL_CONNECTION_PASSWORD: "mysql"
           MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
+          # POSTGRES_URL is the standard root conn URL for Vault
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
+          # POSTGRES_URL_TEST is used by the TFVP test to connect directly to
+          # the postgres container. Note: the host is "localhost" because the
+          # TFVP tests do not run in the same docker network.
+          POSTGRES_URL_TEST: "postgres://postgres:secret@localhost:5432/database?sslmode=disable"
+          # POSTGRES_URL_ROOTLESS is used by Vault to connect to the postgres container.
+          POSTGRES_URL_ROOTLESS: "postgres://{{username}}:{{password}}@postgres:5432/database?sslmode=disable"
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
