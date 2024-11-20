@@ -22,17 +22,35 @@ func TestAccAWSAuthBackendSTSRole_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	accountID := strconv.Itoa(acctest.RandInt())
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
-	externalID := "external-id"
 
-	importStateVerifyIgnore := make([]string, 0)
-	// Ignore external_id if Vault version is < 1.17.0.
-	if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion117) {
-		importStateVerifyIgnore = append(importStateVerifyIgnore, consts.FieldExternalID)
-	}
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn, ""),
+				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, arn),
+			},
+			{
+				ResourceName:      "vault_aws_auth_backend_sts_role.role",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccAWSAuthBackendSTSRole_importWithExternalID(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	accountID := strconv.Itoa(acctest.RandInt())
+	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
+	externalID := "external-id"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		ProviderFactories: providerFactories,
 		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
@@ -42,10 +60,9 @@ func TestAccAWSAuthBackendSTSRole_import(t *testing.T) {
 				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, arn),
 			},
 			{
-				ResourceName:            "vault_aws_auth_backend_sts_role.role",
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: importStateVerifyIgnore,
+				ResourceName:      "vault_aws_auth_backend_sts_role.role",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
