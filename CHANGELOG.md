@@ -1,5 +1,7 @@
 ## Unreleased
 
+* Add new data source `vault_transit_secret_backend_key`. ([#2327](https://github.com/hashicorp/terraform-provider-vault/pull/2327))
+
 ## 4.5.0 (Nov 19, 2024)
 
 FEATURES:
