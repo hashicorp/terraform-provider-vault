@@ -35,7 +35,7 @@ func TestAccAWSAuthBackendSTSRole_withExternalID(t *testing.T) {
 		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn, externalID),
+				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, arn, externalID),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "account_id", accountID),
@@ -45,7 +45,7 @@ func TestAccAWSAuthBackendSTSRole_withExternalID(t *testing.T) {
 			},
 			{
 				// Update external ID.
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn, updatedExternalID),
+				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, arn, updatedExternalID),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "account_id", accountID),
@@ -73,12 +73,12 @@ func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn, ""),
+				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, arn, ""),
 				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, arn),
 			},
 			{
 				// Update ARN.
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, updatedArn, ""),
+				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, updatedArn, ""),
 				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, updatedArn),
 			},
 			{
@@ -159,7 +159,7 @@ func testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, stsRole string)
 	}
 }
 
-func testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, stsRole, externalID string) string {
+func testAccAWSAuthBackendSTSRoleConfig(backend, accountID, stsRole, externalID string) string {
 	backendResource := fmt.Sprintf(`
 resource "vault_auth_backend" "aws" {
 	type = "aws"
