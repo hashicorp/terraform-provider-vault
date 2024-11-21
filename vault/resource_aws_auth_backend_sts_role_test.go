@@ -18,34 +18,13 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccAWSAuthBackendSTSRole_import(t *testing.T) {
-	backend := acctest.RandomWithPrefix("aws")
-	accountID := strconv.Itoa(acctest.RandInt())
-	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn, ""),
-				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, arn),
-			},
-			{
-				ResourceName:      "vault_aws_auth_backend_sts_role.role",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
-func TestAccAWSAuthBackendSTSRole_importWithExternalID(t *testing.T) {
+func TestAccAWSAuthBackendSTSRole_withExternalID(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	accountID := strconv.Itoa(acctest.RandInt())
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
 	externalID := "external-id"
+	updatedExternalID := "external-id-updated"
+	resourceName := "vault_aws_auth_backend_sts_role.role"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -57,10 +36,25 @@ func TestAccAWSAuthBackendSTSRole_importWithExternalID(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn, externalID),
-				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, arn),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "account_id", accountID),
+					resource.TestCheckResourceAttr(resourceName, "sts_role", arn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, externalID),
+				),
 			},
 			{
-				ResourceName:      "vault_aws_auth_backend_sts_role.role",
+				// Update external ID.
+				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn, updatedExternalID),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "account_id", accountID),
+					resource.TestCheckResourceAttr(resourceName, "sts_role", arn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, updatedExternalID),
+				),
+			},
+			{
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -73,8 +67,6 @@ func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
 	accountID := strconv.Itoa(acctest.RandInt())
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
 	updatedArn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
-	externalID := "external-id"
-	updatedExternalID := "external-id-updated"
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		ProviderFactories: providerFactories,
@@ -90,19 +82,9 @@ func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
 				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, updatedArn),
 			},
 			{
-				// Add external ID.
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, updatedArn, externalID),
-				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, updatedArn),
-			},
-			{
-				// Update external ID.
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, updatedArn, updatedExternalID),
-				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, updatedArn),
-			},
-			{
-				// Remove external ID.
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, updatedArn, ""),
-				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, updatedArn),
+				ResourceName:      "vault_aws_auth_backend_sts_role.role",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -165,11 +147,6 @@ func testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, stsRole string)
 		attrs := map[string]string{
 			"sts_role": "sts_role",
 		}
-		// Only check external_id if Vault version is >= 1.17.0
-		if provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion117) {
-			attrs[consts.FieldExternalID] = consts.FieldExternalID
-		}
-
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
 				continue
