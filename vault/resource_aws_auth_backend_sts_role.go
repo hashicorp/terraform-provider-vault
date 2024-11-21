@@ -133,7 +133,9 @@ func awsAuthBackendSTSRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	if provider.IsAPISupported(meta, provider.VaultVersion117) {
 		if v, ok := resp.Data[consts.FieldExternalID]; ok {
-			d.Set(consts.FieldExternalID, v)
+			if err := d.Set(consts.FieldExternalID, v); err != nil {
+				return err
+			}
 		}
 	}
 
