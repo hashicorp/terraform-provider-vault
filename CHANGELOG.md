@@ -2,6 +2,7 @@
 
 FEATURES:
 
+* Update `vault_database_secret_backend_connection`to support `password_authentication` for PostgreSQL, allowing to encrypt password before being passed to PostgreSQL ([#2371](https://github.com/hashicorp/terraform-provider-vault/pull/2371))
 * Add support for `external_id` field for the `vault_aws_auth_backend_sts_role` resource ([#2370](https://github.com/hashicorp/terraform-provider-vault/pull/2370))
 
 ## 4.5.0 (Nov 19, 2024)

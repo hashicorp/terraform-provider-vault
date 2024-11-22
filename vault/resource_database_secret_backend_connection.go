@@ -836,6 +836,12 @@ func postgresConnectionStringResource() *schema.Resource {
 		Optional:    true,
 		Description: "If set, allows onboarding static roles with a rootless connection configuration.",
 	}
+	r.Schema["password_authentication"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Default:     "password",
+		Description: "When set to `scram-sha-256`, passwords will be hashed by Vault before being sent to PostgreSQL.",
+	}
 
 	return r
 }
@@ -1147,6 +1153,12 @@ func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 			if v, ok := data["service_account_json"]; ok {
 				result["service_account_json"] = v.(string)
 			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion114) {
+		if v, ok := data["password_authentication"]; ok {
+			result["password_authentication"] = v.(string)
 		}
 	}
 
@@ -1568,6 +1580,12 @@ func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 		}
 		if v, ok := d.GetOk(prefix + "private_key"); ok {
 			data["private_key"] = v.(string)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion114) {
+		if v, ok := d.GetOk(prefix + "password_authentication"); ok {
+			data["password_authentication"] = v.(string)
 		}
 	}
 
