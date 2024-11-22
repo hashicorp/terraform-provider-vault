@@ -51,7 +51,7 @@ The following arguments are supported:
 * `backend` - (Optional) The path the AWS auth backend being configured was
    mounted at.  Defaults to `aws`.
 
-* `external_id` - (Optional) External ID expected by the STS role. The associated STS role must be configured to require the external ID.
+* `external_id` - (Optional) External ID expected by the STS role. The associated STS role must be configured to require the external ID. Requires Vault 1.17+.
 
 ## Attributes Reference
 
