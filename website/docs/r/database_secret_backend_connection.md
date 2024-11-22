@@ -340,7 +340,7 @@ See the [Vault
 
 * `password_authentication` - (Optional) When set to `scram-sha-256`, passwords will be
   hashed by Vault before being sent to PostgreSQL. See the [Vault docs](https://www.vaultproject.io/api-docs/secret/databases/postgresql.html#sample-payload)
-  for an example.
+  for an example. Requires Vault 1.14+.
 
 * `private_key` - (Optional) The secret key used for the x509 client
   certificate. Must be PEM encoded.
