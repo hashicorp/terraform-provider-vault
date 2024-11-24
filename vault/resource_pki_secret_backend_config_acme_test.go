@@ -57,10 +57,6 @@ func TestPkiSecretBackendConfigACME_basic(t *testing.T) {
 			{
 				Config: testPkiSecretBackendConfigACME(backend, "role:test", "*", "*", "always-required", "",
 					true, true),
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !provider.IsAPISupported(meta, provider.VaultVersion1141), nil
-				},
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldEnabled, "true"),

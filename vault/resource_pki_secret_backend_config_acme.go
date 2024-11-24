@@ -12,11 +12,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -39,19 +37,7 @@ func pkiSecretBackendConfigACMEResource() *schema.Resource {
 		UpdateContext: pkiSecretBackendConfigACMEUpdate,
 		DeleteContext: pkiSecretBackendConfigACMEDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: func(_ context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-				id := d.Id()
-				if id == "" {
-					return nil, fmt.Errorf("no path set for import, id=%q", id)
-				}
-
-				parts := strings.Split(util.NormalizeMountPath(id), "/")
-				if err := d.Set("backend", parts[0]); err != nil {
-					return nil, err
-				}
-
-				return []*schema.ResourceData{d}, nil
-			},
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -75,8 +61,6 @@ func pkiSecretBackendConfigACMEResource() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 				Description: "Specifies the policy to be used for non-role-qualified ACME requests.",
-				ValidateFunc: validation.StringMatch(
-					regexp.MustCompile(`^(forbid|sign-verbatim|role:.+|external-policy(?:\:.+)?)$`), ""),
 			},
 			consts.FieldAllowedRoles: {
 				Type:        schema.TypeList,
@@ -106,16 +90,12 @@ func pkiSecretBackendConfigACMEResource() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 				Description: "Specifies the policy to use for external account binding behaviour.",
-				ValidateFunc: validation.StringInSlice(
-					[]string{"not-required", "new-account-required", "always-required"}, false),
 			},
 			consts.FieldDnsResolver: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: "DNS resolver to use for domain resolution on this mount. " +
 					"Must be in the format <host>:<port>, with both parts mandatory.",
-				ValidateFunc: validation.StringMatch(
-					regexp.MustCompile(`^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{1,5})?$`), ""),
 			},
 		},
 	}
@@ -195,9 +175,7 @@ func pkiSecretBackendConfigACMERead(ctx context.Context, d *schema.ResourceData,
 	}
 
 	if resp == nil {
-		d.SetId("")
-
-		return nil
+		return diag.Errorf("got nil response from Vault from path: %q", path)
 	}
 
 	// set backend and issuerRef
