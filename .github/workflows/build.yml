@@ -65,9 +65,9 @@ jobs:
         image:
         - "vault-enterprise:1.14.13-ent"
         - "vault-enterprise:1.15.16-ent"
-        - "vault-enterprise:1.16.11-ent"
-        - "vault-enterprise:1.17.7-ent"
-        - "vault-enterprise:1.18.0-ent"
+        - "vault-enterprise:1.16.12-ent"
+        - "vault-enterprise:1.17.8-ent"
+        - "vault-enterprise:1.18.1-ent"
         - "vault:latest"
     services:
       vault:

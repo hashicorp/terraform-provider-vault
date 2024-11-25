@@ -6,31 +6,55 @@ package vault
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccAWSAuthBackendSTSRole_import(t *testing.T) {
+func TestAccAWSAuthBackendSTSRole_withExternalID(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	accountID := strconv.Itoa(acctest.RandInt())
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
+	externalID := "external-id"
+	updatedExternalID := "external-id-updated"
+	resourceName := "vault_aws_auth_backend_sts_role.role"
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+		},
 		ProviderFactories: providerFactories,
 		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn),
-				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, arn),
+				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, arn, externalID),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "account_id", accountID),
+					resource.TestCheckResourceAttr(resourceName, "sts_role", arn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, externalID),
+				),
 			},
 			{
-				ResourceName:      "vault_aws_auth_backend_sts_role.role",
+				// Update external ID.
+				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, arn, updatedExternalID),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "account_id", accountID),
+					resource.TestCheckResourceAttr(resourceName, "sts_role", arn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, updatedExternalID),
+				),
+			},
+			{
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -49,12 +73,18 @@ func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, arn),
+				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, arn, ""),
 				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, arn),
 			},
 			{
-				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, updatedArn),
+				// Update ARN.
+				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, updatedArn, ""),
 				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, updatedArn),
+			},
+			{
+				ResourceName:      "vault_aws_auth_backend_sts_role.role",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -129,17 +159,28 @@ func testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, stsRole string)
 	}
 }
 
-func testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, stsRole string) string {
-	return fmt.Sprintf(`
+func testAccAWSAuthBackendSTSRoleConfig(backend, accountID, stsRole, externalID string) string {
+	backendResource := fmt.Sprintf(`
 resource "vault_auth_backend" "aws" {
-  type = "aws"
-  path = "%s"
-}
+	type = "aws"
+	path = "%s"
+}`, backend)
 
+	roleResourceOptionalFields := ""
+	if externalID != "" {
+		roleResourceOptionalFields += fmt.Sprintf(`
+	external_id = "%s"`, externalID)
+	}
+
+	roleResource := fmt.Sprintf(`
 resource "vault_aws_auth_backend_sts_role" "role" {
-  backend = vault_auth_backend.aws.path
-  account_id = "%s"
-  sts_role = "%s"
+	backend = vault_auth_backend.aws.path
+	account_id = "%s"
+	sts_role = "%s"%s
 }
-`, backend, accountID, stsRole)
+`, accountID, stsRole, roleResourceOptionalFields)
+
+	resources := []string{backendResource, roleResource}
+
+	return strings.Join(resources, "\n")
 }
