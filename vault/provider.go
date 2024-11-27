@@ -95,6 +95,10 @@ var (
 			Resource:      UpdateSchemaResource(awsStaticCredDataSource()),
 			PathInventory: []string{"/aws/static-creds/{name}"},
 		},
+		"vault_database_static_access_credentials": {
+			Resource:      UpdateSchemaResource(databaseStaticCredDataSource()),
+			PathInventory: []string{"/database/static-creds/{name}"},
+		},
 		"vault_azure_access_credentials": {
 			Resource:      UpdateSchemaResource(azureAccessCredentialsDataSource()),
 			PathInventory: []string{"/azure/creds/{role}"},
