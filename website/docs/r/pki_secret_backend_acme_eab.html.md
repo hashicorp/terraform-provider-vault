@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_pki_secret_backend_acme_eab resource"
 sidebar_current: "docs-vault-resource-pki-secret-backend-acme-eab"
 description: |-
-  Sets the EST configuration on a PKI Secret Backend for Vault.
+  Creates ACME EAB tokens within the PKI Secret Backend for Vault.
 ---
 
 # vault\_pki\_secret\_backend\_acme_eab
@@ -40,8 +40,7 @@ The following arguments are supported:
 
 * `role` - (Optional) Create an EAB token that is specific to a role's ACME directory.
 
-**NOTE**: EAB tokens are specific to an ACME directory. Within Vault ACME there are different
-ACME directories. 
+**NOTE**: Within Vault ACME there are different ACME directories which an EAB token is associated with;
 
  1. Default directory (`pki/acme/`) - Do not specify a value for issuer nor role parameters.
  2. Issuer specific (`pki/issuer/:issuer_ref/acme/`) - Specify a value for the issuer parameter
