@@ -445,6 +445,10 @@ const (
 	FieldDnsResolver                   = "dns_resolver"
 	FieldEabPolicy                     = "eab_policy"
 	FieldCnValidations                 = "cn_validations"
+	FieldsCreatedOn                    = "created_on"
+	FieldEabKey                        = "key"
+	FieldAcmeDirectory                 = "acme_directory"
+	FieldEabId                         = "eab_id"
 	/*
 		common environment variables
 	*/

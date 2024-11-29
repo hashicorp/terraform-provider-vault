@@ -6,6 +6,7 @@ FEATURES:
 * Add support for `external_id` field for the `vault_aws_auth_backend_sts_role` resource ([#2370](https://github.com/hashicorp/terraform-provider-vault/pull/2370))
 * Add support for ACME configuration with the `vault_pki_secret_backend_config_acme` resource. Requires Vault 1.14+ ([#2157](https://github.com/hashicorp/terraform-provider-vault/pull/2157)).
 * Update `vault_pki_secret_backend_role` to support the `cn_validations` role field ([#1820](https://github.com/hashicorp/terraform-provider-vault/pull/1820)).
+* Add new resource `vault_pki_secret_backend_acme_eab` to manage PKI ACME external account binding tokens. Requires Vault 1.14+. ([#2367](https://github.com/hashicorp/terraform-provider-vault/pull/2367))
 
 ## 4.5.0 (Nov 19, 2024)
 
