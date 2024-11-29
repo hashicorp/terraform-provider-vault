@@ -180,6 +180,9 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
 		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.#", "1"),
 		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
+		resource.TestCheckResourceAttr(resourceName, "cn_validations.#", "2"),
+		resource.TestCheckTypeSetElemAttr(resourceName, "cn_validations.*", "email"),
+		resource.TestCheckTypeSetElemAttr(resourceName, "cn_validations.*", "hostname"),
 	}
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -320,6 +323,8 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
 					resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
 					resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
+					resource.TestCheckResourceAttr(resourceName, "cn_validations.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "cn_validations.*", "disabled"),
 				),
 			},
 			{
@@ -391,6 +396,7 @@ resource "vault_pki_secret_backend_role" "test" {
   basic_constraints_valid_for_non_ca = false
   not_before_duration                = "45m"
   allowed_serial_numbers             = ["*"]
+  cn_validations					 = ["email", "hostname"]
 }
 `, path, name, roleTTL, maxTTL, extraConfig)
 }
@@ -446,6 +452,7 @@ resource "vault_pki_secret_backend_role" "test" {
   basic_constraints_valid_for_non_ca = false
   not_before_duration = "45m"
   allowed_serial_numbers = ["*"]
+  cn_validations = ["disabled"]
 }`, path, name, policyIdentifiers)
 }
 

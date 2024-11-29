@@ -579,6 +579,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendCrlConfigResource()),
 			PathInventory: []string{"/pki/config/crl"},
 		},
+		"vault_pki_secret_backend_config_acme": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigACMEResource()),
+			PathInventory: []string{"/pki/config/acme"},
+		},
 		"vault_pki_secret_backend_config_ca": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCAResource()),
 			PathInventory: []string{"/pki/config/ca"},

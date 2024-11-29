@@ -812,6 +812,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password_authentication", "password"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_open_connections", maxOpenConnections),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_idle_connections", maxIdleConnections),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_connection_lifetime", maxConnLifetime),
@@ -831,6 +832,12 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.disable_escaping", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", ""),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql_password_authentication(name, backend, parsedURL),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password_authentication", "scram-sha-256"),
 				),
 			},
 		},
@@ -1771,6 +1778,27 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, parsedURL.String())
 }
 
+func testAccDatabaseSecretBackendConnectionConfig_postgresql_password_authentication(name, path string, parsedURL *url.URL) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  postgresql {
+	  connection_url          = "%s"
+	  password_authentication = "scram-sha-256"
+  }
+}
+`, path, name, parsedURL.String())
+}
+
 func testAccDatabaseSecretBackendConnectionConfig_postgresql_tls(name, path, tlsCA, tlsCert, privateKey string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
@@ -1849,7 +1877,7 @@ resource "vault_database_secret_backend_connection" "test" {
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
 
-  snowflake { 
+  snowflake {
     connection_url = "%s"
     username = "%s"
     password = "%s"
