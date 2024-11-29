@@ -174,8 +174,8 @@ func (l *AuthLoginAzure) Login(client *api.Client) (*api.Secret, error) {
 }
 
 func (l *AuthLoginAzure) getJWT(ctx context.Context) (string, error) {
-	if v, ok := l.params[consts.FieldJWT]; ok {
-		return v.(string), nil
+	if jwt, ok := l.params[consts.FieldJWT].(string); ok && jwt != "" {
+		return jwt, nil
 	}
 
 	// attempt to get the token from Azure
