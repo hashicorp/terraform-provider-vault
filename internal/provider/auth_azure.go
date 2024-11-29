@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-const defaultAzureScope = "https://management.azure.com/"
+const defaultAzureScope = "https://management.azure.com//.default"
 
 func init() {
 	field := consts.FieldAuthLoginAzure
@@ -53,18 +53,6 @@ func GetAzureLoginSchemaResource(authField string) *schema.Resource {
 				Required:    true,
 				Description: "Name of the login role.",
 			},
-			consts.FieldSubscriptionID: {
-				Type:     schema.TypeString,
-				Required: true,
-				Description: "The subscription ID for the machine that generated the MSI token. " +
-					"This information can be obtained through instance metadata.",
-			},
-			consts.FieldResourceGroupName: {
-				Type:     schema.TypeString,
-				Required: true,
-				Description: "The resource group for the machine that generated the MSI token. " +
-					"This information can be obtained through instance metadata.",
-			},
 			consts.FieldVMName: {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -83,12 +71,6 @@ func GetAzureLoginSchemaResource(authField string) *schema.Resource {
 				Optional: true,
 				Description: "Provides the tenant ID to use in a multi-tenant " +
 					"authentication scenario.",
-				ConflictsWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldJWT)},
-			},
-			consts.FieldClientID: {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "The identity's client ID.",
 				ConflictsWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldJWT)},
 			},
 			consts.FieldScope: {
@@ -138,7 +120,7 @@ func (l *AuthLoginAzure) Init(d *schema.ResourceData, authField string) (AuthLog
 }
 
 func (l *AuthLoginAzure) requiredParams() []string {
-	return []string{consts.FieldRole, consts.FieldSubscriptionID, consts.FieldResourceGroupName}
+	return []string{consts.FieldRole}
 }
 
 // Method name for the azure authentication engine.
@@ -178,13 +160,8 @@ func (l *AuthLoginAzure) getJWT(ctx context.Context) (string, error) {
 		return jwt, nil
 	}
 
-	// attempt to get the token from Azure
-	credOpts := &azidentity.ManagedIdentityCredentialOptions{}
-	if v, ok := l.params[consts.FieldClientID]; ok {
-		credOpts.ID = azidentity.ClientID(v.(string))
-	}
-
-	creds, err := azidentity.NewManagedIdentityCredential(credOpts)
+	// Initialize DefaultAzureCredential
+	creds, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return "", err
 	}
