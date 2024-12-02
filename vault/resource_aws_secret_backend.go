@@ -99,6 +99,21 @@ func awsSecretBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies a custom HTTP STS endpoint to use.",
 			},
+			consts.FieldSTSRegion: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies a custom STS region to use.",
+			},
+			consts.FieldSTSFallbackEndpoints: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Specifies a list of custom STS fallback endpoints to use (in order).",
+			},
+			consts.FieldSTSFallbackRegions: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Specifies a list of custom STS fallback regions to use (in order).",
+			},
 			consts.FieldUsernameTemplate: {
 				Type:        schema.TypeString,
 				Optional:    true,
