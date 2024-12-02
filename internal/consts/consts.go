@@ -530,6 +530,7 @@ const (
 	VaultVersion116 = "1.16.0"
 	VaultVersion117 = "1.17.0"
 	VaultVersion118 = "1.18.0"
+	VaultVersion119 = "1.19.0"
 
 	/*
 		Vault auth methods
