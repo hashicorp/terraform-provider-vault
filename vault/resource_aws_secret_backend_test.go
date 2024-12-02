@@ -223,7 +223,7 @@ func testAccAWSSecretBackendConfig_fallback(path, accessKey, secretKey string) s
 	return fmt.Sprintf(`
 resource "vault_aws_secret_backend" "test" {
   path = "%s"
-  description = "test description updated"
+  description = "test description"
   default_lease_ttl_seconds = 1800
   max_lease_ttl_seconds = 43200
   access_key = "%s"
