@@ -107,11 +107,13 @@ func awsSecretBackendResource() *schema.Resource {
 			},
 			consts.FieldSTSFallbackEndpoints: {
 				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Optional:    true,
 				Description: "Specifies a list of custom STS fallback endpoints to use (in order).",
 			},
 			consts.FieldSTSFallbackRegions: {
 				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Optional:    true,
 				Description: "Specifies a list of custom STS fallback regions to use (in order).",
 			},
@@ -343,7 +345,6 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 			}
 
 			if v, ok := resp.Data[consts.FieldSTSFallbackRegions]; ok {
-				g
 				if err := d.Set(consts.FieldSTSFallbackRegions, v); err != nil {
 					return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldSTSFallbackRegions, path, err)
 				}
