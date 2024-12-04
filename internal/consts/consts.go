@@ -437,6 +437,8 @@ const (
 	FieldTune                          = "tune"
 	FieldMaxRetries                    = "max_retries"
 	FieldSessionTags                   = "session_tags"
+	FieldTokenType                     = "token_type"
+	FieldUserLockoutConfig             = "user_lockout_config"
 
 	/*
 		common environment variables

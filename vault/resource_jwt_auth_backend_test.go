@@ -295,6 +295,96 @@ func TestJWTAuthBackend_remount(t *testing.T) {
 	})
 }
 
+func TestJWTAuthBackend_authMountSchema(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-auth-jwt")
+
+	resourceName := "vault_jwt_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendConfig_authMountSchema(path, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "test desc"),
+					resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "36000"),
+					resource.TestCheckResourceAttr(resourceName, "token_type", "default-service"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "hidden"),
+				),
+			},
+			{
+				Config: testAccJWTAuthBackendConfig_authMountSchema(path, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "test desc updated"),
+					resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "48000"),
+					resource.TestCheckResourceAttr(resourceName, "token_type", "batch"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.2", "header3"),
+					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
+				),
+			},
+			// TODO user_lockout_config can not be read
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldDisableRemount,
+				"user_lockout_config.%",
+				"user_lockout_config.lockout_counter_reset_duration",
+				"user_lockout_config.lockout_duration",
+				"user_lockout_config.lockout_threshold",
+			),
+		},
+	})
+}
+
+func testAccJWTAuthBackendConfig_authMountSchema(path string, isUpdate bool) string {
+	if !isUpdate {
+
+		return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path 					      = "%s"
+  description 			      = "test desc"
+  oidc_discovery_url          = "https://myco.auth0.com/"
+  default_lease_ttl_seconds   = 3600
+  max_lease_ttl_seconds       = 36000
+  passthrough_request_headers = ["header1", "header2"]
+  allowed_response_headers    = ["header1", "header2"]
+  listing_visibility          = "hidden"
+}`, path)
+	} else {
+		return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path 					      = "%s"
+  description 			      = "test desc updated"
+  oidc_discovery_url          = "https://myco.auth0.com/"
+  default_lease_ttl_seconds   = 7200
+  max_lease_ttl_seconds       = 48000
+  passthrough_request_headers = ["header1", "header2"]
+  allowed_response_headers    = ["header1", "header2", "header3"]
+  listing_visibility          = "unauth"
+  token_type				  = "batch"
+}`, path)
+	}
+}
+
 func testAccJWTAuthBackendConfig(path, ns string, local bool) string {
 	c := fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "jwt" {
