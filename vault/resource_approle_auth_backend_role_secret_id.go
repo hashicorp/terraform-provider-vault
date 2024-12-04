@@ -72,6 +72,22 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 				},
 			},
 
+			consts.FieldTTL: {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The TTL duration of the SecretID.",
+			},
+
+			consts.FieldNumUses: {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The number of uses for the secret-id.",
+			},
+
 			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -161,6 +177,14 @@ func approleAuthBackendRoleSecretIDCreate(ctx context.Context, d *schema.Resourc
 		data["metadata"] = result
 	} else {
 		data["metadata"] = ""
+	}
+
+	if v, ok := d.GetOk(consts.FieldTTL); ok {
+		data["ttl"] = v
+	}
+
+	if v, ok := d.GetOk(consts.FieldNumUses); ok {
+		data["num_uses"] = v
 	}
 	withWrappedAccessor := d.Get(consts.FieldWithWrappedAccessor).(bool)
 
@@ -293,12 +317,17 @@ func approleAuthBackendRoleSecretIDRead(ctx context.Context, d *schema.ResourceD
 		return diag.Errorf("error encoding metadata for SecretID %q to JSON: %s", id, err)
 	}
 
+	ttl := resp.Data["secret_id_ttl"]
+	numUses := resp.Data["secret_id_num_uses"]
+
 	fields := map[string]interface{}{
 		consts.FieldBackend:  backend,
 		consts.FieldRoleName: role,
 		consts.FieldCIDRList: cidrs,
 		consts.FieldMetadata: string(metadata),
 		consts.FieldAccessor: accessor,
+		consts.FieldTTL:      ttl,
+		consts.FieldNumUses:  numUses,
 	}
 
 	for k, v := range fields {

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -251,11 +250,10 @@ func getMountAccessor(ctx context.Context, d *schema.ResourceData, meta interfac
 	log.Printf("[DEBUG] Reading mount %s from Vault", mount)
 
 	m, err := mountutil.GetMount(ctx, client, mount)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		return "", fmt.Errorf("expected mount at %s; no mount found", mount)
-	}
-
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			return "", fmt.Errorf("expected mount at %s; no mount found: %w", mount, err)
+		}
 		return "", err
 	}
 

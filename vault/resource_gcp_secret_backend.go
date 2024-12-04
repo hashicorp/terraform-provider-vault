@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -131,7 +130,7 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting GCP backend at %q", path)
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117Ent)
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 
 	mountConfig := api.MountConfigInput{
 		DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
@@ -197,13 +196,12 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 	log.Printf("[DEBUG] Reading GCP backend mount %q from Vault", path)
 
 	mount, err := mountutil.GetMount(ctx, client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 
@@ -230,7 +228,8 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	// read and set config if needed
-	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer117Ent {
 		resp, err := client.Logical().ReadWithContext(ctx, gcpSecretBackendConfigPath(path))
 		if err != nil {
 			return diag.FromErr(err)
@@ -267,7 +266,7 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(err)
 	}
 
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117Ent)
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 
 	if d.HasChanges(consts.FieldDefaultLeaseTTL, consts.FieldMaxLeaseTTL, consts.FieldIdentityTokenKey) {
 		config := api.MountConfigInput{

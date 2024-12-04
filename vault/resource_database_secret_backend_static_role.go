@@ -92,6 +92,13 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to rotate the password for the configured database user.",
 			},
+			consts.FieldSelfManagedPassword: {
+				Type:      schema.TypeString,
+				Optional:  true,
+				Sensitive: true,
+				Description: "The password corresponding to the username in the database. " +
+					"Required when using the Rootless Password Rotation workflow for static roles.",
+			},
 		},
 	}
 }
@@ -129,6 +136,12 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 
 	if v, ok := d.GetOk(consts.FieldRotationPeriod); ok && v != "" {
 		data[consts.FieldRotationPeriod] = v
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOk(consts.FieldSelfManagedPassword); ok && v != "" {
+			data[consts.FieldSelfManagedPassword] = v
+		}
 	}
 
 	log.Printf("[DEBUG] Creating static role %q on database backend %q", name, backend)

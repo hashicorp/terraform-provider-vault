@@ -21,6 +21,7 @@ func TestAccOktaAuthBackendUser(t *testing.T) {
 	t.Parallel()
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
 	organization := "dummy"
+	resourceName := "vault_okta_auth_backend_user.test"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -31,7 +32,12 @@ func TestAccOktaAuthBackendUser(t *testing.T) {
 				Config: testAccOktaAuthUserConfig(path, organization),
 				Check: resource.ComposeTestCheckFunc(
 					testAccOktaAuthBackendUser_InitialCheck,
-					testAccOktaAuthBackend_UsersCheck(path, "user_test", []string{"one", "two"}, []string{"three"}),
+					resource.TestCheckResourceAttr(resourceName, "username", "user_test"),
+					resource.TestCheckResourceAttr(resourceName, "groups.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "groups.0", "one"),
+					resource.TestCheckResourceAttr(resourceName, "groups.1", "two"),
+					resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "policies.0", "three"),
 				),
 			},
 		},

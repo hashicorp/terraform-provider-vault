@@ -231,7 +231,9 @@ func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	if secret == nil {
-		return diag.Errorf("resource not found")
+		log.Printf("[WARN] ConsulSecretBackendRole %q not found, removing from state", path)
+		d.SetId("")
+		return nil
 	}
 
 	data := secret.Data

@@ -5,13 +5,13 @@ package vault
 
 import (
 	"context"
-
 	"log"
 	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -101,6 +101,12 @@ func awsAuthBackendClientResource() *schema.Resource {
 				Computed:    true,
 				Description: "The TTL of generated identity tokens in seconds.",
 			},
+			consts.FieldMaxRetries: {
+				Type:        schema.TypeInt,
+				Default:     -1,
+				Optional:    true,
+				Description: "Number of max retries the client should use for recoverable errors.",
+			},
 		},
 	}
 }
@@ -119,11 +125,10 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 	stsEndpoint := d.Get(consts.FieldSTSEndpoint).(string)
 	stsRegion := d.Get(consts.FieldSTSRegion).(string)
 	stsRegionFromClient := d.Get(useSTSRegionFromClient).(bool)
-
 	identityTokenAud := d.Get(consts.FieldIdentityTokenAudience).(string)
 	roleArn := d.Get(consts.FieldRoleArn).(string)
 	identityTokenTTL := d.Get(consts.FieldIdentityTokenTTL).(int)
-
+	maxRetries := d.Get(consts.FieldMaxRetries).(int)
 	iamServerIDHeaderValue := d.Get(consts.FieldIAMServerIDHeaderValue).(string)
 
 	path := awsAuthBackendClientPath(backend)
@@ -134,6 +139,7 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		consts.FieldSTSEndpoint:            stsEndpoint,
 		consts.FieldSTSRegion:              stsRegion,
 		consts.FieldIAMServerIDHeaderValue: iamServerIDHeaderValue,
+		consts.FieldMaxRetries:             maxRetries,
 	}
 
 	if d.HasChange(consts.FieldAccessKey) || d.HasChange(consts.FieldSecretKey) {
@@ -146,7 +152,7 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		data[useSTSRegionFromClient] = stsRegionFromClient
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
+	if provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta) {
 		data[consts.FieldIdentityTokenAudience] = identityTokenAud
 		data[consts.FieldRoleArn] = roleArn
 		data[consts.FieldIdentityTokenTTL] = identityTokenTTL
@@ -204,6 +210,7 @@ func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		consts.FieldSTSEndpoint,
 		consts.FieldSTSRegion,
 		consts.FieldIAMServerIDHeaderValue,
+		consts.FieldMaxRetries,
 	}
 	for _, k := range fields {
 		if v, ok := secret.Data[k]; ok {
@@ -217,7 +224,7 @@ func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			return diag.FromErr(err)
 		}
 	}
-	if provider.IsAPISupported(meta, provider.VaultVersion117Ent) {
+	if provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta) {
 		wifFields := []string{
 			consts.FieldIdentityTokenAudience,
 			consts.FieldRoleArn,

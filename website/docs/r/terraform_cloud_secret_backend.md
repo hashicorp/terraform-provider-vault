@@ -45,6 +45,10 @@ The following arguments are supported:
 token back from the API, Terraform cannot detect and correct drift
 on `token`. Changing the value, however, _will_ overwrite the previously stored values.
 
+* `address` - (Optional) The address of the Terraform Cloud server, if using
+  Terraform Enterprise, provided as `"protocol://host:port"`. The default is
+  `https://app.terraform.io` for Terraform Cloud.
+
 * `backend` - (Optional) The unique location this backend should be mounted at. Must not begin or end with a `/`. Defaults to `terraform`.
 
 * `disable_remount` - (Optional) If set, opts out of mount migration on path updates.

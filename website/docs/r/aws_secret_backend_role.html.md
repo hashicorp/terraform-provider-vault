@@ -93,6 +93,13 @@ The following arguments are supported:
 * `iam_tags` (Optional) - A map of strings representing key/value pairs
   to be used as tags for any IAM user that is created by this role.
 
+* `session_tags` (Optional) - A map of strings representing key/value pairs to be set
+  during assume role creds creation. Valid only when `credential_type` is set to 
+  `assumed_role`.
+
+* `external_id` (Optional) - External ID to set for assume role creds. 
+  Valid only when `credential_type` is set to `assumed_role`.
+
 * `default_sts_ttl` - (Optional) The default TTL in seconds for STS credentials.
   When a TTL is not specified when STS credentials are requested,
   and a default TTL is specified on the role,

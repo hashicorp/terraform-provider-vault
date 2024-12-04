@@ -167,6 +167,10 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_config_est": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstDataSource()),
+			PathInventory: []string{"/pki/config/est"},
+		},
 		"vault_pki_secret_backend_issuer": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
 			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
@@ -575,6 +579,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendCrlConfigResource()),
 			PathInventory: []string{"/pki/config/crl"},
 		},
+		"vault_pki_secret_backend_config_acme": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigACMEResource()),
+			PathInventory: []string{"/pki/config/acme"},
+		},
 		"vault_pki_secret_backend_config_ca": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCAResource()),
 			PathInventory: []string{"/pki/config/ca"},
@@ -582,6 +590,10 @@ var (
 		"vault_pki_secret_backend_config_cluster": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigClusterResource()),
 			PathInventory: []string{"/pki/config/cluster"},
+		},
+		"vault_pki_secret_backend_config_est": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstResource()),
+			PathInventory: []string{"/pki/config/est"},
 		},
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),
@@ -622,6 +634,10 @@ var (
 		"vault_pki_secret_backend_config_issuers": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigIssuers()),
 			PathInventory: []string{"/pki/config/issuers"},
+		},
+		"vault_pki_secret_backend_acme_eab": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendAcmeEabResource()),
+			PathInventory: []string{"/pki/acme/new-eab"},
 		},
 		"vault_quota_lease_count": {
 			Resource:      UpdateSchemaResource(quotaLeaseCountResource()),

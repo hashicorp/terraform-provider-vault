@@ -423,7 +423,32 @@ const (
 	FieldAllowedResponseHeaders        = "allowed_response_headers"
 	FieldDelegatedAuthAccessors        = "delegated_auth_accessors"
 	FieldPluginVersion                 = "plugin_version"
-
+	FieldUseMSGraphAPI                 = "use_microsoft_graph_api"
+	FieldEnabled                       = "enabled"
+	FieldDefaultMount                  = "default_mount"
+	FieldDefaultPathPolicy             = "default_path_policy"
+	FieldLabelToPathPolicy             = "label_to_path_policy"
+	FieldAuthenticators                = "authenticators"
+	FieldEnableSentinelParsing         = "enable_sentinel_parsing"
+	FieldAuditFields                   = "audit_fields"
+	FieldLastUpdated                   = "last_updated"
+	FieldCustomEndpoint                = "custom_endpoint"
+	FieldPrivateKeyID                  = "private_key_id"
+	FieldTune                          = "tune"
+	FieldMaxRetries                    = "max_retries"
+	FieldSessionTags                   = "session_tags"
+	FieldSelfManagedPassword           = "self_managed_password"
+	FieldAllowedIssuers                = "allowed_issuers"
+	FieldAllowedRoles                  = "allowed_roles"
+	FieldAllowRoleExtKeyUsage          = "allow_role_ext_key_usage"
+	FieldDefaultDirectoryPolicy        = "default_directory_policy"
+	FieldDnsResolver                   = "dns_resolver"
+	FieldEabPolicy                     = "eab_policy"
+	FieldCnValidations                 = "cn_validations"
+	FieldsCreatedOn                    = "created_on"
+	FieldEabKey                        = "key"
+	FieldAcmeDirectory                 = "acme_directory"
+	FieldEabId                         = "eab_id"
 	/*
 		common environment variables
 	*/
@@ -457,6 +482,10 @@ const (
 	EnvVarRadiusPassword = "RADIUS_PASSWORD"
 	// EnvVarTokenFilename for the TokenFile auth login.
 	EnvVarTokenFilename = "TERRAFORM_VAULT_TOKEN_FILENAME"
+
+	// EnvVarVaultConfigPath to override where the Vault configuration is in tests.
+	// Note: only used in tests. not used by the provider to read the Vault config.
+	EnvVarVaultConfigPath = "VAULT_CONFIG_PATH"
 	/*
 		common mount types
 	*/
@@ -484,21 +513,21 @@ const (
 	MountTypeTerraform    = "terraform"
 	MountTypeNone         = "none"
 	MountTypeSAML         = "saml"
+	MountTypeOkta         = "okta"
 
 	/*
 		Vault version constants
 	*/
-	VaultVersion190    = "1.9.0"
-	VaultVersion110    = "1.10.0"
-	VaultVersion111    = "1.11.0"
-	VaultVersion112    = "1.12.0"
-	VaultVersion113    = "1.13.0"
-	VaultVersion114    = "1.14.0"
-	VaultVersion115    = "1.15.0"
-	VaultVersion116    = "1.16.0"
-	VaultVersion116Ent = "1.16.0+ent"
-	VaultVersion117    = "1.17.0"
-	VaultVersion117Ent = "1.17.0+ent"
+	VaultVersion190 = "1.9.0"
+	VaultVersion110 = "1.10.0"
+	VaultVersion111 = "1.11.0"
+	VaultVersion112 = "1.12.0"
+	VaultVersion113 = "1.13.0"
+	VaultVersion114 = "1.14.0"
+	VaultVersion115 = "1.15.0"
+	VaultVersion116 = "1.16.0"
+	VaultVersion117 = "1.17.0"
+	VaultVersion118 = "1.18.0"
 
 	/*
 		Vault auth methods

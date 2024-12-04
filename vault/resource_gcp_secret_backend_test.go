@@ -51,7 +51,7 @@ func TestGCPSecretBackend(t *testing.T) {
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !meta.IsAPISupported(provider.VaultVersion117Ent), nil
+					return !(meta.IsAPISupported(provider.VaultVersion117) && meta.IsEnterpriseSupported()), nil
 				},
 				Config: testGCPSecretBackend_WIFConfig(path),
 				Check: resource.ComposeTestCheckFunc(

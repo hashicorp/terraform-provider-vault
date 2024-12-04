@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -117,6 +116,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.pem_json", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.protocol_version", "4"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.connect_timeout", "5"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.skip_verification", "false"),
 				),
 			},
 		},
@@ -160,6 +160,7 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.pem_json", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.protocol_version", "5"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.connect_timeout", "5"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.skip_verification", "false"),
 				),
 			},
 		},
@@ -377,7 +378,7 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineMSSQL)
 
-	cleanupFunc, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	cleanupFunc, connURL := testutil.PrepareMSSQLTestContainer(t)
 	t.Cleanup(cleanupFunc)
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
@@ -811,6 +812,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password_authentication", "password"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_open_connections", maxOpenConnections),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_idle_connections", maxIdleConnections),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_connection_lifetime", maxConnLifetime),
@@ -832,6 +834,65 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", ""),
 				),
 			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql_password_authentication(name, backend, parsedURL),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password_authentication", "scram-sha-256"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_postgresql_tls(t *testing.T) {
+	resourceName := "vault_database_secret_backend_connection.test"
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEnginePostgres.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql_tls(name, backend, testPostgresCACert, testPostgresClientCert, testPostgresClientKey),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.tls_ca", testPostgresCACert),
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.tls_certificate", testPostgresClientCert),
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.private_key", testPostgresClientKey),
+				),
+			},
+			// the private key is a secret that is never revealed by Vault
+			testutil.GetImportTestStep(resourceName, false, nil, "postgresql.0.private_key"),
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_postgresql_rootlessConfig(t *testing.T) {
+	resourceName := "vault_database_secret_backend_connection.test"
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEnginePostgres.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql_rootless(name, backend),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.self_managed", "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, ""),
 		},
 	})
 }
@@ -1717,6 +1778,70 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, parsedURL.String())
 }
 
+func testAccDatabaseSecretBackendConnectionConfig_postgresql_password_authentication(name, path string, parsedURL *url.URL) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  postgresql {
+	  connection_url          = "%s"
+	  password_authentication = "scram-sha-256"
+  }
+}
+`, path, name, parsedURL.String())
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_postgresql_tls(name, path, tlsCA, tlsCert, privateKey string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  verify_connection = false
+
+  postgresql {
+	connection_url = "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=verify-full"
+	username       = "user1"
+
+	tls_ca          = %q
+	tls_certificate = %q
+	private_key     = %q
+  }
+}
+`, path, name, tlsCA, tlsCert, privateKey)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_postgresql_rootless(name, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+
+  postgresql {
+	connection_url = "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=verify-full"
+	self_managed   = true
+  }
+}
+`, path, name)
+}
+
 func testAccDatabaseSecretBackendConnectionConfig_postgres_cloud(name, path, connURL, authType, serviceAccountJSON string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
@@ -1752,7 +1877,7 @@ resource "vault_database_secret_backend_connection" "test" {
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
 
-  snowflake { 
+  snowflake {
     connection_url = "%s"
     username = "%s"
     password = "%s"
@@ -2316,3 +2441,86 @@ func Test_getDBEngineFromResp(t *testing.T) {
 		})
 	}
 }
+
+const testPostgresCACert = `-----BEGIN CERTIFICATE-----
+MIIE2jCCAsKgAwIBAgIBATANBgkqhkiG9w0BAQsFADANMQswCQYDVQQDEwJjYTAe
+Fw0yNDA3MTIyMDEzMzhaFw0yNjAxMTIyMDIzMzdaMA0xCzAJBgNVBAMTAmNhMIIC
+IjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzd6h6kI5Z3ofQzV5HiKL+uge
+hr8AeCywNBUAQ8yX97HKLPYMw2HQFAx9mMIiW1EbwfMb5NYY6blyyyUfZAwzIDzq
+IrKwGSa//bS2mO19N5oQdy0w+S+Xo55tsDq0C1hNZf7TOJ/lVOi+Ot68OXqLhmTa
+TYrkdYb33kanYVV5IyMgAgGA6w78gJPLKKe57CKe4oq2bU7jPANxu00TthRNL51c
+xucGYJCRkeqK7F6MSxXXS1Xv73mh4uTiFYxwsHbgTKW5LAADWWMCwtgjP1ZSfU1U
+0BGSyh/fVl1gQIjPCbGp+lSO+eYNhC+/42hvi//y0wH4cv0LwssHZKltDq4pEFwZ
+WH8iX6gXoo6FD8FNNCBaZbBAHwPGUkbtjXVl2xhwA5YAin78YM5a1Sy3ZbfxxN++
+msSdMxyVM0I/ctnAF/M8RFLOqf/xAbJf/AaXBvPhJAOqqhqMsi2SF5jc5faUpqRE
+eOHJGnfFsl1O/0t4YPly/SDowIatMRe+fYp7E79cBve4R9uMPTH2/wV1xla4s42r
+GZRoIkeRNg0dI0eFiBOJL8jDTrm8702a2Blu6E0YfxV+XppooGUVzwd2zl7Gvqnl
+cSHx4S5drMEz5WGu6/u/ae712BLBvmBrdU1ta8Fr644AZrrsAIL5plY4wez55+/u
+LcDlUkKZ01579eDdQBkCAwEAAaNFMEMwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB
+/wQIMAYBAf8CAQAwHQYDVR0OBBYEFF6gLEwzFMWpqOFkhuPY/mMepy8QMA0GCSqG
+SIb3DQEBCwUAA4ICAQCaiOUPCFpJx6fw+Vw/sUxzX/JYyrxiOOrMErM5upw3gErq
+pYP6RPZS16lOS0LwXQ9G6c72hgcSf4oBL4C/bCXDX7MtXFaa5INI+Bga+OUM9TtD
+zSZ/CWpfmUPY1NJOIqFIfhMVmuzGlxdQXrjT0pKQ/SlEJnNN6A5qFkX7+UBgT7Ii
+/D11w+I8VTzVmzkkSKalg0I8TZlXD2ADPA+SEljDB6e6wTJie++uLFjhfc2ssJ4I
+ZEkMUg8JOtyVAKlrE+i3YhQFjJuTKezIV9ss6akZb8719/iLPudiPo+4Hd4NrEi6
++VDFsc2bBCO8vLYSDyf8pqzZCG74oIZbmneAM2c4pnbTcm5LsBThVUbvzH1rPZGh
+3oB4F/CHeov9BfLCdPRjL1HFlD5zUUmA5gPI2avZL8RKCsX1lO7xXVfQihofMAd1
+Fb3Wn5+ECeWCPf6EnuEG6aZWyFiBzDrC4jP628t5Oc38Wi3ZQkyVV4BJP+/9AxoF
+Z8o9nMIie9BSNfnbAvxwEThY8Jwc5/azZdHXYUrLDA6bcsBw77WTI/TiddzqbU4g
+yCAn30ML5eJBdp30xw9+pGpFVbUh4vxBVyLC4Yhbcvp9PuZmIKvkruWNSj3zQSnm
+avNz7L+OZEENF2qm/XN6WG5UQHbl3VN614k1dsyD54T+LpNmDZ20wFKPH3zmDw==
+-----END CERTIFICATE-----`
+
+const testPostgresClientCert = `-----BEGIN CERTIFICATE-----
+MIIEMTCCAhmgAwIBAgIQBMMx4O5wAf+ulbCz1EwvAjANBgkqhkiG9w0BAQsFADAN
+MQswCQYDVQQDEwJjYTAeFw0yNDA3MTIyMDEzMzhaFw0yNjAxMTIyMDIzMzdaMBEx
+DzANBgNVBAMTBmNsaWVudDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+ALNhfyofmTapjkf7M5bd6UALxVIngdMx0m/LCE5You2OtuuEM4rFDTs4yi2FFIY+
+3rT+ibEiw0QYCTJZ+xOv4TQE8lSGxnrIFtVXlwFLq5eeuuY2eMFtevXj5g6bk50/
+FQTs2Laq7LRgN8ZoW+Hn6wglbuM+QLIHGBZtVFfgYXVi54FO24MMWqThgIX21Ns6
+iA7nbG/00QYlaqGaZX5vd07cdhxo3qwMSqJc2EP7OKLtmwSuGU4CyWOKfuFr7ITl
+DObGIqODvIaRBVFjIsJiEER5V5FWyCAbj1f5jREO6rXoBlwsFvUw7PlFHtX5t7RO
+JkUajvbsPYFjNDNwk1u4Mo8CAwEAAaOBiDCBhTAOBgNVHQ8BAf8EBAMCA7gwHQYD
+VR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMB0GA1UdDgQWBBTnlzQEFsMsV3EM
+v52+eD/GsjMvqTAfBgNVHSMEGDAWgBReoCxMMxTFqajhZIbj2P5jHqcvEDAUBgNV
+HREEDTALgglsb2NhbGhvc3QwDQYJKoZIhvcNAQELBQADggIBAMm6bto3Tti9iMS/
+kRpDJ74oIAKybm313va7w85qqxa5wDHY5MAr9qWL/tNUQlzfgsfOrLbXxgVZBjAn
+1raxZaBQ5aclmTYKdJRmXAPzcYTu0YV/L3zg2ZX3Rds3M10u1BSxhXK4vTS6VH+K
+d3BZF3uQ0pRd49PERTdb+M5l4y/TV+pmgEsDYarLjAoS4WVBXe3FM/RMYjNQJIae
+baLCf87G7G/WMtmunW+PmL2pKDlmbkENoSULmX1IQ2CxotdYfI8IJWDE3nKzufzR
+X/1mfAksgsSHH4qTUXQFARoGwVaz04pe+E6R0QbgZKWIhhPF+PX99Jm+Uc7s7e7+
+u4E76SOfKXfzuB2sfJlR4BxJnVxxrmJVzBRC7ENwXJ2kTfL6PwLT1xUIu/VtJf7N
+YnXYx7Is8VVJ7oTCrA1k5tCuPv0AV3SnPq/YzhpUgiWI6sAAtv5GshVETSWta0Bh
+XKkRkRK3ubxD7yPhEWypubHY2Nutdj05erBz7FslGvSoPwJrlroLQbwb0fOlHvFA
+klHpzMyNSttmDa6S93wGD7U44C+8kMJUZGT3fy3CFvJacvpHdsNKKHhNEgBn+zmG
+IRrNQZaXS3XsmjyczI7SETRlYABq644LZlFOXkX4Gj4YG6mkznlB9sYp1OLu34Xn
+4Y1FHwnTAcoTwkEPiki3oChg0ndz
+-----END CERTIFICATE-----`
+
+const testPostgresClientKey = `-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAs2F/Kh+ZNqmOR/szlt3pQAvFUieB0zHSb8sITlii7Y6264Qz
+isUNOzjKLYUUhj7etP6JsSLDRBgJMln7E6/hNATyVIbGesgW1VeXAUurl5665jZ4
+wW169ePmDpuTnT8VBOzYtqrstGA3xmhb4efrCCVu4z5AsgcYFm1UV+BhdWLngU7b
+gwxapOGAhfbU2zqIDudsb/TRBiVqoZplfm93Ttx2HGjerAxKolzYQ/s4ou2bBK4Z
+TgLJY4p+4WvshOUM5sYio4O8hpEFUWMiwmIQRHlXkVbIIBuPV/mNEQ7qtegGXCwW
+9TDs+UUe1fm3tE4mRRqO9uw9gWM0M3CTW7gyjwIDAQABAoIBAQCf5IsGUC4w1EhY
+Dyj4FIwiI5vaVA7b4vAR6CdaNpXcLLcODcQnsOfPXxqQIqyd0RKQwMaZV0Q4wTgJ
+Yr1z2fViefpLr+rhbNM1jaKza/Di8IDmTa2rtNvCrEbXxIN6yc0Bm+C8SnU9fvqY
+Z1NndWNB2qQR+N6QEdS9wOxKfF5C08y9Z3B2xoM2HpeYYW4WEJezMvcDGtDp152p
+tN/z8sLKca5doFLwIUiGuJ3g4a5048R9MyEP7bg8g/LAtas4jmOx9xIISRt2i6LJ
+ESszY5yy09K06o+IMKWSTDE1GD6o90wEuGDzF6fMNFxRgqVwAVsIaOO9ZRmIa8fV
+yyw07MnhAoGBAOG/VXK7AFqfrMLPJY66WX1Az8mLP+uEVv/bfAsnheRNgMD5v3RE
+0MgAnx7BAud4O9x4Ej3suNeEiDr4Ukg74CHVKWZACkcTgjY2rg023bwq9slml61E
+8XQDgd1D4EELAJAjIldc0rzQ8YTSJ3xBVp5KL+hl1CFPxpEuFhYS7dURAoGBAMtr
+edUwge1ti3NCW615RWyDbstvAOlcTyT/a0JViIH7zcZg20ZaQop9PYyGdu/19ha7
+8G32flWVqoWf2lBJ+ewG5ykHPEh+O3RLv+3cZs3+0c+fN70PCovsnN5C4BbmR6ls
+5FV6/sTJqgN9BJN+wHV1Dj4wMHwWzdXqDUKnPw2fAoGBANsz4+/8/zIAPEwJwuld
+r8m85kdI7K9vmN7mrANUxGFUlIJNwIdQzv52BAxj1MMYb9/7w5LXywCS04mXWKaF
+ZXTUvFdqNdCgc97ap5VzQkoV2f7knMGF4YMKaM6GuznNSiWryAvWuVbY+LxFKEwy
+Ub5wQSbDwgD6qtCMVKvog4JRAoGAcXmoAhxILnmQdCCNYc0nxCvhj4yBtqwu3lW5
+sMxkFRaxqLt5Ntq9CeJphk2wZZYQzIfUzJLX0Mhn0pjkwSszRs5m/0UxBMOeSPbE
+v1zW4I0I38hS4J1WZc39iCNIPJ4DVekPyvuMyZwxwjZoahsoI53D7z8UnPRfqLgi
+447GpsMCgYBnNiNlMvl4UqkZ83mJsqBwPhM3o3jPgS9OHk+nKjRws19lLUuRXCxy
+a/0qa6m6iLDrh6oyVXsKlRgsePBl7jUjP3HZTalWpX8+HFbVYIPN3mU50qgjR/uF
+lHWczW8tCg9aF3oBqvxt8WV/TU4oV4amunSkbD9HzqcnOuj1fGcZ9w==
+-----END RSA PRIVATE KEY-----`

@@ -4,14 +4,15 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
-
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -109,8 +110,8 @@ func TestAccAWSAuthBackend_wif(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117Ent)
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
@@ -240,13 +241,20 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			consts.FieldSTSEndpoint:            consts.FieldSTSEndpoint,
 			consts.FieldSTSRegion:              consts.FieldSTSRegion,
 			consts.FieldIAMServerIDHeaderValue: consts.FieldIAMServerIDHeaderValue,
+			consts.FieldMaxRetries:             consts.FieldMaxRetries,
 		}
 		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
-				continue
+			respApiAttr := resp.Data[apiAttr]
+			if respApiAttr == nil {
+				return fmt.Errorf("expected non-nil value for %s (%s) of %q", apiAttr, stateAttr, endpoint)
 			}
-			if resp.Data[apiAttr] != instanceState.Attributes[stateAttr] {
-				return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
+			if respApiAttr != nil {
+				if apiAttr == consts.FieldMaxRetries {
+					respApiAttr = respApiAttr.(json.Number).String()
+				}
+				if respApiAttr != instanceState.Attributes[stateAttr] {
+					return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], respApiAttr)
+				}
 			}
 		}
 		return nil
@@ -302,6 +310,7 @@ resource "vault_aws_auth_backend_client" "client" {
   sts_endpoint = "http://vault.test/sts"
   sts_region = "vault-test"
   iam_server_id_header_value = "vault.test"
+  max_retries = "-1"
 }
 `, backend)
 }
@@ -323,6 +332,7 @@ resource "vault_aws_auth_backend_client" "client" {
   sts_endpoint = "http://updated.vault.test/sts"
   sts_region = "updated-vault-test"
   iam_server_id_header_value = "updated.vault.test"
+  max_retries = "0"
 }`, backend)
 }
 

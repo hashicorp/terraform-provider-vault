@@ -335,6 +335,12 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Default:     5,
 						Description: "The number of seconds to use as a connection timeout.",
 					},
+					"skip_verification": {
+						Type:        schema.TypeBool,
+						Optional:    true,
+						Default:     false,
+						Description: "Skip permissions checks when a connection to Cassandra is first created. These checks ensure that Vault is able to create roles, but can be resource intensive in clusters with many roles.",
+					},
 				},
 			},
 			MaxItems:      1,
@@ -558,14 +564,10 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLLegacy.Name(), dbEngineTypes),
 		},
 		dbEnginePostgres.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the postgresql-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass:        true,
-				includeDisableEscaping: true,
-				isCloud:                true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the postgresql-database-plugin plugin.",
+			Elem:          postgresConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
 		},
@@ -789,7 +791,59 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 		}
 	}
 
+	if config.isCloud {
+		res.Schema["auth_type"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Specify alternative authorization type. (Only 'gcp_iam' is valid currently)",
+		}
+		res.Schema["service_account_json"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "A JSON encoded credential for use with IAM authorization",
+			Sensitive:   true,
+		}
+	}
+
 	return res
+}
+
+func postgresConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass:        true,
+		includeDisableEscaping: true,
+		isCloud:                true,
+	})
+	r.Schema["tls_ca"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 CA file for validating the certificate presented by the PostgreSQL server. Must be PEM encoded.",
+	}
+	r.Schema["tls_certificate"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 client certificate for connecting to the database. Must be PEM encoded.",
+	}
+	r.Schema["private_key"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The secret key used for the x509 client certificate. Must be PEM encoded.",
+		Sensitive:   true,
+	}
+
+	r.Schema["self_managed"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "If set, allows onboarding static roles with a rootless connection configuration.",
+	}
+	r.Schema["password_authentication"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Default:     "password",
+		Description: "When set to `scram-sha-256`, passwords will be hashed by Vault before being sent to PostgreSQL.",
+	}
+
+	return r
 }
 
 func mysqlConnectionStringResource() *schema.Resource {
@@ -1006,6 +1060,9 @@ func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOkExists(prefix + "connect_timeout"); ok {
 		data["connect_timeout"] = v.(int)
 	}
+	if v, ok := d.GetOkExists(prefix + "skip_verification"); ok {
+		data["skip_verification"] = v.(bool)
+	}
 }
 
 func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
@@ -1099,6 +1156,28 @@ func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion114) {
+		if v, ok := data["password_authentication"]; ok {
+			result["password_authentication"] = v.(string)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+		if v, ok := data["tls_ca"]; ok {
+			result["tls_ca"] = v.(string)
+		}
+		if v, ok := data["tls_certificate"]; ok {
+			result["tls_certificate"] = v.(string)
+		}
+		// the private key is a secret that is never revealed by Vault
+		result["private_key"] = d.Get(prefix + "private_key")
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := data["self_managed"]; ok {
+			result["self_managed"] = v.(bool)
+		}
+	}
 	return result
 }
 
@@ -1491,6 +1570,30 @@ func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
 	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	setCloudDatabaseConnectionData(d, prefix, data, meta)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+		if v, ok := d.GetOk(prefix + "tls_ca"); ok {
+			data["tls_ca"] = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + "tls_certificate"); ok {
+			data["tls_certificate"] = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + "private_key"); ok {
+			data["private_key"] = v.(string)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion114) {
+		if v, ok := d.GetOk(prefix + "password_authentication"); ok {
+			data["password_authentication"] = v.(string)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOk(prefix + "self_managed"); ok {
+			data["self_managed"] = v.(bool)
+		}
+	}
 }
 
 func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
@@ -2011,6 +2114,9 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 				return nil, fmt.Errorf("unexpected non-number %q returned as connect_timeout from Vault: %s", v, err)
 			}
 			result["connect_timeout"] = timeout
+		}
+		if v, ok := data["skip_verification"]; ok {
+			result["skip_verification"] = v.(bool)
 		}
 		return result, nil
 	}

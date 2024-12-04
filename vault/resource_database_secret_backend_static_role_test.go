@@ -10,6 +10,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -144,6 +146,58 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "rotation_window", "14400"),
 					resource.TestCheckResourceAttr(resourceName, "rotation_statements.0", "SELECT 1;"),
 				),
+			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretBackendStaticRole_Rootless tests the
+// Rootless Config and Rotation flow for Static Roles.
+// To run locally you will need to set the following env vars:
+//   - POSTGRES_URL_TEST
+//   - POSTGRES_URL_ROOTLESS
+func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
+	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
+	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_ROOTLESS")[0]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	username := acctest.RandomWithPrefix("user")
+	dbName := acctest.RandomWithPrefix("db")
+	name := acctest.RandomWithPrefix("staticrole")
+	resourceName := "vault_database_secret_backend_static_role.test"
+
+	testRoleStaticCreate := `
+CREATE ROLE "{{name}}" WITH
+  LOGIN
+  PASSWORD '{{password}}';
+`
+
+	// create static database user
+	testutil.CreateTestPGUser(t, connURLTestRoot, username, "testpassword", testRoleStaticCreate)
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, dbName, backend, connURL, "testpassword"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
+					resource.TestCheckResourceAttr(resourceName, "rotation_period", "3600"),
+				),
+			},
+			{
+				ResourceName:            "vault_database_secret_backend_static_role.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldSelfManagedPassword},
 			},
 		},
 	})
@@ -315,4 +369,33 @@ resource "vault_database_secret_backend_static_role" "test" {
   rotation_statements = ["SELECT 1;"]
 }
 `, path, db, connURL, name, username)
+}
+
+func testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, db, path, connURL, smPassword string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+
+  postgresql {
+	  connection_url = "%s"
+      self_managed   = true
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  self_managed_password = "%s"
+  rotation_period = 3600
+}
+`, path, db, connURL, name, username, smPassword)
 }

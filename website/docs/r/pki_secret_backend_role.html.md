@@ -86,6 +86,8 @@ The following arguments are supported:
 
 * `client_flag` - (Optional) Flag to specify certificates for client use
 
+* `cn_validations` - (Optional) Validations to run on the Common Name field of the certificate, choices: `email`, `hostname`, `disabled`
+
 * `code_signing_flag` - (Optional) Flag to specify certificates for code signing use
 
 * `email_protection_flag` - (Optional) Flag to specify certificates for email protection use
