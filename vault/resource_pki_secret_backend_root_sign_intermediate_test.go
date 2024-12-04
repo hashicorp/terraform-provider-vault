@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
@@ -249,6 +250,7 @@ func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string
 		resource.TestCheckResourceAttrSet(res, "serial_number"),
 		assertPKICertificateBundle(res, format),
 		assertPKICAChain(res),
+		assertCertificateAttributes(res),
 	)
 }
 
@@ -315,6 +317,50 @@ func assertPKICAChain(res string) resource.TestCheckFunc {
 	}
 }
 
+func assertCertificateAttributes(res string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[res]
+		if !ok {
+			return fmt.Errorf("resource %q not found in the state", res)
+		}
+		format := rs.Primary.Attributes["format"]
+		var rawCert []byte
+		switch format {
+		case "pem", "pem_bundle":
+			pemCert := []byte(rs.Primary.Attributes["certificate"])
+			b, _ := pem.Decode(pemCert)
+			if b == nil {
+				return fmt.Errorf("error decoding PEM certificate")
+			}
+
+			rawCert = b.Bytes
+		case "der":
+			certAttr := rs.Primary.Attributes["certificate"]
+			var err error
+			rawCert, err = base64.StdEncoding.DecodeString(certAttr)
+			if err != nil {
+				return fmt.Errorf("error decoding der certificate: %w", err)
+			}
+		}
+
+		crt, err := x509.ParseCertificate(rawCert)
+		if err != nil {
+			return fmt.Errorf("error parsing certificate: %w", err)
+		}
+
+		expectedMaxPathLen, err := strconv.Atoi(rs.Primary.Attributes["max_path_length"])
+		if err != nil {
+			return fmt.Errorf("error parsing max_path_length value as int: %w", err)
+		}
+
+		if expectedMaxPathLen != crt.MaxPathLen {
+			return fmt.Errorf("expected MaxPathLen %d, actual %d", expectedMaxPathLen, crt.MaxPathLen)
+		}
+
+		return nil
+	}
+}
+
 func testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, path, format string, revoke bool, issuerRef string) string {
 	config := fmt.Sprintf(`
 resource "vault_mount" "test-root" {
@@ -368,6 +414,7 @@ resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
   locality             = "San Francisco"
   province             = "CA"
   revoke               = %t
+  max_path_length      = 0
 `, rootPath, path, revoke)
 
 	if format != "" {

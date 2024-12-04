@@ -54,8 +54,10 @@ FEATURES:
 
 IMPROVEMENTS:
 * return a useful error when delete fails for the `vault_jwt_auth_backend_role` resource: ([#2232](https://github.com/hashicorp/terraform-provider-vault/pull/2232))
+BUGS:
 * Remove dependency on `github.com/hashicorp/vault` package: ([#2251](https://github.com/hashicorp/terraform-provider-vault/pull/2251))
 * Add missing `custom_tags` and `secret_name_template` fields to `vault_secrets_sync_azure_destination` resource ([#2247](https://github.com/hashicorp/terraform-provider-vault/pull/2247))
+* Fix handling of 0 value within field `max_path_length` in `vault_pki_secret_backend_root_cert` and `vault_pki_secret_backend_root_sign_intermediate` resources ([#2253](https://github.com/hashicorp/terraform-provider-vault/pull/2253))
 
 ## 4.2.0 (Mar 27, 2024)
 
