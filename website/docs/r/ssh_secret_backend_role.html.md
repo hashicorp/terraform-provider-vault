@@ -98,6 +98,10 @@ The following arguments are supported:
 * `not_before_duration` - (Optional) Specifies the duration by which to backdate the ValidAfter property.
   Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
 
+* `allow_empty_principals` - (Optional) Allow signing certificates with no
+  valid principals (e.g. any valid principal). For backwards compatibility
+  only. The default of false is highly recommended.
+
 
 ### Allowed User Key Configuration
 * `type` - (Required) The SSH public key type.  

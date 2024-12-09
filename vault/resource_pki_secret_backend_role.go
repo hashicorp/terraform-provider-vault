@@ -50,6 +50,7 @@ var pkiSecretListFields = []string{
 	consts.FieldAllowedSerialNumbers,
 	consts.FieldExtKeyUsage,
 	consts.FieldExtKeyUsageOIDs,
+	consts.FieldCnValidations,
 }
 
 var pkiSecretBooleanFields = []string{
@@ -423,9 +424,15 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				Description: "Defines allowed Subject serial numbers.",
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
+			consts.FieldCnValidations: {
+				Type:        schema.TypeList,
+				Required:    false,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specify validations to run on the Common Name field of the certificate.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldAllowedUserIds: {
 				Type:        schema.TypeList,

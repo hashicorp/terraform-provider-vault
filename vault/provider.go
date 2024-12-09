@@ -583,6 +583,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendCrlConfigResource()),
 			PathInventory: []string{"/pki/config/crl"},
 		},
+		"vault_pki_secret_backend_config_acme": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigACMEResource()),
+			PathInventory: []string{"/pki/config/acme"},
+		},
 		"vault_pki_secret_backend_config_ca": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCAResource()),
 			PathInventory: []string{"/pki/config/ca"},
@@ -638,6 +642,10 @@ var (
 		"vault_pki_secret_backend_config_issuers": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigIssuers()),
 			PathInventory: []string{"/pki/config/issuers"},
+		},
+		"vault_pki_secret_backend_acme_eab": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendAcmeEabResource()),
+			PathInventory: []string{"/pki/acme/new-eab"},
 		},
 		"vault_quota_lease_count": {
 			Resource:      UpdateSchemaResource(quotaLeaseCountResource()),
