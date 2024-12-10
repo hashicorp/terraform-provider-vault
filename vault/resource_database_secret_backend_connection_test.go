@@ -924,6 +924,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.auth_type", "gcp_iam"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.use_private_ip", "false"),
 				),
 			},
 			{
@@ -1859,6 +1860,7 @@ resource "vault_database_secret_backend_connection" "test" {
       connection_url       = "%s"
 		auth_type            = "%s"
 		service_account_json = "%s"
+		use_private_ip       = "true"
   }
 }
 `, path, name, connURL, authType, serviceAccountJSON)
