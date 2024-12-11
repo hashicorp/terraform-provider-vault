@@ -83,11 +83,11 @@ for credentials issued by this backend.
 
 * `sts_endpoint` - (Optional) Specifies a custom HTTP STS endpoint to use.
 
-* `sts_region` - (Optional) Specifies the region of the STS endpoint. Should be included if `sts_endpoint` is supplied.
+* `sts_region` - (Optional) Specifies the region of the STS endpoint. Should be included if `sts_endpoint` is supplied. Requires Vault 1.19+
 
-* `sts_fallback_endpoints` - (Optional) Ordered list of `sts_endpoint`s to try if the defined one fails.
+* `sts_fallback_endpoints` - (Optional) Ordered list of `sts_endpoint`s to try if the defined one fails. Requires Vault 1.19+
 
-* `sts_fallback_regions` - (Optional) Ordered list of `sts_region`s matching the fallback endpoints. Should correspond in order with those endpoints.
+* `sts_fallback_regions` - (Optional) Ordered list of `sts_region`s matching the fallback endpoints. Should correspond in order with those endpoints. Requires Vault 1.19+
 
 * `username_template` - (Optional)  Template describing how dynamic usernames are generated. The username template is used to generate both IAM usernames (capped at 64 characters) and STS usernames (capped at 32 characters). If no template is provided the field defaults to the template:
 
