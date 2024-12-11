@@ -23,7 +23,6 @@ import (
 var awsSecretFields = []string{
 	consts.FieldIAMEndpoint,
 	consts.FieldSTSEndpoint,
-	consts.FieldSTSRegion,
 	consts.FieldUsernameTemplate,
 }
 
@@ -243,6 +242,10 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		if v, ok := d.GetOk(consts.FieldSTSFallbackRegions); ok {
 			data[consts.FieldSTSFallbackRegions] = util.ToStringArray(v.([]interface{}))
 		}
+
+		if v, ok := d.GetOk(consts.FieldSTSRegion); ok {
+			data[consts.FieldSTSRegion] = v.(string)
+		}
 	}
 
 	if useAPIVer116 {
@@ -349,6 +352,12 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 					return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldSTSFallbackRegions, path, err)
 				}
 			}
+
+			if v, ok := resp.Data[consts.FieldSTSRegion]; ok {
+				if err := d.Set(consts.FieldSTSRegion, v); err != nil {
+					return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldSTSRegion, path, err)
+				}
+			}
 		}
 
 		if useAPIVer116 {
@@ -449,6 +458,10 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 			if v, ok := d.GetOk(consts.FieldSTSFallbackRegions); ok {
 				data[consts.FieldSTSFallbackRegions] = util.ToStringArray(v.([]interface{}))
+			}
+
+			if v, ok := d.GetOk(consts.FieldSTSRegion); ok {
+				data[consts.FieldSTSRegion] = v.(string)
 			}
 		}
 

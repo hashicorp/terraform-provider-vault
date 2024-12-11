@@ -91,6 +91,8 @@ func TestAccAWSSecretBackend_fallback(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSEndpoint, "https://sts.us-west-1.amazonaws.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSRegion, "us-west-1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackRegions+".0", "us-east-2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackRegions+".1", "us-east-1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackEndpoints+".0", "https://sts.us-east-2.amazonaws.com"),
