@@ -99,6 +99,23 @@ func awsSecretBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies a custom HTTP STS endpoint to use.",
 			},
+			consts.FieldSTSRegion: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies a custom STS region to use.",
+			},
+			consts.FieldSTSFallbackEndpoints: {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+				Description: "Specifies a list of custom STS fallback endpoints to use (in order).",
+			},
+			consts.FieldSTSFallbackRegions: {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+				Description: "Specifies a list of custom STS fallback regions to use (in order).",
+			},
 			consts.FieldUsernameTemplate: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -163,6 +180,9 @@ func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
 }
 
 func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -183,7 +203,7 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
 		MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
 	}
-	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+
 	if useAPIVer116 {
 		identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
 		if identityTokenKey != "" {
@@ -207,9 +227,24 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		consts.FieldAccessKey: accessKey,
 		consts.FieldSecretKey: secretKey,
 	}
+
 	for _, k := range awsSecretFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v.(string)
+		}
+	}
+
+	if useAPIVer119 {
+		if v, ok := d.GetOk(consts.FieldSTSFallbackEndpoints); ok {
+			data[consts.FieldSTSFallbackEndpoints] = util.ToStringArray(v.([]interface{}))
+		}
+
+		if v, ok := d.GetOk(consts.FieldSTSFallbackRegions); ok {
+			data[consts.FieldSTSFallbackRegions] = util.ToStringArray(v.([]interface{}))
+		}
+
+		if v, ok := d.GetOk(consts.FieldSTSRegion); ok {
+			data[consts.FieldSTSRegion] = v.(string)
 		}
 	}
 
@@ -244,6 +279,7 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 
 func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -304,6 +340,26 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 			}
 		}
 
+		if useAPIVer119 {
+			if v, ok := resp.Data[consts.FieldSTSFallbackEndpoints]; ok {
+				if err := d.Set(consts.FieldSTSFallbackEndpoints, v); err != nil {
+					return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldSTSFallbackEndpoints, path, err)
+				}
+			}
+
+			if v, ok := resp.Data[consts.FieldSTSFallbackRegions]; ok {
+				if err := d.Set(consts.FieldSTSFallbackRegions, v); err != nil {
+					return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldSTSFallbackRegions, path, err)
+				}
+			}
+
+			if v, ok := resp.Data[consts.FieldSTSRegion]; ok {
+				if err := d.Set(consts.FieldSTSRegion, v); err != nil {
+					return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldSTSRegion, path, err)
+				}
+			}
+		}
+
 		if useAPIVer116 {
 			if err := d.Set(consts.FieldIdentityTokenAudience, resp.Data[consts.FieldIdentityTokenAudience]); err != nil {
 				return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldIdentityTokenAudience, path, err)
@@ -343,6 +399,7 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 
 func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -377,7 +434,11 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		}
 		log.Printf("[DEBUG] Updated mount config input for %q", path)
 	}
-	if d.HasChanges(consts.FieldAccessKey, consts.FieldSecretKey, consts.FieldRegion, consts.FieldIAMEndpoint, consts.FieldSTSEndpoint, consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn) {
+	if d.HasChanges(consts.FieldAccessKey,
+		consts.FieldSecretKey, consts.FieldRegion, consts.FieldIAMEndpoint,
+		consts.FieldSTSEndpoint, consts.FieldSTSFallbackEndpoints, consts.FieldSTSRegion, consts.FieldSTSFallbackRegions,
+		consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn,
+	) {
 		log.Printf("[DEBUG] Updating root credentials at %q", path+"/config/root")
 		data := map[string]interface{}{
 			consts.FieldAccessKey: d.Get(consts.FieldAccessKey).(string),
@@ -387,6 +448,20 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		for _, k := range awsSecretFields {
 			if v, ok := d.GetOk(k); ok {
 				data[k] = v.(string)
+			}
+		}
+
+		if useAPIVer119 {
+			if v, ok := d.GetOk(consts.FieldSTSFallbackEndpoints); ok {
+				data[consts.FieldSTSFallbackEndpoints] = util.ToStringArray(v.([]interface{}))
+			}
+
+			if v, ok := d.GetOk(consts.FieldSTSFallbackRegions); ok {
+				data[consts.FieldSTSFallbackRegions] = util.ToStringArray(v.([]interface{}))
+			}
+
+			if v, ok := d.GetOk(consts.FieldSTSRegion); ok {
+				data[consts.FieldSTSRegion] = v.(string)
 			}
 		}
 
