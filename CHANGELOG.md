@@ -30,6 +30,8 @@ BUGS:
 
 * Remove consul secret backend role from state if not found on vault: ([#2321](https://github.com/hashicorp/terraform-provider-vault/pull/2321))
 
+* Update `database_secret_backend_connection` to support connecting to cloudsql postgres with private ip
+
 ## 4.4.0 (Aug 7, 2024)
 
 FEATURES:
