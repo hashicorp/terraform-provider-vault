@@ -171,6 +171,13 @@ func NewProvider(
 					"which is normally determined dynamically from the target Vault server",
 				ValidateDiagFunc: ValidateDiagSemVer,
 			},
+			consts.FieldSetNamespaceFromToken: {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Description: "In the case where the Vault token is for a specific namespace " +
+					"and the provider namespace is not configured, use the token namespace " +
+					"as the root namespace for all resources.",
+			},
 		},
 		ConfigureFunc:  NewProviderMeta,
 		DataSourcesMap: dataSourcesMap,

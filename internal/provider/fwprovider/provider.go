@@ -127,6 +127,12 @@ func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, res
 					),
 				},
 			},
+			consts.FieldSetNamespaceFromToken: schema.BoolAttribute{
+				Optional: true,
+				Description: "In the case where the Vault token is for a specific namespace " +
+					"and the provider namespace is not configured, use the token namespace " +
+					"as the root namespace for all resources.",
+			},
 		},
 		Blocks: map[string]schema.Block{
 			"headers": schema.ListNestedBlock{

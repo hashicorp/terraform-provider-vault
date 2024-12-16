@@ -197,7 +197,7 @@ func (p *ProviderMeta) setClient() error {
 	tlsConfig := &api.TLSConfig{
 		CACert:        GetResourceDataStr(d, consts.FieldCACertFile, api.EnvVaultCACert, ""),
 		CAPath:        GetResourceDataStr(d, consts.FieldCACertDir, api.EnvVaultCAPath, ""),
-		Insecure:      d.Get(consts.FieldSkipTLSVerify).(bool),
+		Insecure:      GetResourceDataBool(d, consts.FieldSkipTLSVerify, "VAULT_SKIP_VERIFY", false),
 		TLSServerName: GetResourceDataStr(d, consts.FieldTLSServerName, api.EnvVaultTLSServerName, ""),
 	}
 
@@ -319,7 +319,9 @@ func (p *ProviderMeta) setClient() error {
 		tokenNamespace = strings.Trim(v.(string), "/")
 	}
 
-	if !d.Get(consts.FieldSkipChildToken).(bool) {
+	skipChildToken := GetResourceDataBool(d, consts.FieldSkipChildToken, "TERRAFORM_VAULT_SKIP_CHILD_TOKEN", false)
+	log.Printf("[VINAY] Skip Child Token %t", skipChildToken)
+	if !skipChildToken {
 		// a child token is always created in the namespace of the parent token.
 		token, err = createChildToken(d, client, tokenNamespace)
 		if err != nil {
@@ -340,20 +342,13 @@ func (p *ProviderMeta) setClient() error {
 			"Future releases may not support this type of configuration.", tokenNamespace)
 
 		namespace = tokenNamespace
-
 		// set the namespace on the provider to ensure that all child
 		// namespace paths are properly honoured.
-		// We default to setting the namespace from the token unless the
-		// env var is set to false.
-		setFromToken, err := strconv.ParseBool(os.Getenv("VAULT_SET_NAMESPACE_FROM_TOKEN"))
-		if err == nil && setFromToken || err != nil {
+		setTokenFromNamespace := GetResourceDataBool(d, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true)
+		if setTokenFromNamespace {
 			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 				return err
 			}
-		} else {
-			log.Printf("[WARN] VAULT_SET_NAMESPACE_FROM_TOKEN environment "+
-				"variable is set to \"false\". The token namespace %q will "+
-				"not be used as the root namespace for all resources.", tokenNamespace)
 		}
 	}
 
@@ -580,7 +575,7 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 	// Caution is still required with state files since not all secrets
 	// can explicitly be revoked, and this limited scope won't apply to
 	// any secrets that are *written* by Terraform to Vault.
-	ttl := GetResourceDataInt(d, "max_lease_ttl_seconds", "TERRAFORM_VAULT_MAX_TTL", 1200)
+	ttl := GetResourceDataInt(d, consts.FieldMaxLeaseTTL, "TERRAFORM_VAULT_MAX_TTL", 1200)
 	childTokenLease, err := clone.Auth().Token().Create(&api.TokenCreateRequest{
 		DisplayName:    tokenName,
 		TTL:            fmt.Sprintf("%ds", ttl),
@@ -636,6 +631,39 @@ func GetResourceDataInt(d *schema.ResourceData, field, env string, dv int) int {
 	}
 	// return default
 	return dv
+}
+
+// GetResourceDataBool returns the value for a given ResourceData field
+// If the value is the zero value, then it checks the environment variable. If
+// the environment variable is empty, the default dv is returned
+func GetResourceDataBool(d *schema.ResourceData, field, env string, dv bool) bool {
+	// since Get does not tell us if the value is false or unset,
+	// we only return this value if it is non-nil, else we return the default
+
+	rawConfig := d.GetRawConfig()
+	rawVal := rawConfig.GetAttr(field)
+
+	// We don't care about the underlying value, just detecting if the config value is null (unset) or not.
+	if rawVal.IsNull() {
+		// The value is null (unset) in config, do our defaulting logic
+
+		if env != "" {
+			if s := os.Getenv(env); s != "" {
+				ret, err := strconv.ParseBool(s)
+				if err == nil {
+					return ret
+				}
+				// swallow the error and return the default because that is the
+				// behavior we had when using SDKv2's schema.EnvDefaultFunc
+			}
+		}
+
+		// return default if value not in environment
+		return dv
+	}
+
+	// If the value is set in config, return using d.Get
+	return d.Get(field).(bool)
 }
 
 func GetToken(d *schema.ResourceData) (string, error) {

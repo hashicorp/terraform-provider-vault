@@ -1057,3 +1057,74 @@ func TestNewProviderMeta_Cert(t *testing.T) {
 		})
 	}
 }
+
+func TestGetResourceDataBool(t *testing.T) {
+	testutil.TestAccPreCheck(t)
+	testutil.SkipTestAcc(t)
+	rootProvider := NewProvider(nil, nil)
+
+	//pr := &schema.Resource{
+	//	Schema: rootProvider.Schema,
+	//}
+
+	tests := []struct {
+		name     string
+		field    string
+		data     map[string]interface{}
+		dv       bool
+		env      string
+		expected bool
+	}{
+		{
+			name: "unset",
+			data: map[string]interface{}{
+				consts.FieldSkipChildToken: true,
+			},
+			field:    consts.FieldSetNamespaceFromToken,
+			dv:       true,
+			env:      "VAULT_SET_NAMESPACE_FROM_TOKEN",
+			expected: true,
+		},
+		{
+			name: "set-to-false",
+			data: map[string]interface{}{
+				consts.FieldSetNamespaceFromToken: false,
+			},
+			field:    consts.FieldSetNamespaceFromToken,
+			dv:       true,
+			env:      "VAULT_SET_NAMESPACE_FROM_TOKEN",
+			expected: false,
+		},
+		{
+			name: "set-to-true",
+			data: map[string]interface{}{
+				consts.FieldSetNamespaceFromToken: true,
+			},
+			field:    consts.FieldSetNamespaceFromToken,
+			dv:       true,
+			env:      "VAULT_SET_NAMESPACE_FROM_TOKEN",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			//ctx := context.Background()
+			//cfg := terraform.NewResourceConfigRaw(tt.data)
+			//rootProvider.Configure(ctx, cfg)
+			diff := schema.TestResourceDataRaw(t,
+				rootProvider.Schema,
+				tt.data)
+			//for k, v := range tt.data {
+			//	if err := tt.d.Set(k, v); err != nil {
+			//		t.Fatalf("failed to set resource data, key=%s, value=%#v", k, v)
+			//	}
+			//}
+
+			got := GetResourceDataBool(diff, tt.field, tt.env, tt.dv)
+			if got != tt.expected {
+				t.Errorf("GetResourceDataBool() got = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
