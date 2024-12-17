@@ -98,7 +98,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, true, true),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
-						resource.TestCheckResourceAttr(resourceName, "revoke", "true"),
+						resource.TestCheckResourceAttr(resourceName, "revoke_with_key", "true"),
 						testPKICertRevocation(intermediatePath, store),
 						testCapturePKICert(resourceName, store),
 					)...,
@@ -179,20 +179,33 @@ resource "vault_pki_secret_backend_role" "test" {
 `, rootPath, intermediatePath),
 	}
 
-	if withCert {
+	if withCert && !revokeWithKey {
 		fragments = append(fragments, fmt.Sprintf(`
 resource "vault_pki_secret_backend_cert" "test" {
   backend               = vault_pki_secret_backend_role.test.backend
   name                  = vault_pki_secret_backend_role.test.name
   common_name           = "cert.test.my.domain"
   uri_sans              = ["spiffe://test.my.domain"]
-	user_ids              = ["foo", "bar"]
+  user_ids              = ["foo", "bar"]
   ttl                   = "720h"
   min_seconds_remaining = 60
   revoke                = %t
-  revoke_with_key       = %t
 }
-`, revoke, revokeWithKey))
+`, revoke))
+	}
+	if revokeWithKey && withCert {
+		fragments = append(fragments, `
+resource "vault_pki_secret_backend_cert" "test" {
+  backend               = vault_pki_secret_backend_role.test.backend
+  name                  = vault_pki_secret_backend_role.test.name
+  common_name           = "cert.test.my.domain"
+  uri_sans              = ["spiffe://test.my.domain"]
+  user_ids              = ["foo", "bar"]
+  ttl                   = "720h"
+  min_seconds_remaining = 60
+  revoke_with_key       = true
+}
+`)
 	}
 
 	return strings.Join(fragments, "\n")

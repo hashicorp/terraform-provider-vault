@@ -67,9 +67,9 @@ The following arguments are supported:
 
 * `auto_renew` - (Optional) If set to `true`, certs will be renewed if the expiration is within `min_seconds_remaining`. Default `false`
  
-* `revoke` - If set to `true`, the certificate will be revoked on resource destruction. 
+* `revoke` - If set to `true`, the certificate will be revoked on resource destruction. Needs privileged access on Vault engine. Conflicts with `revoke_with_key`. Default `false`.
 
-* `revoke_with_key` - if set to `true`, use method `revoke-with-key` to revoke the certificate on resource destruction. Used to revoke certificate without using privileged operation.
+* `revoke_with_key` - If set to `true`, use method `revoke-with-key` to revoke the certificate on resource destruction. Used to revoke certificate without using privileged operation. Conflicts with `revoke`. Default `false`
 
 ## Attributes Reference
 
