@@ -371,6 +371,7 @@ const (
 	FieldObjectID                      = "object_id"
 	FieldApplicationObjectID           = "application_object_id"
 	FieldPermanentlyDelete             = "permanently_delete"
+	FieldPersistApp                    = "persist_app"
 	FieldSignInAudience                = "sign_in_audience"
 	FieldTags                          = "tags"
 	FieldSkipStaticRoleImportRotation  = "skip_static_role_import_rotation"
