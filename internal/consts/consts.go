@@ -451,6 +451,7 @@ const (
 	FieldEabKey                        = "key"
 	FieldAcmeDirectory                 = "acme_directory"
 	FieldEabId                         = "eab_id"
+	FieldNotAfter                      = "not_after"
 	/*
 		common environment variables
 	*/
