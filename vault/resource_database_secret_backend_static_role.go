@@ -26,6 +26,8 @@ var staticRoleFields = []string{
 	consts.FieldRotationPeriod,
 	consts.FieldRotationStatements,
 	consts.FieldDBName,
+	consts.FieldCredentialType,
+	consts.FieldCredentialConfig,
 }
 
 func databaseSecretBackendStaticRoleResource() *schema.Resource {
@@ -99,6 +101,20 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 				Description: "The password corresponding to the username in the database. " +
 					"Required when using the Rootless Password Rotation workflow for static roles.",
 			},
+			consts.FieldCredentialType: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				Description: "The credential type for the user, can be one of \"password\", \"rsa_private_key\" or \"client_certificate\"." +
+					"The configuration can be done in `credential_config`.",
+			},
+			consts.FieldCredentialConfig: {
+				Type:     schema.TypeMap,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Optional: true,
+				Description: "The configuration for the credential type." +
+					"Full documentation for the allowed values can be found under \"https://developer.hashicorp.com/vault/api-docs/secret/databases#credential_config\".",
+			},
 		},
 	}
 }
@@ -136,6 +152,14 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 
 	if v, ok := d.GetOk(consts.FieldRotationPeriod); ok && v != "" {
 		data[consts.FieldRotationPeriod] = v
+	}
+
+	if v, ok := d.GetOk(consts.FieldCredentialType); ok && v != "" {
+		data[consts.FieldCredentialType] = v
+	}
+
+	if v, ok := d.GetOk(consts.FieldCredentialConfig); ok && v != "" {
+		data[consts.FieldCredentialConfig] = v
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
