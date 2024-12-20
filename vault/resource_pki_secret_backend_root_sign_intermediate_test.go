@@ -269,7 +269,6 @@ func testCheckPKISecretRootSignIntermediate(res, path, commonName, format, notAf
 		resource.TestCheckResourceAttr(res, "province", "CA"),
 		resource.TestCheckResourceAttr(res, "format", format),
 		resource.TestCheckResourceAttrSet(res, "serial_number"),
-		resource.TestCheckResourceAttr(res, "not_after", notAfter),
 		assertPKICertificateBundle(res, format),
 		assertPKICAChain(res),
 		assertCertificateAttributes(res, notAfter),
