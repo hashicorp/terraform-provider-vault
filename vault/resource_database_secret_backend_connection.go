@@ -1863,8 +1863,10 @@ func writeDatabaseSecretConfig(d *schema.ResourceData, client *api.Client,
 		}
 	}
 
-	if v, ok := d.Get(prefix + consts.FieldSkipStaticRoleImportRotation).(bool); ok {
-		data[consts.FieldSkipStaticRoleImportRotation] = v
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.Get(prefix + consts.FieldSkipStaticRoleImportRotation).(bool); ok {
+			data[consts.FieldSkipStaticRoleImportRotation] = v
+		}
 	}
 
 	log.Printf("[DEBUG] Writing connection config to %q", path)

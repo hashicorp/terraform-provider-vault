@@ -203,6 +203,58 @@ CREATE ROLE "{{name}}" WITH
 	})
 }
 
+// TestAccDatabaseSecretBackendStaticRole_SkipImportRotation tests the skip
+// auto import Rotation configuration.
+// To run locally you will need to set the following env vars:
+//   - POSTGRES_URL_TEST
+//   - POSTGRES_URL_ROOTLESS
+func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
+	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
+	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_ROOTLESS")[0]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	username := acctest.RandomWithPrefix("user")
+	dbName := acctest.RandomWithPrefix("db")
+	name := acctest.RandomWithPrefix("staticrole")
+	resourceName := "vault_database_secret_backend_static_role.test"
+
+	testRoleStaticCreate := `
+CREATE ROLE "{{name}}" WITH
+  LOGIN
+  PASSWORD '{{password}}';
+`
+
+	// create static database user
+	testutil.CreateTestPGUser(t, connURLTestRoot, username, "testpassword", testRoleStaticCreate)
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_skipImportRotation(name, username, dbName, backend, connURL, "testpassword"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
+					resource.TestCheckResourceAttr(resourceName, "rotation_period", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "skip_import_rotation", "true"),
+				),
+			},
+			{
+				ResourceName:      "vault_database_secret_backend_static_role.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func testAccDatabaseSecretBackendStaticRoleCheckDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_database_secret_backend_static_role" {
@@ -367,6 +419,34 @@ resource "vault_database_secret_backend_static_role" "test" {
   username = "%s"
   rotation_period = 1800
   rotation_statements = ["SELECT 1;"]
+}
+`, path, db, connURL, name, username)
+}
+
+func testAccDatabaseSecretBackendStaticRoleConfig_skipImportRotation(name, username, db, path, connURL, smPassword string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+
+  postgresql {
+	  connection_url = "%s"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  skip_import_rotation = true
+  rotation_period = 3600
 }
 `, path, db, connURL, name, username)
 }

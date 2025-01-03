@@ -6,11 +6,12 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"log"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -141,6 +142,9 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := d.GetOk(consts.FieldSelfManagedPassword); ok && v != "" {
 			data[consts.FieldSelfManagedPassword] = v
+		}
+		if v, ok := d.Get(consts.FieldSkipImportRotation).(bool); ok {
+			data[consts.FieldSkipImportRotation] = v
 		}
 	}
 
