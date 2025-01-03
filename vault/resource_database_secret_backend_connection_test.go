@@ -820,6 +820,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", userTempl),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.skip_static_role_import_rotation", "true"),
 				),
 			},
 			{
@@ -1753,6 +1754,8 @@ resource "vault_database_secret_backend_connection" "test" {
       password                = "%s"
       username_template       = "%s"
       disable_escaping        = true
+
+      skip_static_role_import_rotation = true
   }
 }
 `, path, name, parsedURL.String(), openConn, idleConn, maxConnLifetime, username, password, userTempl)

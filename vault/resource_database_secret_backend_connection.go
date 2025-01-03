@@ -1863,6 +1863,10 @@ func writeDatabaseSecretConfig(d *schema.ResourceData, client *api.Client,
 		}
 	}
 
+	if v, ok := d.Get(prefix + consts.FieldSkipStaticRoleImportRotation).(bool); ok {
+		data[consts.FieldSkipStaticRoleImportRotation] = v
+	}
+
 	log.Printf("[DEBUG] Writing connection config to %q", path)
 	_, err = client.Logical().Write(path, data)
 	if err != nil {
