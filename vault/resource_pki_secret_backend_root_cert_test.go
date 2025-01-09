@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -24,11 +25,13 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 
 	store := &testPKICertStore{}
 
+	notAfterTime := time.Now().Add(2 * time.Hour).Format(time.RFC3339)
+
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "86400"),
+		//resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "86400"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pem"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKeyFormat, "der"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
@@ -48,7 +51,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
+				Config: testPkiSecretBackendRootCertificateConfig_basic(path, ""),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testCapturePKICert(resourceName, store),
@@ -67,12 +70,28 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 						t.Fatal(err)
 					}
 				},
-				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
+				Config: testPkiSecretBackendRootCertificateConfig_basic(path, ""),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testPKICertReIssued(resourceName, store),
 						testCapturePKICert(resourceName, store),
 					)...,
+				),
+			},
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+					_, err := client.Logical().Delete(fmt.Sprintf("%s/root", path))
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testPkiSecretBackendRootCertificateConfig_basic(path, fmt.Sprintf("not_after = \"%s\"", notAfterTime)),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNotAfter, notAfterTime),
+					testCapturePKICert(resourceName, store),
+					assertCertificateAttributes(resourceName, notAfterTime),
 				),
 			},
 			{
@@ -100,7 +119,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 						t.Fatalf("empty response for write on path %s", genPath)
 					}
 				},
-				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
+				Config: testPkiSecretBackendRootCertificateConfig_basic(path, ""),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testPKICertReIssued(resourceName, store),
@@ -239,7 +258,12 @@ func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
 	})
 }
 
-func testPkiSecretBackendRootCertificateConfig_basic(path string) string {
+func testPkiSecretBackendRootCertificateConfig_basic(path, extraConfig string) string {
+	//ttl := 86400
+	//if strings.HasPrefix(extraConfig, "not_after") {
+	//	ttl = 0
+	//}
+
 	config := fmt.Sprintf(`
 resource "vault_mount" "test" {
   path                      = "%s"
@@ -253,7 +277,6 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   backend              = vault_mount.test.path
   type                 = "internal"
   common_name          = "test Root CA"
-  ttl                  = "86400"
   format               = "pem"
   private_key_format   = "der"
   key_type             = "rsa"
@@ -265,8 +288,9 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   locality             = "test"
   province             = "test"
   max_path_length      = 0
+  %s
 }
-`, path)
+`, path, extraConfig)
 
 	return config
 }
