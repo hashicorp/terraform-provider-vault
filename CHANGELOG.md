@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 4.6.0 (Jan 15, 2025)
+
 FEATURES:
 
 * Update `vault_database_secret_backend_connection`to support `password_authentication` for PostgreSQL, allowing to encrypt password before being passed to PostgreSQL ([#2371](https://github.com/hashicorp/terraform-provider-vault/pull/2371))
