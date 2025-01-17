@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
 	"testing"
 
@@ -153,9 +154,12 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 
 // TestAccDatabaseSecretBackendStaticRole_Rootless tests the
 // Rootless Config and Rotation flow for Static Roles.
+//
 // To run locally you will need to set the following env vars:
 //   - POSTGRES_URL_TEST
 //   - POSTGRES_URL_ROOTLESS
+//
+// See .github/workflows/build.yml for details.
 func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
 	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
 	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_ROOTLESS")[0]
@@ -199,19 +203,31 @@ func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
 
 // TestAccDatabaseSecretBackendStaticRole_SkipImportRotation tests the skip
 // auto import Rotation configuration.
+//
 // To run locally you will need to set the following env vars:
+//   - POSTGRES_URL
 //   - POSTGRES_URL_TEST
+//
+// See .github/workflows/build.yml for details.
 func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
-	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
+	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
+	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")[0]
+
+	parsedURL, err := url.Parse(connURLTestRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vaultAdminUser := parsedURL.User.Username()
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	username := acctest.RandomWithPrefix("user")
+	staticUsername := acctest.RandomWithPrefix("user")
 	dbName := acctest.RandomWithPrefix("db")
-	name := acctest.RandomWithPrefix("staticrole")
+	roleName := acctest.RandomWithPrefix("staticrole")
 	resourceName := "vault_database_secret_backend_static_role.test"
 
 	// create static database user
-	testutil.CreateTestPGUser(t, connURL, username, "testpassword", testRoleStaticCreate)
+	testutil.CreateTestPGUser(t, connURLTestRoot, staticUsername, "testpassword", testRoleStaticCreate)
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -222,10 +238,10 @@ func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendStaticRoleConfig_skipImportRotation(name, username, dbName, backend, connURL, "testpassword"),
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_skipImportRotation(roleName, staticUsername, dbName, backend, connURL, vaultAdminUser),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "username", staticUsername),
 					resource.TestCheckResourceAttr(resourceName, "skip_import_rotation", "true"),
 				),
 			},
@@ -402,7 +418,7 @@ resource "vault_database_secret_backend_static_role" "test" {
 `, path, db, connURL, name, username)
 }
 
-func testAccDatabaseSecretBackendStaticRoleConfig_skipImportRotation(name, username, db, path, connURL, smPassword string) string {
+func testAccDatabaseSecretBackendStaticRoleConfig_skipImportRotation(roleName, staticUsername, db, path, connURL, vaultAdminUser string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -415,7 +431,8 @@ resource "vault_database_secret_backend_connection" "test" {
   allowed_roles = ["*"]
 
   postgresql {
-	  connection_url = "%s"
+	connection_url = "%s"
+	username = "%s"
   }
 }
 
@@ -427,7 +444,7 @@ resource "vault_database_secret_backend_static_role" "test" {
   skip_import_rotation = true
   rotation_period = 3600
 }
-`, path, db, connURL, name, username)
+`, path, db, connURL, vaultAdminUser, roleName, staticUsername)
 }
 
 func testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, db, path, connURL, smPassword string) string {
