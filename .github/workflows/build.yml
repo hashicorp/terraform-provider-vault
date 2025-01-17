@@ -208,10 +208,12 @@ jobs:
           # POSTGRES_URL is the standard root conn URL for Vault
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
           # POSTGRES_URL_TEST is used by the TFVP test to connect directly to
-          # the postgres container. Note: the host is "localhost" because the
-          # TFVP tests do not run in the same docker network.
+          # the postgres container so that it can create static users.
+          # Note: the host is "localhost" because the TFVP tests do not run in
+          # the same docker network.
           POSTGRES_URL_TEST: "postgres://postgres:secret@localhost:5432/database?sslmode=disable"
-          # POSTGRES_URL_ROOTLESS is used by Vault to connect to the postgres container.
+          # POSTGRES_URL_ROOTLESS is used by Vault to connect to the postgres
+          # container for "rootless" static roles".
           POSTGRES_URL_ROOTLESS: "postgres://{{username}}:{{password}}@postgres:5432/database?sslmode=disable"
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator

@@ -200,9 +200,9 @@ func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
 // TestAccDatabaseSecretBackendStaticRole_SkipImportRotation tests the skip
 // auto import Rotation configuration.
 // To run locally you will need to set the following env vars:
-//   - POSTGRES_URL
+//   - POSTGRES_URL_TEST
 func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
-	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")[0]
+	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	username := acctest.RandomWithPrefix("user")
