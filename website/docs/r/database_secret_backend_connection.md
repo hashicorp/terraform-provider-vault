@@ -62,6 +62,9 @@ The following arguments are supported:
 
 * `data` - (Optional) A map of sensitive data to pass to the endpoint. Useful for templated connection strings.
 
+* `skip_static_role_import_rotation` - (Optional) If set to true, static roles
+  will not be rotated during import. Requires Vault 1.18+ Enterprise.
+
 * `cassandra` - (Optional) A nested block containing configuration options for Cassandra connections.
 
 * `couchbase` - (Optional) A nested block containing configuration options for Couchbase connections.

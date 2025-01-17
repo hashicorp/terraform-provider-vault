@@ -209,8 +209,7 @@ CREATE ROLE "{{name}}" WITH
 //   - POSTGRES_URL_TEST
 //   - POSTGRES_URL_ROOTLESS
 func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
-	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
-	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_ROOTLESS")[0]
+	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	username := acctest.RandomWithPrefix("user")
@@ -225,7 +224,7 @@ CREATE ROLE "{{name}}" WITH
 `
 
 	// create static database user
-	testutil.CreateTestPGUser(t, connURLTestRoot, username, "testpassword", testRoleStaticCreate)
+	testutil.CreateTestPGUser(t, connURL, username, "testpassword", testRoleStaticCreate)
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -246,11 +245,7 @@ CREATE ROLE "{{name}}" WITH
 					resource.TestCheckResourceAttr(resourceName, "skip_import_rotation", "true"),
 				),
 			},
-			{
-				ResourceName:      "vault_database_secret_backend_static_role.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, ""),
 		},
 	})
 }

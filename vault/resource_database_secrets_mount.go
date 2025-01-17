@@ -119,6 +119,8 @@ func databaseSecretsMountResource() *schema.Resource {
 	}
 }
 
+// getDatabaseSecretsMountSchema is used to define the schema for
+// vault_database_secrets_mount
 func getDatabaseSecretsMountSchema() schemaMap {
 	s := getMountSchema("type")
 	for k, v := range getDatabaseSchema(schema.TypeList) {
@@ -150,6 +152,12 @@ func addCommonDatabaseSchema(s *schema.Schema) {
 	}
 }
 
+// getCommonDatabaseSchema is used to define the common schema for both
+// database resources:
+//   - vault_database_secrets_mount
+//   - vault_database_secret_backend_connection
+//
+// New fields on the DB /config endpoint should be added here.
 func getCommonDatabaseSchema() schemaMap {
 	return schemaMap{
 		"name": {
@@ -212,6 +220,8 @@ func getCommonDatabaseSchema() schemaMap {
 	}
 }
 
+// setCommonDatabaseSchema is used to define the schema for
+// vault_database_secret_backend_connection
 func setCommonDatabaseSchema(s schemaMap) schemaMap {
 	for k, v := range getCommonDatabaseSchema() {
 		s[k] = v

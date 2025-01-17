@@ -100,6 +100,11 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 				Description: "The password corresponding to the username in the database. " +
 					"Required when using the Rootless Password Rotation workflow for static roles.",
 			},
+			consts.FieldSkipImportRotation: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Skip rotation of the password on import.",
+			},
 		},
 	}
 }
@@ -211,6 +216,12 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 			return diag.FromErr(err)
 		}
 		if err := d.Set(consts.FieldRotationWindow, role.Data[consts.FieldRotationWindow]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+		if err := d.Set(consts.FieldSkipImportRotation, role.Data[consts.FieldSkipImportRotation]); err != nil {
 			return diag.FromErr(err)
 		}
 	}
