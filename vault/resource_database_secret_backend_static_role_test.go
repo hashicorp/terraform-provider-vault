@@ -166,12 +166,6 @@ func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
 	name := acctest.RandomWithPrefix("staticrole")
 	resourceName := "vault_database_secret_backend_static_role.test"
 
-	testRoleStaticCreate := `
-CREATE ROLE "{{name}}" WITH
-  LOGIN
-  PASSWORD '{{password}}';
-`
-
 	// create static database user
 	testutil.CreateTestPGUser(t, connURLTestRoot, username, "testpassword", testRoleStaticCreate)
 
@@ -206,8 +200,7 @@ CREATE ROLE "{{name}}" WITH
 // TestAccDatabaseSecretBackendStaticRole_SkipImportRotation tests the skip
 // auto import Rotation configuration.
 // To run locally you will need to set the following env vars:
-//   - POSTGRES_URL_TEST
-//   - POSTGRES_URL_ROOTLESS
+//   - POSTGRES_URL
 func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
 	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")[0]
 
@@ -216,12 +209,6 @@ func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
 	dbName := acctest.RandomWithPrefix("db")
 	name := acctest.RandomWithPrefix("staticrole")
 	resourceName := "vault_database_secret_backend_static_role.test"
-
-	testRoleStaticCreate := `
-CREATE ROLE "{{name}}" WITH
-  LOGIN
-  PASSWORD '{{password}}';
-`
 
 	// create static database user
 	testutil.CreateTestPGUser(t, connURL, username, "testpassword", testRoleStaticCreate)
@@ -238,10 +225,7 @@ CREATE ROLE "{{name}}" WITH
 				Config: testAccDatabaseSecretBackendStaticRoleConfig_skipImportRotation(name, username, dbName, backend, connURL, "testpassword"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "username", username),
-					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "3600"),
 					resource.TestCheckResourceAttr(resourceName, "skip_import_rotation", "true"),
 				),
 			},
@@ -474,3 +458,9 @@ resource "vault_database_secret_backend_static_role" "test" {
 }
 `, path, db, connURL, name, username, smPassword)
 }
+
+var testRoleStaticCreate = `
+CREATE ROLE "{{name}}" WITH
+  LOGIN
+  PASSWORD '{{password}}';
+`

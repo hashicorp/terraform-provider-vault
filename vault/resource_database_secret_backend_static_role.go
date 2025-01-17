@@ -220,7 +220,7 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
 		if err := d.Set(consts.FieldSkipImportRotation, role.Data[consts.FieldSkipImportRotation]); err != nil {
 			return diag.FromErr(err)
 		}
