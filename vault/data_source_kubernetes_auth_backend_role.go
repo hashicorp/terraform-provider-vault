@@ -44,6 +44,12 @@ func kubernetesAuthBackendRoleDataSource() *schema.Resource {
 			Computed:    true,
 			Description: "List of namespaces allowed to access this role. If set to \"*\" all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
 		},
+		"bound_service_account_namespace_selector": {
+			Type:        schema.TypeString,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Computed:    true,
+			Description: "A label selector for Kubernetes namespaces allowed to access this role. Accepts either a JSON or YAML object. The value should be of type LabelSelector. Currently, label selectors with matchExpressions are not supported. To use label selectors, Vault must have permission to read namespaces on the Kubernetes cluster. If set with bound_service_account_namespaces, the conditions are ORed.",
+		},
 		"audience": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -93,7 +99,7 @@ func kubernetesAuthBackendRoleDataSourceRead(d *schema.ResourceData, meta interf
 		return err
 	}
 
-	params := []string{"bound_service_account_names", "bound_service_account_namespaces", "audience", "alias_name_source"}
+	params := []string{"bound_service_account_names", "bound_service_account_namespaces", "bound_service_account_namespace_selector", "audience", "alias_name_source"}
 	for _, k := range params {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return err
