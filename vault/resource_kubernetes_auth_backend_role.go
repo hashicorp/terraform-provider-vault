@@ -39,7 +39,7 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 		"bound_service_account_namespaces": {
 			Type:        schema.TypeSet,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			Required:    true,
+			Optional:    true,
 			Description: "List of namespaces allowed to access this role. If set to `[\"*\"]` all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
 		},
 		"bound_service_account_namespace_selector": {
