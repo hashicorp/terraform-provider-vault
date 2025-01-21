@@ -872,41 +872,6 @@ func TestAccDatabaseSecretBackendConnection_postgresql_tls(t *testing.T) {
 	})
 }
 
-func TestAccDatabaseSecretBackendConnection_postgresql_skipRotation(t *testing.T) {
-	MaybeSkipDBTests(t, dbEnginePostgres)
-
-	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
-	connURL := values[0]
-	parsedURL, err := url.Parse(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	username := parsedURL.User.Username()
-
-	resourceName := "vault_database_secret_backend_connection.test"
-	backend := acctest.RandomWithPrefix("tf-test-db")
-	pluginName := dbEnginePostgres.DefaultPluginName()
-	name := acctest.RandomWithPrefix("db")
-
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
-		},
-		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql_skipRotation(name, backend, connURL, username),
-				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
-					resource.TestCheckResourceAttr(resourceName, "skip_static_role_import_rotation", "true"),
-				),
-			},
-			testutil.GetImportTestStep(resourceName, false, nil, ""),
-		},
-	})
-}
-
 func TestAccDatabaseSecretBackendConnection_postgresql_rootlessConfig(t *testing.T) {
 	resourceName := "vault_database_secret_backend_connection.test"
 	backend := acctest.RandomWithPrefix("tf-test-db")
@@ -1856,26 +1821,6 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, tlsCA, tlsCert, privateKey)
-}
-
-func testAccDatabaseSecretBackendConnectionConfig_postgresql_skipRotation(name, path, connURL, username string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "db" {
-  path = "%s"
-  type = "database"
-}
-
-resource "vault_database_secret_backend_connection" "test" {
-  backend = vault_mount.db.path
-  name = "%s"
-  skip_static_role_import_rotation = true
-
-  postgresql {
-    connection_url = "%s"
-	username = "%s"
-  }
-}
-`, path, name, connURL, username)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_postgresql_rootless(name, path string) string {

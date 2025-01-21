@@ -189,11 +189,6 @@ func getCommonDatabaseSchema() schemaMap {
 			Description: "Specifies if the connection is verified during initial configuration.",
 			Default:     true,
 		},
-		consts.FieldSkipStaticRoleImportRotation: {
-			Type:        schema.TypeBool,
-			Optional:    true,
-			Description: "Skip rotation of static role secrets on import.",
-		},
 		"allowed_roles": {
 			Type:        schema.TypeList,
 			Optional:    true,
