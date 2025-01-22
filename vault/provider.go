@@ -107,6 +107,10 @@ var (
 			Resource:      UpdateSchemaResource(genericSecretDataSource()),
 			PathInventory: []string{"/secret/data/{path}"},
 		},
+		"vault_generic_secret_item": {
+			Resource:      UpdateSchemaResource(genericSecretItemDataSource()),
+			PathInventory: []string{"/secret/data/{path}"},
+		},
 		"vault_policy_document": {
 			Resource:      UpdateSchemaResource(policyDocumentDataSource()),
 			PathInventory: []string{"/sys/policy/{name}"},
@@ -383,6 +387,10 @@ var (
 		},
 		"vault_generic_secret": {
 			Resource:      UpdateSchemaResource(genericSecretResource("vault_generic_secret")),
+			PathInventory: []string{GenericPath},
+		},
+		"vault_generic_secret_item": {
+			Resource:      UpdateSchemaResource(genericSecretItemResource("vault_generic_secret_item")),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_jwt_auth_backend": {

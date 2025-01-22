@@ -52,6 +52,8 @@ const (
 	FieldLeaseRenewable                = "lease_renewable"
 	FieldDepth                         = "depth"
 	FieldDataJSON                      = "data_json"
+	FieldKey                           = "key"
+	FieldValue                         = "value"
 	FieldDN                            = "dn"
 	FieldRole                          = "role"
 	FieldRoles                         = "roles"
