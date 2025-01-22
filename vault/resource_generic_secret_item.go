@@ -4,15 +4,13 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func genericSecretItemResource(name string) *schema.Resource {
@@ -26,31 +24,25 @@ func genericSecretItemResource(name string) *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		MigrateState: resourceGenericSecretMigrateState,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Full path where the generic secret will be written.",
-			},
-
-			"id": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Description: "Full path where the generic secret item will be written.",
 			},
 
 			consts.FieldKey: {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Name of the secret to write.",
+				Description: "Name of the secret item to write.",
 			},
 
 			consts.FieldValue: {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Content of the secret to write.",
+				Description: "Content of the secret item to write.",
 				Sensitive:   true,
 			},
 		},
@@ -64,6 +56,7 @@ func genericSecretItemResourceWrite(d *schema.ResourceData, meta interface{}) er
 	}
 
 	path := d.Get(consts.FieldPath).(string)
+	key := d.Get(consts.FieldKey).(string)
 
 	secret, err := versionedSecret(-1, path, client)
 	if err != nil {
@@ -73,16 +66,85 @@ func genericSecretItemResourceWrite(d *schema.ResourceData, meta interface{}) er
 		return fmt.Errorf("no secret found at %q", path)
 	}
 
-	identifier := uuid.New().String()
+	d.SetId(key)
 
-	d.SetId(identifier)
-	d.Set("id", identifier)
+	for k, v := range secret.Data {
+		if k == key {
+			if v == d.Get(consts.FieldValue).(string) {
+				return nil
+			}
 
-	return nil
+			break
+		}
+	}
+
+	secret.Data[key] = d.Get(consts.FieldValue).(string)
+
+	data := secret.Data
+
+	mountPath, v2, err := isKVv2(path, client)
+	if err != nil {
+		return fmt.Errorf("error determining if it's a v2 path: %s", err)
+	}
+
+	if v2 {
+		path = addPrefixToVKVPath(path, mountPath, "data")
+		data = map[string]interface{}{
+			"data":    data,
+			"options": map[string]interface{}{},
+		}
+	}
+
+	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
+		return err
+	}
+
+	return genericSecretItemResourceRead(d, meta)
 }
 
 func genericSecretItemResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	log.Println("genericSecretItemResourceDelete")
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	path := d.Get(consts.FieldPath).(string)
+	key := d.Get(consts.FieldKey).(string)
+
+	secret, err := versionedSecret(-1, path, client)
+	if err != nil {
+		return fmt.Errorf("error reading from Vault: %s", err)
+	}
+	if secret == nil {
+		return fmt.Errorf("no secret found at %q", path)
+	}
+
+	for k := range secret.Data {
+		if k == key {
+			delete(secret.Data, k)
+			break
+		}
+	}
+
+	data := secret.Data
+
+	mountPath, v2, err := isKVv2(path, client)
+	if err != nil {
+		return fmt.Errorf("error determining if it's a v2 path: %s", err)
+	}
+
+	if v2 {
+		path = addPrefixToVKVPath(path, mountPath, "data")
+		data = map[string]interface{}{
+			"data":    data,
+			"options": map[string]interface{}{},
+		}
+	}
+
+	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -93,6 +155,7 @@ func genericSecretItemResourceRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	path := d.Get(consts.FieldPath).(string)
+	key := d.Get(consts.FieldKey).(string)
 
 	secret, err := versionedSecret(-1, path, client)
 	if err != nil {
@@ -102,24 +165,15 @@ func genericSecretItemResourceRead(d *schema.ResourceData, meta interface{}) err
 		return fmt.Errorf("no secret found at %q", path)
 	}
 
-	data := secret.Data
-	jsonData, err := json.Marshal(secret.Data)
-	if err != nil {
-		return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
+	d.SetId(key)
+
+	if err := d.Set(consts.FieldKey, key); err != nil {
+		return err
 	}
 
-	fmt.Println("data--------------", data, jsonData)
-
-	// if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
-	// 	return err
-	// }
-	// if err := d.Set(consts.FieldPath, path); err != nil {
-	// 	return err
-	// }
-
-	// if err := d.Set("data", data); err != nil {
-	// 	return err
-	// }
+	if err := d.Set(consts.FieldValue, secret.Data[d.Get(consts.FieldKey).(string)]); err != nil {
+		return err
+	}
 
 	return nil
 }

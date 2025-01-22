@@ -5,7 +5,6 @@ package vault
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -24,11 +23,6 @@ func genericSecretItemDataSource() *schema.Resource {
 				Description: "Full path from which a secret will be read.",
 			},
 
-			"id": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-
 			consts.FieldKey: {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -40,7 +34,7 @@ func genericSecretItemDataSource() *schema.Resource {
 				Required:    false,
 				Computed:    true,
 				Description: "Content of the secret item to read.",
-				Sensitive:   false,
+				Sensitive:   true,
 			},
 		},
 	}
@@ -52,7 +46,8 @@ func genericSecretItemDataSourceRead(d *schema.ResourceData, meta interface{}) e
 		return e
 	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
+	key := d.Get(consts.FieldKey).(string)
 
 	secret, err := versionedSecret(-1, path, client)
 	if err != nil {
@@ -62,8 +57,13 @@ func genericSecretItemDataSourceRead(d *schema.ResourceData, meta interface{}) e
 		return fmt.Errorf("no secret found at %q", path)
 	}
 
-	log.Println("__________>", d.Get("id").(string))
-	if err := d.Set(consts.FieldKey, d.Get(consts.FieldKey)); err != nil {
+	if _, ok := secret.Data[key]; !ok {
+		return fmt.Errorf("no secret item named %q was found", key)
+	}
+
+	d.SetId(key)
+
+	if err := d.Set(consts.FieldKey, key); err != nil {
 		return err
 	}
 
