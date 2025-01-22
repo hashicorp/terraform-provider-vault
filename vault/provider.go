@@ -390,7 +390,7 @@ var (
 			PathInventory: []string{GenericPath},
 		},
 		"vault_generic_secret_item": {
-			Resource:      UpdateSchemaResource(genericSecretItemResource("vault_generic_secret_item")),
+			Resource:      UpdateSchemaResource(genericSecretItemResource()),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_jwt_auth_backend": {

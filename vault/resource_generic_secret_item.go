@@ -5,15 +5,23 @@ package vault
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-func genericSecretItemResource(name string) *schema.Resource {
+var (
+	genericSecretItemResourceWriteMutex  sync.Mutex
+	genericSecretItemResourceDeleteMutex sync.Mutex
+	genericSecretItemResourceReadMutex   sync.Mutex
+)
+
+func genericSecretItemResource() *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
 
@@ -50,6 +58,9 @@ func genericSecretItemResource(name string) *schema.Resource {
 }
 
 func genericSecretItemResourceWrite(d *schema.ResourceData, meta interface{}) error {
+	genericSecretItemResourceWriteMutex.Lock()
+	defer genericSecretItemResourceWriteMutex.Unlock()
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -58,27 +69,37 @@ func genericSecretItemResourceWrite(d *schema.ResourceData, meta interface{}) er
 	path := d.Get(consts.FieldPath).(string)
 	key := d.Get(consts.FieldKey).(string)
 
+	d.SetId(key)
+
 	secret, err := versionedSecret(-1, path, client)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
+
+	var shouldCreateSecret bool
+
 	if secret == nil {
-		return fmt.Errorf("no secret found at %q", path)
-	}
-
-	d.SetId(key)
-
-	for k, v := range secret.Data {
-		if k == key {
-			if v == d.Get(consts.FieldValue).(string) {
-				return nil
-			}
-
-			break
+		shouldCreateSecret = true
+		secret = &api.Secret{
+			Data: map[string]interface{}{
+				key: d.Get(consts.FieldValue).(string),
+			},
 		}
 	}
 
-	secret.Data[key] = d.Get(consts.FieldValue).(string)
+	if !shouldCreateSecret {
+		for k, v := range secret.Data {
+			if k == key {
+				if v == d.Get(consts.FieldValue).(string) {
+					return nil
+				}
+
+				break
+			}
+		}
+
+		secret.Data[key] = d.Get(consts.FieldValue).(string)
+	}
 
 	data := secret.Data
 
@@ -103,6 +124,9 @@ func genericSecretItemResourceWrite(d *schema.ResourceData, meta interface{}) er
 }
 
 func genericSecretItemResourceDelete(d *schema.ResourceData, meta interface{}) error {
+	genericSecretItemResourceDeleteMutex.Lock()
+	defer genericSecretItemResourceDeleteMutex.Unlock()
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -149,6 +173,9 @@ func genericSecretItemResourceDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func genericSecretItemResourceRead(d *schema.ResourceData, meta interface{}) error {
+	genericSecretItemResourceReadMutex.Lock()
+	defer genericSecretItemResourceReadMutex.Unlock()
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
