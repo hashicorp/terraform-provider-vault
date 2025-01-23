@@ -23,10 +23,6 @@ const (
 
 // PrepareMSSQLTestContainer sets up a test MSSQL docker container
 func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
-	// skip due to error:
-	// tls: failed to parse certificate from server: x509: negative serial number in test case failures.
-	t.Skip("Skipping until https://github.com/microsoft/mssql-docker/issues/895 is resolved.")
-
 	if strings.Contains(runtime.GOARCH, "arm") {
 		t.Skip("Skipping, as this image is not supported on ARM architectures")
 	}
@@ -36,7 +32,7 @@ func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	}
 
 	containerfile := `
-FROM mcr.microsoft.com/mssql/server:2017-latest
+FROM mcr.microsoft.com/mssql/server:2022-latest
 USER root
 ENV MSDIR=/var/opt/mssql
 RUN mkdir -p $MSDIR \
