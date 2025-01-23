@@ -451,6 +451,11 @@ const (
 	FieldEabKey                        = "key"
 	FieldAcmeDirectory                 = "acme_directory"
 	FieldEabId                         = "eab_id"
+	FieldValidPrincipals               = "valid_principals"
+	FieldCertType                      = "cert_type"
+	FieldCriticalOptions               = "critical_options"
+	FieldExtensions                    = "extensions"
+	FieldSignedKey                     = "signed_key"
 	/*
 		common environment variables
 	*/
