@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* Add resource `vault_generic_secret_item` to allow a more granular management of Vault generic secrets ([#2394](https://github.com/hashicorp/terraform-provider-vault/pull/2394))
+
 ## 4.6.0 (Jan 15, 2025)
 
 FEATURES:
