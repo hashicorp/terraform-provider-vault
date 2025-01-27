@@ -2,7 +2,12 @@
 
 FEATURES:
 
-* Add resource `vault_generic_secret_item` to allow a more granular management of Vault generic secrets ([#2394](https://github.com/hashicorp/terraform-provider-vault/pull/2394))
+* Add resource `vault_generic_secret_item` to allow a more granular management of Vault generic secrets ([#2394](https://github.com/hashicorp/terraform-provider-vault/pull/
+
+BUGS:
+
+* Do not panic on Vault PKI roles without the cn_validations field: ([#2398](https://github.com/hashicorp/terraform-provider-vault/pull/2398))
+
 
 ## 4.6.0 (Jan 15, 2025)
 
