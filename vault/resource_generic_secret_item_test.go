@@ -88,7 +88,7 @@ func TestResourceGenericSecretItem_deleteAllVersions(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecretItem_initialConfig_v2(path, false),
-				Check:  testResourceGenericSecretItem_initialCheck_v2(path, "zap", 1),
+				Check:  testResourceGenericSecretItem_initialCheck_v2(path, "bar", 1),
 			},
 			{
 				ImportState:  true,
@@ -96,7 +96,7 @@ func TestResourceGenericSecretItem_deleteAllVersions(t *testing.T) {
 			},
 			{
 				Config: testResourceGenericSecretItem_initialConfig_v2(path, true),
-				Check:  testResourceGenericSecretItem_initialCheck_v2(path, "zoop", 2),
+				Check:  testResourceGenericSecretItem_initialCheck_v2(path, "baz", 2),
 			},
 			{
 				ImportState:  true,
@@ -160,7 +160,6 @@ resource "vault_generic_secret_item" "test" {
 	path  = "%s"
 	key   = "foo"
 	value = "bar"
-EOT
 }`, path)
 	} else {
 		result += fmt.Sprintf(`
