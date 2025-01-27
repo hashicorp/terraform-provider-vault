@@ -14,10 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/pki"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -575,10 +575,10 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 	listFields := append(pkiSecretListFields, consts.FieldKeyUsage)
 	// handle TypeList
 	for _, k := range listFields {
-		list := expandStringSlice(secret.Data[k].([]interface{}))
-
-		if len(list) > 0 {
-			d.Set(k, list)
+		if list, ok := util.GetStringSliceFromSecret(secret, k); ok {
+			if len(list) > 0 {
+				d.Set(k, list)
+			}
 		}
 	}
 
