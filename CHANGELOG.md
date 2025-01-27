@@ -1,5 +1,10 @@
 ## Unreleased
 
+BUGS:
+
+* Do not panic on Vault PKI roles without the cn_validations field: ([#2398](https://github.com/hashicorp/terraform-provider-vault/pull/2398))
+
+
 ## 4.6.0 (Jan 15, 2025)
 
 FEATURES:
