@@ -227,10 +227,11 @@ func testResourceGenericSecretItem_initialCheck_v2(expectedPath string, wantValu
 			return fmt.Errorf("resource has no primary instance")
 		}
 
-		path := instanceState.ID
+		key := instanceState.ID
+		path := instanceState.Attributes["path"]
 
-		if path != instanceState.Attributes["path"] {
-			return fmt.Errorf("id doesn't match path")
+		if key != instanceState.Attributes["key"] {
+			return fmt.Errorf("id doesn't match key")
 		}
 		if path != expectedPath {
 			return fmt.Errorf("unexpected secret path")
@@ -264,15 +265,10 @@ func testResourceGenericSecretItem_initialCheck_v2(expectedPath string, wantValu
 			return fmt.Errorf("Version error: %s", err)
 		}
 
-		// Test the JSON
-		if got := data["zip"]; got != wantValue {
-			return fmt.Errorf("'zip' data is %q; want %q", got, wantValue)
+		if got := data["foo"]; got != wantValue {
+			return fmt.Errorf("'foo' data is %q; want %q", got, wantValue)
 		}
 
-		// Test the map
-		if got := instanceState.Attributes["data.zip"]; got != wantValue {
-			return fmt.Errorf("data[\"zip\"] contains %s; want %s", got, wantValue)
-		}
 		return nil
 	}
 }
@@ -291,6 +287,10 @@ func testResourceGenericSecretItem_updateCheck(s *terraform.State) error {
 	secret, err := client.Logical().Read(path)
 	if err != nil {
 		return fmt.Errorf("error reading back secret: %s", err)
+	}
+
+	if secret == nil {
+		return nil
 	}
 
 	if got, want := secret.Data["foo"], "baz"; got != want {

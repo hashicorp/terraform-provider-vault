@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"log"
 	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -163,6 +164,16 @@ func genericSecretItemResourceDelete(d *schema.ResourceData, meta interface{}) e
 			"data":    data,
 			"options": map[string]interface{}{},
 		}
+	}
+
+	if len(data) == 0 {
+		log.Printf("[DEBUG] Deleting empty vault_generic_secret from %q", path)
+		_, err = client.Logical().Delete(path)
+		if err != nil {
+			return fmt.Errorf("error deleting %q from Vault: %q", path, err)
+		}
+
+		return nil
 	}
 
 	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
