@@ -44,17 +44,12 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		assertCertificateAttributes(resourceName),
 	}
 
-	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks)
+	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, nil)
 }
 
 // TestPkiSecretBackendRootCertificate_name_constraints is just like TestPkiSecretBackendRootCertificate_basic,
 // but it uses the permitted_/excluded_ parameters for the name constraints extension.
 func TestPkiSecretBackendRootCertificate_name_constraints(t *testing.T) {
-	meta := testProvider.Meta().(*provider.ProviderMeta)
-	if !meta.IsAPISupported(provider.VaultVersion119) {
-		t.Skip("requires Vault 1.19+")
-	}
-
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 	config := testPkiSecretBackendRootCertificateConfig_name_constraints(path)
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -95,7 +90,9 @@ func TestPkiSecretBackendRootCertificate_name_constraints(t *testing.T) {
 		},
 	}
 
-	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks)
+	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, func(t *testing.T) {
+		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+	})
 }
 
 func checkCertificateNameConstraints(resourceName string, s *terraform.State) error {
@@ -158,13 +155,18 @@ func checkCertificateNameConstraints(resourceName string, s *terraform.State) er
 	return errors.Join(failedChecks...)
 }
 
-func testPkiSecretBackendRootCertificate(t *testing.T, path string, config string, resourceName string, checks []resource.TestCheckFunc) {
+func testPkiSecretBackendRootCertificate(t *testing.T, path string, config string, resourceName string, checks []resource.TestCheckFunc, preCheck func(t *testing.T)) {
 	store := &testPKICertStore{}
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			if preCheck != nil {
+				preCheck(t)
+			}
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: config,

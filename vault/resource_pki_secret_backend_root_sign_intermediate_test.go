@@ -215,11 +215,6 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootSignIntermediate_name_constraints_pem_bundle(t *testing.T) {
-	meta := testProvider.Meta().(*provider.ProviderMeta)
-	if !meta.IsAPISupported(provider.VaultVersion119) {
-		t.Skip("requires Vault 1.19+")
-	}
-
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 	format := "pem_bundle"
@@ -227,8 +222,11 @@ func TestPkiSecretBackendRootSignIntermediate_name_constraints_pem_bundle(t *tes
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_name_constraints(rootPath, intermediatePath, format, false, ""),
@@ -261,7 +259,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle_multiple_intermed
 	})
 }
 
-func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string, checkNameConstaintAttrs bool) resource.TestCheckFunc {
+func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string, checkNameConstraintsAttrs bool) resource.TestCheckFunc {
 	checks := []resource.TestCheckFunc{resource.TestCheckResourceAttr(res, "backend", path),
 		resource.TestCheckResourceAttr(res, "common_name", commonName),
 		resource.TestCheckResourceAttr(res, "ou", "SubUnit"),
@@ -275,7 +273,7 @@ func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string
 		assertPKICAChain(res),
 		assertCertificateAttributes(res),
 	}
-	if checkNameConstaintAttrs {
+	if checkNameConstraintsAttrs {
 		// Note that the name constraints extension field values are the same as in resource_pki_secret_backend_root_cert_test.go
 		// only for dev convinience (i.e. laziness).
 		checks = append(checks,
