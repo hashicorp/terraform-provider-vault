@@ -120,7 +120,6 @@ func checkCertificateNameConstraints(resourceName string, s *terraform.State) er
 		if err != nil {
 			return err
 		}
-		//fmt.Printf("certificate https://lapo.it/asn1js/#%s\n", hex.EncodeToString(b.Bytes))
 
 		cert, err = x509.ParseCertificate(b.Bytes)
 		if err != nil {
