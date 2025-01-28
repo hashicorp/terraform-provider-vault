@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -23,6 +24,8 @@ import (
 func TestPkiSecretBackendSign_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+
+	notAfter := time.Now().Add(2 * time.Hour).Format(time.RFC3339)
 
 	resourceName := "vault_pki_secret_backend_sign.test"
 	resource.Test(t, resource.TestCase{
@@ -46,6 +49,12 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, `issuer_ref = "test"`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerRef, "test"),
+				),
+			},
+			{
+				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, fmt.Sprintf(`not_after = "%s"`, notAfter)),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "not_after", notAfter),
 				),
 			},
 		},
@@ -178,7 +187,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendSignConfig_renew(path),
+				Config: testPkiSecretBackendSignConfig_renew(path, ""),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testCapturePKICert(resourceName, &store),
@@ -188,7 +197,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 			{
 				// test renewal based on cert expiry
 				PreConfig: testWaitCertExpiry(&store),
-				Config:    testPkiSecretBackendSignConfig_renew(path),
+				Config:    testPkiSecretBackendSignConfig_renew(path, ""),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testPKICertReIssued(resourceName, &store),
@@ -205,7 +214,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 						t.Fatal(err)
 					}
 				},
-				Config: testPkiSecretBackendSignConfig_renew(path),
+				Config: testPkiSecretBackendSignConfig_renew(path, ""),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testPKICertReIssued(resourceName, &store),
@@ -216,7 +225,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 	})
 }
 
-func testPkiSecretBackendSignConfig_renew(rootPath string) string {
+func testPkiSecretBackendSignConfig_renew(rootPath, notAfter string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test-root" {
   path                      = "%s"
@@ -287,8 +296,9 @@ EOT
   ttl                   = "1h"
   auto_renew            = true
   min_seconds_remaining = "3595"
+  not_after             = "%s"
 }
-`, rootPath)
+`, rootPath, notAfter)
 }
 
 func testValidateCSR(resourceName string) resource.TestCheckFunc {

@@ -442,6 +442,13 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldNotAfter: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Set the Not After field of the certificate with specified date value. " +
+					"The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the " +
+					"Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.",
+			},
 		},
 	}
 }
@@ -503,6 +510,12 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 		data[consts.FieldPolicyIdentifiers] = policyIdentifiers
 	} else if policyIdentifierBlocksRaw, ok := d.GetOk(consts.FieldPolicyIdentifier); ok {
 		data[consts.FieldPolicyIdentifiers] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion110) {
+		if notAfter, ok := d.GetOk(consts.FieldNotAfter); ok {
+			data[consts.FieldNotAfter] = notAfter
+		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion111) {
