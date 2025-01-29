@@ -123,7 +123,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 
 	store := &testPKICertStore{}
 	resourceName := "vault_pki_secret_backend_root_sign_intermediate.test"
-	checks := testCheckPKISecretRootSignIntermediate(resourceName, rootPath, commonName, format)
+	checks := testCheckPKISecretRootSignIntermediate(resourceName, rootPath, commonName, format, false)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
@@ -170,7 +170,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false, ""),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, false),
 			},
 		},
 	})
@@ -189,7 +189,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false, ""),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, false),
 			},
 		},
 	})
@@ -208,7 +208,29 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false, ""),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, false),
+			},
+		},
+	})
+}
+
+func TestPkiSecretBackendRootSignIntermediate_name_constraints_pem_bundle(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+	format := "pem_bundle"
+	commonName := "SubOrg Intermediate CA"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_name_constraints(rootPath, intermediatePath, format, false, ""),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, true),
 			},
 		},
 	})
@@ -231,15 +253,14 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle_multiple_intermed
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_multiple_inter(rootPath, intermediate1Path, intermediate2Path, format),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.two", intermediate1Path, commonName, format),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.two", intermediate1Path, commonName, format, false),
 			},
 		},
 	})
 }
 
-func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string) resource.TestCheckFunc {
-	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr(res, "backend", path),
+func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string, checkNameConstraintsAttrs bool) resource.TestCheckFunc {
+	checks := []resource.TestCheckFunc{resource.TestCheckResourceAttr(res, "backend", path),
 		resource.TestCheckResourceAttr(res, "common_name", commonName),
 		resource.TestCheckResourceAttr(res, "ou", "SubUnit"),
 		resource.TestCheckResourceAttr(res, "organization", "SubOrg"),
@@ -251,7 +272,32 @@ func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string
 		assertPKICertificateBundle(res, format),
 		assertPKICAChain(res),
 		assertCertificateAttributes(res),
-	)
+	}
+	if checkNameConstraintsAttrs {
+		// Note that the name constraints extension field values are the same as in resource_pki_secret_backend_root_cert_test.go
+		// only for dev convinience (i.e. laziness).
+		checks = append(checks,
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedDNSDomains+".0", "example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedDNSDomains+".1", ".example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldExcludedDNSDomains+".0", "bad.example.com"),
+
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedIPRanges+".0", "192.0.2.0/24"),
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedIPRanges+".1", "2001:db8::/32"),
+			resource.TestCheckResourceAttr(res, consts.FieldExcludedEmailAddresses+".0", "root@example.com"),
+
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedEmailAddresses+".0", "admin@example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedEmailAddresses+".1", "info@example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldExcludedEmailAddresses+".0", "root@example.com"),
+
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedURIDomains+".0", "https://example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedURIDomains+".1", "https://www.example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldExcludedURIDomains+".0", "ftp://example.com"),
+			func(s *terraform.State) error {
+				return checkCertificateNameConstraints(res, s)
+			},
+		)
+	}
+	return resource.ComposeTestCheckFunc(checks...)
 }
 
 func assertPKICertificateBundle(res, expectedFormat string) resource.TestCheckFunc {
@@ -415,6 +461,84 @@ resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
   province             = "CA"
   revoke               = %t
   max_path_length      = 0
+`, rootPath, path, revoke)
+
+	if format != "" {
+		config += fmt.Sprintf(`
+  format = %q
+`, format)
+	}
+
+	if issuerRef != "" {
+		config += fmt.Sprintf(`
+  issuer_ref = "%s"
+`, issuerRef)
+	}
+
+	return config + "}"
+}
+
+func testPkiSecretBackendRootSignIntermediateConfig_name_constraints(rootPath, path, format string, revoke bool, issuerRef string) string {
+	config := fmt.Sprintf(`
+resource "vault_mount" "test-root" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
+  default_lease_ttl_seconds = "8640000"
+  max_lease_ttl_seconds     = "8640000"
+}
+
+resource "vault_mount" "test-intermediate" {
+  path                      = "%s"
+  type                      = vault_mount.test-root.type
+  description               = "test intermediate"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend              = vault_mount.test-root.path
+  type                 = "internal"
+  common_name          = "RootOrg Root CA"
+  ttl                  = "86400"
+  format               = "pem"
+  private_key_format   = "der"
+  key_type             = "rsa"
+  key_bits             = 4096
+  exclude_cn_from_sans = true
+  ou                   = "Organizational Unit"
+  organization         = "RootOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  depends_on  = [vault_pki_secret_backend_root_cert.test]
+  backend     = vault_mount.test-intermediate.path
+  type        = "internal"
+  common_name = "SubOrg Intermediate CA"
+}
+
+resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
+  backend              = vault_mount.test-root.path
+  csr                  = vault_pki_secret_backend_intermediate_cert_request.test.csr
+  common_name          = "SubOrg Intermediate CA"
+  exclude_cn_from_sans = true
+  ou                   = "SubUnit"
+  organization         = "SubOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
+  permitted_dns_domains		= ["example.com",".example.com"]
+  excluded_dns_domains		= ["bad.example.com"]
+  permitted_ip_ranges		= ["192.0.2.0/24", "2001:db8::/32"]
+  excluded_ip_ranges		= ["192.0.3.0/24", "2002:db8::/16"]
+  permitted_email_addresses = ["admin@example.com","info@example.com"]
+  excluded_email_addresses	= ["root@example.com"]
+  permitted_uri_domains		= ["https://example.com", "https://www.example.com"]
+  excluded_uri_domains		= ["ftp://example.com"]
+  revoke               = %t
 `, rootPath, path, revoke)
 
 	if format != "" {

@@ -4,7 +4,12 @@
 package vault
 
 import (
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
 	"fmt"
+	"github.com/go-test/deep"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"reflect"
 	"strconv"
 	"testing"
@@ -19,11 +24,8 @@ import (
 
 func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
-
+	config := testPkiSecretBackendRootCertificateConfig_basic(path)
 	resourceName := "vault_pki_secret_backend_root_cert.test"
-
-	store := &testPKICertStore{}
-
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
@@ -42,13 +44,131 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		assertCertificateAttributes(resourceName),
 	}
 
+	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, nil)
+}
+
+// TestPkiSecretBackendRootCertificate_name_constraints is just like TestPkiSecretBackendRootCertificate_basic,
+// but it uses the permitted_/excluded_ parameters for the name constraints extension.
+func TestPkiSecretBackendRootCertificate_name_constraints(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+	config := testPkiSecretBackendRootCertificateConfig_name_constraints(path)
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "86400"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pem"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKeyFormat, "der"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "4096"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldOu, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldOrganization, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCountry, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldLocality, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPermittedDNSDomains+".0", "example.com"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPermittedDNSDomains+".1", ".example.com"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldExcludedDNSDomains+".0", "bad.example.com"),
+
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPermittedIPRanges+".0", "192.0.2.0/24"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPermittedIPRanges+".1", "2001:db8::/32"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldExcludedIPRanges+".0", "192.0.3.0/24"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldExcludedIPRanges+".1", "2002::/16"),
+
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPermittedEmailAddresses+".0", "admin@example.com"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPermittedEmailAddresses+".1", "info@example.com"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldExcludedEmailAddresses+".0", "root@example.com"),
+
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPermittedURIDomains+".0", "https://example.com"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPermittedURIDomains+".1", "https://www.example.com"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldExcludedURIDomains+".0", "ftp://example.com"),
+		func(s *terraform.State) error {
+			return checkCertificateNameConstraints(resourceName, s)
+		},
+	}
+
+	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, func(t *testing.T) {
+		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+	})
+}
+
+func checkCertificateNameConstraints(resourceName string, s *terraform.State) error {
+	var cert *x509.Certificate
+	{
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		attrs := rs.Primary.Attributes
+
+		// "pem" for resource_pki_secret_backend_root_cert root certs,
+		// "pem_bundle" for resource_pki_secret_backend_root_sign_intermediate.
+		if !(attrs["format"] == "pem" || attrs["format"] == "pem_bundle") {
+			return errors.New("test only valid for resources configured with the 'pem' or 'pem_bundle' format")
+		}
+
+		certPEM := attrs["certificate"]
+		if certPEM == "" {
+			return fmt.Errorf("certificate from state cannot be empty")
+		}
+
+		b, _ := pem.Decode([]byte(certPEM))
+		if err != nil {
+			return err
+		}
+
+		cert, err = x509.ParseCertificate(b.Bytes)
+		if err != nil {
+			return err
+		}
+	}
+	var failedChecks []error
+	check := func(fieldName string, actual []string, expected ...string) {
+		diff := deep.Equal(expected, actual)
+		if len(diff) > 0 {
+			failedChecks = append(failedChecks, fmt.Errorf("error in field %q: %v", fieldName, diff))
+		}
+	}
+
+	check(consts.FieldPermittedDNSDomains, cert.PermittedDNSDomains, "example.com", ".example.com")
+	check(consts.FieldExcludedDNSDomains, cert.ExcludedDNSDomains, "bad.example.com")
+	var ips []string
+	for _, ip := range cert.PermittedIPRanges {
+		ips = append(ips, ip.String())
+	}
+	check(consts.FieldPermittedIPRanges, ips, "192.0.2.0/24", "2001:db8::/32")
+	ips = nil
+	for _, ip := range cert.ExcludedIPRanges {
+		ips = append(ips, ip.String())
+	}
+	check(consts.FieldExcludedIPRanges, ips, "192.0.3.0/24", "2002::/16")
+	check(consts.FieldPermittedEmailAddresses, cert.PermittedEmailAddresses, "admin@example.com", "info@example.com")
+	check(consts.FieldExcludedEmailAddresses, cert.ExcludedEmailAddresses, "root@example.com")
+	check(consts.FieldPermittedURIDomains, cert.PermittedURIDomains, "https://example.com", "https://www.example.com")
+	check(consts.FieldExcludedURIDomains, cert.ExcludedURIDomains, "ftp://example.com")
+
+	return errors.Join(failedChecks...)
+}
+
+func testPkiSecretBackendRootCertificate(t *testing.T, path string, config string, resourceName string, checks []resource.TestCheckFunc, preCheck func(t *testing.T)) {
+	store := &testPKICertStore{}
+
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			if preCheck != nil {
+				preCheck(t)
+			}
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
+				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testCapturePKICert(resourceName, store),
@@ -67,7 +187,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 						t.Fatal(err)
 					}
 				},
-				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
+				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testPKICertReIssued(resourceName, store),
@@ -100,7 +220,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 						t.Fatalf("empty response for write on path %s", genPath)
 					}
 				},
-				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
+				Config: config,
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testPKICertReIssued(resourceName, store),
@@ -265,6 +385,45 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   locality             = "test"
   province             = "test"
   max_path_length      = 0
+}
+`, path)
+
+	return config
+}
+
+func testPkiSecretBackendRootCertificateConfig_name_constraints(path string) string {
+	config := fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend					= vault_mount.test.path
+  type						= "internal"
+  common_name				= "test Root CA"
+  ttl						= "86400"
+  format					= "pem"
+  private_key_format		= "der"
+  key_type					= "rsa"
+  key_bits					= 4096
+  exclude_cn_from_sans		= true
+  ou						= "test"
+  organization				= "test"
+  country					= "test"
+  locality					= "test"
+  province					= "test"
+  permitted_dns_domains		= ["example.com",".example.com"]
+  excluded_dns_domains		= ["bad.example.com"]
+  permitted_ip_ranges		= ["192.0.2.0/24", "2001:db8::/32"]
+  excluded_ip_ranges		= ["192.0.3.0/24", "2002::/16"]
+  permitted_email_addresses = ["admin@example.com","info@example.com"]
+  excluded_email_addresses	= ["root@example.com"]
+  permitted_uri_domains		= ["https://example.com", "https://www.example.com"]
+  excluded_uri_domains		= ["ftp://example.com"]
 }
 `, path)
 
