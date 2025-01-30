@@ -30,9 +30,6 @@ func genericSecretItemResource() *schema.Resource {
 		Update: genericSecretItemResourceWrite,
 		Delete: genericSecretItemResourceDelete,
 		Read:   provider.ReadWrapper(genericSecretItemResourceRead),
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
