@@ -68,11 +68,3 @@ The following attributes are exported:
 * `key` - A string containing the name of the Vault item within the secret.
 
 * `value` - A string containing the value of the Vault item within the secret.
-
-## Import
-
-Generic secret items can be imported using the `path`, e.g.
-
-```
-$ terraform import vault_generic_secret_item.example secret_item_key
-```
