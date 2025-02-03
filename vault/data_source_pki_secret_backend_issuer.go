@@ -78,6 +78,26 @@ func pkiSecretBackendIssuerDataSource() *schema.Resource {
 				Computed:    true,
 				Description: "Allowed usages for this issuer.",
 			},
+			consts.FieldDisableCriticalExtensionChecks: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "This determines whether this issuer is able to issue certificates where the chain of trust (including the issued certificate) contain critical extensions not processed by Vault.",
+			},
+			consts.FieldDisablePathLengthChecks: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "This determines whether this issuer is able to issue certificates where the chain of trust (including the final issued certificate) is longer than allowed by a certificate authority in that chain.",
+			},
+			consts.FieldDisableNameChecks: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "This determines whether this issuer is able to issue certificates where the chain of trust (including the final issued certificate) contains a link in which the subject of the issuing certificate does not match the named issuer of the certificate it signed.",
+			},
+			consts.FieldDisableNameConstraintChecks: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "This determines whether this issuer is able to issue certificates where the chain of trust (including the final issued certificate) violates the name constraints critical extension of one of the issuer certificates in the chain",
+			},
 		},
 	}
 }
@@ -113,6 +133,13 @@ func readPKISecretBackendIssuer(ctx context.Context, d *schema.ResourceData, met
 		consts.FieldManualChain,
 		consts.FieldUsage,
 	}
+	if supportPkiCertVerifyDisableChecksFields(meta) {
+		issuerComputedFields = append(issuerComputedFields,
+			consts.FieldDisableCriticalExtensionChecks,
+			consts.FieldDisablePathLengthChecks,
+			consts.FieldDisableNameChecks,
+			consts.FieldDisableNameConstraintChecks)
+	}
 
 	for _, k := range issuerComputedFields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
@@ -121,4 +148,8 @@ func readPKISecretBackendIssuer(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	return nil
+}
+
+func supportPkiCertVerifyDisableChecksFields(meta interface{}) bool {
+	return provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 }

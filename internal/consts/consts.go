@@ -459,6 +459,12 @@ const (
 	FieldEabKey                        = "key"
 	FieldAcmeDirectory                 = "acme_directory"
 	FieldEabId                         = "eab_id"
+
+	FieldDisableCriticalExtensionChecks = "disable_critical_extension_checks"
+	FieldDisablePathLengthChecks        = "disable_path_length_checks"
+	FieldDisableNameChecks              = "disable_name_checks"
+	FieldDisableNameConstraintChecks    = "disable_name_constraint_checks"
+
 	/*
 		common environment variables
 	*/

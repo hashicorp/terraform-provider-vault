@@ -105,6 +105,26 @@ func pkiSecretBackendIssuerResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies that the AIA URL values should be templated.",
 			},
+			consts.FieldDisableCriticalExtensionChecks: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "This determines whether this issuer is able to issue certificates where the chain of trust (including the issued certificate) contain critical extensions not processed by Vault.",
+			},
+			consts.FieldDisablePathLengthChecks: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "This determines whether this issuer is able to issue certificates where the chain of trust (including the final issued certificate) is longer than allowed by a certificate authority in that chain.",
+			},
+			consts.FieldDisableNameChecks: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "This determines whether this issuer is able to issue certificates where the chain of trust (including the final issued certificate) contains a link in which the subject of the issuing certificate does not match the named issuer of the certificate it signed.",
+			},
+			consts.FieldDisableNameConstraintChecks: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "This determines whether this issuer is able to issue certificates where the chain of trust (including the final issued certificate) violates the name constraints critical extension of one of the issuer certificates in the chain",
+			},
 			consts.FieldIssuerID: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -162,6 +182,15 @@ func pkiSecretBackendIssuerUpdate(ctx context.Context, d *schema.ResourceData, m
 		consts.FieldCRLDistributionPoints,
 		consts.FieldOCSPServers,
 		consts.FieldEnableAIAURLTemplating,
+	}
+
+	if supportPkiCertVerifyDisableChecksFields(meta) {
+		configurableFields = append(configurableFields,
+			consts.FieldDisableCriticalExtensionChecks,
+			consts.FieldDisablePathLengthChecks,
+			consts.FieldDisableNameChecks,
+			consts.FieldDisableNameConstraintChecks,
+		)
 	}
 
 	var patchRequired bool
@@ -241,6 +270,15 @@ func pkiSecretBackendIssuerRead(ctx context.Context, d *schema.ResourceData, met
 		consts.FieldOCSPServers,
 		consts.FieldEnableAIAURLTemplating,
 		consts.FieldIssuerID,
+	}
+
+	if supportPkiCertVerifyDisableChecksFields(meta) {
+		fields = append(fields,
+			consts.FieldDisableCriticalExtensionChecks,
+			consts.FieldDisablePathLengthChecks,
+			consts.FieldDisableNameChecks,
+			consts.FieldDisableNameConstraintChecks,
+		)
 	}
 
 	for _, k := range fields {
