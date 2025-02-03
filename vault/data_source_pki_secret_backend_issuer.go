@@ -133,13 +133,7 @@ func readPKISecretBackendIssuer(ctx context.Context, d *schema.ResourceData, met
 		consts.FieldManualChain,
 		consts.FieldUsage,
 	}
-	if supportPkiCertVerifyDisableChecksFields(meta) {
-		issuerComputedFields = append(issuerComputedFields,
-			consts.FieldDisableCriticalExtensionChecks,
-			consts.FieldDisablePathLengthChecks,
-			consts.FieldDisableNameChecks,
-			consts.FieldDisableNameConstraintChecks)
-	}
+	issuerComputedFields = appendPkiCertVerifyDisableChecksFields(meta, issuerComputedFields)
 
 	for _, k := range issuerComputedFields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
@@ -150,6 +144,14 @@ func readPKISecretBackendIssuer(ctx context.Context, d *schema.ResourceData, met
 	return nil
 }
 
-func supportPkiCertVerifyDisableChecksFields(meta interface{}) bool {
-	return provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+func appendPkiCertVerifyDisableChecksFields(meta interface{}, fields []string) []string {
+	if !provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		return fields
+	}
+	return append(fields,
+		consts.FieldDisableCriticalExtensionChecks,
+		consts.FieldDisablePathLengthChecks,
+		consts.FieldDisableNameChecks,
+		consts.FieldDisableNameConstraintChecks,
+	)
 }

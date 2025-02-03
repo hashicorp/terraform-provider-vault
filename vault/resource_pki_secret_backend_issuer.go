@@ -183,15 +183,7 @@ func pkiSecretBackendIssuerUpdate(ctx context.Context, d *schema.ResourceData, m
 		consts.FieldOCSPServers,
 		consts.FieldEnableAIAURLTemplating,
 	}
-
-	if supportPkiCertVerifyDisableChecksFields(meta) {
-		configurableFields = append(configurableFields,
-			consts.FieldDisableCriticalExtensionChecks,
-			consts.FieldDisablePathLengthChecks,
-			consts.FieldDisableNameChecks,
-			consts.FieldDisableNameConstraintChecks,
-		)
-	}
+	configurableFields = appendPkiCertVerifyDisableChecksFields(meta, configurableFields)
 
 	var patchRequired bool
 	data := map[string]interface{}{}
@@ -271,15 +263,7 @@ func pkiSecretBackendIssuerRead(ctx context.Context, d *schema.ResourceData, met
 		consts.FieldEnableAIAURLTemplating,
 		consts.FieldIssuerID,
 	}
-
-	if supportPkiCertVerifyDisableChecksFields(meta) {
-		fields = append(fields,
-			consts.FieldDisableCriticalExtensionChecks,
-			consts.FieldDisablePathLengthChecks,
-			consts.FieldDisableNameChecks,
-			consts.FieldDisableNameConstraintChecks,
-		)
-	}
+	fields = appendPkiCertVerifyDisableChecksFields(meta, fields)
 
 	for _, k := range fields {
 		if v, ok := resp.Data[k]; ok {
