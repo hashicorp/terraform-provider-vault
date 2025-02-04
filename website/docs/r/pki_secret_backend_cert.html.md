@@ -71,8 +71,6 @@ The following arguments are supported:
 
 * `revoke_with_key` - If set to `true`, the certificate will be revoked on resource destruction using the `revoke-with-key` PKI API. Conflicts with `revoke`. Default `false`
 
-* `revoke_with_key` - If set to `true`, use method `revoke-with-key` to revoke the certificate on resource destruction. Used to revoke certificate without using privileged operation. Conflicts with `revoke`. Default `false`
-
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
