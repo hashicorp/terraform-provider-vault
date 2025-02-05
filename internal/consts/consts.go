@@ -80,6 +80,7 @@ const (
 	FieldTokenLabel                    = "token_label"
 	FieldCurve                         = "curve"
 	FieldKeyBits                       = "key_bits"
+	FieldSignatureBits                 = "signature_bits"
 	FieldForceRWSession                = "force_rw_session"
 	FieldAccessKey                     = "access_key"
 	FieldSecretKey                     = "secret_key"

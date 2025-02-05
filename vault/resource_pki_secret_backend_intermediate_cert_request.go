@@ -114,6 +114,12 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				ForceNew:    true,
 				Default:     2048,
 			},
+			consts.FieldSignatureBits: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The number of bits to use in the signature algorithm.",
+				ForceNew:    true,
+			},
 			consts.FieldExcludeCNFromSans: {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -268,7 +274,7 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 
 	// Fields only used when we are generating a key
 	if !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting) {
-		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
+		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits, consts.FieldSignatureBits)
 	}
 
 	if isIssuerAPISupported {
@@ -333,7 +339,6 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 		if err := d.Set(consts.FieldPrivateKeyType, resp.Data[consts.FieldPrivateKeyType]); err != nil {
 			return diag.FromErr(err)
 		}
-
 	}
 
 	id := path
