@@ -236,6 +236,37 @@ func TestPkiSecretBackendRootSignIntermediate_name_constraints_pem_bundle(t *tes
 	})
 }
 
+func TestPkiSecretBackendRootSignIntermediate_signature_bits(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+	format := "pem_bundle"
+	commonName := "SubOrg Intermediate CA"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_signature_bits(rootPath, intermediatePath, format, "384"),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, false),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldSignatureBits, "384"),
+				),
+			},
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_signature_bits(rootPath, intermediatePath, format, "512"),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, false),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldSignatureBits, "512"),
+				),
+			},
+		},
+	})
+}
+
 func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle_multiple_intermediates(t *testing.T) {
 	t.Skip("Skip until VAULT-6700 is resolved")
 
@@ -553,6 +584,69 @@ resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
 `, issuerRef)
 	}
 
+	return config + "}"
+}
+
+func testPkiSecretBackendRootSignIntermediateConfig_signature_bits(rootPath, path, format string, signatureBits string) string {
+	config := fmt.Sprintf(`
+resource "vault_mount" "test-root" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
+  default_lease_ttl_seconds = "8640000"
+  max_lease_ttl_seconds     = "8640000"
+}
+
+resource "vault_mount" "test-intermediate" {
+  path                      = "%s"
+  type                      = vault_mount.test-root.type
+  description               = "test intermediate"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend              = vault_mount.test-root.path
+  type                 = "internal"
+  common_name          = "RootOrg Root CA"
+  ttl                  = "86400"
+  format               = "pem"
+  private_key_format   = "der"
+  key_type             = "rsa"
+  key_bits             = 4096
+  exclude_cn_from_sans = true
+  ou                   = "Organizational Unit"
+  organization         = "RootOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  depends_on  = [vault_pki_secret_backend_root_cert.test]
+  backend     = vault_mount.test-intermediate.path
+  type        = "internal"
+  common_name = "SubOrg Intermediate CA"
+}
+
+resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
+  backend              = vault_mount.test-root.path
+  csr                  = vault_pki_secret_backend_intermediate_cert_request.test.csr
+  common_name          = "SubOrg Intermediate CA"
+  exclude_cn_from_sans = true
+  ou                   = "SubUnit"
+  organization         = "SubOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
+  signature_bits       = "%s"
+`, rootPath, path, signatureBits)
+
+	if format != "" {
+		config += fmt.Sprintf(`
+  format = %q
+`, format)
+	}
 	return config + "}"
 }
 
