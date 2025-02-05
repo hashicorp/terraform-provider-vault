@@ -92,6 +92,8 @@ The following arguments are supported:
   Only needed as a workaround in some compatibility scenarios with Active Directory
   Certificate Services
 
+* `key_usage` - (Optional) Specifies key_usage to encode in the generated certificate.
+
 * `key_name` - (Optional) When a new key is created with this request, optionally specifies
   the name for this. The global ref `default` may not be used as a name.
 

@@ -181,6 +181,68 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
 `, path, signatureBits)
 }
 
+func TestPkiSecretBackendIntermediateCertRequest_key_usage(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+	testCheckFunc := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path, ""),
+				Check:  resource.ComposeTestCheckFunc(append(testCheckFunc, resource.TestCheckNoResourceAttr(resourceName, consts.FieldKeyUsage))...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path, `["certsign"]`),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "certsign"))...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path, `["keyagreement", "DecipherOnly"]`),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "keyagreement"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".1", "DecipherOnly"))...),
+			},
+		},
+	})
+}
+
+func testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path string, optionalKeyUsage string) string {
+	var signatureBits string
+	if optionalKeyUsage != "" {
+		signatureBits = fmt.Sprintf(`key_usage = %s`, optionalKeyUsage)
+	}
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  backend        = vault_mount.test.path
+  type           = "internal"
+  common_name    = "test.my.domain"
+  uri_sans       = ["spiffe://test.my.domain"]
+  %s
+}
+`, path, signatureBits)
+}
+
 func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 	path := acctest.RandomWithPrefix("test-pki-mount")
 

@@ -206,6 +206,15 @@ a workaround in some compatibility scenarios with Active Directory Certificate S
 				Default:  false,
 				Optional: true,
 			},
+			consts.FieldKeyUsage: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Specify the key usages to encode in the generated certificate.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			consts.FieldKeyName: {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -268,6 +277,7 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 		consts.FieldIPSans,
 		consts.FieldURISans,
 		consts.FieldOtherSans,
+		consts.FieldKeyUsage,
 	}
 
 	// add multi-issuer write API fields if supported
