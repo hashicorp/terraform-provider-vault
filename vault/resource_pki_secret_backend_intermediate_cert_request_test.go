@@ -243,6 +243,60 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
 `, path, signatureBits)
 }
 
+func TestPkiSecretBackendIntermediateCertRequest_serial_number(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+	testCheckFunc := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_serial_number(path, ""),
+				Check:  resource.ComposeTestCheckFunc(append(testCheckFunc, resource.TestCheckNoResourceAttr(resourceName, consts.FieldSerialNumber))...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_serial_number(path, "WI-3005"),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSerialNumber, "WI-3005"))...),
+			},
+		},
+	})
+}
+
+func testPkiSecretBackendIntermediateCertRequestConfig_serial_number(path string, optionalSerialNumber string) string {
+	var serialNumber string
+	if optionalSerialNumber != "" {
+		serialNumber = fmt.Sprintf(`serial_number = "%s"`, optionalSerialNumber)
+	}
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  backend        = vault_mount.test.path
+  type           = "internal"
+  common_name    = "test.my.domain"
+  uri_sans       = ["spiffe://test.my.domain"]
+  %s
+}
+`, path, serialNumber)
+}
+
 func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 	path := acctest.RandomWithPrefix("test-pki-mount")
 

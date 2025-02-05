@@ -168,6 +168,12 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Description: "The postal code.",
 				ForceNew:    true,
 			},
+			consts.FieldSerialNumber: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The requested Subject's named serial number.",
+				ForceNew:    true,
+			},
 			consts.FieldCSR: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -262,6 +268,7 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 		consts.FieldProvince,
 		consts.FieldStreetAddress,
 		consts.FieldPostalCode,
+		consts.FieldSerialNumber,
 		consts.FieldManagedKeyName,
 		consts.FieldManagedKeyID,
 		consts.FieldSignatureBits,

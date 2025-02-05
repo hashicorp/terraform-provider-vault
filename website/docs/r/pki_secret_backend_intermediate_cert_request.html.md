@@ -82,6 +82,8 @@ The following arguments are supported:
 
 * `postal_code` - (Optional) The postal code
 
+* `serial_number` - (Optional) The requested Subject's named Serial Number
+
 * `managed_key_name` - (Optional) The name of the previously configured managed key. This field is
   required if `type` is `kms`  and it conflicts with `managed_key_id`
 
