@@ -4,7 +4,10 @@
 package vault
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"strconv"
 	"testing"
 
@@ -95,20 +98,61 @@ func TestPkiSecretBackendIntermediateCertRequest_signature_bits(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_signature_bits(path, ""),
-				Check:  resource.ComposeTestCheckFunc(append(testCheckFunc, resource.TestCheckNoResourceAttr(resourceName, consts.FieldSignatureBits))...),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSignatureBits),
+					assertCsrAttributes(resourceName, x509.SHA256WithRSA),
+				)...),
 			},
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_signature_bits(path, "384"),
 				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
-					resource.TestCheckResourceAttr(resourceName, consts.FieldSignatureBits, "384"))...),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSignatureBits, "384"),
+					assertCsrAttributes(resourceName, x509.SHA384WithRSA),
+				)...),
 			},
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_signature_bits(path, "512"),
 				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
-					resource.TestCheckResourceAttr(resourceName, consts.FieldSignatureBits, "512"))...),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSignatureBits, "512"),
+					assertCsrAttributes(resourceName, x509.SHA512WithRSA),
+				)...),
 			},
 		},
 	})
+}
+
+// assertCsrAttributes so far only checks signature algorithm...
+func assertCsrAttributes(resourceName string, expectedSignatureAlgorithm x509.SignatureAlgorithm) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		attrs := rs.Primary.Attributes
+
+		if attrs["format"] != "pem" {
+			// assumes that the certificate `format` is `pem`
+			return fmt.Errorf("test only valid for resources configured with the 'pem' format")
+		}
+
+		csrPEM := attrs["csr"]
+		if csrPEM == "" {
+			return fmt.Errorf("CSR from state cannot be empty")
+		}
+
+		c, _ := pem.Decode([]byte(csrPEM))
+		csr, err := x509.ParseCertificateRequest(c.Bytes)
+		if err != nil {
+			return err
+		}
+
+		if expectedSignatureAlgorithm != csr.SignatureAlgorithm {
+			return fmt.Errorf("expected signature algorithm (form signature_bits) %s, actual %s", expectedSignatureAlgorithm, csr.SignatureAlgorithm)
+		}
+
+		return nil
+	}
 }
 
 func testPkiSecretBackendIntermediateCertRequestConfig_signature_bits(path string, optionalSignatureBits string) string {

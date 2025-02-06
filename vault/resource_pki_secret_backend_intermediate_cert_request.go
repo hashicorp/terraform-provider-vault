@@ -255,6 +255,7 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 		consts.FieldPostalCode,
 		consts.FieldManagedKeyName,
 		consts.FieldManagedKeyID,
+		consts.FieldSignatureBits,
 	}
 
 	intermediateCertBooleanAPIFields := []string{
@@ -274,7 +275,7 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 
 	// Fields only used when we are generating a key
 	if !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting) {
-		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits, consts.FieldSignatureBits)
+		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
 	}
 
 	if isIssuerAPISupported {
