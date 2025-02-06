@@ -258,10 +258,9 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 			},
 			consts.FieldSignatureBits: {
 				Type:        schema.TypeInt,
-				Required:    false,
 				Optional:    true,
+				Computed:    true,
 				Description: "The number of bits to use in the signature algorithm.",
-				Default:     256,
 			},
 			consts.FieldKeyUsage: {
 				Type:        schema.TypeList,
