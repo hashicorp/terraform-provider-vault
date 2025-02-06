@@ -87,6 +87,8 @@ The following arguments are supported:
 
 * `postal_code` - (Optional) The postal code
 
+* `signature_bits` - (Optional) The number of bits to use in the signature algorithm
+
 * `revoke` - If set to `true`, the certificate will be revoked on resource destruction.
 
 * `issuer_ref` - (Optional) Specifies the default issuer of this request. May
