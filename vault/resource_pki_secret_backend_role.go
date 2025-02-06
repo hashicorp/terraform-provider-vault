@@ -33,6 +33,7 @@ var pkiSecretFields = []string{
 	consts.FieldAllowedURISans,
 	consts.FieldCountry,
 	consts.FieldKeyBits,
+	consts.FieldSignatureBits,
 	consts.FieldKeyType,
 	consts.FieldLocality,
 	consts.FieldMaxTTL,
@@ -254,6 +255,13 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "The number of bits of generated keys.",
 				Default:     2048,
+			},
+			consts.FieldSignatureBits: {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				Description: "The number of bits to use in the signature algorithm.",
+				Default:     256,
 			},
 			consts.FieldKeyUsage: {
 				Type:        schema.TypeList,
@@ -593,12 +601,12 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		switch {
 		case k == consts.FieldNotBeforeDuration:
 			d.Set(k, flattenVaultDuration(secret.Data[k]))
-		case k == consts.FieldKeyBits:
-			keyBits, err := secret.Data[consts.FieldKeyBits].(json.Number).Int64()
+		case k == consts.FieldKeyBits || k == consts.FieldSignatureBits:
+			keyBits, err := secret.Data[k].(json.Number).Int64()
 			if err != nil {
-				return diag.Errorf("expected key_bits %q to be a number", secret.Data[consts.FieldKeyBits])
+				return diag.Errorf("expected %s %q to be a number", k, secret.Data[k])
 			}
-			d.Set(consts.FieldKeyBits, keyBits)
+			d.Set(k, keyBits)
 		default:
 			d.Set(k, secret.Data[k])
 		}
