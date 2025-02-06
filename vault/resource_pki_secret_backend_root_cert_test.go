@@ -35,13 +35,14 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKeyFormat, "der"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "4096"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldSignatureBits, "512"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldOu, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldOrganization, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldCountry, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldLocality, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
-		assertCertificateAttributes(resourceName),
+		assertCertificateAttributes(resourceName, x509.SHA512WithRSA),
 	}
 
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, nil)
@@ -378,6 +379,7 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   private_key_format   = "der"
   key_type             = "rsa"
   key_bits             = 4096
+  signature_bits       = 512
   exclude_cn_from_sans = true
   ou                   = "test"
   organization         = "test"
