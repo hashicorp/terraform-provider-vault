@@ -200,6 +200,12 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				ForceNew:    true,
 				Default:     2048,
 			},
+			consts.FieldSignatureBits: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The number of bits to use in the signature algorithm.",
+			},
 			consts.FieldMaxPathLength: {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -423,6 +429,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		consts.FieldPostalCode,
 		consts.FieldManagedKeyName,
 		consts.FieldManagedKeyID,
+		consts.FieldSignatureBits,
 	}
 
 	rootCertBooleanAPIFields := []string{

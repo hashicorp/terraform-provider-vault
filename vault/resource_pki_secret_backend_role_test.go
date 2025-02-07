@@ -155,6 +155,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
 		resource.TestCheckResourceAttr(resourceName, "key_type", "rsa"),
 		resource.TestCheckResourceAttr(resourceName, "key_bits", "2048"),
+		resource.TestCheckResourceAttr(resourceName, "signature_bits", "512"),
 		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
 		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
 		resource.TestCheckResourceAttr(resourceName, "key_usage.#", "3"),
@@ -378,6 +379,7 @@ resource "vault_pki_secret_backend_role" "test" {
   email_protection_flag              = false
   key_type                           = "rsa"
   key_bits                           = 2048
+  signature_bits                     = 512
   ext_key_usage                      = []
   ext_key_usage_oids                 = ["1.3.6.1.4.1.311.4"]
   use_csr_common_name                = true

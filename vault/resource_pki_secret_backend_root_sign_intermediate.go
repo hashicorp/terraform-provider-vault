@@ -242,6 +242,12 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Description: "The postal code.",
 				ForceNew:    true,
 			},
+			consts.FieldSignatureBits: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The number of bits to use in the signature algorithm.",
+				ForceNew:    true,
+			},
 			consts.FieldCertificate: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -310,6 +316,7 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldProvince,
 		consts.FieldStreetAddress,
 		consts.FieldPostalCode,
+		consts.FieldSignatureBits,
 	}
 
 	intermediateSignBooleanAPIFields := []string{
