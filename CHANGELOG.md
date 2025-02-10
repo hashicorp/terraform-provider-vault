@@ -6,6 +6,7 @@ FEATURES:
 * Update `vault_pki_secret_backend_issuer` resource with the new issuer configuration fields to control certificate verification. Requires Vault Enterprise 1.19+ ([#2400](https://github.com/hashicorp/terraform-provider-vault/pull/2400)).
 * Add support for certificate revocation with `revoke_with_key` in `vault_pki_secret_backend_cert` ([#2242](https://github.com/hashicorp/terraform-provider-vault/pull/2242))
 * Add support for signature_bits field to `vault_pki_secret_backend_role`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate` and `vault_pki_secret_backend_intermediate_cert_request` ([#2401])(https://github.com/hashicorp/terraform-provider-vault/pull/2401)
+* Add support for key_usage and serial_number to `vault_pki_secret_backend_intermediate_cert_request` ([#2404])(https://github.com/hashicorp/terraform-provider-vault/pull/2404)
 
 BUGS:
 
