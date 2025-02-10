@@ -82,6 +82,8 @@ The following arguments are supported:
 
 * `postal_code` - (Optional) The postal code
 
+* `serial_number` - (Optional) The requested Subject's named Serial Number
+
 * `managed_key_name` - (Optional) The name of the previously configured managed key. This field is
   required if `type` is `kms`  and it conflicts with `managed_key_id`
 
@@ -91,6 +93,8 @@ The following arguments are supported:
 * `add_basic_constraints` - (Optional) Adds a Basic Constraints extension with 'CA: true'.
   Only needed as a workaround in some compatibility scenarios with Active Directory
   Certificate Services
+
+* `key_usage` - (Optional) Specifies key_usage to encode in the generated certificate.
 
 * `key_name` - (Optional) When a new key is created with this request, optionally specifies
   the name for this. The global ref `default` may not be used as a name.

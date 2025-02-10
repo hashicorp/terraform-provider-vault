@@ -88,7 +88,7 @@ func TestPkiSecretBackendIntermediateCertRequest_signature_bits(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
 		resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "4096"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "2048"),
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -156,29 +156,83 @@ func assertCsrAttributes(resourceName string, expectedSignatureAlgorithm x509.Si
 }
 
 func testPkiSecretBackendIntermediateCertRequestConfig_signature_bits(path string, optionalSignatureBits string) string {
-	var signatureBits string
-	if optionalSignatureBits != "" {
-		signatureBits = fmt.Sprintf(`signature_bits = "%s"`, optionalSignatureBits)
-	}
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path                      = "%s"
-  type                      = "pki"
-  description               = "test"
-  default_lease_ttl_seconds = 86400
-  max_lease_ttl_seconds     = 86400
+	return testPkiSecretBackendIntermediateCertRequestConfig(path, false, optionalSignatureBits, "", "")
 }
 
-resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  backend        = vault_mount.test.path
-  type           = "internal"
-  common_name    = "test.my.domain"
-  uri_sans       = ["spiffe://test.my.domain"]
-  key_type       = "rsa"
-  key_bits       = "4096"
-  %s
+func TestPkiSecretBackendIntermediateCertRequest_key_usage(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+	testCheckFunc := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path, ""),
+				Check:  resource.ComposeTestCheckFunc(append(testCheckFunc, resource.TestCheckNoResourceAttr(resourceName, consts.FieldKeyUsage))...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path, `["certsign"]`),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "certsign"))...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path, `["keyagreement", "DecipherOnly"]`),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "keyagreement"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".1", "DecipherOnly"))...),
+			},
+		},
+	})
 }
-`, path, signatureBits)
+
+func testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path string, optionalKeyUsage string) string {
+	return testPkiSecretBackendIntermediateCertRequestConfig(path, false, "", optionalKeyUsage, "")
+}
+
+func TestPkiSecretBackendIntermediateCertRequest_serial_number(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+	testCheckFunc := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_serial_number(path, ""),
+				Check:  resource.ComposeTestCheckFunc(append(testCheckFunc, resource.TestCheckNoResourceAttr(resourceName, consts.FieldSerialNumber))...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_serial_number(path, "WI-3005"),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSerialNumber, "WI-3005"))...),
+			},
+		},
+	})
+}
+
+func testPkiSecretBackendIntermediateCertRequestConfig_serial_number(path string, optionalSerialNumber string) string {
+	return testPkiSecretBackendIntermediateCertRequestConfig(path, false, "", "", optionalSerialNumber)
 }
 
 func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
@@ -245,6 +299,19 @@ func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 }
 
 func testPkiSecretBackendIntermediateCertRequestConfig_basic(path string, addConstraints bool) string {
+	return testPkiSecretBackendIntermediateCertRequestConfig(path, addConstraints, "", "", "")
+}
+
+func testPkiSecretBackendIntermediateCertRequestConfig(path string, addConstraints bool, optionalSignatureBits, optionalKeyUsage, optionalSerialNumber string) string {
+	if optionalSignatureBits != "" {
+		optionalSignatureBits = fmt.Sprintf(`signature_bits = "%s"`, optionalSignatureBits)
+	}
+	if optionalKeyUsage != "" {
+		optionalKeyUsage = fmt.Sprintf(`key_usage = %s`, optionalKeyUsage)
+	}
+	if optionalSerialNumber != "" {
+		optionalSerialNumber = fmt.Sprintf(`serial_number = "%s"`, optionalSerialNumber)
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path                      = "%s"
@@ -260,8 +327,11 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
   common_name           = "test.my.domain"
   uri_sans              = ["spiffe://test.my.domain"]
   add_basic_constraints = %t
+  %s
+  %s
+  %s
 }
-`, path, addConstraints)
+`, path, addConstraints, optionalSignatureBits, optionalKeyUsage, optionalSerialNumber)
 }
 
 func testPkiSecretBackendIntermediateCertRequestConfig_multiIssuerInternal(path, keyName string) string {
