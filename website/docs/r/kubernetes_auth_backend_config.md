@@ -33,7 +33,7 @@ resource "vault_kubernetes_auth_backend_config" "example" {
 
 The following arguments are supported:
 
-* `backend` - (Required) Unique name of the kubernetes backend to configure.
+* `backend` - (Optional) Unique name of the kubernetes backend to configure.
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
