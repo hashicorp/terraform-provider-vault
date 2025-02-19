@@ -323,7 +323,7 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldProvince,
 		consts.FieldStreetAddress,
 		consts.FieldPostalCode,
-    consts.FieldSignatureBits,
+		consts.FieldSignatureBits,
 		consts.FieldNotAfter,
 	}
 

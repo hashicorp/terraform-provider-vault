@@ -436,7 +436,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		consts.FieldPostalCode,
 		consts.FieldManagedKeyName,
 		consts.FieldManagedKeyID,
-    consts.FieldSignatureBits,
+		consts.FieldSignatureBits,
 		consts.FieldNotAfter,
 	}
 
