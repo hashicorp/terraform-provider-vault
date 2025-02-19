@@ -170,7 +170,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
 		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false, ""),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false, "", ""),
 				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, "", x509.SHA256WithRSA, false),
 			},
 		},
@@ -189,7 +189,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
 		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false, ""),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false, "", ""),
 				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, "", x509.SHA256WithRSA, false),
 			},
 		},
@@ -251,7 +251,7 @@ func TestPkiSecretBackendRootSignIntermediate_name_constraints_pem_bundle(t *tes
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_name_constraints(rootPath, intermediatePath, format, false, ""),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, x509.SHA256WithRSA, true),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, "", format, x509.SHA256WithRSA, true),
 			},
 		},
 	})
@@ -273,14 +273,14 @@ func TestPkiSecretBackendRootSignIntermediate_signature_bits(t *testing.T) {
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_signature_bits(rootPath, intermediatePath, format, "384"),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, x509.SHA384WithRSA, false),
+					testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, "", x509.SHA384WithRSA, false),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldSignatureBits, "384"),
 				),
 			},
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_signature_bits(rootPath, intermediatePath, format, "512"),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, x509.SHA512WithRSA, false),
+					testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, "", x509.SHA512WithRSA, false),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldSignatureBits, "512"),
 				),
 			},
@@ -323,8 +323,7 @@ func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string
 		resource.TestCheckResourceAttrSet(res, "serial_number"),
 		assertPKICertificateBundle(res, format),
 		assertPKICAChain(res),
-		assertCertificateAttributes(res, notAfter),
-		assertCertificateAttributes(res, expectedSignatureAlgorithm),
+		assertCertificateAttributes(res, notAfter, expectedSignatureAlgorithm),
 	}
 	if checkNameConstraintsAttrs {
 		// Note that the name constraints extension field values are the same as in resource_pki_secret_backend_root_cert_test.go
@@ -465,7 +464,7 @@ func assertCertificateAttributes(res string, notAfter string, expectedSignatureA
 			if !notAfterTime.Equal(crt.NotAfter) {
 				return fmt.Errorf("unexpected not_after in certificate: expected %s, got %s", notAfter, crt.NotAfter.Format(time.RFC3339))
 			}
-    }
+		}
 
 		if expectedSignatureAlgorithm != crt.SignatureAlgorithm {
 			return fmt.Errorf("expected signature algorithm (form signature_bits) %s, actual %s", expectedSignatureAlgorithm, crt.SignatureAlgorithm)

@@ -96,24 +96,24 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, notAfter, true, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, notAfter, true, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "not_after", notAfter),
 					testCapturePKICert(resourceName, store),
 				),
 			},
+			{
+				// revoke the cert with key
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, true, true),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						resource.TestCheckResourceAttr(resourceName, "revoke_with_key", "true"),
+						testPKICertRevocation(intermediatePath, store),
+						testCapturePKICert(resourceName, store),
+					)...,
+				),
+			},
 		},
-    {
-        // revoke the cert with key
-        Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, true, true),
-        Check: resource.ComposeTestCheckFunc(
-          append(checks,
-            resource.TestCheckResourceAttr(resourceName, "revoke_with_key", "true"),
-            testPKICertRevocation(intermediatePath, store),
-            testCapturePKICert(resourceName, store),
-          )...,
-        ),
-      },
 	})
 }
 
@@ -187,9 +187,9 @@ resource "vault_pki_secret_backend_role" "test" {
 }
 `, rootPath, intermediatePath),
 	}
-  
-    if withCert {
-      withCertBlock = `
+
+	if withCert {
+		withCertBlock := `
 resource "vault_pki_secret_backend_cert" "test" {
   backend               = vault_pki_secret_backend_role.test.backend
   name                  = vault_pki_secret_backend_role.test.name
@@ -200,21 +200,21 @@ resource "vault_pki_secret_backend_cert" "test" {
   min_seconds_remaining = 60
   revoke                = %t
 `
-      
-     if notAfter != "" {
-        withCertBlock += fmt.Sprintf(`  not_after             = "%s"
+
+		if notAfter != "" {
+			withCertBlock += fmt.Sprintf(`  not_after             = "%s"
         `, notAfter)
-     }
-      
-     if revokeWithKey {
-        withCertBlock += `  revoke_with_key       = true
+		}
+
+		if revokeWithKey {
+			withCertBlock += `  revoke_with_key       = true
         `
-     } else {
-        withCertBlock += fmt.Sprintf(`  revoke                = %t
+		} else {
+			withCertBlock += fmt.Sprintf(`  revoke                = %t
         `, revoke)
-     }
-      
-      withCertBlock += "}"
+		}
+
+		withCertBlock += "}"
 		fragments = append(fragments, withCertBlock)
 	}
 

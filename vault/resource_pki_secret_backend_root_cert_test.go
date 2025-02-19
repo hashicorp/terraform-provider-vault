@@ -25,9 +25,8 @@ import (
 
 func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
-	config := testPkiSecretBackendRootCertificateConfig_basic(path)
+	config := testPkiSecretBackendRootCertificateConfig_basic(path, "")
 	resourceName := "vault_pki_secret_backend_root_cert.test"
-  notAfterTime := time.Now().Add(2 * time.Hour).Format(time.RFC3339)
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
@@ -44,7 +43,36 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldLocality, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
-		assertCertificateAttributes(resourceName, x509.SHA512WithRSA),
+		assertCertificateAttributes(resourceName, "", x509.SHA512WithRSA),
+	}
+
+	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, nil)
+}
+
+func TestPkiSecretBackendRootCertificate_notAfter(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+	notAfterTime := time.Now().Add(2 * time.Hour).Format(time.RFC3339)
+	config := testPkiSecretBackendRootCertificateConfig_basic(path, fmt.Sprintf("not_after = \"%s\"", notAfterTime))
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pem"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKeyFormat, "der"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "4096"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldSignatureBits, "512"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldOu, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldOrganization, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCountry, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldLocality, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldNotAfter, notAfterTime),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+		assertCertificateAttributes(resourceName, notAfterTime, x509.SHA512WithRSA),
 	}
 
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, nil)
@@ -196,22 +224,6 @@ func testPkiSecretBackendRootCertificate(t *testing.T, path string, config strin
 						testPKICertReIssued(resourceName, store),
 						testCapturePKICert(resourceName, store),
 					)...,
-				),
-			},
-			{
-				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
-
-					_, err := client.Logical().Delete(fmt.Sprintf("%s/root", path))
-					if err != nil {
-						t.Fatal(err)
-					}
-				},
-				Config: testPkiSecretBackendRootCertificateConfig_basic(path, fmt.Sprintf("not_after = \"%s\"", notAfterTime)),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldNotAfter, notAfterTime),
-					testCapturePKICert(resourceName, store),
-					assertCertificateAttributes(resourceName, notAfterTime),
 				),
 			},
 			{
@@ -379,10 +391,6 @@ func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
 }
 
 func testPkiSecretBackendRootCertificateConfig_basic(path, extraConfig string) string {
-	//ttl := 86400
-	//if strings.HasPrefix(extraConfig, "not_after") {
-	//	ttl = 0
-	//}
 
 	config := fmt.Sprintf(`
 resource "vault_mount" "test" {
