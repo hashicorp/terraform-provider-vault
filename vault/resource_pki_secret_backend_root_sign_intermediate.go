@@ -137,6 +137,69 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldExcludedDNSDomains: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of domains for which certificates are not allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldPermittedIPRanges: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of IP ranges for which certificates are allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldExcludedIPRanges: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of IP ranges for which certificates are NOT allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldPermittedEmailAddresses: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of email addresses for which certificates are allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldExcludedEmailAddresses: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of email addresses for which certificates are not allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldPermittedURIDomains: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of URI domains for which certificates are allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldExcludedURIDomains: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of URI domains for which certificates are not allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			consts.FieldOu: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -177,6 +240,12 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The postal code.",
+				ForceNew:    true,
+			},
+			consts.FieldSignatureBits: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The number of bits to use in the signature algorithm.",
 				ForceNew:    true,
 			},
 			consts.FieldCertificate: {
@@ -254,6 +323,7 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldProvince,
 		consts.FieldStreetAddress,
 		consts.FieldPostalCode,
+    consts.FieldSignatureBits,
 		consts.FieldNotAfter,
 	}
 
@@ -268,6 +338,21 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldURISans,
 		consts.FieldOtherSans,
 		consts.FieldPermittedDNSDomains,
+	}
+
+	// Whether name constraints fields (other than permitted_dns_domains), are supproted,
+	// See VAULT-32141.
+	isNameConstraintsExtensionSupported := provider.IsAPISupported(meta, provider.VaultVersion119)
+	if isNameConstraintsExtensionSupported {
+		intermediateSignStringArrayFields = append(intermediateSignStringArrayFields,
+			consts.FieldExcludedDNSDomains,
+			consts.FieldPermittedIPRanges,
+			consts.FieldExcludedIPRanges,
+			consts.FieldPermittedEmailAddresses,
+			consts.FieldExcludedEmailAddresses,
+			consts.FieldPermittedURIDomains,
+			consts.FieldExcludedURIDomains,
+		)
 	}
 
 	data := map[string]interface{}{}

@@ -67,7 +67,9 @@ The following arguments are supported:
 
 * `auto_renew` - (Optional) If set to `true`, certs will be renewed if the expiration is within `min_seconds_remaining`. Default `false`
  
-* `revoke` - If set to `true`, the certificate will be revoked on resource destruction. 
+* `revoke` - If set to `true`, the certificate will be revoked on resource destruction using the `revoke` PKI API. Conflicts with `revoke_with_key`. Default `false`.
+
+* `revoke_with_key` - If set to `true`, the certificate will be revoked on resource destruction using the `revoke-with-key` PKI API. Conflicts with `revoke`. Default `false`
 
 ## Attributes Reference
 

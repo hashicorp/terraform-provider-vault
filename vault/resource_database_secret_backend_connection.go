@@ -196,6 +196,7 @@ func (i *dbEngine) PluginPrefixes() ([]string, error) {
 	return append([]string{defaultPrefix}, i.pluginAliases...), nil
 }
 
+// getDatabaseSchema returns the database-specific schema
 func getDatabaseSchema(typ schema.ValueType) schemaMap {
 	var dbEngineTypes []string
 	for _, e := range dbEngines {
