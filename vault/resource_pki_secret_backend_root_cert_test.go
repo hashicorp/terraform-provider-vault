@@ -25,7 +25,7 @@ import (
 
 func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
-	config := testPkiSecretBackendRootCertificateConfig_basic(path, "")
+	config := testPkiSecretBackendRootCertificateConfig_basic(path, "ttl = 86400")
 	resourceName := "vault_pki_secret_backend_root_cert.test"
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
