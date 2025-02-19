@@ -198,7 +198,6 @@ resource "vault_pki_secret_backend_cert" "test" {
   user_ids              = ["foo", "bar"]
   ttl                   = "720h"
   min_seconds_remaining = 60
-  revoke                = %t
 `
 
 		if notAfter != "" {
