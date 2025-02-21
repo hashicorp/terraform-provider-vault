@@ -9,10 +9,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"golang.org/x/crypto/ssh"
 	"testing"
 )
-
-const testSSHKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDR6q4PTcuIkpdGEqaCaxnR8/REqlbSiEIKaRZkVSjiTXOaiSfUsy9cY2+7+oO9fLMUrhylImerjzEoagX1IjYvc9IeUBaRnfacN7QwUDfstgp2jknbg7rNX9j9nFxwltV/jYQPcRq8Ud0wn1nb4qixq+diM7+Up+xJOeaKxbpjEUJH5dcvaBB+Aa24tJpjOQxtFyQ6dUxlgJu0tcygZR92kKYCVjZDohlSED3i/Ak2KFwqCKx2IZWq9z1vMEgmRzv++4Qt1OsbpW8itiCyWn6lmV33eDCdjMrr9TEThQNnMinPrHdmVUnPZ/OomP+rLDRE9lQR16uaSvKhg5TWOFIXRPyEhX9arEATrE4KSWeQN2qgHOb6P24YqgEm1ZdHJq25q/nBBAa1x0tFMiWqZwOsGeJ9nTeOeyiqFKH5YRBo6DIy3ag3taFsfQSve6oqjnrudUd1hJ8/bNSz8amECfP0ULvAEAgpiurj3eCPc3OcXl4tAld9F6KwabEJV5eelcs= user@example.com"
 
 func TestDataSourceSSHSecretBackendSign(t *testing.T) {
 	resource.Test(t, resource.TestCase{
@@ -52,10 +51,11 @@ resource "vault_ssh_secret_backend_role" "test" {
     	permit-pty = ""
     }
     default_user            = "ubuntu"
-    ttl                     = "30m0s"
+    ttl                     = "1800"
 }
 
 data "vault_ssh_secret_backend_sign" "test" {
+	depends_on           = ["vault_ssh_secret_backend_role.test"]
     path             = vault_mount.test.path
     public_key       = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDR6q4PTcuIkpdGEqaCaxnR8/REqlbSiEIKaRZkVSjiTXOaiSfUsy9cY2+7+oO9fLMUrhylImerjzEoagX1IjYvc9IeUBaRnfacN7QwUDfstgp2jknbg7rNX9j9nFxwltV/jYQPcRq8Ud0wn1nb4qixq+diM7+Up+xJOeaKxbpjEUJH5dcvaBB+Aa24tJpjOQxtFyQ6dUxlgJu0tcygZR92kKYCVjZDohlSED3i/Ak2KFwqCKx2IZWq9z1vMEgmRzv++4Qt1OsbpW8itiCyWn6lmV33eDCdjMrr9TEThQNnMinPrHdmVUnPZ/OomP+rLDRE9lQR16uaSvKhg5TWOFIXRPyEhX9arEATrE4KSWeQN2qgHOb6P24YqgEm1ZdHJq25q/nBBAa1x0tFMiWqZwOsGeJ9nTeOeyiqFKH5YRBo6DIy3ag3taFsfQSve6oqjnrudUd1hJ8/bNSz8amECfP0ULvAEAgpiurj3eCPc3OcXl4tAld9F6KwabEJV5eelcs= user@example.com"
     name             = "test"
@@ -83,19 +83,18 @@ func testDataSourceSSHSecretBackendSign_check(s *terraform.State) error {
 		return errors.New("got empty string for signed_key")
 	}
 
-	resourceState = s.Modules[0].Resources["data.vault_ssh_secret_backend_ca.test"]
-	if resourceState == nil {
-		return fmt.Errorf("resource not found in state %v", s.Modules[0].Resources)
+	sshSignature, _, _, _, err := ssh.ParseAuthorizedKey([]byte(signedKey))
+	if err != nil {
+		return fmt.Errorf("error parsing signature: %s", err)
 	}
 
-	iState = resourceState.Primary
-	if iState == nil {
-		return fmt.Errorf("resource has no primary instance")
+	cert, ok := sshSignature.(*ssh.Certificate)
+	if !ok {
+		return fmt.Errorf("unexpected type %T for signature", sshSignature)
 	}
 
-	caPublicKey := iState.Attributes["public_key"]
-	if caPublicKey == "" {
-		return errors.New("got empty string for public_key")
+	if len(cert.ValidPrincipals) != 1 || cert.ValidPrincipals[0] != "my-user" {
+		return fmt.Errorf("unexpected value for valid_principles: expected \"my-user\", got %s", cert.ValidPrincipals)
 	}
 
 	return nil
