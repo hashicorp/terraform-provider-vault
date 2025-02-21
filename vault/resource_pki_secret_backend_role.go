@@ -44,6 +44,7 @@ var pkiSecretFields = []string{
 	consts.FieldProvince,
 	consts.FieldStreetAddress,
 	consts.FieldTTL,
+	consts.FieldNotAfter,
 }
 
 var pkiSecretListFields = []string{
@@ -517,12 +518,6 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 		data[consts.FieldPolicyIdentifiers] = policyIdentifiers
 	} else if policyIdentifierBlocksRaw, ok := d.GetOk(consts.FieldPolicyIdentifier); ok {
 		data[consts.FieldPolicyIdentifiers] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
-	}
-
-	if provider.IsAPISupported(meta, provider.VaultVersion110) {
-		if notAfter, ok := d.GetOk(consts.FieldNotAfter); ok {
-			data[consts.FieldNotAfter] = notAfter
-		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion111) {
