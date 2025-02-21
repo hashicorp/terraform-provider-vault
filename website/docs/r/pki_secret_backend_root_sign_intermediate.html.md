@@ -59,6 +59,20 @@ The following arguments are supported:
 
 * `permitted_dns_domains` - (Optional) List of domains for which certificates are allowed to be issued
 
+* `excluded_dns_domains` - (Optional) List of domains for which certificates are not allowed to be issued. Requires Vault version 1.19+.
+
+* `permitted_ip_ranges` - (Optional)  List of IP ranges for which certificates are allowed to be issued. Requires Vault version 1.19+.
+
+* `excluded_ip_ranges` - (Optional) List of IP ranges for which certificates are not allowed to be issued. Requires Vault version 1.19+.
+
+* `permitted_email_addresses` - (Optional) List of email addresses for which certificates are allowed to be issued. Requires Vault version 1.19+.
+
+* `excluded_email_addresses` - (Optional) List of email addresses for which certificates are not allowed to be issued. Requires Vault version 1.19+.
+
+* `permitted_uri_domains` - (Optional) List of URI domains for which certificates are allowed to be issued. Requires Vault version 1.19+.
+
+* `excluded_uri_domains` - (Optional) List of URI domains for which certificates are not allowed to be issued. Requires Vault version 1.19+.
+
 * `ou` - (Optional) The organization unit
 
 * `organization` - (Optional) The organization
@@ -72,6 +86,8 @@ The following arguments are supported:
 * `street_address` - (Optional) The street address
 
 * `postal_code` - (Optional) The postal code
+
+* `signature_bits` - (Optional) The number of bits to use in the signature algorithm
 
 * `revoke` - If set to `true`, the certificate will be revoked on resource destruction.
 

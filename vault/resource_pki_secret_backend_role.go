@@ -14,10 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/pki"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -33,6 +33,7 @@ var pkiSecretFields = []string{
 	consts.FieldAllowedURISans,
 	consts.FieldCountry,
 	consts.FieldKeyBits,
+	consts.FieldSignatureBits,
 	consts.FieldKeyType,
 	consts.FieldLocality,
 	consts.FieldMaxTTL,
@@ -254,6 +255,12 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "The number of bits of generated keys.",
 				Default:     2048,
+			},
+			consts.FieldSignatureBits: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The number of bits to use in the signature algorithm.",
 			},
 			consts.FieldKeyUsage: {
 				Type:        schema.TypeList,
@@ -575,10 +582,10 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 	listFields := append(pkiSecretListFields, consts.FieldKeyUsage)
 	// handle TypeList
 	for _, k := range listFields {
-		list := expandStringSlice(secret.Data[k].([]interface{}))
-
-		if len(list) > 0 {
-			d.Set(k, list)
+		if list, ok := util.GetStringSliceFromSecret(secret, k); ok {
+			if len(list) > 0 {
+				d.Set(k, list)
+			}
 		}
 	}
 
@@ -593,12 +600,12 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		switch {
 		case k == consts.FieldNotBeforeDuration:
 			d.Set(k, flattenVaultDuration(secret.Data[k]))
-		case k == consts.FieldKeyBits:
-			keyBits, err := secret.Data[consts.FieldKeyBits].(json.Number).Int64()
+		case k == consts.FieldKeyBits || k == consts.FieldSignatureBits:
+			keyBits, err := secret.Data[k].(json.Number).Int64()
 			if err != nil {
-				return diag.Errorf("expected key_bits %q to be a number", secret.Data[consts.FieldKeyBits])
+				return diag.Errorf("expected %s %q to be a number", k, secret.Data[k])
 			}
-			d.Set(consts.FieldKeyBits, keyBits)
+			d.Set(k, keyBits)
 		default:
 			d.Set(k, secret.Data[k])
 		}

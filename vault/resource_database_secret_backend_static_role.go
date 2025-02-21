@@ -6,11 +6,12 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"log"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -99,6 +100,11 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 				Description: "The password corresponding to the username in the database. " +
 					"Required when using the Rootless Password Rotation workflow for static roles.",
 			},
+			consts.FieldSkipImportRotation: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Skip rotation of the password on import.",
+			},
 		},
 	}
 }
@@ -141,6 +147,9 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := d.GetOk(consts.FieldSelfManagedPassword); ok && v != "" {
 			data[consts.FieldSelfManagedPassword] = v
+		}
+		if v, ok := d.Get(consts.FieldSkipImportRotation).(bool); ok {
+			data[consts.FieldSkipImportRotation] = v
 		}
 	}
 
@@ -207,6 +216,12 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 			return diag.FromErr(err)
 		}
 		if err := d.Set(consts.FieldRotationWindow, role.Data[consts.FieldRotationWindow]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldSkipImportRotation, role.Data[consts.FieldSkipImportRotation]); err != nil {
 			return diag.FromErr(err)
 		}
 	}

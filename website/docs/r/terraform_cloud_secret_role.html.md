@@ -49,7 +49,7 @@ The following arguments are supported:
 
 * `max_ttl` - (Optional) Maximum TTL for leases associated with this role, in seconds.
 
-* `ttl` - (Optional) Specifies the TTL for this role.
+* `ttl` - (Optional) Specifies the TTL for this role, in seconds.
 
 ## Attributes Reference
 
