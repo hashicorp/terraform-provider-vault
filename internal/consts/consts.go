@@ -466,6 +466,22 @@ const (
 	FieldDisableNameChecks              = "disable_name_checks"
 	FieldDisableNameConstraintChecks    = "disable_name_constraint_checks"
 
+	FieldInput               = "input"
+	FieldKeyVersion          = "key_version"
+	FieldHashAlgorithm       = "hash_algorithm"
+	FieldReference           = "reference"
+	FieldBatchInput          = "batch_input"
+	FieldContext             = "context"
+	FieldPrehashed           = "prehashed"
+	FieldSignatureAlgorithm  = "signature_algorithm"
+	FieldMarshalingAlgorithm = "marshaling_algorithm"
+	FieldSaltLength          = "salt_length"
+	FieldSignature           = "signature"
+	FieldBatchResults        = "batch_results"
+	FieldHMAC                = "hmac"
+	FieldCMAC                = "cmac"
+	FieldValid               = "valid"
+
 	/*
 		common environment variables
 	*/
