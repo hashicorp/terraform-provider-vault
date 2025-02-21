@@ -8,6 +8,7 @@ FEATURES:
 * Update `vault_pki_secret_backend_role` to support the `cn_validations` role field ([#1820](https://github.com/hashicorp/terraform-provider-vault/pull/1820)).
 * Add new resource `vault_pki_secret_backend_acme_eab` to manage PKI ACME external account binding tokens. Requires Vault 1.14+. ([#2367](https://github.com/hashicorp/terraform-provider-vault/pull/2367))
 * Add new data source and resource `vault_pki_secret_backend_config_cmpv2`. Requires Vault 1.18+. *Available only for Vault Enterprise* ([#2330](https://github.com/hashicorp/terraform-provider-vault/pull/2330))
+* Add new data source `vault_ssh_secret_backend_sign`. ([#2409](https://github.com/hashicorp/terraform-provider-vault/pull/2409))
 
 IMPROVEMENTS:
 

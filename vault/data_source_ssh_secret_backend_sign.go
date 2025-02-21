@@ -21,12 +21,12 @@ func sshSecretBackendSignDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Full path where PKI backend is mounted.",
+				Description: "Full path where SSH backend is mounted.",
 			},
 			consts.FieldName: {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Specifies the name of the role to sign. This is part of the request URL.",
+				Description: "Specifies the name of the role to sign.",
 			},
 			consts.FieldPublicKey: {
 				Type:        schema.TypeString,
@@ -67,12 +67,12 @@ func sshSecretBackendSignDataSource() *schema.Resource {
 			consts.FieldSerialNumber: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The serial number returned from Vault",
+				Description: "The serial number of the certificate returned from Vault",
 			},
 			consts.FieldSignedKey: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The signed key returned from Vault",
+				Description: "The signed certificate returned from Vault",
 			},
 		},
 	}
