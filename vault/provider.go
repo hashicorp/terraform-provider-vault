@@ -191,6 +191,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
 			PathInventory: []string{"/pki/keys"},
 		},
+		"vault_ssh_secret_backend_sign": {
+			Resource:      UpdateSchemaResource(sshSecretBackendSignDataSource()),
+			PathInventory: []string{"/ssh/sign"},
+		},
 		"vault_transform_encode": {
 			Resource:      UpdateSchemaResource(transformEncodeDataSource()),
 			PathInventory: []string{"/transform/encode/{role_name}"},

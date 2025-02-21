@@ -465,6 +465,11 @@ const (
 	FieldDisablePathLengthChecks        = "disable_path_length_checks"
 	FieldDisableNameChecks              = "disable_name_checks"
 	FieldDisableNameConstraintChecks    = "disable_name_constraint_checks"
+	FieldValidPrincipals                = "valid_principals"
+	FieldCertType                       = "cert_type"
+	FieldCriticalOptions                = "critical_options"
+	FieldExtensions                     = "extensions"
+	FieldSignedKey                      = "signed_key"
 
 	/*
 		common environment variables
