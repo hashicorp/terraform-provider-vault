@@ -30,7 +30,7 @@ func TestPkiSecretBackendConfigACME_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendConfigACME(backend, "sign-verbatim", "*", "*", "not-required", "",
-					false, false),
+					false, false, 7776000),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldEnabled, "false"),
@@ -39,11 +39,12 @@ func TestPkiSecretBackendConfigACME_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedIssuers+".0", "*"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldEabPolicy, "not-required"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDnsResolver, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "7776000"),
 				),
 			},
 			{
 				Config: testPkiSecretBackendConfigACME(backend, "forbid", "test", "*", "new-account-required",
-					"1.1.1.1:8443", true, false),
+					"1.1.1.1:8443", true, false, 2592000),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldEnabled, "true"),
@@ -52,11 +53,12 @@ func TestPkiSecretBackendConfigACME_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedIssuers+".0", "*"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldEabPolicy, "new-account-required"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDnsResolver, "1.1.1.1:8443"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "2592000"),
 				),
 			},
 			{
 				Config: testPkiSecretBackendConfigACME(backend, "role:test", "*", "*", "always-required", "",
-					true, true),
+					true, true, 3600),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldEnabled, "true"),
@@ -66,6 +68,7 @@ func TestPkiSecretBackendConfigACME_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedIssuers+".0", "*"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldEabPolicy, "always-required"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDnsResolver, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "3600"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),
@@ -74,7 +77,7 @@ func TestPkiSecretBackendConfigACME_basic(t *testing.T) {
 }
 
 func testPkiSecretBackendConfigACME(path, default_directory_policy, allowed_roles, allowed_issuers,
-	eab_policy, dns_resolver string, enabled, allow_role_ext_key_usage bool) string {
+	eab_policy, dns_resolver string, enabled, allow_role_ext_key_usage bool, max_ttl int) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -108,6 +111,7 @@ resource "vault_pki_secret_backend_config_acme" "test" {
   default_directory_policy = "%s"
   dns_resolver             = "%s"
   eab_policy               = "%s"
+  max_ttl                  = "%d"
 }`, path, enabled, allowed_issuers, allowed_roles, allow_role_ext_key_usage,
-		default_directory_policy, dns_resolver, eab_policy)
+		default_directory_policy, dns_resolver, eab_policy, max_ttl)
 }

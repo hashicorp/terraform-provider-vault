@@ -27,6 +27,7 @@ var (
 		consts.FieldAllowedIssuers,
 		consts.FieldEabPolicy,
 		consts.FieldDnsResolver,
+		consts.FieldMaxTTL,
 	}
 )
 
@@ -96,6 +97,11 @@ func pkiSecretBackendConfigACMEResource() *schema.Resource {
 				Optional: true,
 				Description: "DNS resolver to use for domain resolution on this mount. " +
 					"Must be in the format <host>:<port>, with both parts mandatory.",
+			},
+			consts.FieldMaxTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Specifies the maximum TTL in seconds for certificates issued by ACME.",
 			},
 		},
 	}

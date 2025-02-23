@@ -66,6 +66,8 @@ The following arguments are supported:
 * `eab_policy` - (Optional) Specifies the policy to use for external account binding behaviour.
   Allowed values are `not-required`, `new-account-required` or `always-required`.
 
+* `max_ttl` - (Optional) The maximum TTL in seconds for certificates issued by ACME.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
