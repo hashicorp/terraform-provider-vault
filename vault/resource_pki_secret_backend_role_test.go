@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -132,6 +133,8 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("pki")
 	name := acctest.RandomWithPrefix("role")
 	resourceName := "vault_pki_secret_backend_role.test"
+
+	notAfterTime := time.Now().Add(2 * time.Hour)
 
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -344,6 +347,18 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, `key_usage = []`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "key_usage.#", "0"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 0, 3600, fmt.Sprintf("not_after = \"%s\"", notAfterTime.Format(time.RFC3339))),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "not_after", notAfterTime.Format(time.RFC3339)),
+					resource.TestCheckResourceAttr(resourceName, "max_ttl", "3600"),
 				),
 			},
 		},

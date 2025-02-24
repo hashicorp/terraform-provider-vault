@@ -71,6 +71,8 @@ The following arguments are supported:
 
 * `revoke_with_key` - If set to `true`, the certificate will be revoked on resource destruction using the `revoke-with-key` PKI API. Conflicts with `revoke`. Default `false`
 
+* `not_after` (Optional) - Set the Not After field of the certificate with specified date value. The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
