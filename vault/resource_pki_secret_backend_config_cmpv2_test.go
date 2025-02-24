@@ -5,13 +5,13 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -88,7 +88,10 @@ func TestAccPKISecretBackendConfigCMPV2_AllFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.cert_role", "a-role"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldEnableSentinelParsing, "true"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuditFields+".#", "20"),
-					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDisabledValidations+".#", "2"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDisabledValidations+".0", "DisableMatchingKeyIdValidation"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDisabledValidations+".1", "DisableCertTimeValidation"),
+					resource.TestCheckResourceAttrSet(resourceBackend, consts.FieldLastUpdated),
 
 					// Validate that the data property can read back everything filled in
 					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
@@ -98,9 +101,11 @@ func TestAccPKISecretBackendConfigCMPV2_AllFields(t *testing.T) {
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.%", "1"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.%", "2"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.accessor", "test"),
-					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.cert_role", "a-role"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.cert_role", "a-role"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldEnableSentinelParsing, "true"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuditFields+".#", "20"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldDisabledValidations+".0", "DisableMatchingKeyIdValidation"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldDisabledValidations+".1", "DisableCertTimeValidation"),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
 				),
 			},
@@ -145,6 +150,7 @@ resource "vault_pki_secret_backend_config_cmpv2" "test" {
                   "signature_bits", "exclude_cn_from_sans", "ou", "organization", "country", 
                   "locality", "province", "street_address", "postal_code", "serial_number",
                   "use_pss", "key_type", "key_bits", "add_basic_constraints"]
+  disabled_validations = ["DisableMatchingKeyIdValidation", "DisableCertTimeValidation"]
 }
 
 data "vault_pki_secret_backend_config_cmpv2" "test" {
