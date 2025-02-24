@@ -460,6 +460,8 @@ const (
 	FieldEabKey                        = "key"
 	FieldAcmeDirectory                 = "acme_directory"
 	FieldEabId                         = "eab_id"
+	FieldAssumeRoleArn                 = "assume_role_arn"
+	FieldAssumeRoleSessionName         = "assume_role_session_name"
 
 	FieldDisableCriticalExtensionChecks = "disable_critical_extension_checks"
 	FieldDisablePathLengthChecks        = "disable_path_length_checks"
