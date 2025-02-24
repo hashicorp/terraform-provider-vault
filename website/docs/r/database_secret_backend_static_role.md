@@ -73,6 +73,9 @@ The following arguments are supported:
   Required when using the Rootless Password Rotation workflow for static roles. Only enabled for
   select DB engines (Postgres). Requires Vault 1.18+ Enterprise.
 
+* `skip_import_rotation` - (Optional) If set to true, Vault will skip the
+  initial secret rotation on import. Requires Vault 1.18+ Enterprise.
+
 * `rotation_period` - The amount of time Vault should wait before rotating the password, in seconds.
   Mutually exclusive with `rotation_schedule`.
 

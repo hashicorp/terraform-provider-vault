@@ -33,6 +33,7 @@ var pkiSecretFields = []string{
 	consts.FieldAllowedURISans,
 	consts.FieldCountry,
 	consts.FieldKeyBits,
+	consts.FieldSignatureBits,
 	consts.FieldKeyType,
 	consts.FieldLocality,
 	consts.FieldMaxTTL,
@@ -43,6 +44,7 @@ var pkiSecretFields = []string{
 	consts.FieldProvince,
 	consts.FieldStreetAddress,
 	consts.FieldTTL,
+	consts.FieldNotAfter,
 }
 
 var pkiSecretListFields = []string{
@@ -255,6 +257,12 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Description: "The number of bits of generated keys.",
 				Default:     2048,
 			},
+			consts.FieldSignatureBits: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The number of bits to use in the signature algorithm.",
+			},
 			consts.FieldKeyUsage: {
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -442,6 +450,13 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldNotAfter: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Set the Not After field of the certificate with specified date value. " +
+					"The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the " +
+					"Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.",
+			},
 		},
 	}
 }
@@ -593,12 +608,12 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		switch {
 		case k == consts.FieldNotBeforeDuration:
 			d.Set(k, flattenVaultDuration(secret.Data[k]))
-		case k == consts.FieldKeyBits:
-			keyBits, err := secret.Data[consts.FieldKeyBits].(json.Number).Int64()
+		case k == consts.FieldKeyBits || k == consts.FieldSignatureBits:
+			keyBits, err := secret.Data[k].(json.Number).Int64()
 			if err != nil {
-				return diag.Errorf("expected key_bits %q to be a number", secret.Data[consts.FieldKeyBits])
+				return diag.Errorf("expected %s %q to be a number", k, secret.Data[k])
 			}
-			d.Set(consts.FieldKeyBits, keyBits)
+			d.Set(k, keyBits)
 		default:
 			d.Set(k, secret.Data[k])
 		}

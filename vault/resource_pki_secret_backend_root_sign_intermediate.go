@@ -242,6 +242,12 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Description: "The postal code.",
 				ForceNew:    true,
 			},
+			consts.FieldSignatureBits: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The number of bits to use in the signature algorithm.",
+				ForceNew:    true,
+			},
 			consts.FieldCertificate: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -283,6 +289,13 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies the default issuer of this request.",
 			},
+			consts.FieldNotAfter: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Set the Not After field of the certificate with specified date value. " +
+					"The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. " +
+					"Supports the Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.",
+			},
 		},
 	}
 }
@@ -310,6 +323,8 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldProvince,
 		consts.FieldStreetAddress,
 		consts.FieldPostalCode,
+		consts.FieldSignatureBits,
+		consts.FieldNotAfter,
 	}
 
 	intermediateSignBooleanAPIFields := []string{

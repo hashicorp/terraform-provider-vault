@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
 	"testing"
 
@@ -153,9 +154,12 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 
 // TestAccDatabaseSecretBackendStaticRole_Rootless tests the
 // Rootless Config and Rotation flow for Static Roles.
+//
 // To run locally you will need to set the following env vars:
 //   - POSTGRES_URL_TEST
 //   - POSTGRES_URL_ROOTLESS
+//
+// See .github/workflows/build.yml for details.
 func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
 	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
 	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_ROOTLESS")[0]
@@ -165,12 +169,6 @@ func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
 	dbName := acctest.RandomWithPrefix("db")
 	name := acctest.RandomWithPrefix("staticrole")
 	resourceName := "vault_database_secret_backend_static_role.test"
-
-	testRoleStaticCreate := `
-CREATE ROLE "{{name}}" WITH
-  LOGIN
-  PASSWORD '{{password}}';
-`
 
 	// create static database user
 	testutil.CreateTestPGUser(t, connURLTestRoot, username, "testpassword", testRoleStaticCreate)
@@ -199,6 +197,55 @@ CREATE ROLE "{{name}}" WITH
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{consts.FieldSelfManagedPassword},
 			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretBackendStaticRole_SkipImportRotation tests the skip
+// auto import Rotation configuration.
+//
+// To run locally you will need to set the following env vars:
+//   - POSTGRES_URL
+//   - POSTGRES_URL_TEST
+//
+// See .github/workflows/build.yml for details.
+func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
+	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
+	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")[0]
+
+	parsedURL, err := url.Parse(connURLTestRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vaultAdminUser := parsedURL.User.Username()
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	staticUsername := acctest.RandomWithPrefix("user")
+	dbName := acctest.RandomWithPrefix("db")
+	roleName := acctest.RandomWithPrefix("staticrole")
+	resourceName := "vault_database_secret_backend_static_role.test"
+
+	// create static database user
+	testutil.CreateTestPGUser(t, connURLTestRoot, staticUsername, "testpassword", testRoleStaticCreate)
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_skipImportRotation(roleName, staticUsername, dbName, backend, connURL, vaultAdminUser),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "username", staticUsername),
+					resource.TestCheckResourceAttr(resourceName, "skip_import_rotation", "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, ""),
 		},
 	})
 }
@@ -371,6 +418,35 @@ resource "vault_database_secret_backend_static_role" "test" {
 `, path, db, connURL, name, username)
 }
 
+func testAccDatabaseSecretBackendStaticRoleConfig_skipImportRotation(roleName, staticUsername, db, path, connURL, vaultAdminUser string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+
+  postgresql {
+	connection_url = "%s"
+	username = "%s"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  skip_import_rotation = true
+  rotation_period = 3600
+}
+`, path, db, connURL, vaultAdminUser, roleName, staticUsername)
+}
+
 func testAccDatabaseSecretBackendStaticRoleConfig_rootlessConfig(name, username, db, path, connURL, smPassword string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
@@ -399,3 +475,9 @@ resource "vault_database_secret_backend_static_role" "test" {
 }
 `, path, db, connURL, name, username, smPassword)
 }
+
+var testRoleStaticCreate = `
+CREATE ROLE "{{name}}" WITH
+  LOGIN
+  PASSWORD '{{password}}';
+`

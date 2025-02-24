@@ -97,6 +97,8 @@ The following arguments are supported:
 
 * `key_bits` - (Optional) The number of bits of generated keys
 
+* `signature_bits` - (Optional) The number of bits to use in the signature algorithm
+
 * `key_usage` - (Optional) Specify the allowed key usage constraint on issued
   certificates. Defaults to `["DigitalSignature", "KeyAgreement", "KeyEncipherment"])`.
   To specify no default key usage constraints, set this to an empty list `[]`.
@@ -176,6 +178,8 @@ resource "vault_pki_secret_backend_role" "role" {
 * `not_before_duration` - (Optional) Specifies the [duration](https://developer.hashicorp.com/vault/docs/concepts/duration-format) by which to backdate the NotBefore property.
 
 * `allowed_serial_numbers` - (Optional) An array of allowed serial numbers to put in Subject
+
+* `not_after` - (Optional) Set the Not After field of the certificate with specified date value. The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.
 
 ## Attributes Reference
 
