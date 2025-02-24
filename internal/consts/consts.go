@@ -442,6 +442,7 @@ const (
 	FieldAuthenticators                = "authenticators"
 	FieldEnableSentinelParsing         = "enable_sentinel_parsing"
 	FieldAuditFields                   = "audit_fields"
+	FieldDisabledValidations           = "disabled_validations"
 	FieldLastUpdated                   = "last_updated"
 	FieldCustomEndpoint                = "custom_endpoint"
 	FieldPrivateKeyID                  = "private_key_id"
