@@ -46,7 +46,6 @@ func sshSecretBackendSignDataSource() *schema.Resource {
 			consts.FieldCertType: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     "user",
 				Description: "Specifies the type of certificate to be created; either \"user\" or \"host\".",
 			},
 			consts.FieldKeyID: {
@@ -85,33 +84,35 @@ func readSSHBackendSign(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	path := d.Get("path").(string)
-
 	name := d.Get("name").(string)
-	publicKey := d.Get("public_key").(string)
-	ttl := d.Get("ttl").(string)
-	validPrincipals := d.Get("valid_principals")
-	certType := d.Get("cert_type").(string)
-	keyId := d.Get("key_id").(string)
 
-	payload := map[string]interface{}{
-		"public_key":       publicKey,
-		"ttl":              ttl,
-		"valid_principals": validPrincipals,
-		"cert_type":        certType,
-		"key_id":           keyId,
+	signFields := []string{
+		consts.FieldPublicKey,
+		consts.FieldTTL,
+		consts.FieldValidPrincipals,
+		consts.FieldCertType,
+		consts.FieldKeyID,
 	}
 
-	returnedData, err := client.Logical().WriteWithContext(ctx, path+"/sign/"+name, payload)
+	payload := map[string]interface{}{}
+
+	for _, f := range signFields {
+		if val, ok := d.GetOk(f); ok {
+			payload[f] = val
+		}
+	}
+
+	returnedData, err := client.Logical().WriteWithContext(ctx, fmt.Sprintf("%s/sign/%s", path, name), payload)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("error signing key: %s", err))
 	}
 
-	serialNumber := returnedData.Data["serial_number"]
-	signedKey := returnedData.Data["signed_key"]
+	serialNumber := returnedData.Data[consts.FieldSerialNumber]
+	signedKey := returnedData.Data[consts.FieldSignedKey]
 
 	d.SetId(serialNumber.(string))
-	d.Set("serial_number", serialNumber)
-	d.Set("signed_key", signedKey)
+	d.Set(consts.FieldSerialNumber, serialNumber)
+	d.Set(consts.FieldSignedKey, signedKey)
 
 	return nil
 }
