@@ -179,6 +179,8 @@ resource "vault_pki_secret_backend_role" "role" {
 
 * `allowed_serial_numbers` - (Optional) An array of allowed serial numbers to put in Subject
 
+* `not_after` - (Optional) Set the Not After field of the certificate with specified date value. The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

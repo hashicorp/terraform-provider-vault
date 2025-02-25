@@ -399,6 +399,13 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Description: "The ID of the generated key.",
 				ForceNew:    true,
 			},
+			consts.FieldNotAfter: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Set the Not After field of the certificate with specified date value. " +
+					"The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the " +
+					"Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.",
+			},
 		},
 	}
 }
@@ -430,6 +437,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		consts.FieldManagedKeyName,
 		consts.FieldManagedKeyID,
 		consts.FieldSignatureBits,
+		consts.FieldNotAfter,
 	}
 
 	rootCertBooleanAPIFields := []string{
