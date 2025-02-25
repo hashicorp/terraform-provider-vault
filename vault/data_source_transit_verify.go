@@ -4,9 +4,8 @@
 package vault
 
 import (
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -60,6 +59,7 @@ func transitVerifyDataSource() *schema.Resource {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Specifies a list of items for processing. When this parameter is set, any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input. If the input data value of an item is invalid, the corresponding item in the 'batch_results' will have the key 'error' with a value describing the error.",
+				Elem:        &schema.Schema{Type: schema.TypeMap},
 			},
 			consts.FieldContext: {
 				Type:        schema.TypeString,
@@ -98,6 +98,7 @@ func transitVerifyDataSource() *schema.Resource {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Description: "The results returned from Vault if using batch_input",
+				Elem:        &schema.Schema{Type: schema.TypeMap},
 			},
 		},
 	}

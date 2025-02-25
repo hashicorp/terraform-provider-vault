@@ -4,9 +4,11 @@
 package vault
 
 import (
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"errors"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -28,7 +30,6 @@ func transitSignDataSource() *schema.Resource {
 			consts.FieldHashAlgorithm: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     "sha2-256",
 				Description: "Specifies the hash algorithm to use for supporting key types (notably, not including ed25519 which specifies its own hash algorithm).",
 			},
 			consts.FieldKeyVersion: {
@@ -50,6 +51,7 @@ func transitSignDataSource() *schema.Resource {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Specifies a list of items for processing. When this parameter is set, any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input. If the input data value of an item is invalid, the corresponding item in the 'batch_results' will have the key 'error' with a value describing the error.",
+				Elem:        &schema.Schema{Type: schema.TypeMap},
 			},
 			consts.FieldContext: {
 				Type:        schema.TypeString,
@@ -64,19 +66,16 @@ func transitSignDataSource() *schema.Resource {
 			consts.FieldSignatureAlgorithm: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     "pss",
 				Description: "When using a RSA key, specifies the RSA signature algorithm to use for signing.",
 			},
 			consts.FieldMarshalingAlgorithm: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     "asn1",
 				Description: "Specifies the way in which the signature should be marshaled. This currently only applies to ECDSA keys.",
 			},
 			consts.FieldSaltLength: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     "auto",
 				Description: "The salt length used to sign. This currently only applies to the RSA PSS signature scheme.",
 			},
 			consts.FieldSignature: {
@@ -88,12 +87,74 @@ func transitSignDataSource() *schema.Resource {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Description: "The results returned from Vault if using batch_input",
+				Elem:        &schema.Schema{Type: schema.TypeMap},
 			},
 		},
 	}
 }
 
 func transitSignDataSourceRead(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	path, ok := d.GetOk(consts.FieldPath)
+	if !ok {
+		return errors.New("path is required")
+	}
+
+	keyName, ok := d.GetOk(consts.FieldName)
+	if !ok {
+		return errors.New("name is required")
+	}
+
+	payload := map[string]interface{}{}
+
+	signAPIStringFields := []string{
+		consts.FieldKeyVersion,
+		consts.FieldHashAlgorithm,
+		consts.FieldInput,
+		consts.FieldReference,
+		consts.FieldContext,
+		consts.FieldPrehashed,
+		consts.FieldSignatureAlgorithm,
+		consts.FieldMarshalingAlgorithm,
+		consts.FieldSaltLength,
+		consts.FieldBatchInput,
+	}
+
+	for _, f := range signAPIStringFields {
+		if v, ok := d.GetOk(f); ok {
+			payload[f] = v
+		}
+	}
+
+	prehashed, ok := d.GetOk(consts.FieldPrehashed)
+	if ok {
+		payload[consts.FieldPrehashed] = prehashed.(bool)
+	}
+
+	reqPath := fmt.Sprintf("%s/sign/%s", path, keyName)
+	resp, err := client.Logical().Write(reqPath, payload)
+	if err != nil {
+		return fmt.Errorf("error signing with key: %s", err)
+	}
+
+	d.SetId(reqPath)
+	if batchResults, ok := resp.Data[consts.FieldBatchResults]; ok {
+		err = d.Set(consts.FieldBatchResults, batchResults)
+		if err != nil {
+			return err
+		}
+	}
+
+	if sig, ok := resp.Data[consts.FieldSignature]; ok {
+		err = d.Set(consts.FieldSignature, sig)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
