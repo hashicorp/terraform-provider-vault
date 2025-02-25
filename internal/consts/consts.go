@@ -465,6 +465,7 @@ const (
 	FieldDisableNameChecks              = "disable_name_checks"
 	FieldDisableNameConstraintChecks    = "disable_name_constraint_checks"
 	FieldNotAfter                       = "not_after"
+	FieldDisableAutomatedRotation       = "disable_automated_rotation"
 
 	/*
 		common environment variables
