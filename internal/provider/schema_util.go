@@ -154,3 +154,32 @@ func defaultDisableRemountStateUpgraders() []schema.StateUpgrader {
 		},
 	}
 }
+
+// GetAutomatedRootRotationSchema is a helper method
+// that returns the common schema parameters for automated
+// root rotation
+func GetAutomatedRootRotationSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		consts.FieldRotationSchedule: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Schedule",
+		},
+		consts.FieldRotationPeriod: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Period",
+		},
+		consts.FieldRotationWindow: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Window",
+		},
+		consts.FieldDisableAutomatedRotation: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "Disable",
+		},
+	}
+}
