@@ -72,6 +72,15 @@ func pkiSecretBackendConfigCMPV2Resource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldDisabledValidations: {
+				Type:        schema.TypeList,
+				Required:    false,
+				Optional:    true,
+				Description: "A comma-separated list of validations not to perform on CMPv2 messages.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			consts.FieldLastUpdated: {
 				Type:        schema.TypeString,
 				Computed:    true, // read-only property
@@ -99,6 +108,7 @@ func pkiSecretBackendConfigCMPV2Write(ctx context.Context, d *schema.ResourceDat
 		consts.FieldDefaultPathPolicy,
 		consts.FieldEnableSentinelParsing,
 		consts.FieldAuditFields,
+		consts.FieldDisabledValidations,
 	}
 
 	data := map[string]interface{}{}
