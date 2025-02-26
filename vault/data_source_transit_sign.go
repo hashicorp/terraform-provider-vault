@@ -4,7 +4,6 @@
 package vault
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -99,15 +98,8 @@ func transitSignDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	path, ok := d.GetOk(consts.FieldPath)
-	if !ok {
-		return errors.New("path is required")
-	}
-
-	keyName, ok := d.GetOk(consts.FieldName)
-	if !ok {
-		return errors.New("name is required")
-	}
+	path := d.Get(consts.FieldPath).(string)
+	keyName := d.Get(consts.FieldName).(string)
 
 	payload := map[string]interface{}{}
 

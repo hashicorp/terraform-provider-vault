@@ -481,6 +481,7 @@ const (
 	FieldHMAC                = "hmac"
 	FieldCMAC                = "cmac"
 	FieldValid               = "valid"
+	FieldParameterSet        = "parameter_set"
 
 	/*
 		common environment variables
@@ -547,6 +548,7 @@ const (
 	MountTypeNone         = "none"
 	MountTypeSAML         = "saml"
 	MountTypeOkta         = "okta"
+	MountTypeTransit      = "transit"
 
 	/*
 		Vault version constants
