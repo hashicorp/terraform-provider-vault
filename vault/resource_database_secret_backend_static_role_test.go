@@ -59,6 +59,80 @@ func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendStaticRole_credentialType(t *testing.T) {
+	connURL := testutil.SkipTestEnvUnset(t, "MYSQL_URL")[0]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	username := acctest.RandomWithPrefix("user")
+	dbName := acctest.RandomWithPrefix("db")
+	name := acctest.RandomWithPrefix("staticrole")
+	resourceName := "vault_database_secret_backend_static_role.test"
+
+	if err := createTestUser(connURL, username); err != nil {
+		t.Fatal(err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_credentialType(name, username, dbName, backend, connURL),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
+					resource.TestCheckResourceAttr(resourceName, "credential_type", "password"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendStaticRole_credentialConfig(t *testing.T) {
+	connURL := testutil.SkipTestEnvUnset(t, "MYSQL_URL")[0]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	username := acctest.RandomWithPrefix("user")
+	dbName := acctest.RandomWithPrefix("db")
+	name := acctest.RandomWithPrefix("staticrole")
+	resourceName := "vault_database_secret_backend_static_role.test"
+
+	if err := createTestUser(connURL, username); err != nil {
+		t.Fatal(err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_credentialConfig(name, username, dbName, backend, connURL),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
+					resource.TestCheckResourceAttr(resourceName, "credential_config.password_policy", "numeric"),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_updatedCredentialConfig(name, username, dbName, backend, connURL),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
+					resource.TestCheckResourceAttr(resourceName, "credential_config.password_policy", "alphanumeric"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
 	connURL := testutil.SkipTestEnvUnset(t, "MYSQL_URL")[0]
 
@@ -284,6 +358,7 @@ func createTestUser(connURL, username string) error {
 	if err != nil {
 		return err
 	}
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -302,6 +377,117 @@ func createTestUser(connURL, username string) error {
 		return err
 	}
 	return nil
+}
+
+func testAccDatabaseSecretBackendStaticRoleConfig_credentialType(name, username, db, path, connURL string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+
+  mysql {
+	  connection_url = "%s"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  credential_type = "password"
+  rotation_period = 1800
+  rotation_statements = ["ALTER USER '{{username}}'@'localhost' IDENTIFIED BY '{{password}}';"]
+}
+`, path, db, connURL, name, username)
+}
+
+func testAccDatabaseSecretBackendStaticRoleConfig_credentialConfig(name, username, db, path, connURL string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+
+  mysql {
+	  connection_url = "%s"
+  }
+}
+
+resource "vault_password_policy" "test" {
+  name = "numeric"
+
+  policy = <<EOT
+    length = 20
+    rule "charset" {
+      charset = "0123456789"
+    }
+  EOT
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  credential_type = "password"
+  credential_config = { "password_policy" = "numeric" }
+  rotation_period = 1800
+  rotation_statements = ["ALTER USER '{{username}}'@'localhost' IDENTIFIED BY '{{password}}';"]
+}
+`, path, db, connURL, name, username)
+}
+
+func testAccDatabaseSecretBackendStaticRoleConfig_updatedCredentialConfig(name, username, db, path, connURL string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+
+  mysql {
+	  connection_url = "%s"
+  }
+}
+
+resource "vault_password_policy" "test" {
+  name = "alphanumeric"
+
+  policy = <<EOT
+    length = 20
+    rule "charset" {
+      charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+    }
+  EOT
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  credential_type = "password"
+  credential_config = { "password_policy" = "alphanumeric" }
+  rotation_period = 1800
+  rotation_statements = ["ALTER USER '{{username}}'@'localhost' IDENTIFIED BY '{{password}}';"]
+}
+`, path, db, connURL, name, username)
 }
 
 func testAccDatabaseSecretBackendStaticRoleConfig_rotationSchedule(name, username, db, path, connURL string) string {
