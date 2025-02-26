@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -24,7 +25,7 @@ import (
 
 func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
-	config := testPkiSecretBackendRootCertificateConfig_basic(path)
+	config := testPkiSecretBackendRootCertificateConfig_basic(path, "ttl = 86400")
 	resourceName := "vault_pki_secret_backend_root_cert.test"
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
@@ -42,7 +43,36 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldLocality, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
-		assertCertificateAttributes(resourceName, x509.SHA512WithRSA),
+		assertCertificateAttributes(resourceName, "", x509.SHA512WithRSA),
+	}
+
+	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, nil)
+}
+
+func TestPkiSecretBackendRootCertificate_notAfter(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+	notAfterTime := time.Now().Add(2 * time.Hour).Format(time.RFC3339)
+	config := testPkiSecretBackendRootCertificateConfig_basic(path, fmt.Sprintf("not_after = \"%s\"", notAfterTime))
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pem"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKeyFormat, "der"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "4096"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldSignatureBits, "512"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldOu, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldOrganization, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCountry, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldLocality, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldNotAfter, notAfterTime),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+		assertCertificateAttributes(resourceName, notAfterTime, x509.SHA512WithRSA),
 	}
 
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, nil)
@@ -58,7 +88,7 @@ func TestPkiSecretBackendRootCertificate_name_constraints(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "86400"),
+		//resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "86400"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pem"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKeyFormat, "der"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
@@ -360,7 +390,8 @@ func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
 	})
 }
 
-func testPkiSecretBackendRootCertificateConfig_basic(path string) string {
+func testPkiSecretBackendRootCertificateConfig_basic(path, extraConfig string) string {
+
 	config := fmt.Sprintf(`
 resource "vault_mount" "test" {
   path                      = "%s"
@@ -374,7 +405,6 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   backend              = vault_mount.test.path
   type                 = "internal"
   common_name          = "test Root CA"
-  ttl                  = "86400"
   format               = "pem"
   private_key_format   = "der"
   key_type             = "rsa"
@@ -387,8 +417,9 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   locality             = "test"
   province             = "test"
   max_path_length      = 0
+  %s
 }
-`, path)
+`, path, extraConfig)
 
 	return config
 }

@@ -8,7 +8,11 @@ FEATURES:
 * Add support for signature_bits field to `vault_pki_secret_backend_role`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate` and `vault_pki_secret_backend_intermediate_cert_request` ([#2401])(https://github.com/hashicorp/terraform-provider-vault/pull/2401)
 * Add support for key_usage and serial_number to `vault_pki_secret_backend_intermediate_cert_request` ([#2404])(https://github.com/hashicorp/terraform-provider-vault/pull/2404)
 * Add support for `skip_import_rotation` in `vault_database_secret_backend_static_role`. Requires Vault Enterprise 1.18.5+ ([#2386](https://github.com/hashicorp/terraform-provider-vault/pull/2386)).
-* Add `credential_type` and `credential_config` to `database_secret_backend_static_role` to support features like rsa keys for Snowflake DB engines with static roles
+* Add support for `not_after` in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_role`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2385](https://github.com/hashicorp/terraform-provider-vault/pull/2385)). 
+* Update `vault_pki_secret_backend_config_acme` to support the `max_ttl` field. [#2411](https://github.com/hashicorp/terraform-provider-vault/pull/2411)
+* Add new data source `vault_ssh_secret_backend_sign`. ([#2409](https://github.com/hashicorp/terraform-provider-vault/pull/2409))
+* Add support for `disabled_validations` in `vault_pki_secret_backend_config_cmpv2` [#2412](https://github.com/hashicorp/terraform-provider-vault/pull/2412)
+* Add `credential_type` and `credential_config` to `database_secret_backend_static_role` to support features like rsa keys for Snowflake DB engines with static roles [#2384](https://github.com/hashicorp/terraform-provider-vault/pull/2384)
 
 BUGS:
 
