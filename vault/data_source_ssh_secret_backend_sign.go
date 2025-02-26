@@ -83,8 +83,8 @@ func readSSHBackendSign(ctx context.Context, d *schema.ResourceData, meta interf
 		return diag.FromErr(err)
 	}
 
-	path := d.Get("path").(string)
-	name := d.Get("name").(string)
+	path := d.Get(consts.FieldPath).(string)
+	name := d.Get(consts.FieldName).(string)
 
 	signFields := []string{
 		consts.FieldPublicKey,
