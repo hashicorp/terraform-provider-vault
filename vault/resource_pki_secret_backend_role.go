@@ -462,6 +462,11 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: `Specifies whether or not to use PSS signatures over PKCS#1v1.5 signatures when a RSA-type issuer is used. Ignored for ECDSA/Ed25519 issuers.`,
 			},
+			consts.FieldNoStoreMetadata: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: `allows metadata to be stored keyed on the certificate's serial number. The field is independent of no_store, allowing metadata storage regardless of whether certificates are stored. If true, metadata is not stored and an error is returned if the metadata field is specified on issuance APIs`,
+			},
 		},
 	}
 }
@@ -548,6 +553,12 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 			if len(list) > 0 {
 				data[consts.FieldAllowedUserIds] = list
 			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		if noStoreMetadata, ok := d.GetOk(consts.FieldNoStoreMetadata); ok {
+			data[consts.FieldNoStoreMetadata] = noStoreMetadata
 		}
 	}
 

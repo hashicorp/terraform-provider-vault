@@ -473,6 +473,7 @@ const (
 	FieldExtensions                     = "extensions"
 	FieldSignedKey                      = "signed_key"
 	FieldUsePSS                         = "use_pss"
+	FieldNoStoreMetadata                = "no_store_metadata"
 
 	/*
 		common environment variables
