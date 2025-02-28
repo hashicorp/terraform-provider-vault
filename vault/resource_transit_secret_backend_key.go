@@ -234,16 +234,18 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 		"auto_rotate_period":    autoRotatePeriod,
 	}
 
-	if params, ok := d.GetOk(consts.FieldParameterSet); ok {
-		data[consts.FieldParameterSet] = params
-	}
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		if params, ok := d.GetOk(consts.FieldParameterSet); ok {
+			data[consts.FieldParameterSet] = params
+		}
 
-	if params, ok := d.GetOk(consts.FieldHybridKeyTypeEC); ok {
-		data[consts.FieldHybridKeyTypeEC] = params
-	}
+		if params, ok := d.GetOk(consts.FieldHybridKeyTypeEC); ok {
+			data[consts.FieldHybridKeyTypeEC] = params
+		}
 
-	if params, ok := d.GetOk(consts.FieldHybridKeyTypePQC); ok {
-		data[consts.FieldHybridKeyTypePQC] = params
+		if params, ok := d.GetOk(consts.FieldHybridKeyTypePQC); ok {
+			data[consts.FieldHybridKeyTypePQC] = params
+		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
