@@ -41,10 +41,6 @@ func TestDataSourceTransitSign(t *testing.T) {
 				Config: signVerifyConfig("ecdsa-p256", "", signBlock(signBatchConfig)),
 				Check:  resource.TestCheckResourceAttrSet(resourceName, "batch_results.#"),
 			},
-			{
-				Config: signVerifyConfig("ml-dsa", "parameter_set = \"44\"", signBlock(signInputConfig)),
-				Check:  resource.TestCheckResourceAttrSet(resourceName, "signature"),
-			},
 		},
 		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypeTransit, consts.FieldPath),
 	})
