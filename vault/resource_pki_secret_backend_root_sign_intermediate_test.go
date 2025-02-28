@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"bytes"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -172,6 +173,21 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 						if approximaetNotBeforeDuration < 110 || approximaetNotBeforeDuration > 130 {
 							// Note that we use a tolerance of 10 seconds, which should be plenty
 							return fmt.Errorf("notBefore duration expected to be ~ 120s, but was %#v", approximaetNotBeforeDuration)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
+					`skid = "14:2E:B3:17:B7:58:56:CB:AE:50:09:40:E6:1F:AF:9D:8B:14:C2:C6"`),
+				Check: resource.ComposeTestCheckFunc(
+					checks,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSKID, "14:2E:B3:17:B7:58:56:CB:AE:50:09:40:E6:1F:AF:9D:8B:14:C2:C6"),
+					testPKICert(resourceName, func(cert *x509.Certificate) error {
+						expected := []byte{0x14, 0x2E, 0xB3, 0x17, 0xB7, 0x58, 0x56, 0xCB, 0xAE, 0x50, 0x09, 0x40, 0xE6, 0x1F, 0xAF, 0x9D, 0x8B, 0x14, 0xC2, 0xC6}
+						if !bytes.Equal(expected, cert.SubjectKeyId) {
+							return fmt.Errorf("SubjectKeyID expected %#v but got %#v", expected, cert.SubjectKeyId)
 						}
 						return nil
 					}),

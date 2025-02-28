@@ -248,6 +248,12 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Description: "The number of bits to use in the signature algorithm.",
 				ForceNew:    true,
 			},
+			consts.FieldSKID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Value for the Subject Key Identifier field\n  (RFC 5280 Section 4.2.1.2). Specified as a string in hex format.",
+				ForceNew:    true,
+			},
 			consts.FieldCertificate: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -332,6 +338,7 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldStreetAddress,
 		consts.FieldPostalCode,
 		consts.FieldSignatureBits,
+		consts.FieldSKID,
 		consts.FieldNotAfter,
 		consts.FieldNotBeforeDuration,
 	}
@@ -403,14 +410,14 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 	}
 	log.Printf("[DEBUG] Created root sign-intermediate on PKI secret backend %q", backend)
 
-	certFieldsMap := map[string]string{
-		consts.FieldCertificate:  consts.FieldCertificate,
-		consts.FieldIssuingCA:    consts.FieldIssuingCA,
-		consts.FieldSerialNumber: consts.FieldSerialNumber,
+	computedFields := []string{
+		consts.FieldCertificate,
+		consts.FieldIssuingCA,
+		consts.FieldSerialNumber,
 	}
 
-	for k, v := range certFieldsMap {
-		if err := d.Set(k, resp.Data[v]); err != nil {
+	for _, k := range computedFields {
+		if err := d.Set(k, resp.Data[k]); err != nil {
 			return diag.FromErr(err)
 		}
 	}

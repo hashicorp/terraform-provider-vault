@@ -81,6 +81,7 @@ const (
 	FieldCurve                         = "curve"
 	FieldKeyBits                       = "key_bits"
 	FieldSignatureBits                 = "signature_bits"
+	FieldSKID                          = "skid"
 	FieldForceRWSession                = "force_rw_session"
 	FieldAccessKey                     = "access_key"
 	FieldSecretKey                     = "secret_key"
