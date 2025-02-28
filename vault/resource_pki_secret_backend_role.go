@@ -458,14 +458,18 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					"Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.",
 			},
 			consts.FieldUsePSS: {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: `Specifies whether or not to use PSS signatures over PKCS#1v1.5 signatures when a RSA-type issuer is used. Ignored for ECDSA/Ed25519 issuers.`,
+				Type:     schema.TypeBool,
+				Optional: true,
+				Description: "Specifies whether or not to use PSS signatures over PKCS#1v1.5 signatures " +
+					"when a RSA-type issuer is used. Ignored for ECDSA/Ed25519 issuers.",
 			},
 			consts.FieldNoStoreMetadata: {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: `allows metadata to be stored keyed on the certificate's serial number. The field is independent of no_store, allowing metadata storage regardless of whether certificates are stored. If true, metadata is not stored and an error is returned if the metadata field is specified on issuance APIs`,
+				Type:     schema.TypeBool,
+				Optional: true,
+				Description: "Allows metadata to be stored keyed on the certificate's serial number. " +
+					"The field is independent of no_store, allowing metadata storage regardless of whether " +
+					"certificates are stored. If true, metadata is not stored and an error is returned if the " +
+					"metadata field is specified on issuance APIs",
 			},
 		},
 	}
