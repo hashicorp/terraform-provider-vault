@@ -475,6 +475,7 @@ const (
 	FieldUsePSS                         = "use_pss"
 	FieldNoStoreMetadata                = "no_store_metadata"
 	FieldCertMetadata                   = "cert_metadata"
+	FieldSerialNumberSource             = "serial_number_source"
 
 	/*
 		common environment variables

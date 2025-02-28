@@ -471,6 +471,15 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					"certificates are stored. If true, metadata is not stored and an error is returned if the " +
 					"metadata field is specified on issuance APIs",
 			},
+			consts.FieldSerialNumberSource: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Specifies the source of the subject serial number. Valid values are json-csr (default) " +
+					"or json. When set to json-csr, the subject serial number is taken from the serial_number " +
+					"parameter and falls back to the serial number in the CSR. When set to json, the subject " +
+					"serial number is taken from the serial_number parameter but will ignore any value in the CSR." +
+					" For backwards compatibility an empty value for this field will default to the json-csr behavior.",
+			},
 		},
 	}
 }
@@ -563,6 +572,12 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 	if provider.IsAPISupported(meta, provider.VaultVersion117) {
 		if noStoreMetadata, ok := d.GetOk(consts.FieldNoStoreMetadata); ok {
 			data[consts.FieldNoStoreMetadata] = noStoreMetadata
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		if serialNumberSource, ok := d.GetOk(consts.FieldSerialNumberSource); ok {
+			data[consts.FieldSerialNumberSource] = serialNumberSource
 		}
 	}
 
