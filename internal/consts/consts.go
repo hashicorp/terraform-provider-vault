@@ -482,6 +482,9 @@ const (
 	FieldCMAC                = "cmac"
 	FieldValid               = "valid"
 	FieldParameterSet        = "parameter_set"
+	FieldHybridKeyTypeEC     = "hybrid_key_type_ec"
+	FieldHybridKeyTypePQC    = "hybrid_key_type_pqc"
+	FieldSignatureContext    = "signature_context"
 
 	/*
 		common environment variables

@@ -69,6 +69,11 @@ func transitVerifyDataSource() *schema.Resource {
 				Optional:    true,
 				Description: "Base64 encoded context for key derivation. Required if key derivation is enabled; currently only available with ed25519 keys.",
 			},
+			consts.FieldSignatureContext: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: `Base64 encoded context for Ed25519ctx and Ed25519ph signatures.`,
+			},
 			consts.FieldPrehashed: {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -129,6 +134,7 @@ func transitVerifyDataSourceRead(d *schema.ResourceData, meta interface{}) error
 		consts.FieldReference,
 		consts.FieldBatchInput,
 		consts.FieldContext,
+		consts.FieldSignatureContext,
 		consts.FieldPrehashed,
 		consts.FieldSignatureAlgorithm,
 		consts.FieldMarshalingAlgorithm,

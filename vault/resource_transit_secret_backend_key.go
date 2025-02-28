@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"log"
 	"regexp"
 	"strings"
@@ -15,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -141,6 +140,16 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Optional:    true,
 				Description: "The parameter set to use for ML-DSA. Required for ML-DSA and hybrid keys. Valid values are 44, 65, and 87.",
 			},
+			consts.FieldHybridKeyTypeEC: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The elliptic curve algorithm to use for hybrid signatures. Supported key types are `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, and `ed25519`.",
+			},
+			consts.FieldHybridKeyTypePQC: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The post-quantum algorithm to use for hybrid signatures. Currently, ML-DSA is the only supported key type.",
+			},
 			"supports_encryption": {
 				Type:        schema.TypeBool,
 				Computed:    true,
@@ -227,6 +236,14 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 
 	if params, ok := d.GetOk(consts.FieldParameterSet); ok {
 		data[consts.FieldParameterSet] = params
+	}
+
+	if params, ok := d.GetOk(consts.FieldHybridKeyTypeEC); ok {
+		data[consts.FieldHybridKeyTypeEC] = params
+	}
+
+	if params, ok := d.GetOk(consts.FieldHybridKeyTypePQC); ok {
+		data[consts.FieldHybridKeyTypePQC] = params
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
