@@ -82,6 +82,7 @@ const (
 	FieldKeyBits                       = "key_bits"
 	FieldSignatureBits                 = "signature_bits"
 	FieldSKID                          = "skid"
+	FieldUsePSS                        = "use_pss"
 	FieldForceRWSession                = "force_rw_session"
 	FieldAccessKey                     = "access_key"
 	FieldSecretKey                     = "secret_key"

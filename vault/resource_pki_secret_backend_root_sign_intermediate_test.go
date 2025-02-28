@@ -193,6 +193,15 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 					}),
 				),
 			},
+			{
+				SkipFunc: skip(provider.VaultVersion112),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
+					`use_pss = true`),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckPKISecretRootSignIntermediate(resourceName, rootPath, commonName, format, "", x509.SHA256WithRSAPSS, false),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsePSS, "true"),
+				),
+			},
 		},
 	})
 }
