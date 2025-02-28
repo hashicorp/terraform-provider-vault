@@ -4,6 +4,9 @@
 package vault
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -91,11 +94,13 @@ func transitVerifyDataSource() *schema.Resource {
 			},
 			consts.FieldValid: {
 				Type:        schema.TypeBool,
+				Optional:    true,
 				Computed:    true,
 				Description: "Indicates whether verification succeeded",
 			},
 			consts.FieldBatchResults: {
 				Type:        schema.TypeList,
+				Optional:    true,
 				Computed:    true,
 				Description: "The results returned from Vault if using batch_input",
 				Elem:        &schema.Schema{Type: schema.TypeMap},
@@ -105,6 +110,96 @@ func transitVerifyDataSource() *schema.Resource {
 }
 
 func transitVerifyDataSourceRead(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	path := d.Get(consts.FieldPath).(string)
+	keyName := d.Get(consts.FieldName).(string)
+
+	payload := map[string]interface{}{}
+
+	verifyAPIStringFields := []string{
+		consts.FieldHashAlgorithm,
+		consts.FieldInput,
+		consts.FieldSignature,
+		consts.FieldHMAC,
+		consts.FieldCMAC,
+		consts.FieldReference,
+		consts.FieldBatchInput,
+		consts.FieldContext,
+		consts.FieldPrehashed,
+		consts.FieldSignatureAlgorithm,
+		consts.FieldMarshalingAlgorithm,
+		consts.FieldSaltLength,
+	}
+
+	for _, f := range verifyAPIStringFields {
+		if v, ok := d.GetOk(f); ok {
+			payload[f] = v
+		}
+	}
+
+	prehashed, ok := d.GetOk(consts.FieldPrehashed)
+	if ok {
+		payload[consts.FieldPrehashed] = prehashed.(bool)
+	}
+
+	reqPath := fmt.Sprintf("%s/verify/%s", path, keyName)
+	resp, err := client.Logical().Write(reqPath, payload)
+	if err != nil {
+		return fmt.Errorf("error signing with key: %s", err)
+	}
+
+	d.SetId(reqPath)
+	if rawBatchResults, ok := resp.Data[consts.FieldBatchResults]; ok {
+		batchResults, err := convertBatchResults(rawBatchResults)
+		if err != nil {
+			return err
+		}
+
+		err = d.Set(consts.FieldBatchResults, batchResults)
+		if err != nil {
+			return err
+		}
+	}
+
+	if valid, ok := resp.Data[consts.FieldValid]; ok {
+		err = d.Set(consts.FieldValid, valid)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
+}
+
+// The code that does the parsing for maps will panic if given a map with a mix of boolean
+// and string values. This function converts booleans to strings to avoid the error.
+func convertBatchResults(rawResults interface{}) ([]map[string]interface{}, error) {
+	batchResultsList, ok := rawResults.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected batch_results type %T", rawResults)
+	}
+
+	var batchResults []map[string]interface{}
+	for _, result := range batchResultsList {
+		resultMap, ok := result.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected element type %T", result)
+		}
+
+		stringMap := make(map[string]interface{})
+		for k, v := range resultMap {
+			switch v.(type) {
+			case bool:
+				stringMap[k] = strconv.FormatBool(v.(bool))
+			default:
+				stringMap[k] = v
+			}
+		}
+	}
+
+	return batchResults, nil
 }

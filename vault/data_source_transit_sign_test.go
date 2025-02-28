@@ -12,7 +12,46 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-var config = `
+var signBatchConfig = `
+    batch_input = [
+		{
+		  input = "adba32=="
+		  context = "abcd"
+		},
+		{
+		  input = "aGVsbG8gd29ybGQuCg=="
+		  context = "efgh"
+		}
+    ]
+`
+
+var signInputConfig = "input = \"aGVsbG8gd29ybGQuCg==\""
+
+func TestDataSourceTransitSign(t *testing.T) {
+	resourceName := "data.vault_transit_sign.test"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: signVerifyConfig("ecdsa-p256", "", signBlock(signInputConfig)),
+				Check:  resource.TestCheckResourceAttrSet(resourceName, "signature"),
+			},
+			{
+				Config: signVerifyConfig("ecdsa-p256", "", signBlock(signBatchConfig)),
+				Check:  resource.TestCheckResourceAttrSet(resourceName, "batch_results.#"),
+			},
+			{
+				Config: signVerifyConfig("ml-dsa", "parameter_set = \"44\"", signBlock(signInputConfig)),
+				Check:  resource.TestCheckResourceAttrSet(resourceName, "signature"),
+			},
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypeTransit, consts.FieldPath),
+	})
+}
+
+func signVerifyConfig(keyType, keyConfig, blocks string) string {
+	baseConfig := `
 resource "vault_mount" "test" {
   path        = "transit"
   type        = "transit"
@@ -27,6 +66,13 @@ resource "vault_transit_secret_backend_key" "test" {
   %s
 }
 
+%s
+`
+	return fmt.Sprintf(baseConfig, keyType, keyConfig, blocks)
+}
+
+func signBlock(input string) string {
+	block := `
 data "vault_transit_sign" "test" {
     path        = vault_mount.test.path
     name        = vault_transit_secret_backend_key.test.name
@@ -34,44 +80,5 @@ data "vault_transit_sign" "test" {
 }
 `
 
-var batchConfig = `
-    batch_input = [
-		{
-		  input = "adba32=="
-		  context = "abcd"
-		},
-		{
-		  input = "aGVsbG8gd29ybGQuCg=="
-		  context = "efgh"
-		}
-    ]
-`
-
-var inputConfig = "input = \"aGVsbG8gd29ybGQuCg==\""
-
-func TestDataSourceTransitSign(t *testing.T) {
-	resourceName := "data.vault_transit_sign.test"
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config: buildConfig("ecdsa-p256", "", inputConfig),
-				Check:  resource.TestCheckResourceAttrSet(resourceName, "signature"),
-			},
-			{
-				Config: buildConfig("ecdsa-p256", "", batchConfig),
-				Check:  resource.TestCheckResourceAttrSet(resourceName, "batch_results.#"),
-			},
-			{
-				Config: buildConfig("ml-dsa", "parameter_set = \"44\"", inputConfig),
-				Check:  resource.TestCheckResourceAttrSet(resourceName, "signature"),
-			},
-		},
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypeTransit, consts.FieldPath),
-	})
-}
-
-func buildConfig(keyType, keyConfig, input string) string {
-	return fmt.Sprintf(config, keyType, keyConfig, input)
+	return fmt.Sprintf(block, input)
 }

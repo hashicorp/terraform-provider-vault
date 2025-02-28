@@ -79,11 +79,13 @@ func transitSignDataSource() *schema.Resource {
 			},
 			consts.FieldSignature: {
 				Type:        schema.TypeString,
+				Optional:    true,
 				Computed:    true,
 				Description: "The signature returned from Vault if using input",
 			},
 			consts.FieldBatchResults: {
 				Type:        schema.TypeList,
+				Optional:    true,
 				Computed:    true,
 				Description: "The results returned from Vault if using batch_input",
 				Elem:        &schema.Schema{Type: schema.TypeMap},
