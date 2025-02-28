@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/go-version"
 	"reflect"
 	"strconv"
 	"strings"
@@ -122,9 +123,15 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 	format := "pem"
 	commonName := "SubOrg Intermediate CA"
 
-	store := &testPKICertStore{}
+	skip := func(minVersion *version.Version) func() (bool, error) {
+		return func() (bool, error) {
+			meta := testProvider.Meta().(*provider.ProviderMeta)
+			return !meta.IsAPISupported(minVersion), nil
+		}
+	}
 	resourceName := "vault_pki_secret_backend_root_sign_intermediate.test"
 	checks := testCheckPKISecretRootSignIntermediate(resourceName, rootPath, commonName, format, "", x509.SHA256WithRSA, false)
+	store := &testPKICertStore{}
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
@@ -152,6 +159,22 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					checks,
 					testPKICertRevocation(rootPath, store),
+				),
+			},
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
+					`not_before_duration = "120s"`),
+				Check: resource.ComposeTestCheckFunc(
+					checks,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNotBeforeDuration, "120s"),
+					testPKICert(resourceName, func(cert *x509.Certificate) error {
+						approximaetNotBeforeDuration := time.Now().Sub(cert.NotBefore).Seconds()
+						if approximaetNotBeforeDuration < 110 || approximaetNotBeforeDuration > 130 {
+							// Note that we use a tolerance of 10 seconds, which should be plenty
+							return fmt.Errorf("notBefore duration expected to be ~ 120s, but was %#v", approximaetNotBeforeDuration)
+						}
+						return nil
+					}),
 				),
 			},
 		},

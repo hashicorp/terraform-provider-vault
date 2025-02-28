@@ -278,6 +278,14 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Computed:    true,
 				Description: "The certificate's serial number, hex formatted.",
 			},
+			consts.FieldNotBeforeDuration: {
+				Type:         schema.TypeString,
+				Required:     false,
+				Optional:     true,
+				Computed:     true,
+				Description:  "Specifies the duration by which to backdate the NotBefore property.",
+				ValidateFunc: provider.ValidateDuration,
+			},
 			consts.FieldRevoke: {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -325,6 +333,7 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldPostalCode,
 		consts.FieldSignatureBits,
 		consts.FieldNotAfter,
+		consts.FieldNotBeforeDuration,
 	}
 
 	intermediateSignBooleanAPIFields := []string{
