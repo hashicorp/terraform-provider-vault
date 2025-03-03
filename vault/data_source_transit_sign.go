@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -142,18 +143,22 @@ func transitSignDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.SetId(reqPath)
-	if batchResults, ok := resp.Data[consts.FieldBatchResults]; ok {
+
+	batchResults, batchOK := resp.Data[consts.FieldBatchResults]
+	sig, sigOK := resp.Data[consts.FieldSignature]
+
+	if batchOK {
 		err = d.Set(consts.FieldBatchResults, batchResults)
 		if err != nil {
 			return err
 		}
-	}
-
-	if sig, ok := resp.Data[consts.FieldSignature]; ok {
+	} else if sigOK {
 		err = d.Set(consts.FieldSignature, sig)
 		if err != nil {
 			return err
 		}
+	} else {
+		return errors.New("response contained neither batch_results field nor signature field")
 	}
 
 	return nil

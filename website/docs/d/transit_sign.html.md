@@ -14,7 +14,7 @@ This is a data source which can be used to generate a signature using a Vault Tr
 
 ```hcl
 data "vault_transit_sign" "test" {
-  backend     = "transit"
+  path        = "transit"
   key         = "test"
   input       = "aGVsbG8gd29ybGQ="
 }
@@ -26,15 +26,19 @@ Each document configuration may have one or more `rule` blocks, which each accep
 
 * `name` - (Required) Specifies the name of the encryption key that was used to generate the signature or HMAC.
 
-* `backend` - (Required) The path the transit secret backend is mounted at, with no leading or trailing `/`.
+* `path` - (Required) The path the transit secret backend is mounted at, with no leading or trailing `/`.
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
+  *Available only for Vault Enterprise*.
 
 * `key_version` - (Optional) Specifies the version of the key to use for
   signing. If not set, uses the latest version. Must be greater than or equal
   to the key's `min_encryption_version`, if set.
 
 * `hash_algorithm` - (Optional) Specifies the hash algorithm to use for
-  supporting key types (notably, not including `ed25519` which specifies its
-  own hash algorithm). This can also be specified as part of the URL.
+  supporting key types.
   Currently-supported algorithms are:
 
 	* `sha1`

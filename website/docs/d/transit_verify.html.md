@@ -14,7 +14,7 @@ This is a data source which can be used to verify a signature using a Vault Tran
 
 ```hcl
 data "vault_transit_verify" "test" {
-  backend     = "transit"
+  path        = "transit"
   key         = "test"
   signature   = "vault:v1:4kYRAVY/Q/6jjA3CT7HPhxKO+ru/4PhyGKBLRpn9DSeT99McPXEk302NXtzCzsvbSOZPif7f32tlr58iYoxjCQ=="
   input       = "aGVsbG8gd29ybGQ="
@@ -27,8 +27,14 @@ Each document configuration may have one or more `rule` blocks, which each accep
 
 * `name` – (Required) Specifies the name of the encryption key that was used to generate the signature or HMAC.
 
-* `hash_algorithm` – (Optional) Specifies the hash algorithm to use. This
-  can also be specified as part of the URL. Currently-supported algorithms are:
+* `path` - (Required) The path the transit secret backend is mounted at, with no leading or trailing `/`.
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
+  *Available only for Vault Enterprise*.
+
+* `hash_algorithm` – (Optional) Specifies the hash algorithm to use. Currently-supported algorithms are:
 
 	* `sha1`
 	* `sha2-224`

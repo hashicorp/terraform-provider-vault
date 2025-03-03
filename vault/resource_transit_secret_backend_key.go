@@ -13,7 +13,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -84,12 +83,11 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Description: "Amount of seconds the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
 			},
 			"type": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Description:  "Specifies the type of key to create. The currently-supported types are: aes128-gcm96, aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, ecdsa-p384, ecdsa-p521, hmac, rsa-2048, rsa-3072, rsa-4096",
-				ForceNew:     true,
-				Default:      "aes256-gcm96",
-				ValidateFunc: validation.StringInSlice([]string{"aes128-gcm96", "aes256-gcm96", "chacha20-poly1305", "ed25519", "ecdsa-p256", "ecdsa-p384", "ecdsa-p521", "hmac", "rsa-2048", "rsa-3072", "rsa-4096", "ml-dsa", "hybrid"}, false),
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the type of key to create. The currently-supported types are: aes128-gcm96, aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, ecdsa-p384, ecdsa-p521, hmac, rsa-2048, rsa-3072, rsa-4096",
+				ForceNew:    true,
+				Default:     "aes256-gcm96",
 			},
 			"keys": {
 				Type:        schema.TypeList,

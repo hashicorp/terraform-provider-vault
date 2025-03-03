@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -159,7 +160,11 @@ func transitVerifyDataSourceRead(d *schema.ResourceData, meta interface{}) error
 	}
 
 	d.SetId(reqPath)
-	if rawBatchResults, ok := resp.Data[consts.FieldBatchResults]; ok {
+
+	rawBatchResults, batchOK := resp.Data[consts.FieldBatchResults]
+	valid, validOK := resp.Data[consts.FieldSignature]
+
+	if batchOK {
 		batchResults, err := convertBatchResults(rawBatchResults)
 		if err != nil {
 			return err
@@ -169,13 +174,13 @@ func transitVerifyDataSourceRead(d *schema.ResourceData, meta interface{}) error
 		if err != nil {
 			return err
 		}
-	}
-
-	if valid, ok := resp.Data[consts.FieldValid]; ok {
+	} else if validOK {
 		err = d.Set(consts.FieldValid, valid)
 		if err != nil {
 			return err
 		}
+	} else {
+		return errors.New("response contained neither batch_results field nor valid field")
 	}
 
 	return nil
