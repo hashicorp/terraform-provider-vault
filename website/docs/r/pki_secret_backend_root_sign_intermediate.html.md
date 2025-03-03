@@ -100,8 +100,6 @@ The following arguments are supported:
 The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the Y10K end date 
 for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.
 
-* `use_pss` - (Optional) Specifies whether or not to use PSS signatures over PKCS#1v1.5 signatures when a RSA-type issuer is used. Ignored for ECDSA/Ed25519 issuers.
-
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:

@@ -550,8 +550,8 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		if issuerRef, ok := d.GetOk(consts.FieldUsePSS); ok {
-			data[consts.FieldUsePSS] = issuerRef
+		if usePSS, ok := d.GetOk(consts.FieldUsePSS); ok {
+			data[consts.FieldUsePSS] = usePSS
 		}
 	}
 
@@ -685,9 +685,36 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if usePSS, ok := secret.Data[consts.FieldUsePSS]; ok {
+			err = d.Set(consts.FieldUsePSS, usePSS)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		if allowedUserIds, ok := secret.Data[consts.FieldAllowedUserIds]; ok {
 			d.Set(consts.FieldAllowedUserIds, allowedUserIds)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		if noStoreMetadata, ok := secret.Data[consts.FieldNoStoreMetadata]; ok {
+			err = d.Set(consts.FieldNoStoreMetadata, noStoreMetadata)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		if serialNumberSource, ok := secret.Data[consts.FieldSerialNumberSource]; ok {
+			err = d.Set(consts.FieldSerialNumberSource, serialNumberSource)
+			if err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 
@@ -752,6 +779,12 @@ func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if usePSS, ok := d.GetOk(consts.FieldUsePSS); ok {
+			data[consts.FieldUsePSS] = usePSS
+		}
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		if allowedUserIds, ok := d.GetOk(consts.FieldAllowedUserIds); ok {
 			ifcList := allowedUserIds.([]interface{})
@@ -763,6 +796,18 @@ func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 			if len(list) > 0 {
 				data[consts.FieldAllowedUserIds] = list
 			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		if noStoreMetadata, ok := d.GetOk(consts.FieldNoStoreMetadata); ok {
+			data[consts.FieldNoStoreMetadata] = noStoreMetadata
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		if serialNumberSource, ok := d.GetOk(consts.FieldSerialNumberSource); ok {
+			data[consts.FieldSerialNumberSource] = serialNumberSource
 		}
 	}
 

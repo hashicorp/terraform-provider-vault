@@ -296,12 +296,6 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 					"The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. " +
 					"Supports the Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.",
 			},
-			consts.FieldUsePSS: {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Description: "Specifies whether or not to use PSS signatures over PKCS#1v1.5 signatures when a " +
-					"RSA-type issuer is used. Ignored for ECDSA/Ed25519 issuers.",
-			},
 		},
 	}
 }
@@ -375,12 +369,6 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		if v, ok := d.GetOk(consts.FieldIssuerRef); ok {
 			data[consts.FieldIssuerRef] = v
 			issuerRef = v.(string)
-		}
-	}
-
-	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		if v, ok := d.GetOk(consts.FieldUsePSS); ok {
-			data[consts.FieldUsePSS] = v
 		}
 	}
 

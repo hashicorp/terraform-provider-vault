@@ -187,6 +187,9 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "cn_validations.#", "2"),
 		resource.TestCheckTypeSetElemAttr(resourceName, "cn_validations.*", "email"),
 		resource.TestCheckTypeSetElemAttr(resourceName, "cn_validations.*", "hostname"),
+		resource.TestCheckResourceAttr(resourceName, "use_pss", "true"),
+		resource.TestCheckResourceAttr(resourceName, "no_store_metadata", "false"),
+		resource.TestCheckResourceAttr(resourceName, "serial_number_source", "json"),
 	}
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -414,6 +417,9 @@ resource "vault_pki_secret_backend_role" "test" {
   not_before_duration                = "45m"
   allowed_serial_numbers             = ["*"]
   cn_validations					 = ["email", "hostname"]
+  use_pss                            = true
+  no_store_metadata                  = false
+  serial_number_source               = "json"
 }
 `, path, name, roleTTL, maxTTL, extraConfig)
 }
@@ -470,6 +476,9 @@ resource "vault_pki_secret_backend_role" "test" {
   not_before_duration = "45m"
   allowed_serial_numbers = ["*"]
   cn_validations = ["disabled"]
+  use_pss                            = true
+  no_store_metadata                  = false
+  serial_number_source               = "json"
 }`, path, name, policyIdentifiers)
 }
 
