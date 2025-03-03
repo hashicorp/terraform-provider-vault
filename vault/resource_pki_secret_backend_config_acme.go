@@ -27,6 +27,12 @@ var (
 		consts.FieldAllowedIssuers,
 		consts.FieldEabPolicy,
 		consts.FieldDnsResolver,
+		consts.FieldMaxTTL,
+	}
+
+	// the following require Vault Server Version 1.17+
+	pkiAcmeVault117Fields = map[string]bool{
+		consts.FieldMaxTTL: true,
 	}
 )
 
@@ -97,6 +103,12 @@ func pkiSecretBackendConfigACMEResource() *schema.Resource {
 				Description: "DNS resolver to use for domain resolution on this mount. " +
 					"Must be in the format <host>:<port>, with both parts mandatory.",
 			},
+			consts.FieldMaxTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specifies the maximum TTL in seconds for certificates issued by ACME.",
+			},
 		},
 	}
 }
@@ -135,6 +147,10 @@ func pkiSecretBackendConfigACMEUpdate(ctx context.Context, d *schema.ResourceDat
 	var patchRequired bool
 	data := map[string]interface{}{}
 	for _, k := range pkiAcmeFields {
+		if pkiAcmeVault117Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion117) {
+			continue
+		}
+
 		if d.HasChange(k) {
 			data[k] = d.Get(k)
 			patchRequired = true
@@ -184,6 +200,10 @@ func pkiSecretBackendConfigACMERead(ctx context.Context, d *schema.ResourceData,
 	}
 
 	for _, k := range pkiAcmeFields {
+		if pkiAcmeVault117Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion117) {
+			continue
+		}
+
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return diag.Errorf("error setting state key %q for acme config, err=%s",
 				k, err)

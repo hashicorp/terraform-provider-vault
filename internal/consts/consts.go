@@ -442,6 +442,7 @@ const (
 	FieldAuthenticators                = "authenticators"
 	FieldEnableSentinelParsing         = "enable_sentinel_parsing"
 	FieldAuditFields                   = "audit_fields"
+	FieldDisabledValidations           = "disabled_validations"
 	FieldLastUpdated                   = "last_updated"
 	FieldCustomEndpoint                = "custom_endpoint"
 	FieldPrivateKeyID                  = "private_key_id"
@@ -465,6 +466,12 @@ const (
 	FieldDisablePathLengthChecks        = "disable_path_length_checks"
 	FieldDisableNameChecks              = "disable_name_checks"
 	FieldDisableNameConstraintChecks    = "disable_name_constraint_checks"
+	FieldNotAfter                       = "not_after"
+	FieldValidPrincipals                = "valid_principals"
+	FieldCertType                       = "cert_type"
+	FieldCriticalOptions                = "critical_options"
+	FieldExtensions                     = "extensions"
+	FieldSignedKey                      = "signed_key"
 
 	FieldInput               = "input"
 	FieldKeyVersion          = "key_version"
@@ -556,17 +563,18 @@ const (
 	/*
 		Vault version constants
 	*/
-	VaultVersion190 = "1.9.0"
-	VaultVersion110 = "1.10.0"
-	VaultVersion111 = "1.11.0"
-	VaultVersion112 = "1.12.0"
-	VaultVersion113 = "1.13.0"
-	VaultVersion114 = "1.14.0"
-	VaultVersion115 = "1.15.0"
-	VaultVersion116 = "1.16.0"
-	VaultVersion117 = "1.17.0"
-	VaultVersion118 = "1.18.0"
-	VaultVersion119 = "1.19.0"
+	VaultVersion190  = "1.9.0"
+	VaultVersion110  = "1.10.0"
+	VaultVersion111  = "1.11.0"
+	VaultVersion112  = "1.12.0"
+	VaultVersion113  = "1.13.0"
+	VaultVersion114  = "1.14.0"
+	VaultVersion115  = "1.15.0"
+	VaultVersion116  = "1.16.0"
+	VaultVersion117  = "1.17.0"
+	VaultVersion118  = "1.18.0"
+	VaultVersion1185 = "1.18.5"
+	VaultVersion119  = "1.19.0"
 
 	/*
 		Vault auth methods

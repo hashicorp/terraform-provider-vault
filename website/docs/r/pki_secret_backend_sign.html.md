@@ -97,6 +97,8 @@ The following arguments are supported:
   the `/pki/issuer/:issuer_ref/{issue,sign}/:name` paths to prevent users
   overriding the role's `issuer_ref` value.
 
+* `not_after` - (Optional) Set the Not After field of the certificate with specified date value. The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
