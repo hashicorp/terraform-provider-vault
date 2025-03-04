@@ -173,6 +173,13 @@ func pkiSecretBackendSignResource() *schema.Resource {
 					"The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the " +
 					"Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.",
 			},
+			consts.FieldCertMetadata: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "A base 64 encoded value or an empty string to associate with the certificate's " +
+					"serial number. The role's no_store_metadata must be set to false, " +
+					"otherwise an error is returned when specified.",
+			},
 		},
 	}
 }
@@ -220,6 +227,12 @@ func pkiSecretBackendSignCreate(ctx context.Context, d *schema.ResourceData, met
 	if provider.IsAPISupported(meta, provider.VaultVersion111) {
 		if issuerRef, ok := d.GetOk(consts.FieldIssuerRef); ok {
 			data[consts.FieldIssuerRef] = issuerRef
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		if certMetadata, ok := d.GetOk(consts.FieldCertMetadata); ok {
+			data[consts.FieldCertMetadata] = certMetadata
 		}
 	}
 

@@ -474,6 +474,7 @@ const (
 	FieldCriticalOptions                = "critical_options"
 	FieldExtensions                     = "extensions"
 	FieldSignedKey                      = "signed_key"
+	FieldCertMetadata                   = "cert_metadata"
 
 	/*
 		common environment variables
