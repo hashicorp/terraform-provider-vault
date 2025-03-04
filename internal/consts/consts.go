@@ -477,6 +477,26 @@ const (
 	FieldNoStoreMetadata                = "no_store_metadata"
 	FieldSerialNumberSource             = "serial_number_source"
 
+	FieldInput               = "input"
+	FieldKeyVersion          = "key_version"
+	FieldHashAlgorithm       = "hash_algorithm"
+	FieldReference           = "reference"
+	FieldBatchInput          = "batch_input"
+	FieldContext             = "context"
+	FieldPrehashed           = "prehashed"
+	FieldSignatureAlgorithm  = "signature_algorithm"
+	FieldMarshalingAlgorithm = "marshaling_algorithm"
+	FieldSaltLength          = "salt_length"
+	FieldSignature           = "signature"
+	FieldBatchResults        = "batch_results"
+	FieldHMAC                = "hmac"
+	FieldCMAC                = "cmac"
+	FieldValid               = "valid"
+	FieldParameterSet        = "parameter_set"
+	FieldHybridKeyTypeEC     = "hybrid_key_type_ec"
+	FieldHybridKeyTypePQC    = "hybrid_key_type_pqc"
+	FieldSignatureContext    = "signature_context"
+
 	/*
 		common environment variables
 	*/
@@ -542,6 +562,7 @@ const (
 	MountTypeNone         = "none"
 	MountTypeSAML         = "saml"
 	MountTypeOkta         = "okta"
+	MountTypeTransit      = "transit"
 
 	/*
 		Vault version constants
