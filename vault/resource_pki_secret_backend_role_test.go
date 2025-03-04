@@ -361,6 +361,30 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "max_ttl", "3600"),
 				),
 			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion112), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, "use_pss = true"),
+				Check:  resource.TestCheckResourceAttr(resourceName, "use_pss", "true"),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion117), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, "no_store_metadata = false"),
+				Check:  resource.TestCheckResourceAttr(resourceName, "no_store_metadata", "false"),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion119), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, "serial_number_source = \"json\""),
+				Check:  resource.TestCheckResourceAttr(resourceName, "serial_number_source", "json"),
+			},
 		},
 	})
 }

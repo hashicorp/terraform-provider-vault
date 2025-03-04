@@ -457,6 +457,29 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					"The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the " +
 					"Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.",
 			},
+			consts.FieldUsePSS: {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Description: "Specifies whether or not to use PSS signatures over PKCS#1v1.5 signatures " +
+					"when a RSA-type issuer is used. Ignored for ECDSA/Ed25519 issuers.",
+			},
+			consts.FieldNoStoreMetadata: {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Description: "Allows metadata to be stored keyed on the certificate's serial number. " +
+					"The field is independent of no_store, allowing metadata storage regardless of whether " +
+					"certificates are stored. If true, metadata is not stored and an error is returned if the " +
+					"metadata field is specified on issuance APIs",
+			},
+			consts.FieldSerialNumberSource: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Specifies the source of the subject serial number. Valid values are json-csr (default) " +
+					"or json. When set to json-csr, the subject serial number is taken from the serial_number " +
+					"parameter and falls back to the serial number in the CSR. When set to json, the subject " +
+					"serial number is taken from the serial_number parameter but will ignore any value in the CSR." +
+					" For backwards compatibility an empty value for this field will default to the json-csr behavior.",
+			},
 		},
 	}
 }
@@ -526,6 +549,12 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if usePSS, ok := d.GetOk(consts.FieldUsePSS); ok {
+			data[consts.FieldUsePSS] = usePSS
+		}
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		if allowedUserIds, ok := d.GetOk(consts.FieldAllowedUserIds); ok {
 			ifcList := allowedUserIds.([]interface{})
@@ -537,6 +566,18 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 			if len(list) > 0 {
 				data[consts.FieldAllowedUserIds] = list
 			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		if noStoreMetadata, ok := d.GetOk(consts.FieldNoStoreMetadata); ok {
+			data[consts.FieldNoStoreMetadata] = noStoreMetadata
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		if serialNumberSource, ok := d.GetOk(consts.FieldSerialNumberSource); ok {
+			data[consts.FieldSerialNumberSource] = serialNumberSource
 		}
 	}
 
@@ -644,9 +685,36 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if usePSS, ok := secret.Data[consts.FieldUsePSS]; ok {
+			err = d.Set(consts.FieldUsePSS, usePSS)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		if allowedUserIds, ok := secret.Data[consts.FieldAllowedUserIds]; ok {
 			d.Set(consts.FieldAllowedUserIds, allowedUserIds)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		if noStoreMetadata, ok := secret.Data[consts.FieldNoStoreMetadata]; ok {
+			err = d.Set(consts.FieldNoStoreMetadata, noStoreMetadata)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		if serialNumberSource, ok := secret.Data[consts.FieldSerialNumberSource]; ok {
+			err = d.Set(consts.FieldSerialNumberSource, serialNumberSource)
+			if err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 
@@ -711,6 +779,12 @@ func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if usePSS, ok := d.GetOk(consts.FieldUsePSS); ok {
+			data[consts.FieldUsePSS] = usePSS
+		}
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		if allowedUserIds, ok := d.GetOk(consts.FieldAllowedUserIds); ok {
 			ifcList := allowedUserIds.([]interface{})
@@ -722,6 +796,18 @@ func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 			if len(list) > 0 {
 				data[consts.FieldAllowedUserIds] = list
 			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		if noStoreMetadata, ok := d.GetOk(consts.FieldNoStoreMetadata); ok {
+			data[consts.FieldNoStoreMetadata] = noStoreMetadata
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		if serialNumberSource, ok := d.GetOk(consts.FieldSerialNumberSource); ok {
+			data[consts.FieldSerialNumberSource] = serialNumberSource
 		}
 	}
 
