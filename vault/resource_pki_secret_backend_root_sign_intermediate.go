@@ -294,8 +294,8 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     false,
 				Optional:     true,
-				Computed:     true,
 				Description:  "Specifies the duration by which to backdate the NotBefore property.",
+				ForceNew:     true,
 				ValidateFunc: provider.ValidateDuration,
 			},
 			consts.FieldRevoke: {
