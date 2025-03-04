@@ -207,6 +207,14 @@ var (
 			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
 			PathInventory: []string{"/transform/decode/{role_name}"},
 		},
+		"vault_transit_sign": {
+			Resource:      UpdateSchemaResource(transitSignDataSource()),
+			PathInventory: []string{"/transit/sign/{name}"},
+		},
+		"vault_transit_verify": {
+			Resource:      UpdateSchemaResource(transitVerifyDataSource()),
+			PathInventory: []string{"/transit/verify/{name}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*provider.Description{
