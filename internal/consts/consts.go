@@ -474,6 +474,8 @@ const (
 	FieldCriticalOptions                = "critical_options"
 	FieldExtensions                     = "extensions"
 	FieldSignedKey                      = "signed_key"
+	FieldNoStoreMetadata                = "no_store_metadata"
+	FieldSerialNumberSource             = "serial_number_source"
 
 	/*
 		common environment variables
