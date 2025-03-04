@@ -474,7 +474,6 @@ const (
 	FieldCriticalOptions                = "critical_options"
 	FieldExtensions                     = "extensions"
 	FieldSignedKey                      = "signed_key"
-	FieldUsePSS                         = "use_pss"
 	FieldNoStoreMetadata                = "no_store_metadata"
 	FieldCertMetadata                   = "cert_metadata"
 	FieldSerialNumberSource             = "serial_number_source"
