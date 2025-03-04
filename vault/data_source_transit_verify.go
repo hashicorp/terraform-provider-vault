@@ -162,7 +162,7 @@ func transitVerifyDataSourceRead(d *schema.ResourceData, meta interface{}) error
 	d.SetId(reqPath)
 
 	rawBatchResults, batchOK := resp.Data[consts.FieldBatchResults]
-	valid, validOK := resp.Data[consts.FieldSignature]
+	valid, validOK := resp.Data[consts.FieldValid]
 
 	if batchOK {
 		batchResults, err := convertBatchResults(rawBatchResults)
