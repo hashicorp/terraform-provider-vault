@@ -115,6 +115,15 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				ForceNew:    true,
 				Default:     -1,
 			},
+			consts.FieldKeyUsage: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Specify the key usages to be added to the existing set of key usages, CRL,CertSign, on the generated certificate.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			consts.FieldExcludeCNFromSans: {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -361,6 +370,7 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldURISans,
 		consts.FieldOtherSans,
 		consts.FieldPermittedDNSDomains,
+		consts.FieldKeyUsage,
 	}
 
 	// Whether name constraints fields (other than permitted_dns_domains), are supproted,
