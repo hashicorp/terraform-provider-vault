@@ -61,7 +61,8 @@ var certBlock = `resource "vault_pki_secret_backend_cert" "test" {
   ttl                   = "720h"
   min_seconds_remaining = 60
   cert_metadata         = "dGVzdCBtZXRhZGF0YQ=="
-}`
+}
+`
 
 func TestAccDataSourcePKISecretCertMetadata(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-backend")
