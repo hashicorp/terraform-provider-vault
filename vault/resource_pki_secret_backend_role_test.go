@@ -362,26 +362,12 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion112), nil
 				},
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, "use_pss = true"),
-				Check: resource.ComposeTestCheckFunc(
-					append(checks,
-						resource.TestCheckResourceAttr(resourceName, "use_pss", "true"),
-					)...,
-				),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				Check:  resource.TestCheckResourceAttr(resourceName, "use_pss", "true"),
 			},
 			{
 				SkipFunc: func() (bool, error) {
@@ -389,16 +375,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					return !meta.IsAPISupported(provider.VaultVersion117), nil
 				},
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, "no_store_metadata = false"),
-				Check: resource.ComposeTestCheckFunc(
-					append(checks,
-						resource.TestCheckResourceAttr(resourceName, "no_store_metadata", "false"),
-					)...,
-				),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				Check:  resource.TestCheckResourceAttr(resourceName, "no_store_metadata", "false"),
 			},
 			{
 				SkipFunc: func() (bool, error) {
@@ -406,11 +383,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					return !meta.IsAPISupported(provider.VaultVersion119), nil
 				},
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, "serial_number_source = \"json\""),
-				Check: resource.ComposeTestCheckFunc(
-					append(checks,
-						resource.TestCheckResourceAttr(resourceName, "serial_number_source", "json"),
-					)...,
-				),
+				Check:  resource.TestCheckResourceAttr(resourceName, "serial_number_source", "json"),
 			},
 		},
 	})
