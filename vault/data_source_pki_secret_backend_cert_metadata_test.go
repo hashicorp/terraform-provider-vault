@@ -17,7 +17,7 @@ import (
 func TestAccDataSourcePKISecretCertMetadata(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-backend")
 
-	dataName := "data.vault_pki_secret_backend_issuer.test"
+	dataName := "data.vault_pki_secret_backend_cert_metadata.test"
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
@@ -112,6 +112,11 @@ EOT
 		auto_renew            = true
 		min_seconds_remaining = "3595"
 		cert_metadata         = "dGVzdCBtZXRhZGF0YQ=="
+	}
+
+	data "vault_pki_secret_backend_cert_metadata" "test" {
+		path = vault_mount.test-root.path
+		serial = vault_pki_secret_backend_sign.test.serial_number
 	}
 `, backend)
 }
