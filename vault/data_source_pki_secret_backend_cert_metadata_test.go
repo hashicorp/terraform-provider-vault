@@ -14,68 +14,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccDataSourcePKISecretCertMetadata(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-pki-backend")
-
-	dataName := "data.vault_pki_secret_backend_cert_metadata.test"
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testPKISecretCertMetadataConfig(backend),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dataName, consts.FieldPath, backend),
-					resource.TestCheckResourceAttr(dataName, consts.FieldCertMetadata, "dGVzdCBtZXRhZGF0YQ=="),
-					resource.TestCheckResourceAttrSet(dataName, consts.FieldIssuerID),
-					resource.TestCheckResourceAttrSet(dataName, consts.FieldExpiration),
-					resource.TestCheckResourceAttrSet(dataName, consts.FieldRole),
-					resource.TestCheckResourceAttrSet(dataName, consts.FieldSerialNumber),
-				),
-			},
-		},
-	})
-}
-
-func testPKISecretCertMetadataConfig(backend string) string {
-	return fmt.Sprintf(`resource "vault_mount" "test-root" {
-		path                      = "%s"
-		type                      = "pki"
-		description               = "test root"
-		default_lease_ttl_seconds = "8640000"
-		max_lease_ttl_seconds     = "8640000"
-	}
-
-	resource "vault_pki_secret_backend_root_cert" "test" {
-		backend            = vault_mount.test-root.path
-		type               = "internal"
-		common_name        = "my.domain"
-		ttl                = "86400"
-		format             = "pem"
-		private_key_format = "der"
-		key_type           = "rsa"
-		key_bits           = 4096
-		ou                 = "test"
-		organization       = "test"
-		country            = "test"
-		locality           = "test"
-		province           = "test"
-	}
-
-	resource "vault_pki_secret_backend_role" "test" {
-		backend           = vault_pki_secret_backend_root_cert.test.backend
-		name              = "test"
-		allowed_domains   = ["test.my.domain"]
-		allow_subdomains  = true
-		max_ttl           = "3600"
-		key_usage         = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
-		no_store_metadata = false
-	}
-
-	resource "vault_pki_secret_backend_sign" "test" {
+var signBlock = `resource "vault_pki_secret_backend_sign" "test" {
 		backend               = vault_mount.test-root.path
 		name                  = vault_pki_secret_backend_role.test.name
 		csr                   = <<EOT
@@ -113,10 +52,94 @@ EOT
 		min_seconds_remaining = "3595"
 		cert_metadata         = "dGVzdCBtZXRhZGF0YQ=="
 	}
+`
+
+var certBlock = `resource "vault_pki_secret_backend_cert" "test" {
+  backend               = vault_pki_secret_backend_role.test.backend
+  name                  = vault_pki_secret_backend_role.test.name
+  common_name           = "cert.test.my.domain"
+  ttl                   = "720h"
+  min_seconds_remaining = 60
+  cert_metadata         = "dGVzdCBtZXRhZGF0YQ=="
+}`
+
+func TestAccDataSourcePKISecretCertMetadata(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-pki-backend")
+
+	dataName := "data.vault_pki_secret_backend_cert_metadata.test"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testPKISecretCertMetadataConfig(backend, signBlock, "vault_pki_secret_backend_sign"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(dataName, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(dataName, consts.FieldCertMetadata, "dGVzdCBtZXRhZGF0YQ=="),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldIssuerID),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldExpiration),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldRole),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldSerialNumber),
+				),
+			},
+			{
+				Config: testPKISecretCertMetadataConfig(backend, certBlock, "vault_pki_secret_backend_cert"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(dataName, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(dataName, consts.FieldCertMetadata, "dGVzdCBtZXRhZGF0YQ=="),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldIssuerID),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldExpiration),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldRole),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldSerialNumber),
+				),
+			},
+		},
+	})
+}
+
+func testPKISecretCertMetadataConfig(backend, block, resourceName string) string {
+	return fmt.Sprintf(`resource "vault_mount" "test-root" {
+		path                      = "%s"
+		type                      = "pki"
+		description               = "test root"
+		default_lease_ttl_seconds = "8640000"
+		max_lease_ttl_seconds     = "8640000"
+	}
+
+	resource "vault_pki_secret_backend_root_cert" "test" {
+		backend            = vault_mount.test-root.path
+		type               = "internal"
+		common_name        = "my.domain"
+		ttl                = "86400"
+		format             = "pem"
+		private_key_format = "der"
+		key_type           = "rsa"
+		key_bits           = 4096
+		ou                 = "test"
+		organization       = "test"
+		country            = "test"
+		locality           = "test"
+		province           = "test"
+	}
+
+	resource "vault_pki_secret_backend_role" "test" {
+		backend           = vault_pki_secret_backend_root_cert.test.backend
+		name              = "test"
+		allowed_domains   = ["test.my.domain"]
+		allow_subdomains  = true
+		max_ttl           = "3600"
+		key_usage         = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
+		no_store_metadata = false
+	}
+
+	%s
 
 	data "vault_pki_secret_backend_cert_metadata" "test" {
 		path = vault_mount.test-root.path
-		serial = vault_pki_secret_backend_sign.test.serial_number
+		serial = %s.test.serial_number
 	}
-`, backend)
+`, backend, block, resourceName)
 }
