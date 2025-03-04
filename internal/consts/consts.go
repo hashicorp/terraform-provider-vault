@@ -475,7 +475,6 @@ const (
 	FieldExtensions                     = "extensions"
 	FieldSignedKey                      = "signed_key"
 	FieldNoStoreMetadata                = "no_store_metadata"
-	FieldCertMetadata                   = "cert_metadata"
 	FieldSerialNumberSource             = "serial_number_source"
 
 	/*
