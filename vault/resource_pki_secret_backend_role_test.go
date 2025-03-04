@@ -187,9 +187,6 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "cn_validations.#", "2"),
 		resource.TestCheckTypeSetElemAttr(resourceName, "cn_validations.*", "email"),
 		resource.TestCheckTypeSetElemAttr(resourceName, "cn_validations.*", "hostname"),
-		resource.TestCheckResourceAttr(resourceName, "use_pss", "true"),
-		resource.TestCheckResourceAttr(resourceName, "no_store_metadata", "false"),
-		resource.TestCheckResourceAttr(resourceName, "serial_number_source", "json"),
 	}
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -364,6 +361,57 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "max_ttl", "3600"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion112), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, "use_pss = true"),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						resource.TestCheckResourceAttr(resourceName, "use_pss", "true"),
+					)...,
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion117), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, "no_store_metadata = false"),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						resource.TestCheckResourceAttr(resourceName, "no_store_metadata", "false"),
+					)...,
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion119), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, "serial_number_source = \"json\""),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						resource.TestCheckResourceAttr(resourceName, "serial_number_source", "json"),
+					)...,
+				),
+			},
 		},
 	})
 }
@@ -417,9 +465,6 @@ resource "vault_pki_secret_backend_role" "test" {
   not_before_duration                = "45m"
   allowed_serial_numbers             = ["*"]
   cn_validations					 = ["email", "hostname"]
-  use_pss                            = true
-  no_store_metadata                  = false
-  serial_number_source               = "json"
 }
 `, path, name, roleTTL, maxTTL, extraConfig)
 }
@@ -476,9 +521,6 @@ resource "vault_pki_secret_backend_role" "test" {
   not_before_duration = "45m"
   allowed_serial_numbers = ["*"]
   cn_validations = ["disabled"]
-  use_pss                            = true
-  no_store_metadata                  = false
-  serial_number_source               = "json"
 }`, path, name, policyIdentifiers)
 }
 
