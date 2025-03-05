@@ -167,6 +167,10 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_cert_metadata": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendCertMetadataDataSource()),
+			PathInventory: []string{"/pki/cert-metadata/{serial}"},
+		},
 		"vault_pki_secret_backend_config_cmpv2": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCMPV2DataSource()),
 			PathInventory: []string{"/pki/config/cmp"},

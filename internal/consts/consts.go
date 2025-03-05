@@ -476,6 +476,7 @@ const (
 	FieldSignedKey                      = "signed_key"
 	FieldNoStoreMetadata                = "no_store_metadata"
 	FieldSerialNumberSource             = "serial_number_source"
+	FieldCertMetadata                   = "cert_metadata"
 
 	FieldInput               = "input"
 	FieldKeyVersion          = "key_version"

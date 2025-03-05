@@ -14,8 +14,9 @@ FEATURES:
 * Add support for `disabled_validations` in `vault_pki_secret_backend_config_cmpv2` [#2412](https://github.com/hashicorp/terraform-provider-vault/pull/2412)
 * Add `credential_type` and `credential_config` to `database_secret_backend_static_role` to support features like rsa keys for Snowflake DB engines with static roles [#2384](https://github.com/hashicorp/terraform-provider-vault/pull/2384)
 * Add support for missing parameters to `vault_pki_secret_backend_root_sign_intermediate`: `not_before_duration`, `skid` and `use_pss` [#2417](https://github.com/hashicorp/terraform-provider-vault/pull/2417)
-* Add support for `use_pss`, `no_store_metadata`, and `serial_number_source` to `vault_pki_secret_backend_role` [#2420](https://github.com/hashicorp/terraform-provider-vault/pull/2420) 
+* Add support for `use_pss`, `no_store_metadata`, and `serial_number_source` to `vault_pki_secret_backend_role` [#2420](https://github.com/hashicorp/terraform-provider-vault/pull/2420)
 * Add support for Transit `sign` and `verify` endpoints ([#2418](https://github.com/hashicorp/terraform-provider-vault/pull/2418))
+* Add new data source `vault_pki_secret_backend_cert_metadata` and support for `cert_metadata` in `vault_pki_secret_backend_cert` and `vault_pki_secret_backend_sign` [#2422](https://github.com/hashicorp/terraform-provider-vault/pull/2422)
 
 BUGS:
 
