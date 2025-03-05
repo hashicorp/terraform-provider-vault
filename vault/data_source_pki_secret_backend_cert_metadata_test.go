@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-var signBlock = `resource "vault_pki_secret_backend_sign" "test" {
+var signConfigBlock = `resource "vault_pki_secret_backend_sign" "test" {
 		backend               = vault_mount.test-root.path
 		name                  = vault_pki_secret_backend_role.test.name
 		csr                   = <<EOT
@@ -54,7 +54,7 @@ EOT
 	}
 `
 
-var certBlock = `resource "vault_pki_secret_backend_cert" "test" {
+var certConfigBlock = `resource "vault_pki_secret_backend_cert" "test" {
   backend               = vault_pki_secret_backend_role.test.backend
   name                  = vault_pki_secret_backend_role.test.name
   common_name           = "cert.test.my.domain"
@@ -76,7 +76,7 @@ func TestAccDataSourcePKISecretCertMetadata(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testPKISecretCertMetadataConfig(backend, signBlock, "vault_pki_secret_backend_sign"),
+				Config: testPKISecretCertMetadataConfig(backend, signConfigBlock, "vault_pki_secret_backend_sign"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(dataName, consts.FieldCertMetadata, "dGVzdCBtZXRhZGF0YQ=="),
@@ -87,7 +87,7 @@ func TestAccDataSourcePKISecretCertMetadata(t *testing.T) {
 				),
 			},
 			{
-				Config: testPKISecretCertMetadataConfig(backend, certBlock, "vault_pki_secret_backend_cert"),
+				Config: testPKISecretCertMetadataConfig(backend, certConfigBlock, "vault_pki_secret_backend_cert"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(dataName, consts.FieldCertMetadata, "dGVzdCBtZXRhZGF0YQ=="),
