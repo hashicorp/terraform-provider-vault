@@ -72,6 +72,7 @@ func TestAccDataSourcePKISecretCertMetadata(t *testing.T) {
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		Steps: []resource.TestStep{
