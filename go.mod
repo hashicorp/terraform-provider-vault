@@ -32,7 +32,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.20.3
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.11.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.15.1
-	github.com/hashicorp/vault/api v1.15.0
+	github.com/hashicorp/vault/api v1.14.0
 	github.com/hashicorp/vault/sdk v0.14.0
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/jcmturner/gokrb5/v8 v8.4.4
