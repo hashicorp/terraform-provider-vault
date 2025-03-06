@@ -463,6 +463,7 @@ const (
 	FieldEabKey                        = "key"
 	FieldAcmeDirectory                 = "acme_directory"
 	FieldEabId                         = "eab_id"
+	FieldMaxCrlEntries                 = "max_crl_entries"
 
 	FieldDisableCriticalExtensionChecks = "disable_critical_extension_checks"
 	FieldDisablePathLengthChecks        = "disable_path_length_checks"
