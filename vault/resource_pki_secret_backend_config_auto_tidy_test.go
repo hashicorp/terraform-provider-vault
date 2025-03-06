@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/stretchr/testify/require"
 	"regexp"
 	"testing"
@@ -241,6 +242,7 @@ func TestAccPKISecretBackendConfigAutoTidy_ent(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
@@ -272,7 +274,7 @@ tidy_cert_metadata = true
 						consts.FieldTidyRevocationQueue,
 						consts.FieldTidyCrossClusterRevokedCerts,
 						consts.FieldTidyCertMetadata,
-						// consts.FieldTidyCmpv2NonceStore, // TODO: Enable once VAULT-34539 is fixed
+						// consts.FieldTidyCmpv2NonceStore, // TODO: Enable once VAULT-34539 is fixed (and set min req version)
 					),
 				),
 			},
