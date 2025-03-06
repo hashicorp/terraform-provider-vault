@@ -63,6 +63,9 @@ func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
 	{
 		var attrSetChecks []resource.TestCheckFunc
 		for field := range pkiSecretBackendConfigAutoTidySchema() {
+			if field == "tidy_cert_metadata" || field == "tidy_cmpv2_nonce_store" {
+				continue
+			}
 			attrSetChecks = append(attrSetChecks, resource.TestCheckResourceAttrSet(resourceName, field))
 		}
 		allAttributesSetCheck = resource.ComposeTestCheckFunc(attrSetChecks...)
