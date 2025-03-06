@@ -114,7 +114,7 @@ func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
 				),
 			},
 			{
-				// Enable all tidy operations
+				// Enable all tidy operations (minus the ENT ones: tidy_cert_metadata and tidy_cmpv2_nonce_store)
 				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
 enabled = true
 tidy_cert_store = true
@@ -125,9 +125,6 @@ tidy_move_legacy_ca_bundle = true
 tidy_acme = true
 tidy_revocation_queue = true
 tidy_cross_cluster_revoked_certs = true
-tidy_cert_metadata = true
-
-# tidy_cmpv2_nonce_store = true # TODO: Enable once VAULT-34539 is fixed 
 `),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
@@ -141,8 +138,6 @@ tidy_cert_metadata = true
 						consts.FieldTidyAcme,
 						consts.FieldTidyRevocationQueue,
 						consts.FieldTidyCrossClusterRevokedCerts,
-						consts.FieldTidyCertMetadata,
-						// consts.FieldTidyCmpv2NonceStore, // TODO: Enable once VAULT-34539 is fixed
 					),
 				),
 			},
@@ -225,6 +220,66 @@ safety_buffer = "59000s"
 			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
+
+}
+
+func TestAccPKISecretBackendConfigAutoTidy_ent(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-pki")
+	resourceType := "vault_pki_secret_backend_config_auto_tidy"
+	resourceName := resourceType + ".test"
+
+	checkAttributes := func(expected string, fields ...string) resource.TestCheckFunc {
+		var checks []resource.TestCheckFunc
+		for _, f := range fields {
+			checks = append(checks, resource.TestCheckResourceAttr(resourceName, f, expected))
+		}
+		return resource.ComposeTestCheckFunc(checks...)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				// Enable all tidy operations
+				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
+enabled = true
+tidy_cert_store = true
+tidy_revoked_certs = true
+tidy_revoked_cert_issuer_associations = true
+tidy_expired_issuers = true
+tidy_move_legacy_ca_bundle = true
+tidy_acme = true
+tidy_revocation_queue = true
+tidy_cross_cluster_revoked_certs = true
+tidy_cert_metadata = true
+# tidy_cmpv2_nonce_store = true # TODO: Enable once VAULT-34539 is fixed 
+`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					checkAttributes("true",
+						consts.FieldEnabled,
+						consts.FieldTidyCertStore,
+						consts.FieldTidyRevokedCerts,
+						consts.FieldTidyRevokedCertIssuerAssociations,
+						consts.FieldTidyExpiredIssuers,
+						consts.FieldTidyMoveLegacyCaBundle,
+						consts.FieldTidyAcme,
+						consts.FieldTidyRevocationQueue,
+						consts.FieldTidyCrossClusterRevokedCerts,
+						consts.FieldTidyCertMetadata,
+						// consts.FieldTidyCmpv2NonceStore, // TODO: Enable once VAULT-34539 is fixed
+					),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+		},
+	})
+
 }
 
 func testAccPKISecretBackendConfigAutoTidy_basic(path, fields string) string {
