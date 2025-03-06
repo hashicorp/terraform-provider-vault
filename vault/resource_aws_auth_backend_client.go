@@ -252,8 +252,8 @@ func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
-		if diagErr := automatedrotationutil.PopulateAutomatedRotationFields(d, secret, d.Id()); diagErr != nil {
-			return diagErr
+		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, secret, d.Id()); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 

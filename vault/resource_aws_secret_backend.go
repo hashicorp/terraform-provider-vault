@@ -373,8 +373,8 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 			}
 
 			if isEnterprise {
-				if diagErr := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, path); diagErr != nil {
-					return diagErr
+				if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, path); err != nil {
+					return diag.FromErr(err)
 				}
 			}
 		}
