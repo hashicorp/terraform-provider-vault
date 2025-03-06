@@ -123,7 +123,7 @@ func pkiSecretBackendIssuerResource() *schema.Resource {
 			consts.FieldDisableNameConstraintChecks: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "This determines whether this issuer is able to issue certificates where the chain of trust (including the final issued certificate) violates the name constraints critical extension of one of the issuer certificates in the chain",
+				Description: "This determines whether this issuer is able to issue certificates where the chain of trust (including the final issued certificate) violates the name constraints critical extension of one of the issuer certificates in the chain.",
 			},
 			consts.FieldIssuerID: {
 				Type:        schema.TypeString,

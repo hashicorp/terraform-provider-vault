@@ -141,6 +141,12 @@ The following arguments are supported:
 
    - `cps` - (Optional) The URL of the CPS for the policy identifier
 
+* `use_pss` - (Optional) Specifies whether or not to use PSS signatures over PKCS#1v1.5 signatures when a RSA-type issuer is used. Ignored for ECDSA/Ed25519 issuers.
+
+* `no_store_metadata` - (Optional) Allows metadata to be stored keyed on the certificate's serial number. The field is independent of no_store, allowing metadata storage regardless of whether certificates are stored. If true, metadata is not stored and an error is returned if the metadata field is specified on issuance APIs
+
+* `serial_number_source` - (Optional) Specifies the source of the subject serial number. Valid values are json-csr (default) or json. When set to json-csr, the subject serial number is taken from the serial_number parameter and falls back to the serial number in the CSR. When set to json, the subject serial number is taken from the serial_number parameter but will ignore any value in the CSR. For backwards compatibility an empty value for this field will default to the json-csr behavior.
+
    Example usage:
 ```hcl
 resource "vault_mount" "pki" {
@@ -178,6 +184,8 @@ resource "vault_pki_secret_backend_role" "role" {
 * `not_before_duration` - (Optional) Specifies the [duration](https://developer.hashicorp.com/vault/docs/concepts/duration-format) by which to backdate the NotBefore property.
 
 * `allowed_serial_numbers` - (Optional) An array of allowed serial numbers to put in Subject
+
+* `not_after` - (Optional) Set the Not After field of the certificate with specified date value. The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.
 
 ## Attributes Reference
 

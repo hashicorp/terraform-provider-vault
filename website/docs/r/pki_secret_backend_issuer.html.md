@@ -75,6 +75,25 @@ The following arguments are supported:
 * `enable_aia_url_templating` - (Optional) Specifies that the AIA URL values should
   be templated.
 
+* `disable_critical_extension_checks` - (Optional) This determines whether this
+  issuer is able to issue certificates where the chain of trust (including the
+  issued certificate) contain critical extensions not processed by Vault.
+
+* `disable_path_length_checks` - (Optional) This determines whether this issuer
+  is able to issue certificates where the chain of trust (including the final
+  issued certificate) is longer than allowed by a certificate authority in that
+  chain.
+
+* `disable_name_checks` - (Optional) This determines whether this issuer is able
+  to issue certificates where the chain of trust (including the final issued
+  certificate) contains a link in which the subject of the issuing certificate
+  does not match the named issuer of the certificate it signed.
+
+* `disable_name_constraint_checks` - (Optional) This determines whether this
+  issuer is able to issue certificates where the chain of trust (including the
+  final issued certificate) violates the name constraints critical extension of
+  one of the issuer certificates in the chain.
+
 
 ## Attributes Reference
 

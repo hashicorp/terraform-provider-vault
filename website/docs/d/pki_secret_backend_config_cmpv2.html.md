@@ -56,6 +56,8 @@ The following arguments are supported:
 
 * `audit_fields` - Fields parsed from the CSR that appear in the audit and can be used by sentinel policies.
 
+* `disabled_validations` - A comma-separated list of validations not to perform on CMPv2 messages.
+
 * `last_updated` - A read-only timestamp representing the last time the configuration was updated.
 
 <a id="nestedatt--authenticators"></a>

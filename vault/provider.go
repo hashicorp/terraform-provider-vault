@@ -167,6 +167,10 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_cert_metadata": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendCertMetadataDataSource()),
+			PathInventory: []string{"/pki/cert-metadata/{serial}"},
+		},
 		"vault_pki_secret_backend_config_cmpv2": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCMPV2DataSource()),
 			PathInventory: []string{"/pki/config/cmp"},
@@ -191,6 +195,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
 			PathInventory: []string{"/pki/keys"},
 		},
+		"vault_ssh_secret_backend_sign": {
+			Resource:      UpdateSchemaResource(sshSecretBackendSignDataSource()),
+			PathInventory: []string{"/ssh/sign"},
+		},
 		"vault_transform_encode": {
 			Resource:      UpdateSchemaResource(transformEncodeDataSource()),
 			PathInventory: []string{"/transform/encode/{role_name}"},
@@ -198,6 +206,14 @@ var (
 		"vault_transform_decode": {
 			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
 			PathInventory: []string{"/transform/decode/{role_name}"},
+		},
+		"vault_transit_sign": {
+			Resource:      UpdateSchemaResource(transitSignDataSource()),
+			PathInventory: []string{"/transit/sign/{name}"},
+		},
+		"vault_transit_verify": {
+			Resource:      UpdateSchemaResource(transitVerifyDataSource()),
+			PathInventory: []string{"/transit/verify/{name}"},
 		},
 	}
 
