@@ -17,6 +17,7 @@ FEATURES:
 * Add support for `use_pss`, `no_store_metadata`, and `serial_number_source` to `vault_pki_secret_backend_role` [#2420](https://github.com/hashicorp/terraform-provider-vault/pull/2420)
 * Add support for Transit `sign` and `verify` endpoints ([#2418](https://github.com/hashicorp/terraform-provider-vault/pull/2418))
 * Add new data source `vault_pki_secret_backend_cert_metadata` and support for `cert_metadata` in `vault_pki_secret_backend_cert` and `vault_pki_secret_backend_sign` [#2422](https://github.com/hashicorp/terraform-provider-vault/pull/2422)
+* Add support for `max_crl_entries` in `vault_pki_secret_backend_crl_config` [#2423](https://github.com/hashicorp/terraform-provider-vault/pull/2423)
 
 BUGS:
 
