@@ -59,18 +59,6 @@ var pkiSecretBackendConfigAutoTidyBoolFields = map[string]string{
 
 func pkiSecretBackendConfigAutoTidySchema() map[string]*schema.Schema {
 	var atLeastOneTidyOperation []string
-	//{
-	//	consts.FieldTidyCertStore,
-	//	consts.FieldTidyRevokedCerts,
-	//	consts.FieldTidyRevokedCertIssuerAssociations,
-	//	consts.FieldTidyExpiredIssuers,
-	//	consts.FieldTidyMoveLegacyCaBundle,
-	//	consts.FieldTidyRevocationQueue,
-	//	consts.FieldTidyCrossClusterRevokedCerts,
-	//	consts.FieldTidyAcme,
-	//	consts.FieldTidyCertMetadata,
-	//	consts.FieldTidyCmpv2NonceStore,
-	//}
 	var isOneOfField func(string) bool
 	{
 		atLeastOneOfSet := make(map[string]any)
