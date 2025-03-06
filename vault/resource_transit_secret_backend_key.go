@@ -13,8 +13,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -84,12 +83,11 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Description: "Amount of seconds the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
 			},
 			"type": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Description:  "Specifies the type of key to create. The currently-supported types are: aes128-gcm96, aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, ecdsa-p384, ecdsa-p521, hmac, rsa-2048, rsa-3072, rsa-4096",
-				ForceNew:     true,
-				Default:      "aes256-gcm96",
-				ValidateFunc: validation.StringInSlice([]string{"aes128-gcm96", "aes256-gcm96", "chacha20-poly1305", "ed25519", "ecdsa-p256", "ecdsa-p384", "ecdsa-p521", "hmac", "rsa-2048", "rsa-3072", "rsa-4096"}, false),
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the type of key to create. The currently-supported types are: aes128-gcm96, aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, ecdsa-p384, ecdsa-p521, hmac, rsa-2048, rsa-3072, rsa-4096",
+				ForceNew:    true,
+				Default:     "aes256-gcm96",
 			},
 			"keys": {
 				Type:        schema.TypeList,
@@ -134,6 +132,21 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Optional:    true,
 				Description: "Minimum key version to use for encryption",
 				Default:     0,
+			},
+			consts.FieldParameterSet: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The parameter set to use for ML-DSA. Required for ML-DSA and hybrid keys. Valid values are 44, 65, and 87.",
+			},
+			consts.FieldHybridKeyTypeEC: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The elliptic curve algorithm to use for hybrid signatures. Supported key types are `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, and `ed25519`.",
+			},
+			consts.FieldHybridKeyTypePQC: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The post-quantum algorithm to use for hybrid signatures. Currently, ML-DSA is the only supported key type.",
 			},
 			"supports_encryption": {
 				Type:        schema.TypeBool,
@@ -217,6 +230,20 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 		"derived":               d.Get("derived").(bool),
 		"type":                  d.Get("type").(string),
 		"auto_rotate_period":    autoRotatePeriod,
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		if params, ok := d.GetOk(consts.FieldParameterSet); ok {
+			data[consts.FieldParameterSet] = params
+		}
+
+		if params, ok := d.GetOk(consts.FieldHybridKeyTypeEC); ok {
+			data[consts.FieldHybridKeyTypeEC] = params
+		}
+
+		if params, ok := d.GetOk(consts.FieldHybridKeyTypePQC); ok {
+			data[consts.FieldHybridKeyTypePQC] = params
+		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {

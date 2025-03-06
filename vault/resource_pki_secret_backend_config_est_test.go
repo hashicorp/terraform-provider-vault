@@ -96,8 +96,7 @@ func TestAccPKISecretBackendConfigEst_AllFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.%", "2"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.%", "2"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.accessor", "test"),
-					// @TODO add these back in when Vault 1.16.3 is released (https://github.com/hashicorp/vault-enterprise/pull/5785)
-					// resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.cert_role", "a-role"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.cert_role", "a-role"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass.%", "1"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass.accessor", "test2"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldEnableSentinelParsing, "true"),
@@ -116,8 +115,7 @@ func TestAccPKISecretBackendConfigEst_AllFields(t *testing.T) {
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.%", "2"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.%", "2"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.accessor", "test"),
-					// @TODO add these back in when Vault 1.16.3 is released (https://github.com/hashicorp/vault-enterprise/pull/5785)
-					// resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.cert_role", "a-role"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.cert_role", "a-role"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass.%", "1"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass.accessor", "test2"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldEnableSentinelParsing, "true"),
@@ -164,9 +162,7 @@ resource "vault_pki_secret_backend_config_est" "test" {
      "test-label-2": format("role:%%s", vault_pki_secret_backend_role.est_role_2.name)
   }
   authenticators { 
-	# @TODO add these back in when Vault 1.16.3 is released (https://github.com/hashicorp/vault-enterprise/pull/5785)
-	# cert = { "accessor" = "test", "cert_role" = "a-role" }
-	cert = { "accessor" = "test", "cert_role" = "" }
+	cert = { "accessor" = "test", "cert_role" = "a-role" }
 	userpass = { "accessor" = "test2" } 
   }	
   enable_sentinel_parsing = true

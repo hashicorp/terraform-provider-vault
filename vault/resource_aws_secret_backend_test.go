@@ -76,6 +76,51 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 	})
 }
 
+func TestAccAWSSecretBackend_fallback(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	resourceType := "vault_aws_secret_backend"
+	resourceName := resourceType + ".test"
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSSecretBackendConfig_fallback(path, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSEndpoint, "https://sts.us-west-1.amazonaws.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSRegion, "us-west-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackRegions+".0", "us-east-2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackRegions+".1", "us-east-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackRegions+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackEndpoints+".0", "https://sts.us-east-2.amazonaws.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackEndpoints+".1", "https://sts.us-east-1.amazonaws.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackEndpoints+".#", "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
+			{
+				Config: testAccAWSSecretBackendConfig_fallbackUpdated(path, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "updated description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSEndpoint, "https://sts.us-central-2.amazonaws.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSRegion, "us-central-2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackRegions+".0", "us-east-2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackRegions+".1", "eu-central-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackRegions+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackEndpoints+".0", "https://sts.us-east-2.amazonaws.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackEndpoints+".1", "https://sts.eu-central-1.amazonaws.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSFallbackEndpoints+".#", "2"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccAWSSecretBackend_wif(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-aws")
 	resourceType := "vault_aws_secret_backend"
@@ -280,6 +325,45 @@ resource "vault_aws_secret_backend" "test" {
 
   iam_endpoint = "https://iam.amazonaws.com"
   sts_endpoint = "https://sts.us-west-1.amazonaws.com"
+}`, path, accessKey, secretKey)
+}
+
+func testAccAWSSecretBackendConfig_fallback(path, accessKey, secretKey string) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  default_lease_ttl_seconds = 1800
+  max_lease_ttl_seconds = 43200
+  access_key = "%s"
+  secret_key = "%s"
+  region = "us-west-1"
+
+  iam_endpoint = "https://iam.amazonaws.com"
+  sts_endpoint = "https://sts.us-west-1.amazonaws.com"
+
+  sts_region = "us-west-1"
+  sts_fallback_regions = ["us-east-2", "us-east-1"]
+  sts_fallback_endpoints = ["https://sts.us-east-2.amazonaws.com","https://sts.us-east-1.amazonaws.com"]
+}`, path, accessKey, secretKey)
+}
+
+func testAccAWSSecretBackendConfig_fallbackUpdated(path, accessKey, secretKey string) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path = "%s"
+  description = "updated description"
+  default_lease_ttl_seconds = 60
+  max_lease_ttl_seconds = 1000
+  access_key = "%s"
+  secret_key = "%s"
+  region = "us-central-2"
+
+  sts_endpoint = "https://sts.us-central-2.amazonaws.com"
+
+  sts_region = "us-central-2"
+  sts_fallback_regions = ["us-east-2", "eu-central-1"]
+  sts_fallback_endpoints = ["https://sts.us-east-2.amazonaws.com","https://sts.eu-central-1.amazonaws.com"]
 }`, path, accessKey, secretKey)
 }
 

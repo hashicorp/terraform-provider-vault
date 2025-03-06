@@ -35,14 +35,17 @@ const (
 var (
 	MaxHTTPRetriesCCC int
 
-	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion110))
-	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
-	VaultVersion112 = version.Must(version.NewSemver(consts.VaultVersion112))
-	VaultVersion113 = version.Must(version.NewSemver(consts.VaultVersion113))
-	VaultVersion114 = version.Must(version.NewSemver(consts.VaultVersion114))
-	VaultVersion115 = version.Must(version.NewSemver(consts.VaultVersion115))
-	VaultVersion116 = version.Must(version.NewSemver(consts.VaultVersion116))
-	VaultVersion117 = version.Must(version.NewSemver(consts.VaultVersion117))
+	VaultVersion110  = version.Must(version.NewSemver(consts.VaultVersion110))
+	VaultVersion111  = version.Must(version.NewSemver(consts.VaultVersion111))
+	VaultVersion112  = version.Must(version.NewSemver(consts.VaultVersion112))
+	VaultVersion113  = version.Must(version.NewSemver(consts.VaultVersion113))
+	VaultVersion114  = version.Must(version.NewSemver(consts.VaultVersion114))
+	VaultVersion115  = version.Must(version.NewSemver(consts.VaultVersion115))
+	VaultVersion116  = version.Must(version.NewSemver(consts.VaultVersion116))
+	VaultVersion117  = version.Must(version.NewSemver(consts.VaultVersion117))
+	VaultVersion118  = version.Must(version.NewSemver(consts.VaultVersion118))
+	VaultVersion1185 = version.Must(version.NewSemver(consts.VaultVersion1185))
+	VaultVersion119  = version.Must(version.NewSemver(consts.VaultVersion119))
 
 	TokenTTLMinRecommended = time.Minute * 15
 )

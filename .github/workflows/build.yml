@@ -37,7 +37,7 @@ jobs:
           terraform_wrapper: false
 
       - name: Cache go build
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             ~/.cache/go-build
@@ -63,11 +63,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.13.13-ent"
         - "vault-enterprise:1.14.13-ent"
-        - "vault-enterprise:1.15.12-ent"
-        - "vault-enterprise:1.16.6-ent"
-        - "vault-enterprise:1.17.2-ent"
+        - "vault-enterprise:1.15.16-ent"
+        - "vault-enterprise:1.16.15-ent"
+        - "vault-enterprise:1.17.11-ent"
+        - "vault-enterprise:1.18.4-ent"
         - "vault:latest"
     services:
       vault:
@@ -183,7 +183,7 @@ jobs:
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
       - name: Cache go build
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             ~/.cache/go-build
@@ -205,7 +205,16 @@ jobs:
           MYSQL_CONNECTION_PASSWORD: "mysql"
           MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
+          # POSTGRES_URL is the standard root conn URL for Vault
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
+          # POSTGRES_URL_TEST is used by the TFVP test to connect directly to
+          # the postgres container so that it can create static users.
+          # Note: the host is "localhost" because the TFVP tests do not run in
+          # the same docker network.
+          POSTGRES_URL_TEST: "postgres://postgres:secret@localhost:5432/database?sslmode=disable"
+          # POSTGRES_URL_ROOTLESS is used by Vault to connect to the postgres
+          # container for "rootless" static roles".
+          POSTGRES_URL_ROOTLESS: "postgres://{{username}}:{{password}}@postgres:5432/database?sslmode=disable"
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password

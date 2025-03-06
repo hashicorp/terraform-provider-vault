@@ -52,6 +52,8 @@ The following arguments are supported:
 
 * `disable_local_ca_jwt` - (Optional) Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod. Requires Vault `v1.5.4+` or Vault auth kubernetes plugin `v0.7.1+`
 
+* `use_annotations_as_alias_metadata` - (Optional) Use annotations from the client token's associated service account as alias metadata for the Vault entity. Requires Vault `v1.16+` or Vault auth kubernetes plugin `v0.18.0+`
+
 
 ## Attributes Reference
 
