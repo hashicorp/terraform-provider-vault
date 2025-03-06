@@ -447,6 +447,28 @@ func testPKICertRevocation(path string, store *testPKICertStore) resource.TestCh
 	}
 }
 
+func testPKICert(resourceName string, check func(*x509.Certificate) error) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		certificate, ok := rs.Primary.Attributes["certificate"]
+		if !ok {
+			return fmt.Errorf("certificate not found in state")
+		}
+
+		p, _ := pem.Decode([]byte(certificate))
+		cert, err := x509.ParseCertificate(p.Bytes)
+		if err != nil {
+			return err
+		}
+
+		return check(cert)
+	}
+}
+
 func testPKICertReIssued(resourceName string, store *testPKICertStore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
