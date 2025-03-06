@@ -6,14 +6,16 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 )
 
 func adSecretBackendResource() *schema.Resource {
@@ -197,44 +199,44 @@ func adSecretBackendResource() *schema.Resource {
 			Description: `LDAP domain to use for users (eg: ou=People,dc=example,dc=org)`,
 		},
 	}
-	r := provider.MustAddMountMigrationSchema(&schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		DeprecationMessage: `This resource is replaced by "vault_ldap_secret_backend" and will be removed in the next major release.`,
-		CreateContext:      createConfigResource,
-		UpdateContext:      updateConfigResource,
-		ReadContext:        provider.ReadContextWrapper(readConfigResource),
-		DeleteContext:      deleteConfigResource,
+		Create:             createConfigResource,
+		Update:             updateConfigResource,
+		Read:               provider.ReadWrapper(readConfigResource),
+		Delete:             deleteConfigResource,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			State: schema.ImportStatePassthrough,
 		},
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Schema:        fields,
 	}, false)
-
-	// Add common mount schema to the resource
-	provider.MustAddSchema(r, getMountSchema(
-		consts.FieldPath,
-		consts.FieldType,
-		consts.FieldDescription,
-		consts.FieldDefaultLeaseTTL,
-		consts.FieldMaxLeaseTTL,
-		consts.FieldLocal,
-	))
-
-	return r
 }
 
-func createConfigResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func createConfigResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return diag.FromErr(e)
+		return e
 	}
 
 	backend := d.Get("backend").(string)
+	description := d.Get("description").(string)
+	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
+	local := d.Get("local").(bool)
+	maxTTL := d.Get("max_lease_ttl_seconds").(int)
 
 	log.Printf("[DEBUG] Mounting AD backend at %q", backend)
-
-	if err := createMount(ctx, d, meta, client, backend, consts.MountTypeAD); err != nil {
-		return diag.FromErr(err)
+	err := client.Sys().Mount(backend, &api.MountInput{
+		Type:        consts.MountTypeAD,
+		Description: description,
+		Local:       local,
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("error mounting to %q: %s", backend, err)
 	}
 
 	log.Printf("[DEBUG] Mounted AD backend at %q", backend)
@@ -325,34 +327,44 @@ func createConfigResource(ctx context.Context, d *schema.ResourceData, meta inte
 
 	configPath := fmt.Sprintf("%s/config", backend)
 	log.Printf("[DEBUG] Writing %q", configPath)
-	if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
-		return diag.Errorf("error writing %q: %s", configPath, err)
+	if _, err := client.Logical().Write(configPath, data); err != nil {
+		return fmt.Errorf("error writing %q: %s", configPath, err)
 	}
 	log.Printf("[DEBUG] Wrote %q", configPath)
-	return readConfigResource(ctx, d, meta)
+	return readConfigResource(d, meta)
 }
 
-func readConfigResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func readConfigResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return diag.FromErr(e)
+		return e
 	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading %q", path)
 
+	ctx := context.Background()
+	mount, err := mountutil.GetMount(ctx, client, path)
+	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
+		return err
+	}
+
 	d.Set("backend", d.Id())
 
-	if err := readMount(ctx, d, meta, true); err != nil {
-		return diag.FromErr(err)
-	}
+	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
+	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 
 	configPath := fmt.Sprintf("%s/config", d.Id())
 	log.Printf("[DEBUG] Reading %q", configPath)
 
-	resp, err := client.Logical().ReadWithContext(ctx, configPath)
+	resp, err := client.Logical().Read(configPath)
 	if err != nil {
-		return diag.Errorf("error reading %q: %s", configPath, err)
+		return fmt.Errorf("error reading %q: %s", configPath, err)
 	}
 	log.Printf("[DEBUG] Read %q", configPath)
 	if resp == nil {
@@ -363,146 +375,166 @@ func readConfigResource(ctx context.Context, d *schema.ResourceData, meta interf
 
 	if val, ok := resp.Data["anonymous_group_search"]; ok {
 		if err := d.Set("anonymous_group_search", val); err != nil {
-			return diag.Errorf("error setting state key 'anonymous_group_search': %s", err)
+			return fmt.Errorf("error setting state key 'anonymous_group_search': %s", err)
 		}
 	}
 	if val, ok := resp.Data["binddn"]; ok {
 		if err := d.Set("binddn", val); err != nil {
-			return diag.Errorf("error setting state key 'binddn': %s", err)
+			return fmt.Errorf("error setting state key 'binddn': %s", err)
 		}
 	}
 	if val, ok := resp.Data["case_sensitive_names"]; ok {
 		if err := d.Set("case_sensitive_names", val); err != nil {
-			return diag.Errorf("error setting state key 'case_sensitive_names': %s", err)
+			return fmt.Errorf("error setting state key 'case_sensitive_names': %s", err)
 		}
 	}
 	if val, ok := resp.Data["client_tls_cert"]; ok {
 		if err := d.Set("client_tls_cert", val); err != nil {
-			return diag.Errorf("error setting state key 'client_tls_cert': %s", err)
+			return fmt.Errorf("error setting state key 'client_tls_cert': %s", err)
 		}
 	}
 	if val, ok := resp.Data["client_tls_key"]; ok {
 		if err := d.Set("client_tls_key", val); err != nil {
-			return diag.Errorf("error setting state key 'client_tls_key': %s", err)
+			return fmt.Errorf("error setting state key 'client_tls_key': %s", err)
 		}
 	}
 	if val, ok := resp.Data["deny_null_bind"]; ok {
 		if err := d.Set("deny_null_bind", val); err != nil {
-			return diag.Errorf("error setting state key 'deny_null_bind': %s", err)
+			return fmt.Errorf("error setting state key 'deny_null_bind': %s", err)
 		}
 	}
 	if val, ok := resp.Data["discoverdn"]; ok {
 		if err := d.Set("discoverdn", val); err != nil {
-			return diag.Errorf("error setting state key 'discoverdn': %s", err)
+			return fmt.Errorf("error setting state key 'discoverdn': %s", err)
 		}
 	}
 	if val, ok := resp.Data["groupattr"]; ok {
 		if err := d.Set("groupattr", val); err != nil {
-			return diag.Errorf("error setting state key 'groupattr': %s", err)
+			return fmt.Errorf("error setting state key 'groupattr': %s", err)
 		}
 	}
 	if val, ok := resp.Data["groupdn"]; ok {
 		if err := d.Set("groupdn", val); err != nil {
-			return diag.Errorf("error setting state key 'groupdn': %s", err)
+			return fmt.Errorf("error setting state key 'groupdn': %s", err)
 		}
 	}
 	if val, ok := resp.Data["groupfilter"]; ok {
 		if err := d.Set("groupfilter", val); err != nil {
-			return diag.Errorf("error setting state key 'groupfilter': %s", err)
+			return fmt.Errorf("error setting state key 'groupfilter': %s", err)
 		}
 	}
 	if val, ok := resp.Data["insecure_tls"]; ok {
 		if err := d.Set("insecure_tls", val); err != nil {
-			return diag.Errorf("error setting state key 'insecure_tls': %s", err)
+			return fmt.Errorf("error setting state key 'insecure_tls': %s", err)
 		}
 	}
 	if val, ok := resp.Data["last_rotation_tolerance"]; ok {
 		if err := d.Set("last_rotation_tolerance", val); err != nil {
-			return diag.Errorf("error setting state key 'last_rotation_tolerance': %s", err)
+			return fmt.Errorf("error setting state key 'last_rotation_tolerance': %s", err)
 		}
 	}
 	if val, ok := resp.Data["max_ttl"]; ok {
 		if err := d.Set("max_ttl", val); err != nil {
-			return diag.Errorf("error setting state key 'max_ttl': %s", err)
+			return fmt.Errorf("error setting state key 'max_ttl': %s", err)
 		}
 	}
 	if val, ok := resp.Data["password_policy"]; ok {
 		if err := d.Set("password_policy", val); err != nil {
-			return diag.Errorf("error setting state key 'password_policy': %s", err)
+			return fmt.Errorf("error setting state key 'password_policy': %s", err)
 		}
 	}
 	if val, ok := resp.Data["request_timeout"]; ok {
 		if err := d.Set("request_timeout", val); err != nil {
-			return diag.Errorf("error setting state key 'request_timeout': %s", err)
+			return fmt.Errorf("error setting state key 'request_timeout': %s", err)
 		}
 	}
 	if val, ok := resp.Data["starttls"]; ok {
 		if err := d.Set("starttls", val); err != nil {
-			return diag.Errorf("error setting state key 'starttls': %s", err)
+			return fmt.Errorf("error setting state key 'starttls': %s", err)
 		}
 	}
 	if val, ok := resp.Data["tls_max_version"]; ok {
 		if err := d.Set("tls_max_version", val); err != nil {
-			return diag.Errorf("error setting state key 'tls_max_version': %s", err)
+			return fmt.Errorf("error setting state key 'tls_max_version': %s", err)
 		}
 	}
 	if val, ok := resp.Data["tls_min_version"]; ok {
 		if err := d.Set("tls_min_version", val); err != nil {
-			return diag.Errorf("error setting state key 'tls_min_version': %s", err)
+			return fmt.Errorf("error setting state key 'tls_min_version': %s", err)
 		}
 	}
 	if val, ok := resp.Data["ttl"]; ok {
 		if err := d.Set("ttl", val); err != nil {
-			return diag.Errorf("error setting state key 'ttl': %s", err)
+			return fmt.Errorf("error setting state key 'ttl': %s", err)
 		}
 	}
 	if val, ok := resp.Data["upndomain"]; ok {
 		if err := d.Set("upndomain", val); err != nil {
-			return diag.Errorf("error setting state key 'upndomain': %s", err)
+			return fmt.Errorf("error setting state key 'upndomain': %s", err)
 		}
 	}
 	if val, ok := resp.Data["url"]; ok {
 		if err := d.Set("url", val); err != nil {
-			return diag.Errorf("error setting state key 'url': %s", err)
+			return fmt.Errorf("error setting state key 'url': %s", err)
 		}
 	}
 	if val, ok := resp.Data["use_pre111_group_cn_behavior"]; ok {
 		if err := d.Set("use_pre111_group_cn_behavior", val); err != nil {
-			return diag.Errorf("error setting state key 'use_pre111_group_cn_behavior': %s", err)
+			return fmt.Errorf("error setting state key 'use_pre111_group_cn_behavior': %s", err)
 		}
 	}
 	if val, ok := resp.Data["use_token_groups"]; ok {
 		if err := d.Set("use_token_groups", val); err != nil {
-			return diag.Errorf("error setting state key 'use_token_groups': %s", err)
+			return fmt.Errorf("error setting state key 'use_token_groups': %s", err)
 		}
 	}
 	if val, ok := resp.Data["userattr"]; ok {
 		if err := d.Set("userattr", val); err != nil {
-			return diag.Errorf("error setting state key 'userattr': %s", err)
+			return fmt.Errorf("error setting state key 'userattr': %s", err)
 		}
 	}
 	if val, ok := resp.Data["userdn"]; ok {
 		if err := d.Set("userdn", val); err != nil {
-			return diag.Errorf("error setting state key 'userdn': %s", err)
+			return fmt.Errorf("error setting state key 'userdn': %s", err)
 		}
 	}
 	return nil
 }
 
-func updateConfigResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 	backend := d.Id()
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return diag.FromErr(e)
+		return e
 	}
 
 	backend, e = util.Remount(d, client, consts.FieldBackend, false)
 	if e != nil {
-		return diag.FromErr(e)
+		return e
 	}
 
+	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
+	maxTTL := d.Get("max_lease_ttl_seconds").(int)
+	tune := api.MountConfigInput{}
 	data := map[string]interface{}{}
+
+	if defaultTTL != 0 {
+		tune.DefaultLeaseTTL = fmt.Sprintf("%ds", defaultTTL)
+		data["default_lease_ttl_seconds"] = defaultTTL
+	}
+
+	if maxTTL != 0 {
+		tune.MaxLeaseTTL = fmt.Sprintf("%ds", maxTTL)
+		data["max_lease_ttl_seconds"] = maxTTL
+	}
+
+	if tune.DefaultLeaseTTL != "0" || tune.MaxLeaseTTL != "0" {
+		err := client.Sys().TuneMount(backend, tune)
+		if err != nil {
+			return fmt.Errorf("error mounting to %q: %s", backend, err)
+		}
+	}
 
 	vaultPath := fmt.Sprintf("%s/config", backend)
 	log.Printf("[DEBUG] Updating %q", vaultPath)
@@ -586,29 +618,29 @@ func updateConfigResource(ctx context.Context, d *schema.ResourceData, meta inte
 		data["userdn"] = raw
 	}
 	data["insecure_tls"] = d.Get("insecure_tls")
-	if _, err := client.Logical().WriteWithContext(ctx, vaultPath, data); err != nil {
-		return diag.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
+	if _, err := client.Logical().Write(vaultPath, data); err != nil {
+		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
 	}
 	log.Printf("[DEBUG] Updated %q", vaultPath)
-	return readConfigResource(ctx, d, meta)
+	return readConfigResource(d, meta)
 }
 
-func deleteConfigResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func deleteConfigResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return diag.FromErr(e)
+		return e
 	}
 
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Unmounting AD backend %q", vaultPath)
 
-	err := client.Sys().UnmountWithContext(ctx, vaultPath)
+	err := client.Sys().Unmount(vaultPath)
 	if err != nil && util.Is404(err) {
 		log.Printf("[WARN] %q not found, removing from state", vaultPath)
 		d.SetId("")
-		return diag.Errorf("error unmounting AD backend from %q: %s", vaultPath, err)
+		return fmt.Errorf("error unmounting AD backend from %q: %s", vaultPath, err)
 	} else if err != nil {
-		return diag.Errorf("error unmounting AD backend from %q: %s", vaultPath, err)
+		return fmt.Errorf("error unmounting AD backend from %q: %s", vaultPath, err)
 	}
 	log.Printf("[DEBUG] Unmounted AD backend %q", vaultPath)
 	return nil
