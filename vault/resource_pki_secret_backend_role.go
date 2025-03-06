@@ -474,6 +474,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 			consts.FieldSerialNumberSource: {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				Description: "Specifies the source of the subject serial number. Valid values are json-csr (default) " +
 					"or json. When set to json-csr, the subject serial number is taken from the serial_number " +
 					"parameter and falls back to the serial number in the CSR. When set to json, the subject " +
