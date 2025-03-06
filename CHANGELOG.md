@@ -19,6 +19,7 @@ FEATURES:
 * Add new data source `vault_pki_secret_backend_cert_metadata` and support for `cert_metadata` in `vault_pki_secret_backend_cert` and `vault_pki_secret_backend_sign` [#2422](https://github.com/hashicorp/terraform-provider-vault/pull/2422)
 * Add support for `max_crl_entries` in `vault_pki_secret_backend_crl_config` [#2423](https://github.com/hashicorp/terraform-provider-vault/pull/2423)
 * Add support for new Automated Root Rotation parameters to AWS Auth/Secrets and DB Secrets resources. Requires Vault Enterprise 1.19.0+ ([#2414](https://github.com/hashicorp/terraform-provider-vault/pull/2414)).
+* Add new resource `vault_pki_secret_backend_config_auto_tidy` to set PKI automatic tidy configuration [#1934](https://github.com/hashicorp/terraform-provider-vault/pull/1934)
 
 BUGS:
 
