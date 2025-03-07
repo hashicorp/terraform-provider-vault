@@ -200,22 +200,19 @@ func pkiSecretBackendConfigAutoTidyRead(_ context.Context, d *schema.ResourceDat
 	}
 
 	log.Printf("[DEBUG] Reading auto tidy config from PKI secret path %q", path)
-	config, err := client.Logical().Read(path)
+	resp, err := client.Logical().Read(path)
 	if err != nil {
 		return diag.Errorf("error reading auto tidy config on PKI secret backend %q: %s", path, err)
 	}
-
-	if config == nil {
-		log.Printf("[WARN] Removing auto tidy config path %q as its ID is invalid", path)
-		d.SetId("")
-		return nil
+	if resp == nil {
+		return diag.Errorf("got nil response from Vault from path: %q", path)
 	}
 
 	for k := range pkiSecretBackendConfigAutoTidySchema() {
 		if k == consts.FieldBackend {
 			continue
 		}
-		if v, ok := config.Data[k]; ok {
+		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return diag.FromErr(err)
 			}
