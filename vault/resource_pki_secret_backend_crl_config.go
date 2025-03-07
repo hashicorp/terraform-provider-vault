@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -107,6 +108,14 @@ func pkiSecretBackendCrlConfigResource() *schema.Resource {
 					"cluster-local paths.",
 				Computed: true,
 			},
+			consts.FieldMaxCrlEntries: {
+				Type:     schema.TypeInt,
+				Optional: true,
+				Description: "The maximum number of entries a CRL can contain. This option exists to " +
+					"prevent accidental runaway issuance/revocation from overloading Vault. If set " +
+					"to -1, the limit is disabled.",
+				Computed: true,
+			},
 		},
 	}
 }
@@ -141,6 +150,12 @@ func pkiSecretBackendCrlConfigCreate(d *schema.ResourceData, meta interface{}) e
 			"cross_cluster_revocation",
 			"unified_crl",
 			"unified_crl_on_existing_paths",
+		}...)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		fields = append(fields, []string{
+			consts.FieldMaxCrlEntries,
 		}...)
 	}
 
@@ -218,6 +233,12 @@ func pkiSecretBackendCrlConfigUpdate(d *schema.ResourceData, meta interface{}) e
 			"cross_cluster_revocation",
 			"unified_crl",
 			"unified_crl_on_existing_paths",
+		}...)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		fields = append(fields, []string{
+			consts.FieldMaxCrlEntries,
 		}...)
 	}
 
