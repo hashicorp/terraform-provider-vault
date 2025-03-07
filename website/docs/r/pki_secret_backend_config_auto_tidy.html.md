@@ -32,11 +32,15 @@ resource "vault_pki_secret_backend_config_auto_tidy" "test" {
 
 The following arguments are supported (at least one tidy operation is required):
 
-* `enabled` - (Optional) Specifies whether automatic tidy is enabled or not.
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
+  *Available only for Vault Enterprise*.
 
-* `acme_account_safety_buffer` - (Optional) The amount of time that must pass after creation that an
-  account with no orders is marked revoked, and the amount of time after being marked revoked or
-  deactivated.
+* `backend` - (Required) The path to the PKI secret backend to
+  read the configuration from, with no leading or trailing `/`s.
+
+* `enabled` - (Optional) Specifies whether automatic tidy is enabled or not.
 
 * `interval_duration` - (Optional) Interval at which to run an auto-tidy operation. This is the time
   between tidy invocations (after one finishes to the start of the next).
