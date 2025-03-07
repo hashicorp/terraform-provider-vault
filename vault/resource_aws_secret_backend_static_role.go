@@ -53,6 +53,21 @@ func awsSecretBackendStaticRoleResource() *schema.Resource {
 			Required:    true,
 			Description: "How often Vault should rotate the password of the user entry.",
 		},
+		consts.FieldAssumeRoleArn: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The ARN of the role to assume when managing the static role. This is required for cross-account role management. ",
+		},
+		consts.FieldAssumeRoleSessionName: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Session name to use when assuming the role.",
+		},
+		consts.FieldExternalID: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "External ID to use when assuming the role.",
+		},
 	}
 	return &schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(createUpdateAWSStaticRoleResource, provider.VaultVersion114),
@@ -72,6 +87,12 @@ var awsSecretBackendStaticRoleFields = []string{
 	consts.FieldRotationPeriod,
 }
 
+var awsSecretBackendStaticAssumeRoleFields = []string{
+	consts.FieldAssumeRoleArn,
+	consts.FieldAssumeRoleSessionName,
+	consts.FieldExternalID,
+}
+
 // createUpdateAWSStaticRoleResources upserts an aws static-role to our vault instance.
 func createUpdateAWSStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
@@ -87,6 +108,15 @@ func createUpdateAWSStaticRoleResource(ctx context.Context, d *schema.ResourceDa
 	for _, field := range awsSecretBackendStaticRoleFields {
 		if v, ok := d.GetOk(field); ok {
 			data[field] = v
+		}
+	}
+
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		for _, field := range awsSecretBackendStaticAssumeRoleFields {
+			if v, ok := d.GetOk(field); ok {
+				data[field] = v
+			}
 		}
 	}
 
@@ -131,6 +161,17 @@ func readAWSStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta
 		if val, ok := resp.Data[field]; ok {
 			if err := d.Set(field, val); err != nil {
 				return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
+			}
+		}
+	}
+
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		for _, field := range awsSecretBackendStaticAssumeRoleFields {
+			if val, ok := resp.Data[field]; ok {
+				if err := d.Set(field, val); err != nil {
+					return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
+				}
 			}
 		}
 	}
