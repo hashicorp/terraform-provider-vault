@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"strings"
 
@@ -27,7 +28,7 @@ var awsSecretFields = []string{
 }
 
 func awsSecretBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: awsSecretBackendCreate,
 		ReadContext:   provider.ReadContextWrapper(awsSecretBackendRead),
 		UpdateContext: awsSecretBackendUpdate,
@@ -152,6 +153,11 @@ func awsSecretBackendResource() *schema.Resource {
 			},
 		},
 	}, false)
+
+	// Add common automated root rotation schema to the resource
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
@@ -181,7 +187,8 @@ func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
 
 func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
-	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+	isEnterprise := provider.IsEnterpriseSupported(meta)
+	useAPIVer116Enterprise := provider.IsAPISupported(meta, provider.VaultVersion116) && isEnterprise
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -204,7 +211,7 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
 	}
 
-	if useAPIVer116 {
+	if useAPIVer116Enterprise {
 		identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
 		if identityTokenKey != "" {
 			mountConfig.IdentityTokenKey = identityTokenKey
@@ -246,9 +253,14 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		if v, ok := d.GetOk(consts.FieldSTSRegion); ok {
 			data[consts.FieldSTSRegion] = v.(string)
 		}
+
+		// parse automated root rotation fields if Enterprise 1.19 server
+		if isEnterprise {
+			automatedrotationutil.ParseAutomatedRotationFields(d, data)
+		}
 	}
 
-	if useAPIVer116 {
+	if useAPIVer116Enterprise {
 		if v, ok := d.GetOk(consts.FieldIdentityTokenAudience); ok && v != "" {
 			data[consts.FieldIdentityTokenAudience] = v.(string)
 		}
@@ -278,7 +290,8 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 }
 
 func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+	isEnterprise := provider.IsEnterpriseSupported(meta)
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && isEnterprise
 	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
 
 	client, e := provider.GetClient(d, meta)
@@ -358,6 +371,12 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 					return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldSTSRegion, path, err)
 				}
 			}
+
+			if isEnterprise {
+				if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, path); err != nil {
+					return diag.FromErr(err)
+				}
+			}
 		}
 
 		if useAPIVer116 {
@@ -398,7 +417,8 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 }
 
 func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+	isEnterprise := provider.IsEnterpriseSupported(meta)
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && isEnterprise
 	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
 
 	client, e := provider.GetClient(d, meta)
@@ -438,6 +458,10 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		consts.FieldSecretKey, consts.FieldRegion, consts.FieldIAMEndpoint,
 		consts.FieldSTSEndpoint, consts.FieldSTSFallbackEndpoints, consts.FieldSTSRegion, consts.FieldSTSFallbackRegions,
 		consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn,
+		consts.FieldRotationSchedule,
+		consts.FieldRotationPeriod,
+		consts.FieldRotationWindow,
+		consts.FieldDisableAutomatedRotation,
 	) {
 		log.Printf("[DEBUG] Updating root credentials at %q", path+"/config/root")
 		data := map[string]interface{}{
@@ -462,6 +486,11 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 			if v, ok := d.GetOk(consts.FieldSTSRegion); ok {
 				data[consts.FieldSTSRegion] = v.(string)
+			}
+
+			// parse automated root rotation fields if Enterprise 1.19 server
+			if isEnterprise {
+				automatedrotationutil.ParseAutomatedRotationFields(d, data)
 			}
 		}
 
