@@ -282,6 +282,22 @@ safety_buffer = "59000s"
 					checkAttributes("59000", consts.FieldSafetyBuffer),
 				),
 			},
+			{
+				// This is the example in the documentation
+				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
+  enabled = true
+  tidy_cert_store = true
+  interval_duration = "1h"
+`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					checkAttributes("true",
+						consts.FieldEnabled,
+						consts.FieldTidyCertStore,
+					),
+					checkAttributes("3600", consts.FieldIntervalDuration),
+				),
+			},
 			getImportTestStep(provider.VaultVersion118),
 			getImportTestStep(provider.VaultVersion117, consts.FieldTidyCmpv2NonceStore, consts.FieldMinStartupBackoffDuration, consts.FieldMaxStartupBackoffDuration),
 			getImportTestStep(nil, consts.FieldTidyCertMetadata, consts.FieldTidyCmpv2NonceStore, consts.FieldMinStartupBackoffDuration, consts.FieldMaxStartupBackoffDuration),

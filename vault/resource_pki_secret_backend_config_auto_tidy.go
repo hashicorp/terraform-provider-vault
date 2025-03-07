@@ -44,7 +44,7 @@ var pkiSecretBackendConfigAutoTidyDurationFields = map[string]string{
 var pkiSecretBackendConfigAutoTidyBoolFields = map[string]string{
 	consts.FieldEnabled:                              "Specifies whether automatic tidy is enabled or not.",
 	consts.FieldMaintainStoredCertificateCounts:      "This configures whether stored certificate are counted upon initialization of the backend, and whether during normal operation, a running count of certificates stored is maintained.",
-	consts.FieldPublishStoredCertificateCountMetrics: "This configures whether the stored certificate\ncount is published to the metrics consumer.",
+	consts.FieldPublishStoredCertificateCountMetrics: "This configures whether the stored certificate count is published to the metrics consumer.",
 	consts.FieldTidyCertStore:                        "Set to true to enable tidying up the certificate store",
 	consts.FieldTidyRevokedCerts:                     "Set to true to remove all invalid and expired certificates from storage. A revoked storage entry is considered invalid if the entry is empty, or the value within the entry is empty. If a certificate is removed due to expiry, the entry will also be removed from the CRL, and the CRL will be rotated.",
 	consts.FieldTidyRevokedCertIssuerAssociations:    "Set to true to validate issuer associations on revocation entries. This helps increase the performance of CRL building and OCSP responses.",
