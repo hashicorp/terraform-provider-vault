@@ -18,6 +18,7 @@ FEATURES:
 * Add support for Transit `sign` and `verify` endpoints ([#2418](https://github.com/hashicorp/terraform-provider-vault/pull/2418))
 * Add new data source `vault_pki_secret_backend_cert_metadata` and support for `cert_metadata` in `vault_pki_secret_backend_cert` and `vault_pki_secret_backend_sign` [#2422](https://github.com/hashicorp/terraform-provider-vault/pull/2422)
 * Add support for `max_crl_entries` in `vault_pki_secret_backend_crl_config` [#2423](https://github.com/hashicorp/terraform-provider-vault/pull/2423)
+* Add support for new Automated Root Rotation parameters to AWS Auth/Secrets and DB Secrets resources. Requires Vault Enterprise 1.19.0+ ([#2414](https://github.com/hashicorp/terraform-provider-vault/pull/2414)).
 
 BUGS:
 

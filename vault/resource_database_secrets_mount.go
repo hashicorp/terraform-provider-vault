@@ -160,7 +160,7 @@ func addCommonDatabaseSchema(s *schema.Schema) {
 //
 // New fields on the DB /config endpoint should be added here.
 func getCommonDatabaseSchema() schemaMap {
-	return schemaMap{
+	s := schemaMap{
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
@@ -214,6 +214,13 @@ func getCommonDatabaseSchema() schemaMap {
 			Sensitive: false,
 		},
 	}
+
+	// add common automated root rotation parameters
+	for k, v := range provider.GetAutomatedRootRotationSchema() {
+		s[k] = v
+	}
+
+	return s
 }
 
 // setCommonDatabaseSchema is used to define the schema for
@@ -257,7 +264,7 @@ func databaseSecretsMountCreateOrUpdate(ctx context.Context, d *schema.ResourceD
 					return diag.Errorf("duplicate name %q for engine %#v", name, engine)
 				}
 				seen[name] = true
-				if err := writeDatabaseSecretConfig(d, client, engine, i, true, path, meta); err != nil {
+				if err := writeDatabaseSecretConfig(ctx, d, client, engine, i, true, path, meta); err != nil {
 					return diag.FromErr(err)
 				}
 				count++
@@ -295,7 +302,7 @@ func databaseSecretsMountRead(ctx context.Context, d *schema.ResourceData, meta 
 		return nil
 	}
 
-	resp, err := client.Logical().List(root + "/config")
+	resp, err := client.Logical().ListWithContext(ctx, root+"/config")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -352,7 +359,7 @@ func readDBEngineConfig(d *schema.ResourceData, client *api.Client, store *dbCon
 		return err
 	}
 
-	for k, v := range getDBCommonConfig(d, resp, engine, idx, true, name) {
+	for k, v := range getDBCommonConfig(d, resp, engine, idx, true, name, meta) {
 		result[k] = v
 	}
 

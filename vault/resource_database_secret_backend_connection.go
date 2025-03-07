@@ -4,9 +4,12 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"regexp"
 	"sort"
@@ -710,13 +713,12 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 	}
 
 	return &schema.Resource{
-		Create: databaseSecretBackendConnectionCreateOrUpdate,
-		Read:   provider.ReadWrapper(databaseSecretBackendConnectionRead),
-		Update: databaseSecretBackendConnectionCreateOrUpdate,
-		Delete: databaseSecretBackendConnectionDelete,
-		Exists: databaseSecretBackendConnectionExists,
+		CreateContext: databaseSecretBackendConnectionCreateOrUpdate,
+		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendConnectionRead),
+		UpdateContext: databaseSecretBackendConnectionCreateOrUpdate,
+		DeleteContext: databaseSecretBackendConnectionDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: s,
 	}
@@ -1797,34 +1799,31 @@ func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix
 }
 
 func databaseSecretBackendConnectionCreateOrUpdate(
-	d *schema.ResourceData, meta interface{},
-) error {
+	ctx context.Context, d *schema.ResourceData, meta interface{},
+) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	engine, err := getDBEngine(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	path := databaseSecretBackendConnectionPath(
 		d.Get("backend").(string), d.Get("name").(string))
-	if err := writeDatabaseSecretConfig(
-		d, client, engine, 0, false, path, meta); err != nil {
-		return err
+	if err := writeDatabaseSecretConfig(ctx, d, client, engine, 0, false, path, meta); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.SetId(path)
 	log.Printf("[DEBUG] Wrote database connection config %q", path)
 
-	return databaseSecretBackendConnectionRead(d, meta)
+	return databaseSecretBackendConnectionRead(ctx, d, meta)
 }
 
-func writeDatabaseSecretConfig(d *schema.ResourceData, client *api.Client,
-	engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{},
-) error {
+func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, client *api.Client, engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{}) error {
 	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta)
 	if err != nil {
 		return err
@@ -1864,8 +1863,14 @@ func writeDatabaseSecretConfig(d *schema.ResourceData, client *api.Client,
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		// parse automated root rotation fields if Enterprise 1.19 server
+		automatedrotationutil.ParseAutomatedRotationFieldsWithFieldPrefix(d, data, prefix)
+
+	}
+
 	log.Printf("[DEBUG] Writing connection config to %q", path)
-	_, err = client.Logical().Write(path, data)
+	_, err = client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return fmt.Errorf("error configuring database connection %q: %s", path, err)
 	}
@@ -1908,28 +1913,28 @@ func getSortedPluginPrefixes() ([]string, error) {
 	return pluginPrefixes, nil
 }
 
-func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendConnectionRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
 	backend, err := databaseSecretBackendConnectionBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for database connection: %s", path, err)
+		return diag.Errorf("invalid path %q for database connection: %s", path, err)
 	}
 
 	name, err := databaseSecretBackendConnectionNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for database connection: %s", path, err)
+		return diag.Errorf("invalid path %q for database connection: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading database connection config %q", path)
-	resp, err := client.Logical().Read(path)
+	resp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error reading database connection config %q: %s", path, err)
+		return diag.Errorf("error reading database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read database connection config %q", path)
 	if resp == nil {
@@ -1945,34 +1950,32 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		engine, err = getDBEngineFromResp(dbEngines, resp)
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	result, err := getDBConnectionConfig(d, engine, 0, resp, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err := d.Set(engine.Name(), []map[string]interface{}{result}); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err := d.Set("backend", backend); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	for k, v := range getDBCommonConfig(d, resp, engine, 0, false, name) {
+	for k, v := range getDBCommonConfig(d, resp, engine, 0, false, name, meta) {
 		if err := d.Set(k, v); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	return nil
 }
 
-func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret,
-	engine *dbEngine, idx int, unifiedSchema bool, name string,
-) map[string]interface{} {
+func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngine, idx int, unifiedSchema bool, name string, meta interface{}) map[string]interface{} {
 	var roles []string
 	for _, role := range resp.Data["allowed_roles"].([]interface{}) {
 		roles = append(roles, role.(string))
@@ -1999,6 +2002,10 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret,
 		}
 	}
 	result["root_rotation_statements"] = rootRotationStmts
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		automatedrotationutil.GetAutomatedRotationFieldsFromResponse(resp, result)
+	}
 
 	return result
 }
@@ -2140,18 +2147,18 @@ func getConnectionDetailsMongoDBAtlas(d *schema.ResourceData, prefix string, res
 	return result
 }
 
-func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendConnectionDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing database connection config %q", path)
-	_, err := client.Logical().Delete(path)
+	_, err := client.Logical().DeleteWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error removing database connection config %q: %s", path, err)
+		return diag.Errorf("error removing database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Removed database connection config %q", path)
 

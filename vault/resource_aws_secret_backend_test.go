@@ -6,6 +6,7 @@ package vault
 import (
 	"fmt"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -151,6 +152,62 @@ func TestAccAWSSecretBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn-updated"),
 				),
 			},
+		},
+	})
+}
+
+// TestAccAWSSecretBackend_automatedRotation tests that Automated
+// Root Rotation parameters are compatible with the AWS Secrets Backend
+// resource
+func TestAccAWSSecretBackend_automatedRotation(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	resourceType := "vault_aws_secret_backend"
+	resourceName := resourceType + ".test"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSSecretBackendConfig_automatedRotation(path, "", 10, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			// zero-out rotation_period
+			{
+				Config: testAccAWSSecretBackendConfig_automatedRotation(path, "*/20 * * * *", 0, 120, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "120"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * *"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				Config:      testAccAWSSecretBackendConfig_automatedRotation(path, "", 30, 120, true),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+			},
+			// zero-out rotation_schedule and rotation_window
+			{
+				Config: testAccAWSSecretBackendConfig_automatedRotation(path, "", 30, 0, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -409,4 +466,15 @@ resource "vault_aws_secret_backend" "test" {
   secret_key = "%s"
   username_template = "%s"
 }`, path, accessKey, secretKey, templ)
+}
+
+func testAccAWSSecretBackendConfig_automatedRotation(path, schedule string, period, window int, disable bool) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path = "%s"
+  rotation_period = "%d"
+  rotation_schedule = "%s"
+  rotation_window = "%d"
+  disable_automated_rotation = %t
+}`, path, period, schedule, window, disable)
 }
