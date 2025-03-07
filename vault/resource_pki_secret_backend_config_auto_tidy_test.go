@@ -5,6 +5,8 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/stretchr/testify/require"
 	"regexp"
@@ -51,37 +53,37 @@ func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
 	resourceType := "vault_pki_secret_backend_config_auto_tidy"
 	resourceName := resourceType + ".test"
 
-	meta := testProvider.Meta().(*provider.ProviderMeta)
 	checkAttributes := func(expected string, fields ...string) resource.TestCheckFunc {
-		var checks []resource.TestCheckFunc
-		for _, f := range fields {
-			switch {
-			case f == consts.FieldTidyCertMetadata && !meta.IsAPISupported(provider.VaultVersion117):
-			case f == consts.FieldTidyCmpv2NonceStore && !meta.IsAPISupported(provider.VaultVersion118):
-			case f == consts.FieldMaxStartupBackoffDuration && !meta.IsAPISupported(provider.VaultVersion118):
-			case f == consts.FieldMinStartupBackoffDuration && !meta.IsAPISupported(provider.VaultVersion118):
-			default:
-				checks = append(checks, resource.TestCheckResourceAttr(resourceName, f, expected))
+		return func(s *terraform.State) error {
+			meta := testProvider.Meta().(*provider.ProviderMeta)
+			var checks []resource.TestCheckFunc
+			for _, f := range fields {
+				switch {
+				case f == consts.FieldTidyCertMetadata && !meta.IsAPISupported(provider.VaultVersion117):
+				case f == consts.FieldTidyCmpv2NonceStore && !meta.IsAPISupported(provider.VaultVersion118):
+				case f == consts.FieldMaxStartupBackoffDuration && !meta.IsAPISupported(provider.VaultVersion118):
+				case f == consts.FieldMinStartupBackoffDuration && !meta.IsAPISupported(provider.VaultVersion118):
+				default:
+					checks = append(checks, resource.TestCheckResourceAttr(resourceName, f, expected))
+				}
+			}
+			return resource.ComposeTestCheckFunc(checks...)(s)
+		}
+	}
+
+	getImportTestStep := func(minVer *version.Version, ignoreFields ...string) resource.TestStep {
+		ret := testutil.GetImportTestStep(resourceName, false, nil, ignoreFields...)
+		if minVer != nil {
+			ret.SkipFunc = func() (bool, error) {
+				meta := testProvider.Meta().(*provider.ProviderMeta)
+				return !meta.IsAPISupported(minVer), nil
 			}
 		}
-		return resource.ComposeTestCheckFunc(checks...)
+		return ret
 	}
 
-	var importStep resource.TestStep
-	switch {
-	case meta.IsAPISupported(provider.VaultVersion118):
-		importStep = testutil.GetImportTestStep(resourceName, false, nil)
-	case meta.IsAPISupported(provider.VaultVersion117):
-		importStep = testutil.GetImportTestStep(resourceName, false, nil,
-			consts.FieldTidyCmpv2NonceStore, consts.FieldMinStartupBackoffDuration, consts.FieldMaxStartupBackoffDuration)
-	default: // pre 1.17
-		importStep = testutil.GetImportTestStep(resourceName, false, nil,
-			consts.FieldTidyCertMetadata, consts.FieldTidyCmpv2NonceStore, consts.FieldMinStartupBackoffDuration, consts.FieldMaxStartupBackoffDuration)
-	}
-
-	var allAttributesSetCheck resource.TestCheckFunc
-	{
-		var attrSetChecks []resource.TestCheckFunc
+	allAttributesSetCheck := func(s *terraform.State) error {
+		meta := testProvider.Meta().(*provider.ProviderMeta)
 		for field := range pkiSecretBackendConfigAutoTidySchema() {
 			switch {
 			case field == consts.FieldTidyCertMetadata && !meta.IsAPISupported(provider.VaultVersion117):
@@ -89,10 +91,13 @@ func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
 			case field == consts.FieldMaxStartupBackoffDuration && !meta.IsAPISupported(provider.VaultVersion118):
 			case field == consts.FieldMinStartupBackoffDuration && !meta.IsAPISupported(provider.VaultVersion118):
 			default:
-				attrSetChecks = append(attrSetChecks, resource.TestCheckResourceAttrSet(resourceName, field))
+				err := resource.TestCheckResourceAttrSet(resourceName, field)(s)
+				if err != nil {
+					return err
+				}
 			}
 		}
-		allAttributesSetCheck = resource.ComposeTestCheckFunc(attrSetChecks...)
+		return nil
 	}
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -220,6 +225,7 @@ publish_stored_certificate_count_metrics = true
 			{
 				// Set all the duration fields, pre 1.18 (no min/max startup backoff duration)
 				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return meta.GetVaultVersion().LessThan(provider.VaultVersion118), nil
 				},
 				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
@@ -247,6 +253,7 @@ safety_buffer = "59000s"
 			{
 				// Set all the duration fields 1.18+
 				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return meta.GetVaultVersion().GreaterThanOrEqual(provider.VaultVersion118), nil
 				},
 				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
@@ -275,10 +282,11 @@ safety_buffer = "59000s"
 					checkAttributes("59000", consts.FieldSafetyBuffer),
 				),
 			},
-			importStep,
+			getImportTestStep(provider.VaultVersion118),
+			getImportTestStep(provider.VaultVersion117, consts.FieldTidyCmpv2NonceStore, consts.FieldMinStartupBackoffDuration, consts.FieldMaxStartupBackoffDuration),
+			getImportTestStep(nil, consts.FieldTidyCertMetadata, consts.FieldTidyCmpv2NonceStore, consts.FieldMinStartupBackoffDuration, consts.FieldMaxStartupBackoffDuration),
 		},
 	})
-
 }
 
 func TestAccPKISecretBackendConfigAutoTidy_ent(t *testing.T) {
