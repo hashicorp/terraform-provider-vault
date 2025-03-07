@@ -19,7 +19,7 @@ import (
 
 func pkiSecretBackendConfigAutoTidyResource() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: pkiSecretBackendConfigAutoTidyCreateUpdate,
+		CreateContext: provider.MountCreateContextWrapper(pkiSecretBackendConfigAutoTidyCreateUpdate, provider.VaultVersion112),
 		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendConfigAutoTidyRead),
 		UpdateContext: pkiSecretBackendConfigAutoTidyCreateUpdate,
 		DeleteContext: pkiSecretBackendConfigAutoTidyDelete,

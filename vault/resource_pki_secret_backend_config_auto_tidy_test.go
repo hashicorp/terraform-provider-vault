@@ -51,22 +51,46 @@ func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
 	resourceType := "vault_pki_secret_backend_config_auto_tidy"
 	resourceName := resourceType + ".test"
 
+	meta := testProvider.Meta().(*provider.ProviderMeta)
 	checkAttributes := func(expected string, fields ...string) resource.TestCheckFunc {
 		var checks []resource.TestCheckFunc
 		for _, f := range fields {
-			checks = append(checks, resource.TestCheckResourceAttr(resourceName, f, expected))
+			switch {
+			case f == consts.FieldTidyCertMetadata && !meta.IsAPISupported(provider.VaultVersion117):
+			case f == consts.FieldTidyCmpv2NonceStore && !meta.IsAPISupported(provider.VaultVersion118):
+			case f == consts.FieldMaxStartupBackoffDuration && !meta.IsAPISupported(provider.VaultVersion118):
+			case f == consts.FieldMinStartupBackoffDuration && !meta.IsAPISupported(provider.VaultVersion118):
+			default:
+				checks = append(checks, resource.TestCheckResourceAttr(resourceName, f, expected))
+			}
 		}
 		return resource.ComposeTestCheckFunc(checks...)
+	}
+
+	var importStep resource.TestStep
+	switch {
+	case meta.IsAPISupported(provider.VaultVersion118):
+		importStep = testutil.GetImportTestStep(resourceName, false, nil)
+	case meta.IsAPISupported(provider.VaultVersion117):
+		importStep = testutil.GetImportTestStep(resourceName, false, nil,
+			consts.FieldTidyCmpv2NonceStore, consts.FieldMinStartupBackoffDuration, consts.FieldMaxStartupBackoffDuration)
+	default: // pre 1.17
+		importStep = testutil.GetImportTestStep(resourceName, false, nil,
+			consts.FieldTidyCertMetadata, consts.FieldTidyCmpv2NonceStore, consts.FieldMinStartupBackoffDuration, consts.FieldMaxStartupBackoffDuration)
 	}
 
 	var allAttributesSetCheck resource.TestCheckFunc
 	{
 		var attrSetChecks []resource.TestCheckFunc
 		for field := range pkiSecretBackendConfigAutoTidySchema() {
-			if field == "tidy_cert_metadata" || field == "tidy_cmpv2_nonce_store" {
-				continue
+			switch {
+			case field == consts.FieldTidyCertMetadata && !meta.IsAPISupported(provider.VaultVersion117):
+			case field == consts.FieldTidyCmpv2NonceStore && !meta.IsAPISupported(provider.VaultVersion118):
+			case field == consts.FieldMaxStartupBackoffDuration && !meta.IsAPISupported(provider.VaultVersion118):
+			case field == consts.FieldMinStartupBackoffDuration && !meta.IsAPISupported(provider.VaultVersion118):
+			default:
+				attrSetChecks = append(attrSetChecks, resource.TestCheckResourceAttrSet(resourceName, field))
 			}
-			attrSetChecks = append(attrSetChecks, resource.TestCheckResourceAttrSet(resourceName, field))
 		}
 		allAttributesSetCheck = resource.ComposeTestCheckFunc(attrSetChecks...)
 	}
@@ -82,9 +106,9 @@ func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
 			{
 				// Simplest call with enabled = false
 				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
-			enabled = false
-			tidy_cert_store = true
-			`),
+enabled = false
+tidy_cert_store = true
+`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					checkAttributes("false", consts.FieldEnabled),
@@ -95,10 +119,10 @@ func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
 			{
 				// Enable a couple of tidy operations
 				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
-			enabled = true
-			tidy_cert_store = true
-			tidy_acme = true
-			`),
+enabled = true
+tidy_cert_store = true
+tidy_acme = true
+`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					checkAttributes("true",
@@ -150,14 +174,14 @@ tidy_cross_cluster_revoked_certs = true
 				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
 enabled = true
 tidy_cert_store = true
-min_startup_backoff_duration = "123s"
+interval_duration = "123s"
 `),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					checkAttributes("true",
 						consts.FieldEnabled,
 						consts.FieldTidyCertStore),
-					checkAttributes("123", consts.FieldMinStartupBackoffDuration),
+					checkAttributes("123", consts.FieldIntervalDuration),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),
@@ -166,14 +190,14 @@ min_startup_backoff_duration = "123s"
 				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
 enabled = true
 tidy_cert_store = true
-min_startup_backoff_duration = "3m"
+interval_duration = "3m"
 `),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					checkAttributes("true",
 						consts.FieldEnabled,
 						consts.FieldTidyCertStore),
-					checkAttributes("180", consts.FieldMinStartupBackoffDuration),
+					checkAttributes("180", consts.FieldIntervalDuration),
 				),
 			},
 			{
@@ -194,7 +218,37 @@ publish_stored_certificate_count_metrics = true
 				),
 			},
 			{
-				// Set all the duration fields
+				// Set all the duration fields, pre 1.18 (no min/max startup backoff duration)
+				SkipFunc: func() (bool, error) {
+					return meta.GetVaultVersion().LessThan(provider.VaultVersion118), nil
+				},
+				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
+enabled = true
+tidy_acme = true
+acme_account_safety_buffer = "10000s"
+issuer_safety_buffer = "12000s"
+pause_duration = "4m2s"
+revocation_queue_safety_buffer = "2800s"
+safety_buffer = "59000s"
+`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					checkAttributes("true",
+						consts.FieldEnabled,
+						consts.FieldTidyAcme,
+					),
+					checkAttributes("10000", consts.FieldAcmeAccountSafetyBuffer),
+					checkAttributes("12000", consts.FieldIssuerSafetyBuffer),
+					checkAttributes("4m2s", consts.FieldPauseDuration), // Interesting, pause_duration behaves correctly
+					checkAttributes("2800", consts.FieldRevocationQueueSafetyBuffer),
+					checkAttributes("59000", consts.FieldSafetyBuffer),
+				),
+			},
+			{
+				// Set all the duration fields 1.18+
+				SkipFunc: func() (bool, error) {
+					return meta.GetVaultVersion().GreaterThanOrEqual(provider.VaultVersion118), nil
+				},
 				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
 enabled = true
 tidy_acme = true
@@ -221,7 +275,7 @@ safety_buffer = "59000s"
 					checkAttributes("59000", consts.FieldSafetyBuffer),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			importStep,
 		},
 	})
 
