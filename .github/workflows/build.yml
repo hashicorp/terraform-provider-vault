@@ -58,7 +58,7 @@ jobs:
           make test
   acceptance:
     needs: [go-version, build]
-    runs-on: custom-linux-large
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
