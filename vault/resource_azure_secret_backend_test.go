@@ -232,7 +232,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 				// disable it
 				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "", 0, 0, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
@@ -247,7 +247,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 			{ // try again but with schedule (from nothing
 				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "*/20 * * * SUN", 3600, 0, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SUN"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "3600"),
