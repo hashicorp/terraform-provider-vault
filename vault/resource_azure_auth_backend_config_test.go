@@ -148,6 +148,16 @@ func TestAccAzureAuthBackendConfig_automatedRotation(t *testing.T) {
 				Config:      testAccAzureAuthBackendConfig_automatedRotation(backend, 600, "", 900, false),
 				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
 			},
+			{ // try again but with schedule (from nothing
+				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, 0, "*/20 * * * SUN", 3600, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SUN"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret),
 		},
 	})
