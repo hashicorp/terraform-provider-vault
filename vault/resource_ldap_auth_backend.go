@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"strings"
 
@@ -202,7 +203,7 @@ func ldapAuthBackendResource() *schema.Resource {
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		SchemaVersion: 2,
 		// Handle custom state upgrade case since schema version was already 1
 		StateUpgraders: []schema.StateUpgrader{
@@ -222,6 +223,11 @@ func ldapAuthBackendResource() *schema.Resource {
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema:        fields,
 	}, true)
+
+	// add automated rotation fields to the resource
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func ldapAuthBackendConfigPath(path string) string {
@@ -288,6 +294,11 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		if v, ok := d.GetOk(consts.FieldMaxPageSize); ok {
 			data[consts.FieldMaxPageSize] = v
 		}
+	}
+
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
 	if v, ok := d.GetOk(consts.FieldBindPass); ok {
@@ -382,6 +393,13 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	if useAPIVer111 {
 		if err := d.Set(consts.FieldMaxPageSize, resp.Data[consts.FieldMaxPageSize]); err != nil {
 			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldMaxPageSize, path, err)
+		}
+	}
+
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, d.Id()); err != nil {
+			return diag.Errorf("error reading rotation fields from LDAP Auth Backend %q: %q", path, err)
 		}
 	}
 
