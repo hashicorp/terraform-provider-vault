@@ -43,7 +43,7 @@ func TestLDAPSecretBackend(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		}, PreventPostDestroyRefresh: true,
-		CheckDestroy:                 testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPSecretBackendConfig_defaults(path, bindDN, bindPass),
@@ -199,7 +199,7 @@ func TestLDAPSecretBackend_automatedRotation(t *testing.T) {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		}, PreventPostDestroyRefresh: true,
-		CheckDestroy:                 testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPSecretBackendConfig_automatedRotation(path, bindDN, bindPass, "* * * * *", 50, 0, false),
