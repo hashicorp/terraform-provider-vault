@@ -332,7 +332,7 @@ resource "vault_azure_secret_backend" "test" {
   rotation_schedule       = %s
   rotation_window         = %d
   rotation_period         = %d
-  disable_automated_rotation = %b
+  disable_automated_rotation = %t
 }
 `, path, rotationSchedule, rotationWindow, rotationPeriod, disableRotation)
 }
