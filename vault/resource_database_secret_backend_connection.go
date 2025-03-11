@@ -8,14 +8,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -1866,7 +1867,6 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		// parse automated root rotation fields if Enterprise 1.19 server
 		automatedrotationutil.ParseAutomatedRotationFieldsWithFieldPrefix(d, data, prefix)
-
 	}
 
 	log.Printf("[DEBUG] Writing connection config to %q", path)
