@@ -23,6 +23,7 @@ FEATURES:
   * Azure Auth/Secrets
   * DB Secrets ([#2414](https://github.com/hashicorp/terraform-provider-vault/pull/2414)).
   * LDAP Auth/Secrets
+* Add new resource `vault_pki_secret_backend_config_auto_tidy` to set PKI automatic tidy configuration [#1934](https://github.com/hashicorp/terraform-provider-vault/pull/1934)
 
 BUGS:
 

@@ -463,6 +463,8 @@ const (
 	FieldEabKey                        = "key"
 	FieldAcmeDirectory                 = "acme_directory"
 	FieldEabId                         = "eab_id"
+	FieldAssumeRoleArn                 = "assume_role_arn"
+	FieldAssumeRoleSessionName         = "assume_role_session_name"
 	FieldMaxCrlEntries                 = "max_crl_entries"
 
 	FieldDisableCriticalExtensionChecks = "disable_critical_extension_checks"
@@ -499,6 +501,27 @@ const (
 	FieldHybridKeyTypePQC         = "hybrid_key_type_pqc"
 	FieldSignatureContext         = "signature_context"
 	FieldDisableAutomatedRotation = "disable_automated_rotation"
+
+	FieldIntervalDuration                     = "interval_duration"
+	FieldMaintainStoredCertificateCounts      = "maintain_stored_certificate_counts"
+	FieldMinStartupBackoffDuration            = "min_startup_backoff_duration"
+	FieldMaxStartupBackoffDuration            = "max_startup_backoff_duration"
+	FieldPublishStoredCertificateCountMetrics = "publish_stored_certificate_count_metrics"
+	FieldTidyCertStore                        = "tidy_cert_store"
+	FieldTidyRevokedCerts                     = "tidy_revoked_certs"
+	FieldTidyRevokedCertIssuerAssociations    = "tidy_revoked_cert_issuer_associations"
+	FieldTidyExpiredIssuers                   = "tidy_expired_issuers"
+	FieldTidyMoveLegacyCaBundle               = "tidy_move_legacy_ca_bundle"
+	FieldTidyCrossClusterRevokedCerts         = "tidy_cross_cluster_revoked_certs"
+	FieldTidyCertMetadata                     = "tidy_cert_metadata"
+	FieldTidyCmpv2NonceStore                  = "tidy_cmpv2_nonce_store"
+	FieldTidyAcme                             = "tidy_acme"
+	FieldTidyRevocationQueue                  = "tidy_revocation_queue"
+	FieldSafetyBuffer                         = "safety_buffer"
+	FieldIssuerSafetyBuffer                   = "issuer_safety_buffer"
+	FieldAcmeAccountSafetyBuffer              = "acme_account_safety_buffer"
+	FieldPauseDuration                        = "pause_duration"
+	FieldRevocationQueueSafetyBuffer          = "revocation_queue_safety_buffer"
 
 	/*
 		common environment variables
