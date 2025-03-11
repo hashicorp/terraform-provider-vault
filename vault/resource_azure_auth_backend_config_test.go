@@ -112,10 +112,10 @@ func TestAccAzureAuthBackendConfig_automatedRotation(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// normal period setting
-				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, "10m", "", "", false),
+				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, "600", "", "", false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "10m"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
