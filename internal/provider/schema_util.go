@@ -178,7 +178,6 @@ func GetAutomatedRootRotationSchema() map[string]*schema.Schema {
 		consts.FieldDisableAutomatedRotation: {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Computed:    true,
 			Description: "Stops rotation of the root credential until set to false.",
 		},
 	}
