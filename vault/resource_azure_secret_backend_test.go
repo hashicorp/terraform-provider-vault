@@ -204,13 +204,13 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldBackend),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				// normal period setting
 				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "", 0, 600, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
@@ -329,9 +329,9 @@ resource "vault_azure_secret_backend" "test" {
   subscription_id         = "11111111-2222-3333-4444-111111111111"
   tenant_id               = "22222222-3333-4444-5555-333333333333"
   client_id               = "22222222-3333-4444-5555-444444444444"
-  rotation_schedule       = %s
-  rotation_window         = %d
-  rotation_period         = %d
+  rotation_schedule       = "%s"
+  rotation_window         = "%d"
+  rotation_period         = "%d"
   disable_automated_rotation = %t
 }
 `, path, rotationSchedule, rotationWindow, rotationPeriod, disableRotation)
