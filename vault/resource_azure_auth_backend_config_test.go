@@ -291,7 +291,7 @@ resource "vault_auth_backend" "azure" {
   type = "azure"
 }
 
-resource "vault_auth_azure_backend_config" "config" {
+resource "vault_azure_auth_backend_config" "config" {
   backend = vault_auth_backend.azure.path
   tenant_id = "11111111-2222-3333-4444-555555555555"
   client_id = "11111111-2222-3333-4444-555555555555"
