@@ -196,7 +196,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-azure")
 
 	resourceType := "vault_azure_secret_backend"
-	resourceName := resourceType + ".config"
+	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
