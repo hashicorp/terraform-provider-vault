@@ -221,7 +221,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 				// switch to schedule
 				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "*/20 * * * SAT", 0, 0, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SAT"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
