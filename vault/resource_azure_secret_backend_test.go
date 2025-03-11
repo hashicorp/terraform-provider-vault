@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -191,6 +192,73 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 	})
 }
 
+func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-azure")
+
+	resourceType := "vault_azure_secret_backend"
+	resourceName := resourceType + ".config"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				// normal period setting
+				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "", 0, 600, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				// switch to schedule
+				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "*/20 * * * SAT", 0, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SAT"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				// disable it
+				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "", 0, 0, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
+				),
+			},
+			{
+				// do an error
+				Config:      testAccAzureSecretBackendConfig_automatedRotation(backend, "", 900, 600, false),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+			},
+			{ // try again but with schedule (from nothing
+				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "*/20 * * * SUN", 3600, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SUN"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret),
+		},
+	})
+}
+
 func testAzureSecretBackend_initialConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "test" {
@@ -252,4 +320,19 @@ resource "vault_azure_secret_backend" "test" {
   identity_token_audience = "wif-audience-updated"
   identity_token_ttl 	  = 1800
 }`, path)
+}
+
+func testAccAzureSecretBackendConfig_automatedRotation(path string, rotationSchedule string, rotationWindow, rotationPeriod int, disableRotation bool) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "test" {
+  path 					  = "%s"
+  subscription_id         = "11111111-2222-3333-4444-111111111111"
+  tenant_id               = "22222222-3333-4444-5555-333333333333"
+  client_id               = "22222222-3333-4444-5555-444444444444"
+  rotation_schedule       = %s
+  rotation_window         = %d
+  rotation_period         = %d
+  disable_automated_rotation = %b
+}
+`, path, rotationSchedule, rotationWindow, rotationPeriod, disableRotation)
 }
