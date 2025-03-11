@@ -254,7 +254,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount),
 		},
 	})
 }
