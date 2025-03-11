@@ -268,8 +268,8 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 
 	data := map[string]interface{}{}
 
-	if v, ok := d.GetOk(consts.FieldCredentials); ok {
-		data[consts.FieldCredentials] = v
+	if d.HasChange(consts.FieldCredentials) {
+		data[consts.FieldCredentials] = d.Get(consts.FieldCredentials)
 	}
 
 	epField := consts.FieldCustomEndpoint
