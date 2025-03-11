@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"strings"
 	"testing"
 
@@ -145,7 +146,7 @@ func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
 					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldBindPass, consts.FieldDisableRemount),
 		},
 	})
 }
