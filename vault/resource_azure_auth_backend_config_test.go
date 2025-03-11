@@ -112,7 +112,7 @@ func TestAccAzureAuthBackendConfig_automatedRotation(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// normal period setting
-				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, "600", "", "", false),
+				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, 600, "", 0, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "600"),
@@ -123,7 +123,7 @@ func TestAccAzureAuthBackendConfig_automatedRotation(t *testing.T) {
 			},
 			{
 				// switch to schedule
-				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, "", "*/20 * * * SAT", "", false),
+				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, 0, "*/20 * * * SAT", 0, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
@@ -134,7 +134,7 @@ func TestAccAzureAuthBackendConfig_automatedRotation(t *testing.T) {
 			},
 			{
 				// disable it
-				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, "", "", "", true),
+				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, 0, "", 0, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
@@ -145,7 +145,7 @@ func TestAccAzureAuthBackendConfig_automatedRotation(t *testing.T) {
 			},
 			{
 				// do an error
-				Config:      testAccAzureAuthBackendConfig_automatedRotation(backend, "10m", "", "15m", false),
+				Config:      testAccAzureAuthBackendConfig_automatedRotation(backend, 600, "", 900, false),
 				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret),
@@ -284,7 +284,7 @@ resource "vault_azure_auth_backend_config" "config" {
 }`, backend)
 }
 
-func testAccAzureAuthBackendConfig_automatedRotation(backend, periodDuration, scheduleString, windowDuration string, disableRotation bool) string {
+func testAccAzureAuthBackendConfig_automatedRotation(backend string, periodDuration int, scheduleString string, windowDuration int, disableRotation bool) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "azure" {
   path = "%s"
@@ -297,9 +297,9 @@ resource "vault_azure_auth_backend_config" "config" {
   client_id = "11111111-2222-3333-4444-555555555555"
   client_secret = "12345678901234567890"
   resource = "http://vault.hashicorp.com"
-  rotation_period = "%s"
+  rotation_period = "%d"
   rotation_schedule = "%s"
-  rotation_window = "%s"
+  rotation_window = "%d"
   disable_automated_rotation = %t
 }`, backend, periodDuration, scheduleString, windowDuration, disableRotation)
 }
