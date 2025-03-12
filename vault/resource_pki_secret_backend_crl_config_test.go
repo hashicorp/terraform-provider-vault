@@ -122,7 +122,7 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 		)
 	})
 
-	// test against vault-1.13 and above
+	// test against vault-1.13 up to and including 1.18
 	t.Run("vault-1.13-to-1.18", func(t *testing.T) {
 		setupCRLConfigTest(t, func() {
 			testutil.TestAccPreCheck(t)
