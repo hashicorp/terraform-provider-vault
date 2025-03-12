@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-
 	"log"
 	"regexp"
 	"strings"
@@ -15,12 +14,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 )
 
 var azureAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$")
 
 func azureAuthBackendConfigResource() *schema.Resource {
-	return &schema.Resource{
+	r := &schema.Resource{
 		CreateContext: azureAuthBackendWrite,
 		ReadContext:   provider.ReadContextWrapper(azureAuthBackendRead),
 		UpdateContext: azureAuthBackendWrite,
@@ -82,6 +82,10 @@ func azureAuthBackendConfigResource() *schema.Resource {
 			},
 		},
 	}
+
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -115,6 +119,10 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 	if useAPIVer117Ent {
 		data[consts.FieldIdentityTokenAudience] = identityTokenAud
 		data[consts.FieldIdentityTokenTTL] = identityTokenTTL
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
 	log.Printf("[DEBUG] Writing Azure auth backend config to %q", path)
@@ -193,6 +201,12 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 			if err := d.Set(consts.FieldIdentityTokenTTL, v); err != nil {
 				return diag.FromErr(err)
 			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, secret, d.Id()); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 

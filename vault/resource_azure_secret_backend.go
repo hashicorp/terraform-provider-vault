@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"strings"
 
@@ -21,7 +22,7 @@ import (
 )
 
 func azureSecretBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: azureSecretBackendCreate,
 		ReadContext:   provider.ReadContextWrapper(azureSecretBackendRead),
 		UpdateContext: azureSecretBackendUpdate,
@@ -108,6 +109,10 @@ func azureSecretBackendResource() *schema.Resource {
 			},
 		},
 	}, false)
+
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func azureSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -136,6 +141,7 @@ func azureSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta 
 		Description: description,
 		Config:      mountConfig,
 	}
+
 	if err := client.Sys().MountWithContext(ctx, path, input); err != nil {
 		return diag.Errorf("error mounting to %q: %s", path, err)
 	}
@@ -226,6 +232,13 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 			return diag.FromErr(err)
 		}
 		if err := d.Set(consts.FieldIdentityTokenTTL, resp.Data[consts.FieldIdentityTokenTTL]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, d.Id()); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -331,6 +344,11 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 		if v, ok := d.GetOk(consts.FieldIdentityTokenTTL); ok && v != 0 {
 			data[consts.FieldIdentityTokenTTL] = v.(int)
 		}
+	}
+
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
 	return data
