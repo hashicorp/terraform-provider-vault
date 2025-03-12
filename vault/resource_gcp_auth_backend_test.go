@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -291,6 +292,62 @@ func testGCPAuthBackendCheck_attrs(resourceName string) resource.TestCheckFunc {
 	}
 }
 
+// TestAccGCPAuthBackend_automatedRotation tests that Automated
+// Root Rotation parameters are compatible with the GCP Auth Backend
+// resource
+func TestAccGCPAuthBackendClient_automatedRotation(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-gcp")
+	resourceType := "vault_gcp_auth_backend"
+	resourceName := resourceType + ".test"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccGCPAuthBackendConfigAutomatedRootRotation(path, "", 10, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			// zero-out rotation_period
+			{
+				Config: testAccGCPAuthBackendConfigAutomatedRootRotation(path, "*/20 * * * *", 0, 120, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "120"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * *"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				Config:      testAccGCPAuthBackendConfigAutomatedRootRotation(path, "", 30, 120, true),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+			},
+			// zero-out rotation_schedule and rotation_window
+			{
+				Config: testAccGCPAuthBackendConfigAutomatedRootRotation(path, "", 30, 0, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
+		},
+	})
+}
+
 func testGCPAuthBackendConfig_basic(path, credentials, description string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
@@ -392,4 +449,15 @@ resource "vault_gcp_auth_backend" "test" {
  identity_token_key      = vault_identity_oidc_key.test.name
 }
 `, path)
+}
+
+func testAccGCPAuthBackendConfigAutomatedRootRotation(path, schedule string, period, window int, disable bool) string {
+	return fmt.Sprintf(`
+resource "vault_gcp_auth_backend" "test" {
+  path = "%s"
+  rotation_period = "%d"
+  rotation_schedule = "%s"
+  rotation_window = "%d"
+  disable_automated_rotation = %t
+}`, path, period, schedule, window, disable)
 }

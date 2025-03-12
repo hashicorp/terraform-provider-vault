@@ -6,9 +6,10 @@ package vault
 import (
 	"context"
 	"fmt"
-	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"strings"
+
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 

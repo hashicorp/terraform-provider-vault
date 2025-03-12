@@ -5,10 +5,11 @@ package vault
 
 import (
 	"context"
-	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"regexp"
 	"strings"
+
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -167,7 +168,6 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		// parse automated root rotation fields if Enterprise 1.19 server
 		automatedrotationutil.ParseAutomatedRotationFields(d, data)
-
 	}
 
 	// sts_endpoint and sts_region are required to be set together
