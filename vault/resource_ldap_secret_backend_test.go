@@ -186,6 +186,46 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 	})
 }
 
+func TestLDAPSecretBackend_automatedRotation(t *testing.T) {
+	var (
+		path                = acctest.RandomWithPrefix("tf-test-ldap")
+		bindDN, bindPass, _ = testutil.GetTestLDAPCreds(t)
+		resourceType        = "vault_ldap_secret_backend"
+		resourceName        = resourceType + ".test"
+	)
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		}, PreventPostDestroyRefresh: true,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPSecretBackendConfig_automatedRotation(path, bindDN, bindPass, "* * * * *", 50, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "* * * * *"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "50"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				Config: testLDAPSecretBackendConfig_automatedRotation(path, bindDN, bindPass, "", 0, 100, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "100"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldBindPass, consts.FieldConnectionTimeout, consts.FieldDescription, consts.FieldDisableRemount),
+		},
+	})
+}
+
 // testLDAPSecretBackendConfig_defaults is used to setup the backend defaults.
 func testLDAPSecretBackendConfig_defaults(path, bindDN, bindPass string) string {
 	return fmt.Sprintf(`
@@ -254,4 +294,19 @@ resource "vault_ldap_secret_backend" "test" {
   %s
 }
 `, path, url, extraConfig)
+}
+
+// testLDAPSecretBackendConfig_defaults is used to setup the backend defaults.
+func testLDAPSecretBackendConfig_automatedRotation(path, bindDN, bindPass, schedule string, window, period int, disable bool) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                      = "%s"
+  description               = "test description"
+  binddn                    = "%s"
+  bindpass                  = "%s"
+  rotation_schedule         = "%s"
+  rotation_window           = "%d"
+  rotation_period           = "%d"
+  disable_automated_rotation = %t
+}`, path, bindDN, bindPass, schedule, window, period, disable)
 }
