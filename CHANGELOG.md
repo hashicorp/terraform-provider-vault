@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+ * Added optional subscribe_event_types attribute to data `vault_policy_document`: https://github.com/hashicorp/terraform-provider-vault/pull/2433
+
 ## 4.7.0 (Mar 12, 2025)
 
 FEATURES:
