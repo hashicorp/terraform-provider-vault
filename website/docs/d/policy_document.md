@@ -47,6 +47,8 @@ Each document configuration may have one or more `rule` blocks, which each accep
 
 * `max_wrapping_ttl` - (Optional) The maximum allowed TTL that clients can specify for a wrapped response.
 
+* `subscribe_event_types` - (Optional) Event types to subscribe to. See [Vault Documentation](https://developer.hashicorp.com/vault/docs/concepts/events) for possible event types.
+
 ### Parameters
 
 Each of `*_parameter` attributes can optionally further restrict paths based on the keys and data at those keys when evaluating the permissions for a path.

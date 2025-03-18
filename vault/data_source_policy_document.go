@@ -22,14 +22,15 @@ type Policy struct {
 }
 
 type PolicyRule struct {
-	Path               string
-	Description        string
-	MinWrappingTTL     string
-	MaxWrappingTTL     string
-	Capabilities       []string
-	RequiredParameters []string
-	AllowedParameters  map[string][]string
-	DeniedParameters   map[string][]string
+	Path                string
+	Description         string
+	MinWrappingTTL      string
+	MaxWrappingTTL      string
+	Capabilities        []string
+	RequiredParameters  []string
+	AllowedParameters   map[string][]string
+	DeniedParameters    map[string][]string
+	SubscribeEventTypes []string
 }
 
 var allowedCapabilities = []string{
@@ -133,6 +134,14 @@ func policyDocumentDataSource() *schema.Resource {
 								},
 							},
 						},
+
+						"subscribe_event_types": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
 					},
 				},
 			},
@@ -185,6 +194,10 @@ func policyDocumentDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 				if err != nil {
 					return fmt.Errorf("error reading argument denied_parameter: %s", err)
 				}
+			}
+
+			if subscribeEventTypesIntfs := rawRule["subscribe_event_types"].([]interface{}); len(subscribeEventTypesIntfs) > 0 {
+				rule.SubscribeEventTypes = policyDecodeConfigListOfStrings(subscribeEventTypesIntfs)
 			}
 
 			log.Printf("[DEBUG] Rule is: %#v", rule)
@@ -267,6 +280,10 @@ func policyRenderListOfMapsOfListToString(input map[string][]string) string {
 func policyRenderPolicyRule(rule *PolicyRule) string {
 	renderedRule := fmt.Sprintf("path \"%s\" {\n", rule.Path)
 	renderedRule = fmt.Sprintf("%s  capabilities = %s\n", renderedRule, policyRenderListOfStrings(rule.Capabilities))
+
+	if len(rule.SubscribeEventTypes) > 0 {
+		renderedRule = fmt.Sprintf("%s  subscribe_event_types = %s\n", renderedRule, policyRenderListOfStrings(rule.SubscribeEventTypes))
+	}
 
 	if rule.Description != "" {
 		renderedRule = fmt.Sprintf("# %s\n%s", rule.Description, renderedRule)
