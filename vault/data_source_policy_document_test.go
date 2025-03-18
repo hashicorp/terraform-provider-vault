@@ -26,6 +26,21 @@ func TestDataSourcePolicyDocument(t *testing.T) {
 	})
 }
 
+func TestDataSourcePolicyDocument_withSubscribeEvents(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testDataSourcePolicyDocument_withSubscribeEvents,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.vault_policy_document.test", "hcl", testResultPolicyHCLDocument_withSubscribeEvents),
+				),
+			},
+		},
+	})
+}
+
 var testDataSourcePolicyDocument_config = `
 data "vault_policy_document" "test" {
   rule {
@@ -119,6 +134,21 @@ path "secret/test2/*" {
 
 path "secret/test3/" {
   capabilities = ["read", "list"]
+}
+`
+
+var testDataSourcePolicyDocument_withSubscribeEvents = `
+data "vault_policy_document" "test" {
+  rule {
+    path                   = "secret/test1/*"
+    capabilities           = ["read", "list", "subscribe"]
+    subscribe_event_types  = ["*"]
+  }
+}
+`
+var testResultPolicyHCLDocument_withSubscribeEvents = `path "secret/test1/*" {
+  capabilities = ["read", "list", "subscribe"]
+  subscribe_event_types = ["*"]
 }
 `
 
