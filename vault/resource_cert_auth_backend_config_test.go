@@ -15,9 +15,9 @@ import (
 func TestAccCertAuthBackendConfig_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("cert")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckCertAuthBackendConfigDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckCertAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCertAuthBackendConfig_basic(backend),
@@ -35,9 +35,9 @@ func TestAccCertAuthBackendConfig_import(t *testing.T) {
 func TestAccCertAuthBackendConfig_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("cert")
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckCertAuthBackendConfigDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckCertAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCertAuthBackendConfig_basic(backend),
@@ -52,7 +52,7 @@ func TestAccCertAuthBackendConfig_basic(t *testing.T) {
 }
 
 func testAccCheckCertAuthBackendConfigDestroy(s *terraform.State) error {
-	config := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	config := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_cert_auth_backend_config" {
@@ -102,7 +102,7 @@ func testAccCertAuthBackendConfigCheck_attrs(backend string) resource.TestCheckF
 			return fmt.Errorf("expected ID to be %q, got %q", "auth/"+backend+"/config", endpoint)
 		}
 
-		config := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		config := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 		resp, err := config.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back cert auth config from %q: %s", endpoint, err)
