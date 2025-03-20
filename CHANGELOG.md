@@ -201,6 +201,7 @@ FEATURES:
   * GCP Auth/Secrets ([#2427](https://github.com/hashicorp/terraform-provider-vault/pull/2427))
 * Add new resource `vault_pki_secret_backend_config_auto_tidy` to set PKI automatic tidy configuration [#1934](https://github.com/hashicorp/terraform-provider-vault/pull/1934)
 * Add support for cross-account management of static roles in AWS Secrets: ([#2413](https://github.com/hashicorp/terraform-provider-vault/pull/2413))
+* Add support for whitelisting certificate extensions with `allowed_metadata_extensions` in `vault_cert_auth_backend_role`: ([#2436](https://github.com/hashicorp/terraform-provider-vault/pull/2436))
 
 BUGS:
 
