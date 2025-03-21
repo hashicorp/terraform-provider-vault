@@ -252,7 +252,7 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 		creds, err := azidentity.NewClientSecretCredential(
 			tenantID, clientID, clientSecret, &azidentity.ClientSecretCredentialOptions{})
 		if err != nil {
-			return diag.Errorf("failed to create new credential during retry: %w", err)
+			return diag.Errorf("failed to create new credential during retry: %s", err)
 		}
 
 		providerClient, err := armresources.NewProvidersClient(subscriptionID, creds, &arm.ClientOptions{
@@ -261,7 +261,7 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 			},
 		})
 		if err != nil {
-			return diag.Errorf("failed to create new provider client during retry: %w", err)
+			return diag.Errorf("failed to create new provider client during retry: %s", err)
 		}
 
 		pager := providerClient.NewListPager(&armresources.ProvidersClientListOptions{
