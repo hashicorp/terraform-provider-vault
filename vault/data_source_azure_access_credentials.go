@@ -224,12 +224,6 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 		return diag.Errorf("tenant_id cannot be empty when validate_creds is true")
 	}
 
-	creds, err := azidentity.NewClientSecretCredential(
-		tenantID, clientID, clientSecret, &azidentity.ClientSecretCredentialOptions{})
-	if err != nil {
-		return diag.FromErr(e)
-	}
-
 	var environment string
 	if v, ok := d.GetOk("environment"); ok {
 		environment = v.(string)
@@ -248,15 +242,6 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(err)
 	}
 
-	providerClient, err := armresources.NewProvidersClient(subscriptionID, creds,
-		&arm.ClientOptions{
-			ClientOptions: policy.ClientOptions{
-				Cloud: cloudConfig,
-			},
-		})
-	if err != nil {
-		return diag.Errorf("failed to create providers client: %s", err)
-	}
 	delay := time.Duration(d.Get("num_seconds_between_tests").(int)) * time.Second
 	maxValidationSeconds := d.Get("max_cred_validation_seconds").(int)
 	endTime := time.Now().Add(time.Duration(maxValidationSeconds) * time.Second)
@@ -264,6 +249,21 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 	var successCount int
 	// begin validate_creds retry loop
 	for {
+		creds, err := azidentity.NewClientSecretCredential(
+			tenantID, clientID, clientSecret, &azidentity.ClientSecretCredentialOptions{})
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to create new credential during retry: %w", err))
+		}
+
+		providerClient, err := armresources.NewProvidersClient(subscriptionID, creds, &arm.ClientOptions{
+			ClientOptions: policy.ClientOptions{
+				Cloud: cloudConfig,
+			},
+		})
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to create new provider client during retry: %w", err))
+		}
+
 		pager := providerClient.NewListPager(&armresources.ProvidersClientListOptions{
 			Expand: pointerutil.StringPtr("metadata"),
 		})
