@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func gcpSecretBackendResource(name string) *schema.Resource {
@@ -223,17 +222,12 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(e)
 	}
 
-	path := d.Id()
 	d.Partial(true)
-
-	path, err := util.Remount(d, client, consts.FieldPath, false)
-	if err != nil {
-		return diag.FromErr(err)
-	}
 
 	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
+	path := d.Id()
 
 	data := make(map[string]interface{})
 

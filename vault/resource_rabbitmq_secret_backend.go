@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func rabbitMQSecretBackendResource() *schema.Resource {
@@ -164,17 +163,13 @@ func rabbitMQSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(e)
 	}
 
-	path := d.Id()
 	d.Partial(true)
-
-	path, err := util.Remount(d, client, consts.FieldPath, false)
-	if err != nil {
-		return diag.FromErr(err)
-	}
 
 	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
+	path := d.Id()
+
 	if d.HasChanges("connection_uri", "username", "password", "verify_connection", "username_template", "password_policy") {
 		log.Printf("[DEBUG] Updating connection credentials at %q", path+"/config/connection")
 		data := map[string]interface{}{

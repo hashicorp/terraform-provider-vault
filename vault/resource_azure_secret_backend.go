@@ -14,7 +14,6 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func azureSecretBackendResource() *schema.Resource {
@@ -214,16 +213,11 @@ func azureSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.FromErr(e)
 	}
 
-	path := d.Id()
-
-	path, err := util.Remount(d, client, consts.FieldPath, false)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
 	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
+
+	path := d.Id()
 
 	data := azureSecretBackendRequestData(d, meta)
 	if len(data) > 0 {

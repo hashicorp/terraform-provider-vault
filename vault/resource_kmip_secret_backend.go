@@ -147,18 +147,12 @@ func kmipSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta i
 	if e != nil {
 		return diag.FromErr(e)
 	}
-	path := d.Id()
-
-	path, err := util.Remount(d, client, consts.FieldPath, false)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	log.Printf("[DEBUG] Updating mount %s in Vault", path)
 
 	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
+
+	path := d.Id()
 
 	data := map[string]interface{}{}
 	configPath := fmt.Sprintf("%s/config", path)

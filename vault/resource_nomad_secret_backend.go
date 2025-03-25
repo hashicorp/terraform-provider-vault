@@ -275,7 +275,6 @@ func readNomadAccessConfigResource(ctx context.Context, d *schema.ResourceData, 
 }
 
 func updateNomadAccessConfigResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	backend := d.Id()
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -284,14 +283,11 @@ func updateNomadAccessConfigResource(ctx context.Context, d *schema.ResourceData
 
 	data := map[string]interface{}{}
 
-	backend, err := util.Remount(d, client, consts.FieldBackend, false)
-	if err != nil {
-		return diag.FromErr(e)
-	}
-
 	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
+
+	backend := d.Id()
 
 	configPath := fmt.Sprintf("%s/config/access", backend)
 	log.Printf("[DEBUG] Updating %q", configPath)

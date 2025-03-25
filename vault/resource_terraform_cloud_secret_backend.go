@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func terraformCloudSecretBackendResource() *schema.Resource {
@@ -164,17 +163,12 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(e)
 	}
 
-	backend := d.Id()
-	configPath := terraformCloudSecretBackendConfigPath(backend)
-
-	backend, e = util.Remount(d, client, consts.FieldBackend, false)
-	if e != nil {
-		return diag.FromErr(e)
-	}
-
 	if err := updateMount(ctx, d, meta, true); err != nil {
 		return diag.FromErr(err)
 	}
+	backend := d.Id()
+	configPath := terraformCloudSecretBackendConfigPath(backend)
+
 	if d.HasChange("address") || d.HasChange("token") || d.HasChange("base_path") {
 		log.Printf("[DEBUG] Updating Terraform Cloud configuration at %q", configPath)
 		data := map[string]interface{}{
