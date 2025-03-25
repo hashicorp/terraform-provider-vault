@@ -3,6 +3,7 @@
 FEATURES:
 
 * Add support for `recursive` search in `data_vault_namespaces` [#2408](https://github.com/hashicorp/terraform-provider-vault/pull/2408)
+* Add support for `explicit_max_ttl` in `vault_azure_secret_backend_role` resources. Requires Vault 1.18+ ([#2438](https://github.com/hashicorp/terraform-provider-vault/pull/2438)).
 
 ## 4.7.0 (Mar 12, 2025)
 
