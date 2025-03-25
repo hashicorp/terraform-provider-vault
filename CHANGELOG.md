@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* Add support for `recursive` search in `data_vault_namespaces` [#2408](https://github.com/hashicorp/terraform-provider-vault/pull/2408)
+
 ## 4.7.0 (Mar 12, 2025)
 
 FEATURES:
