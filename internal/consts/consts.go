@@ -41,6 +41,7 @@ const (
 	FieldNamespaceID                   = "namespace_id"
 	FieldNamespacePath                 = "namespace_path"
 	FieldPathFQ                        = "path_fq"
+	FieldPathsFQ                       = "paths_fq"
 	FieldData                          = "data"
 	FieldDisableRead                   = "disable_read"
 	FieldName                          = "name"

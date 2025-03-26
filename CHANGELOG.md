@@ -2,6 +2,12 @@
 
 FEATURES:
 
+* Add support for `recursive` search in `data_vault_namespaces` [#2408](https://github.com/hashicorp/terraform-provider-vault/pull/2408)
+
+## 4.7.0 (Mar 12, 2025)
+
+FEATURES:
+
 * Update `vault_pki_secret_backend_root_cert` and `vault_pki_secret_backend_root_sign_intermediate` to support the new fields for the name constraints extension. Requires Vault 1.19+ ([#2396](https://github.com/hashicorp/terraform-provider-vault/pull/2396)).
 * Update `vault_pki_secret_backend_issuer` resource with the new issuer configuration fields to control certificate verification. Requires Vault Enterprise 1.19+ ([#2400](https://github.com/hashicorp/terraform-provider-vault/pull/2400)).
 * Add support for certificate revocation with `revoke_with_key` in `vault_pki_secret_backend_cert` ([#2242](https://github.com/hashicorp/terraform-provider-vault/pull/2242))
@@ -25,6 +31,7 @@ FEATURES:
   * LDAP Auth/Secrets ([#2428](https://github.com/hashicorp/terraform-provider-vault/pull/2428))
   * GCP Auth/Secrets ([#2427](https://github.com/hashicorp/terraform-provider-vault/pull/2427))
 * Add new resource `vault_pki_secret_backend_config_auto_tidy` to set PKI automatic tidy configuration [#1934](https://github.com/hashicorp/terraform-provider-vault/pull/1934)
+* Add support for cross-account management of static roles in AWS Secrets: ([#2413](https://github.com/hashicorp/terraform-provider-vault/pull/2413))
 
 BUGS:
 

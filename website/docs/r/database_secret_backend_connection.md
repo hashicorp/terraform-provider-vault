@@ -27,9 +27,11 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "postgres" {
-  backend       = vault_mount.db.path
-  name          = "postgres"
-  allowed_roles = ["dev", "prod"]
+  backend           = vault_mount.db.path
+  name              = "postgres"
+  allowed_roles     = ["dev", "prod"]
+  rotation_schedule = "0 * * * SAT"
+  rotation_window   = 3600
 
   postgresql {
     connection_url = "postgres://username:password@host:port/database"
@@ -61,6 +63,18 @@ The following arguments are supported:
 * `root_rotation_statements` - (Optional) A list of database statements to be executed to rotate the root user's credentials.
 
 * `data` - (Optional) A map of sensitive data to pass to the endpoint. Useful for templated connection strings.
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
+  A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+
+* `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+.
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled token rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+.
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
 
 * `cassandra` - (Optional) A nested block containing configuration options for Cassandra connections.
 
