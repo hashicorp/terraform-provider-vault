@@ -151,6 +151,23 @@ func GetTestAzureConf(t *testing.T) *AzureTestConf {
 	}
 }
 
+func GetTestAzureConfForGroups(t *testing.T) *AzureTestConf {
+	t.Helper()
+
+	v := SkipTestEnvUnset(t,
+		"AZURE_SUBSCRIPTION_ID",
+		"AZURE_TENANT_ID",
+		"AZURE_CLIENT_ID",
+		"AZURE_CLIENT_SECRET")
+
+	return &AzureTestConf{
+		SubscriptionID: v[0],
+		TenantID:       v[1],
+		ClientID:       v[2],
+		ClientSecret:   v[3],
+	}
+}
+
 func GetTestAzureConfExistingSP(t *testing.T) *AzureTestConf {
 	v := SkipTestEnvUnset(t,
 		"AZURE_SUBSCRIPTION_ID",
