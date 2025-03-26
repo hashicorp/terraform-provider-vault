@@ -66,6 +66,14 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "tags.1", "project:vault_testing"))
 	}
 
+	isVaultVersion118 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion118)
+	if !isVaultVersion118 {
+		azureRoleInitialCheckFuncs = append(azureRoleInitialCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "explicit_max_ttl", "0"))
+		azureRoleUpdatedCheckFuncs = append(azureRoleUpdatedCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "explicit_max_ttl", "2592000"))
+	}
+
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
@@ -208,7 +216,8 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
  role             = "%[6]s-azure-roles"
  ttl              = 300
  max_ttl          = 600
- description	   = "Test for Vault Provider"
+ explicit_max_ttl = 0
+ description	  = "Test for Vault Provider"
  sign_in_audience = "AzureADMyOrg"
  tags             = ["team:engineering"]
 
@@ -259,6 +268,7 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
   role        	   = "%[6]s-azure-roles"
   ttl        	   = 600
   max_ttl    	   = 900
+  explicit_max_ttl = 2592000
   description 	   = "Test for Vault Provider"
   sign_in_audience = "AzureADMultipleOrgs"
   tags       	   = ["environment:development","project:vault_testing"]
@@ -306,11 +316,12 @@ resource "vault_azure_secret_backend" "azure" {
 }
 
 resource "vault_azure_secret_backend_role" "test_azure_roles" {
-  backend     = vault_azure_secret_backend.azure.path
-  role        = "%[6]s-azure-roles"
-  ttl         = 300
-  max_ttl     = 600
-  description = "Test for Vault Provider"
+  backend          = vault_azure_secret_backend.azure.path
+  role             = "%[6]s-azure-roles"
+  ttl              = 300
+  max_ttl          = 600
+  explicit_max_ttl = 2592000
+  description      = "Test for Vault Provider"
 
   azure_roles {
     role_name = "Reader"
