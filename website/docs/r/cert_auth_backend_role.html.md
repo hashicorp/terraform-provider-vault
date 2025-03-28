@@ -56,6 +56,9 @@ The following arguments are supported:
 
 * `allowed_organizational_units` - (Optional array: []) Allowed organization units for authenticated client certificates.
 
+* `allowed_metadata_extensions` - (Optional array: []) Allowed oid extensions. Upon successful authentication,
+  these extensions will be added as metadata if they are present in the certificate.
+
 * `required_extensions` - (Optional array: []) TLS extensions required on
   client certificates
 
