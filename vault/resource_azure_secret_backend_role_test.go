@@ -320,8 +320,10 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
   role             = "%[6]s-azure-roles"
   ttl              = 300
   max_ttl          = 600
-  explicit_max_ttl = 2592000
+  explicit_max_ttl = 0
   description      = "Test for Vault Provider"
+  sign_in_audience = "AzureADMultipleOrgs"
+  tags       	   = ["environment:development","project:vault_testing"]
 
   azure_roles {
     role_name = "Reader"

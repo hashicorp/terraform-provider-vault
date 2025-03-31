@@ -121,9 +121,9 @@ func azureSecretBackendRoleResource() *schema.Resource {
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			consts.FieldExplicitMaxTTL: {
-				Type:        schema.TypeInt,
+				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Specifies the explicit maximum lifetime of the lease and service principal, in seconds.",
+				Description: "Specifies the explicit maximum lifetime of the lease and service principal.",
 			},
 			consts.FieldSignInAudience: {
 				Type:        schema.TypeString,
