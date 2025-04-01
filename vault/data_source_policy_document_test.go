@@ -33,7 +33,7 @@ data "vault_policy_document" "test" {
     capabilities          = ["create", "read", "update", "delete", "list", "patch"]
     description           = "test rule 1"
     required_parameters   = ["test_param1"]
-	subscribe_event_types = ["test_events1"]
+    subscribe_event_types = ["test_events1"]
 
     allowed_parameter {
       key   = "spam"
@@ -63,7 +63,7 @@ data "vault_policy_document" "test" {
     capabilities          = ["read", "list"]
     description           = "test rule 2"
     required_parameters   = ["test_param2"]
-	subscribe_event_types = ["test_events2", "test_events3"]
+    subscribe_event_types = ["test_events2", "test_events3"]
 
     allowed_parameter {
       key   = "all"
