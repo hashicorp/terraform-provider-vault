@@ -29,10 +29,11 @@ func TestDataSourcePolicyDocument(t *testing.T) {
 var testDataSourcePolicyDocument_config = `
 data "vault_policy_document" "test" {
   rule {
-    path                = "secret/test1/*"
-    capabilities        = ["create", "read", "update", "delete", "list", "patch"]
-    description         = "test rule 1"
-    required_parameters = ["test_param1"]
+    path                  = "secret/test1/*"
+    capabilities          = ["create", "read", "update", "delete", "list", "patch"]
+    description           = "test rule 1"
+    required_parameters   = ["test_param1"]
+	subscribe_event_types = ["test_events1"]
 
     allowed_parameter {
       key   = "spam"
@@ -58,10 +59,11 @@ data "vault_policy_document" "test" {
   }
 
   rule {
-    path                = "secret/test2/*"
-    capabilities        = ["read", "list"]
-    description         = "test rule 2"
-    required_parameters = ["test_param2"]
+    path                  = "secret/test2/*"
+    capabilities          = ["read", "list"]
+    description           = "test rule 2"
+    required_parameters   = ["test_param2"]
+	subscribe_event_types = ["test_events2", "test_events3"]
 
     allowed_parameter {
       key   = "all"
@@ -92,6 +94,7 @@ var testResultPolicyHCLDocument = `# test rule 1
 path "secret/test1/*" {
   capabilities = ["create", "read", "update", "delete", "list", "patch"]
   required_parameters = ["test_param1"]
+  subscribe_event_types = ["test_events1"]
   allowed_parameters = {
     "eggs" = ["foo", "bar"]
     "spam" = ["eggs"]
@@ -107,6 +110,7 @@ path "secret/test1/*" {
 path "secret/test2/*" {
   capabilities = ["read", "list"]
   required_parameters = ["test_param2"]
+  subscribe_event_types = ["test_events2", "test_events3"]
   allowed_parameters = {
     "all" = []
   }

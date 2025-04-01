@@ -22,14 +22,15 @@ type Policy struct {
 }
 
 type PolicyRule struct {
-	Path               string
-	Description        string
-	MinWrappingTTL     string
-	MaxWrappingTTL     string
-	Capabilities       []string
-	RequiredParameters []string
-	AllowedParameters  map[string][]string
-	DeniedParameters   map[string][]string
+	Path                string
+	Description         string
+	MinWrappingTTL      string
+	MaxWrappingTTL      string
+	Capabilities        []string
+	RequiredParameters  []string
+	SubscribeEventTypes []string
+	AllowedParameters   map[string][]string
+	DeniedParameters    map[string][]string
 }
 
 var allowedCapabilities = []string{
@@ -85,6 +86,14 @@ func policyDocumentDataSource() *schema.Resource {
 						},
 
 						"required_parameters": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+
+						"subscribe_event_types": {
 							Type:     schema.TypeList,
 							Optional: true,
 							Elem: &schema.Schema{
@@ -169,6 +178,10 @@ func policyDocumentDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 
 			if reqParamIntfs := rawRule["required_parameters"].([]interface{}); len(reqParamIntfs) > 0 {
 				rule.RequiredParameters = policyDecodeConfigListOfStrings(reqParamIntfs)
+			}
+
+			if subEventTypesIntfs := rawRule["subscribe_event_types"].([]interface{}); len(subEventTypesIntfs) > 0 {
+				rule.SubscribeEventTypes = policyDecodeConfigListOfStrings(subEventTypesIntfs)
 			}
 
 			if allowedParamIntfs := rawRule["allowed_parameter"].([]interface{}); len(allowedParamIntfs) > 0 {
@@ -274,6 +287,10 @@ func policyRenderPolicyRule(rule *PolicyRule) string {
 
 	if rule.RequiredParameters != nil {
 		renderedRule = fmt.Sprintf("%s  required_parameters = %s\n", renderedRule, policyRenderListOfStrings(rule.RequiredParameters))
+	}
+
+	if rule.SubscribeEventTypes != nil {
+		renderedRule = fmt.Sprintf("%s  subscribe_event_types = %s\n", renderedRule, policyRenderListOfStrings(rule.SubscribeEventTypes))
 	}
 
 	if rule.AllowedParameters != nil {

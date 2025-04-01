@@ -3,6 +3,7 @@
 FEATURES:
 
 * Add support for `recursive` search in `data_vault_namespaces` [#2408](https://github.com/hashicorp/terraform-provider-vault/pull/2408)
+* Add support for `subscribe_event_types` in `data_source_policy_document` []()
 
 BUGS:
 
