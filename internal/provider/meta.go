@@ -319,7 +319,7 @@ func (p *ProviderMeta) setClient() error {
 		tokenNamespace = strings.Trim(v.(string), "/")
 	}
 
-	skipChildToken := GetResourceDataBool(d, consts.FieldSkipChildToken, "TERRAFORM_VAULT_SKIP_CHILD_TOKEN", false)
+	skipChildToken := GetResourceDataBool(d, consts.FieldSkipChildToken, consts.EnvVarSkipChildToken, false)
 	log.Printf("[VINAY] Skip Child Token %t", skipChildToken)
 	if !skipChildToken {
 		// a child token is always created in the namespace of the parent token.
