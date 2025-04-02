@@ -54,7 +54,7 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 	}
 
 	isVaultVersion116 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion116)
-	if !isVaultVersion116 {
+	if isVaultVersion116 {
 		azureRoleInitialCheckFuncs = append(azureRoleInitialCheckFuncs,
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "sign_in_audience", "AzureADMyOrg"),
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "tags.#", "1"),
@@ -67,7 +67,7 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 	}
 
 	isVaultVersion118 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion118)
-	if !isVaultVersion118 {
+	if isVaultVersion118 {
 		azureRoleInitialCheckFuncs = append(azureRoleInitialCheckFuncs,
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "explicit_max_ttl", "0"))
 		azureRoleUpdatedCheckFuncs = append(azureRoleUpdatedCheckFuncs,
