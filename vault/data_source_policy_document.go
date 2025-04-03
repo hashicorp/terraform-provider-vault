@@ -22,15 +22,32 @@ type Policy struct {
 }
 
 type PolicyRule struct {
-	Path                string
-	Description         string
-	MinWrappingTTL      string
-	MaxWrappingTTL      string
-	Capabilities        []string
-	RequiredParameters  []string
+	// Path in Vault that the rule applies to.
+	Path string
+
+	// Description is an optional annotation for the rule.
+	Description string
+
+	// MinWrappingTTL is the minimum allowed TTL for the wrapped response.
+	MinWrappingTTL string
+
+	// MaxWrappingTTL is the maximum allowed TTL for the wrapped response.
+	MaxWrappingTTL string
+
+	// Capabilities is the list of allowed operations on the specified path.
+	Capabilities []string
+
+	// RequiredParameters is a list of parameters that must be specified.
+	RequiredParameters []string
+
+	// SubscribeEventTypes is a list of event types to subscribe to when using `subscribe` capability.
 	SubscribeEventTypes []string
-	AllowedParameters   map[string][]string
-	DeniedParameters    map[string][]string
+
+	// AllowedParameters defines a whitelist of keys and values that are permitted on the given path.
+	AllowedParameters map[string][]string
+
+	// DeniedParameters defines a blacklist of keys and values that are denied on the given path.
+	DeniedParameters map[string][]string
 }
 
 var allowedCapabilities = []string{
@@ -57,28 +74,33 @@ func policyDocumentDataSource() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						consts.FieldPath: {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "A path in Vault that this rule applies to.",
 						},
 
 						"description": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Description of the rule.",
 						},
 
 						"min_wrapping_ttl": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The minimum allowed TTL that clients can specify for a wrapped response.",
 						},
 
 						"max_wrapping_ttl": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The maximum allowed TTL that clients can specify for a wrapped response.",
 						},
 
 						"capabilities": {
-							Type:     schema.TypeList,
-							Required: true,
+							Type:        schema.TypeList,
+							Required:    true,
+							Description: "A list of capabilities to apply to the specified path.",
 							Elem: &schema.Schema{
 								Type:         schema.TypeString,
 								ValidateFunc: capabilityValidation,
@@ -86,34 +108,39 @@ func policyDocumentDataSource() *schema.Resource {
 						},
 
 						"required_parameters": {
-							Type:     schema.TypeList,
-							Optional: true,
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "A list of parameters that must be specified.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 						},
 
 						"subscribe_event_types": {
-							Type:     schema.TypeList,
-							Optional: true,
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "A list of event types to subscribe to when using `subscribe` capability",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 						},
 
 						"allowed_parameter": {
-							Type:     schema.TypeList,
-							Optional: true,
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "Whitelists a list of keys and values that are permitted on the given path.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"key": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Name of permitted key.",
 									},
 
 									"value": {
-										Type:     schema.TypeList,
-										Required: true,
+										Type:        schema.TypeList,
+										Required:    true,
+										Description: "A list of values what are permitted by policy rule.",
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
@@ -123,18 +150,21 @@ func policyDocumentDataSource() *schema.Resource {
 						},
 
 						"denied_parameter": {
-							Type:     schema.TypeList,
-							Optional: true,
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "Blacklists a list of parameter and values.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"key": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Name of denied key.",
 									},
 
 									"value": {
-										Type:     schema.TypeList,
-										Required: true,
+										Type:        schema.TypeList,
+										Required:    true,
+										Description: "A list of values what are denied by policy rule.",
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
@@ -147,8 +177,9 @@ func policyDocumentDataSource() *schema.Resource {
 			},
 
 			"hcl": {
-				Type:     schema.TypeString,
-				Computed: true, Elem: &schema.Schema{
+				Type:        schema.TypeString,
+				Description: "The above arguments serialized as a standard Vault HCL policy document.",
+				Computed:    true, Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
@@ -165,38 +196,54 @@ func policyDocumentDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 
 		for i, ruleI := range rawRuleIntfs {
 			rawRule := ruleI.(map[string]interface{})
-			rule := &PolicyRule{
-				Path:           rawRule["path"].(string),
-				Description:    rawRule["description"].(string),
-				MinWrappingTTL: rawRule["min_wrapping_ttl"].(string),
-				MaxWrappingTTL: rawRule["max_wrapping_ttl"].(string),
+			rule := &PolicyRule{}
+			ruleFields := map[string]*string{
+				consts.FieldPath:   &rule.Path,
+				"description":      &rule.Description,
+				"min_wrapping_ttl": &rule.MinWrappingTTL,
+				"max_wrapping_ttl": &rule.MaxWrappingTTL,
 			}
-
-			if capabilityIntfs := rawRule["capabilities"].([]interface{}); len(capabilityIntfs) > 0 {
-				rule.Capabilities = policyDecodeConfigListOfStrings(capabilityIntfs)
-			}
-
-			if reqParamIntfs := rawRule["required_parameters"].([]interface{}); len(reqParamIntfs) > 0 {
-				rule.RequiredParameters = policyDecodeConfigListOfStrings(reqParamIntfs)
-			}
-
-			if subEventTypesIntfs := rawRule["subscribe_event_types"].([]interface{}); len(subEventTypesIntfs) > 0 {
-				rule.SubscribeEventTypes = policyDecodeConfigListOfStrings(subEventTypesIntfs)
-			}
-
-			if allowedParamIntfs := rawRule["allowed_parameter"].([]interface{}); len(allowedParamIntfs) > 0 {
-				var err error
-				rule.AllowedParameters, err = policyDecodeConfigListOfMapsOfListToString(allowedParamIntfs)
-				if err != nil {
-					return fmt.Errorf("error reading argument allowed_parameter: %s", err)
+			for k, v := range ruleFields {
+				if value, ok := rawRule[k].(string); ok {
+					*v = value
 				}
 			}
 
-			if deniedParamIntfs := rawRule["denied_parameter"].([]interface{}); len(deniedParamIntfs) > 0 {
-				var err error
-				rule.DeniedParameters, err = policyDecodeConfigListOfMapsOfListToString(deniedParamIntfs)
-				if err != nil {
-					return fmt.Errorf("error reading argument denied_parameter: %s", err)
+			if v, ok := rawRule["capabilities"]; ok {
+				if capabilityIntfs, ok := v.([]interface{}); ok && len(capabilityIntfs) > 0 {
+					rule.Capabilities = policyDecodeConfigListOfStrings(capabilityIntfs)
+				}
+			}
+
+			if v, ok := rawRule["required_parameters"]; ok {
+				if reqParamIntfs, ok := v.([]interface{}); ok && len(reqParamIntfs) > 0 {
+					rule.RequiredParameters = policyDecodeConfigListOfStrings(reqParamIntfs)
+				}
+			}
+
+			if v, ok := rawRule["subscribe_event_types"]; ok {
+				if subEventTypesIntfs, ok := v.([]interface{}); ok && len(subEventTypesIntfs) > 0 {
+					rule.SubscribeEventTypes = policyDecodeConfigListOfStrings(subEventTypesIntfs)
+				}
+			}
+
+			if v, ok := rawRule["allowed_parameter"]; ok {
+				if allowedParamIntfs, ok := v.([]interface{}); ok && len(allowedParamIntfs) > 0 {
+					var err error
+					rule.AllowedParameters, err = policyDecodeConfigListOfMapsOfListToString(allowedParamIntfs)
+					if err != nil {
+						return fmt.Errorf("error reading argument allowed_parameter: %s", err)
+					}
+				}
+			}
+
+			if v, ok := rawRule["denied_parameter"]; ok {
+				if deniedParamIntfs, ok := v.([]interface{}); ok && len(deniedParamIntfs) > 0 {
+					var err error
+					rule.DeniedParameters, err = policyDecodeConfigListOfMapsOfListToString(deniedParamIntfs)
+					if err != nil {
+						return fmt.Errorf("error reading argument denied_parameter: %s", err)
+					}
 				}
 			}
 
@@ -285,19 +332,19 @@ func policyRenderPolicyRule(rule *PolicyRule) string {
 		renderedRule = fmt.Sprintf("# %s\n%s", rule.Description, renderedRule)
 	}
 
-	if rule.RequiredParameters != nil {
+	if len(rule.RequiredParameters) > 0 {
 		renderedRule = fmt.Sprintf("%s  required_parameters = %s\n", renderedRule, policyRenderListOfStrings(rule.RequiredParameters))
 	}
 
-	if rule.SubscribeEventTypes != nil {
+	if len(rule.SubscribeEventTypes) > 0 {
 		renderedRule = fmt.Sprintf("%s  subscribe_event_types = %s\n", renderedRule, policyRenderListOfStrings(rule.SubscribeEventTypes))
 	}
 
-	if rule.AllowedParameters != nil {
+	if len(rule.AllowedParameters) > 0 {
 		renderedRule = fmt.Sprintf("%s  allowed_parameters = %s\n", renderedRule, policyRenderListOfMapsOfListToString(rule.AllowedParameters))
 	}
 
-	if rule.DeniedParameters != nil {
+	if len(rule.DeniedParameters) > 0 {
 		renderedRule = fmt.Sprintf("%s  denied_parameters = %s\n", renderedRule, policyRenderListOfMapsOfListToString(rule.DeniedParameters))
 	}
 
