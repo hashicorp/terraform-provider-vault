@@ -205,16 +205,16 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 			{
 				SkipFunc: skip(provider.VaultVersion118),
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
-					`key_usage = ["KeyAgreement", "CertSign"]`),
+					`key_usage = ["DigitalSignature", "CertSign"]`),
 				Check: resource.ComposeTestCheckFunc(
 					checks,
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "2"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "KeyAgreement"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "DigitialSignature"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".1", "CertSign"),
 					testPKICert(resourceName, func(cert *x509.Certificate) error {
 						if 0 == cert.KeyUsage&x509.KeyUsageKeyAgreement || 0 == cert.KeyUsage&x509.KeyUsageCertSign {
 							return fmt.Errorf("KeyUsage expected %b, got %b",
-								x509.KeyUsageKeyAgreement|x509.KeyUsageCertSign,
+								x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign,
 								cert.KeyUsage)
 						}
 						return nil
