@@ -197,38 +197,48 @@ func policyDocumentDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 		for i, ruleI := range rawRuleIntfs {
 			rawRule := ruleI.(map[string]interface{})
 			rule := &PolicyRule{}
-			ruleFields := map[string]*string{
-				consts.FieldPath:   &rule.Path,
+
+			pathVal, ok := rawRule[consts.FieldPath].(string)
+			if !ok || pathVal == "" {
+				return fmt.Errorf("missing or invalid field: %s", consts.FieldPath)
+			}
+			rule.Path = pathVal
+
+			optionalFields := map[string]*string{
 				"description":      &rule.Description,
 				"min_wrapping_ttl": &rule.MinWrappingTTL,
 				"max_wrapping_ttl": &rule.MaxWrappingTTL,
 			}
-			for k, v := range ruleFields {
+			for k, v := range optionalFields {
 				if value, ok := rawRule[k].(string); ok {
 					*v = value
 				}
 			}
 
-			if v, ok := rawRule["capabilities"]; ok {
-				if capabilityIntfs, ok := v.([]interface{}); ok && len(capabilityIntfs) > 0 {
-					rule.Capabilities = policyDecodeConfigListOfStrings(capabilityIntfs)
-				}
+			capVal, ok := rawRule["capabilities"]
+			if !ok {
+				return fmt.Errorf("missing field: capabilities")
 			}
+			capList, ok := capVal.([]interface{})
+			if !ok || len(capList) == 0 {
+				return fmt.Errorf("invalid or empty capabilities list, expected a list of strings")
+			}
+			rule.Capabilities = policyDecodeConfigListOfStrings(capList)
 
-			if v, ok := rawRule["required_parameters"]; ok {
-				if reqParamIntfs, ok := v.([]interface{}); ok && len(reqParamIntfs) > 0 {
+			if reqParamVal, ok := rawRule["required_parameters"]; ok {
+				if reqParamIntfs, ok := reqParamVal.([]interface{}); ok && len(reqParamIntfs) > 0 {
 					rule.RequiredParameters = policyDecodeConfigListOfStrings(reqParamIntfs)
 				}
 			}
 
-			if v, ok := rawRule["subscribe_event_types"]; ok {
-				if subEventTypesIntfs, ok := v.([]interface{}); ok && len(subEventTypesIntfs) > 0 {
+			if subEventVal, ok := rawRule["subscribe_event_types"]; ok {
+				if subEventTypesIntfs, ok := subEventVal.([]interface{}); ok && len(subEventTypesIntfs) > 0 {
 					rule.SubscribeEventTypes = policyDecodeConfigListOfStrings(subEventTypesIntfs)
 				}
 			}
 
-			if v, ok := rawRule["allowed_parameter"]; ok {
-				if allowedParamIntfs, ok := v.([]interface{}); ok && len(allowedParamIntfs) > 0 {
+			if allowVal, ok := rawRule["allowed_parameter"]; ok {
+				if allowedParamIntfs, ok := allowVal.([]interface{}); ok && len(allowedParamIntfs) > 0 {
 					var err error
 					rule.AllowedParameters, err = policyDecodeConfigListOfMapsOfListToString(allowedParamIntfs)
 					if err != nil {
@@ -237,8 +247,8 @@ func policyDocumentDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 				}
 			}
 
-			if v, ok := rawRule["denied_parameter"]; ok {
-				if deniedParamIntfs, ok := v.([]interface{}); ok && len(deniedParamIntfs) > 0 {
+			if deniedVal, ok := rawRule["denied_parameter"]; ok {
+				if deniedParamIntfs, ok := deniedVal.([]interface{}); ok && len(deniedParamIntfs) > 0 {
 					var err error
 					rule.DeniedParameters, err = policyDecodeConfigListOfMapsOfListToString(deniedParamIntfs)
 					if err != nil {
