@@ -2,8 +2,9 @@
 
 FEATURES:
 
-* Add support for `recursive` search in `data_vault_namespaces` [#2408](https://github.com/hashicorp/terraform-provider-vault/pull/2408)
+* Add support for `recursive` search in `data_vault_namespaces` [#2408](https://github.com/hashicorp/terraform-provider-vault/pull/2408).
 * Add support for `explicit_max_ttl` in `vault_azure_secret_backend_role` resources. Requires Vault 1.18+ ([#2438](https://github.com/hashicorp/terraform-provider-vault/pull/2438)).
+* Add new data source and resource `vault_pki_secret_backend_config_scep`. Requires Vault 1.20+ ([#2447](https://github.com/hashicorp/terraform-provider-vault/pull/2447)).
 
 BUGS:
 
