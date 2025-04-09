@@ -267,6 +267,8 @@ const (
 	FieldAllowLocalhost                = "allow_localhost"
 	FieldAllowedDomains                = "allowed_domains"
 	FieldAllowedDomainsTemplate        = "allowed_domains_template"
+	FieldAllowedEncryptionAlgorithms   = "allowed_encryption_algorithms"
+	FieldAllowedDigestAlgorithms       = "allowed_digest_algorithms"
 	FieldAllowBareDomains              = "allow_bare_domains"
 	FieldAllowSubdomains               = "allow_subdomains"
 	FieldAllowGlobDomains              = "allow_glob_domains"
@@ -623,6 +625,7 @@ const (
 	VaultVersion118  = "1.18.0"
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
+	VaultVersion120  = "1.20.0"
 
 	/*
 		Vault auth methods

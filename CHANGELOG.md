@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add new data source and resource `vault_pki_secret_backend_config_scep`. Requires Vault 1.20+ ([#2449](https://github.com/hashicorp/terraform-provider-vault/pull/2449)).
+
 ## 5.0.0 (May 21, 2025)
 
 **Important**: `5.X` multiplexes the Vault provider to use the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework),
