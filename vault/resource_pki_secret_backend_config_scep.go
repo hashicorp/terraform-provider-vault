@@ -18,7 +18,7 @@ import (
 func pkiSecretBackendConfigScepResource() *schema.Resource {
 	return &schema.Resource{
 		Description:   "Manages Vault PKI SCEP configuration",
-		CreateContext: provider.MountCreateContextWrapper(pkiSecretBackendConfigScepWrite, provider.VaultVersion116),
+		CreateContext: provider.MountCreateContextWrapper(pkiSecretBackendConfigScepWrite, provider.VaultVersion120),
 		UpdateContext: pkiSecretBackendConfigScepWrite,
 		ReadContext:   pkiSecretBackendConfigScepRead,
 		DeleteContext: pkiSecretBackendConfigScepDelete,

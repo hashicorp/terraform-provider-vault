@@ -150,12 +150,12 @@ func verifyPkiScepFeatureSupported(meta interface{}) error {
 
 	minVersion := provider.VaultVersion120
 	if !provider.IsAPISupported(meta, minVersion) {
-		return fmt.Errorf("feature not enabled on current Vault version. min version required=%s; "+
+		return fmt.Errorf("SCEP feature not enabled on current Vault version. Minimum version required=%s; "+
 			"current vault version=%s", minVersion, currentVersion)
 	}
 
 	if !provider.IsEnterpriseSupported(meta) {
-		return errors.New("feature requires Vault Enterprise")
+		return errors.New("SCEP feature requires Vault Enterprise")
 	}
 	return nil
 }
