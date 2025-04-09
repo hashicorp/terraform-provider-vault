@@ -153,12 +153,12 @@ func verifyPkiEstFeatureSupported(meta interface{}) error {
 
 	minVersion := provider.VaultVersion116
 	if !provider.IsAPISupported(meta, minVersion) {
-		return fmt.Errorf("EST feature not enabled on current Vault version. Minimum version required=%s; "+
+		return fmt.Errorf("feature not enabled on current Vault version. min version required=%s; "+
 			"current vault version=%s", minVersion, currentVersion)
 	}
 
 	if !provider.IsEnterpriseSupported(meta) {
-		return errors.New("EST feature requires Vault Enterprise")
+		return errors.New("feature requires Vault Enterprise")
 	}
 	return nil
 }

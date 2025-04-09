@@ -179,10 +179,6 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstDataSource()),
 			PathInventory: []string{"/pki/config/est"},
 		},
-		"vault_pki_secret_backend_config_scep": {
-			Resource:      UpdateSchemaResource(pkiSecretBackendConfigScepDataSource()),
-			PathInventory: []string{"/pki/config/scep"},
-		},
 		"vault_pki_secret_backend_issuer": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
 			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
@@ -622,10 +618,6 @@ var (
 		"vault_pki_secret_backend_config_est": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstResource()),
 			PathInventory: []string{"/pki/config/est"},
-		},
-		"vault_pki_secret_backend_config_scep": {
-			Resource:      UpdateSchemaResource(pkiSecretBackendConfigScepResource()),
-			PathInventory: []string{"/pki/config/scep"},
 		},
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),
