@@ -3,6 +3,7 @@
 FEATURES:
 
 * Add support for `recursive` search in `data_vault_namespaces` [#2408](https://github.com/hashicorp/terraform-provider-vault/pull/2408)
+* Add support for `subscribe_event_types` in `data_source_policy_document` [#2445](https://github.com/hashicorp/terraform-provider-vault/pull/2445)
 * Add support for `explicit_max_ttl` in `vault_azure_secret_backend_role` resources. Requires Vault 1.18+ ([#2438](https://github.com/hashicorp/terraform-provider-vault/pull/2438)).
 
 BUGS:
