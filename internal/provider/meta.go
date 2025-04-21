@@ -367,6 +367,7 @@ func (p *ProviderMeta) setVaultVersion() error {
 	}
 
 	d := p.resourceData
+	skipGetVaultVersion := GetResourceDataBool(d, consts.FieldSkipGetVaultVersion, "", false)
 	var vaultVersion *version.Version
 	if v, ok := d.GetOk(consts.FieldVaultVersionOverride); ok {
 		ver, err := version.NewVersion(v.(string))
@@ -375,7 +376,7 @@ func (p *ProviderMeta) setVaultVersion() error {
 				consts.FieldVaultVersionOverride, err)
 		}
 		vaultVersion = ver
-	} else if !d.Get(consts.FieldSkipGetVaultVersion).(bool) {
+	} else if !skipGetVaultVersion {
 		// Set the Vault version to *ProviderMeta object
 		client, err := p.getClient()
 		if err != nil {
