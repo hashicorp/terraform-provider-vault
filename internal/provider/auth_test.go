@@ -316,3 +316,40 @@ func TestAuthLoginCommon_Namespace(t *testing.T) {
 		})
 	}
 }
+
+func TestAuthLogin_Init_nilParameters(t *testing.T) {
+	s := make(map[string]*schema.Schema)
+	MustAddAuthLoginSchema(s)
+
+	for field, sch := range s {
+		if sch.Type != schema.TypeList {
+			continue
+		}
+
+		switch field {
+		case "auth_login_kerberos", "auth_login_userpass", "auth_login_azure", "auth_login_cert",
+			"auth_login_oci", "auth_login_jwt", "auth_login_radius", "auth_login_token_file":
+			// Skip entries that require mandatory fields for Init
+			continue
+		}
+
+		raw := map[string]interface{}{
+			field: []interface{}{
+				map[string]interface{}{
+					"method":     "gcp",
+					"path":       "auth/gcp/login",
+					"parameters": nil,
+					"role":       "vault-admin",
+				},
+			},
+		}
+
+		l, err := GetAuthLogin(schema.TestResourceDataRaw(t, s, raw))
+		if err != nil {
+			t.Errorf("unexpected error for field %s: %v", field, err)
+		}
+		if l == nil {
+			t.Errorf("expected auth login for field %s but got nil", field)
+		}
+	}
+}

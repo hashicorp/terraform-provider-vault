@@ -8,6 +8,7 @@ FEATURES:
 
 BUGS:
 
+* Fix panic when `auth_login.parameters` is explicitly set to `null` [#XXXX](https://github.com/hashicorp/terraform-provider-vault/pull/XXXX)
 * Fix credential validation failures in `vault_azure_access_credentials` data source caused by Azure RBAC propagation delays using `azure_groups` [#2437](https://github.com/hashicorp/terraform-provider-vault/pull/2437)
 
 ## 4.7.0 (Mar 12, 2025)
