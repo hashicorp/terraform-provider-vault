@@ -37,7 +37,7 @@ jobs:
           terraform_wrapper: false
 
       - name: Cache go build
-        uses: actions/cache@v3.4.0 # v3.4.0
+        uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3.4.0
         with:
           path: |
             ~/.cache/go-build
