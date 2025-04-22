@@ -320,7 +320,6 @@ func (p *ProviderMeta) setClient() error {
 	}
 
 	skipChildToken := GetResourceDataBool(d, consts.FieldSkipChildToken, consts.EnvVarSkipChildToken, false)
-	log.Printf("[VINAY] Skip Child Token %t", skipChildToken)
 	if !skipChildToken {
 		// a child token is always created in the namespace of the parent token.
 		token, err = createChildToken(d, client, tokenNamespace)
