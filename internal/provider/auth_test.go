@@ -38,6 +38,7 @@ type authLoginTest struct {
 	tls                bool
 	preLoginFunc       func(t *testing.T)
 	token              string
+	cloneToken         bool
 }
 
 type authLoginInitTest struct {
@@ -117,6 +118,10 @@ func testAuthLogin(t *testing.T, tt authLoginTest) {
 		config, ln = testutil.TestHTTPServer(t, tt.handler.handler())
 	}
 	defer ln.Close()
+
+	if tt.cloneToken {
+		config.CloneToken = tt.cloneToken
+	}
 
 	c, err := api.NewClient(config)
 	if err != nil {
