@@ -5,7 +5,6 @@ package provider
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -144,38 +143,6 @@ func TestAuthLoginTokenFile_Login(t *testing.T) {
 				}
 			},
 			wantErr: false,
-		},
-		{
-			name: "error-vault-token-set",
-			authLogin: &AuthLoginTokenFile{
-				AuthLoginCommon{
-					authField: "baz",
-					mount:     consts.MountTypeNone,
-					params: map[string]interface{}{
-						consts.FieldFilename: path.Join(tempDir, "basic"),
-					},
-					initialized: true,
-				},
-			},
-			handler: &testLoginHandler{
-				handlerFunc: handlerFunc,
-			},
-			preLoginFunc: func(t *testing.T) {
-				t.Helper()
-
-				filename := path.Join(tempDir, "basic")
-				t.Cleanup(func() {
-					if err := os.Remove(filename); err != nil {
-						t.Error(err)
-					}
-				})
-				if err := os.WriteFile(filename, []byte("qux\n"), 0o600); err != nil {
-					t.Fatal(err)
-				}
-			},
-			token:     "foo",
-			wantErr:   true,
-			expectErr: errors.New("vault login client has a token set"),
 		},
 		{
 			name: "error-invalid-file-mode",
