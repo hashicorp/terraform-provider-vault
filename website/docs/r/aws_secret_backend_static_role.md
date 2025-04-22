@@ -34,13 +34,31 @@ resource "vault_aws_secret_backend_static_role" "role" {
 }
 ```
 
+```hcl
+
+resource "vault_aws_secret_backend" "aws" {
+  path = "my-aws"
+  description = "Obtain AWS credentials."
+}
+
+resource "vault_aws_secret_backend_static_role" "assume-role" {
+  backend = vault_aws_secret_backend.aws.path
+  name = "assume-role-test"
+  username = "my-assume-role-user"
+  assume_role_arn = "arn:aws:iam::123456789012:role/assume-role"
+  assume_role_session_name = "assume-role-session"
+  external_id = "test-id"
+  rotation_period = "3600"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
 * `backend` - (Optional) The unique path this backend should be mounted at. Must
@@ -52,6 +70,18 @@ The following arguments are supported:
 * `username` - (Required) The username of the existing AWS IAM to manage password rotation for.
 
 * `rotation_period` - (Required) How often Vault should rotate the password of the user entry.
+
+* `assume_role_arn` - (Optional) Specifies the ARN of the role that Vault should assume.
+  When provided, Vault will use AWS STS to assume this role and generate temporary credentials.
+  If `assume_role_arn` is provided, `assume_role_session_name` must also be provided.
+  Requires Vault 1.19+. *Available only for Vault Enterprise*.
+
+* `assume_role_session_name` - (Optional) Specifies the session name to use when assuming the role.
+  If `assume_role_session_name` is provided, `assume_role_arn` must also be provided.
+    Requires Vault 1.19+. *Available only for Vault Enterprise*.
+
+* `external_id` - (Optional) Specifies the external ID to use when assuming the role.
+  Requires Vault 1.19+. *Available only for Vault Enterprise*.
 
 ## Attributes Reference
 

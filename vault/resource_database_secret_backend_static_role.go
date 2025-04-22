@@ -6,11 +6,12 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"log"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -26,6 +27,8 @@ var staticRoleFields = []string{
 	consts.FieldRotationPeriod,
 	consts.FieldRotationStatements,
 	consts.FieldDBName,
+	consts.FieldCredentialType,
+	consts.FieldCredentialConfig,
 }
 
 func databaseSecretBackendStaticRoleResource() *schema.Resource {
@@ -92,6 +95,32 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to rotate the password for the configured database user.",
 			},
+			consts.FieldSelfManagedPassword: {
+				Type:      schema.TypeString,
+				Optional:  true,
+				Sensitive: true,
+				Description: "The password corresponding to the username in the database. " +
+					"Required when using the Rootless Password Rotation workflow for static roles.",
+			},
+			consts.FieldSkipImportRotation: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Skip rotation of the password on import.",
+			},
+			consts.FieldCredentialType: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				Description: "The credential type for the user, can be one of \"password\", \"rsa_private_key\" or \"client_certificate\"." +
+					"The configuration can be done in `credential_config`.",
+			},
+			consts.FieldCredentialConfig: {
+				Type:     schema.TypeMap,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Optional: true,
+				Description: "The configuration for the credential type." +
+					"Full documentation for the allowed values can be found under \"https://developer.hashicorp.com/vault/api-docs/secret/databases#credential_config\".",
+			},
 		},
 	}
 }
@@ -129,6 +158,23 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 
 	if v, ok := d.GetOk(consts.FieldRotationPeriod); ok && v != "" {
 		data[consts.FieldRotationPeriod] = v
+	}
+
+	if v, ok := d.GetOk(consts.FieldCredentialType); ok && v != "" {
+		data[consts.FieldCredentialType] = v
+	}
+
+	if v, ok := d.GetOk(consts.FieldCredentialConfig); ok && v != "" {
+		data[consts.FieldCredentialConfig] = v
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOk(consts.FieldSelfManagedPassword); ok && v != "" {
+			data[consts.FieldSelfManagedPassword] = v
+		}
+		if v, ok := d.Get(consts.FieldSkipImportRotation).(bool); ok {
+			data[consts.FieldSkipImportRotation] = v
+		}
 	}
 
 	log.Printf("[DEBUG] Creating static role %q on database backend %q", name, backend)
@@ -194,6 +240,12 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 			return diag.FromErr(err)
 		}
 		if err := d.Set(consts.FieldRotationWindow, role.Data[consts.FieldRotationWindow]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldSkipImportRotation, role.Data[consts.FieldSkipImportRotation]); err != nil {
 			return diag.FromErr(err)
 		}
 	}

@@ -66,6 +66,43 @@ func MustAddMountMigrationSchema(r *schema.Resource, customStateUpgrade bool) *s
 	return r
 }
 
+func MustAddSecretsSyncCommonSchema(r *schema.Resource) *schema.Resource {
+	MustAddSchema(r, map[string]*schema.Schema{
+		consts.FieldType: {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Type of secrets destination.",
+			ForceNew:    true,
+		},
+		consts.FieldSecretNameTemplate: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "Template describing how to generate external secret names.",
+		},
+		consts.FieldGranularity: {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Determines what level of information is synced as a distinct resource at the destination. " +
+				"Can be 'secret-path' or 'secret-key'",
+		},
+	})
+
+	return r
+}
+
+func MustAddSecretsSyncCloudSchema(r *schema.Resource) *schema.Resource {
+	MustAddSchema(r, map[string]*schema.Schema{
+		consts.FieldCustomTags: {
+			Type:        schema.TypeMap,
+			Optional:    true,
+			Description: "Custom tags to set on the secret managed at the destination.",
+		},
+	})
+
+	return MustAddSecretsSyncCommonSchema(r)
+}
+
 func GetNamespaceSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		consts.FieldNamespace: {
@@ -114,6 +151,34 @@ func defaultDisableRemountStateUpgraders() []schema.StateUpgrader {
 			Version: 0,
 			Type:    SecretsAuthMountDisableRemountResourceV0().CoreConfigSchema().ImpliedType(),
 			Upgrade: SecretsAuthMountDisableRemountUpgradeV0,
+		},
+	}
+}
+
+// GetAutomatedRootRotationSchema is a helper method
+// that returns the common schema parameters for automated
+// root rotation
+func GetAutomatedRootRotationSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		consts.FieldRotationSchedule: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The cron-style schedule for the root credential to be rotated on. Cannot be used with rotation_period.",
+		},
+		consts.FieldRotationPeriod: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "The period of time in seconds between each rotation of the root credential. Cannot be used with rotation_schedule.",
+		},
+		consts.FieldRotationWindow: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "The maximum amount of time in seconds Vault is allowed to complete a rotation once a scheduled rotation is triggered. Can only be used with rotation_schedule.",
+		},
+		consts.FieldDisableAutomatedRotation: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "Stops rotation of the root credential until set to false.",
 		},
 	}
 }

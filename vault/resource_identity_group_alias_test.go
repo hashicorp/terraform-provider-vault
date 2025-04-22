@@ -87,7 +87,7 @@ func testAccCheckIdentityGroupAliasDestroy(s *terraform.State) error {
 			return e
 		}
 
-		secret, err := client.Logical().Read(identityGroupAliasIDPath(rs.Primary.ID))
+		secret, err := client.Logical().Read(getIdentityGroupAliasIDPath(rs.Primary.ID))
 		if err != nil {
 			return fmt.Errorf("error checking for identity group %q: %s", rs.Primary.ID, err)
 		}

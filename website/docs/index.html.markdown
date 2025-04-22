@@ -48,10 +48,8 @@ on each resource's documentation page about how any secrets are persisted
 to the state and consider carefully whether such usage is compatible with
 their security policies.
 
-Except as otherwise noted, the resources that write secrets into Vault are
-designed such that they require only the *create* and *update* capabilities
-on the relevant resources, so that distinct tokens can be used for reading
-vs. writing and thus limit the exposure of a compromised token.
+Please see the [Vault Policies and the Terraform Vault Provider](/docs/providers/vault/guides/policies.html)
+guide for details on token capabilites.
 
 ## Using Vault credentials in Terraform configuration
 
@@ -332,8 +330,10 @@ The `auth_login_cert` configuration block accepts the following arguments:
 
 * `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
-* `mount` - (Optional) The name of the authentication engine mount.  
+* `mount` - (Optional) The name of the authentication engine mount.
   Default: `cert`
+
+* `name` - (Optional) Authenticate against only the named certificate role.
 
 * `cert_file` - (Required) Path to a file on local disk that contains the
   PEM-encoded certificate to present to the server.

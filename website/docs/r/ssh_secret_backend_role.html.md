@@ -41,7 +41,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `name` - (Required) Specifies the name of the role to create.
@@ -90,10 +90,6 @@ The following arguments are supported:
 * `allowed_user_key_config` - (Optional) Set of configuration blocks to define allowed  
   user key configuration, like key type and their lengths. Can be specified multiple times.  
   *See [Configuration-Options](#allowed-user-key-configuration) for more info*
- 
-* `allowed_user_key_lengths` - (Optional) Specifies a map of ssh key types and their expected sizes which 
- are allowed to be signed by the CA type.  
- *Deprecated: use* [allowed_user_key_config](#allowed_user_key_config) *instead*
 
 * `max_ttl` - (Optional) Specifies the maximum Time To Live value.
 
@@ -101,6 +97,10 @@ The following arguments are supported:
 
 * `not_before_duration` - (Optional) Specifies the duration by which to backdate the ValidAfter property.
   Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
+
+* `allow_empty_principals` - (Optional) Allow signing certificates with no
+  valid principals (e.g. any valid principal). For backwards compatibility
+  only. The default of false is highly recommended.
 
 
 ### Allowed User Key Configuration

@@ -66,6 +66,11 @@ func quotaRateLimitResource() *schema.Resource {
 				Optional:    true,
 				Description: "If set on a quota where path is set to an auth mount with a concept of roles (such as /auth/approle/), this will make the quota restrict login requests to that mount that are made with the specified role.",
 			},
+			"inheritable": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "If set to true on a quota where path is set to a namespace, the same quota will be cumulatively applied to all child namespace. The inheritable parameter cannot be set to true if the path does not specify a namespace. Only the quotas associated with the root namespace are inheritable by default.",
+			},
 		},
 	}
 }
@@ -92,6 +97,12 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("block_interval"); ok {
 		data["block_interval"] = v
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		if v, ok := d.GetOkExists("inheritable"); ok {
+			data["inheritable"] = v.(bool)
+		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
@@ -136,6 +147,12 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 		fields = append(fields, consts.FieldRole)
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		if _, ok := d.GetOkExists("inheritable"); ok {
+			fields = append(fields, "inheritable")
+		}
+	}
+
 	for _, k := range fields {
 		v, ok := resp.Data[k]
 		if ok {
@@ -169,6 +186,12 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("block_interval"); ok {
 		data["block_interval"] = v
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		if v, ok := d.GetOkExists("inheritable"); ok {
+			data["inheritable"] = v.(bool)
+		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {

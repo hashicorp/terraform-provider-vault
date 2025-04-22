@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -76,6 +77,28 @@ func awsSecretBackendRoleResource(name string) *schema.Resource {
 				Optional:    true,
 				Description: "A list of IAM group names. IAM users generated against this vault role will be added to these IAM Groups. For a credential type of assumed_role or federation_token, the policies sent to the corresponding AWS call (sts:AssumeRole or sts:GetFederation) will be the policies from each group in iam_groups combined with the policy_document and policy_arns parameters.",
 			},
+			"iam_tags": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of strings representing key/value pairs used as tags for any IAM user created by this role.",
+			},
+			consts.FieldSessionTags: {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: fmt.Sprintf(`Session tags to be set for assume role creds created.`),
+			},
+			consts.FieldExternalID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "External ID to set for assume role creds.",
+			},
+
 			"default_sts_ttl": {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -123,6 +146,12 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	iamGroups := d.Get("iam_groups").(*schema.Set).List()
 
+	iamTags := d.Get("iam_tags")
+
+	sessionTags := d.Get(consts.FieldSessionTags)
+
+	externalID := d.Get(consts.FieldExternalID)
+
 	if policyDocument == "" && len(policyARNs) == 0 && len(roleARNs) == 0 && len(iamGroups) == 0 {
 		return fmt.Errorf("at least one of: `policy_document`, `policy_arns`, `role_arns` or `iam_groups` must be set")
 	}
@@ -154,6 +183,15 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 	if d.HasChange("iam_groups") {
 		data["iam_groups"] = iamGroups
+	}
+	if d.HasChange("iam_tags") {
+		data["iam_tags"] = iamTags
+	}
+	if d.HasChange(consts.FieldSessionTags) {
+		data[consts.FieldSessionTags] = sessionTags
+	}
+	if d.HasChange(consts.FieldExternalID) {
+		data[consts.FieldExternalID] = externalID
 	}
 	if d.HasChange("user_path") {
 		if credentialType == "iam_user" {
@@ -238,6 +276,15 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	if v, ok := secret.Data["iam_groups"]; ok {
 		d.Set("iam_groups", v)
+	}
+	if v, ok := secret.Data["iam_tags"]; ok {
+		d.Set("iam_tags", v)
+	}
+	if v, ok := secret.Data[consts.FieldSessionTags]; ok {
+		d.Set(consts.FieldSessionTags, v)
+	}
+	if v, ok := secret.Data[consts.FieldExternalID]; ok {
+		d.Set(consts.FieldExternalID, v)
 	}
 	if v, ok := secret.Data["permissions_boundary_arn"]; ok {
 		d.Set("permissions_boundary_arn", v)

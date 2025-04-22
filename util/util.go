@@ -14,10 +14,9 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
-
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 type (
@@ -281,28 +280,6 @@ func SetResourceData(d *schema.ResourceData, data map[string]interface{}) error 
 	return nil
 }
 
-// NormalizeMountPath to be in a form valid for accessing values from api.MountOutput
-func NormalizeMountPath(path string) string {
-	return TrimSlashes(path) + consts.PathDelim
-}
-
-// TrimSlashes from path.
-func TrimSlashes(path string) string {
-	return strings.Trim(path, consts.PathDelim)
-}
-
-// CheckMountEnabled in Vault, path must contain a trailing '/',
-func CheckMountEnabled(client *api.Client, path string) (bool, error) {
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return false, err
-	}
-
-	_, ok := mounts[NormalizeMountPath(path)]
-
-	return ok, nil
-}
-
 // GetAPIRequestDataWithMap to pass to Vault from schema.ResourceData.
 // The fieldMap specifies the schema field to its vault constituent.
 // If the vault field is empty, then two fields are mapped 1:1.
@@ -473,4 +450,41 @@ func RetryWrite(client *api.Client, path string, data map[string]interface{}, re
 		func(err error, duration time.Duration) {
 			log.Printf("[WARN] Writing to path %q failed, retrying in %s", path, duration)
 		})
+}
+
+// GetStringSliceFromSecret will return a string slice from the secret data within the provided field name if it exists.
+// The bool return value will be false if the field does not exist or is not a string slice. It will be true if the field
+// exists and was an empty slice.
+func GetStringSliceFromSecret(secret *api.Secret, fieldName string) ([]string, bool) {
+	if secret == nil || secret.Data == nil {
+		return nil, false
+	}
+
+	rawVal, exists := secret.Data[fieldName]
+	if !exists {
+		return nil, false
+	}
+
+	rv := reflect.ValueOf(rawVal)
+	switch rv.Kind() {
+	case reflect.Slice:
+		if rv.IsNil() {
+			return nil, false
+		}
+	case reflect.Array:
+	default:
+		return nil, false
+	}
+
+	output := make([]string, rv.Len())
+
+	for i := 0; i < rv.Len(); i++ {
+		myStr, err := parseutil.ParseString(rv.Index(i).Interface())
+		if err != nil {
+			return nil, false
+		}
+		output[i] = myStr
+	}
+
+	return output, true
 }

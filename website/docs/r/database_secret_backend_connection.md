@@ -27,9 +27,11 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "postgres" {
-  backend       = vault_mount.db.path
-  name          = "postgres"
-  allowed_roles = ["dev", "prod"]
+  backend           = vault_mount.db.path
+  name              = "postgres"
+  allowed_roles     = ["dev", "prod"]
+  rotation_schedule = "0 * * * SAT"
+  rotation_window   = 3600
 
   postgresql {
     connection_url = "postgres://username:password@host:port/database"
@@ -61,6 +63,18 @@ The following arguments are supported:
 * `root_rotation_statements` - (Optional) A list of database statements to be executed to rotate the root user's credentials.
 
 * `data` - (Optional) A map of sensitive data to pass to the endpoint. Useful for templated connection strings.
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
+  A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+
+* `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+.
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled token rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+.
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
 
 * `cassandra` - (Optional) A nested block containing configuration options for Cassandra connections.
 
@@ -123,6 +137,9 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
+
+* `skip_verification` - (Optional) Skip permissions checks when a connection to Cassandra is first created.
+  These checks ensure that Vault is able to create roles, but can be resource intensive in clusters with many roles.
 
 ### Couchbase Configuration Options
 
@@ -325,6 +342,23 @@ See the [Vault
 
 * `password` - (Optional) The root credential password used in the connection URL.
 
+* `self_managed` - (Optional)  If set, allows onboarding static roles with a rootless
+  connection configuration. Mutually exclusive with `username` and `password`.
+  If set, will force `verify_connection` to be false. Requires Vault 1.18+ Enterprise.
+
+* `tls_ca` - (Optional) The x509 CA file for validating the certificate
+  presented by the PostgreSQL server. Must be PEM encoded.
+
+* `tls_certificate` - (Optional) The x509 client certificate for connecting to
+  the database. Must be PEM encoded.
+
+* `password_authentication` - (Optional) When set to `scram-sha-256`, passwords will be
+  hashed by Vault before being sent to PostgreSQL. See the [Vault docs](https://www.vaultproject.io/api-docs/secret/databases/postgresql.html#sample-payload)
+  for an example. Requires Vault 1.14+.
+
+* `private_key` - (Optional) The secret key used for the x509 client
+  certificate. Must be PEM encoded.
+
 * `auth_type` - (Optional) Enable IAM authentication to a Google Cloud instance when set to `gcp_iam`
 
 * `service_account_json` - (Optional) JSON encoding of an IAM access key. Requires `auth_type` to be `gcp_iam`.
@@ -358,6 +392,10 @@ See the [Vault
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
+* `split_statements` - (Optional) Enable spliting statements after semi-colons.
+
+* `disconnect_sessions` - (Optional) Enable the built-in session disconnect mechanism.
 
 ### Elasticsearch Configuration Options
 

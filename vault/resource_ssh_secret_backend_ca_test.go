@@ -67,6 +67,34 @@ func TestAccSSHSecretBackend_import(t *testing.T) {
 	})
 }
 
+// TestAccSSHSecretBackendCA_Upgrade_key_type uses ExternalProviders (vault) to
+// generate a state file with a previous version of the provider and then
+// verify that there are no planned changes after migrating to an updated
+// schema to validate the sshSecretBackendCAUpgradeV0 state upgrader.
+func TestAccSSHSecretBackendCA_Upgrade_key_type(t *testing.T) {
+	backend := "ssh-" + acctest.RandString(10)
+	resource.Test(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"vault": {
+						// 4.2.0 does not have the key_type field
+						VersionConstraint: "4.2.0",
+						Source:            "hashicorp/vault",
+					},
+				},
+				Config: testAccSSHSecretBackendCAConfigGenerated(backend),
+				Check:  testAccSSHSecretBackendCACheck(backend),
+			},
+			{
+				ProviderFactories: providerFactories,
+				Config:            testAccSSHSecretBackendCAConfigGenerated(backend),
+				PlanOnly:          true,
+			},
+		},
+	})
+}
+
 func testAccCheckSSHSecretBackendCADestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ssh_secret_backend_ca" {

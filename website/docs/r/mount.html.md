@@ -8,6 +8,7 @@ description: |-
 
 # vault\_mount
 
+This resource enables a new secrets engine at the given path.
 
 ## Example Usage
 
@@ -60,7 +61,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `path` - (Required) Where the secret backend will be mounted
@@ -86,6 +87,25 @@ The following arguments are supported:
 * `external_entropy_access` - (Optional) Boolean flag that can be explicitly set to true to enable the secrets engine to access Vault's external entropy source
 
 * `allowed_managed_keys` - (Optional) Set of managed key registry entry names that the mount in question is allowed to access
+
+* `listing_visibility` - (Optional) Specifies whether to show this mount in the UI-specific
+  listing endpoint. Valid values are `unauth` or `hidden`. If not set, behaves like `hidden`.
+
+* `passthrough_request_headers` - (Optional) List of headers to allow and pass from the request to
+  the plugin.
+
+* `allowed_response_headers` - (Optional) List of headers to allow, allowing a plugin to include
+  them in the response.
+
+* `delegated_auth_accessors` - (Optional)  List of allowed authentication mount accessors the
+  backend can request delegated authentication for.
+
+* `plugin_version` - (Optional) Specifies the semantic version of the plugin to use, e.g. "v1.0.0".
+  If unspecified, the server will select any matching unversioned plugin that may have been
+  registered, the latest versioned plugin registered, or a built-in plugin in that order of precedence.
+
+* `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
+  not provided, this will default to Vault's OIDC default key.
 
 ## Attributes Reference
 

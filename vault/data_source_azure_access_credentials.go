@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
@@ -24,6 +25,19 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
+
+// https://learn.microsoft.com/en-us/graph/sdks/national-clouds
+const (
+	azurePublicCloudEnvName = "AZUREPUBLICCLOUD"
+	azureChinaCloudEnvName  = "AZURECHINACLOUD"
+	azureUSGovCloudEnvName  = "AZUREUSGOVERNMENTCLOUD"
+)
+
+var azureCloudConfigMap = map[string]cloud.Configuration{
+	azureChinaCloudEnvName:  cloud.AzureChina,
+	azurePublicCloudEnvName: cloud.AzurePublic,
+	azureUSGovCloudEnvName:  cloud.AzureGovernment,
+}
 
 func azureAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
@@ -111,7 +125,7 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: `The Azure environment to use during credential validation.
-Defaults to the environment configured in the Vault backend.
+Defaults to the Azure Public Cloud.
 Some possible values: AzurePublicCloud, AzureUSGovernmentCloud`,
 			},
 		},
@@ -210,13 +224,6 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 		return diag.Errorf("tenant_id cannot be empty when validate_creds is true")
 	}
 
-	creds, err := azidentity.NewClientSecretCredential(
-		tenantID, clientID, clientSecret, &azidentity.ClientSecretCredentialOptions{})
-	if err != nil {
-		return diag.FromErr(e)
-	}
-
-	clientOptions := &arm.ClientOptions{}
 	var environment string
 	if v, ok := d.GetOk("environment"); ok {
 		environment = v.(string)
@@ -230,13 +237,11 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 		}
 	}
 
-	cloudConfig, err := cloudConfigFromName(environment)
-	clientOptions.Cloud = cloudConfig
-
-	providerClient, err := armresources.NewProvidersClient(subscriptionID, creds, clientOptions)
+	cloudConfig, err := getAzureCloudConfigFromName(environment)
 	if err != nil {
-		return diag.Errorf("failed to create providers client: %s", err)
+		return diag.FromErr(err)
 	}
+
 	delay := time.Duration(d.Get("num_seconds_between_tests").(int)) * time.Second
 	maxValidationSeconds := d.Get("max_cred_validation_seconds").(int)
 	endTime := time.Now().Add(time.Duration(maxValidationSeconds) * time.Second)
@@ -244,6 +249,21 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 	var successCount int
 	// begin validate_creds retry loop
 	for {
+		creds, err := azidentity.NewClientSecretCredential(
+			tenantID, clientID, clientSecret, &azidentity.ClientSecretCredentialOptions{})
+		if err != nil {
+			return diag.Errorf("failed to create new credential during retry: %s", err)
+		}
+
+		providerClient, err := armresources.NewProvidersClient(subscriptionID, creds, &arm.ClientOptions{
+			ClientOptions: policy.ClientOptions{
+				Cloud: cloudConfig,
+			},
+		})
+		if err != nil {
+			return diag.Errorf("failed to create new provider client during retry: %s", err)
+		}
+
 		pager := providerClient.NewListPager(&armresources.ProvidersClientListOptions{
 			Expand: pointerutil.StringPtr("metadata"),
 		})
@@ -292,25 +312,13 @@ func azureAccessCredentialsDataSourceRead(ctx context.Context, d *schema.Resourc
 	return nil
 }
 
-// https://learn.microsoft.com/en-us/graph/sdks/national-clouds
-const (
-	azurePublicCloudEnvName = "AZUREPUBLICCLOUD"
-	azureChinaCloudEnvName  = "AZURECHINACLOUD"
-	azureUSGovCloudEnvName  = "AZUREUSGOVERNMENTCLOUD"
-)
-
-func cloudConfigFromName(name string) (cloud.Configuration, error) {
-	configs := map[string]cloud.Configuration{
-		azureChinaCloudEnvName:  cloud.AzureChina,
-		azurePublicCloudEnvName: cloud.AzurePublic,
-		azureUSGovCloudEnvName:  cloud.AzureGovernment,
+func getAzureCloudConfigFromName(name string) (cloud.Configuration, error) {
+	if name == "" {
+		return cloud.AzurePublic, nil
 	}
-
-	name = strings.ToUpper(name)
-	c, ok := configs[name]
-	if !ok {
-		return c, fmt.Errorf("err: no cloud configuration matching the name %q", name)
+	if c, ok := azureCloudConfigMap[strings.ToUpper(name)]; !ok {
+		return c, fmt.Errorf("unsupported Azure cloud name %q", name)
+	} else {
+		return c, nil
 	}
-
-	return c, nil
 }

@@ -4,15 +4,15 @@
 package vault
 
 import (
-	"fmt"
-	"log"
-	"strings"
+	"context"
 
+	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/vault/api"
 )
 
 func authMountTuneSchema() *schema.Schema {
@@ -77,35 +77,22 @@ func authMountTuneSchema() *schema.Schema {
 	}
 }
 
-func authMountInfoGet(client *api.Client, path string) (*api.AuthMount, error) {
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return nil, fmt.Errorf("error reading from auth mounts: %s", err)
-	}
-
-	authMount := auths[strings.Trim(path, "/")+"/"]
-	if authMount == nil {
-		return nil, fmt.Errorf("auth mount %s not present", path)
-	}
-	return authMount, nil
-}
-
-func authMountTune(client *api.Client, path string, configured interface{}) error {
+func authMountTune(ctx context.Context, client *api.Client, path string, configured interface{}) error {
 	input := expandAuthMethodTune(configured.(*schema.Set).List())
 
-	return tuneMount(client, path, input)
+	return tuneMount(ctx, client, path, input)
 }
 
-func tuneMount(client *api.Client, path string, input api.MountConfigInput) error {
-	err := client.Sys().TuneMount(path, input)
+func tuneMount(ctx context.Context, client *api.Client, path string, input api.MountConfigInput) error {
+	err := client.Sys().TuneMountWithContext(ctx, path, input)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func authMountTuneGet(client *api.Client, path string) (map[string]interface{}, error) {
-	tune, err := client.Sys().MountConfig(path)
+func authMountTuneGet(ctx context.Context, client *api.Client, path string) (map[string]interface{}, error) {
+	tune, err := client.Sys().MountConfigWithContext(ctx, path)
 	if err != nil {
 		log.Printf("[ERROR] Error when reading tune config from path %q: %s", path+"/tune", err)
 		return nil, err
@@ -114,30 +101,13 @@ func authMountTuneGet(client *api.Client, path string) (map[string]interface{}, 
 	return flattenAuthMethodTune(tune), nil
 }
 
-func authMountDisable(client *api.Client, path string) error {
+func authMountDisable(ctx context.Context, client *api.Client, path string) diag.Diagnostics {
 	log.Printf("[DEBUG] Disabling auth mount config from '%q'", path)
-	err := client.Sys().DisableAuth(path)
+	err := client.Sys().DisableAuthWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error disabling auth mount from '%q': %s", path, err)
+		return diag.Errorf("error disabling auth mount from '%q': %s", path, err)
 	}
 	log.Printf("[INFO] Disabled auth mount from '%q'", path)
 
 	return nil
-}
-
-func getAuthMountIfPresent(client *api.Client, path string) (*api.AuthMount, error) {
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return nil, fmt.Errorf("error reading from Vault: %s", err)
-	}
-
-	configuredPath := path + "/"
-
-	for authBackendPath, auth := range auths {
-		if authBackendPath == configuredPath {
-			return auth, nil
-		}
-	}
-
-	return nil, nil
 }

@@ -4,12 +4,14 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -21,20 +23,19 @@ var approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::r
 
 func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 	return &schema.Resource{
-		Create: approleAuthBackendRoleSecretIDCreate,
-		Read:   provider.ReadWrapper(approleAuthBackendRoleSecretIDRead),
-		Delete: approleAuthBackendRoleSecretIDDelete,
-		Exists: approleAuthBackendRoleSecretIDExists,
+		CreateContext: approleAuthBackendRoleSecretIDCreate,
+		ReadContext:   provider.ReadContextWrapper(approleAuthBackendRoleSecretIDRead),
+		DeleteContext: approleAuthBackendRoleSecretIDDelete,
 
 		Schema: map[string]*schema.Schema{
-			"role_name": {
+			consts.FieldRoleName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the role.",
 				ForceNew:    true,
 			},
 
-			"secret_id": {
+			consts.FieldSecretID: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
@@ -43,7 +44,7 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 				Sensitive:   true,
 			},
 
-			"cidr_list": {
+			consts.FieldCIDRList: {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "List of CIDR blocks that can log in using the SecretID.",
@@ -71,7 +72,23 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 				},
 			},
 
-			"backend": {
+			consts.FieldTTL: {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The TTL duration of the SecretID.",
+			},
+
+			consts.FieldNumUses: {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The number of uses for the secret-id.",
+			},
+
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Unique name of the auth backend to configure.",
@@ -83,20 +100,20 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 				},
 			},
 
-			"with_wrapped_accessor": {
+			consts.FieldWithWrappedAccessor: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Use the wrapped secret-id accessor as the id of this resource. If false, a fresh secret-id will be regenerated whenever the wrapping token is expired or invalidated through unwrapping.",
 				ForceNew:    true,
 			},
 
-			"accessor": {
+			consts.FieldAccessor: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The unique ID used to access this SecretID.",
 			},
 
-			"wrapping_ttl": {
+			consts.FieldWrappingTTL: {
 				Type:        schema.TypeString,
 				Required:    false,
 				Optional:    true,
@@ -104,14 +121,14 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 				Description: "The TTL duration of the wrapped SecretID.",
 			},
 
-			"wrapping_token": {
+			consts.FieldWrappingToken: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The wrapped SecretID token.",
 				Sensitive:   true,
 			},
 
-			"wrapping_accessor": {
+			consts.FieldWrappingAccessor: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The wrapped SecretID accessor.",
@@ -120,34 +137,34 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 	}
 }
 
-func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface{}) error {
+func approleAuthBackendRoleSecretIDCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
-	role := d.Get("role_name").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	role := d.Get(consts.FieldRoleName).(string)
 
 	path := approleAuthBackendRolePath(backend, role) + "/secret-id"
 
-	if _, ok := d.GetOk("secret_id"); ok {
+	if _, ok := d.GetOk(consts.FieldSecretID); ok {
 		path = approleAuthBackendRolePath(backend, role) + "/custom-secret-id"
 	}
 
 	log.Printf("[DEBUG] Writing AppRole auth backend role SecretID %q", path)
-	iCIDRs := d.Get("cidr_list").(*schema.Set).List()
+	iCIDRs := d.Get(consts.FieldCIDRList).(*schema.Set).List()
 	cidrs := make([]string, 0, len(iCIDRs))
 	for _, iCIDR := range iCIDRs {
 		cidrs = append(cidrs, iCIDR.(string))
 	}
 
 	data := map[string]interface{}{}
-	if v, ok := d.GetOk("secret_id"); ok {
-		data["secret_id"] = v.(string)
+	if v, ok := d.GetOk(consts.FieldSecretID); ok {
+		data[consts.FieldSecretID] = v.(string)
 	}
 	if len(cidrs) > 0 {
-		data["cidr_list"] = strings.Join(cidrs, ",")
+		data[consts.FieldCIDRList] = strings.Join(cidrs, ",")
 	}
 	if v, ok := d.GetOk(consts.FieldMetadata); ok {
 		name := "vault_approle_auth_backend_role_secret_id"
@@ -155,21 +172,29 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 		if err != nil {
 			log.Printf("[ERROR] Failed to normalize JSON data %q, resource=%q, key=%q, err=%s",
 				v, name, "metadata", err)
-			return err
+			return diag.FromErr(err)
 		}
 		data["metadata"] = result
 	} else {
 		data["metadata"] = ""
 	}
-	withWrappedAccessor := d.Get("with_wrapped_accessor").(bool)
 
-	wrappingTTL, wrapped := d.GetOk("wrapping_ttl")
+	if v, ok := d.GetOk(consts.FieldTTL); ok {
+		data["ttl"] = v
+	}
+
+	if v, ok := d.GetOk(consts.FieldNumUses); ok {
+		data["num_uses"] = v
+	}
+	withWrappedAccessor := d.Get(consts.FieldWithWrappedAccessor).(bool)
+
+	wrappingTTL, wrapped := d.GetOk(consts.FieldWrappingTTL)
 
 	if wrapped {
 		var err error
 
 		if client, err = client.Clone(); err != nil {
-			return fmt.Errorf("error cloning client: %w", err)
+			return diag.Errorf("error cloning client: %s", err)
 		}
 		client.SetWrappingLookupFunc(func(_, _ string) string {
 			return wrappingTTL.(string)
@@ -178,7 +203,7 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error writing AppRole auth backend role SecretID %q: %s", path, err)
+		return diag.Errorf("error writing AppRole auth backend role SecretID %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote AppRole auth backend role SecretID %q", path)
 
@@ -190,40 +215,49 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 		} else {
 			accessor = resp.WrapInfo.Accessor
 		}
-		d.Set("wrapping_token", resp.WrapInfo.Token)
-		d.Set("wrapping_accessor", accessor)
+		if err := d.Set(consts.FieldWrappingToken, resp.WrapInfo.Token); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set(consts.FieldWrappingAccessor, accessor); err != nil {
+			return diag.FromErr(err)
+		}
 	} else {
 		accessor = resp.Data["secret_id_accessor"].(string)
-		d.Set("secret_id", resp.Data["secret_id"])
-		d.Set("accessor", accessor)
+		if err := d.Set(consts.FieldSecretID, resp.Data[consts.FieldSecretID]); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set(consts.FieldAccessor, accessor); err != nil {
+			return diag.FromErr(err)
+		}
+
 	}
 
 	d.SetId(approleAuthBackendRoleSecretIDID(backend, role, accessor, wrapped, withWrappedAccessor))
 
-	return approleAuthBackendRoleSecretIDRead(d, meta)
+	return approleAuthBackendRoleSecretIDRead(ctx, d, meta)
 }
 
-func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}) error {
+func approleAuthBackendRoleSecretIDRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	id := d.Id()
 
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
-		return fmt.Errorf("invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
+		return diag.Errorf("invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
 	}
 
 	// If the ID is wrapped, there is no information available other than whether
 	// the wrapping token is still valid, unless we are planning to re-use it.
-	withWrappedAccessor := d.Get("with_wrapped_accessor").(bool)
+	withWrappedAccessor := d.Get(consts.FieldWithWrappedAccessor).(bool)
 
 	if wrapped && !withWrappedAccessor {
 		valid, err := approleAuthBackendRoleSecretIDExists(d, meta)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		if !valid {
 			log.Printf("[WARN] AppRole auth backend role SecretID %q not found, removing from state", id)
@@ -240,10 +274,19 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	})
 	if err != nil {
 		// We need to check if the secret_id has expired
-		if util.IsExpiredTokenErr(err) {
+		if util.IsExpiredTokenErr(err) || util.Is404(err) {
+			log.Printf("[WARN] AppRole auth backend role SecretID %q from %q not found, removing from state", id, path)
+			d.SetId("")
 			return nil
 		}
-		return fmt.Errorf("error reading AppRole auth backend role SecretID %q: %s", id, err)
+		if isAppRoleDoesNotExistError(err, role) {
+			// remove secretID from state in case approle is deleted out-of-band
+			log.Printf("[WARN] AppRole auth backend role %q deleted out-of-band, removing secret ID %q from state", role, id)
+			d.SetId("")
+			return nil
+		}
+
+		return diag.Errorf("error reading AppRole auth backend role SecretID %q: %s", id, err)
 	}
 	log.Printf("[DEBUG] Read AppRole auth backend role SecretID %q", id)
 	if resp == nil {
@@ -253,7 +296,7 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	}
 
 	var cidrs []string
-	switch data := resp.Data["cidr_list"].(type) {
+	switch data := resp.Data[consts.FieldCIDRList].(type) {
 	case string:
 		if data != "" {
 			cidrs = strings.Split(data, ",")
@@ -266,43 +309,53 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	case nil:
 		cidrs = make([]string, 0)
 	default:
-		return fmt.Errorf("unknown type %T for cidr_list in response for SecretID %q", data, accessor)
+		return diag.Errorf("unknown type %T for cidr_list in response for SecretID %q", data, accessor)
 	}
 
 	metadata, err := json.Marshal(resp.Data["metadata"])
 	if err != nil {
-		return fmt.Errorf("error encoding metadata for SecretID %q to JSON: %s", id, err)
+		return diag.Errorf("error encoding metadata for SecretID %q to JSON: %s", id, err)
 	}
 
-	d.Set("backend", backend)
-	d.Set("role_name", role)
-	err = d.Set("cidr_list", cidrs)
-	if err != nil {
-		return fmt.Errorf("error setting cidr_list in state: %s", err)
+	ttl := resp.Data["secret_id_ttl"]
+	numUses := resp.Data["secret_id_num_uses"]
+
+	fields := map[string]interface{}{
+		consts.FieldBackend:  backend,
+		consts.FieldRoleName: role,
+		consts.FieldCIDRList: cidrs,
+		consts.FieldMetadata: string(metadata),
+		consts.FieldAccessor: accessor,
+		consts.FieldTTL:      ttl,
+		consts.FieldNumUses:  numUses,
 	}
-	d.Set(consts.FieldMetadata, string(metadata))
-	d.Set("accessor", accessor)
+
+	for k, v := range fields {
+		if err := d.Set(k, v); err != nil {
+			return diag.Errorf("error setting %q in state; err=%s", k, err)
+		}
+	}
 
 	return nil
 }
 
-func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface{}) error {
+func approleAuthBackendRoleSecretIDDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	id := d.Id()
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
-		return fmt.Errorf("invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
+		return diag.Errorf("invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
 	}
 
 	var path, accessorParam string
 
 	if wrapped {
 		path = "auth/token/revoke-accessor"
-		accessorParam = "accessor"
+		accessorParam = consts.FieldAccessor
 	} else {
 		path = approleAuthBackendRolePath(backend, role) + "/secret-id-accessor/destroy"
 		accessorParam = "secret_id_accessor"
@@ -313,7 +366,7 @@ func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface
 		accessorParam: accessor,
 	})
 	if err != nil {
-		return fmt.Errorf("error deleting AppRole auth backend role SecretID %q", id)
+		return diag.Errorf("error deleting AppRole auth backend role SecretID %q", id)
 	}
 	log.Printf("[DEBUG] Deleted AppRole auth backend role SecretID %q", id)
 
@@ -335,7 +388,7 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 
 	if wrapped {
 		_, err := client.Logical().Write("auth/token/lookup-accessor", map[string]interface{}{
-			"accessor": accessor,
+			consts.FieldAccessor: accessor,
 		})
 		if err == nil {
 			return true, nil
@@ -354,6 +407,11 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 	if err != nil {
 		// We need to check if the secret_id has expired or if 404 was returned
 		if util.IsExpiredTokenErr(err) || util.Is404(err) {
+			return false, nil
+		}
+
+		if isAppRoleDoesNotExistError(err, role) {
+			// secretID is invalid if approle is deleted out-of-band
 			return false, nil
 		}
 		return true, fmt.Errorf("error checking if AppRole auth backend role SecretID %q exists: %s", id, err)
@@ -387,4 +445,8 @@ func approleAuthBackendRoleSecretIDParseID(id string) (backend, role, accessor s
 	}
 
 	return
+}
+
+func isAppRoleDoesNotExistError(err error, role string) bool {
+	return util.Is500(err) && strings.Contains(err.Error(), fmt.Sprintf("role \"%s\" does not exist", role))
 }

@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -86,18 +88,52 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 				Config: testAccAWSAuthBackendClientConfig_basicWithoutSecretKey(backend),
 				Check: resource.ComposeTestCheckFunc(
 					testAccAWSAuthBackendClientCheck_attrs(backend),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "access_key", "AWSACCESSKEY"),
-					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", "secret_key"),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", consts.FieldAccessKey, "AWSACCESSKEY"),
+					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", consts.FieldSecretKey),
 				),
 			},
 			{
 				Config: testAccAWSAuthBackendClientConfig_updatedWithoutSecretKey(backend),
 				Check: resource.ComposeTestCheckFunc(
 					testAccAWSAuthBackendClientCheck_attrs(backend),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "access_key", "AWSACCESSKEY"),
-					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", "secret_key"),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", consts.FieldAccessKey, "AWSACCESSKEY"),
+					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", consts.FieldSecretKey),
 				),
 			},
+		},
+	})
+}
+
+func TestAccAWSAuthBackend_wif(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resourceName := "vault_aws_auth_backend_client.client"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+		},
+		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClient_wifBasic(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn"),
+				),
+			},
+			{
+				Config: testAccAWSAuthBackendClient_wifUpdated(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn-updated"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
@@ -142,6 +178,62 @@ func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep("vault_aws_auth_backend_client.client", false, nil),
+		},
+	})
+}
+
+// TestAccAWSAuthBackendClient_automatedRotation tests that Automated
+// Root Rotation parameters are compatible with the AWS Auth Backend Client
+// resource
+func TestAccAWSAuthBackendClient_automatedRotation(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	resourceType := "vault_aws_auth_backend_client"
+	resourceName := resourceType + ".test"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "", 10, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			// zero-out rotation_period
+			{
+				Config: testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "*/20 * * * *", 0, 120, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "120"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * *"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				Config:      testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "", 30, 120, true),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+			},
+			// zero-out rotation_schedule and rotation_window
+			{
+				Config: testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "", 30, 0, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -199,24 +291,62 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			return fmt.Errorf("AWS auth client not configured at %q", endpoint)
 		}
 		attrs := map[string]string{
-			"access_key": "access_key",
-			//"secret_key":                 "secret_key",
-			"ec2_endpoint":               "endpoint",
-			"iam_endpoint":               "iam_endpoint",
-			"sts_endpoint":               "sts_endpoint",
-			"sts_region":                 "sts_region",
-			"iam_server_id_header_value": "iam_server_id_header_value",
+			consts.FieldAccessKey:              consts.FieldAccessKey,
+			consts.FieldEC2Endpoint:            "endpoint",
+			consts.FieldIAMEndpoint:            consts.FieldIAMEndpoint,
+			consts.FieldSTSEndpoint:            consts.FieldSTSEndpoint,
+			consts.FieldSTSRegion:              consts.FieldSTSRegion,
+			consts.FieldIAMServerIDHeaderValue: consts.FieldIAMServerIDHeaderValue,
+			consts.FieldMaxRetries:             consts.FieldMaxRetries,
 		}
 		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
-				continue
+			respApiAttr := resp.Data[apiAttr]
+			if respApiAttr == nil {
+				return fmt.Errorf("expected non-nil value for %s (%s) of %q", apiAttr, stateAttr, endpoint)
 			}
-			if resp.Data[apiAttr] != instanceState.Attributes[stateAttr] {
-				return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
+			if respApiAttr != nil {
+				if apiAttr == consts.FieldMaxRetries {
+					respApiAttr = respApiAttr.(json.Number).String()
+				}
+				if respApiAttr != instanceState.Attributes[stateAttr] {
+					return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], respApiAttr)
+				}
 			}
 		}
 		return nil
 	}
+}
+
+func testAccAWSAuthBackendClient_wifBasic(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  identity_token_audience = "wif-audience"
+  identity_token_ttl = 600
+  role_arn = "test-role-arn"
+}
+`, backend)
+}
+
+func testAccAWSAuthBackendClient_wifUpdated(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  identity_token_audience = "wif-audience-updated"
+  identity_token_ttl = 1800
+  role_arn = "test-role-arn-updated"
+}
+`, backend)
 }
 
 func testAccAWSAuthBackendClientConfig_basic(backend string) string {
@@ -236,6 +366,7 @@ resource "vault_aws_auth_backend_client" "client" {
   sts_endpoint = "http://vault.test/sts"
   sts_region = "vault-test"
   iam_server_id_header_value = "vault.test"
+  max_retries = "-1"
 }
 `, backend)
 }
@@ -257,6 +388,7 @@ resource "vault_aws_auth_backend_client" "client" {
   sts_endpoint = "http://updated.vault.test/sts"
   sts_region = "updated-vault-test"
   iam_server_id_header_value = "updated.vault.test"
+  max_retries = "0"
 }`, backend)
 }
 
@@ -329,4 +461,21 @@ resource "vault_aws_auth_backend_client" "client" {
   access_key = "AWSACCESSKEY"
   use_sts_region_from_client = %v
 }`, backend, useSTSRegionFromClient)
+}
+
+func testAccAWSAuthBackendClientConfigAutomatedRootRotation(backend, schedule string, period, window int, disable bool) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "test" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "test" {
+  backend = vault_auth_backend.test.path
+  rotation_period = "%d"
+  rotation_schedule = "%s"
+  rotation_window = "%d"
+  disable_automated_rotation = %t
+}`, backend, period, schedule, window, disable)
 }

@@ -33,7 +33,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path the PKI secret backend is mounted at, with no leading or trailing `/`s.
@@ -62,6 +62,9 @@ The following arguments are supported:
 
 * `unified_crl_on_existing_paths` - (Optional) Enables serving the unified CRL and OCSP on the existing, previously
  cluster-local paths. **Vault 1.13+**
+
+* `max_crl_entries` - (Optional) The maximum number of entries a CRL can contain. This option exists to prevent 
+ accidental runaway issuance/revocation from overloading Vault. If set to -1, the limit is disabled. **Vault 1.19**
 
 ## Attributes Reference
 

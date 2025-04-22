@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -187,7 +188,7 @@ Vault client version does not meet the minimum requirement for this feature (Vau
 	return consulSecretBackendRead(ctx, d, meta)
 }
 
-func consulSecretBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func consulSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -198,20 +199,17 @@ func consulSecretBackendRead(_ context.Context, d *schema.ResourceData, meta int
 
 	log.Printf("[DEBUG] Reading Consul backend mount %q from Vault", path)
 
-	mounts, err := client.Sys().ListMounts()
+	mount, err := mountutil.GetMount(ctx, client, path)
 	if err != nil {
-		return diag.Errorf("error reading mount %q: %s", path, err)
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
+		return diag.FromErr(err)
 	}
 
-	// path can have a trailing slash, but doesn't need to have one
-	// this standardises on having a trailing slash, which is how the
-	// API always responds.
-	mount, ok := mounts[strings.Trim(path, "/")+"/"]
-	if !ok {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
+	log.Printf("[DEBUG] Read Consul backend mount %q from Vault", path)
 
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)
 	secret, err := client.Logical().Read(configPath)

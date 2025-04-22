@@ -26,17 +26,37 @@ for more details.
 
 ## Example Usage
 
+You can setup the Azure auth engine with Workload Identity Federation (WIF) for a secret-less configuration:
+```hcl
+resource "vault_auth_backend" "example" {
+  type = "azure"
+  identity_token_key = "example-key"
+}
+
+resource "vault_azure_auth_backend_config" "example" {
+  backend                 = vault_auth_backend.example.path
+  tenant_id               = "11111111-2222-3333-4444-555555555555"
+  client_id               = "11111111-2222-3333-4444-555555555555"
+  identity_token_audience = "<TOKEN_AUDIENCE>"
+  identity_token_ttl      = "<TOKEN_TTL>"
+  rotation_schedule       = "0 * * * SAT"
+  rotation_window         = 3600
+}
+```
+
 ```hcl
 resource "vault_auth_backend" "example" {
   type = "azure"
 }
 
 resource "vault_azure_auth_backend_config" "example" {
-  backend       = vault_auth_backend.example.path
-  tenant_id     = "11111111-2222-3333-4444-555555555555"
-  client_id     = "11111111-2222-3333-4444-555555555555"
-  client_secret = "01234567890123456789"
-  resource      = "https://vault.hashicorp.com"
+  backend           = vault_auth_backend.example.path
+  tenant_id         = "11111111-2222-3333-4444-555555555555"
+  client_id         = "11111111-2222-3333-4444-555555555555"
+  client_secret     = "01234567890123456789"
+  resource          = "https://vault.hashicorp.com"
+  rotation_schedule = "0 * * * SAT"
+  rotation_window   = 3600
 }
 ```
 
@@ -46,7 +66,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `tenant_id` - (Required) The tenant id for the Azure Active Directory
@@ -68,6 +88,28 @@ The following arguments are supported:
 	AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud,
 	AzureGermanCloud.  Defaults to `AzurePublicCloud`.
 
+* `identity_token_audience` - (Optional) The audience claim value for plugin identity tokens. Requires Vault 1.17+.
+    *Available only for Vault Enterprise*
+
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds.
+    Defaults to 1 hour. Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
+    Requires Vault 1.17+. *Available only for Vault Enterprise*
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
+  A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+  *Available only for Vault Enterprise*
+
+* `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+.
+  *Available only for Vault Enterprise*
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled token rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+.
+  *Available only for Vault Enterprise*
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
+  *Available only for Vault Enterprise*
 
 ## Attributes Reference
 

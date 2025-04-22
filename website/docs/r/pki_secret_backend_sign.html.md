@@ -63,7 +63,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The PKI secret backend the resource belongs to.
@@ -97,6 +97,10 @@ The following arguments are supported:
   the `/pki/issuer/:issuer_ref/{issue,sign}/:name` paths to prevent users
   overriding the role's `issuer_ref` value.
 
+* `not_after` - (Optional) Set the Not After field of the certificate with specified date value. The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.
+
+* `cert_metadata` (Optional) - A base 64 encoded value or an empty string to associate with the certificate's serial number. The role's no_store_metadata must be set to false, otherwise an error is returned when specified.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
@@ -112,7 +116,3 @@ In addition to the fields above, the following attributes are exported:
 * `expiration` - The expiration date of the certificate in unix epoch format
 
 * `renew_pending` - `true` if the current time (during refresh) is after the start of the early renewal window declared by `min_seconds_remaining`, and `false` otherwise; if `auto_renew` is set to `true` then the provider will plan to replace the certificate once renewal is pending.
-
-## Deprecations
-
-* `serial` - Use `serial_number` instead.

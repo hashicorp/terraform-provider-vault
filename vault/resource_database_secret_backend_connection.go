@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -196,6 +200,7 @@ func (i *dbEngine) PluginPrefixes() ([]string, error) {
 	return append([]string{defaultPrefix}, i.pluginAliases...), nil
 }
 
+// getDatabaseSchema returns the database-specific schema
 func getDatabaseSchema(typ schema.ValueType) schemaMap {
 	var dbEngineTypes []string
 	for _, e := range dbEngines {
@@ -334,6 +339,12 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Optional:    true,
 						Default:     5,
 						Description: "The number of seconds to use as a connection timeout.",
+					},
+					"skip_verification": {
+						Type:        schema.TypeBool,
+						Optional:    true,
+						Default:     false,
+						Description: "Skip permissions checks when a connection to Cassandra is first created. These checks ensure that Vault is able to create roles, but can be resource intensive in clusters with many roles.",
 					},
 				},
 			},
@@ -534,54 +545,42 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMySQL.Name(), dbEngineTypes),
 		},
 		dbEngineMySQLRDS.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the mysql-rds-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
+			Elem:          mysqlConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLRDS.Name(), dbEngineTypes),
 		},
 		dbEngineMySQLAurora.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the mysql-aurora-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
+			Elem:          mysqlConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLAurora.Name(), dbEngineTypes),
 		},
 		dbEngineMySQLLegacy.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the mysql-legacy-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
+			Elem:          mysqlConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLLegacy.Name(), dbEngineTypes),
 		},
 		dbEnginePostgres.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the postgresql-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass:        true,
-				includeDisableEscaping: true,
-				isCloud:                true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the postgresql-database-plugin plugin.",
+			Elem:          postgresConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
 		},
 		dbEngineOracle.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the oracle-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the oracle-database-plugin plugin.",
+			Elem:          oracleConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.Name(), dbEngineTypes),
 		},
@@ -715,13 +714,12 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 	}
 
 	return &schema.Resource{
-		Create: databaseSecretBackendConnectionCreateOrUpdate,
-		Read:   provider.ReadWrapper(databaseSecretBackendConnectionRead),
-		Update: databaseSecretBackendConnectionCreateOrUpdate,
-		Delete: databaseSecretBackendConnectionDelete,
-		Exists: databaseSecretBackendConnectionExists,
+		CreateContext: databaseSecretBackendConnectionCreateOrUpdate,
+		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendConnectionRead),
+		UpdateContext: databaseSecretBackendConnectionCreateOrUpdate,
+		DeleteContext: databaseSecretBackendConnectionDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: s,
 	}
@@ -797,7 +795,59 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 		}
 	}
 
+	if config.isCloud {
+		res.Schema["auth_type"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Specify alternative authorization type. (Only 'gcp_iam' is valid currently)",
+		}
+		res.Schema["service_account_json"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "A JSON encoded credential for use with IAM authorization",
+			Sensitive:   true,
+		}
+	}
+
 	return res
+}
+
+func postgresConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass:        true,
+		includeDisableEscaping: true,
+		isCloud:                true,
+	})
+	r.Schema["tls_ca"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 CA file for validating the certificate presented by the PostgreSQL server. Must be PEM encoded.",
+	}
+	r.Schema["tls_certificate"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 client certificate for connecting to the database. Must be PEM encoded.",
+	}
+	r.Schema["private_key"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The secret key used for the x509 client certificate. Must be PEM encoded.",
+		Sensitive:   true,
+	}
+
+	r.Schema["self_managed"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "If set, allows onboarding static roles with a rootless connection configuration.",
+	}
+	r.Schema["password_authentication"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Default:     "password",
+		Description: "When set to `scram-sha-256`, passwords will be hashed by Vault before being sent to PostgreSQL.",
+	}
+
+	return r
 }
 
 func mysqlConnectionStringResource() *schema.Resource {
@@ -828,6 +878,26 @@ func mssqlConnectionStringResource() *schema.Resource {
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Description: "Set to true when the target is a Contained Database, e.g. AzureSQL.",
+	}
+
+	return r
+}
+
+func oracleConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass: true,
+	})
+	r.Schema["split_statements"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "Set to true in order to split statements after semi-colons.",
+		Default:     true,
+	}
+	r.Schema["disconnect_sessions"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "Set to true to disconnect any open sessions prior to running the revocation statements.",
+		Default:     true,
 	}
 
 	return r
@@ -912,13 +982,13 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineMySQL:
 		setMySQLDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineMySQLRDS:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setMySQLDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineMySQLAurora:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setMySQLDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineMySQLLegacy:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setMySQLDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineOracle:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setOracleDatabaseConnectionData(d, prefix, data)
 	case dbEnginePostgres:
 		setPostgresDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineElasticSearch:
@@ -993,6 +1063,9 @@ func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	}
 	if v, ok := d.GetOkExists(prefix + "connect_timeout"); ok {
 		data["connect_timeout"] = v.(int)
+	}
+	if v, ok := d.GetOkExists(prefix + "skip_verification"); ok {
+		data["skip_verification"] = v.(bool)
 	}
 }
 
@@ -1087,6 +1160,28 @@ func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion114) {
+		if v, ok := data["password_authentication"]; ok {
+			result["password_authentication"] = v.(string)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+		if v, ok := data["tls_ca"]; ok {
+			result["tls_ca"] = v.(string)
+		}
+		if v, ok := data["tls_certificate"]; ok {
+			result["tls_certificate"] = v.(string)
+		}
+		// the private key is a secret that is never revealed by Vault
+		result["private_key"] = d.Get(prefix + "private_key")
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := data["self_managed"]; ok {
+			result["self_managed"] = v.(bool)
+		}
+	}
 	return result
 }
 
@@ -1405,6 +1500,25 @@ func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix
 	return result
 }
 
+func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+	if v, ok := data["split_statements"]; ok {
+		result["split_statements"] = v.(bool)
+	}
+
+	if v, ok := data["disconnect_sessions"]; ok {
+		result["disconnect_sessions"] = v.(bool)
+	}
+
+	return result
+}
+
 func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	if v, ok := d.GetOk(prefix + "connection_url"); ok {
 		data["connection_url"] = v.(string)
@@ -1460,6 +1574,30 @@ func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
 	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	setCloudDatabaseConnectionData(d, prefix, data, meta)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+		if v, ok := d.GetOk(prefix + "tls_ca"); ok {
+			data["tls_ca"] = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + "tls_certificate"); ok {
+			data["tls_certificate"] = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + "private_key"); ok {
+			data["private_key"] = v.(string)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion114) {
+		if v, ok := d.GetOk(prefix + "password_authentication"); ok {
+			data["password_authentication"] = v.(string)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOk(prefix + "self_managed"); ok {
+			data["self_managed"] = v.(bool)
+		}
+	}
 }
 
 func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
@@ -1629,6 +1767,16 @@ func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 	}
 }
 
+func setOracleDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+	if v, ok := d.GetOkExists(prefix + "split_statements"); ok {
+		data["split_statements"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "disconnect_sessions"); ok {
+		data["disconnect_sessions"] = v.(bool)
+	}
+}
+
 func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
 
@@ -1652,34 +1800,31 @@ func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix
 }
 
 func databaseSecretBackendConnectionCreateOrUpdate(
-	d *schema.ResourceData, meta interface{},
-) error {
+	ctx context.Context, d *schema.ResourceData, meta interface{},
+) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	engine, err := getDBEngine(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	path := databaseSecretBackendConnectionPath(
 		d.Get("backend").(string), d.Get("name").(string))
-	if err := writeDatabaseSecretConfig(
-		d, client, engine, 0, false, path, meta); err != nil {
-		return err
+	if err := writeDatabaseSecretConfig(ctx, d, client, engine, 0, false, path, meta); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.SetId(path)
 	log.Printf("[DEBUG] Wrote database connection config %q", path)
 
-	return databaseSecretBackendConnectionRead(d, meta)
+	return databaseSecretBackendConnectionRead(ctx, d, meta)
 }
 
-func writeDatabaseSecretConfig(d *schema.ResourceData, client *api.Client,
-	engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{},
-) error {
+func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, client *api.Client, engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{}) error {
 	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta)
 	if err != nil {
 		return err
@@ -1719,8 +1864,13 @@ func writeDatabaseSecretConfig(d *schema.ResourceData, client *api.Client,
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		// parse automated root rotation fields if Enterprise 1.19 server
+		automatedrotationutil.ParseAutomatedRotationFieldsWithFieldPrefix(d, data, prefix)
+	}
+
 	log.Printf("[DEBUG] Writing connection config to %q", path)
-	_, err = client.Logical().Write(path, data)
+	_, err = client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return fmt.Errorf("error configuring database connection %q: %s", path, err)
 	}
@@ -1763,28 +1913,28 @@ func getSortedPluginPrefixes() ([]string, error) {
 	return pluginPrefixes, nil
 }
 
-func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendConnectionRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
 	backend, err := databaseSecretBackendConnectionBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for database connection: %s", path, err)
+		return diag.Errorf("invalid path %q for database connection: %s", path, err)
 	}
 
 	name, err := databaseSecretBackendConnectionNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for database connection: %s", path, err)
+		return diag.Errorf("invalid path %q for database connection: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading database connection config %q", path)
-	resp, err := client.Logical().Read(path)
+	resp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error reading database connection config %q: %s", path, err)
+		return diag.Errorf("error reading database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read database connection config %q", path)
 	if resp == nil {
@@ -1800,34 +1950,32 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		engine, err = getDBEngineFromResp(dbEngines, resp)
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	result, err := getDBConnectionConfig(d, engine, 0, resp, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err := d.Set(engine.Name(), []map[string]interface{}{result}); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err := d.Set("backend", backend); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	for k, v := range getDBCommonConfig(d, resp, engine, 0, false, name) {
+	for k, v := range getDBCommonConfig(d, resp, engine, 0, false, name, meta) {
 		if err := d.Set(k, v); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	return nil
 }
 
-func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret,
-	engine *dbEngine, idx int, unifiedSchema bool, name string,
-) map[string]interface{} {
+func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngine, idx int, unifiedSchema bool, name string, meta interface{}) map[string]interface{} {
 	var roles []string
 	for _, role := range resp.Data["allowed_roles"].([]interface{}) {
 		roles = append(roles, role.(string))
@@ -1854,6 +2002,10 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret,
 		}
 	}
 	result["root_rotation_statements"] = rootRotationStmts
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		automatedrotationutil.GetAutomatedRotationFieldsFromResponse(resp, result)
+	}
 
 	return result
 }
@@ -1890,13 +2042,13 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineMySQL:
 		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineMySQLRDS:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineMySQLAurora:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineMySQLLegacy:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineOracle:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getOracleConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEnginePostgres:
 		result = getPostgresConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineElasticSearch:
@@ -1971,6 +2123,9 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 			}
 			result["connect_timeout"] = timeout
 		}
+		if v, ok := data["skip_verification"]; ok {
+			result["skip_verification"] = v.(bool)
+		}
 		return result, nil
 	}
 	return nil, nil
@@ -1992,18 +2147,18 @@ func getConnectionDetailsMongoDBAtlas(d *schema.ResourceData, prefix string, res
 	return result
 }
 
-func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendConnectionDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing database connection config %q", path)
-	_, err := client.Logical().Delete(path)
+	_, err := client.Logical().DeleteWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error removing database connection config %q: %s", path, err)
+		return diag.Errorf("error removing database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Removed database connection config %q", path)
 

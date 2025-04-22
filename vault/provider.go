@@ -69,9 +69,19 @@ var (
 			Resource:      UpdateSchemaResource(ldapDynamicCredDataSource()),
 			PathInventory: []string{"/ldap/creds/{role}"},
 		},
+		"vault_namespace": {
+			Resource:       UpdateSchemaResource(namespaceDataSource()),
+			PathInventory:  []string{"/sys/namespaces/{path}"},
+			EnterpriseOnly: true,
+		},
 		"vault_ad_access_credentials": {
 			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},
+		},
+		"vault_namespaces": {
+			Resource:       UpdateSchemaResource(namespacesDataSource()),
+			PathInventory:  []string{"/sys/namespaces"},
+			EnterpriseOnly: true,
 		},
 		"vault_nomad_access_token": {
 			Resource:      UpdateSchemaResource(nomadAccessCredentialsDataSource()),
@@ -157,6 +167,18 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_cert_metadata": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendCertMetadataDataSource()),
+			PathInventory: []string{"/pki/cert-metadata/{serial}"},
+		},
+		"vault_pki_secret_backend_config_cmpv2": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCMPV2DataSource()),
+			PathInventory: []string{"/pki/config/cmp"},
+		},
+		"vault_pki_secret_backend_config_est": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstDataSource()),
+			PathInventory: []string{"/pki/config/est"},
+		},
 		"vault_pki_secret_backend_issuer": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
 			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
@@ -173,6 +195,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
 			PathInventory: []string{"/pki/keys"},
 		},
+		"vault_ssh_secret_backend_sign": {
+			Resource:      UpdateSchemaResource(sshSecretBackendSignDataSource()),
+			PathInventory: []string{"/ssh/sign"},
+		},
 		"vault_transform_encode": {
 			Resource:      UpdateSchemaResource(transformEncodeDataSource()),
 			PathInventory: []string{"/transform/encode/{role_name}"},
@@ -180,6 +206,14 @@ var (
 		"vault_transform_decode": {
 			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
 			PathInventory: []string{"/transform/decode/{role_name}"},
+		},
+		"vault_transit_sign": {
+			Resource:      UpdateSchemaResource(transitSignDataSource()),
+			PathInventory: []string{"/transit/sign/{name}"},
+		},
+		"vault_transit_verify": {
+			Resource:      UpdateSchemaResource(transitVerifyDataSource()),
+			PathInventory: []string{"/transit/verify/{name}"},
 		},
 	}
 
@@ -561,13 +595,33 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendCrlConfigResource()),
 			PathInventory: []string{"/pki/config/crl"},
 		},
+		"vault_pki_secret_backend_config_acme": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigACMEResource()),
+			PathInventory: []string{"/pki/config/acme"},
+		},
 		"vault_pki_secret_backend_config_ca": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCAResource()),
 			PathInventory: []string{"/pki/config/ca"},
 		},
+		"vault_pki_secret_backend_config_cluster": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigClusterResource()),
+			PathInventory: []string{"/pki/config/cluster"},
+		},
+		"vault_pki_secret_backend_config_cmpv2": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCMPV2Resource()),
+			PathInventory: []string{"/pki/config/cmp"},
+		},
+		"vault_pki_secret_backend_config_est": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstResource()),
+			PathInventory: []string{"/pki/config/est"},
+		},
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),
 			PathInventory: []string{"/pki/config/urls"},
+		},
+		"vault_pki_secret_backend_config_auto_tidy": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigAutoTidyResource()),
+			PathInventory: []string{"/pki/config/auto-tidy"},
 		},
 		"vault_pki_secret_backend_intermediate_cert_request": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIntermediateCertRequestResource()),
@@ -604,6 +658,10 @@ var (
 		"vault_pki_secret_backend_config_issuers": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigIssuers()),
 			PathInventory: []string{"/pki/config/issuers"},
+		},
+		"vault_pki_secret_backend_acme_eab": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendAcmeEabResource()),
+			PathInventory: []string{"/pki/acme/new-eab"},
 		},
 		"vault_quota_lease_count": {
 			Resource:      UpdateSchemaResource(quotaLeaseCountResource()),
@@ -724,6 +782,52 @@ var (
 		"vault_saml_auth_backend_role": {
 			Resource:      UpdateSchemaResource(samlAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/saml/role/{name}"},
+		},
+		"vault_secrets_sync_config": {
+			Resource:      UpdateSchemaResource(secretsSyncConfigResource()),
+			PathInventory: []string{"/sys/sync/config"},
+		},
+		"vault_secrets_sync_aws_destination": {
+			Resource:      UpdateSchemaResource(awsSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/aws-sm/{name}"},
+		},
+		"vault_secrets_sync_azure_destination": {
+			Resource:      UpdateSchemaResource(azureSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/azure-kv/{name}"},
+		},
+		"vault_secrets_sync_gcp_destination": {
+			Resource:      UpdateSchemaResource(gcpSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/gcp-sm/{name}"},
+		},
+		"vault_secrets_sync_gh_destination": {
+			Resource:      UpdateSchemaResource(githubSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/gh/{name}"},
+		},
+		"vault_secrets_sync_github_apps": {
+			Resource:      UpdateSchemaResource(githubAppsSecretsSyncResource()),
+			PathInventory: []string{"/sys/sync/github-apps/{name}"},
+		},
+		"vault_secrets_sync_vercel_destination": {
+			Resource:      UpdateSchemaResource(vercelSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/vercel-project/{name}"},
+		},
+		"vault_secrets_sync_association": {
+			Resource:      UpdateSchemaResource(secretsSyncAssociationResource()),
+			PathInventory: []string{"/sys/sync/destinations/{type}/{name}/associations/set"},
+		},
+		"vault_config_ui_custom_message": {
+			Resource:      UpdateSchemaResource(configUICustomMessageResource()),
+			PathInventory: []string{"/sys/config/ui/custom-messages"},
+		},
+		"vault_plugin": {
+			// Only available in the root namespace, don't add namespace to the schema.
+			Resource:      pluginResource(),
+			PathInventory: []string{"/sys/plugins/catalog/{type}/{name}"},
+		},
+		"vault_plugin_pinned_version": {
+			// Only available in the root namespace, don't add namespace to the schema.
+			Resource:      pluginPinnedVersionResource(),
+			PathInventory: []string{"/sys/plugins/pins/{type}/{name}"},
 		},
 	}
 )

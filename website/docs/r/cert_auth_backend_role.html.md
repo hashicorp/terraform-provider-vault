@@ -35,7 +35,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Optional string: "cert") Path to the mounted Cert auth backend
@@ -55,7 +55,6 @@ The following arguments are supported:
 * `allowed_uri_sans` - (Optional array: []) Allowed URIs for authenticated client certificates
 
 * `allowed_organizational_units` - (Optional array: []) Allowed organization units for authenticated client certificates.
- *In previous provider releases this field was incorrectly named `allowed_organization_units`, please update accordingly*
 
 * `required_extensions` - (Optional array: []) TLS extensions required on
   client certificates

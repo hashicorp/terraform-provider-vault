@@ -19,10 +19,23 @@ artifacts accordingly. See
 for more details.
 
 ## Example Usage
+You can setup the GCP secret backend with Workload Identity Federation (WIF) for a secret-less configuration:
+```hcl
+resource "vault_gcp_secret_backend" "gcp" {
+  identity_token_key      = "example-key"
+  identity_token_ttl      = 1800
+  identity_token_audience = "<TOKEN_AUDIENCE>"
+  service_account_email   = "<SERVICE_ACCOUNT_EMAIL>"
+  rotation_schedule       = "0 * * * SAT"
+  rotation_window         = 3600
+}
+```
 
 ```hcl
 resource "vault_gcp_secret_backend" "gcp" {
-  credentials = file("credentials.json")
+  credentials       = file("credentials.json")
+  rotation_schedule = "0 * * * SAT"
+  rotation_window   = 3600
 }
 ```
 
@@ -32,7 +45,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `credentials` - (Optional) The GCP service account credentials in JSON format.
@@ -58,6 +71,36 @@ for credentials issued by this backend. Defaults to '0'.
 
 * `local` - (Optional) Boolean flag that can be explicitly set to true to enforce local mount in HA environment
 
+* `service_account_email` – (Optional) Service Account to impersonate for plugin workload identity federation.
+  Required with `identity_token_audience`. Requires Vault 1.17+. *Available only for Vault Enterprise*.
+
+* `identity_token_audience` - (Optional) The audience claim value for plugin identity
+  tokens. Must match an allowed audience configured for the target [Workload Identity Pool](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#prepare).
+  Mutually exclusive with `credentials`.  Requires Vault 1.17+. *Available only for Vault Enterprise*.
+
+* `identity_token_ttl` - (Optional) The TTL of generated tokens. Defaults to
+  1 hour. Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
+  Requires Vault 1.17+. *Available only for Vault Enterprise*.
+
+* `identity_token_key` - (Optional) The key to use for signing plugin identity
+  tokens. Requires Vault 1.17+. *Available only for Vault Enterprise*.
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
+  A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+  *Available only for Vault Enterprise*.
+
+* `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+. *Available only for Vault Enterprise*.
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled token rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+. *Available only for Vault Enterprise*.
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
+  *Available only for Vault Enterprise*.
+
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+In addition to the arguments above, the following attributes are exported:
+
+* `accessor` - The accessor of the created GCP mount.

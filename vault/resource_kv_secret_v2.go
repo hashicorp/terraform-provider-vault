@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	kvV2SecretMountFromPathRegex = regexp.MustCompile("^(.+)/data/.+$")
-	kvV2SecretNameFromPathRegex  = regexp.MustCompile("^.+/data/(.+)$")
+	kvV2SecretMountFromPathRegex = regexp.MustCompile("^(.+?)/data/.+$")
+	kvV2SecretNameFromPathRegex  = regexp.MustCompile("^.+?/data/(.+?)$")
 
 	kvMetadataFields = map[string]string{
 		consts.FieldMaxVersions:        consts.FieldMaxVersions,
@@ -287,7 +287,14 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 		log.Printf("[DEBUG] secret: %#v", secret)
 
 		data := secret.Data["data"]
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return diag.Errorf("error marshaling JSON for %q: %s", path, err)
+		}
 
+		if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
+			return diag.FromErr(err)
+		}
 		if v, ok := data.(map[string]interface{}); ok {
 			if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
 				return diag.FromErr(err)

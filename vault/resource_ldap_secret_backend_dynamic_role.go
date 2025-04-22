@@ -119,12 +119,15 @@ func readLDAPDynamicRoleResource(ctx context.Context, d *schema.ResourceData, me
 	log.Printf("[DEBUG] Reading %q", rolePath)
 
 	resp, err := client.Logical().ReadWithContext(ctx, rolePath)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	if resp == nil {
 		log.Printf("[WARN] %q not found, removing from state", rolePath)
 		d.SetId("")
 		return nil
 	}
-
 	for _, field := range ldapSecretBackendDynamicRoleFields {
 		if val, ok := resp.Data[field]; ok {
 			if err := d.Set(field, val); err != nil {

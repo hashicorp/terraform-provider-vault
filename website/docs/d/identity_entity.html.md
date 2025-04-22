@@ -32,7 +32,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace of the target resource.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
 * `entity_name` - (Optional) Name of the entity.
@@ -52,7 +52,7 @@ The lookup criteria can be `entity_name`, `entity_id`, `alias_id`, or a combinat
 
 ## Required Vault Capabilities
 
-Use of this resource requires the `create` capability on `/identity/lookup/entity`.
+Use of this resource requires the `update` capability on `/identity/lookup/entity`.
 
 ## Attributes Reference
 

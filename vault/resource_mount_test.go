@@ -236,6 +236,67 @@ func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 	})
 }
 
+func TestResourceMount_IDTokenKey(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-pki")
+
+	resourceName := "vault_mount.test"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceMount_IDTokenKeyConfig(path, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "gcp"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "36000"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "hidden"),
+					// @TODO add these back in when Vault 1.16.3 is released
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "2"),
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
+				),
+			},
+			{
+				Config: testResourceMount_IDTokenKeyConfig(path, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "gcp"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "36000"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.2", "header3"),
+					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
+					resource.TestCheckResourceAttr(resourceName, "identity_token_key", "my-key"),
+					// @TODO add these back in when Vault 1.16.3 is released
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "3"),
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.2", "header3"),
+				),
+			},
+			// @TODO remove ignore_fields once Vault 1.16.3 is released
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"delegated_auth_accessors",
+			),
+		},
+	})
+}
+
 func TestResourceMountMangedKeys(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-pki")
 	keyName := acctest.RandomWithPrefix("kms-key")
@@ -244,7 +305,7 @@ func TestResourceMountMangedKeys(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_managedKeysConfig(keyName, path, false),
@@ -323,6 +384,46 @@ resource "vault_mount" "test" {
   default_lease_ttl_seconds = 7200
   max_lease_ttl_seconds     = 86400
   allowed_managed_keys      = vault_managed_keys.keys.aws[*].name
+}
+`, path)
+	}
+
+	return ret
+}
+
+func testResourceMount_IDTokenKeyConfig(path string, isUpdate bool) string {
+	ret := ""
+
+	if !isUpdate {
+		ret += fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                        = "%s"
+  type                        = "gcp"
+  default_lease_ttl_seconds   = 3600
+  max_lease_ttl_seconds       = 36000
+  passthrough_request_headers = ["header1", "header2"]
+  allowed_response_headers    = ["header1", "header2"]
+  delegated_auth_accessors    = ["header1", "header2"]
+  listing_visibility          = "hidden"
+}
+`, path)
+	} else {
+		ret += fmt.Sprintf(`
+resource "vault_identity_oidc_key" "test" {
+  name      = "my-key"
+  algorithm = "RS256"
+}
+
+resource "vault_mount" "test" {
+  path                        = "%s"
+  type                        = "gcp"
+  default_lease_ttl_seconds   = 3600
+  max_lease_ttl_seconds       = 36000
+  passthrough_request_headers = ["header1"]
+  allowed_response_headers    = ["header1", "header2", "header3"]
+  delegated_auth_accessors    = ["header1", "header2", "header3"]
+  listing_visibility          = "unauth"
+  identity_token_key          = vault_identity_oidc_key.test.name
 }
 `, path)
 	}

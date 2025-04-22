@@ -1,0 +1,22 @@
+# See GitHub's docs for more information on this file:
+# https://docs.github.com/en/free-pro-team@latest/github/administering-a-repository/configuration-options-for-dependency-updates
+version: 2
+updates:
+  # Dependabot only updates hashicorp GHAs, external GHAs are managed by internal tooling (tsccr)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    allow:
+      - dependency-name: "hashicorp/*"
+  # Defines a group by package name, for security updates for golang dependencies
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      golang:
+        applies-to: security-updates
+        patterns:
+          - "golang.org*"
+          - "google.golang.org*"

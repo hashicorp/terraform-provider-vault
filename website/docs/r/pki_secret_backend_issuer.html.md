@@ -43,7 +43,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path the PKI secret backend is mounted at, with no
@@ -74,6 +74,25 @@ The following arguments are supported:
 
 * `enable_aia_url_templating` - (Optional) Specifies that the AIA URL values should
   be templated.
+
+* `disable_critical_extension_checks` - (Optional) This determines whether this
+  issuer is able to issue certificates where the chain of trust (including the
+  issued certificate) contain critical extensions not processed by Vault.
+
+* `disable_path_length_checks` - (Optional) This determines whether this issuer
+  is able to issue certificates where the chain of trust (including the final
+  issued certificate) is longer than allowed by a certificate authority in that
+  chain.
+
+* `disable_name_checks` - (Optional) This determines whether this issuer is able
+  to issue certificates where the chain of trust (including the final issued
+  certificate) contains a link in which the subject of the issuing certificate
+  does not match the named issuer of the certificate it signed.
+
+* `disable_name_constraint_checks` - (Optional) This determines whether this
+  issuer is able to issue certificates where the chain of trust (including the
+  final issued certificate) violates the name constraints critical extension of
+  one of the issuer certificates in the chain.
 
 
 ## Attributes Reference

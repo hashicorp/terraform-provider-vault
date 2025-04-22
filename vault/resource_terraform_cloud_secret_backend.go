@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func terraformCloudSecretBackendResource() *schema.Resource {
@@ -147,19 +149,15 @@ func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[DEBUG] Reading Terraform Cloud backend mount %q from Vault", backend)
 
-	mounts, err := client.Sys().ListMounts()
+	ctx := context.Background()
+	mount, err := mountutil.GetMount(ctx, client, backend)
 	if err != nil {
-		return fmt.Errorf("Error reading mount %q: %s", backend, err)
-	}
-
-	// backend can have a trailing slash, but doesn't need to have one
-	// this standardises on having a trailing slash, which is how the
-	// API always responds.
-	mount, ok := mounts[strings.Trim(backend, "/")+"/"]
-	if !ok {
-		log.Printf("[WARN] Mount %q not found, removing from state.", backend)
-		d.SetId("")
-		return nil
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", backend)
+			d.SetId("")
+			return nil
+		}
+		return err
 	}
 
 	d.Set("backend", backend)
@@ -256,13 +254,17 @@ func terraformCloudSecretBackendExists(d *schema.ResourceData, meta interface{})
 	backend := d.Id()
 
 	log.Printf("[DEBUG] Checking if Terraform Cloud backend exists at %q", backend)
-	mounts, err := client.Sys().ListMounts()
+
+	_, err := mountutil.GetMount(context.Background(), client, backend)
 	if err != nil {
-		return true, fmt.Errorf("Error retrieving list of mounts: %s", err)
+		if mountutil.IsMountNotFoundError(err) {
+			return false, nil
+		}
+
+		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
 	}
-	log.Printf("[DEBUG] Checked if Terraform Cloud backend exists at %q", backend)
-	_, ok := mounts[strings.Trim(backend, "/")+"/"]
-	return ok, nil
+
+	return true, nil
 }
 
 func terraformCloudSecretBackendConfigPath(backend string) string {

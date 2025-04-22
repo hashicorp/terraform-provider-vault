@@ -115,13 +115,6 @@ func consulSecretBackendRoleResource() *schema.Resource {
 				Description: "Specifies the TTL for this role.",
 				Default:     0,
 			},
-			"token_type": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Specifies the type of token to create when using this role. Valid values are \"client\" or \"management\".",
-				Default:     "client",
-				Deprecated:  "Consul 1.11 and later removed the legacy ACL system which supported this field.",
-			},
 			"local": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -187,7 +180,6 @@ func consulSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, m
 	params := []string{
 		"max_ttl",
 		"ttl",
-		"token_type",
 		"local",
 		"consul_namespace",
 		"partition",
@@ -239,7 +231,9 @@ func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	if secret == nil {
-		return diag.Errorf("resource not found")
+		log.Printf("[WARN] ConsulSecretBackendRole %q not found, removing from state", path)
+		d.SetId("")
+		return nil
 	}
 
 	data := secret.Data
@@ -260,7 +254,6 @@ func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, me
 	params := map[string]string{
 		"max_ttl":            "max_ttl",
 		"ttl":                "ttl",
-		"token_type":         "token_type",
 		"local":              "local",
 		"consul_roles":       "consul_roles",
 		"consul_namespace":   "consul_namespace",

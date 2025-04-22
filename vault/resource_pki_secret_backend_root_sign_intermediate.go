@@ -137,6 +137,69 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldExcludedDNSDomains: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of domains for which certificates are not allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldPermittedIPRanges: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of IP ranges for which certificates are allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldExcludedIPRanges: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of IP ranges for which certificates are NOT allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldPermittedEmailAddresses: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of email addresses for which certificates are allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldExcludedEmailAddresses: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of email addresses for which certificates are not allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldPermittedURIDomains: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of URI domains for which certificates are allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldExcludedURIDomains: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of URI domains for which certificates are not allowed to be issued.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			consts.FieldOu: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -179,6 +242,24 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Description: "The postal code.",
 				ForceNew:    true,
 			},
+			consts.FieldSignatureBits: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The number of bits to use in the signature algorithm.",
+				ForceNew:    true,
+			},
+			consts.FieldSKID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Value for the Subject Key Identifier field\n  (RFC 5280 Section 4.2.1.2). Specified as a string in hex format.",
+				ForceNew:    true,
+			},
+			consts.FieldUsePSS: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Specifies whether or not to use PSS signatures\n  over PKCS#1v1.5 signatures when a RSA-type issuer is used.",
+				ForceNew:    true,
+			},
 			consts.FieldCertificate: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -204,16 +285,18 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 					"Requires the format to be set to any of: pem, " +
 					"pem_bundle. The value will be empty for all other formats.",
 			},
-			consts.FieldSerial: {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Deprecated:  "Use serial_number instead",
-				Description: "The serial number.",
-			},
 			consts.FieldSerialNumber: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The certificate's serial number, hex formatted.",
+			},
+			consts.FieldNotBeforeDuration: {
+				Type:         schema.TypeString,
+				Required:     false,
+				Optional:     true,
+				Description:  "Specifies the duration by which to backdate the NotBefore property.",
+				ForceNew:     true,
+				ValidateFunc: provider.ValidateDuration,
 			},
 			consts.FieldRevoke: {
 				Type:        schema.TypeBool,
@@ -226,6 +309,13 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies the default issuer of this request.",
 			},
+			consts.FieldNotAfter: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Set the Not After field of the certificate with specified date value. " +
+					"The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. " +
+					"Supports the Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.",
+			},
 		},
 	}
 }
@@ -237,7 +327,6 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 	}
 
 	backend := d.Get(consts.FieldBackend).(string)
-	path := pkiSecretBackendRootSignIntermediateCreatePath(backend)
 
 	commonName := d.Get(consts.FieldCommonName).(string)
 
@@ -254,11 +343,16 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldProvince,
 		consts.FieldStreetAddress,
 		consts.FieldPostalCode,
+		consts.FieldSignatureBits,
+		consts.FieldSKID,
+		consts.FieldNotAfter,
+		consts.FieldNotBeforeDuration,
 	}
 
 	intermediateSignBooleanAPIFields := []string{
 		consts.FieldExcludeCNFromSans,
 		consts.FieldUseCSRValues,
+		consts.FieldUsePSS,
 	}
 
 	intermediateSignStringArrayFields := []string{
@@ -269,17 +363,35 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldPermittedDNSDomains,
 	}
 
+	// Whether name constraints fields (other than permitted_dns_domains), are supproted,
+	// See VAULT-32141.
+	isNameConstraintsExtensionSupported := provider.IsAPISupported(meta, provider.VaultVersion119)
+	if isNameConstraintsExtensionSupported {
+		intermediateSignStringArrayFields = append(intermediateSignStringArrayFields,
+			consts.FieldExcludedDNSDomains,
+			consts.FieldPermittedIPRanges,
+			consts.FieldExcludedIPRanges,
+			consts.FieldPermittedEmailAddresses,
+			consts.FieldExcludedEmailAddresses,
+			consts.FieldPermittedURIDomains,
+			consts.FieldExcludedURIDomains,
+		)
+	}
+
 	data := map[string]interface{}{}
+	rawConfig := d.GetRawConfig()
 	for _, k := range intermediateSignAPIFields {
-		if v, ok := d.GetOk(k); ok {
+		if v := d.Get(k); !rawConfig.GetAttr(k).IsNull() {
 			data[k] = v
 		}
 	}
 
 	// add version specific multi-issuer fields
+	var issuerRef string
 	if provider.IsAPISupported(meta, provider.VaultVersion111) {
-		if issuerRef, ok := d.GetOk(consts.FieldIssuerRef); ok {
-			data[consts.FieldIssuerRef] = issuerRef
+		if v, ok := d.GetOk(consts.FieldIssuerRef); ok {
+			data[consts.FieldIssuerRef] = v
+			issuerRef = v.(string)
 		}
 	}
 
@@ -296,6 +408,8 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		}
 	}
 
+	path := pkiSecretBackendRootSignIntermediateCreatePath(backend, issuerRef)
+
 	log.Printf("[DEBUG] Creating root sign-intermediate on PKI secret backend %q", backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -303,18 +417,14 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 	}
 	log.Printf("[DEBUG] Created root sign-intermediate on PKI secret backend %q", backend)
 
-	// helpful to consolidate code into single loop
-	// since 'serial' is deprecated, we read the 'serial_number'
-	// field from the response in order to set to the TF state
-	certFieldsMap := map[string]string{
-		consts.FieldCertificate:  consts.FieldCertificate,
-		consts.FieldIssuingCA:    consts.FieldIssuingCA,
-		consts.FieldSerialNumber: consts.FieldSerialNumber,
-		consts.FieldSerial:       consts.FieldSerialNumber,
+	computedFields := []string{
+		consts.FieldCertificate,
+		consts.FieldIssuingCA,
+		consts.FieldSerialNumber,
 	}
 
-	for k, v := range certFieldsMap {
-		if err := d.Set(k, resp.Data[v]); err != nil {
+	for _, k := range computedFields {
+		if err := d.Set(k, resp.Data[k]); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -327,7 +437,14 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		return diag.FromErr(err)
 	}
 
-	d.SetId(fmt.Sprintf("%s/%s", backend, commonName))
+	if issuerRef != "" {
+		// encodes unique ID info for the particular issuer and
+		// the CN of the Intermediate CSR
+		d.SetId(fmt.Sprintf("%s/%s", path, commonName))
+	} else {
+		// leave behavior unchanged for default issuer
+		d.SetId(fmt.Sprintf("%s/%s", backend, commonName))
+	}
 
 	return pkiSecretBackendRootSignIntermediateRead(ctx, d, meta)
 }
@@ -438,7 +555,11 @@ func pkiSecretBackendRootSignIntermediateUpdate(ctx context.Context, d *schema.R
 	return nil
 }
 
-func pkiSecretBackendRootSignIntermediateCreatePath(backend string) string {
+func pkiSecretBackendRootSignIntermediateCreatePath(backend string, issuer string) string {
+	// Send request to multi-issuer endpoint
+	if issuer != "" {
+		return strings.Trim(backend, "/") + fmt.Sprintf("/issuer/%s/sign-intermediate", issuer)
+	}
 	return strings.Trim(backend, "/") + "/root/sign-intermediate"
 }
 

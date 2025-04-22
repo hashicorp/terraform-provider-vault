@@ -13,8 +13,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -29,7 +28,6 @@ func transitSecretBackendKeyResource() *schema.Resource {
 		Read:   provider.ReadWrapper(transitSecretBackendKeyRead),
 		Update: transitSecretBackendKeyUpdate,
 		Delete: transitSecretBackendKeyDelete,
-		Exists: transitSecretBackendKeyExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -78,28 +76,18 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Description: "If set, enables taking backup of named key in the plaintext format. Once set, this cannot be disabled.",
 				Default:     false,
 			},
-			"auto_rotate_interval": {
-				Type:          schema.TypeInt,
-				Optional:      true,
-				Computed:      true,
-				Deprecated:    "Use auto_rotate_period instead",
-				Description:   "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
-				ConflictsWith: []string{"auto_rotate_period"},
-			},
 			"auto_rotate_period": {
-				Type:          schema.TypeInt,
-				Optional:      true,
-				Computed:      true,
-				Description:   "Amount of seconds the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
-				ConflictsWith: []string{"auto_rotate_interval"},
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "Amount of seconds the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
 			},
 			"type": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Description:  "Specifies the type of key to create. The currently-supported types are: aes128-gcm96, aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, ecdsa-p384, ecdsa-p521, hmac, rsa-2048, rsa-3072, rsa-4096",
-				ForceNew:     true,
-				Default:      "aes256-gcm96",
-				ValidateFunc: validation.StringInSlice([]string{"aes128-gcm96", "aes256-gcm96", "chacha20-poly1305", "ed25519", "ecdsa-p256", "ecdsa-p384", "ecdsa-p521", "hmac", "rsa-2048", "rsa-3072", "rsa-4096"}, false),
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the type of key to create. The currently-supported types are: aes128-gcm96, aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, ecdsa-p384, ecdsa-p521, hmac, rsa-2048, rsa-3072, rsa-4096",
+				ForceNew:    true,
+				Default:     "aes256-gcm96",
 			},
 			"keys": {
 				Type:        schema.TypeList,
@@ -144,6 +132,21 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Optional:    true,
 				Description: "Minimum key version to use for encryption",
 				Default:     0,
+			},
+			consts.FieldParameterSet: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The parameter set to use for ML-DSA. Required for ML-DSA and hybrid keys. Valid values are 44, 65, and 87.",
+			},
+			consts.FieldHybridKeyTypeEC: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The elliptic curve algorithm to use for hybrid signatures. Supported key types are `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, and `ed25519`.",
+			},
+			consts.FieldHybridKeyTypePQC: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The post-quantum algorithm to use for hybrid signatures. Currently, ML-DSA is the only supported key type.",
 			},
 			"supports_encryption": {
 				Type:        schema.TypeBool,
@@ -229,6 +232,20 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 		"auto_rotate_period":    autoRotatePeriod,
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		if params, ok := d.GetOk(consts.FieldParameterSet); ok {
+			data[consts.FieldParameterSet] = params
+		}
+
+		if params, ok := d.GetOk(consts.FieldHybridKeyTypeEC); ok {
+			data[consts.FieldHybridKeyTypeEC] = params
+		}
+
+		if params, ok := d.GetOk(consts.FieldHybridKeyTypePQC); ok {
+			data[consts.FieldHybridKeyTypePQC] = params
+		}
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		data["key_size"] = d.Get("key_size").(int)
 	}
@@ -252,13 +269,7 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 func getTransitAutoRotatePeriod(d *schema.ResourceData) int {
 	var autoRotatePeriod int
 	v, ok := d.GetOkExists("auto_rotate_period")
-	if !ok {
-		if v, ok := d.GetOkExists("auto_rotate_interval"); ok {
-			log.Printf("[WARN] Using auto_rotate_internal to set auto_rotate_period, " +
-				"please use auto_rotate_period instead")
-			autoRotatePeriod = v.(int)
-		}
-	} else {
+	if ok {
 		autoRotatePeriod = v.(int)
 	}
 
@@ -390,32 +401,15 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		"deletion_allowed", "derived", "exportable",
 		"supports_decryption", "supports_derivation",
 		"supports_encryption", "supports_signing", "type",
-	}
-
-	set := func(f, k string) error {
-		v, ok := secret.Data[k]
-		if !ok {
-			log.Printf("[WARN] Expected key %q not found in response, path=%q", k, path)
-		}
-		if err := d.Set(f, v); err != nil {
-			return err
-		}
-		return nil
+		"auto_rotate_period",
 	}
 
 	for _, f := range fields {
-		if err := set(f, f); err != nil {
-			return err
+		if v, ok := secret.Data[f]; ok {
+			if err := d.Set(f, v); err != nil {
+				return err
+			}
 		}
-	}
-
-	autoRotatePeriodField := "auto_rotate_period"
-	if _, ok := d.GetOkExists("auto_rotate_interval"); ok {
-		autoRotatePeriodField = "auto_rotate_interval"
-	}
-
-	if err := set(autoRotatePeriodField, "auto_rotate_period"); err != nil {
-		return nil
 	}
 
 	return nil
@@ -463,22 +457,6 @@ func transitSecretBackendKeyDelete(d *schema.ResourceData, meta interface{}) err
 	}
 	log.Printf("[DEBUG] Deleted keyu %q", path)
 	return nil
-}
-
-func transitSecretBackendKeyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if key %q exists", path)
-	secret, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if key %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if key %q exists", path)
-	return secret != nil, nil
 }
 
 func transitSecretBackendKeyPath(backend string, name string) string {

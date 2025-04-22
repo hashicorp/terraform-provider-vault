@@ -20,16 +20,17 @@ import (
 var kubernetesSecretBackendFromPathRegex = regexp.MustCompile("^(.+)/roles/.+$")
 
 const (
-	fieldAllowedKubernetesNamespaces = "allowed_kubernetes_namespaces"
-	fieldTokenMaxTTL                 = "token_max_ttl"
-	fieldTokenDefaultTTL             = "token_default_ttl"
-	fieldServiceAccountName          = "service_account_name"
-	fieldKubernetesRoleName          = "kubernetes_role_name"
-	fieldKubernetesRoleType          = "kubernetes_role_type"
-	fieldGeneratedRoleRules          = "generated_role_rules"
-	fieldNameTemplate                = "name_template"
-	fieldExtraAnnotations            = "extra_annotations"
-	fieldExtraLabels                 = "extra_labels"
+	fieldAllowedKubernetesNamespaces        = "allowed_kubernetes_namespaces"
+	fieldAllowedKubernetesNamespaceSelector = "allowed_kubernetes_namespace_selector"
+	fieldTokenMaxTTL                        = "token_max_ttl"
+	fieldTokenDefaultTTL                    = "token_default_ttl"
+	fieldServiceAccountName                 = "service_account_name"
+	fieldKubernetesRoleName                 = "kubernetes_role_name"
+	fieldKubernetesRoleType                 = "kubernetes_role_type"
+	fieldGeneratedRoleRules                 = "generated_role_rules"
+	fieldNameTemplate                       = "name_template"
+	fieldExtraAnnotations                   = "extra_annotations"
+	fieldExtraLabels                        = "extra_labels"
 )
 
 func kubernetesSecretBackendRoleResource() *schema.Resource {
@@ -63,8 +64,16 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Description: "The list of Kubernetes namespaces this role can generate " +
-					"credentials for. If set to '*' all namespaces are allowed.",
-				Required: true,
+					"credentials for. If set to '*' all namespaces are allowed. If set with" +
+					"`allowed_kubernetes_namespace_selector`, the conditions are `OR`ed.",
+				Optional: true,
+			},
+			fieldAllowedKubernetesNamespaceSelector: {
+				Type: schema.TypeString,
+				Description: "A label selector for Kubernetes namespaces in which credentials can be" +
+					"generated. Accepts either a JSON or YAML object. The value should be of type" +
+					"LabelSelector. If set with `allowed_kubernetes_namespace`, the conditions are `OR`ed.",
+				Optional: true,
 			},
 			fieldTokenMaxTTL: {
 				Type:        schema.TypeInt,
@@ -143,6 +152,7 @@ func kubernetesSecretBackendRoleCreateUpdate(ctx context.Context, d *schema.Reso
 	data := make(map[string]interface{})
 	fields := []string{
 		fieldAllowedKubernetesNamespaces,
+		fieldAllowedKubernetesNamespaceSelector,
 		fieldTokenMaxTTL,
 		fieldTokenDefaultTTL,
 		fieldServiceAccountName,
@@ -154,6 +164,9 @@ func kubernetesSecretBackendRoleCreateUpdate(ctx context.Context, d *schema.Reso
 		fieldExtraLabels,
 	}
 	for _, k := range fields {
+		if k == fieldAllowedKubernetesNamespaceSelector && !provider.IsAPISupported(meta, provider.VaultVersion112) {
+			continue
+		}
 		if d.HasChange(k) {
 			data[k] = d.Get(k)
 		}
@@ -200,6 +213,7 @@ func kubernetesSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, 
 	fields := []string{
 		consts.FieldName,
 		fieldAllowedKubernetesNamespaces,
+		fieldAllowedKubernetesNamespaceSelector,
 		fieldTokenMaxTTL,
 		fieldTokenDefaultTTL,
 		fieldServiceAccountName,
@@ -211,6 +225,9 @@ func kubernetesSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, 
 		fieldExtraLabels,
 	}
 	for _, k := range fields {
+		if k == fieldAllowedKubernetesNamespaceSelector && !provider.IsAPISupported(meta, provider.VaultVersion112) {
+			continue
+		}
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return diag.Errorf("error setting state key %q on Kubernetes backend role, err=%s",
 				k, err)

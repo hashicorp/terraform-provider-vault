@@ -10,6 +10,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -56,6 +57,7 @@ func DefaultTransportOptions() *TransportOptions {
 	if logBody, err := strconv.ParseBool(os.Getenv(EnvLogBody)); err == nil {
 		opts.LogRequestBody = logBody
 		opts.LogResponseBody = logBody
+
 	} else {
 		if logRequestBody, err := strconv.ParseBool(os.Getenv(EnvLogRequestBody)); err == nil {
 			opts.LogRequestBody = logRequestBody
@@ -89,6 +91,7 @@ func (t *TransportWrapper) SetTLSConfig(c *tls.Config) error {
 }
 
 func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) {
+	transportID := uuid.New().String()
 	if logging.IsDebugOrHigher() {
 		var origHeaders http.Header
 		if len(t.options.HMACRequestHeaders) > 0 && len(req.Header) > 0 {
@@ -108,7 +111,7 @@ func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) 
 
 		reqData, err := httputil.DumpRequestOut(req, t.options.LogRequestBody)
 		if err == nil {
-			log.Printf("[DEBUG] "+logReqMsg, t.name, prettyPrintJsonLines(reqData))
+			log.Printf("[DEBUG] "+logReqMsg, transportID, t.name, prettyPrintJsonLines(reqData))
 		} else {
 			log.Printf("[ERROR] %s API Request error: %#v", t.name, err)
 		}
@@ -126,7 +129,7 @@ func (t *TransportWrapper) RoundTrip(req *http.Request) (*http.Response, error) 
 	if logging.IsDebugOrHigher() {
 		respData, err := httputil.DumpResponse(resp, t.options.LogResponseBody)
 		if err == nil {
-			log.Printf("[DEBUG] "+logRespMsg, t.name, prettyPrintJsonLines(respData))
+			log.Printf("[DEBUG] "+logRespMsg, transportID, t.name, prettyPrintJsonLines(respData))
 		} else {
 			log.Printf("[ERROR] %s API Response error: %#v", t.name, err)
 		}
@@ -157,12 +160,12 @@ func prettyPrintJsonLines(b []byte) string {
 	return strings.Join(parts, "\n")
 }
 
-const logReqMsg = `%s API Request Details:
+const logReqMsg = `[%s] %s API Request Details:
 ---[ REQUEST ]---------------------------------------
 %s
 -----------------------------------------------------`
 
-const logRespMsg = `%s API Response Details:
+const logRespMsg = `[%s] %s API Response Details:
 ---[ RESPONSE ]--------------------------------------
 %s
 -----------------------------------------------------`

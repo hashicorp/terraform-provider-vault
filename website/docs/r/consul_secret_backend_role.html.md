@@ -37,7 +37,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Optional) The unique name of an existing Consul secrets backend mount. Must not begin or end with a `/`. One of `path` or `backend` is required.
@@ -68,9 +68,6 @@ identities to attach to the token. Applicable for Vault 1.11+ with Consul 1.8+.
 * `max_ttl` - (Optional) Maximum TTL for leases associated with this role, in seconds.
 
 * `ttl` - (Optional) Specifies the TTL for this role.
-
-* `token_type` - (Optional) Specifies the type of token to create when using this role. Valid values are "client" or "management".
-  *Deprecated: Consul 1.11 and later removed the legacy ACL system which supported this field.*
 
 * `local` - (Optional) Indicates that the token should not be replicated globally and instead be local to the current datacenter.
 

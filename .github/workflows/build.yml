@@ -17,27 +17,31 @@ jobs:
     outputs:
       version: ${{ steps.go-version.outputs.version }}
     steps:
-      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - id: go-version
         run: echo "version=$(cat .go-version)" >> "$GITHUB_OUTPUT"
   build:
     needs: [go-version]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version-file: '.go-version'
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.4.*'
+          terraform_version: '1.7.*'
           terraform_wrapper: false
 
       - name: Cache go build
+<<<<<<< HEAD
         uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3.4.0
+=======
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+>>>>>>> main
         with:
           path: |
             ~/.cache/go-build
@@ -58,16 +62,17 @@ jobs:
           make test
   acceptance:
     needs: [go-version, build]
-    runs-on: [custom, linux, custom-linux-large]
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.11.12-ent"
-        - "vault-enterprise:1.12.11-ent"
-        - "vault-enterprise:1.13.8-ent"
-        - "vault-enterprise:1.14.4-ent"
-        - "vault-enterprise:1.15.0-ent"
+        - "vault-enterprise:1.15.16-ent"
+        - "vault-enterprise:1.16.15-ent"
+        - "vault-enterprise:1.17.11-ent"
+        - "vault-enterprise:1.18.4-ent"
+        - "vault-enterprise:1.19.0-ent"
+        - "vault:latest"
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -75,6 +80,8 @@ jobs:
           VAULT_DEV_ROOT_TOKEN_ID: root
           VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
           VAULT_AUTH_CONFIG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VAULT_LOCAL_CONFIG: |
+            {"plugin_directory": "/vault/plugins"}
         options: >-
           --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
           --health-interval 1s
@@ -82,6 +89,8 @@ jobs:
           --health-retries 5
         ports:
           - 8200:8200
+        volumes:
+          - ${{ github.workspace }}:/vault/plugins
       mysql:
         image: docker.mirror.hashicorp.services/mysql:latest
         env:
@@ -151,22 +160,34 @@ jobs:
           LDAP_USERS: "alice,bob,foo"
           LDAP_PASSWORDS: "password1,password2,password3"
     steps:
-      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version-file: '.go-version'
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.4.*'
+          terraform_version: '1.7.*'
           terraform_wrapper: false
       - name: Check Terraform CLI version
         run: terraform --version
+      - name: Download external plugin
+        id: plugin
+        env:
+          PLUGIN: "vault-plugin-auth-jwt"
+          VERSION: "0.17.0"
+        run: |
+          ZIP="${PLUGIN}_${VERSION}_linux_amd64.zip"
+          SHA256SUMS="${PLUGIN}_${VERSION}_SHA256SUMS"
+          curl -sO "https://releases.hashicorp.com/${PLUGIN}/${VERSION}/{${ZIP},${SHA256SUMS}}"
+          shasum -a 256 -c "${PLUGIN}_${VERSION}_SHA256SUMS" --ignore-missing
+          unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
+          echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
       - name: Cache go build
-        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             ~/.cache/go-build
@@ -188,7 +209,16 @@ jobs:
           MYSQL_CONNECTION_PASSWORD: "mysql"
           MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
+          # POSTGRES_URL is the standard root conn URL for Vault
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
+          # POSTGRES_URL_TEST is used by the TFVP test to connect directly to
+          # the postgres container so that it can create static users.
+          # Note: the host is "localhost" because the TFVP tests do not run in
+          # the same docker network.
+          POSTGRES_URL_TEST: "postgres://postgres:secret@localhost:5432/database?sslmode=disable"
+          # POSTGRES_URL_ROOTLESS is used by Vault to connect to the postgres
+          # container for "rootless" static roles".
+          POSTGRES_URL_ROOTLESS: "postgres://{{username}}:{{password}}@postgres:5432/database?sslmode=disable"
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
@@ -197,8 +227,14 @@ jobs:
           LDAP_BINDDN: "cn=admin,dc=example,dc=org"
           LDAP_BINDPASS: "adminpassword"
           LDAP_URL: "ldap://openldap:1389"
+          VAULT_PLUGIN_COMMAND: ${{ steps.plugin.outputs.command }}
         run: |
-          make testacc-ent TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
+          if [[ ${{ matrix.image }} =~ "-ent" ]]; then
+            target="testacc-ent"
+          else
+            target="testacc"
+          fi
+          make $target TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json

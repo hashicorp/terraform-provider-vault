@@ -25,6 +25,19 @@ for more information. The example below demonstrates how to do this.
 
 ## Example Usage: *vault-1.9 and above*
 
+You can setup the Azure secrets engine with Workload Identity Federation (WIF) for a secret-less configuration:
+```hcl
+resource "vault_azure_secret_backend" "azure" {
+  subscription_id         = "11111111-2222-3333-4444-111111111111"
+  tenant_id               = "11111111-2222-3333-4444-222222222222"
+  client_id               = "11111111-2222-3333-4444-333333333333"
+  identity_token_audience = "<TOKEN_AUDIENCE>"
+  identity_token_ttl      = "<TOKEN_TTL>"
+  rotation_schedule       = "0 * * * SAT"
+  rotation_window         = 3600
+}
+```
+
 ```hcl
 resource "vault_azure_secret_backend" "azure" {
   use_microsoft_graph_api = true
@@ -33,6 +46,8 @@ resource "vault_azure_secret_backend" "azure" {
   client_id               = "11111111-2222-3333-4444-333333333333"
   client_secret           = "12345678901234567890"
   environment             = "AzurePublicCloud"
+  rotation_schedule       = "0 * * * SAT"
+  rotation_window         = 3600
 }
 ```
 
@@ -55,7 +70,7 @@ The following arguments are supported:
 
 - `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 - `subscription_id` (`string: <required>`) - The subscription id for the Azure Active Directory.
@@ -73,6 +88,30 @@ The following arguments are supported:
 - `environment` (`string:""`) - The Azure environment.
 
 - `path` (`string: <optional>`) - The unique path this backend should be mounted at. Defaults to `azure`.
+
+- `identity_token_audience` - (Optional) The audience claim value. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
+
+- `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
+
+- `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
+
+- `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
+  A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+  *Available only for Vault Enterprise*
+
+- `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+.
+  *Available only for Vault Enterprise*
+
+- `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled token rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+. *Available only for Vault Enterprise*
+
+- `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
+  *Available only for Vault Enterprise*
 
 - `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
   See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)

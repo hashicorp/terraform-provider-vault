@@ -4,40 +4,42 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 type schemaMap map[string]*schema.Schema
 
 func getMountSchema(excludes ...string) schemaMap {
 	s := schemaMap{
-		"path": {
+		consts.FieldPath: {
 			Type:        schema.TypeString,
 			Required:    true,
 			ForceNew:    false,
 			Description: "Where the secret backend will be mounted",
 		},
-		"type": {
+		consts.FieldType: {
 			Type:        schema.TypeString,
 			Required:    true,
 			ForceNew:    true,
 			Description: "Type of the backend, such as 'aws'",
 		},
-		"description": {
+		consts.FieldDescription: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Required:    false,
 			Description: "Human-friendly description of the mount",
 		},
-		"default_lease_ttl_seconds": {
+		consts.FieldDefaultLeaseTTL: {
 			Type:        schema.TypeInt,
 			Required:    false,
 			Optional:    true,
@@ -46,7 +48,7 @@ func getMountSchema(excludes ...string) schemaMap {
 			Description: "Default lease duration for tokens and secrets in seconds",
 		},
 
-		"max_lease_ttl_seconds": {
+		consts.FieldMaxLeaseTTL: {
 			Type:        schema.TypeInt,
 			Required:    false,
 			Optional:    true,
@@ -55,7 +57,7 @@ func getMountSchema(excludes ...string) schemaMap {
 			Description: "Maximum possible lease duration for tokens and secrets in seconds",
 		},
 
-		"audit_non_hmac_request_keys": {
+		consts.FieldAuditNonHMACRequestKeys: {
 			Type:        schema.TypeList,
 			Computed:    true,
 			Optional:    true,
@@ -63,7 +65,7 @@ func getMountSchema(excludes ...string) schemaMap {
 			Elem:        &schema.Schema{Type: schema.TypeString},
 		},
 
-		"audit_non_hmac_response_keys": {
+		consts.FieldAuditNonHMACResponseKeys: {
 			Type:        schema.TypeList,
 			Computed:    true,
 			Optional:    true,
@@ -71,13 +73,13 @@ func getMountSchema(excludes ...string) schemaMap {
 			Elem:        &schema.Schema{Type: schema.TypeString},
 		},
 
-		"accessor": {
+		consts.FieldAccessor: {
 			Type:        schema.TypeString,
 			Computed:    true,
 			Description: "Accessor of the mount",
 		},
 
-		"local": {
+		consts.FieldLocal: {
 			Type:        schema.TypeBool,
 			Required:    false,
 			Optional:    true,
@@ -86,7 +88,7 @@ func getMountSchema(excludes ...string) schemaMap {
 			Description: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
 		},
 
-		"options": {
+		consts.FieldOptions: {
 			Type:        schema.TypeMap,
 			Required:    false,
 			Optional:    true,
@@ -95,7 +97,7 @@ func getMountSchema(excludes ...string) schemaMap {
 			Description: "Specifies mount type specific options that are passed to the backend",
 		},
 
-		"seal_wrap": {
+		consts.FieldSealWrap: {
 			Type:        schema.TypeBool,
 			Required:    false,
 			Optional:    true,
@@ -104,7 +106,7 @@ func getMountSchema(excludes ...string) schemaMap {
 			Description: "Enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability",
 		},
 
-		"external_entropy_access": {
+		consts.FieldExternalEntropyAccess: {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Default:     false,
@@ -112,12 +114,56 @@ func getMountSchema(excludes ...string) schemaMap {
 			Description: "Enable the secrets engine to access Vault's external entropy source",
 		},
 
-		"allowed_managed_keys": {
+		consts.FieldAllowedManagedKeys: {
 			Type:        schema.TypeSet,
 			Optional:    true,
-			ForceNew:    true,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Description: "List of managed key registry entry names that the mount in question is allowed to access",
+		},
+
+		consts.FieldListingVisibility: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Specifies whether to show this mount in the UI-specific listing endpoint",
+		},
+
+		consts.FieldPassthroughRequestHeaders: {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description: "List of headers to allow and pass from the request to the plugin",
+		},
+
+		consts.FieldAllowedResponseHeaders: {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description: "List of headers to allow and pass from the request to the plugin",
+		},
+
+		consts.FieldDelegatedAuthAccessors: {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description: "List of headers to allow and pass from the request to the plugin",
+		},
+
+		consts.FieldPluginVersion: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Specifies the semantic version of the plugin to use, e.g. 'v1.0.0'",
+		},
+
+		consts.FieldIdentityTokenKey: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The key to use for signing plugin workload identity tokens",
 		},
 	}
 	for _, v := range excludes {
@@ -145,8 +191,8 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	path := d.Get("path").(string)
-	if err := createMount(d, client, path, d.Get("type").(string)); err != nil {
+	path := d.Get(consts.FieldPath).(string)
+	if err := createMount(d, client, path, d.Get(consts.FieldType).(string)); err != nil {
 		return err
 	}
 
@@ -158,26 +204,50 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 func createMount(d *schema.ResourceData, client *api.Client, path string, mountType string) error {
 	input := &api.MountInput{
 		Type:        mountType,
-		Description: d.Get("description").(string),
+		Description: d.Get(consts.FieldDescription).(string),
 		Config: api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
+			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
 		},
-		Local:                 d.Get("local").(bool),
+		Local:                 d.Get(consts.FieldLocal).(bool),
 		Options:               mountOptions(d),
-		SealWrap:              d.Get("seal_wrap").(bool),
-		ExternalEntropyAccess: d.Get("external_entropy_access").(bool),
+		SealWrap:              d.Get(consts.FieldSealWrap).(bool),
+		ExternalEntropyAccess: d.Get(consts.FieldExternalEntropyAccess).(bool),
 	}
 
-	if v, ok := d.GetOk("audit_non_hmac_request_keys"); ok {
+	if v, ok := d.GetOk(consts.FieldAuditNonHMACRequestKeys); ok {
 		input.Config.AuditNonHMACRequestKeys = expandStringSlice(v.([]interface{}))
 	}
-	if v, ok := d.GetOk("audit_non_hmac_response_keys"); ok {
+	if v, ok := d.GetOk(consts.FieldAuditNonHMACResponseKeys); ok {
 		input.Config.AuditNonHMACResponseKeys = expandStringSlice(v.([]interface{}))
 	}
 
-	if v, ok := d.GetOk("allowed_managed_keys"); ok {
+	if v, ok := d.GetOk(consts.FieldAllowedManagedKeys); ok {
 		input.Config.AllowedManagedKeys = expandStringSlice(v.(*schema.Set).List())
+	}
+
+	if v, ok := d.GetOk(consts.FieldPassthroughRequestHeaders); ok {
+		input.Config.PassthroughRequestHeaders = expandStringSlice(v.([]interface{}))
+	}
+
+	if v, ok := d.GetOk(consts.FieldAllowedResponseHeaders); ok {
+		input.Config.AllowedResponseHeaders = expandStringSlice(v.([]interface{}))
+	}
+
+	if v, ok := d.GetOk(consts.FieldDelegatedAuthAccessors); ok {
+		input.Config.DelegatedAuthAccessors = expandStringSlice(v.([]interface{}))
+	}
+
+	if v, ok := d.GetOk(consts.FieldListingVisibility); ok {
+		input.Config.ListingVisibility = v.(string)
+	}
+
+	if v, ok := d.GetOk(consts.FieldPluginVersion); ok {
+		input.Config.PluginVersion = v.(string)
+	}
+
+	if v, ok := d.GetOk(consts.FieldIdentityTokenKey); ok {
+		input.Config.IdentityTokenKey = v.(string)
 	}
 
 	log.Printf("[DEBUG] Creating mount %s in Vault", path)
@@ -200,28 +270,28 @@ func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) err
 	}
 
 	config := api.MountConfigInput{
-		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-		MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
+		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
+		MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
 		Options:         mountOptions(d),
 	}
 
-	if d.HasChange("audit_non_hmac_request_keys") {
-		config.AuditNonHMACRequestKeys = expandStringSlice(d.Get("audit_non_hmac_request_keys").([]interface{}))
+	if d.HasChange(consts.FieldAuditNonHMACRequestKeys) {
+		config.AuditNonHMACRequestKeys = expandStringSlice(d.Get(consts.FieldAuditNonHMACRequestKeys).([]interface{}))
 	}
 
-	if d.HasChange("audit_non_hmac_response_keys") {
-		config.AuditNonHMACResponseKeys = expandStringSlice(d.Get("audit_non_hmac_response_keys").([]interface{}))
+	if d.HasChange(consts.FieldAuditNonHMACResponseKeys) {
+		config.AuditNonHMACResponseKeys = expandStringSlice(d.Get(consts.FieldAuditNonHMACResponseKeys).([]interface{}))
 	}
 
-	if d.HasChange("description") {
-		description := fmt.Sprintf("%s", d.Get("description"))
+	if d.HasChange(consts.FieldDescription) {
+		description := fmt.Sprintf("%s", d.Get(consts.FieldDescription))
 		config.Description = &description
 	}
 
 	path := d.Id()
 
-	if d.HasChange("path") {
-		newPath := d.Get("path").(string)
+	if d.HasChange(consts.FieldPath) {
+		newPath := d.Get(consts.FieldPath).(string)
 
 		log.Printf("[DEBUG] Remount %s to %s in Vault", path, newPath)
 
@@ -234,8 +304,32 @@ func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) err
 		path = newPath
 	}
 
-	if d.HasChange("allowed_managed_keys") {
-		config.AllowedManagedKeys = expandStringSlice(d.Get("allowed_managed_keys").(*schema.Set).List())
+	if d.HasChange(consts.FieldAllowedManagedKeys) {
+		config.AllowedManagedKeys = expandStringSlice(d.Get(consts.FieldAllowedManagedKeys).(*schema.Set).List())
+	}
+
+	if d.HasChange(consts.FieldPassthroughRequestHeaders) {
+		config.PassthroughRequestHeaders = expandStringSlice(d.Get(consts.FieldPassthroughRequestHeaders).([]interface{}))
+	}
+
+	if d.HasChange(consts.FieldAllowedResponseHeaders) {
+		config.AllowedResponseHeaders = expandStringSlice(d.Get(consts.FieldAllowedResponseHeaders).([]interface{}))
+	}
+
+	if d.HasChange(consts.FieldDelegatedAuthAccessors) {
+		config.DelegatedAuthAccessors = expandStringSlice(d.Get(consts.FieldDelegatedAuthAccessors).([]interface{}))
+	}
+
+	if d.HasChange(consts.FieldListingVisibility) {
+		config.ListingVisibility = d.Get(consts.FieldListingVisibility).(string)
+	}
+
+	if d.HasChange(consts.FieldPluginVersion) {
+		config.PluginVersion = d.Get(consts.FieldPluginVersion).(string)
+	}
+
+	if d.HasChange(consts.FieldIdentityTokenKey) {
+		config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
 	}
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)
@@ -288,23 +382,19 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 
 	log.Printf("[DEBUG] Reading mount %s from Vault", path)
 
-	mounts, err := client.Sys().ListMounts()
+	ctx := context.Background()
+	mount, err := mountutil.GetMount(ctx, client, path)
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
-	}
-
-	// path can have a trailing slash, but doesn't need to have one
-	// this standardises on having a trailing slash, which is how the
-	// API always responds.
-	mount, ok := mounts[strings.Trim(path, "/")+"/"]
-	if !ok {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
+		return err
 	}
 
 	if !excludeType {
-		if cfgType, ok := d.GetOk("type"); ok {
+		if cfgType, ok := d.GetOk(consts.FieldType); ok {
 			// kv-v2 is an alias for kv, version 2. Vault will report it back as "kv"
 			// and requires special handling to avoid perpetual drift.
 			if cfgType == "kv-v2" && mount.Type == "kv" && mount.Options["version"] == "2" {
@@ -319,28 +409,69 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 			}
 		}
 
-		d.Set("type", mount.Type)
+		d.Set(consts.FieldType, mount.Type)
 	}
 
-	d.Set("path", path)
-	d.Set("description", mount.Description)
-	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
-	d.Set("audit_non_hmac_request_keys", mount.Config.AuditNonHMACRequestKeys)
-	d.Set("audit_non_hmac_response_keys", mount.Config.AuditNonHMACResponseKeys)
-	d.Set("accessor", mount.Accessor)
-	d.Set("local", mount.Local)
-	d.Set("options", mount.Options)
-	d.Set("seal_wrap", mount.SealWrap)
-	d.Set("external_entropy_access", mount.ExternalEntropyAccess)
-	d.Set("allowed_managed_keys", mount.Config.AllowedManagedKeys)
+	if err := d.Set(consts.FieldPath, path); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldDefaultLeaseTTL, mount.Config.DefaultLeaseTTL); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldMaxLeaseTTL, mount.Config.MaxLeaseTTL); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldAuditNonHMACRequestKeys, mount.Config.AuditNonHMACRequestKeys); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldAuditNonHMACResponseKeys, mount.Config.AuditNonHMACResponseKeys); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldLocal, mount.Local); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldOptions, mount.Options); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldSealWrap, mount.SealWrap); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldExternalEntropyAccess, mount.ExternalEntropyAccess); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldAllowedManagedKeys, mount.Config.AllowedManagedKeys); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldPassthroughRequestHeaders, mount.Config.PassthroughRequestHeaders); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldAllowedResponseHeaders, mount.Config.AllowedResponseHeaders); err != nil {
+		return err
+	}
+
+	// @TODO add this back in when Vault 1.16.3 is released
+	// if err := d.Set(consts.FieldDelegatedAuthAccessors, mount.Config.DelegatedAuthAccessors); err != nil {
+	//	return err
+	// }
+	if err := d.Set(consts.FieldListingVisibility, mount.Config.ListingVisibility); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func mountOptions(d *schema.ResourceData) map[string]string {
 	options := map[string]string{}
-	if opts, ok := d.GetOk("options"); ok {
+	if opts, ok := d.GetOk(consts.FieldOptions); ok {
 		for k, v := range opts.(map[string]interface{}) {
 			options[k] = v.(string)
 		}

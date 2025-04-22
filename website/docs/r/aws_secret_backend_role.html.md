@@ -52,7 +52,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path the AWS secret backend is mounted at,
@@ -89,6 +89,16 @@ The following arguments are supported:
   corresponding AWS call (sts:AssumeRole or sts:GetFederation) will be the
   policies from each group in `iam_groups` combined with the `policy_document`
   and `policy_arns` parameters.
+
+* `iam_tags` (Optional) - A map of strings representing key/value pairs
+  to be used as tags for any IAM user that is created by this role.
+
+* `session_tags` (Optional) - A map of strings representing key/value pairs to be set
+  during assume role creds creation. Valid only when `credential_type` is set to 
+  `assumed_role`.
+
+* `external_id` (Optional) - External ID to set for assume role creds. 
+  Valid only when `credential_type` is set to `assumed_role`.
 
 * `default_sts_ttl` - (Optional) The default TTL in seconds for STS credentials.
   When a TTL is not specified when STS credentials are requested,

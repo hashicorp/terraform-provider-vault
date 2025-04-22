@@ -33,7 +33,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path the transit secret backend is mounted at, with no leading or trailing `/`s.
@@ -63,6 +63,15 @@ The following arguments are supported:
 
 * `key_size` - (Optional) The key size in bytes for algorithms that allow variable key sizes. Currently only applicable to HMAC, where it must be between 32 and 512 bytes.
 
+* `parameter_set` - (Optional) The parameter set to use for ML-DSA. Required for
+  ML-DSA and hybrid keys. Valid values are `44`, `65`, and `87`.
+
+* `hybrid_key_type_pqc` - (Optional) The post-quantum algorithm to use for hybrid signatures.
+  Currently, ML-DSA is the only supported key type.
+
+* `hybrid_key_type_ec` - (Optional) The elliptic curve algorithm to use for hybrid signatures.
+  Supported key types are `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, and `ed25519`.
+
 ## Attributes Reference
 
 * `keys` - List of key versions in the keyring. This attribute is zero-indexed and will contain a map of values depending on the `type` of the encryption key.
@@ -83,11 +92,6 @@ The following arguments are supported:
 * `supports_derivation` - Whether or not the key supports derivation, based on key type.
 
 * `supports_signing` - Whether or not the key supports signing, based on key type.
-
-
-## Deprecations
-
-* `auto_rotate_interval` - Replaced by `auto_rotate_period`.
 
 ## Import
 

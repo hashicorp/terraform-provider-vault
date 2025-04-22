@@ -5,7 +5,6 @@ package vault
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -42,22 +41,6 @@ func TestADSecretBackend(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "description", "disable_remount"),
-			// TODO: on vault-1.11+ length should conflict with password_policy
-			// We should re-enable this check when we have the adaptive version support.
-			//{
-			//	Config: testADSecretBackendConflictsConfig(
-			//		resourceName, bindDN, bindPass, url, "length", 12),
-			//	ExpectError: regexp.MustCompile(`.*"length": conflicts with password_policy.*`),
-
-			//	PlanOnly: true,
-			//},
-			{
-				Config: testADSecretBackendConflictsConfig(
-					resourceName, bindDN, bindPass, url, "formatter", "{{foo}}"),
-				ExpectError: regexp.MustCompile(`.*"formatter": conflicts with password_policy.*`),
-
-				PlanOnly: true,
-			},
 			{
 				Config: testADSecretBackend_updateConfig(backend, bindDN, bindPass, url),
 				Check: resource.ComposeTestCheckFunc(
@@ -150,34 +133,4 @@ resource "vault_ad_secret_backend" "test" {
   userdn                    = "CN=Users,DC=corp,DC=hashicorp,DC=com"
 }
 `, backend, bindDN, bindPass, url)
-}
-
-func testADSecretBackendConflictsConfig(backend, bindDN, bindPass, url, conflict string, conflictVal interface{}) string {
-	var cVal string
-	switch v := conflictVal.(type) {
-	case string:
-		cVal = fmt.Sprintf(`"%s"`, v)
-	case int:
-		cVal = fmt.Sprintf("%d", v)
-	default:
-		panic(fmt.Sprintf("unsupprted type %T", v))
-	}
-
-	config := fmt.Sprintf(`
-resource "vault_ad_secret_backend" "test" {
-  backend                   = "%s"
-  description               = "test description"
-  default_lease_ttl_seconds = "7200"
-  max_lease_ttl_seconds     = "14400"
-  binddn                    = "%s"
-  bindpass                  = "%s"
-  url                       = "%s"
-  insecure_tls              = "false"
-  userdn                    = "CN=Users,DC=corp,DC=hashicorp,DC=com"
-  password_policy           = "foo"
-  %s                        = %s
-}
-`, backend, bindDN, bindPass, url, conflict, cVal)
-
-	return config
 }

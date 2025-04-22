@@ -35,7 +35,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path the PKI secret backend is mounted at, with no leading or trailing `/`s.
@@ -45,6 +45,8 @@ The following arguments are supported:
 * `crl_distribution_points` - (Optional) Specifies the URL values for the CRL Distribution Points field.
 
 * `ocsp_servers` - (Optional) Specifies the URL values for the OCSP Servers field.
+
+* `enable_templating` - (Optional) Specifies that templating of AIA fields is allowed.
 
 ## Attributes Reference
 

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math/big"
 	"net"
 	"net/http"
@@ -41,6 +42,7 @@ import (
 
 const (
 	EnvVarSkipVaultNext = "SKIP_VAULT_NEXT_TESTS"
+	EnvVarTfAccEnt      = "TF_ACC_ENTERPRISE"
 )
 
 func TestAccPreCheck(t *testing.T) {
@@ -61,7 +63,7 @@ func SkipTestAcc(t *testing.T) {
 
 func SkipTestAccEnt(t *testing.T) {
 	t.Helper()
-	SkipTestEnvUnset(t, "TF_ACC_ENTERPRISE")
+	SkipTestEnvUnset(t, EnvVarTfAccEnt)
 }
 
 // SkipTestEnvSet skips the test if any of the provided environment variables
@@ -131,6 +133,8 @@ type AzureTestConf struct {
 }
 
 func GetTestAzureConf(t *testing.T) *AzureTestConf {
+	t.Helper()
+
 	v := SkipTestEnvUnset(t,
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
@@ -144,6 +148,23 @@ func GetTestAzureConf(t *testing.T) *AzureTestConf {
 		ClientID:       v[2],
 		ClientSecret:   v[3],
 		Scope:          v[4],
+	}
+}
+
+func GetTestAzureConfForGroups(t *testing.T) *AzureTestConf {
+	t.Helper()
+
+	v := SkipTestEnvUnset(t,
+		"AZURE_SUBSCRIPTION_ID",
+		"AZURE_TENANT_ID",
+		"AZURE_CLIENT_ID",
+		"AZURE_CLIENT_SECRET")
+
+	return &AzureTestConf{
+		SubscriptionID: v[0],
+		TenantID:       v[1],
+		ClientID:       v[2],
+		ClientSecret:   v[3],
 	}
 }
 
@@ -839,6 +860,37 @@ func GetImportTestStep(resourceName string, skipVerify bool, check resource.Impo
 	}
 
 	return ts
+}
+
+func TestAccCheckAuthMountExists(n string, out *api.AuthMount, c *api.Client) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		return AuthMountExistsHelper(n, s, out, c)
+	}
+}
+
+func AuthMountExistsHelper(resourceName string, s *terraform.State, out *api.AuthMount, c *api.Client) error {
+	rs, ok := s.RootModule().Resources[resourceName]
+	if !ok {
+		return fmt.Errorf("Not found: %s", resourceName)
+	}
+
+	if rs.Primary.ID == "" {
+		return fmt.Errorf("No id for %s is set", resourceName)
+	}
+
+	auths, err := c.Sys().ListAuth()
+	if err != nil {
+		return fmt.Errorf("error reading from Vault: %s", err)
+	}
+
+	resp := auths[strings.Trim(rs.Primary.ID, "/")+"/"]
+	if resp == nil {
+		return fmt.Errorf("auth mount %s not present", rs.Primary.ID)
+	}
+	log.Printf("[INFO] Auth mount resource '%v' confirmed to exist at path: %v", resourceName, rs.Primary.ID)
+	*out = *resp
+
+	return nil
 }
 
 // GetNamespaceImportStateCheck checks that the namespace was properly imported into the state.

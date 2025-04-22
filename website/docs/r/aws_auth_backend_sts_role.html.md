@@ -40,7 +40,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `account_id` - (Optional) The AWS account ID to configure the STS role for.
@@ -50,6 +50,8 @@ The following arguments are supported:
 
 * `backend` - (Optional) The path the AWS auth backend being configured was
    mounted at.  Defaults to `aws`.
+
+* `external_id` - (Optional) External ID expected by the STS role. The associated STS role must be configured to require the external ID. Requires Vault 1.17+.
 
 ## Attributes Reference
 

@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func rabbitMQSecretBackendResource() *schema.Resource {
@@ -152,17 +154,17 @@ func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading RabbitMQ secret backend mount %q from Vault", path)
-	mounts, err := client.Sys().ListMounts()
+	ctx := context.Background()
+	mount, err := mountutil.GetMount(ctx, client, path)
 	if err != nil {
-		return fmt.Errorf("error reading mount %q: %s", path, err)
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
+		return err
 	}
-	log.Printf("[DEBUG] Read RabbitMQ secret backend mount %q from Vault", path)
-	mount, ok := mounts[strings.Trim(path, "/")+"/"]
-	if !ok {
-		log.Printf("[WARN] Mount %q not found, removing backend from state.", path)
-		d.SetId("")
-		return nil
-	}
+
 	d.Set(consts.FieldPath, path)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
@@ -245,11 +247,15 @@ func rabbitMQSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if RabbitMQ backend exists at %q", path)
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
+
+	if _, err := mountutil.GetMount(context.Background(), client, path); err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			return false, nil
+		}
+
+		// TODO: returning true here is probably wrong. We should move existence checks to the Read function.
+		return true, err
 	}
-	log.Printf("[DEBUG] Checked if RabbitMQ backend exists at %q", path)
-	_, ok := mounts[strings.Trim(path, "/")+"/"]
-	return ok, nil
+
+	return true, nil
 }

@@ -88,29 +88,29 @@ The following arguments are supported:
   The following options are available for each `credential_type` value:
 
   * `password`
-    * `password_policy` (Optional) - The [policy](/vault/docs/concepts/password-policies)
-      used for password generation. If not provided, defaults to the password policy of the
-      database [configuration](/vault/api-docs/secret/databases#password_policy).
+      * `password_policy` (Optional) - The [policy](/vault/docs/concepts/password-policies)
+        used for password generation. If not provided, defaults to the password policy of the
+        database [configuration](/vault/api-docs/secret/databases#password_policy).
 
   * `rsa_private_key`
-    * `key_bits` (Optional) - The bit size of the RSA key to generate. Options include:
-      `2048`, `3072`, `4096`.
-    * `format` (Optional) - The output format of the generated private key
-      credential. The private key will be returned from the API in PEM encoding. Options
-      include: `pkcs8`.
+      * `key_bits` (Optional) - The bit size of the RSA key to generate. Options include:
+        `2048`, `3072`, `4096`.
+      * `format` (Optional) - The output format of the generated private key
+        credential. The private key will be returned from the API in PEM encoding. Options
+        include: `pkcs8`.
 
   * `client_certificate`
-    * `common_name_template` (Optional) - A [username template](/vault/docs/concepts/username-templating)
-      to be used for the client certificate common name.
-    * `ca_cert` (Optional) - The PEM-encoded CA certificate.
-    * `ca_private_key` (Optional) - The PEM-encoded private key for the given `ca_cert`.
-    * `key_type` (Required) - Specifies the desired key type. Options include:
-      `rsa`, `ed25519`, `ec`.
-    * `key_bits` (Optional) - Number of bits to use for the generated keys. Options include:
-      `2048` (default), `3072`, `4096`; with `key_type=ec`, allowed values are: `224`, `256` (default),
-      `384`, `521`; ignored with `key_type=ed25519`.
-    * `signature_bits` (Optional) - The number of bits to use in the signature algorithm. Options include:
-      `256` (default), `384`, `512`.
+      * `common_name_template` (Optional) - A [username template](/vault/docs/concepts/username-templating)
+        to be used for the client certificate common name.
+      * `ca_cert` (Optional) - The PEM-encoded CA certificate.
+      * `ca_private_key` (Optional) - The PEM-encoded private key for the given `ca_cert`.
+      * `key_type` (Required) - Specifies the desired key type. Options include:
+        `rsa`, `ed25519`, `ec`.
+      * `key_bits` (Optional) - Number of bits to use for the generated keys. Options include:
+        `2048` (default), `3072`, `4096`; with `key_type=ec`, allowed values are: `224`, `256` (default),
+        `384`, `521`; ignored with `key_type=ed25519`.
+      * `signature_bits` (Optional) - The number of bits to use in the signature algorithm. Options include:
+        `256` (default), `384`, `512`.
 
 ## Attributes Reference
 

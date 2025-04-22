@@ -37,6 +37,18 @@ func TestAccAppRoleAuthBackendRoleSecretID_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
 				),
 			},
+			{
+				PreConfig: func() {
+					// delete approle out-of-band
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					path := fmt.Sprintf("auth/%s/role/%s", backend, role)
+					_, err := client.Logical().Delete(path)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_basic(backend, role),
+			},
 		},
 	})
 }
@@ -178,6 +190,8 @@ func TestAccAppRoleAuthBackendRoleSecretID_full(t *testing.T) {
 					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
 					resource.TestCheckResourceAttr(secretIDResource, "cidr_list.#", "2"),
 					resource.TestCheckResourceAttr(secretIDResource, consts.FieldMetadata, `{"hello":"world"}`),
+					resource.TestCheckResourceAttr(secretIDResource, "ttl", "700"),
+					resource.TestCheckResourceAttr(secretIDResource, "num_uses", "2"),
 				),
 			},
 		},
@@ -242,6 +256,8 @@ resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
   role_name = vault_approle_auth_backend_role.role.role_name
   backend = vault_auth_backend.approle.path
   cidr_list = ["10.148.0.0/20", "10.150.0.0/20"]
+  ttl = 700
+  num_uses = 2
   metadata = <<EOF
 {
   "hello": "world"

@@ -38,7 +38,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The PKI secret backend the resource belongs to.
@@ -64,6 +64,8 @@ The following arguments are supported:
 
 * `key_bits` - (Optional) The number of bits to use
 
+* `signature_bits` - (Optional) The number of bits to use in the signature algorithm
+
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
 
 * `ou` - (Optional) The organization unit
@@ -80,6 +82,8 @@ The following arguments are supported:
 
 * `postal_code` - (Optional) The postal code
 
+* `serial_number` - (Optional) The requested Subject's named Serial Number
+
 * `managed_key_name` - (Optional) The name of the previously configured managed key. This field is
   required if `type` is `kms`  and it conflicts with `managed_key_id`
 
@@ -89,6 +93,8 @@ The following arguments are supported:
 * `add_basic_constraints` - (Optional) Adds a Basic Constraints extension with 'CA: true'.
   Only needed as a workaround in some compatibility scenarios with Active Directory
   Certificate Services
+
+* `key_usage` - (Optional) Specifies key_usage to encode in the generated certificate.
 
 * `key_name` - (Optional) When a new key is created with this request, optionally specifies
   the name for this. The global ref `default` may not be used as a name.

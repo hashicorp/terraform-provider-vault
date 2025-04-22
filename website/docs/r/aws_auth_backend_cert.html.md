@@ -31,7 +31,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_cert" "cert" {
-  backend         = vault_auth_backend.aws.path}"
+  backend         = vault_auth_backend.aws.path
   cert_name       = "my-cert"
   aws_public_cert = file("${path.module}/aws_public_key.crt)"
   type            = "pkcs7"
@@ -44,7 +44,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
 * `cert_name` - (Required) The name of the certificate.

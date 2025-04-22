@@ -10,6 +10,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
@@ -17,17 +18,18 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func jwtAuthBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Create: jwtAuthBackendWrite,
-		Delete: jwtAuthBackendDelete,
-		Read:   provider.ReadWrapper(jwtAuthBackendRead),
-		Update: jwtAuthBackendUpdate,
+		CreateContext: jwtAuthBackendWrite,
+		DeleteContext: jwtAuthBackendDelete,
+		ReadContext:   provider.ReadContextWrapper(jwtAuthBackendRead),
+		UpdateContext: jwtAuthBackendUpdate,
 
 		CustomizeDiff: jwtCustomizeDiff,
 
@@ -212,10 +214,10 @@ var matchingJwtMountConfigOptions = []string{
 	"namespace_in_state",
 }
 
-func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	authType := d.Get("type").(string)
@@ -228,38 +230,38 @@ func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
-	err := client.Sys().EnableAuthWithOptions(path, options)
+	err := client.Sys().EnableAuthWithOptionsWithContext(ctx, path, options)
 	if err != nil {
-		return fmt.Errorf("error writing to Vault: %s", err)
+		return diag.Errorf("error writing to Vault: %s", err)
 	}
 
 	d.SetId(path)
 
-	return jwtAuthBackendUpdate(d, meta)
+	return jwtAuthBackendUpdate(ctx, d, meta)
 }
 
-func jwtAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := getJwtPath(d)
 
 	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
 
-	err := client.Sys().DisableAuth(path)
+	err := client.Sys().DisableAuthWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error disabling auth from Vault: %s", err)
+		return diag.Errorf("error disabling auth from Vault: %s", err)
 	}
 
 	return nil
 }
 
-func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := getJwtPath(d)
@@ -274,20 +276,19 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.Set("path", path)
 
-	mount, err := getAuthMountIfPresent(client, path)
+	mount, err := mountutil.GetAuthMount(ctx, client, path)
 	if err != nil {
-		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
+		return diag.FromErr(err)
 	}
 
-	if mount == nil {
-		// If we fell out here then we didn't find our Auth in the list.
-		d.SetId("")
-		return nil
-	}
-
-	config, err := client.Logical().Read(jwtConfigEndpoint(path))
+	config, err := client.Logical().ReadWithContext(ctx, jwtConfigEndpoint(path))
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return diag.Errorf("error reading from Vault: %s", err)
 	}
 
 	if config == nil {
@@ -317,13 +318,13 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Reading jwt auth tune from %q", path+"/tune")
-	rawTune, err := authMountTuneGet(client, "auth/"+path)
+	rawTune, err := authMountTuneGet(ctx, client, "auth/"+path)
 	if err != nil {
-		return fmt.Errorf("error reading tune information from Vault: %s", err)
+		return diag.Errorf("error reading tune information from Vault: %s", err)
 	}
 	if err := d.Set("tune", []map[string]interface{}{rawTune}); err != nil {
 		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
@@ -353,10 +354,10 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 	return newConfig, nil
 }
 
-func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := getJwtPath(d)
@@ -365,7 +366,7 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	if !d.IsNewResource() {
 		path, e = util.Remount(d, client, consts.FieldPath, true)
 		if e != nil {
-			return e
+			return diag.FromErr(e)
 		}
 	}
 
@@ -377,7 +378,7 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			if configOption == "provider_config" {
 				newConfig, err := convertProviderConfigValues(d.Get(configOption).(map[string]interface{}))
 				if err != nil {
-					return err
+					return diag.FromErr(err)
 				}
 
 				configuration[configOption] = newConfig
@@ -385,9 +386,9 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	_, err := client.Logical().Write(jwtConfigEndpoint(path), configuration)
+	_, err := client.Logical().WriteWithContext(ctx, jwtConfigEndpoint(path), configuration)
 	if err != nil {
-		return fmt.Errorf("error updating configuration to Vault for path %s: %s", path, err)
+		return diag.Errorf("error updating configuration to Vault for path %s: %s", path, err)
 	}
 
 	if d.HasChange("tune") {
@@ -396,7 +397,7 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			backendType := d.Get("type")
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
-			err := authMountTune(client, "auth/"+path, raw)
+			err := authMountTune(ctx, client, "auth/"+path, raw)
 			if err != nil {
 				return nil
 			}
@@ -405,7 +406,7 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	return jwtAuthBackendRead(d, meta)
+	return jwtAuthBackendRead(ctx, d, meta)
 }
 
 func jwtConfigEndpoint(path string) string {
