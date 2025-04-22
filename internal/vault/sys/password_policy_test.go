@@ -52,7 +52,10 @@ func TestAccPasswordPolicyNS(t *testing.T) {
 	updatedConfig := testAccPasswordPolicyConfigNS(ns, policyName, testPolicyUpdated)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
+		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
