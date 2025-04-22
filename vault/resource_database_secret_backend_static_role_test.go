@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"net/url"
 	"os"
 	"testing"
@@ -92,6 +93,7 @@ func TestAccDatabaseSecretBackendStaticRole_credentialType(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendStaticRole_credentialConfig(t *testing.T) {
+	var p *schema.Provider
 	connURL := testutil.SkipTestEnvUnset(t, "MYSQL_URL")[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
@@ -105,9 +107,9 @@ func TestAccDatabaseSecretBackendStaticRole_credentialConfig(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendStaticRoleConfig_credentialConfig(name, username, dbName, backend, connURL),
