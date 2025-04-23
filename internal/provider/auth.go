@@ -249,7 +249,11 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 
 	var params map[string]interface{}
 	if v, ok := l.getOk(d, consts.FieldParameters); ok {
-		params = v.(map[string]interface{})
+		rawParams := v.(map[string]interface{})
+		if rawParams == nil {
+			rawParams = make(map[string]interface{})
+		}
+		params = rawParams
 		ns, _ := l.getOk(d, consts.FieldNamespace)
 		params[consts.FieldNamespace] = ns
 
