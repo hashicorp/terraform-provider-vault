@@ -80,6 +80,52 @@ func TestAccPasswordPolicyNS(t *testing.T) {
 	})
 }
 
+func TestAccPasswordPolicy_Muxing(t *testing.T) {
+	policyName := acctest.RandomWithPrefix("test-policy")
+	policyNameUpdated := acctest.RandomWithPrefix("test-policy-updated")
+	resourceName := "vault_password_policy.test"
+	testPolicy := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"
+	testPolicyUpdated := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\nrule \"charset\" {\n  charset = \"1234567890\"\nmin-chars = 1\n}\n"
+	updatedConfig := testAccPasswordPolicyConfig(policyNameUpdated, testPolicyUpdated)
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
+		},
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"vault": {
+						// 4.7.0 is not multiplexed
+						VersionConstraint: "4.7.0",
+						Source:            "hashicorp/vault",
+					},
+				},
+				Config: testAccPasswordPolicyConfig(policyName, testPolicy),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", policyName),
+					resource.TestCheckResourceAttrSet(resourceName, "policy"),
+				),
+			},
+			// upgrade to new Muxed TFVP, ensure plan is seamless
+			{
+				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+				Config:                   testAccPasswordPolicyConfig(policyName, testPolicy),
+				PlanOnly:                 true,
+			},
+			// update name to ensure resource can get recreated on name updates
+			{
+				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+				Config:                   updatedConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", policyNameUpdated),
+					resource.TestCheckResourceAttrSet(resourceName, "policy"),
+				),
+			},
+		},
+	})
+}
+
 func testAccPasswordPolicyConfig(policyName, policy string) string {
 	return fmt.Sprintf(`
 resource "vault_password_policy" "test" {
