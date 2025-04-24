@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/vault/api"
-	"log"
 	"strconv"
 )
 
@@ -136,7 +135,6 @@ func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.Op
 	}
 
 	// read the name from the id field to support the import command
-	log.Printf("[VINAY] data read from config: %+v", data)
 	path := r.path(data.Mount.ValueString(), data.Name.ValueString())
 
 	var secretResp *api.Secret
@@ -150,8 +148,6 @@ func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.Op
 	} else {
 		secretResp, err = c.Logical().ReadWithContext(ctx, path)
 	}
-
-	log.Printf("[VINAY] secret read from vault: %+v", secretResp.Data)
 
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -178,7 +174,6 @@ func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.Op
 		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
 		return
 	}
-	log.Printf("[VINAY] marshalled data to values: %+v", readResp)
 
 	data.CreatedTime = types.StringValue(readResp.Metadata.CreatedTime)
 	data.DeletionTime = types.StringValue(readResp.Metadata.DeletionTime)
@@ -187,8 +182,6 @@ func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.Op
 	secretData, diag := types.MapValueFrom(ctx, types.StringType, readResp.Data)
 	resp.Diagnostics.Append(diag...)
 	data.Data = secretData
-
-	log.Printf("[VINAY] got map value: %+v", secretData)
 
 	jsonData, err := json.Marshal(data.Data)
 	if err != nil {
@@ -201,8 +194,7 @@ func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.Op
 	resp.Diagnostics.Append(diag...)
 	data.CustomMetadata = secretCustomMetadata
 
-	log.Printf("[VINAY] got end value: %+v", data)
-
+	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
 func (r *KVV2EphemeralSecretResource) path(mount, name string) string {
