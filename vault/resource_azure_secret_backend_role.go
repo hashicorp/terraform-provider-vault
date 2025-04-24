@@ -6,9 +6,10 @@ package vault
 import (
 	"context"
 	"encoding/json"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
@@ -110,6 +111,12 @@ func azureSecretBackendRoleResource() *schema.Resource {
 				Computed:    true,
 				Description: "Indicates whether the applications and service principals created by Vault will be permanently deleted when the corresponding leases expire.",
 			},
+			consts.FieldPersistApp: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Persists the created service principal and application for the lifetime of the role. Useful for when the Service Principal needs to maintain ownership of objects it creates. Defaults to false in Vault 1.16+",
+			},
 			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -207,6 +214,7 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 				data[consts.FieldTags] = strings.Join(tags, ",")
 			}
 		}
+		data[consts.FieldPersistApp] = d.Get(consts.FieldPersistApp).(bool)
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
