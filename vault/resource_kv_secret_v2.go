@@ -112,6 +112,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 				StateFunc:    NormalizeDataJSONFunc(name),
 				ValidateFunc: ValidateDataJSONFunc(name),
 				Sensitive:    true,
+				WriteOnly:    true,
 			},
 
 			consts.FieldData: {

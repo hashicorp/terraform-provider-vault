@@ -3,6 +3,7 @@ package base
 import (
 	"fmt"
 
+	ephemeralschema "github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -42,6 +43,14 @@ func MustAddBaseSchema(s *schema.Schema) {
 	mustAddSchema(s, baseSchema)
 }
 
+// MustAddBaseEphemeralSchema adds the schema fields that are required for all net new
+// resources and data sources built with the TF Plugin Framework.
+//
+// This should be called from a resources or data source's Schema() method.
+func MustAddBaseEphemeralSchema(s *ephemeralschema.Schema) {
+	mustAddEphemeralSchema(s, baseEphemeralSchema)
+}
+
 // MustAddLegacyBaseSchema adds the schema fields that are required for
 // resources and data sources that have been migrated from SDKv2 to the
 // Terraform Plugin Framework.
@@ -73,6 +82,7 @@ func legacyBaseSchema() map[string]schema.Attribute {
 }
 
 type schemaFunc func() map[string]schema.Attribute
+type ephemeralSchemaFunc func() map[string]ephemeralschema.Attribute
 
 func baseSchema() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
@@ -89,7 +99,31 @@ func baseSchema() map[string]schema.Attribute {
 	}
 }
 
+func baseEphemeralSchema() map[string]ephemeralschema.Attribute {
+	return map[string]ephemeralschema.Attribute{
+		consts.FieldNamespace: ephemeralschema.StringAttribute{
+			Optional:            true,
+			MarkdownDescription: "Target namespace. (requires Enterprise)",
+			Validators: []validator.String{
+				validators.PathValidator(),
+			},
+		},
+	}
+}
+
 func mustAddSchema(s *schema.Schema, schemaFuncs ...schemaFunc) {
+	for _, f := range schemaFuncs {
+		for k, v := range f() {
+			if _, ok := s.Attributes[k]; ok {
+				panic(fmt.Sprintf("cannot add schema field %q, already exists in the Schema map", k))
+			}
+
+			s.Attributes[k] = v
+		}
+	}
+}
+
+func mustAddEphemeralSchema(s *ephemeralschema.Schema, schemaFuncs ...ephemeralSchemaFunc) {
 	for _, f := range schemaFuncs {
 		for k, v := range f() {
 			if _, ok := s.Attributes[k]; ok {

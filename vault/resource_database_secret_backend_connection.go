@@ -763,6 +763,13 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 			Description: "The root credential password used in the connection URL",
 			Sensitive:   true,
 		}
+		res.Schema["password_wo"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Write-only field for the root credential password used in the connection URL",
+			Sensitive:   true,
+			WriteOnly:   true,
+		}
 	}
 
 	if config.isCloud {
