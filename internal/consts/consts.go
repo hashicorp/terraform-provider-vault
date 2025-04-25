@@ -472,7 +472,7 @@ const (
 	FieldMaxCrlEntries                 = "max_crl_entries"
 	FieldChallenge                     = "challenge"
 	FieldRootPasswordTTL               = "root_password_ttl"
-
+	FieldOCIHomeTenancyID              = "home_tenancy_id"
 	FieldDisableCriticalExtensionChecks = "disable_critical_extension_checks"
 	FieldDisablePathLengthChecks        = "disable_path_length_checks"
 	FieldDisableNameChecks              = "disable_name_checks"

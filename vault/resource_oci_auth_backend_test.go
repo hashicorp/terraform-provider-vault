@@ -18,18 +18,21 @@ import (
 func TestAccOCIAuthBackendConfig_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("oci")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckOCIAuthBackendConfigDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckOCIAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOCIAuthBackendConfig_basic(backend),
 				Check:  testAccOCIAuthBackendConfigCheck_attrs(backend),
 			},
 			{
-				ResourceName:      "vault_oci_auth_backend_config.config",
+				ResourceName:      "vault_oci_auth_backend.config",
 				ImportState:       true,
 				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"disable_remount",
+				},
 			},
 		},
 	})
@@ -38,9 +41,9 @@ func TestAccOCIAuthBackendConfig_import(t *testing.T) {
 func TestAccOCIAuthBackendConfig_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("oci")
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckOCIAuthBackendConfigDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckOCIAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOCIAuthBackendConfig_basic(backend),
@@ -55,10 +58,10 @@ func TestAccOCIAuthBackendConfig_basic(t *testing.T) {
 }
 
 func testAccCheckOCIAuthBackendConfigDestroy(s *terraform.State) error {
-	config := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	config := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_oci_auth_backend_config" {
+		if rs.Type != "vault_oci_auth_backend" {
 			continue
 		}
 		secret, err := config.Logical().Read(rs.Primary.ID)
@@ -74,14 +77,8 @@ func testAccCheckOCIAuthBackendConfigDestroy(s *terraform.State) error {
 
 func testAccOCIAuthBackendConfig_basic(backend string) string {
 	return fmt.Sprintf(`
-resource "vault_auth_backend" "oci" {
-  type = "oci"
+resource "vault_oci_auth_backend" "config" {
   path = "%s"
-  description = "Test auth backend for OCI backend config"
-}
-
-resource "vault_oci_auth_backend_config" "config" {
-  backend = vault_auth_backend.oci.path
   home_tenancy_id = "ocid1.tenancy.oc1..aaaaaaaah7zkvaffv26pzyauoe2zbnionqvhvsexamplee557wakiofi4ysgqq"
 }
 `, backend)
@@ -89,7 +86,7 @@ resource "vault_oci_auth_backend_config" "config" {
 
 func testAccOCIAuthBackendConfigCheck_attrs(backend string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_oci_auth_backend_config.config"]
+		resourceState := s.Modules[0].Resources["vault_oci_auth_backend.config"]
 		if resourceState == nil {
 			return fmt.Errorf("resource not found in state")
 		}
@@ -99,13 +96,13 @@ func testAccOCIAuthBackendConfigCheck_attrs(backend string) resource.TestCheckFu
 			return fmt.Errorf("resource has no primary instance")
 		}
 
-		endpoint := instanceState.ID
+		endpoint := "auth/" + backend + "/config"
 
-		if endpoint != "auth/"+backend+"/config" {
-			return fmt.Errorf("expected ID to be %q, got %q", "auth/"+backend+"/config", endpoint)
+		if backend != instanceState.ID {
+			return fmt.Errorf("expected ID to be %q, got %q", backend, instanceState.ID)
 		}
 
-		config := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		config := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 		resp, err := config.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back oci auth config from %q: %s", endpoint, err)
@@ -131,14 +128,8 @@ func testAccOCIAuthBackendConfigCheck_attrs(backend string) resource.TestCheckFu
 
 func testAccOCIAuthBackendConfig_updated(backend string) string {
 	return fmt.Sprintf(`
-resource "vault_auth_backend" "oci" {
+resource "vault_oci_auth_backend" "config" {
   path = "%s"
-  type = "oci"
-  description = "Test auth backend for OCI backend config"
-}
-
-resource "vault_oci_auth_backend_config" "config" {
-  backend = vault_auth_backend.oci.path
   home_tenancy_id = "ocid1.tenancy.oc1..aaaaaaaah7zkvaffv26pzyauoe2zbnionqvhvsexamplee557wakiofi4ysgqq"
 }`, backend)
 }
