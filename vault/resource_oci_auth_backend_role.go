@@ -12,13 +12,14 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
-	ociAuthBackendRoleBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/role/.+$")
-	ociAuthBackendRoleNameFromPathRegex    = regexp.MustCompile("^auth/.+/role/(.+)$")
+	ociAuthBackendFromPathRegex  = regexp.MustCompile("^auth/(.+)/role/[^/]+$")
+	ociAuthRoleNameFromPathRegex = regexp.MustCompile("^auth/.+/role/([^/]+)$")
 )
 
 func ociAuthBackendRoleResource() *schema.Resource {
@@ -53,10 +54,12 @@ func ociAuthBackendRoleResource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		CreateContext: ociAuthBackendRoleCreate,
-		ReadContext:   ReadContextWrapper(ociAuthBackendRoleRead),
-		UpdateContext: ociAuthBackendRoleUpdate,
-		DeleteContext: ociAuthBackendRoleDelete,
+		SchemaVersion: 1,
+
+		CreateContext: ociAuthRoleCreate,
+		UpdateContext: ociAuthRoleUpdate,
+		ReadContext:   provider.ReadContextWrapper(ociAuthRoleRead),
+		DeleteContext: ociAuthRoleDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -64,7 +67,20 @@ func ociAuthBackendRoleResource() *schema.Resource {
 	}
 }
 
-func ociAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func ociRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, create bool) {
+	updateTokenFields(d, data, create)
+
+	if _, ok := d.GetOk("ocid_list"); ok {
+		iOL := d.Get("ocid_list").([]interface{})
+		ocid_list := make([]string, len(iOL))
+		for i, iO := range iOL {
+			ocid_list[i] = iO.(string)
+		}
+		data["ocid_list"] = strings.Join(ocid_list, ",")
+	}
+}
+
+func ociAuthRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -73,140 +89,132 @@ func ociAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
 
-	path := ociAuthBackendRolePath(backend, name)
+	path := ociRoleResourcePath(backend, name)
 
-	log.Printf("[DEBUG] Writing OCI auth backend role %q", path)
+	log.Printf("[DEBUG] Writing %s auth backend role %q", consts.AuthMethodOCI, path)
 
 	data := map[string]interface{}{}
-	updateTokenFields(d, data, true)
+	ociRoleUpdateFields(d, data, true)
 
-	iOL := d.Get("ocid_list").([]interface{})
-	ocid_list := make([]string, len(iOL))
-	for i, iO := range iOL {
-		ocid_list[i] = iO.(string)
-	}
-	data["ocid_list"] = strings.Join(ocid_list, ",")
-
+	log.Printf("[DEBUG] Writing role %q to %s auth backend", path, consts.AuthMethodOCI)
 	d.SetId(path)
-	if _, err := client.Logical().Write(path, data); err != nil {
+	_, err := client.Logical().Write(path, data)
+	if err != nil {
 		d.SetId("")
-		return diag.Errorf("error writing OCI auth backend role %q: %s", path, err)
+		return diag.Errorf("Error writing %s auth role %q: %s", consts.AuthMethodOCI, path, err)
 	}
-	log.Printf("[DEBUG] Wrote OCI auth backend role %q", path)
+	log.Printf("[DEBUG] Wrote role %q to %s auth backend", path, consts.AuthMethodOCI)
 
-	return ociAuthBackendRoleRead(ctx, d, meta)
+	return ociAuthRoleRead(ctx, d, meta)
 }
 
-func ociAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func ociAuthRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
 	path := d.Id()
 
-	backend, err := ociAuthBackendRoleBackendFromPath(path)
-	if err != nil {
-		return diag.Errorf("invalid path %q for OCI auth backend role: %s", path, err)
-	}
+	data := map[string]interface{}{}
+	ociRoleUpdateFields(d, data, false)
 
-	role, err := ociAuthBackendRoleNameFromPath(path)
+	log.Printf("[DEBUG] Updating role %q in %s auth backend", path, consts.AuthMethodOCI)
+	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return diag.Errorf("invalid path %q for OCI auth backend role: %s", path, err)
+		return diag.Errorf("Error updating %s auth role %q: %s", consts.AuthMethodOCI, path, err)
 	}
+	log.Printf("[DEBUG] Updated role %q to %s auth backend", path, consts.AuthMethodOCI)
 
-	log.Printf("[DEBUG] Reading OCI auth backend role %q", path)
+	return ociAuthRoleRead(ctx, d, meta)
+}
+
+func ociAuthRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+	path := d.Id()
+
+	log.Printf("[DEBUG] Reading %s role %q", consts.AuthMethodOCI, path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return diag.Errorf("error reading OCI auth backend role %q: %s", path, err)
+		return diag.Errorf("Error reading %s role %q: %s", consts.AuthMethodOCI, path, err)
 	}
-	log.Printf("[DEBUG] Read OCI auth backend role %q", path)
+	log.Printf("[DEBUG] Read %s role %q", consts.AuthMethodOCI, path)
+
 	if resp == nil {
-		log.Printf("[WARN] OCI auth backend role %q not found, removing from state", path)
+		log.Printf("[WARN] %s role %q not found, removing from state", consts.AuthMethodOCI, path)
 		d.SetId("")
 		return nil
 	}
+
+	backend, err := ociAuthResourceBackendFromPath(path)
+	if err != nil {
+		return diag.Errorf("invalid path %q for %s auth backend role: %s", path, consts.AuthMethodOCI, err)
+	}
+	d.Set("backend", backend)
+	name, err := ociAuthResourceRoleFromPath(path)
+	if err != nil {
+		return diag.Errorf("invalid path %q for %s auth backend role: %s", path, consts.AuthMethodOCI, err)
+	}
+	d.Set("name", name)
 
 	if err := readTokenFields(d, resp); err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.Set("backend", backend)
-	d.Set("name", role)
-	d.Set("ocid_list", resp.Data["ocid_list"])
+	for _, k := range []string{"ocid_list"} {
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.Errorf("error reading %s for %s Auth Backend Role %q: %q", k, path, consts.AuthMethodOCI, err)
+			}
+		}
+	}
 
 	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
 
 	return diags
 }
 
-func ociAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func ociAuthRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
 	path := d.Id()
 
-	log.Printf("[DEBUG] Updating OCI auth backend role %q", path)
-
-	data := map[string]interface{}{}
-	updateTokenFields(d, data, false)
-
-	iOL := d.Get("ocid_list").([]interface{})
-	ocid_list := make([]string, len(iOL))
-	for i, iO := range iOL {
-		ocid_list[i] = iO.(string)
-	}
-	data["ocid_list"] = strings.Join(ocid_list, ",")
-
-	log.Printf("[DEBUG] Updating role %q in OCI auth backend", path)
-	_, err := client.Logical().Write(path, data)
-	if err != nil {
-		return diag.Errorf("Error updating OCI auth role %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Updated role %q to OCI auth backend", path)
-
-	return ociAuthBackendRoleRead(ctx, d, meta)
-}
-
-func ociAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return diag.FromErr(e)
-	}
-	path := d.Id()
-
-	log.Printf("[DEBUG] Deleting OCI auth backend role %q", path)
+	log.Printf("[DEBUG] Deleting %s auth backend role %q", consts.AuthMethodOCI, path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return diag.Errorf("error deleting OCI auth backend role %q", path)
+		return diag.Errorf("error deleting %s auth backend role %q", consts.AuthMethodOCI, path)
 	}
-	log.Printf("[DEBUG] Deleted OCI auth backend role %q", path)
+	log.Printf("[DEBUG] Deleted %s auth backend role %q", consts.AuthMethodOCI, path)
 
 	return nil
 }
 
-func ociAuthBackendRolePath(backend, role string) string {
+func ociRoleResourcePath(backend, role string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/role/" + strings.Trim(role, "/")
 }
 
-func ociAuthBackendRoleNameFromPath(path string) (string, error) {
-	if !ociAuthBackendRoleNameFromPathRegex.MatchString(path) {
-		return "", fmt.Errorf("no role found")
+func ociAuthResourceBackendFromPath(path string) (string, error) {
+	if !ociAuthBackendFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
 	}
-	res := ociAuthBackendRoleNameFromPathRegex.FindStringSubmatch(path)
+	res := ociAuthBackendFromPathRegex.FindStringSubmatch(path)
 	if len(res) != 2 {
-		return "", fmt.Errorf("unexpected number of matches (%d) for role", len(res))
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
 	}
 	return res[1], nil
 }
 
-func ociAuthBackendRoleBackendFromPath(path string) (string, error) {
-	if !ociAuthBackendRoleBackendFromPathRegex.MatchString(path) {
-		return "", fmt.Errorf("no backend found")
+func ociAuthResourceRoleFromPath(path string) (string, error) {
+	if !ociAuthRoleNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no role found")
 	}
-	res := ociAuthBackendRoleBackendFromPathRegex.FindStringSubmatch(path)
+	res := ociAuthRoleNameFromPathRegex.FindStringSubmatch(path)
 	if len(res) != 2 {
-		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+		return "", fmt.Errorf("unexpected number of matches (%d) for role", len(res))
 	}
 	return res[1], nil
 }

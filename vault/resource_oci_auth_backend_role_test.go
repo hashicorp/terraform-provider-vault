@@ -22,9 +22,9 @@ func TestOCIAuthBackendRole_basic(t *testing.T) {
 
 	resourceName := "vault_oci_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testOCIAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testOCIAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testOCIAuthBackendRoleConfig_basic(backend, name),
@@ -40,9 +40,9 @@ func TestOCIAuthBackendRole(t *testing.T) {
 
 	resourceName := "vault_oci_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testOCIAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testOCIAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testOCIAuthBackendRoleConfig(backend, name),
@@ -149,14 +149,13 @@ func testOCIAuthBackendRoleCheck_attrs(resourceName, backend, name string) resou
 
 func testOCIAuthBackendRoleConfig_basic(backend, name string) string {
 	return fmt.Sprintf(`
-
-resource "vault_auth_backend" "oci" {
-    path = "%s"
-    type = "oci"
+resource "vault_oci_auth_backend" "config" {
+  path = "%s"
+  home_tenancy_id = "ocid1.tenancy.oc1..aaaaaaaah7zkvaffv26pzyauoe2zbnionqvhvsexamplee557wakiofi4ysgqq"
 }
 
 resource "vault_oci_auth_backend_role" "test" {
-    backend        = vault_auth_backend.oci.path
+    backend        = vault_oci_auth_backend.config.path
     name           = "%s"
     ocid_list      = ["ocid1.group.oc1..aaaaaaaabmyiinfq32y5aha3r2yo4exampleo4yg3fjk2sbne4567tropaa", "ocid1.dynamicgroup.oc1..aaaaaaaabvfwct33xri5examplegov4zyjp3rd5d7sk9jjdggxijhco56hrq"]
     token_ttl      = 300
@@ -168,14 +167,13 @@ resource "vault_oci_auth_backend_role" "test" {
 
 func testOCIAuthBackendRoleConfig(backend, name string) string {
 	return fmt.Sprintf(`
-
-resource "vault_auth_backend" "oci" {
-    path = "%s"
-    type = "oci"
+resource "vault_oci_auth_backend" "config" {
+  path = "%s"
+  home_tenancy_id = "ocid1.tenancy.oc1..aaaaaaaah7zkvaffv26pzyauoe2zbnionqvhvsexamplee557wakiofi4ysgqq"
 }
 
 resource "vault_oci_auth_backend_role" "test" {
-    backend        = vault_auth_backend.oci.path
+    backend        = vault_oci_auth_backend.config.path
     name           = "%s"
     token_ttl      = 300
     token_max_ttl  = 600
@@ -187,14 +185,13 @@ resource "vault_oci_auth_backend_role" "test" {
 
 func testOCIAuthBackendRoleUnset(backend, name string) string {
 	return fmt.Sprintf(`
-
-resource "vault_auth_backend" "oci" {
-    path = "%s"
-    type = "oci"
+resource "vault_oci_auth_backend" "config" {
+  path = "%s"
+  home_tenancy_id = "ocid1.tenancy.oc1..aaaaaaaah7zkvaffv26pzyauoe2zbnionqvhvsexamplee557wakiofi4ysgqq"
 }
 
 resource "vault_oci_auth_backend_role" "test" {
-    backend   = vault_auth_backend.oci.path
+    backend   = vault_oci_auth_backend.config.path
     name      = "%s"
     ocid_list = ["ocid1.dynamicgroup.oc1..aaaaaaaabvfwc45fh7dkexampleov4zyjp3rd5d7sk95jjdggdijhco5793f"]
 }

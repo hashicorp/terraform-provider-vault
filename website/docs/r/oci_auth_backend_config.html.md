@@ -40,6 +40,8 @@ resource "vault_oci_auth_backend_config" "example" {
 
 The following arguments are supported:
 
+* `description` - (Optional) A description of the auth backend.
+
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
