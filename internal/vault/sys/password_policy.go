@@ -32,10 +32,7 @@ type PasswordPolicyResource struct {
 // resource schema.
 type PasswordPolicyModel struct {
 	// common fields to all migrated resources
-	ID types.String `tfsdk:"id"`
-
-	// common fields to all resources
-	Namespace types.String `tfsdk:"namespace"`
+	base.BaseModelLegacy
 
 	// fields specific to this resource
 	Name   types.String `tfsdk:"name"`
