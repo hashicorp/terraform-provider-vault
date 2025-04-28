@@ -15,9 +15,6 @@ import (
 // BaseModel describes common fields for all of the Terraform resource data models
 //
 // Ideally this struct would be imbedded into all Resources and DataSources.
-// However, the Terraform Plugin Framework doesn't support unmarshalling nested
-// structs. See https://github.com/hashicorp/terraform-plugin-framework/issues/242
-// So for now, we must duplicate all fields.
 type BaseModel struct {
 	Namespace types.String `tfsdk:"namespace"`
 }
@@ -26,9 +23,6 @@ type BaseModel struct {
 // data models that have been migrated from SDKv2 to the TF Plugin Framework.
 //
 // Ideally this struct would be imbedded into all Resources and DataSources.
-// However, the Terraform Plugin Framework doesn't support unmarshalling nested
-// structs. See https://github.com/hashicorp/terraform-plugin-framework/issues/242
-// So for now, we must duplicate all fields.
 type BaseModelLegacy struct {
 	ID        types.String `tfsdk:"id"`
 	Namespace types.String `tfsdk:"namespace"`
