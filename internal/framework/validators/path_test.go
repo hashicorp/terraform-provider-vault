@@ -22,6 +22,11 @@ func TestFrameworkProvider_PathValidator(t *testing.T) {
 				return types.StringValue("foo")
 			},
 		},
+		"valid-nested": {
+			configValue: func(t *testing.T) types.String {
+				return types.StringValue("foo/bar")
+			},
+		},
 		"invalid-leading": {
 			configValue: func(t *testing.T) types.String {
 				return types.StringValue("/foo")

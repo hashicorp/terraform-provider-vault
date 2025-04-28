@@ -139,7 +139,7 @@ func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T, v **sche
 // with a previous version of the provider and then verify that there are no
 // planned changes after migrating to the Framework.
 //
-// As of TFVP v4.7.0, the resources used in this test are not implemented with
+// As of TFVP v4.8.0, the resources used in this test are not implemented with
 // the new Terraform Plugin Framework. However, this will act as a smoketest to
 // verify the provider schemas match 1-1.
 //
@@ -153,8 +153,8 @@ func TestAccMuxServer(t *testing.T) {
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"vault": {
-						// 4.7.0 is not multiplexed
-						VersionConstraint: "4.7.0",
+						// 4.8.0 is not multiplexed
+						VersionConstraint: "4.8.0",
 						Source:            "hashicorp/vault",
 					},
 				},

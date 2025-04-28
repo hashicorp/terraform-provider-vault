@@ -12,20 +12,21 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
 )
 
-// BaseModel describes common fields for all of the Terraform resource data models
+// BaseModel describes common fields for all Terraform resource data models
 //
-// Ideally this struct would be imbedded into all Resources and DataSources.
+// This struct should be embedded into all Terraform Plugin Framework Resources and Data Sources.
 type BaseModel struct {
 	Namespace types.String `tfsdk:"namespace"`
 }
 
-// BaseModelLegacy describes common fields for all of the Terraform resource
+// BaseModelLegacy describes common fields for all Terraform resource
 // data models that have been migrated from SDKv2 to the TF Plugin Framework.
 //
-// Ideally this struct would be imbedded into all Resources and DataSources.
+// This struct should be embedded into all SDKv2 Resources and Data Sources.
 type BaseModelLegacy struct {
-	ID        types.String `tfsdk:"id"`
-	Namespace types.String `tfsdk:"namespace"`
+	BaseModel
+
+	ID types.String `tfsdk:"id"`
 }
 
 // MustAddBaseSchema adds the schema fields that are required for all net new

@@ -96,8 +96,8 @@ func TestAccPasswordPolicy_Muxing(t *testing.T) {
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"vault": {
-						// 4.7.0 is not multiplexed
-						VersionConstraint: "4.7.0",
+						// 4.8.0 is not multiplexed
+						VersionConstraint: "4.8.0",
 						Source:            "hashicorp/vault",
 					},
 				},
