@@ -560,6 +560,7 @@ The `auth_login_azure` configuration block accepts the following arguments:
 * `jwt` - (Optional) The signed JSON Web Token against which the login is being attempted. 
  If not provided a token will be created from Azure's managed identities for Azure resources API.
   *Can be specified with the `TERRAFORM_VAULT_AZURE_AUTH_JWT` environment variable.*
+ If this value is not provided, a [`DefaultAzureCredential`](https://learn.microsoft.com/en-gb/azure/developer/go/sdk/authentication/credential-chains#defaultazurecredential-overview) will be used to perform authentication via numerous methods in order until one succeeds.
 
 * `subscription_id` - (Required) The subscription ID for the machine that generated the MSI token.
   This information can be obtained through instance metadata.
@@ -575,9 +576,9 @@ The `auth_login_azure` configuration block accepts the following arguments:
 
 * `tenant_id` - (Optional) Provides the tenant ID to use in a multi-tenant authentication scenario.
 
-* `client_id` - (Optional) The identity's client ID.
+* `client_id` - (Optional) Provides the client ID of the identity to use when multiple identities are available.
 
-* `scope` - (Optional) The scopes to include in the token request. Defaults to `https://management.azure.com/`
+* `scope` - (Optional) The scopes to include in the token request. Defaults to `https://management.azure.com//.default`
 
 
 ### Token File
