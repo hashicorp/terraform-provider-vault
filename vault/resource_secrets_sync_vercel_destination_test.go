@@ -16,6 +16,7 @@ import (
 )
 
 func TestVercelSecretsSyncDestination(t *testing.T) {
+	var p *schema.Provider
 	destName := acctest.RandomWithPrefix("tf-sync-dest-vercel")
 
 	resourceName := "vault_secrets_sync_vercel_destination.test"
@@ -27,7 +28,7 @@ func TestVercelSecretsSyncDestination(t *testing.T) {
 	accessToken := values[0]
 	projectID := values[1]
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)

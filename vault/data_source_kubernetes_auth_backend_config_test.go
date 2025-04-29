@@ -17,13 +17,14 @@ import (
 )
 
 func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt, kubernetesCAcert),
@@ -58,6 +59,7 @@ func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
 }
 
 func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
 	issuer := "kubernetes/serviceaccount"
@@ -66,9 +68,9 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 	useAnnotationsAsAliasMetadata := true
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, jwt, issuer,

@@ -16,11 +16,12 @@ import (
 )
 
 func TestAccDataSourcePKISecretKey(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-pki-backend")
 	keyName := acctest.RandomWithPrefix("tf-test-pki-key")
 	dataName := "data.vault_pki_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)

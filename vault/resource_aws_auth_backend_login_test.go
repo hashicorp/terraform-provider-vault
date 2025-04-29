@@ -21,6 +21,7 @@ import (
 )
 
 func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
+	var p *schema.Provider
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
@@ -49,8 +50,8 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	reqHeaders := base64.StdEncoding.EncodeToString(loginDataHeaders)
 	reqBody := base64.StdEncoding.EncodeToString(loginDataBody)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_iamIdentity(mountPath, accessKey, secretKey, reqMethod, reqURL, reqHeaders, reqBody, roleName, *testIdentity.Arn),
@@ -63,6 +64,7 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestEnvUnset(t, "TF_AWS_META")
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
@@ -99,8 +101,8 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	pkcs7 = strings.Replace(pkcs7, "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_pkcs7(mountPath, accessKey, secretKey, roleName, ami, account, arn, pkcs7),
@@ -113,6 +115,7 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestEnvUnset(t, "TF_AWS_META")
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
@@ -155,8 +158,8 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	sig = strings.Replace(sig, "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_ec2Identity(mountPath, accessKey, secretKey, roleName, ami, account, arn, identity, sig),

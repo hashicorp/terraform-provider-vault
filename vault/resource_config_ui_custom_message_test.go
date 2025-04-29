@@ -47,10 +47,11 @@ func testConfigUICustomMessageConfig(isUpdate bool) string {
 }
 
 func TestAccConfigUICustomMessage(t *testing.T) {
+	var p *schema.Provider
 	resourceName := "vault_config_ui_custom_message.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)

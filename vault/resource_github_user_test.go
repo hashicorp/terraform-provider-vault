@@ -4,8 +4,10 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"log"
 	"testing"
 
@@ -18,13 +20,14 @@ import (
 )
 
 func TestAccGithubUser_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_user.user"
 	user := "john_doe"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccGithubUserCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccGithubUserCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubUserConfig_basic(backend, user, []string{"admin", "security"}),
@@ -51,12 +54,13 @@ func TestAccGithubUser_basic(t *testing.T) {
 }
 
 func TestAccGithubUser_importBasic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_user.user"
 	user := "import"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubUserConfig_basic(backend, user, []string{"security", "admin"}),
@@ -71,13 +75,16 @@ func TestAccGithubUser_importBasic(t *testing.T) {
 }
 
 func TestGithubUserBackEndPath(t *testing.T) {
+	var p *schema.Provider
 	t.Run("With default mount", func(t *testing.T) {
+		var p *schema.Provider
 		actual := githubMappingPath("auth/github/map/users/foo", "users")
 		if actual != "github" {
 			t.Fatalf("expected '%s', got: '%s'", "github", actual)
 		}
 	})
 	t.Run("With custom mount", func(t *testing.T) {
+		var p *schema.Provider
 		actual := githubMappingPath("auth/mymount/submount/map/users/foo", "users")
 		if actual != "mymount/submount" {
 			t.Fatalf("expected '%s', got: '%s'", "mymount/submount", actual)

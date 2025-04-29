@@ -15,14 +15,15 @@ import (
 )
 
 func TestAccDataSourceNamespaces(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestAccEnt(t)
 
 	ns := acctest.RandomWithPrefix("tf-ns")
 	resourceName := "data.vault_namespaces"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceNamespacesConfig(ns, 3),

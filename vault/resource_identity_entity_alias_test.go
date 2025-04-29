@@ -19,6 +19,7 @@ import (
 )
 
 func TestAccIdentityEntityAlias(t *testing.T) {
+	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("my-entity")
 
 	nameEntity := "vault_identity_entity.entityA"
@@ -26,9 +27,9 @@ func TestAccIdentityEntityAlias(t *testing.T) {
 	nameGithubA := "vault_auth_backend.githubA"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityAliasDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityAliasConfig(entity, false, false),
@@ -52,6 +53,7 @@ func TestAccIdentityEntityAlias(t *testing.T) {
 }
 
 func TestAccIdentityEntityAliasDuplicateFlow(t *testing.T) {
+	var p *schema.Provider
 	namePrefix := acctest.RandomWithPrefix("test-duplicate-flow")
 	alias := acctest.RandomWithPrefix("alias")
 
@@ -124,9 +126,9 @@ resource "vault_identity_entity_alias" "test2" {
 	entityResource1 := "vault_identity_entity.test1"
 	entityResource2 := "vault_identity_entity.test2"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityAliasDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				// test the case where the apply operation would produce two new aliases having the same name
@@ -230,6 +232,7 @@ resource "vault_identity_entity_alias" "test2" {
 }
 
 func TestAccIdentityEntityAlias_Update(t *testing.T) {
+	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("my-entity")
 
 	nameEntityA := "vault_identity_entity.entityA"
@@ -239,9 +242,9 @@ func TestAccIdentityEntityAlias_Update(t *testing.T) {
 	nameGithubB := "vault_auth_backend.githubB"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityAliasDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityAliasConfig(entity, false, false),
@@ -286,6 +289,7 @@ func testAccCheckIdentityEntityAliasDestroy(s *terraform.State) error {
 }
 
 func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
+	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("my-entity")
 
 	nameEntityA := "vault_identity_entity.entityA"
@@ -297,9 +301,9 @@ func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
 	// TODO add back empty custom_metadata update tests
 	// once bug in Vault is resolved
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityAliasDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityAliasMetadataConfig(entity, false),

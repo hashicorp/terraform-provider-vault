@@ -16,13 +16,14 @@ import (
 )
 
 func TestAccNomadSecretBackendRoleClientBasic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
 	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccNomadSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccNomadSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testNomadSecretBackendRoleClientConfig(backend, address, token, "bob", "readonly", true),
@@ -39,13 +40,14 @@ func TestAccNomadSecretBackendRoleClientBasic(t *testing.T) {
 }
 
 func TestAccNomadSecretBackendRoleManagementBasic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
 	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccNomadSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccNomadSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testNomadSecretBackendRoleManagementConfig(backend, address, token, "bob", false),
@@ -61,13 +63,14 @@ func TestAccNomadSecretBackendRoleManagementBasic(t *testing.T) {
 }
 
 func TestAccNomadSecretBackendRoleImport(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
 	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccADSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccADSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testNomadSecretBackendRoleClientConfig(backend, address, token, "bob", "readonly", true),

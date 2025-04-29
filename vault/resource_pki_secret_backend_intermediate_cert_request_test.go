@@ -20,6 +20,7 @@ import (
 )
 
 func TestPkiSecretBackendIntermediateCertRequest_basic(t *testing.T) {
+	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
@@ -32,9 +33,9 @@ func TestPkiSecretBackendIntermediateCertRequest_basic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_basic(path, false),
@@ -51,6 +52,7 @@ func TestPkiSecretBackendIntermediateCertRequest_basic(t *testing.T) {
 }
 
 func TestPkiSecretBackendIntermediateCertRequest_managedKeys(t *testing.T) {
+	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 	keyName := acctest.RandomWithPrefix("kms-key")
 
@@ -58,9 +60,9 @@ func TestPkiSecretBackendIntermediateCertRequest_managedKeys(t *testing.T) {
 
 	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_managedKeys(path, keyName, accessKey, secretKey),
@@ -78,6 +80,7 @@ func TestPkiSecretBackendIntermediateCertRequest_managedKeys(t *testing.T) {
 }
 
 func TestPkiSecretBackendIntermediateCertRequest_signature_bits(t *testing.T) {
+	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
@@ -92,9 +95,9 @@ func TestPkiSecretBackendIntermediateCertRequest_signature_bits(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_signature_bits(path, ""),
@@ -160,6 +163,7 @@ func testPkiSecretBackendIntermediateCertRequestConfig_signature_bits(path strin
 }
 
 func TestPkiSecretBackendIntermediateCertRequest_key_usage(t *testing.T) {
+	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
@@ -172,9 +176,9 @@ func TestPkiSecretBackendIntermediateCertRequest_key_usage(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path, ""),
@@ -202,6 +206,7 @@ func testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path string, op
 }
 
 func TestPkiSecretBackendIntermediateCertRequest_serial_number(t *testing.T) {
+	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
@@ -214,9 +219,9 @@ func TestPkiSecretBackendIntermediateCertRequest_serial_number(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_serial_number(path, ""),
@@ -236,6 +241,7 @@ func testPkiSecretBackendIntermediateCertRequestConfig_serial_number(path string
 }
 
 func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("test-pki-mount")
 
 	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
@@ -264,7 +270,7 @@ func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 	)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)

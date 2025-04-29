@@ -23,13 +23,14 @@ import (
 )
 
 func TestAccIdentityEntity(t *testing.T) {
+	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -40,13 +41,14 @@ func TestAccIdentityEntity(t *testing.T) {
 }
 
 func TestAccIdentityEntityUpdate(t *testing.T) {
+	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -69,13 +71,14 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 }
 
 func TestAccIdentityEntityUpdateRemoveValues(t *testing.T) {
+	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -99,13 +102,14 @@ func TestAccIdentityEntityUpdateRemoveValues(t *testing.T) {
 // are still in the plan. They should be removed from the entity if this
 // bool is true.
 func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
+	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -216,6 +220,7 @@ resource "vault_identity_entity" "entity" {
 }
 
 func TestReadEntity(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 
 	tests := []struct {
@@ -311,6 +316,7 @@ func TestReadEntity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var p *schema.Provider
 			defer func() {
 				provider.MaxHTTPRetriesCCC = DefaultMaxHTTPRetriesCCC
 			}()
@@ -382,6 +388,7 @@ func TestReadEntity(t *testing.T) {
 }
 
 func TestIsEntityNotFoundError(t *testing.T) {
+	var p *schema.Provider
 	tests := []struct {
 		name     string
 		err      error
@@ -405,6 +412,7 @@ func TestIsEntityNotFoundError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var p *schema.Provider
 			actual := group.IsIdentityNotFoundError(tt.err)
 			if actual != tt.expected {
 				t.Fatalf("isIdentityNotFoundError(): expected %v, actual %v", tt.expected, actual)

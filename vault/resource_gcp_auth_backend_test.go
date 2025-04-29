@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"regexp"
 	"testing"
 
@@ -34,6 +36,7 @@ const gcpJSONCredentials string = `
 `
 
 func TestGCPAuthBackend_basic(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 
 	var resAuthFirst api.AuthMount
@@ -44,9 +47,9 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 	updatedDescription := "GCP Auth Mount updated"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testGCPAuthBackendDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
@@ -157,6 +160,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 }
 
 func TestGCPAuthBackend_WIF(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-gcp-auth")
 	resourceType := "vault_gcp_auth_backend"
 	resourceName := resourceType + ".test"
@@ -165,8 +169,8 @@ func TestGCPAuthBackend_WIF(t *testing.T) {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testGCPAuthBackendDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackend_WIFConfig_basic(path),
@@ -197,15 +201,16 @@ func TestGCPAuthBackend_WIF(t *testing.T) {
 }
 
 func TestGCPAuthBackend_import(t *testing.T) {
+	var p *schema.Provider
 	path := resource.PrefixedUniqueId("gcp-import-")
 	resourceType := "vault_gcp_auth_backend"
 	resourceName := resourceType + ".test"
 	description := "GCP Auth Mount"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testGCPAuthBackendDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
@@ -225,6 +230,7 @@ func TestGCPAuthBackend_import(t *testing.T) {
 }
 
 func TestGCPAuthBackend_remount(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-auth-gcp")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-gcp-updated")
 	resourceType := "vault_gcp_auth_backend"
@@ -232,8 +238,8 @@ func TestGCPAuthBackend_remount(t *testing.T) {
 	description := "GCP Auth Mount"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
@@ -296,11 +302,12 @@ func testGCPAuthBackendCheck_attrs(resourceName string) resource.TestCheckFunc {
 // Root Rotation parameters are compatible with the GCP Auth Backend
 // resource
 func TestAccGCPAuthBackendClient_automatedRotation(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-gcp")
 	resourceType := "vault_gcp_auth_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)

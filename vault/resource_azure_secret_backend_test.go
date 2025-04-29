@@ -18,6 +18,7 @@ import (
 )
 
 func TestAzureSecretBackend(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 
 	path := acctest.RandomWithPrefix("tf-test-azure")
@@ -26,7 +27,7 @@ func TestAzureSecretBackend(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -104,6 +105,7 @@ func getAzureBackendChecks(resourceName, path string, isUpdate bool) resource.Te
 }
 
 func TestAccAzureSecretBackend_wif(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 
 	path := acctest.RandomWithPrefix("tf-test-azure")
@@ -112,7 +114,7 @@ func TestAccAzureSecretBackend_wif(t *testing.T) {
 	resourceType := "vault_azure_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
@@ -147,6 +149,7 @@ func TestAccAzureSecretBackend_wif(t *testing.T) {
 }
 
 func TestAzureSecretBackend_remount(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 
 	path := acctest.RandomWithPrefix("tf-test-azure")
@@ -173,7 +176,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -193,13 +196,14 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 }
 
 func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-azure")
 
 	resourceType := "vault_azure_secret_backend"
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)

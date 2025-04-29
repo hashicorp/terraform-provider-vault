@@ -16,12 +16,13 @@ import (
 )
 
 func TestPkiSecretBackendConfigACME_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("pki-root")
 	resourceType := "vault_pki_secret_backend_config_acme"
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
@@ -73,7 +74,7 @@ func TestPkiSecretBackendConfigACME_basic(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)

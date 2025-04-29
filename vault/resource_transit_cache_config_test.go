@@ -19,12 +19,13 @@ import (
 )
 
 func TestAccTransitCacheConfig(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("test-cache-config")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccTransitCacheConfigCheckDestroyed,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccTransitCacheConfigCheckDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTransitCacheConfig(name, 600),

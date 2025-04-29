@@ -4,8 +4,10 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"log"
 	"regexp"
 	"testing"
@@ -19,13 +21,14 @@ import (
 )
 
 func TestAccGithubTeam_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_team.team"
 	team := "my-team-slugified"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccGithubTeamCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "security"}),
@@ -52,12 +55,13 @@ func TestAccGithubTeam_basic(t *testing.T) {
 }
 
 func TestAccGithubTeam_teamConfigError(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("github")
 	team := "Team With Spaces"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccGithubTeamCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccGithubTeamConfig_basic(backend, team, []string{}),
@@ -68,12 +72,13 @@ func TestAccGithubTeam_teamConfigError(t *testing.T) {
 }
 
 func TestAccGithubTeam_importBasic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_team.team"
 	team := "import-team"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "developer"}),

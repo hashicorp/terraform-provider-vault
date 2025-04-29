@@ -16,9 +16,10 @@ import (
 )
 
 func TestDataSourceGenericSecret(t *testing.T) {
+	var p *schema.Provider
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceGenericSecret_config,
@@ -29,11 +30,12 @@ func TestDataSourceGenericSecret(t *testing.T) {
 }
 
 func TestDataSourceGenericSecret_v2(t *testing.T) {
+	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-acctest-kv/")
 	path := acctest.RandomWithPrefix("foo")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceV2Secret_config(mount, path),

@@ -71,14 +71,15 @@ lRWEdZ9naFNIj9WsUcKHqRECAwEAAQ==
 -----END PUBLIC KEY-----`
 
 func TestAccKubernetesAuthBackendConfig_import(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
 	issuer := "kubernetes/serviceaccount"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, jwt, issuer,
@@ -136,13 +137,14 @@ func TestAccKubernetesAuthBackendConfig_import(t *testing.T) {
 }
 
 func TestAccKubernetesAuthBackendConfig_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt, kubernetesCAcert),
@@ -184,14 +186,15 @@ func testAccCheckKubernetesAuthBackendConfigDestroy(s *terraform.State) error {
 }
 
 func TestAccKubernetesAuthBackendConfig_update(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("kubernetes")
 	oldJWT := kubernetesJWT
 	newJWT := kubernetesAnotherJWT
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_basic(backend, oldJWT, kubernetesCAcert),
@@ -224,15 +227,16 @@ func TestAccKubernetesAuthBackendConfig_update(t *testing.T) {
 }
 
 func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
 	issuer := "api"
 	testResource := "vault_kubernetes_auth_backend_config.config"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, jwt, issuer,
@@ -264,6 +268,7 @@ func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 }
 
 func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("kubernetes")
 	oldJWT := kubernetesJWT
 	newJWT := kubernetesAnotherJWT
@@ -271,9 +276,9 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 	newIssuer := "api"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, oldJWT, oldIssuer,
@@ -355,6 +360,7 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 }
 
 func TestAccKubernetesAuthBackendConfig_localCA(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
 
@@ -363,8 +369,8 @@ func TestAccKubernetesAuthBackendConfig_localCA(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionGTE(t, testProvider.Meta(), vaultVersion193)
 		},
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt, ""),
@@ -495,6 +501,7 @@ resource "vault_kubernetes_auth_backend_config" "config" {
 }
 
 func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("kubernetes")
 	oldJWT := kubernetesJWT
 	// newJWT := kubernetesAnotherJWT
@@ -507,8 +514,8 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 			testutil.SkipTestEnvSet(t, envVarTFAccK8sSkipInCluster)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), vaultVersion193)
 		},
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, "", oldJWT, oldIssuer,

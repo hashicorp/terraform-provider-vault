@@ -21,13 +21,14 @@ import (
 )
 
 func TestAccIdentityGroup(t *testing.T) {
+	var p *schema.Provider
 	group := acctest.RandomWithPrefix("test-group")
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityGroupDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
@@ -38,14 +39,15 @@ func TestAccIdentityGroup(t *testing.T) {
 }
 
 func TestAccIdentityGroupUpdate(t *testing.T) {
+	var p *schema.Provider
 	group := acctest.RandomWithPrefix("test-group")
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityGroupDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
@@ -106,13 +108,14 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 }
 
 func TestAccIdentityGroupExternal(t *testing.T) {
+	var p *schema.Provider
 	group := acctest.RandomWithPrefix("test-group")
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityGroupDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
@@ -123,6 +126,7 @@ func TestAccIdentityGroupExternal(t *testing.T) {
 }
 
 func TestAccIdentityGroup_DuplicateCreate(t *testing.T) {
+	var p *schema.Provider
 	// group identity names are stored in lower case,
 	// this test attempts to create two resources with different casing for the
 	// same lower case group name.
@@ -142,9 +146,9 @@ resource "vault_identity_group" "test_upper" {
 `, group, strings.ToUpper(group[0:1])+group[1:])
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityGroupDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -156,6 +160,7 @@ resource "vault_identity_group" "test_upper" {
 }
 
 func TestIdentityGroupExternalGroupIDsUpgradeV0(t *testing.T) {
+	var p *schema.Provider
 	tests := []struct {
 		name     string
 		rawState map[string]interface{}
@@ -174,6 +179,7 @@ func TestIdentityGroupExternalGroupIDsUpgradeV0(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var p *schema.Provider
 			got, err := identityGroupExternalGroupIDsUpgradeV0(nil, tt.rawState, nil)
 
 			if tt.wantErr {

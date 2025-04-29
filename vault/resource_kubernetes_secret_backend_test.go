@@ -15,15 +15,16 @@ import (
 )
 
 func TestAccKubernetesSecretBackend(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
 	path := acctest.RandomWithPrefix("tf-test-kubernetes")
 	resourceType := "vault_kubernetes_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeKubernetes, ""),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKubernetes, ""),
 		Steps: []resource.TestStep{
 			{
 				Config: testKubernetesSecretBackend_initialConfig(path),

@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"reflect"
 	"testing"
 
@@ -66,6 +68,7 @@ func TestAccKVSecretV2_pathRegex(t *testing.T) {
 }
 
 func TestAccKVSecretV2(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	resourceName := "vault_kv_secret_v2.test"
 	mount := acctest.RandomWithPrefix("tf-kvv2")
@@ -77,8 +80,8 @@ func TestAccKVSecretV2(t *testing.T) {
 	customMetadata := `{"extra":"cheese","pizza":"please"}`
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKVSecretV2Config_initial(mount, name),
@@ -166,14 +169,15 @@ func TestAccKVSecretV2(t *testing.T) {
 }
 
 func TestAccKVSecretV2_DisableRead(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	resourceName := "vault_kv_secret_v2.test"
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	name := acctest.RandomWithPrefix("tf-secret")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {
@@ -217,13 +221,14 @@ func TestAccKVSecretV2_DisableRead(t *testing.T) {
 
 // Fadia u have added this
 func TestAccKVSecretV2_UpdateOutsideTerraform(t *testing.T) {
+	var p *schema.Provider
 	resourceName := "vault_kv_secret_v2.test"
 	mount := acctest.RandomWithPrefix("tf-kv")
 	name := acctest.RandomWithPrefix("foo")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKVSecretV2Config_initial(mount, name),

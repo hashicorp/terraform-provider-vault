@@ -16,12 +16,13 @@ import (
 )
 
 func TestAccTransformAlphabet(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("transform")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testTransformAlphabetDestroy,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testTransformAlphabetDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testTransformAlphabet_basicConfig(path, "numerics", "0123456789"),

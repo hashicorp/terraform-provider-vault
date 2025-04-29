@@ -22,14 +22,15 @@ const (
 )
 
 func TestAccRabbitMQSecretBackendRole_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccRabbitMQSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendRoleConfig_basic(name, backend, connectionUri, username, password),
@@ -65,14 +66,15 @@ func TestAccRabbitMQSecretBackendRole_basic(t *testing.T) {
 }
 
 func TestAccRabbitMQSecretBackendRole_nested(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccRabbitMQSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendRoleConfig_basic(name, backend, connectionUri, username, password),
@@ -108,14 +110,15 @@ func TestAccRabbitMQSecretBackendRole_nested(t *testing.T) {
 }
 
 func TestAccRabbitMQSecretBackendRole_topic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccRabbitMQSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendRoleConfig_topics(name, backend, connectionUri, username, password),

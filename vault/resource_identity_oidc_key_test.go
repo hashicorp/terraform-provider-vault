@@ -17,13 +17,14 @@ import (
 )
 
 func TestAccIdentityOidcKey(t *testing.T) {
+	var p *schema.Provider
 	key := acctest.RandomWithPrefix("test-key")
 
 	resourceName := "vault_identity_oidc_key.key"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityOidcKeyDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityOidcKeyDestroy,
 		Steps: []resource.TestStep{
 			{
 				// Test a create failure
@@ -51,13 +52,14 @@ func TestAccIdentityOidcKey(t *testing.T) {
 }
 
 func TestAccIdentityOidcKeyUpdate(t *testing.T) {
+	var p *schema.Provider
 	key := acctest.RandomWithPrefix("test-key")
 
 	resourceName := "vault_identity_oidc_key.key"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityOidcKeyDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityOidcKeyDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcKeyConfig(key),

@@ -14,14 +14,15 @@ import (
 )
 
 func TestDataSourceIdentityOIDCPublicKeys(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	keyName := acctest.RandomWithPrefix("test-key")
 	clientName := acctest.RandomWithPrefix("test-client")
 	providerName := acctest.RandomWithPrefix("test-provider")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityOIDCPublicKeys_config(keyName, clientName, providerName),

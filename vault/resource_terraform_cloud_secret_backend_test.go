@@ -16,6 +16,7 @@ import (
 )
 
 func TestTerraformCloudSecretBackend(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	token := os.Getenv("TEST_TF_TOKEN")
 
@@ -23,9 +24,9 @@ func TestTerraformCloudSecretBackend(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testTerraformCloudSecretBackend_initialConfig(backend, token),
@@ -56,6 +57,7 @@ func TestTerraformCloudSecretBackend(t *testing.T) {
 }
 
 func TestTerraformCloudSecretBackend_remount(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	updatedBackend := acctest.RandomWithPrefix("tf-test-terraform-cloud-updated")
 
@@ -64,9 +66,9 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 	token := "randomized-token-12392183123"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testTerraformCloudSecretBackend_initialConfig(backend, token),

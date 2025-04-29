@@ -15,10 +15,11 @@ import (
 )
 
 func TestAccDataSourcePKISecretConfigCMPV2(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-pki-backend")
 	dataName := "data.vault_pki_secret_backend_config_cmpv2.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)

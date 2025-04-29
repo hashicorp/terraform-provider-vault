@@ -17,6 +17,7 @@ import (
 )
 
 func TestManagedKeys(t *testing.T) {
+	var p *schema.Provider
 	namePrefix := acctest.RandomWithPrefix("aws-keys")
 	name0 := namePrefix + "-0"
 	name1 := namePrefix + "-1"
@@ -24,8 +25,8 @@ func TestManagedKeys(t *testing.T) {
 	resourceName := "vault_managed_keys.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {
@@ -171,6 +172,7 @@ func TestManagedKeys(t *testing.T) {
 //
 // The final variable specifies that this test can only be run locally
 func TestManagedKeysPKCS(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
 
 	name := acctest.RandomWithPrefix("pkcs-keys")
@@ -179,8 +181,8 @@ func TestManagedKeysPKCS(t *testing.T) {
 	library, slot, pin := testutil.GetTestPKCSCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: testManagedKeysConfig_pkcs(name, library, slot, pin),

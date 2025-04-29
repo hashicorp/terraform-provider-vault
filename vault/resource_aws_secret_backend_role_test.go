@@ -30,13 +30,14 @@ const (
 )
 
 func TestAccAWSSecretBackendRole_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-aws")
 	name := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccAWSSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendRoleConfigBasic(name, backend, accessKey, secretKey),
@@ -55,13 +56,14 @@ func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 }
 
 func TestAccAWSSecretBackendRole_import(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-aws")
 	name := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccAWSSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendRoleConfigBasic(name, backend, accessKey, secretKey),
@@ -97,13 +99,14 @@ func TestAccAWSSecretBackendRole_import(t *testing.T) {
 }
 
 func TestAccAWSSecretBackendRole_nested(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-aws/nested")
 	name := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccAWSSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendRoleConfigBasic(name, backend, accessKey, secretKey),

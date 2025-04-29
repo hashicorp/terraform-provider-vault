@@ -14,12 +14,13 @@ import (
 )
 
 func TestMFAOktaBasic(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("mfa-okta")
 	resourceName := "vault_mfa_okta.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: testMFAOktaConfig(path),

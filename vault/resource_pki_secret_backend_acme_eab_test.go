@@ -15,6 +15,7 @@ import (
 )
 
 func TestAccPKISecretBackendAcmeEab(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 
 	backend := acctest.RandomWithPrefix("tf-test-pki")
@@ -22,7 +23,7 @@ func TestAccPKISecretBackendAcmeEab(t *testing.T) {
 	resourceBackend := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
@@ -125,6 +126,7 @@ resource "vault_pki_secret_backend_acme_eab" "test" {
 }
 
 func Test_pkiSecretBackendComputeAcmeDirectoryPath(t *testing.T) {
+	var p *schema.Provider
 	type args struct {
 		backend string
 		issuer  string
@@ -142,6 +144,7 @@ func Test_pkiSecretBackendComputeAcmeDirectoryPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var p *schema.Provider
 			if got := pkiSecretBackendComputeAcmeDirectoryPath(tt.args.backend, tt.args.issuer, tt.args.role); got != tt.want {
 				t.Errorf("pkiSecretBackendComputeAcmeDirectoryPath() = %v, want %v", got, tt.want)
 			}

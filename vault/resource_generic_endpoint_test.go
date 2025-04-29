@@ -18,6 +18,7 @@ import (
 )
 
 func TestResourceGenericEndpoint(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("userpass")
 	resourceNames := []string{
 		"vault_generic_endpoint.up1",
@@ -27,9 +28,9 @@ func TestResourceGenericEndpoint(t *testing.T) {
 		"vault_generic_endpoint.u1_entity",
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testResourceGenericEndpoint_destroyCheck(resourceNames, path),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testResourceGenericEndpoint_destroyCheck(resourceNames, path),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericEndpoint_initialConfig(path),

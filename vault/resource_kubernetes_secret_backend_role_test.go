@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -17,6 +19,7 @@ import (
 )
 
 func TestAccKubernetesSecretBackendRole(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
 	resourceName := "vault_kubernetes_secret_backend_role.test"
@@ -24,9 +27,9 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-role")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccKubernetesSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccKubernetesSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testKubernetesSecretBackendRole_initialConfig(backend, name),

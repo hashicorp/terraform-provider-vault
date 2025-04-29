@@ -21,13 +21,14 @@ const (
 )
 
 func TestAccIdentityOIDCScope(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("test-scope")
 	resourceName := "vault_identity_oidc_scope.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckOIDCScopeDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckOIDCScopeDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOIDCScopeConfig_basic(name),

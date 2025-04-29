@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -17,13 +19,14 @@ import (
 )
 
 func TestDataSourceIdentityEntityName(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "data.vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityEntity_configName(entity),
@@ -39,13 +42,14 @@ func TestDataSourceIdentityEntityName(t *testing.T) {
 }
 
 func TestDataSourceIdentityEntityAlias(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "data.vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityEntity_configAlias(entity),

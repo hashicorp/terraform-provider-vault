@@ -14,6 +14,7 @@ import (
 )
 
 func TestAccMongoDBAtlasSecretBackend_basic(t *testing.T) {
+	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-test-mongodbatlas")
 	resourceType := "vault_mongodbatlas_secret_backend"
 	resourceName := resourceType + ".test"
@@ -23,9 +24,9 @@ func TestAccMongoDBAtlasSecretBackend_basic(t *testing.T) {
 	updatedPublicKey := "klpruxce"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeMongoDBAtlas, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeMongoDBAtlas, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccMongoDBAtlasSecretBackendConfig_basic(mount, privateKey, publicKey),

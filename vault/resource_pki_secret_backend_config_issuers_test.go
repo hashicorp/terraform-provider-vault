@@ -16,6 +16,7 @@ import (
 )
 
 func TestAccPKISecretBackendConfigIssuers_basic(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 
 	backend := acctest.RandomWithPrefix("tf-test-pki")
@@ -23,7 +24,7 @@ func TestAccPKISecretBackendConfigIssuers_basic(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)

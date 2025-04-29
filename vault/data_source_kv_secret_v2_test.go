@@ -17,6 +17,7 @@ import (
 )
 
 func TestDataSourceKVV2Secret(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	mount := acctest.RandomWithPrefix("tf-kv")
 	name := acctest.RandomWithPrefix("foo")
@@ -25,8 +26,8 @@ func TestDataSourceKVV2Secret(t *testing.T) {
 
 	resourceName := "data.vault_kv_secret_v2.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceKVV2SecretConfig(mount, name),
@@ -63,12 +64,13 @@ func TestDataSourceKVV2Secret(t *testing.T) {
 }
 
 func TestDataSourceKVV2Secret_deletedSecret(t *testing.T) {
+	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-kv")
 	name := acctest.RandomWithPrefix("foo")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {

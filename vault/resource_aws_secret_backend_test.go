@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"regexp"
 	"testing"
@@ -17,14 +19,15 @@ import (
 )
 
 func TestAccAWSSecretBackend_basic(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-aws")
 	resourceType := "vault_aws_secret_backend"
 	resourceName := resourceType + ".test"
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey),
@@ -78,14 +81,15 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 }
 
 func TestAccAWSSecretBackend_fallback(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-aws")
 	resourceType := "vault_aws_secret_backend"
 	resourceName := resourceType + ".test"
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendConfig_fallback(path, accessKey, secretKey),
@@ -123,11 +127,12 @@ func TestAccAWSSecretBackend_fallback(t *testing.T) {
 }
 
 func TestAccAWSSecretBackend_wif(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-aws")
 	resourceType := "vault_aws_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
@@ -160,11 +165,12 @@ func TestAccAWSSecretBackend_wif(t *testing.T) {
 // Root Rotation parameters are compatible with the AWS Secrets Backend
 // resource
 func TestAccAWSSecretBackend_automatedRotation(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-aws")
 	resourceType := "vault_aws_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
@@ -213,6 +219,7 @@ func TestAccAWSSecretBackend_automatedRotation(t *testing.T) {
 }
 
 func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-aws")
 	resourceType := "vault_aws_secret_backend"
 	resourceName := resourceType + ".test"
@@ -220,9 +227,9 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 	templ := fmt.Sprintf(`{{ printf \"vault-%%s-%%s-%%s\" (printf \"%%s-%%s\" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}`)
 	expectedTempl := fmt.Sprintf(`{{ printf "vault-%%s-%%s-%%s" (printf "%%s-%%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}`)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendConfig_userTemplate(path, accessKey, secretKey, templ),
@@ -236,14 +243,15 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 }
 
 func TestAccAWSSecretBackend_remount(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-aws")
 	updatedPath := acctest.RandomWithPrefix("tf-test-aws-updated")
 
 	resourceName := "vault_aws_secret_backend.test"
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey),

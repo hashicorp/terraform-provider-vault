@@ -21,6 +21,7 @@ import (
 // listed at https://www.vaultproject.io/docs/secrets/gcp/index.html for the project you are testing
 // on. The credentials must also allow setting IAM permissions on the project being tested.
 func TestGCPSecretStaticAccount(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	staticAccount := acctest.RandomWithPrefix("tf-test")
 	credentials, project := testutil.GetTestGCPCreds(t)
@@ -47,9 +48,9 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 	resourceNameBackend := "vault_gcp_secret_backend.test"
 	resourceName := "vault_gcp_secret_static_account.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testGCPSecretStaticAccountDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testGCPSecretStaticAccountDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: noBindings,

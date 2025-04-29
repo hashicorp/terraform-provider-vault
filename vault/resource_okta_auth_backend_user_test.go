@@ -18,15 +18,16 @@ import (
 
 // This is light on testing as most of the code is covered by `resource_okta_auth_backend_test.go`
 func TestAccOktaAuthBackendUser(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
 	organization := "dummy"
 	resourceName := "vault_okta_auth_backend_user.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccOktaAuthBackendUser_Destroyed(path, "user_test"),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccOktaAuthBackendUser_Destroyed(path, "user_test"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthUserConfig(path, organization),

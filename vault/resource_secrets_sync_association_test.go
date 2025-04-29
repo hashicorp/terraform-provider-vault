@@ -15,6 +15,7 @@ import (
 )
 
 func TestSecretsSyncAssociation_gh(t *testing.T) {
+	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-test-sync")
 	destName := acctest.RandomWithPrefix("tf-sync-dest")
 	secretName := acctest.RandomWithPrefix("tf-sync-secret")
@@ -32,7 +33,7 @@ func TestSecretsSyncAssociation_gh(t *testing.T) {
 	repoName := values[2]
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)

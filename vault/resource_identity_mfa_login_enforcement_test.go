@@ -16,6 +16,7 @@ import (
 )
 
 func TestIdentityMFALoginEnforcement(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 
 	name := acctest.RandomWithPrefix("ident-mfa-enf")
@@ -30,8 +31,8 @@ func TestIdentityMFALoginEnforcement(t *testing.T) {
 
 	importTestStep := testutil.GetImportTestStep(resourceName, false, nil, consts.FieldIntegrationKey, consts.FieldSecretKey)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: getTestMFAEnforcementConfig(name),

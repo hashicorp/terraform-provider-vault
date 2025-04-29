@@ -14,11 +14,12 @@ import (
 )
 
 func TestSecretsSyncConfig(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestEnvUnset(t, "VAULT_SECRETS_SYNC_ENABLED")
 	resourceName := "vault_secrets_sync_config.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
@@ -48,7 +49,7 @@ func TestSecretsSyncConfig(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)

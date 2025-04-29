@@ -17,12 +17,13 @@ import (
 )
 
 func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityOidcKeyAllowedClientIdDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityOidcKeyAllowedClientIdDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcKeyAllowedClientIdConfig(name),

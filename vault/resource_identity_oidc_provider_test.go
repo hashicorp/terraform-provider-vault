@@ -16,6 +16,7 @@ import (
 )
 
 func TestAccIdentityOIDCProvider(t *testing.T) {
+	var p *schema.Provider
 	providerName := acctest.RandomWithPrefix("test-provider")
 	keyName := acctest.RandomWithPrefix("test-key")
 	assignmentName := acctest.RandomWithPrefix("test-assignment")
@@ -25,9 +26,9 @@ func TestAccIdentityOIDCProvider(t *testing.T) {
 	resourceName := "vault_identity_oidc_provider.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckOIDCProviderDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckOIDCProviderDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOIDCProviderConfig(keyName, assignmentName, clientName, scopeName, providerName),

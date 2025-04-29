@@ -17,12 +17,13 @@ import (
 )
 
 func TestAuditRequestHeader(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("tf-test")
 	newName := acctest.RandomWithPrefix("tf-test-new")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAuditRequestHeaderCheckDestroy(name, newName),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAuditRequestHeaderCheckDestroy(name, newName),
 		Steps: []resource.TestStep{
 			{
 				Config: testAuditRequestHeader_Config(name, false),

@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -15,6 +17,7 @@ import (
 )
 
 func TestAccMongoDBAtlasSecretRole_basic(t *testing.T) {
+	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-test-mongodbatlas")
 	resourceType := "vault_mongodbatlas_secret_role"
 	resourceName := resourceType + ".role"
@@ -37,9 +40,9 @@ func TestAccMongoDBAtlasSecretRole_basic(t *testing.T) {
 	updatedMaxTtl := "120"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeMongoDBAtlas, consts.FieldMount),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeMongoDBAtlas, consts.FieldMount),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccMongoDBAtlasSecretBackendRole_initial(mount, name),

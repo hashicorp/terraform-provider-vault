@@ -16,15 +16,16 @@ import (
 )
 
 func TestAccJWTAuthBackendRole_import(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckJWTAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTAuthBackendRoleConfig_full(backend, role),
@@ -90,15 +91,16 @@ func TestAccJWTAuthBackendRole_import(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRole_basic(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckJWTAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTAuthBackendRoleConfig_basic(backend, role),
@@ -136,14 +138,15 @@ func TestAccJWTAuthBackendRole_basic(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRole_update(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckJWTAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTAuthBackendRoleConfig_basic(backend, role),
@@ -210,15 +213,16 @@ func TestAccJWTAuthBackendRole_update(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRole_full(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckJWTAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTAuthBackendRoleConfig_full(backend, role),
@@ -276,15 +280,16 @@ func TestAccJWTAuthBackendRole_full(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRoleOIDC_full(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
 	backend := acctest.RandomWithPrefix("oidc")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckJWTAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTAuthBackendRoleConfigOIDC_full(backend, role),
@@ -352,14 +357,15 @@ func TestAccJWTAuthBackendRoleOIDC_full(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRoleOIDC_disableParsing(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckJWTAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTAuthBackendRoleConfigOIDC_disableParsing(backend, role),
@@ -387,6 +393,7 @@ func TestAccJWTAuthBackendRoleOIDC_disableParsing(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
@@ -445,9 +452,9 @@ func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckJWTAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTAuthBackendRoleConfig_full(backend, role),

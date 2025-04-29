@@ -16,6 +16,7 @@ import (
 )
 
 func TestIdentityMFATOTP(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 
 	resourceName := mfa.ResourceNameTOTP + ".test"
@@ -29,8 +30,8 @@ func TestIdentityMFATOTP(t *testing.T) {
 
 	importTestStep := testutil.GetImportTestStep(resourceName, false, nil)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`

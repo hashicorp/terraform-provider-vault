@@ -20,13 +20,14 @@ const testAccIdentityOidcRoleTemplate = `{
 }`
 
 func TestAccIdentityOidcRole(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("test-role")
 
 	resourceName := "vault_identity_oidc_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityOidcRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityOidcRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcRoleConfig(name),
@@ -48,14 +49,15 @@ func TestAccIdentityOidcRole(t *testing.T) {
 }
 
 func TestAccIdentityOidcRoleWithClientId(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("test-role")
 	clientId := acctest.RandomWithPrefix("test-client-id")
 
 	resourceName := "vault_identity_oidc_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityOidcRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityOidcRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcRoleWithClientIdConfig(name, clientId),
@@ -78,15 +80,16 @@ func TestAccIdentityOidcRoleWithClientId(t *testing.T) {
 }
 
 func TestAccIdentityOidcRoleUpdate(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("test-role")
 	clientId := acctest.RandomWithPrefix("test-client-id")
 	updateClientId := acctest.RandomWithPrefix("test-update-client-id")
 
 	resourceName := "vault_identity_oidc_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityOidcRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckIdentityOidcRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcRoleWithClientIdConfig(name, clientId),

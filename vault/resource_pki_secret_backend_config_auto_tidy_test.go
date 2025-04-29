@@ -20,6 +20,7 @@ import (
 )
 
 func TestPkiSecretBackendConfigAutoTidySuppressDurationDiff(t *testing.T) {
+	var p *schema.Provider
 	type testCase struct {
 		oldValue string
 		newValue string
@@ -49,6 +50,7 @@ func TestPkiSecretBackendConfigAutoTidySuppressDurationDiff(t *testing.T) {
 }
 
 func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	resourceType := "vault_pki_secret_backend_config_auto_tidy"
 	resourceName := resourceType + ".test"
@@ -100,9 +102,9 @@ func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
 		return nil
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccPKISecretBackendConfigAutoTidy_basic(backend, `enabled = true`),
@@ -306,6 +308,7 @@ safety_buffer = "59000s"
 }
 
 func TestAccPKISecretBackendConfigAutoTidy_ent(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	resourceType := "vault_pki_secret_backend_config_auto_tidy"
 	resourceName := resourceType + ".test"
@@ -319,7 +322,7 @@ func TestAccPKISecretBackendConfigAutoTidy_ent(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)

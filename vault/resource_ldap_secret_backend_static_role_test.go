@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -15,6 +17,7 @@ import (
 )
 
 func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
+	var p *schema.Provider
 	var (
 		path                  = acctest.RandomWithPrefix("tf-test-ldap-static-role")
 		bindDN, bindPass, url = testutil.GetTestLDAPCreds(t)
@@ -28,7 +31,7 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 		updatedRotationPeriod = "120"
 	)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)

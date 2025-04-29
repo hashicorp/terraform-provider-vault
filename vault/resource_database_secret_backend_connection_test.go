@@ -38,6 +38,7 @@ const testDefaultDatabaseSecretBackendResource = "vault_database_secret_backend_
 // copy/build a db plugin and install it with a unique name, then register it in vault.
 
 func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEnginePostgres)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -50,9 +51,9 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 
 	userTempl := "{{.DisplayName}}"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_import(name, backend, connURL, userTempl),
@@ -81,6 +82,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineCassandra)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -93,9 +95,9 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 	pluginName := dbEngineCassandra.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra(name, backend, host, username, password, "5"),
@@ -125,6 +127,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineCassandra)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -137,9 +140,9 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 	pluginName := dbEngineCassandra.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_cassandraProtocol(name, backend, host, username, password),
@@ -169,6 +172,7 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineCouchbase)
 
 	values := testutil.SkipTestEnvUnset(t, "COUCHBASE_HOST", "COUCHBASE_USERNAME", "COUCHBASE_PASSWORD")
@@ -219,9 +223,9 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_couchbase(
@@ -266,6 +270,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineInfluxDB)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -280,9 +285,9 @@ func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 	resourceName := testDefaultDatabaseSecretBackendResource
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_influxdb(name, backend, host, port, username, password),
@@ -309,6 +314,7 @@ func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineMongoDBAtlas)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -323,9 +329,9 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 	pluginName := dbEngineMongoDBAtlas.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, backend, publicKey, privateKey, projectID),
@@ -346,6 +352,7 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineMongoDB)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -356,9 +363,9 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 	pluginName := dbEngineMongoDB.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mongodb(name, backend, connURL),
@@ -377,6 +384,7 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineMSSQL)
 
 	cleanupFunc, connURL := testutil.PrepareMSSQLTestContainer(t)
@@ -393,9 +401,9 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 
 	username := parsedURL.User.Username()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, false),
@@ -445,6 +453,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
+	var p *schema.Provider
 	// wanted this to be the included with the following test, but the env-var check is different
 	values := testutil.SkipTestEnvUnset(t, "MYSQL_CLOUD_CONNECTION_URL", "MYSQL_CLOUD_CONNECTION_SERVICE_ACCOUNT_JSON")
 	connURL, saJSON := values[0], values[1]
@@ -452,7 +461,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
@@ -486,6 +495,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineMySQL)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -496,9 +506,9 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql(name, backend, connURL, username, password),
@@ -580,6 +590,7 @@ func testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName s
 }
 
 func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineMySQL)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -591,9 +602,9 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 	pluginName := dbEngineMySQL.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, username, password, 0),
@@ -630,6 +641,7 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineMySQL)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -662,9 +674,9 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, username, password, 0),
@@ -721,6 +733,7 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 }
 
 func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineMySQL)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -732,9 +745,9 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 	password := acctest.RandomWithPrefix("password")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_tls(name, backend, connURL, password, tlsCA, tlsCertificateKey),
@@ -779,6 +792,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEnginePostgres)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -799,9 +813,9 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 	userTempl := "{{.DisplayName}}"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, username, password, maxOpenConnections, maxIdleConnections, maxConnLifetime, parsedURL),
@@ -846,13 +860,14 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_postgresql_tls(t *testing.T) {
+	var p *schema.Provider
 	resourceName := "vault_database_secret_backend_connection.test"
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEnginePostgres.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
@@ -874,13 +889,14 @@ func TestAccDatabaseSecretBackendConnection_postgresql_tls(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_postgresql_rootlessConfig(t *testing.T) {
+	var p *schema.Provider
 	resourceName := "vault_database_secret_backend_connection.test"
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEnginePostgres.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
@@ -899,6 +915,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_rootlessConfig(t *testing
 }
 
 func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
+	var p *schema.Provider
 	// wanted this to be the included with the following test, but the env-var check is different
 	values := testutil.SkipTestEnvUnset(t, "POSTGRES_CLOUD_URL", "POSTGRES_CLOUD_SERVICE_ACCOUNT_JSON")
 	connURL, saJSON := values[0], values[1]
@@ -906,7 +923,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
@@ -940,6 +957,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 // TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation tests that Automated
 // Root Rotation parameters are compatible with the DB Secrets Backend Connection resource
 func TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEnginePostgres)
 
 	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
@@ -949,7 +967,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation(t *
 	resourceName := "vault_database_secret_backend_connection.test"
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
@@ -998,6 +1016,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation(t *
 }
 
 func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineElasticSearch)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -1011,9 +1030,9 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, backend, connURL, username, password),
@@ -1077,6 +1096,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineSnowflake)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -1092,9 +1112,9 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 
 	config := testAccDatabaseSecretBackendConnectionConfig_snowflake(name, backend, connURL, username, password, userTempl)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -1114,6 +1134,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineRedis)
 
 	values := testutil.SkipTestEnvUnset(t, "REDIS_HOST", "REDIS_PORT", "REDIS_USERNAME", "REDIS_PASSWORD")
@@ -1127,9 +1148,9 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "*"),
@@ -1176,6 +1197,7 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineRedisElastiCache)
 
 	url := os.Getenv("ELASTICACHE_URL")
@@ -1186,9 +1208,9 @@ func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 	pluginName := dbEngineRedisElastiCache.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_redis_elasticache(name, backend, url),
@@ -1210,6 +1232,7 @@ func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
+	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineRedshift)
 
 	url := os.Getenv("REDSHIFT_URL")
@@ -1220,9 +1243,9 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 	pluginName := dbEngineRedshift.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, false),
@@ -1263,6 +1286,7 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_invalid_plugin(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := name + "-plugin"
 	config := fmt.Sprintf(`
@@ -1280,8 +1304,8 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }`, name, name, pluginName)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -2110,6 +2134,7 @@ func MaybeSkipDBTests(t *testing.T, engine *dbEngine) {
 }
 
 func Test_dbEngine_GetPluginName(t *testing.T) {
+	var p *schema.Provider
 	type fields struct {
 		name              string
 		defaultPluginName string
@@ -2253,6 +2278,7 @@ func Test_dbEngine_GetPluginName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var p *schema.Provider
 			i := &dbEngine{
 				name:              tt.fields.name,
 				defaultPluginName: tt.fields.defaultPluginName,
@@ -2273,6 +2299,7 @@ func Test_dbEngine_GetPluginName(t *testing.T) {
 }
 
 func Test_getDBEngine(t *testing.T) {
+	var p *schema.Provider
 	type args struct {
 		d *schema.ResourceData
 	}
@@ -2336,6 +2363,7 @@ func Test_getDBEngine(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var p *schema.Provider
 			got, err := getDBEngine(tt.args.d)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getDBEngine() error = %v, wantErr %v", err, tt.wantErr)
@@ -2354,6 +2382,7 @@ func Test_getDBEngine(t *testing.T) {
 }
 
 func Test_getDBEngineFromResp(t *testing.T) {
+	var p *schema.Provider
 	tests := []struct {
 		name      string
 		engines   []*dbEngine
@@ -2514,6 +2543,7 @@ func Test_getDBEngineFromResp(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var p *schema.Provider
 			got, err := getDBEngineFromResp(tt.engines, tt.r)
 			if tt.expectErr != nil {
 				if !reflect.DeepEqual(tt.expectErr, err) {

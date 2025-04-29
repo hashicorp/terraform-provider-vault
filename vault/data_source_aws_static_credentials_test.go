@@ -15,6 +15,7 @@ import (
 )
 
 func TestAccDataSourceAWSStaticCredentials(t *testing.T) {
+	var p *schema.Provider
 	a, s := testutil.GetTestAWSCreds(t)
 	username := testutil.SkipTestEnvUnset(t, "AWS_STATIC_USER")[0]
 	mount := acctest.RandomWithPrefix("tf-aws-static")
@@ -26,7 +27,7 @@ func TestAccDataSourceAWSStaticCredentials(t *testing.T) {
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
 
 		},
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: testAWSStaticDataSourceConfig(mount, a, s, username),

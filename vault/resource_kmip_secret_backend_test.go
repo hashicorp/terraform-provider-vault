@@ -15,6 +15,7 @@ import (
 )
 
 func TestAccKMIPSecretBackend_basic(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestAccEnt(t)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
@@ -33,9 +34,9 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPSecretBackend_initialConfig(path, addr1),
@@ -78,6 +79,7 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 }
 
 func TestAccKMIPSecretBackend_remount(t *testing.T) {
+	var p *schema.Provider
 	testutil.SkipTestAccEnt(t)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
@@ -97,9 +99,9 @@ func TestAccKMIPSecretBackend_remount(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPSecretBackend_initialConfig(path, addr1),

@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"os"
 	"strconv"
 	"testing"
@@ -144,6 +146,7 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 }
 
 func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...string) {
+	var p *schema.Provider
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	resourceName := "vault_pki_secret_backend_crl_config.test"
 	var unifiedCrl bool
@@ -162,10 +165,10 @@ func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...str
 		testutil.GetImportTestStep(resourceName, false, nil, ignoreImportFields...),
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          preCheck,
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
-		Steps:             steps,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 preCheck,
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps:                    steps,
 	})
 }
 

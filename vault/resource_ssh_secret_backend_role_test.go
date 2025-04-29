@@ -17,6 +17,7 @@ import (
 )
 
 func TestAccSSHSecretBackendRole(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
 
@@ -123,7 +124,7 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -133,12 +134,13 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 }
 
 func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccSSHSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccSSHSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendRoleOTPConfig_basic(name, backend),
@@ -155,12 +157,13 @@ func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
 }
 
 func TestAccSSHSecretBackendRole_template(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
 	resourceName := "vault_ssh_secret_backend_role.test_role"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)

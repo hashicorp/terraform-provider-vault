@@ -17,13 +17,14 @@ import (
 )
 
 func TestAccResourceTerraformCloudSecretCredsOrganizationBasic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	vals := testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN", "TEST_TF_ORGANIZATION")
 	token, organization := vals[0], vals[1]
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -42,13 +43,14 @@ func TestAccResourceTerraformCloudSecretCredsOrganizationBasic(t *testing.T) {
 }
 
 func TestAccResourceTerraformCloudSecretCredsTeamBasic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	vals := testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN", "TEST_TF_ORGANIZATION", "TEST_TF_TEAM_ID")
 	token, organization, teamID := vals[0], vals[1], vals[2]
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -68,13 +70,14 @@ func TestAccResourceTerraformCloudSecretCredsTeamBasic(t *testing.T) {
 }
 
 func TestAccResourceTerraformCloudSecretCredsUserBasic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	vals := testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN", "TEST_TF_USER_ID")
 	token, userID := vals[0], vals[1]
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},

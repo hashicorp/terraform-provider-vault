@@ -14,12 +14,13 @@ import (
 )
 
 func TestAccDataSourceNomadAccessCredentialsClientBasic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
 	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceNomadAccessCredentialsConfig(backend, address, token, "test"),
@@ -33,12 +34,13 @@ func TestAccDataSourceNomadAccessCredentialsClientBasic(t *testing.T) {
 }
 
 func TestAccDataSourceNomadAccessCredentialsManagementBasic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
 	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceNomadAccessCredentialsManagementConfig(backend, address, token, "test"),

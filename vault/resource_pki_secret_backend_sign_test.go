@@ -22,6 +22,7 @@ import (
 )
 
 func TestPkiSecretBackendSign_basic(t *testing.T) {
+	var p *schema.Provider
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 
@@ -29,9 +30,9 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 
 	resourceName := "vault_pki_secret_backend_sign.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, ""),
@@ -166,6 +167,7 @@ EOT
 }
 
 func TestPkiSecretBackendSign_renew(t *testing.T) {
+	var p *schema.Provider
 	path := "pki-root-" + strconv.Itoa(acctest.RandInt())
 
 	var store testPKICertStore
@@ -182,9 +184,9 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 		testValidateCSR(resourceName),
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendSignConfig_renew(path, ""),

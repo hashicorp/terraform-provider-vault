@@ -16,14 +16,15 @@ import (
 )
 
 func TestAccAppRoleAuthBackendRole_import(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 	roleID := acctest.RandomWithPrefix("test-role-id")
 	resourcePath := "vault_approle_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_full(backend, role, roleID),
@@ -61,13 +62,14 @@ func TestAccAppRoleAuthBackendRole_import(t *testing.T) {
 }
 
 func TestAccAppRoleAuthBackendRole_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role),
@@ -103,13 +105,14 @@ func TestAccAppRoleAuthBackendRole_basic(t *testing.T) {
 }
 
 func TestAccAppRoleAuthBackendRole_update(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role),
@@ -174,15 +177,16 @@ func TestAccAppRoleAuthBackendRole_update(t *testing.T) {
 }
 
 func TestAccAppRoleAuthBackendRole_full(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 	roleID := acctest.RandomWithPrefix("test-role-id")
 	resourcePath := "vault_approle_auth_backend_role.role"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_full(backend, role, roleID),
@@ -211,15 +215,16 @@ func TestAccAppRoleAuthBackendRole_full(t *testing.T) {
 }
 
 func TestAccAppRoleAuthBackendRole_fullUpdate(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 	roleID := acctest.RandomWithPrefix("test-role-id")
 	newRoleID := acctest.RandomWithPrefix("test-role-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_full(backend, role, roleID),

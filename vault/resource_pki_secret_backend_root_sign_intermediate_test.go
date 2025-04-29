@@ -120,6 +120,7 @@ DjZxoKDOAPYwWRsTAgup5jWWwVoCG/GA8cWMDwO1Ul5UYWHalg==
 )
 
 func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
+	var p *schema.Provider
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 	format := "pem"
@@ -135,9 +136,9 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 	checks := testCheckPKISecretRootSignIntermediate(resourceName, rootPath, commonName, format, "", x509.SHA256WithRSA, false)
 	store := &testPKICertStore{}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false),
@@ -208,14 +209,15 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
+	var p *schema.Provider
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "pem"`),
@@ -226,14 +228,15 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
+	var p *schema.Provider
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "der"`),
@@ -244,14 +247,15 @@ func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle(t *testing.T) {
+	var p *schema.Provider
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "pem_bundle"`),
@@ -266,15 +270,16 @@ func notAfter(t time.Time) string {
 }
 
 func TestPkiSecretBackendRootSignIntermediate_not_after(t *testing.T) {
+	var p *schema.Provider
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 	commonName := "SubOrg Intermediate CA"
 	notAfterTime := time.Now().Add(5 * time.Hour)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "der"`, notAfter(notAfterTime)),
@@ -285,13 +290,14 @@ func TestPkiSecretBackendRootSignIntermediate_not_after(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootSignIntermediate_name_constraints_pem_bundle(t *testing.T) {
+	var p *schema.Provider
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 	format := "pem_bundle"
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
@@ -307,13 +313,14 @@ func TestPkiSecretBackendRootSignIntermediate_name_constraints_pem_bundle(t *tes
 }
 
 func TestPkiSecretBackendRootSignIntermediate_signature_bits(t *testing.T) {
+	var p *schema.Provider
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 	format := "pem_bundle"
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -338,6 +345,7 @@ func TestPkiSecretBackendRootSignIntermediate_signature_bits(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle_multiple_intermediates(t *testing.T) {
+	var p *schema.Provider
 	t.Skip("Skip until VAULT-6700 is resolved")
 
 	random := strconv.Itoa(acctest.RandInt())
@@ -348,9 +356,9 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle_multiple_intermed
 	commonName := "SubOrg Intermediate 2 CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_multiple_inter(rootPath, intermediate1Path, intermediate2Path, format),
@@ -824,6 +832,7 @@ resource "vault_pki_secret_backend_intermediate_set_signed" "two" {
 }
 
 func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
+	var p *schema.Provider
 	tests := []struct {
 		name        string
 		rawState    map[string]interface{}
@@ -875,6 +884,7 @@ func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var p *schema.Provider
 			got, err := pkiSecretRootSignIntermediateRUpgradeV0(nil, tt.rawState, nil)
 
 			if tt.wantErr {
@@ -896,6 +906,7 @@ func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
 }
 
 func Test_setCAChain(t *testing.T) {
+	var p *schema.Provider
 	pem2derb64 := func(data string) string {
 		b, _ := pem.Decode([]byte(data))
 		return base64.StdEncoding.EncodeToString(b.Bytes)
@@ -1125,6 +1136,7 @@ func Test_setCAChain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var p *schema.Provider
 			d := schema.TestResourceDataRaw(
 				t,
 				map[string]*schema.Schema{

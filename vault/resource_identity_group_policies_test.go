@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
 	"testing"
 
@@ -19,12 +21,13 @@ import (
 )
 
 func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
+	var p *schema.Provider
 	group := acctest.RandomWithPrefix("test-group")
 	resourceName := "vault_identity_group_policies.policies"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityGroupPoliciesDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupPoliciesConfigExclusive(group),
@@ -44,14 +47,15 @@ func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
 }
 
 func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
+	var p *schema.Provider
 	group := acctest.RandomWithPrefix("test-group")
 	resourceNameDev := "vault_identity_group_policies.dev"
 	resourceNameTest := "vault_identity_group_policies.test"
 	resourceNameGroup := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityGroupPoliciesDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupPoliciesConfigNonExclusive(group),

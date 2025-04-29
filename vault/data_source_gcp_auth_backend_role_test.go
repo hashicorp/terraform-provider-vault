@@ -15,15 +15,16 @@ import (
 )
 
 func TestAccGCPAuthBackendRoleDataSource_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("gcp")
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 	serviceAccount := acctest.RandomWithPrefix("tf-test-gcp-service-account")
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testGCPAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendRoleConfig_basic(backend, name, serviceAccount, projectId),
@@ -60,15 +61,16 @@ func TestAccGCPAuthBackendRoleDataSource_basic(t *testing.T) {
 }
 
 func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("gcp")
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
 
 	resourceName := "vault_gcp_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testGCPAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendRoleConfig_gce(backend, name, projectId),
@@ -92,12 +94,13 @@ func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
 }
 
 func TestAccGCPAuthBackendRoleDataSource_none(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("gcp")
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGCPAuthBackendRoleDataSourceConfig(backend, name),

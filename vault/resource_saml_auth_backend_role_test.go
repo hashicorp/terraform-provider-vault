@@ -16,6 +16,7 @@ import (
 )
 
 func TestAccSAMLAuthBackendRole_basic(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("saml")
 	name := acctest.RandomWithPrefix("test-role")
 
@@ -27,8 +28,8 @@ func TestAccSAMLAuthBackendRole_basic(t *testing.T) {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeSAML, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeSAML, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSAMLAuthBackendRoleConfig_basic(path, name),

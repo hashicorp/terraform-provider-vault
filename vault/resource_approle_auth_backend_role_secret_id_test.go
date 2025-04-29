@@ -21,13 +21,14 @@ import (
 const secretIDResource = "vault_approle_auth_backend_role_secret_id.secret_id"
 
 func TestAccAppRoleAuthBackendRoleSecretID_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_basic(backend, role),
@@ -54,14 +55,15 @@ func TestAccAppRoleAuthBackendRoleSecretID_basic(t *testing.T) {
 }
 
 func TestAccAppRoleAuthBackendRoleSecretID_wrapped(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 	withWrappedAccessor := false
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role, withWrappedAccessor),
@@ -77,14 +79,15 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped(t *testing.T) {
 }
 
 func TestAccAppRoleAuthBackendRoleSecretID_wrapped_withWrappedAccessor(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 	withWrappedAccessor := true
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role, withWrappedAccessor),
@@ -102,14 +105,15 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_withWrappedAccessor(t *testin
 }
 
 func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 	withWrappedAccessor := false
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		CheckDestroy: func(s *terraform.State) error {
 			if err := testAccCheckAppRoleAuthBackendRoleSecretIDDestroy(s); err != nil {
 				return err
@@ -136,14 +140,15 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace(t *testing.T) {
 }
 
 func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace_withWrappedAccessor(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 	withWrappedAccessor := true
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		CheckDestroy: func(s *terraform.State) error {
 			if err := testAccCheckAppRoleAuthBackendRoleSecretIDDestroy(s); err != nil {
 				return err
@@ -172,14 +177,15 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace_withWrappedAccessor
 }
 
 func TestAccAppRoleAuthBackendRoleSecretID_full(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 	secretID := acctest.RandomWithPrefix("test-role-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_full(backend, role, secretID),

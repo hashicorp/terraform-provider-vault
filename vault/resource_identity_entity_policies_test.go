@@ -20,11 +20,12 @@ import (
 )
 
 func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
+	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityEntityPoliciesDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityPoliciesConfigExclusive(entity),
@@ -44,11 +45,12 @@ func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 }
 
 func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
+	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityEntityPoliciesDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityPoliciesConfigNonExclusive(entity),

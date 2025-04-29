@@ -16,6 +16,7 @@ import (
 )
 
 func TestAccPKISecretBackendConfigCMPV2_Empty(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 
 	backend := acctest.RandomWithPrefix("tf-test-pki")
@@ -24,7 +25,7 @@ func TestAccPKISecretBackendConfigCMPV2_Empty(t *testing.T) {
 	dataName := "data.vault_pki_secret_backend_config_cmpv2.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
@@ -59,6 +60,7 @@ func TestAccPKISecretBackendConfigCMPV2_Empty(t *testing.T) {
 }
 
 func TestAccPKISecretBackendConfigCMPV2_AllFields_Pre1185(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 
 	backend := acctest.RandomWithPrefix("tf-test-pki")
@@ -67,7 +69,7 @@ func TestAccPKISecretBackendConfigCMPV2_AllFields_Pre1185(t *testing.T) {
 	dataName := "data.vault_pki_secret_backend_config_cmpv2.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
@@ -110,6 +112,7 @@ func TestAccPKISecretBackendConfigCMPV2_AllFields_Pre1185(t *testing.T) {
 }
 
 func TestAccPKISecretBackendConfigCMPV2_AllFields(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 
 	backend := acctest.RandomWithPrefix("tf-test-pki")
@@ -118,7 +121,7 @@ func TestAccPKISecretBackendConfigCMPV2_AllFields(t *testing.T) {
 	dataName := "data.vault_pki_secret_backend_config_cmpv2.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)

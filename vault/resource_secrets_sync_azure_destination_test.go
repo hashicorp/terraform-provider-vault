@@ -16,6 +16,7 @@ import (
 )
 
 func TestAzureSecretsSyncDestination(t *testing.T) {
+	var p *schema.Provider
 	destName := acctest.RandomWithPrefix("tf-sync-dest-azure")
 
 	resourceName := "vault_secrets_sync_azure_destination.test"
@@ -32,7 +33,7 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 	tenantID := values[3]
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)

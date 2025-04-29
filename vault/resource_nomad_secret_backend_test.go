@@ -15,6 +15,7 @@ import (
 )
 
 func TestAccNomadSecretBackend(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
 	// TODO: test environment should exist in CI
 	address, token := testutil.GetTestNomadCreds(t)
@@ -68,6 +69,7 @@ func TestAccNomadSecretBackend(t *testing.T) {
 }
 
 func TestNomadSecretBackend_remount(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
 	updatedBackend := acctest.RandomWithPrefix("tf-test-nomad-updated")
 
@@ -75,8 +77,8 @@ func TestNomadSecretBackend_remount(t *testing.T) {
 	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testNomadSecretBackendConfig(backend, address, token, 60, 30, 3600, 7200),

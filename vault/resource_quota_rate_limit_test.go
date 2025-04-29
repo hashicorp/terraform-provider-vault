@@ -26,13 +26,14 @@ func randomQuotaRateString() string {
 }
 
 func TestQuotaRateLimit(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("tf-test")
 	rateLimit := randomQuotaRateString()
 	newRateLimit := randomQuotaRateString()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testQuotaRateLimitCheckDestroy([]string{rateLimit, newRateLimit}),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testQuotaRateLimitCheckDestroy([]string{rateLimit, newRateLimit}),
 		Steps: []resource.TestStep{
 			{
 				Config: testQuotaRateLimitConfig(name, "", rateLimit, 1, 0),
@@ -69,6 +70,7 @@ func TestQuotaRateLimit(t *testing.T) {
 }
 
 func TestQuotaRateLimitWithRole(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("rate-limit")
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
@@ -77,7 +79,7 @@ func TestQuotaRateLimitWithRole(t *testing.T) {
 	resourceName := "vault_quota_rate_limit.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
@@ -115,6 +117,7 @@ func TestQuotaRateLimitWithRole(t *testing.T) {
 }
 
 func TestQuotaRateLimitInheritable(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("tf-test")
 	rateLimit := randomQuotaRateString()
 	newRateLimit := randomQuotaRateString()
@@ -122,7 +125,7 @@ func TestQuotaRateLimitInheritable(t *testing.T) {
 	resourceName := "vault_quota_rate_limit.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
@@ -167,6 +170,7 @@ func TestQuotaRateLimitInheritable(t *testing.T) {
 }
 
 func TestQuotaRateLimitWithNamespaceInheritable(t *testing.T) {
+	var p *schema.Provider
 	name := acctest.RandomWithPrefix("tf-test")
 	ns := "ns-" + name
 	rateLimit := randomQuotaRateString()
@@ -175,7 +179,7 @@ func TestQuotaRateLimitWithNamespaceInheritable(t *testing.T) {
 	resourceName := "vault_quota_rate_limit.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)

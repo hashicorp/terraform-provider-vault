@@ -15,6 +15,7 @@ import (
 )
 
 func TestDataSourceKVSecretListV2(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	mount := acctest.RandomWithPrefix("tf-kv")
 	s1 := acctest.RandomWithPrefix("foo")
@@ -24,8 +25,8 @@ func TestDataSourceKVSecretListV2(t *testing.T) {
 	datasource2 := "data.vault_kv_secrets_list_v2.test_internal"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceKVV2SecretListConfig(mount, s1, s2),

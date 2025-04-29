@@ -16,10 +16,11 @@ import (
 )
 
 func TestAccRaftAutopilotConfig_basic(t *testing.T) {
+	var p *schema.Provider
 	resourceName := "vault_raft_autopilot.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")

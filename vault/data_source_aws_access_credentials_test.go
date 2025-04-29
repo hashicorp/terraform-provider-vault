@@ -23,13 +23,14 @@ import (
 )
 
 func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
+	var p *schema.Provider
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	region := testutil.GetTestAWSRegion(t)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAccessCredentialsConfig_basic(mountPath, accessKey, secretKey, region),
@@ -47,6 +48,7 @@ func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 }
 
 func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
+	var p *schema.Provider
 	mountPath := acctest.RandomWithPrefix("aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	region := testutil.GetTestAWSRegion(t)
@@ -109,9 +111,10 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
+			var p *schema.Provider
 			resource.Test(t, resource.TestCase{
-				ProviderFactories: providerFactories,
-				PreCheck:          func() { testutil.TestAccPreCheck(t) },
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
 						Config: test.config,
@@ -131,14 +134,15 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 }
 
 func TestAccDataSourceAWSAccessCredentials_sts_ttl(t *testing.T) {
+	var p *schema.Provider
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	region := testutil.GetTestAWSRegion(t)
 	ttl := "18m"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAccessCredentialsConfig_sts_basic(mountPath, accessKey, secretKey, region),

@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
 	"strings"
 	"testing"
@@ -19,6 +21,7 @@ import (
 )
 
 func TestAccAWSAuthBackendSTSRole_withExternalID(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("aws")
 	accountID := strconv.Itoa(acctest.RandInt())
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
@@ -31,8 +34,8 @@ func TestAccAWSAuthBackendSTSRole_withExternalID(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, arn, externalID),
@@ -63,14 +66,15 @@ func TestAccAWSAuthBackendSTSRole_withExternalID(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("aws")
 	accountID := strconv.Itoa(acctest.RandInt())
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
 	updatedArn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, arn, ""),

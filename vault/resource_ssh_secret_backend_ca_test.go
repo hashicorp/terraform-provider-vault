@@ -16,12 +16,13 @@ import (
 )
 
 func TestAccSSHSecretBackendCA_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := "ssh-" + acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSSHSecretBackendCADestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigGenerated(backend),
@@ -32,12 +33,13 @@ func TestAccSSHSecretBackendCA_basic(t *testing.T) {
 }
 
 func TestAccSSHSecretBackendCA_provided(t *testing.T) {
+	var p *schema.Provider
 	backend := "ssh-" + acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSSHSecretBackendCADestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigProvided(backend),
@@ -48,10 +50,11 @@ func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 }
 
 func TestAccSSHSecretBackend_import(t *testing.T) {
+	var p *schema.Provider
 	backend := "ssh-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigGenerated(backend),
@@ -72,6 +75,7 @@ func TestAccSSHSecretBackend_import(t *testing.T) {
 // verify that there are no planned changes after migrating to an updated
 // schema to validate the sshSecretBackendCAUpgradeV0 state upgrader.
 func TestAccSSHSecretBackendCA_Upgrade_key_type(t *testing.T) {
+	var p *schema.Provider
 	backend := "ssh-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
 		Steps: []resource.TestStep{
@@ -87,9 +91,9 @@ func TestAccSSHSecretBackendCA_Upgrade_key_type(t *testing.T) {
 				Check:  testAccSSHSecretBackendCACheck(backend),
 			},
 			{
-				ProviderFactories: providerFactories,
-				Config:            testAccSSHSecretBackendCAConfigGenerated(backend),
-				PlanOnly:          true,
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				Config:                   testAccSSHSecretBackendCAConfigGenerated(backend),
+				PlanOnly:                 true,
 			},
 		},
 	})

@@ -21,6 +21,7 @@ import (
 // TestAccDataSourceAzureAccessCredentials_basic tests the creation of dynamic
 // service principals using azure_roles
 func TestAccDataSourceAzureAccessCredentialsAzureRoles_basic(t *testing.T) {
+	var p *schema.Provider
 	// This test takes a while because it's testing a loop that
 	// retries real credentials until they're eventually consistent.
 	if testing.Short() {
@@ -29,8 +30,8 @@ func TestAccDataSourceAzureAccessCredentialsAzureRoles_basic(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
 	conf := testutil.GetTestAzureConf(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAzureAccessCredentialsConfigBasicAzureRoles(mountPath, conf, 20),
@@ -48,6 +49,7 @@ func TestAccDataSourceAzureAccessCredentialsAzureRoles_basic(t *testing.T) {
 // service principals using azure_groups
 // Requires AZURE_GROUP_NAME to be set to a group that the service principal will be assigned to
 func TestAccDataSourceAzureAccessCredentialsAzureGroups_basic(t *testing.T) {
+	var p *schema.Provider
 	// This test takes a while because it's testing a loop that
 	// retries real credentials until they're eventually consistent.
 	if testing.Short() {
@@ -62,8 +64,8 @@ func TestAccDataSourceAzureAccessCredentialsAzureGroups_basic(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
 	conf := testutil.GetTestAzureConfForGroups(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAzureAccessCredentialsConfigBasicAzureGroups(mountPath, conf, groupName, 20),
@@ -80,6 +82,7 @@ func TestAccDataSourceAzureAccessCredentialsAzureGroups_basic(t *testing.T) {
 // TestAccDataSourceAzureAccessCredentials_ExistingSP tests the credential
 // generation for existing service principals
 func TestAccDataSourceAzureAccessCredentials_ExistingSP(t *testing.T) {
+	var p *schema.Provider
 	// This test takes a while because it's testing a loop that
 	// retries real credentials until they're eventually consistent.
 	if testing.Short() {
@@ -88,8 +91,8 @@ func TestAccDataSourceAzureAccessCredentials_ExistingSP(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
 	conf := testutil.GetTestAzureConfExistingSP(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAzureAccessCredentialsConfig_existingSP(mountPath, conf, 60),
@@ -218,6 +221,7 @@ data "vault_azure_access_credentials" "test" {
 }
 
 func Test_getAzureCloudConfigFromName(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 
 	mixedCap := func(s string) string {
@@ -275,6 +279,7 @@ func Test_getAzureCloudConfigFromName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var p *schema.Provider
 			got, err := getAzureCloudConfigFromName(tt.cloudName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getAzureCloudConfigFromName() error = %v, wantErr %v", err, tt.wantErr)

@@ -16,12 +16,13 @@ import (
 )
 
 func TestAccAwsAuthBackendConfigIdentity(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("aws")
 	resourceName := "vault_aws_auth_backend_config_identity.config"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAwsAuthBackendConfigIdentityDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckAwsAuthBackendConfigIdentityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAwsAuthBackendConfigIdentity_basic(backend),

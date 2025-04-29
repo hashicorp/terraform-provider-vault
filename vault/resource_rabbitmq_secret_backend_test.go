@@ -15,14 +15,15 @@ import (
 )
 
 func TestAccRabbitMQSecretBackend_basic(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resourceType := "vault_rabbitmq_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password),
@@ -60,14 +61,15 @@ func TestAccRabbitMQSecretBackend_basic(t *testing.T) {
 }
 
 func TestAccRabbitMQSecretBackend_template(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resourceType := "vault_rabbitmq_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendTemplateConfig(path, connectionUri, username, password, path, path),
@@ -92,6 +94,7 @@ func TestAccRabbitMQSecretBackend_template(t *testing.T) {
 }
 
 func TestRabbitMQSecretBackend_remount(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	updatedPath := acctest.RandomWithPrefix("tf-test-rabbitmq-updated")
 
@@ -99,8 +102,8 @@ func TestRabbitMQSecretBackend_remount(t *testing.T) {
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password),

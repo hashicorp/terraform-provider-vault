@@ -16,13 +16,14 @@ import (
 )
 
 func TestAccTransformTransformation(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("transform")
 
 	resourceName := "vault_transform_transformation.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      transformTransformationDestroy,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             transformTransformationDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: transformTransformation_basicConfig(path, "ccn-fpe", "fpe", "ccn", "internal", "payments", "*"),

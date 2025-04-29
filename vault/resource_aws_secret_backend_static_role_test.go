@@ -15,6 +15,7 @@ import (
 )
 
 func TestAccAWSSecretBackendStaticRole(t *testing.T) {
+	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-aws-static")
 	a, s := testutil.GetTestAWSCreds(t)
 	resourceName := "vault_aws_secret_backend_static_role.role"
@@ -25,7 +26,7 @@ func TestAccAWSSecretBackendStaticRole(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
 		},
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: testAWSStaticResourceConfig(mount, a, s, username),
@@ -41,6 +42,7 @@ func TestAccAWSSecretBackendStaticRole(t *testing.T) {
 }
 
 func TestAccAWSSecretBackendStaticAssumeRole(t *testing.T) {
+	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-aws-static")
 	a, s := testutil.GetTestAWSCreds(t)
 	resourceName := "vault_aws_secret_backend_static_role.role"
@@ -51,7 +53,7 @@ func TestAccAWSSecretBackendStaticAssumeRole(t *testing.T) {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: testAWSStaticAssumeResourceConfig(mount, a, s, username),
@@ -71,6 +73,7 @@ func TestAccAWSSecretBackendStaticAssumeRole(t *testing.T) {
 
 // TestAWSPathMatching tests the regular expression (and supporting function) that parses paths into backends and role names
 func TestAWSPathMatching(t *testing.T) {
+	var p *schema.Provider
 	cases := []struct {
 		name    string
 		path    string
@@ -122,6 +125,7 @@ func TestAWSPathMatching(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			var p *schema.Provider
 			b, r, e := parseAWSStaticRolePath(tc.path)
 			if tc.isError && e == nil {
 				t.Fatal("expected an error but didn't get one")

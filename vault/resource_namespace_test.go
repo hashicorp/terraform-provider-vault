@@ -18,6 +18,7 @@ import (
 )
 
 func TestAccNamespace(t *testing.T) {
+	var p *schema.Provider
 	namespacePath := acctest.RandomWithPrefix("parent-ns")
 	resourceNameParent := "vault_namespace.parent"
 	resourceNameChild := "vault_namespace.child"
@@ -44,9 +45,9 @@ func TestAccNamespace(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testNamespaceDestroy(namespacePath),
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testNamespaceDestroy(namespacePath),
 		Steps: []resource.TestStep{
 			{
 				Config: testNestedNamespaces(namespacePath, 3),

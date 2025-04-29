@@ -10,6 +10,7 @@ import (
 )
 
 func TestGenericSecretMigrateState(t *testing.T) {
+	var p *schema.Provider
 	cases := map[string]struct {
 		StateVersion int
 		Attributes   map[string]string

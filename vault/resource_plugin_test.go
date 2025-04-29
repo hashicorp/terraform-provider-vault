@@ -22,6 +22,7 @@ import (
 const envPluginCommand = "VAULT_PLUGIN_COMMAND"
 
 func TestPlugin(t *testing.T) {
+	var p *schema.Provider
 	const (
 		typ     = "auth"
 		version = "v1.0.0"
@@ -42,7 +43,7 @@ func TestPlugin(t *testing.T) {
 	cmd := os.Getenv(envPluginCommand)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.SkipTestEnvUnset(t, envPluginCommand)
@@ -118,6 +119,7 @@ func testValidateList(resourceName, attr string, expected []string) resource.Tes
 }
 
 func TestPluginFromID(t *testing.T) {
+	var p *schema.Provider
 	for name, tc := range map[string]struct {
 		id      string
 		typ     string
@@ -136,6 +138,7 @@ func TestPluginFromID(t *testing.T) {
 		"missing name":                     {"auth/version/v1.0.0", "", "", ""},
 	} {
 		t.Run(name, func(t *testing.T) {
+			var p *schema.Provider
 			typ, name, version := pluginFromID(tc.id)
 			if typ != tc.typ {
 				t.Errorf("expected type %q, got %q", tc.typ, typ)

@@ -18,6 +18,7 @@ import (
 const secretsKeyTemplate = "VAULT_{{ .MountAccessor | uppercase }}_{{ .SecretKey | uppercase }}"
 
 func TestGithubSecretsSyncDestination(t *testing.T) {
+	var p *schema.Provider
 	destName := acctest.RandomWithPrefix("tf-sync-dest-gh")
 
 	resourceName := "vault_secrets_sync_gh_destination.test"
@@ -33,7 +34,7 @@ func TestGithubSecretsSyncDestination(t *testing.T) {
 	repoName := values[2]
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)

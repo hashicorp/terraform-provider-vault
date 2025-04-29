@@ -16,13 +16,14 @@ import (
 )
 
 func TestAccTokenAuthBackendRole(t *testing.T) {
+	var p *schema.Provider
 	role := acctest.RandomWithPrefix("test-role")
 
 	resourceName := "vault_token_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckTokenAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTokenAuthBackendRoleConfig(role),
@@ -38,14 +39,15 @@ func TestAccTokenAuthBackendRole(t *testing.T) {
 }
 
 func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
+	var p *schema.Provider
 	role := acctest.RandomWithPrefix("test-role")
 	roleUpdated := acctest.RandomWithPrefix("test-role-updated")
 
 	resourceName := "vault_token_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckTokenAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTokenAuthBackendRoleConfig(role),

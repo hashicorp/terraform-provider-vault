@@ -16,13 +16,14 @@ import (
 )
 
 func TestTerraformCloudSecretRole(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-backend")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	organization := "hashicorp-vault-testing"
 	vals := testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN", "TEST_TF_TEAM_ID", "TEST_TF_USER_ID")
 	token, teamID, userID := vals[0], vals[1], vals[2]
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -163,6 +164,7 @@ resource "vault_terraform_cloud_secret_role" "test_user" {
 }
 
 func TestTerraformCloudSecretBackendRoleNameFromPath(t *testing.T) {
+	var p *schema.Provider
 	{
 		name, err := terraformCloudSecretRoleNameFromPath("foo/role/bar")
 		if err != nil {
@@ -185,6 +187,7 @@ func TestTerraformCloudSecretBackendRoleNameFromPath(t *testing.T) {
 }
 
 func TestTerraformCloudSecretBackendRoleBackendFromPath(t *testing.T) {
+	var p *schema.Provider
 	{
 		backend, err := terraformCloudSecretRoleBackendFromPath("foo/role/bar")
 		if err != nil {

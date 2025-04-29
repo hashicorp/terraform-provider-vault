@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"os"
 	"strings"
 	"testing"
@@ -18,6 +20,7 @@ import (
 )
 
 func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
+	var p *schema.Provider
 	subscriptionID := os.Getenv("ARM_SUBSCRIPTION_ID")
 	if subscriptionID == "" {
 		t.Skip("ARM_SUBSCRIPTION_ID not set")
@@ -75,7 +78,7 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -111,6 +114,7 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 }
 
 func TestAzureSecretBackendRole_AzureGroups(t *testing.T) {
+	var p *schema.Provider
 	subscriptionID := os.Getenv("ARM_SUBSCRIPTION_ID")
 	if subscriptionID == "" {
 		t.Skip("ARM_SUBSCRIPTION_ID not set")
@@ -124,7 +128,7 @@ func TestAzureSecretBackendRole_AzureGroups(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-azure")
 	role := acctest.RandomWithPrefix("tf-test-azure-role")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},

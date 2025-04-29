@@ -16,6 +16,7 @@ import (
 )
 
 func TestAccSAMLAuthBackend_basic(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("saml")
 	resourceType := "vault_saml_auth_backend"
 	resourceName := resourceType + ".test"
@@ -25,8 +26,8 @@ func TestAccSAMLAuthBackend_basic(t *testing.T) {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeSAML, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeSAML, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSAMLAuthBackendConfig_basic(path),

@@ -16,13 +16,14 @@ import (
 )
 
 func TestMFATOTPBasic(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("mfa-totp")
 	resourceName := "vault_mfa_totp.test"
 
 	var id string
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		Steps: []resource.TestStep{
 			{
 				Config: testMFATOTPConfig(path, 20),

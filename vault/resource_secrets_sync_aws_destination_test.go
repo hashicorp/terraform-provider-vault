@@ -21,6 +21,7 @@ const (
 )
 
 func TestAWSSecretsSyncDestination(t *testing.T) {
+	var p *schema.Provider
 	destName := acctest.RandomWithPrefix("tf-sync-dest-aws")
 
 	resourceName := "vault_secrets_sync_aws_destination.test"
@@ -28,7 +29,7 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	region := testutil.GetTestAWSRegion(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)

@@ -16,13 +16,14 @@ import (
 )
 
 func TestAccADSecretBackendRole_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-ad")
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccADSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccADSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testADSecretBackendRoleConfig(backend, bindDN, bindPass, url, "bob", "Bob", 60),
@@ -47,6 +48,7 @@ func TestAccADSecretBackendRole_basic(t *testing.T) {
 }
 
 func TestAccADSecretBackendRole_import(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-ad")
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 	role := "bob"
@@ -54,9 +56,9 @@ func TestAccADSecretBackendRole_import(t *testing.T) {
 	ttl := 60
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccADSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccADSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testADSecretBackendRoleConfig(backend, bindDN, bindPass, url, role, serviceAccountName, ttl),

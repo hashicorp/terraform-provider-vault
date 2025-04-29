@@ -16,12 +16,13 @@ import (
 )
 
 func TestAccTransformTemplate(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("transform")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testTransformTemplateDestroy,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testTransformTemplateDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testTransformTemplate_basicConfig(path, "regex",

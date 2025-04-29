@@ -21,6 +21,7 @@ type testPKIKeyStore struct {
 }
 
 func TestAccPKISecretBackendKey_basic(t *testing.T) {
+	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-test-pki")
 	resourceType := "vault_pki_secret_backend_key"
 	resourceName := resourceType + ".test"
@@ -31,7 +32,7 @@ func TestAccPKISecretBackendKey_basic(t *testing.T) {
 	store := &testPKIKeyStore{}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)

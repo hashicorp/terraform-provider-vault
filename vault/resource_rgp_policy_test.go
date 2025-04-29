@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -16,11 +18,12 @@ import (
 )
 
 func TestAccRoleGoverningPolicy(t *testing.T) {
+	var p *schema.Provider
 	policyName := acctest.RandomWithPrefix("test-policy")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccRoleGoverningPolicyCheckDestroy,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testAccRoleGoverningPolicyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleGoverningPolicy(policyName, "soft-mandatory"),

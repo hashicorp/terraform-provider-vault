@@ -15,6 +15,7 @@ import (
 )
 
 func TestAccOktaAuthBackend_basic(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-basic-")
@@ -22,9 +23,9 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthConfig_basic(path, organization),
@@ -65,6 +66,7 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_import(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-import-")
@@ -72,9 +74,9 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthConfig_basic(path, organization),
@@ -125,6 +127,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-group-optional")
@@ -132,9 +135,9 @@ func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthConfig_groups_optional(path, organization),
@@ -151,6 +154,7 @@ func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_remount(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-okta")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-okta-updated")
@@ -159,8 +163,8 @@ func TestAccOktaAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_okta_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthConfig_basic(path, organization),
@@ -192,14 +196,15 @@ func TestAccOktaAuthBackend_remount(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_TokenFields(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-okta")
 	organization := "example"
 	resourceName := "vault_okta_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthConfig_tokenFields(path, organization),

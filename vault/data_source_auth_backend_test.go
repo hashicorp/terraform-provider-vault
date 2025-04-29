@@ -15,10 +15,11 @@ import (
 )
 
 func TestDataSourceAuthBackend(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("foo")
 	r.Test(t, r.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testDataSourceAuthBackendBasic_config,

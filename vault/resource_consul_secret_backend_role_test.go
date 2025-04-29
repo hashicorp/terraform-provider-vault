@@ -18,6 +18,7 @@ import (
 )
 
 func TestConsulSecretBackendRole(t *testing.T) {
+	var p *schema.Provider
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-consul")
 	name := acctest.RandomWithPrefix("tf-test-name")
@@ -71,7 +72,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "client-0:dc1"))
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
@@ -123,9 +124,9 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"))
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccConsulSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testConsulSecretBackendRole_initialConfig(path, name, token, true, false),
@@ -142,6 +143,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 }
 
 func TestConsulSecretBackendRole_Legacy(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-consul")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
@@ -179,7 +181,7 @@ func TestConsulSecretBackendRole_Legacy(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "policies.1", "far"))
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion111)
@@ -229,9 +231,9 @@ func TestConsulSecretBackendRole_Legacy(t *testing.T) {
 		resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "bar"))
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccConsulSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testConsulSecretBackendRole_initialConfig(path, name, token, false, true),
@@ -389,6 +391,7 @@ node_identities = [
 }
 
 func TestConsulSecretBackendRoleNameFromPath(t *testing.T) {
+	var p *schema.Provider
 	{
 		name, err := consulSecretBackendRoleNameFromPath("foo/roles/bar")
 		if err != nil {
@@ -411,6 +414,7 @@ func TestConsulSecretBackendRoleNameFromPath(t *testing.T) {
 }
 
 func TestConsulSecretBackendRoleBackendFromPath(t *testing.T) {
+	var p *schema.Provider
 	{
 		backend, err := consulSecretBackendRoleBackendFromPath("foo/roles/bar")
 		if err != nil {

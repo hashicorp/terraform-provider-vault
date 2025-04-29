@@ -17,13 +17,14 @@ import (
 )
 
 func TestTransitSecretBackendKey_basic(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("transit")
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testTransitSecretBackendKeyCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testTransitSecretBackendKeyConfig_basic(name, backend),
@@ -86,13 +87,14 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 }
 
 func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("transit")
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testTransitSecretBackendKeyCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testTransitSecretBackendKeyConfig_rsa4096(name, backend),
@@ -147,11 +149,12 @@ func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
 }
 
 func TestTransitSecretBackendKey_hmac(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("transit")
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)

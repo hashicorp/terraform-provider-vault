@@ -24,6 +24,7 @@ import (
 )
 
 func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
+	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 	config := testPkiSecretBackendRootCertificateConfig_basic(path, "ttl = 86400")
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -50,6 +51,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootCertificate_notAfter(t *testing.T) {
+	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -81,6 +83,7 @@ func TestPkiSecretBackendRootCertificate_notAfter(t *testing.T) {
 // TestPkiSecretBackendRootCertificate_name_constraints is just like TestPkiSecretBackendRootCertificate_basic,
 // but it uses the permitted_/excluded_ parameters for the name constraints extension.
 func TestPkiSecretBackendRootCertificate_name_constraints(t *testing.T) {
+	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 	config := testPkiSecretBackendRootCertificateConfig_name_constraints(path)
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -122,6 +125,7 @@ func TestPkiSecretBackendRootCertificate_name_constraints(t *testing.T) {
 	}
 
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, func(t *testing.T) {
+		var p *schema.Provider
 		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 	})
 }
@@ -189,7 +193,7 @@ func testPkiSecretBackendRootCertificate(t *testing.T, path string, config strin
 	store := &testPKICertStore{}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			if preCheck != nil {
@@ -263,6 +267,7 @@ func testPkiSecretBackendRootCertificate(t *testing.T, path string, config strin
 }
 
 func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
+	var p *schema.Provider
 	path := acctest.RandomWithPrefix("test-pki-mount")
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -294,7 +299,7 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 	)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
@@ -331,13 +336,14 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 // Ensures that TF state is cleanly resolved whenever
 // multiple root certs are generated
 func TestAccPKISecretBackendRootCert_multipleRootCerts(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	resourceType := "vault_pki_secret_backend_root_cert"
 	resourceCurrentIssuer := resourceType + ".current"
 	resourceNextIssuer := resourceType + ".next"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
@@ -361,6 +367,7 @@ func TestAccPKISecretBackendRootCert_multipleRootCerts(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
+	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -376,9 +383,9 @@ func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootCertificateConfig_managedKeys(path, managedKeyName, accessKey, secretKey),
@@ -572,6 +579,7 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 }
 
 func Test_pkiSecretSerialNumberUpgradeV0(t *testing.T) {
+	var p *schema.Provider
 	tests := []struct {
 		name     string
 		rawState map[string]interface{}
@@ -591,6 +599,7 @@ func Test_pkiSecretSerialNumberUpgradeV0(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var p *schema.Provider
 			got, err := pkiSecretSerialNumberUpgradeV0(nil, tt.rawState, nil)
 
 			if tt.wantErr {

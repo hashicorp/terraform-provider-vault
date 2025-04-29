@@ -15,6 +15,7 @@ import (
 )
 
 func TestADSecretBackend(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-ad")
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
@@ -60,6 +61,7 @@ func TestADSecretBackend(t *testing.T) {
 }
 
 func TestADSecretBackend_remount(t *testing.T) {
+	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-ad")
 	updatedBackend := acctest.RandomWithPrefix("tf-test-ad-updated")
 
@@ -67,8 +69,8 @@ func TestADSecretBackend_remount(t *testing.T) {
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testADSecretBackend_initialConfig(backend, bindDN, bindPass, url),
