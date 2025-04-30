@@ -4,6 +4,8 @@
 package vault
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"

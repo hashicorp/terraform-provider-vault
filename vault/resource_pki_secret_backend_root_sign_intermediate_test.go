@@ -5,6 +5,7 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -832,7 +833,6 @@ resource "vault_pki_secret_backend_intermediate_set_signed" "two" {
 }
 
 func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
-	var p *schema.Provider
 	tests := []struct {
 		name        string
 		rawState    map[string]interface{}
@@ -884,7 +884,6 @@ func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var p *schema.Provider
 			got, err := pkiSecretRootSignIntermediateRUpgradeV0(nil, tt.rawState, nil)
 
 			if tt.wantErr {
@@ -906,7 +905,6 @@ func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
 }
 
 func Test_setCAChain(t *testing.T) {
-	var p *schema.Provider
 	pem2derb64 := func(data string) string {
 		b, _ := pem.Decode([]byte(data))
 		return base64.StdEncoding.EncodeToString(b.Bytes)
@@ -1136,7 +1134,6 @@ func Test_setCAChain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var p *schema.Provider
 			d := schema.TestResourceDataRaw(
 				t,
 				map[string]*schema.Schema{

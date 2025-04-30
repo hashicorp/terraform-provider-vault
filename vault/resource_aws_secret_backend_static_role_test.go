@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"testing"
 
@@ -73,7 +75,6 @@ func TestAccAWSSecretBackendStaticAssumeRole(t *testing.T) {
 
 // TestAWSPathMatching tests the regular expression (and supporting function) that parses paths into backends and role names
 func TestAWSPathMatching(t *testing.T) {
-	var p *schema.Provider
 	cases := []struct {
 		name    string
 		path    string
@@ -125,7 +126,6 @@ func TestAWSPathMatching(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			var p *schema.Provider
 			b, r, e := parseAWSStaticRolePath(tc.path)
 			if tc.isError && e == nil {
 				t.Fatal("expected an error but didn't get one")

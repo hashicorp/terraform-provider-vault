@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"database/sql"
 	"encoding/base64"
 	"errors"
@@ -2134,7 +2135,6 @@ func MaybeSkipDBTests(t *testing.T, engine *dbEngine) {
 }
 
 func Test_dbEngine_GetPluginName(t *testing.T) {
-	var p *schema.Provider
 	type fields struct {
 		name              string
 		defaultPluginName string
@@ -2278,7 +2278,6 @@ func Test_dbEngine_GetPluginName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var p *schema.Provider
 			i := &dbEngine{
 				name:              tt.fields.name,
 				defaultPluginName: tt.fields.defaultPluginName,
@@ -2299,7 +2298,6 @@ func Test_dbEngine_GetPluginName(t *testing.T) {
 }
 
 func Test_getDBEngine(t *testing.T) {
-	var p *schema.Provider
 	type args struct {
 		d *schema.ResourceData
 	}
@@ -2363,7 +2361,6 @@ func Test_getDBEngine(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var p *schema.Provider
 			got, err := getDBEngine(tt.args.d)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getDBEngine() error = %v, wantErr %v", err, tt.wantErr)
@@ -2382,7 +2379,6 @@ func Test_getDBEngine(t *testing.T) {
 }
 
 func Test_getDBEngineFromResp(t *testing.T) {
-	var p *schema.Provider
 	tests := []struct {
 		name      string
 		engines   []*dbEngine
@@ -2543,7 +2539,6 @@ func Test_getDBEngineFromResp(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var p *schema.Provider
 			got, err := getDBEngineFromResp(tt.engines, tt.r)
 			if tt.expectErr != nil {
 				if !reflect.DeepEqual(tt.expectErr, err) {

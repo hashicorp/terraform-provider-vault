@@ -4,11 +4,13 @@
 package vault
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"github.com/go-test/deep"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"reflect"
 	"strconv"
@@ -24,7 +26,6 @@ import (
 )
 
 func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
-	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 	config := testPkiSecretBackendRootCertificateConfig_basic(path, "ttl = 86400")
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -51,7 +52,6 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootCertificate_notAfter(t *testing.T) {
-	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -83,7 +83,6 @@ func TestPkiSecretBackendRootCertificate_notAfter(t *testing.T) {
 // TestPkiSecretBackendRootCertificate_name_constraints is just like TestPkiSecretBackendRootCertificate_basic,
 // but it uses the permitted_/excluded_ parameters for the name constraints extension.
 func TestPkiSecretBackendRootCertificate_name_constraints(t *testing.T) {
-	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 	config := testPkiSecretBackendRootCertificateConfig_name_constraints(path)
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -125,7 +124,6 @@ func TestPkiSecretBackendRootCertificate_name_constraints(t *testing.T) {
 	}
 
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, func(t *testing.T) {
-		var p *schema.Provider
 		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 	})
 }
@@ -190,6 +188,7 @@ func checkCertificateNameConstraints(resourceName string, s *terraform.State) er
 }
 
 func testPkiSecretBackendRootCertificate(t *testing.T, path string, config string, resourceName string, checks []resource.TestCheckFunc, preCheck func(t *testing.T)) {
+	var p *schema.Provider
 	store := &testPKICertStore{}
 
 	resource.Test(t, resource.TestCase{
@@ -579,7 +578,6 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 }
 
 func Test_pkiSecretSerialNumberUpgradeV0(t *testing.T) {
-	var p *schema.Provider
 	tests := []struct {
 		name     string
 		rawState map[string]interface{}
@@ -599,7 +597,6 @@ func Test_pkiSecretSerialNumberUpgradeV0(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var p *schema.Provider
 			got, err := pkiSecretSerialNumberUpgradeV0(nil, tt.rawState, nil)
 
 			if tt.wantErr {

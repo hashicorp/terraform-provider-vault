@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"

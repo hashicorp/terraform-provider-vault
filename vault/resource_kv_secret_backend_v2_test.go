@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -52,7 +54,6 @@ func TestAccKVSecretBackendV2(t *testing.T) {
 }
 
 func TestKVV2SecretNameFromPath(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	tests := []struct {
 		name      string
@@ -82,7 +83,6 @@ func TestKVV2SecretNameFromPath(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			var p *schema.Provider
 			t.Parallel()
 			name, err := getKVV2SecretNameFromPath(tt.path)
 			if err == nil && tt.expectErr {
@@ -97,7 +97,6 @@ func TestKVV2SecretNameFromPath(t *testing.T) {
 }
 
 func TestKVV2SecretMountFromPath(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	tests := []struct {
 		name      string
@@ -127,7 +126,6 @@ func TestKVV2SecretMountFromPath(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			var p *schema.Provider
 			t.Parallel()
 			mount, err := getKVV2SecretMountFromPath(tt.path)
 

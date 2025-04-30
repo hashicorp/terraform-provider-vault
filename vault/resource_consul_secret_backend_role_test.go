@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"regexp"
 	"testing"
 
@@ -391,7 +393,6 @@ node_identities = [
 }
 
 func TestConsulSecretBackendRoleNameFromPath(t *testing.T) {
-	var p *schema.Provider
 	{
 		name, err := consulSecretBackendRoleNameFromPath("foo/roles/bar")
 		if err != nil {
@@ -414,7 +415,6 @@ func TestConsulSecretBackendRoleNameFromPath(t *testing.T) {
 }
 
 func TestConsulSecretBackendRoleBackendFromPath(t *testing.T) {
-	var p *schema.Provider
 	{
 		backend, err := consulSecretBackendRoleBackendFromPath("foo/roles/bar")
 		if err != nil {

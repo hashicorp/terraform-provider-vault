@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -23,7 +25,7 @@ func TestAccNomadSecretBackend(t *testing.T) {
 	resourceType := "vault_nomad_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories:         providerFactories,
+		ProtoV5ProviderFactories:  testAccProtoV5ProviderFactories(context.Background(), t, &p),
 		PreCheck:                  func() { testutil.TestAccPreCheck(t) },
 		PreventPostDestroyRefresh: true,
 		CheckDestroy:              testCheckMountDestroyed(resourceType, consts.MountTypeNomad, consts.FieldBackend),

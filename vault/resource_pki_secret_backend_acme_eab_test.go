@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -126,7 +128,6 @@ resource "vault_pki_secret_backend_acme_eab" "test" {
 }
 
 func Test_pkiSecretBackendComputeAcmeDirectoryPath(t *testing.T) {
-	var p *schema.Provider
 	type args struct {
 		backend string
 		issuer  string
@@ -144,7 +145,6 @@ func Test_pkiSecretBackendComputeAcmeDirectoryPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var p *schema.Provider
 			if got := pkiSecretBackendComputeAcmeDirectoryPath(tt.args.backend, tt.args.issuer, tt.args.role); got != tt.want {
 				t.Errorf("pkiSecretBackendComputeAcmeDirectoryPath() = %v, want %v", got, tt.want)
 			}

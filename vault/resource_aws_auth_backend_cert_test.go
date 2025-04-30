@@ -4,8 +4,10 @@
 package vault
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"

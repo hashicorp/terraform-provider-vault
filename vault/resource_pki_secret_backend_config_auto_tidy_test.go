@@ -4,8 +4,10 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/stretchr/testify/require"
@@ -20,7 +22,6 @@ import (
 )
 
 func TestPkiSecretBackendConfigAutoTidySuppressDurationDiff(t *testing.T) {
-	var p *schema.Provider
 	type testCase struct {
 		oldValue string
 		newValue string
