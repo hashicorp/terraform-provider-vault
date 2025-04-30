@@ -113,7 +113,6 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			var p *schema.Provider
 			resource.Test(t, resource.TestCase{
 				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
 				PreCheck:                 func() { testutil.TestAccPreCheck(t) },
