@@ -166,7 +166,6 @@ resource "vault_terraform_cloud_secret_role" "test_user" {
 }
 
 func TestTerraformCloudSecretBackendRoleNameFromPath(t *testing.T) {
-	var p *schema.Provider
 	{
 		name, err := terraformCloudSecretRoleNameFromPath("foo/role/bar")
 		if err != nil {
@@ -189,7 +188,6 @@ func TestTerraformCloudSecretBackendRoleNameFromPath(t *testing.T) {
 }
 
 func TestTerraformCloudSecretBackendRoleBackendFromPath(t *testing.T) {
-	var p *schema.Provider
 	{
 		backend, err := terraformCloudSecretRoleBackendFromPath("foo/role/bar")
 		if err != nil {
