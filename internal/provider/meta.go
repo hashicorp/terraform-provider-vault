@@ -646,6 +646,12 @@ func GetResourceDataBool(d *schema.ResourceData, field, env string, dv bool) boo
 	// we only return this value if it is non-nil, else we return the default
 
 	rawConfig := d.GetRawConfig()
+	// RawConfig will only be available for a full acceptance test loop with plan/apply
+	// for unit testing cases, this value will be nil
+	// a test client will be set up using default values in this case
+	if rawConfig.IsNull() {
+		return dv
+	}
 	rawVal := rawConfig.GetAttr(field)
 
 	// We don't care about the underlying value, just detecting if the config value is null (unset) or not.

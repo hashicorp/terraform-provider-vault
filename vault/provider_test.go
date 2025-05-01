@@ -79,18 +79,20 @@ func initTestProvider() {
 			}
 
 			if testProvider == nil {
-				testProvider = Provider()
-				testProviders = map[string]*schema.Provider{
-					providerName: testProvider,
-				}
-				rs := &schema.Resource{
-					Schema: testProvider.Schema,
-				}
-
-				m, err := testProvider.ConfigureFunc(rs.TestResourceData())
+				_, p, err := ProtoV5ProviderServerFactory(context.Background())
 				if err != nil {
 					panic(err)
 				}
+				testProvider = p.SchemaProvider()
+				rootProviderResource := &schema.Resource{
+					Schema: p.SchemaProvider().Schema,
+				}
+				rootProviderData := rootProviderResource.TestResourceData()
+				m, err := provider.NewProviderMeta(rootProviderData)
+				if err != nil {
+					panic(err)
+				}
+
 				testProvider.SetMeta(m)
 			}
 		},
@@ -130,6 +132,20 @@ func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T, v **sche
 
 	return map[string]func() (tfprotov5.ProviderServer, error){
 		providerName: func() (tfprotov5.ProviderServer, error) {
+			if testProvider == nil {
+				testProvider = p.SchemaProvider()
+
+				rootProviderResource := &schema.Resource{
+					Schema: p.SchemaProvider().Schema,
+				}
+				rootProviderData := rootProviderResource.TestResourceData()
+				m, err := provider.NewProviderMeta(rootProviderData)
+				if err != nil {
+					panic(err)
+				}
+
+				testProvider.SetMeta(m)
+			}
 			return providerServer, nil
 		},
 	}
