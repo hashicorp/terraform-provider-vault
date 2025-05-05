@@ -62,8 +62,7 @@ func TestProvider(t *testing.T) {
 }
 
 var (
-	testProvider  *schema.Provider
-	testProviders map[string]*schema.Provider
+	testProvider *schema.Provider
 
 	testProviderMutex sync.Mutex
 )
@@ -85,8 +84,8 @@ func initTestProvider() {
 				if err != nil {
 					panic(err)
 				}
-				testProviderMutex.Lock()
-				defer testProviderMutex.Unlock()
+
+				// no need to lock here since sync.Once performs a lock
 				testProvider = p.SchemaProvider()
 				rootProviderResource := &schema.Resource{
 					Schema: p.SchemaProvider().Schema,
@@ -101,13 +100,6 @@ func initTestProvider() {
 			}
 		},
 	)
-}
-
-var providerFactories = map[string]func() (*schema.Provider, error){
-	providerName: func() (*schema.Provider, error) {
-		initTestProvider()
-		return testProvider, nil
-	},
 }
 
 // A basic token helper script.

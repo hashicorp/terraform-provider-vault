@@ -647,10 +647,10 @@ func GetResourceDataBool(d *schema.ResourceData, field, env string, dv bool) boo
 
 	rawConfig := d.GetRawConfig()
 
-	// Note: following block is only used during unit testing
-	// RawConfig will only be available for a full acceptance test loop with plan/apply
-	// for unit testing cases, this value will be nil
-	// a test client will be set up using default values in this case
+	// Note: the following block is only encountered when setting up the testProvider
+	// RawConfig will only be available during a terraform plan/apply execution
+	// this value will be nil during PreChecks and Destroy operations in tests
+	// the testProvider in those cases is set up using default values
 	if rawConfig.IsNull() {
 		return dv
 	}
