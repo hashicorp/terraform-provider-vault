@@ -64,6 +64,8 @@ func TestProvider(t *testing.T) {
 var (
 	testProvider  *schema.Provider
 	testProviders map[string]*schema.Provider
+
+	testProviderMutex sync.Mutex
 )
 
 func init() {
@@ -83,6 +85,8 @@ func initTestProvider() {
 				if err != nil {
 					panic(err)
 				}
+				testProviderMutex.Lock()
+				defer testProviderMutex.Unlock()
 				testProvider = p.SchemaProvider()
 				rootProviderResource := &schema.Resource{
 					Schema: p.SchemaProvider().Schema,
@@ -128,7 +132,20 @@ func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T, v **sche
 	}
 
 	providerServer := providerServerFactory()
+
+	testProviderMutex.Lock()
 	*v = p.SchemaProvider()
+	rootProviderResource := &schema.Resource{
+		Schema: p.SchemaProvider().Schema,
+	}
+	rootProviderData := rootProviderResource.TestResourceData()
+	m, err := provider.NewProviderMeta(rootProviderData)
+	if err != nil {
+		panic(err)
+	}
+
+	(*v).SetMeta(m)
+	testProviderMutex.Unlock()
 
 	return map[string]func() (tfprotov5.ProviderServer, error){
 		providerName: func() (tfprotov5.ProviderServer, error) {

@@ -208,14 +208,13 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 }
 
 func TestResourceAuthTune(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_auth_backend.test"
 	var resAuthFirst api.AuthMount
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &testProvider),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
