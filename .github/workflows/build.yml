@@ -47,6 +47,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-golang-
 
+      - name: Build
+        run: |
+          make build
   acceptance:
     needs: [go-version, build]
     runs-on: ubuntu-latest
