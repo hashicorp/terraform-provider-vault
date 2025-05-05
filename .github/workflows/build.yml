@@ -60,6 +60,24 @@ jobs:
         - "vault-enterprise:1.18.4-ent"
         - "vault-enterprise:1.19.0-ent"
         - "vault:latest"
+    services:
+      vault:
+        image: hashicorp/${{ matrix.image }}
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: root
+          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
+          VAULT_AUTH_CONFIG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VAULT_LOCAL_CONFIG: |
+            {"plugin_directory": "/vault/plugins"}
+        options: >-
+          --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
+          --health-interval 1s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 8200:8200
+        volumes:
+          - ${{ github.workspace }}:/vault/plugins
     steps:
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
