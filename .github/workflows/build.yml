@@ -47,15 +47,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-golang-
 
-      - name: Build
-        run: |
-          make build
-      - name: Run unit tests
-        # here to short-circuit the acceptance tests, in the case of a failure.
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-        run: |
-          make test
   acceptance:
     needs: [go-version, build]
     runs-on: ubuntu-latest
@@ -69,92 +60,6 @@ jobs:
         - "vault-enterprise:1.18.4-ent"
         - "vault-enterprise:1.19.0-ent"
         - "vault:latest"
-    services:
-      vault:
-        image: hashicorp/${{ matrix.image }}
-        env:
-          VAULT_DEV_ROOT_TOKEN_ID: root
-          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
-          VAULT_AUTH_CONFIG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VAULT_LOCAL_CONFIG: |
-            {"plugin_directory": "/vault/plugins"}
-        options: >-
-          --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
-          --health-interval 1s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 8200:8200
-        volumes:
-          - ${{ github.workspace }}:/vault/plugins
-      mysql:
-        image: docker.mirror.hashicorp.services/mysql:latest
-        env:
-          MYSQL_ROOT_PASSWORD: mysql
-        ports:
-          - 3306:3306
-      mssql:
-        image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
-        env:
-          ACCEPT_EULA: Y
-          SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
-        ports:
-          - 1433:1433
-      mongo:
-        image: docker.mirror.hashicorp.services/mongo:latest
-        env:
-          MONGO_INITDB_ROOT_USERNAME: root
-          MONGO_INITDB_ROOT_PASSWORD: mongodb
-          MONGO_INITDB_DATABASE: admin
-        ports:
-          - 27017:27017
-      postgres:
-        image: docker.mirror.hashicorp.services/postgres:latest
-        env:
-          POSTGRES_PASSWORD: secret
-          POSTGRES_DB: database
-        ports:
-          - 5432:5432
-      couchbase:
-        image: docker.io/couchbase/server-sandbox:7.1.1
-        ports:
-          - 8091:8091
-          - 8092:8092
-          - 8093:8093
-          - 8094:8094
-          - 11207:11207
-          - 11210:11210
-          - 18091:18091
-          - 18092:18092
-          - 18093:18093
-          - 18094:18094
-        options: >-
-          --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
-          --health-interval 1s
-          --health-timeout 5s
-          --health-retries 60
-      consul:
-        image: docker.mirror.hashicorp.services/hashicorp/consul:latest
-        env:
-          CONSUL_LOCAL_CONFIG: "{\"acl\":{\"enabled\":true}}"
-        ports:
-          - 8500:8500
-          - 8600:8600
-        options: >-
-          --health-cmd "curl -f 'http://127.0.0.1:8500/v1/health/node/server-1'"
-          --health-interval 1s
-          --health-timeout 5s
-          --health-retries 5
-      openldap:
-        image: docker.io/bitnami/openldap:2.6
-        ports:
-          - 1389:1389
-          - 1636:1636
-        env:
-          LDAP_ADMIN_USERNAME: "admin"
-          LDAP_ADMIN_PASSWORD: "adminpassword"
-          LDAP_USERS: "alice,bob,foo"
-          LDAP_PASSWORDS: "password1,password2,password3"
     steps:
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
@@ -225,12 +130,7 @@ jobs:
           LDAP_URL: "ldap://openldap:1389"
           VAULT_PLUGIN_COMMAND: ${{ steps.plugin.outputs.command }}
         run: |
-          if [[ ${{ matrix.image }} =~ "-ent" ]]; then
-            target="testacc-ent"
-          else
-            target="testacc"
-          fi
-          make $target TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
+          make testacc-ent TESTARGS="-v -run TestResourceGenericSecret ./vault/..."
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json

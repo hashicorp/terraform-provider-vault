@@ -6,8 +6,9 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -26,7 +27,7 @@ func TestAccGenericSecret_importBasic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(mount, name),
-				Check:  testResourceGenericSecret_initialCheck(path),
+				Check:  testResourceGenericSecret_initialCheck(t, path),
 			},
 			{
 				ResourceName:            "vault_generic_secret.test",
@@ -57,7 +58,7 @@ func TestAccGenericSecret_importBasicNS(t *testing.T) {
 				Config: testResourceGenericSecret_initialConfigNS(ns, mount, name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
-					testResourceGenericSecret_initialCheck(path),
+					testResourceGenericSecret_initialCheck(t, path),
 				),
 			},
 			{

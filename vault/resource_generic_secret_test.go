@@ -6,9 +6,10 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -32,7 +33,7 @@ func TestResourceGenericSecret(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(mount, name),
-				Check:  testResourceGenericSecret_initialCheck(path),
+				Check:  testResourceGenericSecret_initialCheck(t, path),
 			},
 			{
 				Config: testResourceGenericSecret_updateConfig(mount, name),
@@ -62,7 +63,7 @@ func TestResourceGenericSecretNS(t *testing.T) {
 				Config: testResourceGenericSecret_initialConfigNS(ns, mount, name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
-					testResourceGenericSecret_initialCheck(path),
+					testResourceGenericSecret_initialCheck(t, path),
 				),
 			},
 			{
@@ -110,7 +111,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(mount, name),
-				Check:  testResourceGenericSecret_initialCheck(path),
+				Check:  testResourceGenericSecret_initialCheck(t, path),
 			},
 			{
 				ImportState:  true,
@@ -126,7 +127,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 					}
 				},
 				Config: testResourceGenericSecret_initialConfig(mount, name),
-				Check:  testResourceGenericSecret_initialCheck(path),
+				Check:  testResourceGenericSecret_initialCheck(t, path),
 			},
 			{
 				ImportState:  true,
@@ -275,7 +276,7 @@ EOT
 	return result
 }
 
-func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCheckFunc {
+func testResourceGenericSecret_initialCheck(t *testing.T, expectedPath string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_generic_secret.test"]
 		if resourceState == nil {
@@ -300,13 +301,16 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 		if err != nil {
 			return err
 		}
+		t.Logf("JMF client %v", client)
 
 		secret, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("error reading back secret: %s", err)
 		}
 
+		t.Logf("JMF secret %v", secret)
 		data := secret.Data
+
 		// Test the JSON
 		if got, want := data["zip"], "zap"; got != want {
 			return fmt.Errorf("'zip' data is %q; want %q", got, want)
