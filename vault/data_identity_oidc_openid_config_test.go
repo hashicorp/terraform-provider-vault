@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"net/url"
 	"os"
 	"strings"
@@ -20,7 +19,6 @@ import (
 )
 
 func TestDataSourceIdentityOIDCOpenIDConfig(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 	testutil.TestAccPreCheck(t)
 	t.Parallel()
@@ -68,7 +66,7 @@ func TestDataSourceIdentityOIDCOpenIDConfig(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityOIDCOpenIDConfig_config(keyName, clientName, providerName, u.Host),

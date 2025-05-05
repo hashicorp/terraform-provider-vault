@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
 	"testing"
 
@@ -25,7 +24,6 @@ import (
 const testGHOrg = "hashicorp"
 
 func TestAccGithubAuthBackend_basic(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 
 	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
@@ -36,7 +34,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -76,7 +74,6 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 }
 
 func TestAccGithubAuthBackend_ns(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 
 	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
@@ -88,7 +85,7 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -131,7 +128,6 @@ func githubAuthMountExistsHelperNS(resourceName string, out *api.AuthMount) reso
 }
 
 func TestAccGithubAuthBackend_tuning(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 
 	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
@@ -142,7 +138,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -206,7 +202,6 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 }
 
 func TestAccGithubAuthBackend_description(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 
 	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
@@ -216,7 +211,7 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 	resourceName := resourceType + ".test"
 	var resAuth api.AuthMount
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -249,7 +244,6 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 }
 
 func TestAccGithubAuthBackend_importTuning(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 
 	path := acctest.RandomWithPrefix("github")
@@ -258,7 +252,7 @@ func TestAccGithubAuthBackend_importTuning(t *testing.T) {
 	var resAuth api.AuthMount
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -273,7 +267,6 @@ func TestAccGithubAuthBackend_importTuning(t *testing.T) {
 }
 
 func TestGithubAuthBackend_remount(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestAcc(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gh")
@@ -286,7 +279,7 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{

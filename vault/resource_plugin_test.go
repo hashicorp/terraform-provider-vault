@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"os"
 	"strconv"
 	"strings"
@@ -24,7 +23,6 @@ import (
 const envPluginCommand = "VAULT_PLUGIN_COMMAND"
 
 func TestPlugin(t *testing.T) {
-	var p *schema.Provider
 	const (
 		typ     = "auth"
 		version = "v1.0.0"
@@ -45,7 +43,7 @@ func TestPlugin(t *testing.T) {
 	cmd := os.Getenv(envPluginCommand)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.SkipTestEnvUnset(t, envPluginCommand)

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -17,7 +16,6 @@ import (
 )
 
 func TestAccOktaAuthBackend_basic(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-basic-")
@@ -26,7 +24,7 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -68,7 +66,6 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_import(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-import-")
@@ -77,7 +74,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -129,7 +126,6 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-group-optional")
@@ -138,7 +134,7 @@ func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -156,7 +152,6 @@ func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_remount(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-okta")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-okta-updated")
@@ -165,7 +160,7 @@ func TestAccOktaAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_okta_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -198,14 +193,13 @@ func TestAccOktaAuthBackend_remount(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_TokenFields(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-okta")
 	organization := "example"
 	resourceName := "vault_okta_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{

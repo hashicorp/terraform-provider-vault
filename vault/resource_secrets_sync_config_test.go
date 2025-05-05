@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"regexp"
 	"testing"
 
@@ -16,12 +15,11 @@ import (
 )
 
 func TestSecretsSyncConfig(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestEnvUnset(t, "VAULT_SECRETS_SYNC_ENABLED")
 	resourceName := "vault_secrets_sync_config.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
@@ -51,7 +49,7 @@ func TestSecretsSyncConfig(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strings"
 	"testing"
 
@@ -19,14 +18,13 @@ import (
 )
 
 func TestAzureAuthBackendRole_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-azure-backend")
 	name := acctest.RandomWithPrefix("tf-test-azure-role")
 
 	resourceName := "vault_azure_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAzureAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -38,14 +36,13 @@ func TestAzureAuthBackendRole_basic(t *testing.T) {
 }
 
 func TestAzureAuthBackendRole(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-azure-backend")
 	name := acctest.RandomWithPrefix("tf-test-azure-role")
 
 	resourceName := "vault_azure_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAzureAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{

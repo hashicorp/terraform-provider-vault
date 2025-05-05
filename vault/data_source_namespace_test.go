@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -18,7 +17,6 @@ import (
 )
 
 func TestAccDataSourceNamespace(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestAccEnt(t)
 
 	resourceName := "data.vault_namespace"
@@ -26,7 +24,7 @@ func TestAccDataSourceNamespace(t *testing.T) {
 	pathChild := acctest.RandomWithPrefix("tf-child")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testNamespaceDestroy(path),
 		Steps: []resource.TestStep{
@@ -46,7 +44,7 @@ func TestAccDataSourceNamespace(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
@@ -66,7 +64,7 @@ func TestAccDataSourceNamespace(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testNamespaceDestroy(path),
 		Steps: []resource.TestStep{

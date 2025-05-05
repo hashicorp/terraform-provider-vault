@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"log"
 	"testing"
 
@@ -25,13 +24,12 @@ import (
 )
 
 func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
-	var p *schema.Provider
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	region := testutil.GetTestAWSRegion(t)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -50,7 +48,6 @@ func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 }
 
 func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
-	var p *schema.Provider
 	mountPath := acctest.RandomWithPrefix("aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	region := testutil.GetTestAWSRegion(t)
@@ -114,7 +111,7 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			resource.Test(t, resource.TestCase{
-				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 				PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
@@ -135,14 +132,13 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 }
 
 func TestAccDataSourceAWSAccessCredentials_sts_ttl(t *testing.T) {
-	var p *schema.Provider
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	region := testutil.GetTestAWSRegion(t)
 	ttl := "18m"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{

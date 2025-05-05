@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/stretchr/testify/require"
@@ -51,7 +50,6 @@ func TestPkiSecretBackendConfigAutoTidySuppressDurationDiff(t *testing.T) {
 }
 
 func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	resourceType := "vault_pki_secret_backend_config_auto_tidy"
 	resourceName := resourceType + ".test"
@@ -103,7 +101,7 @@ func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
 		return nil
 	}
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
@@ -309,7 +307,6 @@ safety_buffer = "59000s"
 }
 
 func TestAccPKISecretBackendConfigAutoTidy_ent(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	resourceType := "vault_pki_secret_backend_config_auto_tidy"
 	resourceName := resourceType + ".test"
@@ -323,7 +320,7 @@ func TestAccPKISecretBackendConfigAutoTidy_ent(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)

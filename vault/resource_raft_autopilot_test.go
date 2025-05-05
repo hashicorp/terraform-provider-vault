@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
 	"testing"
 
@@ -18,11 +17,10 @@ import (
 )
 
 func TestAccRaftAutopilotConfig_basic(t *testing.T) {
-	var p *schema.Provider
 	resourceName := "vault_raft_autopilot.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -18,12 +17,11 @@ import (
 )
 
 func TestAccTransformTemplate(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("transform")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testTransformTemplateDestroy,
 		Steps: []resource.TestStep{
 			{

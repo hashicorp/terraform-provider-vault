@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
 	"strings"
 	"testing"
@@ -22,13 +21,12 @@ import (
 )
 
 func TestAccIdentityGroupMemberEntityIdsExclusiveEmpty(t *testing.T) {
-	var p *schema.Provider
 	devEntity := acctest.RandomWithPrefix("dev-entity")
 
 	resourceName := "vault_identity_group_member_entity_ids.member_entity_ids"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -54,13 +52,12 @@ func TestAccIdentityGroupMemberEntityIdsExclusiveEmpty(t *testing.T) {
 }
 
 func TestAccIdentityGroupMemberEntityIdsExclusive(t *testing.T) {
-	var p *schema.Provider
 	devEntity := acctest.RandomWithPrefix("dev-entity")
 	testEntity := acctest.RandomWithPrefix("test-entity")
 	resourceName := "vault_identity_group_member_entity_ids.member_entity_ids"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -82,7 +79,6 @@ func TestAccIdentityGroupMemberEntityIdsExclusive(t *testing.T) {
 }
 
 func TestAccIdentityGroupMemberEntityIdsNonExclusiveEmpty(t *testing.T) {
-	var p *schema.Provider
 	devEntity := acctest.RandomWithPrefix("dev-entity")
 	testEntity := acctest.RandomWithPrefix("test-entity")
 	var devEntityTester group.GroupMemberTester
@@ -90,7 +86,7 @@ func TestAccIdentityGroupMemberEntityIdsNonExclusiveEmpty(t *testing.T) {
 	resourceNameTest := "vault_identity_group_member_entity_ids.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -134,7 +130,6 @@ type identityGMETest struct {
 }
 
 func TestAccIdentityGroupMemberEntityIdsNonExclusive(t *testing.T) {
-	var p *schema.Provider
 	var tester1 group.GroupMemberTester
 	entity1 := acctest.RandomWithPrefix("entity")
 
@@ -148,7 +143,7 @@ func TestAccIdentityGroupMemberEntityIdsNonExclusive(t *testing.T) {
 	resourceNameTest := "vault_identity_group_member_entity_ids.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -185,7 +180,6 @@ func TestAccIdentityGroupMemberEntityIdsNonExclusive(t *testing.T) {
 }
 
 func TestAccIdentityGroupMemberEntityIdsDynamic(t *testing.T) {
-	var p *schema.Provider
 	tests := []*identityGMETest{
 		{
 			name:        acctest.RandomWithPrefix("entity"),
@@ -218,7 +212,7 @@ func TestAccIdentityGroupMemberEntityIdsDynamic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"os"
 	"strings"
 	"testing"
@@ -20,7 +19,6 @@ import (
 )
 
 func TestPluginPinnedVersion(t *testing.T) {
-	var p *schema.Provider
 	const (
 		typ     = "auth"
 		version = "1.0.0"
@@ -31,7 +29,7 @@ func TestPluginPinnedVersion(t *testing.T) {
 	resourceName := "vault_plugin_pinned_version.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.SkipTestEnvUnset(t, envPluginCommand)

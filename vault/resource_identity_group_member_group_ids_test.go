@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -17,7 +16,6 @@ import (
 )
 
 func TestAccIdentityGroupMemberGroupIdsNonExclusive(t *testing.T) {
-	var p *schema.Provider
 	group1 := acctest.RandomWithPrefix("group")
 	var tester1 group.GroupMemberTester
 
@@ -31,7 +29,7 @@ func TestAccIdentityGroupMemberGroupIdsNonExclusive(t *testing.T) {
 	resourceNameTest := "vault_identity_group_member_group_ids.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberGroupIdsConfigNonExclusive(group1, group2),

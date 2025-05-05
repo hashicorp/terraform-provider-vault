@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-test/deep"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"reflect"
 	"strconv"
@@ -188,11 +187,10 @@ func checkCertificateNameConstraints(resourceName string, s *terraform.State) er
 }
 
 func testPkiSecretBackendRootCertificate(t *testing.T, path string, config string, resourceName string, checks []resource.TestCheckFunc, preCheck func(t *testing.T)) {
-	var p *schema.Provider
 	store := &testPKICertStore{}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			if preCheck != nil {
@@ -266,7 +264,6 @@ func testPkiSecretBackendRootCertificate(t *testing.T, path string, config strin
 }
 
 func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("test-pki-mount")
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -298,7 +295,7 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 	)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
@@ -335,14 +332,13 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 // Ensures that TF state is cleanly resolved whenever
 // multiple root certs are generated
 func TestAccPKISecretBackendRootCert_multipleRootCerts(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	resourceType := "vault_pki_secret_backend_root_cert"
 	resourceCurrentIssuer := resourceType + ".current"
 	resourceNextIssuer := resourceType + ".next"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
@@ -366,7 +362,6 @@ func TestAccPKISecretBackendRootCert_multipleRootCerts(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
-	var p *schema.Provider
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -382,7 +377,7 @@ func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{

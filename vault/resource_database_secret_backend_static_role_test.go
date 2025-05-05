@@ -7,7 +7,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"net/url"
 	"os"
 	"testing"
@@ -24,7 +23,6 @@ import (
 )
 
 func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
-	var p *schema.Provider
 	connURL := testutil.SkipTestEnvUnset(t, "MYSQL_URL")[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
@@ -38,7 +36,7 @@ func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -62,7 +60,6 @@ func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendStaticRole_credentialType(t *testing.T) {
-	var p *schema.Provider
 	connURL := testutil.SkipTestEnvUnset(t, "MYSQL_URL")[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
@@ -76,7 +73,7 @@ func TestAccDatabaseSecretBackendStaticRole_credentialType(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -95,7 +92,6 @@ func TestAccDatabaseSecretBackendStaticRole_credentialType(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendStaticRole_credentialConfig(t *testing.T) {
-	var p *schema.Provider
 	connURL := testutil.SkipTestEnvUnset(t, "MYSQL_URL")[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
@@ -109,7 +105,7 @@ func TestAccDatabaseSecretBackendStaticRole_credentialConfig(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -138,7 +134,6 @@ func TestAccDatabaseSecretBackendStaticRole_credentialConfig(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
-	var p *schema.Provider
 	connURL := testutil.SkipTestEnvUnset(t, "MYSQL_URL")[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
@@ -152,7 +147,7 @@ func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -182,7 +177,6 @@ func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
-	var p *schema.Provider
 	connURL := os.Getenv("MYSQL_URL")
 	if connURL == "" {
 		t.Skip("MYSQL_URL not set")
@@ -198,7 +192,7 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
@@ -241,7 +235,6 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 //
 // See .github/workflows/build.yml for details.
 func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
-	var p *schema.Provider
 	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
 	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_ROOTLESS")[0]
 
@@ -255,7 +248,7 @@ func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
 	testutil.CreateTestPGUser(t, connURLTestRoot, username, "testpassword", testRoleStaticCreate)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
@@ -291,7 +284,6 @@ func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
 //
 // See .github/workflows/build.yml for details.
 func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
-	var p *schema.Provider
 	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
 	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")[0]
 
@@ -312,7 +304,7 @@ func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
 	testutil.CreateTestPGUser(t, connURLTestRoot, staticUsername, "testpassword", testRoleStaticCreate)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)

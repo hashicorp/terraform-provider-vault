@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"reflect"
 	"strings"
 	"testing"
@@ -29,10 +28,9 @@ type testMountConfig struct {
 }
 
 func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("example")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -57,7 +55,6 @@ func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
 }
 
 func TestResourceMount(t *testing.T) {
-	var p *schema.Provider
 	path := "example-" + acctest.RandString(10)
 	cfg := testMountConfig{
 		path:        path,
@@ -73,7 +70,7 @@ func TestResourceMount(t *testing.T) {
 		description: "updated",
 	}
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -95,10 +92,9 @@ func TestResourceMount(t *testing.T) {
 // Test Local flag
 
 func TestResourceMount_Local(t *testing.T) {
-	var p *schema.Provider
 	path := "example-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -116,10 +112,9 @@ func TestResourceMount_Local(t *testing.T) {
 // Test SealWrap flag
 
 func TestResourceMount_SealWrap(t *testing.T) {
-	var p *schema.Provider
 	path := "example-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -136,7 +131,6 @@ func TestResourceMount_SealWrap(t *testing.T) {
 
 // Test Audit non-HMAC fields
 func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
-	var p *schema.Provider
 	resourcePath := "vault_mount.test"
 	path := "example-" + acctest.RandString(10)
 
@@ -145,7 +139,7 @@ func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
 	expectReqKeysUpdate := []string{"test3request", "test4request"}
 	expectRespKeysUpdate := []string{"test3response", "test4response"}
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -179,7 +173,6 @@ func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
 }
 
 func TestResourceMount_KVV2(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("example")
 	kvv2Cfg := fmt.Sprintf(`
 			resource "vault_mount" "test" {
@@ -197,7 +190,7 @@ func TestResourceMount_KVV2(t *testing.T) {
 		description: "Example mount for testing",
 	}
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -215,10 +208,9 @@ func TestResourceMount_KVV2(t *testing.T) {
 }
 
 func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("example")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -246,12 +238,11 @@ func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 }
 
 func TestResourceMount_IDTokenKey(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-pki")
 
 	resourceName := "vault_mount.test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
@@ -308,14 +299,13 @@ func TestResourceMount_IDTokenKey(t *testing.T) {
 }
 
 func TestResourceMountMangedKeys(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-pki")
 	keyName := acctest.RandomWithPrefix("kms-key")
 
 	resourceName := "vault_mount.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{

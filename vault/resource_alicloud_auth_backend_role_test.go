@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -18,14 +17,13 @@ import (
 )
 
 func TestAlicloudAuthBackendRole_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-alicloud-backend")
 	name := acctest.RandomWithPrefix("tf-test-alicloud-role")
 	arn := acctest.RandomWithPrefix("acs:ram:123456:tf:role/")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAlicloudAuthBackedRoleDestroy,
 		Steps: []resource.TestStep{
 			{

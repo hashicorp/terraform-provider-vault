@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strings"
 	"testing"
 
@@ -20,7 +19,6 @@ import (
 )
 
 func TestLDAPAuthBackendGroup_import(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	groupname := acctest.RandomWithPrefix("tf-test-ldap-group")
@@ -33,7 +31,7 @@ func TestLDAPAuthBackendGroup_import(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend_group.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendGroupDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -50,7 +48,6 @@ func TestLDAPAuthBackendGroup_import(t *testing.T) {
 }
 
 func TestLDAPAuthBackendGroup_basic(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	groupname := acctest.RandomWithPrefix("tf-test-ldap-group")
@@ -63,7 +60,7 @@ func TestLDAPAuthBackendGroup_basic(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend_group.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendGroupDestroy,
 		Steps: []resource.TestStep{
 			{

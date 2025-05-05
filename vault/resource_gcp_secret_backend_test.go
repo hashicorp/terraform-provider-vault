@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"regexp"
 	"testing"
 
@@ -19,14 +18,13 @@ import (
 )
 
 func TestGCPSecretBackend(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-gcp")
 
 	resourceType := "vault_gcp_secret_backend"
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -74,7 +72,6 @@ func TestGCPSecretBackend(t *testing.T) {
 }
 
 func TestGCPSecretBackend_remount(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-gcp")
 	updatedPath := acctest.RandomWithPrefix("tf-test-gcp-updated")
 
@@ -82,7 +79,7 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -117,12 +114,11 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 // Root Rotation parameters are compatible with the GCP Secrets Backend
 // resource
 func TestAccGCPSecretBackend_automatedRotation(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-gcp")
 	resourceType := "vault_gcp_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)

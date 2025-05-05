@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -23,7 +22,6 @@ import (
 )
 
 func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
-	var p *schema.Provider
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
@@ -52,7 +50,7 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	reqHeaders := base64.StdEncoding.EncodeToString(loginDataHeaders)
 	reqBody := base64.StdEncoding.EncodeToString(loginDataBody)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -66,7 +64,6 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestEnvUnset(t, "TF_AWS_META")
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
@@ -103,7 +100,7 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	pkcs7 = strings.Replace(pkcs7, "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -117,7 +114,6 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestEnvUnset(t, "TF_AWS_META")
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
@@ -160,7 +156,7 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	sig = strings.Replace(sig, "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{

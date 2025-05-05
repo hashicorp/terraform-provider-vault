@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"regexp"
 	"testing"
 
@@ -19,12 +18,11 @@ import (
 )
 
 func TestTransitSecretBackendKey_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("transit")
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
@@ -89,12 +87,11 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 }
 
 func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("transit")
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
@@ -151,12 +148,11 @@ func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
 }
 
 func TestTransitSecretBackendKey_hmac(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("transit")
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)

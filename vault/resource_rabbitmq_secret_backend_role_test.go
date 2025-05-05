@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -24,13 +23,12 @@ const (
 )
 
 func TestAccRabbitMQSecretBackendRole_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -68,13 +66,12 @@ func TestAccRabbitMQSecretBackendRole_basic(t *testing.T) {
 }
 
 func TestAccRabbitMQSecretBackendRole_nested(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -112,13 +109,12 @@ func TestAccRabbitMQSecretBackendRole_nested(t *testing.T) {
 }
 
 func TestAccRabbitMQSecretBackendRole_topic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 	"time"
 
@@ -18,9 +17,8 @@ import (
 )
 
 func TestDataSourceGenericSecret(t *testing.T) {
-	var p *schema.Provider
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -32,11 +30,10 @@ func TestDataSourceGenericSecret(t *testing.T) {
 }
 
 func TestDataSourceGenericSecret_v2(t *testing.T) {
-	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-acctest-kv/")
 	path := acctest.RandomWithPrefix("foo")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{

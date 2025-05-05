@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"regexp"
 	"testing"
 
@@ -21,12 +20,11 @@ import (
 )
 
 func TestResourceAuth(t *testing.T) {
-	var p *schema.Provider
 	path := "github-" + acctest.RandString(10)
 
 	resourceName := "vault_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -60,14 +58,13 @@ func TestResourceAuth(t *testing.T) {
 }
 
 func TestAuthBackend_remount(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("tf-test-auth")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-updated")
 
 	resourceName := "vault_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -214,7 +211,7 @@ func TestResourceAuthTune(t *testing.T) {
 	resName := "vault_auth_backend.test"
 	var resAuthFirst api.AuthMount
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &testProvider),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{

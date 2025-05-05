@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -23,13 +22,12 @@ import (
 )
 
 func TestAccIdentityGroup(t *testing.T) {
-	var p *schema.Provider
 	group := acctest.RandomWithPrefix("test-group")
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -41,14 +39,13 @@ func TestAccIdentityGroup(t *testing.T) {
 }
 
 func TestAccIdentityGroupUpdate(t *testing.T) {
-	var p *schema.Provider
 	group := acctest.RandomWithPrefix("test-group")
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -110,13 +107,12 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 }
 
 func TestAccIdentityGroupExternal(t *testing.T) {
-	var p *schema.Provider
 	group := acctest.RandomWithPrefix("test-group")
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -128,7 +124,6 @@ func TestAccIdentityGroupExternal(t *testing.T) {
 }
 
 func TestAccIdentityGroup_DuplicateCreate(t *testing.T) {
-	var p *schema.Provider
 	// group identity names are stored in lower case,
 	// this test attempts to create two resources with different casing for the
 	// same lower case group name.
@@ -149,7 +144,7 @@ resource "vault_identity_group" "test_upper" {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{

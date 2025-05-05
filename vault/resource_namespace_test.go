@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"regexp"
 	"testing"
 
@@ -20,7 +19,6 @@ import (
 )
 
 func TestAccNamespace(t *testing.T) {
-	var p *schema.Provider
 	namespacePath := acctest.RandomWithPrefix("parent-ns")
 	resourceNameParent := "vault_namespace.parent"
 	resourceNameChild := "vault_namespace.child"
@@ -48,7 +46,7 @@ func TestAccNamespace(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testNamespaceDestroy(namespacePath),
 		Steps: []resource.TestStep{
 			{

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"testing"
 
@@ -17,7 +16,6 @@ import (
 )
 
 func TestAccAWSSecretBackendStaticRole(t *testing.T) {
-	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-aws-static")
 	a, s := testutil.GetTestAWSCreds(t)
 	resourceName := "vault_aws_secret_backend_static_role.role"
@@ -28,7 +26,7 @@ func TestAccAWSSecretBackendStaticRole(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
 		},
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAWSStaticResourceConfig(mount, a, s, username),
@@ -44,7 +42,6 @@ func TestAccAWSSecretBackendStaticRole(t *testing.T) {
 }
 
 func TestAccAWSSecretBackendStaticAssumeRole(t *testing.T) {
-	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-aws-static")
 	a, s := testutil.GetTestAWSCreds(t)
 	resourceName := "vault_aws_secret_backend_static_role.role"
@@ -55,7 +52,7 @@ func TestAccAWSSecretBackendStaticAssumeRole(t *testing.T) {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAWSStaticAssumeResourceConfig(mount, a, s, username),

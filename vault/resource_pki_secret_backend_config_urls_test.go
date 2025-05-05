@@ -21,7 +21,6 @@ import (
 )
 
 func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
-	var p *schema.Provider
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 
 	issuingCertificates := "http://127.0.0.1:8200/v1/pki/ca"
@@ -64,7 +63,7 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{

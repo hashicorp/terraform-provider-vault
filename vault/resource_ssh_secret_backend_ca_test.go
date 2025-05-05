@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -18,11 +17,10 @@ import (
 )
 
 func TestAccSSHSecretBackendCA_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := "ssh-" + acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
@@ -35,11 +33,10 @@ func TestAccSSHSecretBackendCA_basic(t *testing.T) {
 }
 
 func TestAccSSHSecretBackendCA_provided(t *testing.T) {
-	var p *schema.Provider
 	backend := "ssh-" + acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
@@ -52,10 +49,9 @@ func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 }
 
 func TestAccSSHSecretBackend_import(t *testing.T) {
-	var p *schema.Provider
 	backend := "ssh-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -77,7 +73,6 @@ func TestAccSSHSecretBackend_import(t *testing.T) {
 // verify that there are no planned changes after migrating to an updated
 // schema to validate the sshSecretBackendCAUpgradeV0 state upgrader.
 func TestAccSSHSecretBackendCA_Upgrade_key_type(t *testing.T) {
-	var p *schema.Provider
 	backend := "ssh-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
 		Steps: []resource.TestStep{
@@ -93,7 +88,7 @@ func TestAccSSHSecretBackendCA_Upgrade_key_type(t *testing.T) {
 				Check:  testAccSSHSecretBackendCACheck(backend),
 			},
 			{
-				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 				Config:                   testAccSSHSecretBackendCAConfigGenerated(backend),
 				PlanOnly:                 true,
 			},

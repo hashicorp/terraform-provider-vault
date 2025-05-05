@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"log"
 	"regexp"
 	"testing"
@@ -21,12 +20,11 @@ import (
 )
 
 func TestAccGithubTeam_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_team.team"
 	team := "my-team-slugified"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
@@ -55,11 +53,10 @@ func TestAccGithubTeam_basic(t *testing.T) {
 }
 
 func TestAccGithubTeam_teamConfigError(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("github")
 	team := "Team With Spaces"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
@@ -72,13 +69,12 @@ func TestAccGithubTeam_teamConfigError(t *testing.T) {
 }
 
 func TestAccGithubTeam_importBasic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_team.team"
 	team := "import-team"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "developer"}),

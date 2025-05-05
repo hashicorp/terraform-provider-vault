@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
 	"testing"
 
@@ -19,13 +18,12 @@ import (
 )
 
 func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -61,7 +59,6 @@ func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
 }
 
 func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
 	issuer := "kubernetes/serviceaccount"
@@ -71,7 +68,7 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{

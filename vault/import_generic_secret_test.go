@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -16,13 +15,12 @@ import (
 )
 
 func TestAccGenericSecret_importBasic(t *testing.T) {
-	var p *schema.Provider
 	mount := "secretsv1"
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(mount, name),
@@ -39,7 +37,6 @@ func TestAccGenericSecret_importBasic(t *testing.T) {
 }
 
 func TestAccGenericSecret_importBasicNS(t *testing.T) {
-	var p *schema.Provider
 	// TODO: investigate why namespace field is not honoured during import.
 	// Work around is to set the namespace in the provider{} for import.
 	t.Skip("VAULT-4254: namespaced resource imports require provider config")
@@ -51,7 +48,7 @@ func TestAccGenericSecret_importBasicNS(t *testing.T) {
 	resourceName := "vault_generic_secret.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfigNS(ns, mount, name),

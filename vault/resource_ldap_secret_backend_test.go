@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -30,7 +29,6 @@ Then export the following environment variables:
 	export LDAP_URL=ldap://localhost:1389
 */
 func TestLDAPSecretBackend(t *testing.T) {
-	var p *schema.Provider
 	var (
 		path                  = acctest.RandomWithPrefix("tf-test-ldap")
 		bindDN, bindPass, url = testutil.GetTestLDAPCreds(t)
@@ -41,7 +39,7 @@ func TestLDAPSecretBackend(t *testing.T) {
 		updatedUserDN         = "CN=Users,DC=corp,DC=hashicorp,DC=com"
 	)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
@@ -106,7 +104,6 @@ func TestLDAPSecretBackend(t *testing.T) {
 //
 // export AD_URL=ldaps://localhost:2636
 func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
-	var p *schema.Provider
 	var (
 		path         = acctest.RandomWithPrefix("tf-test-ldap")
 		resourceType = "vault_ldap_secret_backend"
@@ -118,7 +115,7 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 		url = testutil.SkipTestEnvUnset(t, "AD_URL")[0]
 	)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
@@ -191,7 +188,6 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 }
 
 func TestLDAPSecretBackend_automatedRotation(t *testing.T) {
-	var p *schema.Provider
 	var (
 		path                = acctest.RandomWithPrefix("tf-test-ldap")
 		bindDN, bindPass, _ = testutil.GetTestLDAPCreds(t)
@@ -199,7 +195,7 @@ func TestLDAPSecretBackend_automatedRotation(t *testing.T) {
 		resourceName        = resourceType + ".test"
 	)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)

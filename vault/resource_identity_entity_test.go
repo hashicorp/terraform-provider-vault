@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"net/http"
 	"reflect"
 	"testing"
@@ -25,13 +24,12 @@ import (
 )
 
 func TestAccIdentityEntity(t *testing.T) {
-	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -43,13 +41,12 @@ func TestAccIdentityEntity(t *testing.T) {
 }
 
 func TestAccIdentityEntityUpdate(t *testing.T) {
-	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -73,13 +70,12 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 }
 
 func TestAccIdentityEntityUpdateRemoveValues(t *testing.T) {
-	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -104,13 +100,12 @@ func TestAccIdentityEntityUpdateRemoveValues(t *testing.T) {
 // are still in the plan. They should be removed from the entity if this
 // bool is true.
 func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
-	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{

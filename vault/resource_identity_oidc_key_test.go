@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"regexp"
 	"testing"
 
@@ -19,13 +18,12 @@ import (
 )
 
 func TestAccIdentityOidcKey(t *testing.T) {
-	var p *schema.Provider
 	key := acctest.RandomWithPrefix("test-key")
 
 	resourceName := "vault_identity_oidc_key.key"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityOidcKeyDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -54,13 +52,12 @@ func TestAccIdentityOidcKey(t *testing.T) {
 }
 
 func TestAccIdentityOidcKeyUpdate(t *testing.T) {
-	var p *schema.Provider
 	key := acctest.RandomWithPrefix("test-key")
 
 	resourceName := "vault_identity_oidc_key.key"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityOidcKeyDestroy,
 		Steps: []resource.TestStep{
 			{

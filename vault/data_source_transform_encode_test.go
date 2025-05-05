@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -16,11 +15,10 @@ import (
 )
 
 func TestAccEncodeBasic(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: transformEncode_basicConfig(path),
@@ -64,11 +62,10 @@ data "vault_transform_encode" "test" {
 }
 
 func TestAccEncodeBatch(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: transformEncodeRole_batchConfig(path),

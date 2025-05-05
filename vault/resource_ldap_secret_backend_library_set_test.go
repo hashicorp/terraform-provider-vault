@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -17,14 +16,13 @@ import (
 )
 
 func TestAccLDAPSecretBackendLibrarySet(t *testing.T) {
-	var p *schema.Provider
 	setName := acctest.RandomWithPrefix("tf-test-ldap-library-set")
 	bindDN, bindPass, url := testutil.GetTestLDAPCreds(t)
 	resourceType := "vault_ldap_secret_backend_library_set"
 	resourceName := resourceType + ".set"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -18,12 +17,11 @@ import (
 )
 
 func TestAccADSecretBackendRole_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-ad")
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccADSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -50,7 +48,6 @@ func TestAccADSecretBackendRole_basic(t *testing.T) {
 }
 
 func TestAccADSecretBackendRole_import(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-ad")
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 	role := "bob"
@@ -58,7 +55,7 @@ func TestAccADSecretBackendRole_import(t *testing.T) {
 	ttl := 60
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccADSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{

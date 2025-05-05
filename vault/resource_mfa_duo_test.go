@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -16,14 +15,13 @@ import (
 )
 
 func TestMFADuoBasic(t *testing.T) {
-	var p *schema.Provider
 	mfaDuoPath := acctest.RandomWithPrefix("mfa-duo")
 
 	resourceName := "vault_mfa_duo.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testMFADuoConfig(mfaDuoPath),

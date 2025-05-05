@@ -125,7 +125,7 @@ echo "helper-token"
 //
 // Any tests that use this function will serve as a smoketest to verify the
 // provider schemas match 1-1 so that we may catch runtime errors.
-func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T, v **schema.Provider) map[string]func() (tfprotov5.ProviderServer, error) {
+func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T) map[string]func() (tfprotov5.ProviderServer, error) {
 	providerServerFactory, p, err := ProtoV5ProviderServerFactory(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -134,7 +134,7 @@ func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T, v **sche
 	providerServer := providerServerFactory()
 
 	testProviderMutex.Lock()
-	*v = p.SchemaProvider()
+	testProvider = p.SchemaProvider()
 	rootProviderResource := &schema.Resource{
 		Schema: p.SchemaProvider().Schema,
 	}
@@ -144,7 +144,7 @@ func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T, v **sche
 		panic(err)
 	}
 
-	(*v).SetMeta(m)
+	testProvider.SetMeta(m)
 	testProviderMutex.Unlock()
 
 	return map[string]func() (tfprotov5.ProviderServer, error){
@@ -166,7 +166,6 @@ func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T, v **sche
 // to follow to verify that switching from SDKv2 to the Framework has not
 // affected your provider's behavior.
 func TestAccMuxServer(t *testing.T) {
-	var p *schema.Provider
 	resource.Test(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
@@ -181,7 +180,7 @@ func TestAccMuxServer(t *testing.T) {
 				Check:  testResourceApproleLoginCheckAttrs(t),
 			},
 			{
-				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 				Config:                   testResourceApproleConfig_basic(),
 				PlanOnly:                 true,
 			},
@@ -190,10 +189,9 @@ func TestAccMuxServer(t *testing.T) {
 }
 
 func TestAccAuthLoginProviderConfigure(t *testing.T) {
-	var p *schema.Provider
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceApproleConfig_basic(),
@@ -203,7 +201,7 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 	})
 
 	rootProviderResource := &schema.Resource{
-		Schema: p.Schema,
+		Schema: testProvider.Schema,
 	}
 	rootProviderData := rootProviderResource.TestResourceData()
 	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
@@ -216,7 +214,7 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testHeaderConfig("auth", "123"),
@@ -627,11 +625,10 @@ func TestAccTokenName(t *testing.T) {
 		},
 	}
 
-	var p *schema.Provider
 	for _, test := range tests {
 		t.Run(test.WantTokenName, func(t *testing.T) {
 			resource.Test(t, resource.TestCase{
-				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 				PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
@@ -691,11 +688,10 @@ func TestAccChildToken(t *testing.T) {
 		},
 	}
 
-	var p *schema.Provider
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			resource.Test(t, resource.TestCase{
-				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 				PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{

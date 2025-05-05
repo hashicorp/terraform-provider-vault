@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strings"
 	"testing"
 
@@ -74,7 +73,6 @@ func TestGCPAuthBackendRole_basic(t *testing.T) {
 }
 
 func testGCPAuthBackendRole_basic(t *testing.T, backend string) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 	serviceAccount := acctest.RandomWithPrefix("tf-test-gcp-service-account")
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
@@ -82,7 +80,7 @@ func testGCPAuthBackendRole_basic(t *testing.T, backend string) {
 	resourceName := "vault_gcp_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -113,7 +111,6 @@ func testGCPAuthBackendRole_basic(t *testing.T, backend string) {
 }
 
 func TestGCPAuthBackendRole_gce(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-gcp-backend")
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
@@ -121,7 +118,7 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 	resourceName := "vault_gcp_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{

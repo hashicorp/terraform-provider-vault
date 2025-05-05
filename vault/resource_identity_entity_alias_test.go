@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"regexp"
 	"testing"
 
@@ -21,7 +20,6 @@ import (
 )
 
 func TestAccIdentityEntityAlias(t *testing.T) {
-	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("my-entity")
 
 	nameEntity := "vault_identity_entity.entityA"
@@ -30,7 +28,7 @@ func TestAccIdentityEntityAlias(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -55,7 +53,6 @@ func TestAccIdentityEntityAlias(t *testing.T) {
 }
 
 func TestAccIdentityEntityAliasDuplicateFlow(t *testing.T) {
-	var p *schema.Provider
 	namePrefix := acctest.RandomWithPrefix("test-duplicate-flow")
 	alias := acctest.RandomWithPrefix("alias")
 
@@ -129,7 +126,7 @@ resource "vault_identity_entity_alias" "test2" {
 	entityResource2 := "vault_identity_entity.test2"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -234,7 +231,6 @@ resource "vault_identity_entity_alias" "test2" {
 }
 
 func TestAccIdentityEntityAlias_Update(t *testing.T) {
-	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("my-entity")
 
 	nameEntityA := "vault_identity_entity.entityA"
@@ -245,7 +241,7 @@ func TestAccIdentityEntityAlias_Update(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -291,7 +287,6 @@ func testAccCheckIdentityEntityAliasDestroy(s *terraform.State) error {
 }
 
 func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
-	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("my-entity")
 
 	nameEntityA := "vault_identity_entity.entityA"
@@ -304,7 +299,7 @@ func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
 	// once bug in Vault is resolved
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{

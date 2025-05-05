@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
 	"testing"
 
@@ -20,14 +19,13 @@ import (
 
 // This is light on testing as most of the code is covered by `resource_okta_auth_backend_test.go`
 func TestAccOktaAuthBackendGroup_basic(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
 	organization := "dummy"
 	resourceName := "vault_okta_auth_backend_group.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccOktaAuthBackendGroup_Destroyed(path, "foo"),
 		Steps: []resource.TestStep{
@@ -53,14 +51,13 @@ func TestAccOktaAuthBackendGroup_basic(t *testing.T) {
 
 /* Test config which contains a special character "/" in the group name */
 func TestAccOktaAuthBackendGroup_specialChar(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
 	organization := "dummy"
 	resourceName := "vault_okta_auth_backend_group.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccOktaAuthBackendGroup_Destroyed(path, "foo/bar"),
 		Steps: []resource.TestStep{

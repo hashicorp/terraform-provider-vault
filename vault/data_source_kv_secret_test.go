@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -17,7 +16,6 @@ import (
 )
 
 func TestDataSourceKVSecret(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	mount := acctest.RandomWithPrefix("tf-kv")
 	name := acctest.RandomWithPrefix("foo")
@@ -26,7 +24,7 @@ func TestDataSourceKVSecret(t *testing.T) {
 
 	resourceName := "data.vault_kv_secret.test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{

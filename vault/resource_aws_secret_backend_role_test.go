@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strings"
 	"testing"
 
@@ -32,12 +31,11 @@ const (
 )
 
 func TestAccAWSSecretBackendRole_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-aws")
 	name := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -58,12 +56,11 @@ func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 }
 
 func TestAccAWSSecretBackendRole_import(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-aws")
 	name := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -101,12 +98,11 @@ func TestAccAWSSecretBackendRole_import(t *testing.T) {
 }
 
 func TestAccAWSSecretBackendRole_nested(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-aws/nested")
 	name := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{

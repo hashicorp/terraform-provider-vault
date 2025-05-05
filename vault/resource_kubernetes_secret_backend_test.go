@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -17,14 +16,13 @@ import (
 )
 
 func TestAccKubernetesSecretBackend(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
 	path := acctest.RandomWithPrefix("tf-test-kubernetes")
 	resourceType := "vault_kubernetes_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKubernetes, ""),
 		Steps: []resource.TestStep{

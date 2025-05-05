@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -17,7 +16,6 @@ import (
 )
 
 func TestAccKMIPSecretRole_basic(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestAccEnt(t)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
@@ -36,7 +34,7 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 	addr1 := lns[0].Addr().String()
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -93,7 +91,6 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 }
 
 func TestAccKMIPSecretRole_remount(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestAccEnt(t)
 
 	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
@@ -112,7 +109,7 @@ func TestAccKMIPSecretRole_remount(t *testing.T) {
 	resourceType := "vault_kmip_secret_role"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{

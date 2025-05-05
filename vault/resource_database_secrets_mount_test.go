@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"net/url"
 	"testing"
 
@@ -19,7 +18,6 @@ import (
 )
 
 func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
-	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEngineMSSQL)
 
 	cleanupFunc, connURL := testutil.PrepareMSSQLTestContainer(t)
@@ -47,7 +45,7 @@ func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
 
 	username := parsedURL.User.Username()
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -111,7 +109,6 @@ func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
 }
 
 func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
-	var p *schema.Provider
 	testutil.SkipTestEnvSet(t, "SKIP_MSSQL_MULTI_CI")
 	MaybeSkipDBTests(t, dbEngineMSSQL)
 
@@ -150,7 +147,7 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 	resourceName := resourceType + ".db"
 	username := parsedURL.User.Username()
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -240,7 +237,6 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 // Root Rotation parameters are compatible with the DB Secrets Mount resource
 // Note: update steps are not included since DB mounts can only be configured once
 func TestAccDatabaseSecretsMount_postgresql_automatedRootRotation(t *testing.T) {
-	var p *schema.Provider
 	MaybeSkipDBTests(t, dbEnginePostgres)
 
 	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
@@ -250,7 +246,7 @@ func TestAccDatabaseSecretsMount_postgresql_automatedRootRotation(t *testing.T) 
 	resourceName := "vault_database_secrets_mount.test"
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)

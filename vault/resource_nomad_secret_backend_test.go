@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -17,7 +16,6 @@ import (
 )
 
 func TestAccNomadSecretBackend(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
 	// TODO: test environment should exist in CI
 	address, token := testutil.GetTestNomadCreds(t)
@@ -25,7 +23,7 @@ func TestAccNomadSecretBackend(t *testing.T) {
 	resourceType := "vault_nomad_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories:  testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories:  testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                  func() { testutil.TestAccPreCheck(t) },
 		PreventPostDestroyRefresh: true,
 		CheckDestroy:              testCheckMountDestroyed(resourceType, consts.MountTypeNomad, consts.FieldBackend),
@@ -71,7 +69,6 @@ func TestAccNomadSecretBackend(t *testing.T) {
 }
 
 func TestNomadSecretBackend_remount(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
 	updatedBackend := acctest.RandomWithPrefix("tf-test-nomad-updated")
 
@@ -79,7 +76,7 @@ func TestNomadSecretBackend_remount(t *testing.T) {
 	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{

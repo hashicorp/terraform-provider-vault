@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -20,7 +19,6 @@ import (
 )
 
 func TestResourceGenericEndpoint(t *testing.T) {
-	var p *schema.Provider
 	path := acctest.RandomWithPrefix("userpass")
 	resourceNames := []string{
 		"vault_generic_endpoint.up1",
@@ -30,7 +28,7 @@ func TestResourceGenericEndpoint(t *testing.T) {
 		"vault_generic_endpoint.u1_entity",
 	}
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceGenericEndpoint_destroyCheck(resourceNames, path),
 		Steps: []resource.TestStep{

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
 	"testing"
 
@@ -22,11 +21,10 @@ import (
 )
 
 func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
-	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -47,11 +45,10 @@ func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 }
 
 func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
-	var p *schema.Provider
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{

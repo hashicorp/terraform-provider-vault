@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -18,7 +17,6 @@ import (
 )
 
 func TestVercelSecretsSyncDestination(t *testing.T) {
-	var p *schema.Provider
 	destName := acctest.RandomWithPrefix("tf-sync-dest-vercel")
 
 	resourceName := "vault_secrets_sync_vercel_destination.test"
@@ -30,7 +28,7 @@ func TestVercelSecretsSyncDestination(t *testing.T) {
 	accessToken := values[0]
 	projectID := values[1]
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)

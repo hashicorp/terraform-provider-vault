@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -23,7 +22,6 @@ type testPKIKeyStore struct {
 }
 
 func TestAccPKISecretBackendKey_basic(t *testing.T) {
-	var p *schema.Provider
 	mount := acctest.RandomWithPrefix("tf-test-pki")
 	resourceType := "vault_pki_secret_backend_key"
 	resourceName := resourceType + ".test"
@@ -34,7 +32,7 @@ func TestAccPKISecretBackendKey_basic(t *testing.T) {
 	store := &testPKIKeyStore{}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
 	"testing"
 
@@ -21,12 +20,11 @@ import (
 )
 
 func TestAccTransitCacheConfig(t *testing.T) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("test-cache-config")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccTransitCacheConfigCheckDestroyed,
 		Steps: []resource.TestStep{
 			{

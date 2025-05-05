@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"regexp"
 	"testing"
 
@@ -17,7 +16,6 @@ import (
 )
 
 func TestAccGCPAuthBackendRoleDataSource_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("gcp")
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 	serviceAccount := acctest.RandomWithPrefix("tf-test-gcp-service-account")
@@ -25,7 +23,7 @@ func TestAccGCPAuthBackendRoleDataSource_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -63,7 +61,6 @@ func TestAccGCPAuthBackendRoleDataSource_basic(t *testing.T) {
 }
 
 func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("gcp")
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
@@ -71,7 +68,7 @@ func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
 	resourceName := "vault_gcp_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -96,13 +93,12 @@ func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
 }
 
 func TestAccGCPAuthBackendRoleDataSource_none(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("gcp")
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGCPAuthBackendRoleDataSourceConfig(backend, name),

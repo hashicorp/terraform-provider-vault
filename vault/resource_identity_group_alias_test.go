@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -19,7 +18,6 @@ import (
 )
 
 func TestAccIdentityGroupAlias(t *testing.T) {
-	var p *schema.Provider
 	group := acctest.RandomWithPrefix("my-group")
 
 	nameGroup := "vault_identity_group.group"
@@ -28,7 +26,7 @@ func TestAccIdentityGroupAlias(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityGroupAliasDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -44,7 +42,6 @@ func TestAccIdentityGroupAlias(t *testing.T) {
 }
 
 func TestAccIdentityGroupAliasUpdate(t *testing.T) {
-	var p *schema.Provider
 	suffix := acctest.RandomWithPrefix("")
 
 	nameGroupA := "vault_identity_group.groupA"
@@ -57,7 +54,7 @@ func TestAccIdentityGroupAliasUpdate(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityGroupAliasDestroy,
 		Steps: []resource.TestStep{
 			{

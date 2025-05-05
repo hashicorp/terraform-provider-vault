@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -17,7 +16,6 @@ import (
 )
 
 func TestIdentityMFAOKTA(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 
 	resourceName := mfa.ResourceNameOKTA + ".test"
@@ -38,7 +36,7 @@ func TestIdentityMFAOKTA(t *testing.T) {
 	)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`

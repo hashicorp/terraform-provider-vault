@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
 	"testing"
 	"time"
@@ -39,10 +38,9 @@ func testResourceTokenCheckDestroy(s *terraform.State) error {
 }
 
 func TestResourceToken_basic(t *testing.T) {
-	var p *schema.Provider
 	resourceName := "vault_token.test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
@@ -61,10 +59,9 @@ func TestResourceToken_basic(t *testing.T) {
 }
 
 func TestResourceToken_import(t *testing.T) {
-	var p *schema.Provider
 	resourceName := "vault_token.test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
@@ -105,10 +102,9 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_full(t *testing.T) {
-	var p *schema.Provider
 	resourceName := "vault_token.test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
@@ -161,9 +157,8 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_lookup(t *testing.T) {
-	var p *schema.Provider
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
@@ -194,10 +189,9 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_expire(t *testing.T) {
-	var p *schema.Provider
 	t.Skip("skipping, because it's flaky in CI and there's a long time.Sleep call")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
@@ -257,7 +251,6 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_renew(t *testing.T) {
-	var p *schema.Provider
 	t.Skip("skipping, because it's flaky in CI and there's a long time.Sleep call")
 	resourceName := "vault_token.test"
 
@@ -270,7 +263,7 @@ func TestResourceToken_renew(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldPolicies+".0", "test"),
 	}
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{

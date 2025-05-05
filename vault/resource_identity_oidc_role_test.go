@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -22,13 +21,12 @@ const testAccIdentityOidcRoleTemplate = `{
 }`
 
 func TestAccIdentityOidcRole(t *testing.T) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("test-role")
 
 	resourceName := "vault_identity_oidc_role.role"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityOidcRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -51,14 +49,13 @@ func TestAccIdentityOidcRole(t *testing.T) {
 }
 
 func TestAccIdentityOidcRoleWithClientId(t *testing.T) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("test-role")
 	clientId := acctest.RandomWithPrefix("test-client-id")
 
 	resourceName := "vault_identity_oidc_role.role"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityOidcRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -82,7 +79,6 @@ func TestAccIdentityOidcRoleWithClientId(t *testing.T) {
 }
 
 func TestAccIdentityOidcRoleUpdate(t *testing.T) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("test-role")
 	clientId := acctest.RandomWithPrefix("test-client-id")
 	updateClientId := acctest.RandomWithPrefix("test-update-client-id")
@@ -90,7 +86,7 @@ func TestAccIdentityOidcRoleUpdate(t *testing.T) {
 	resourceName := "vault_identity_oidc_role.role"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityOidcRoleDestroy,
 		Steps: []resource.TestStep{
 			{

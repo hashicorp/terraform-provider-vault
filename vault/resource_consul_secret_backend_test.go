@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"regexp"
 	"strings"
 	"testing"
@@ -27,7 +26,6 @@ type testMountStore struct {
 }
 
 func TestConsulSecretBackend(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-consul")
 	resourceType := "vault_consul_secret_backend"
@@ -35,7 +33,7 @@ func TestConsulSecretBackend(t *testing.T) {
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -134,7 +132,6 @@ func TestConsulSecretBackend(t *testing.T) {
 }
 
 func TestConsulSecretBackend_Bootstrap(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	testutil.SkipTestAcc(t)
 
@@ -148,7 +145,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 	consulAddr := consulConfig.Address()
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
@@ -205,7 +202,6 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 }
 
 func TestConsulSecretBackend_remount(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-consul")
 	updatedPath := acctest.RandomWithPrefix("tf-test-consul-updated")
@@ -217,7 +213,7 @@ func TestConsulSecretBackend_remount(t *testing.T) {
 	store := &testMountStore{}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldPath),
 		Steps: []resource.TestStep{

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -19,11 +18,10 @@ import (
 )
 
 func TestAuditRequestHeader(t *testing.T) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("tf-test")
 	newName := acctest.RandomWithPrefix("tf-test-new")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAuditRequestHeaderCheckDestroy(name, newName),
 		Steps: []resource.TestStep{

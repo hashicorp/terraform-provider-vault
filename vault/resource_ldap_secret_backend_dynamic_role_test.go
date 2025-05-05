@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -30,14 +29,13 @@ changetype: delete`
 )
 
 func TestAccLDAPSecretBackendDynamicRole(t *testing.T) {
-	var p *schema.Provider
 	roleName := acctest.RandomWithPrefix("tf-test-ldap-dynamic-role")
 	bindDN, bindPass, _ := testutil.GetTestLDAPCreds(t)
 	resourceType := "vault_ldap_secret_backend_dynamic_role"
 	resourceName := resourceType + ".role"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)

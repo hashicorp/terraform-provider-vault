@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -17,14 +16,13 @@ import (
 )
 
 func TestADSecretBackend(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-ad")
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resourceType := "vault_ad_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories:  testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories:  testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                  func() { testutil.TestAccPreCheck(t) },
 		PreventPostDestroyRefresh: true,
 		CheckDestroy:              testCheckMountDestroyed(resourceType, consts.MountTypeAD, consts.FieldBackend),
@@ -63,7 +61,6 @@ func TestADSecretBackend(t *testing.T) {
 }
 
 func TestADSecretBackend_remount(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-ad")
 	updatedBackend := acctest.RandomWithPrefix("tf-test-ad-updated")
 
@@ -71,7 +68,7 @@ func TestADSecretBackend_remount(t *testing.T) {
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{

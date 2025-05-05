@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -21,14 +20,13 @@ import (
 )
 
 func TestAccKVSecret(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	resourceName := "vault_kv_secret.test"
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	name := acctest.RandomWithPrefix("tf-secret")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -67,14 +65,13 @@ func TestAccKVSecret(t *testing.T) {
 	})
 }
 func TestAccKVSecret_UpdateOutsideTerraform(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	resourceName := "vault_kv_secret.test"
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	name := acctest.RandomWithPrefix("tf-secret")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{

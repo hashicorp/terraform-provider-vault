@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"log"
 	"testing"
 
@@ -20,12 +19,11 @@ import (
 )
 
 func TestAccGithubUser_basic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_user.user"
 	user := "john_doe"
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccGithubUserCheckDestroy,
 		Steps: []resource.TestStep{
@@ -54,13 +52,12 @@ func TestAccGithubUser_basic(t *testing.T) {
 }
 
 func TestAccGithubUser_importBasic(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_user.user"
 	user := "import"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubUserConfig_basic(backend, user, []string{"security", "admin"}),

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -18,14 +17,13 @@ import (
 )
 
 func TestAccAWSAuthBackendRole_importInferred(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -48,14 +46,13 @@ func TestAccAWSAuthBackendRole_importInferred(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendRole_importEC2(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -72,14 +69,13 @@ func TestAccAWSAuthBackendRole_importEC2(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendRole_importIAM(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -96,14 +92,13 @@ func TestAccAWSAuthBackendRole_importIAM(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendRole_inferred(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -115,14 +110,13 @@ func TestAccAWSAuthBackendRole_inferred(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendRole_ec2(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -134,14 +128,13 @@ func TestAccAWSAuthBackendRole_ec2(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendRole_iam(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -153,14 +146,13 @@ func TestAccAWSAuthBackendRole_iam(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendRole_iam_resolve_aws_unique_ids(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -172,14 +164,13 @@ func TestAccAWSAuthBackendRole_iam_resolve_aws_unique_ids(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 
 	resourceName := "vault_aws_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{

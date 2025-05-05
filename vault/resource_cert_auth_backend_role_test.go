@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strings"
 	"testing"
 
@@ -74,7 +73,6 @@ bwvTJuiSbAHkhG+eM/04PpWPMo6skek10KmIBvGveHM8R89gbA1Fgw==
 const testBase64PEM = `MIIDIzCCAgugAwIBAgIJAIxJbvl6PnmvMA0GCSqGSIb3DQEBBQUAMBUxEzARBgNVBAMTClZhdWx0IFRlc3QwHhcNMTgwNTA5MTcyMjU0WhcNMjgwNTA2MTcyMjU0WjAVMRMwEQYDVQQDEwpWYXVsdCBUZXN0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxZj/1W69FiancHSEbMhfL0KZvftNksIN2rsMHhVkLDSn7KZyqlVhSOmygARFVmSwi5AO894FAuJU7L/RDcBD6mI3lTzDokeuRoRMpwbNg2aR+VNQaQpdHbLFm3xTO1na7wuxO4F7tDzLQRKzO0wSmqBhXXdJsoTG97mA8Gq5tAR20Uz8vWh3PI8taFG6aSuL7rfm+O3iMoCPTj3DofUENfnd0ZxlXpR/X7Z1iQej5+jXIn0ygoXxc07rfPd6J2jxz0lWL95Q65QWBSaKKNjWHaShSsqGe8KLZu9BFp20+M4Y8fd40B7+mlWk17nUdqvwZtnNL1qf+t0SFFhueQY+4wIDAQABo3YwdDAdBgNVHQ4EFgQUoTWVof3QQakI0Xfamu5nJglXUwswRQYDVR0jBD4wPIAUoTWVof3QQakI0Xfamu5nJglXUwuhGaQXMBUxEzARBgNVBAMTClZhdWx0IFRlc3SCCQCMSW75ej55rzAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4IBAQDFmMBq5s5vBHMrACXfgIBpZSSaiBXz8tVDaiYO5UfZsWqEIn61+NrgJT4Xvhba3VZgGkOLX/9CfnTXx9nq4qL2ht4my2QszXXBJyi0pB+0VIQhbRzjbrYeQn8uCmN5DLph3sA+vJuUWvR7l6h1zUjzRrXWLFQ+qQxtyYT18fgO3uttnbuzptDT23RDRySaoYLpeUFY47RIzFmuIO8bNsh8h5ymHNkVXrrvvqDIxIPD/M21z4ZlZSbsokyVcsGKbF87xv8SFXj5GbtZ7UI0qVYr9zk/Y090Qv1aypM1k5jHWSBCixTrUFtWENQYLYhh2bMP1uJ4UMxSNJXCthRASqNF`
 
 func TestCertAuthBackend(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
 	name := acctest.RandomWithPrefix("tf-test-cert-name")
 
@@ -88,7 +86,7 @@ func TestCertAuthBackend(t *testing.T) {
 	resourceName := "vault_cert_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCertAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -124,7 +122,6 @@ func TestCertAuthBackend(t *testing.T) {
 }
 
 func TestCertAuthBackend_OCSP(t *testing.T) {
-	var p *schema.Provider
 	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
 	name := acctest.RandomWithPrefix("tf-test-cert-name")
 
@@ -134,7 +131,7 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
 		},
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCertAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{

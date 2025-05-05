@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -19,12 +18,11 @@ import (
 )
 
 func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityOidcKeyAllowedClientIdDestroy,
 		Steps: []resource.TestStep{
 			{

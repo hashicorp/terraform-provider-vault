@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -18,7 +17,6 @@ import (
 )
 
 func TestGithubAppsSecretsSync(t *testing.T) {
-	var p *schema.Provider
 	appName := acctest.RandomWithPrefix("tf-sync-github-apps")
 
 	resourceName := "vault_secrets_sync_github_apps.test"
@@ -32,7 +30,7 @@ func TestGithubAppsSecretsSync(t *testing.T) {
 	appID := values[1]
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)

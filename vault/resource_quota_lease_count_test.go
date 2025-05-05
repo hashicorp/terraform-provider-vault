@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -19,7 +18,6 @@ import (
 )
 
 func TestQuotaLeaseCount(t *testing.T) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("tf-test")
 	ns := "ns-" + name
 	leaseCount := "1001"
@@ -27,7 +25,7 @@ func TestQuotaLeaseCount(t *testing.T) {
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
 		CheckDestroy:             testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
 		Steps: []resource.TestStep{
@@ -60,14 +58,13 @@ func TestQuotaLeaseCount(t *testing.T) {
 }
 
 func TestQuotaLeaseCountRoot(t *testing.T) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("tf-test")
 	leaseCount := "1001"
 	newLeaseCount := "2001"
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion116)
@@ -87,7 +84,6 @@ func TestQuotaLeaseCountRoot(t *testing.T) {
 }
 
 func TestQuotaLeaseCountWithRole(t *testing.T) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("lease-count")
 	ns := "ns-" + name
 	backend := acctest.RandomWithPrefix("approle")
@@ -97,7 +93,7 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
@@ -131,7 +127,6 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 }
 
 func TestQuotaLeaseCountInheritable(t *testing.T) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("tf-test")
 	ns := "ns-" + name
 	leaseCount := "1001"
@@ -140,7 +135,7 @@ func TestQuotaLeaseCountInheritable(t *testing.T) {
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
@@ -188,7 +183,6 @@ func TestQuotaLeaseCountInheritable(t *testing.T) {
 }
 
 func TestQuotaLeaseCountWithRoleInheritable(t *testing.T) {
-	var p *schema.Provider
 	name := acctest.RandomWithPrefix("lease-count")
 	ns := "ns-" + name
 	backend := acctest.RandomWithPrefix("approle")
@@ -199,7 +193,7 @@ func TestQuotaLeaseCountWithRoleInheritable(t *testing.T) {
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)

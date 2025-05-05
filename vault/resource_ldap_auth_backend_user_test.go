@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strings"
 	"testing"
 
@@ -20,7 +19,6 @@ import (
 )
 
 func TestLDAPAuthBackendUser_basic(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	username := acctest.RandomWithPrefix("tf-test-ldap-user")
@@ -38,7 +36,7 @@ func TestLDAPAuthBackendUser_basic(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend_user.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -57,7 +55,6 @@ func TestLDAPAuthBackendUser_basic(t *testing.T) {
 }
 
 func TestLDAPAuthBackendUser_noGroups(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	username := acctest.RandomWithPrefix("tf-test-ldap-user")
@@ -68,7 +65,7 @@ func TestLDAPAuthBackendUser_noGroups(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend_user.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -87,7 +84,6 @@ func TestLDAPAuthBackendUser_noGroups(t *testing.T) {
 }
 
 func TestLDAPAuthBackendUser_oneGroup(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	username := acctest.RandomWithPrefix("tf-test-ldap-user")
@@ -100,7 +96,7 @@ func TestLDAPAuthBackendUser_oneGroup(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend_user.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
 			{

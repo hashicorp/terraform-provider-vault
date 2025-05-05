@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"strings"
 	"testing"
@@ -20,14 +19,13 @@ import (
 )
 
 func TestLDAPAuthBackend_basic(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -56,14 +54,13 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 }
 
 func TestLDAPAuthBackend_tls(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-tls-path")
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -93,7 +90,6 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 }
 
 func TestLDAPAuthBackend_remount(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-ldap")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-ldap-updated")
@@ -101,7 +97,7 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
@@ -124,7 +120,6 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 }
 
 func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
-	var p *schema.Provider
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-ldap")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-ldap-updated")
@@ -132,7 +127,7 @@ func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
