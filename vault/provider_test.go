@@ -210,8 +210,6 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 }
 
 func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
-	var p *schema.Provider
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -224,7 +222,7 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 	})
 
 	rootProviderResource := &schema.Resource{
-		Schema: p.Schema,
+		Schema: testProvider.Schema,
 	}
 	rootProviderData := rootProviderResource.TestResourceData()
 	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
