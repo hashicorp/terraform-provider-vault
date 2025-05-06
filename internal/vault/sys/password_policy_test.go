@@ -5,10 +5,11 @@ package sys_test
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -111,7 +112,11 @@ func TestAccPasswordPolicy_Muxing(t *testing.T) {
 			{
 				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 				Config:                   testAccPasswordPolicyConfig(policyName, testPolicy),
-				PlanOnly:                 true,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 			// update name to ensure resource can get recreated on name updates
 			{

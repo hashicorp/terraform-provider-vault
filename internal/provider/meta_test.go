@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 	vault_consts "github.com/hashicorp/vault/sdk/helper/consts"
 	"os"

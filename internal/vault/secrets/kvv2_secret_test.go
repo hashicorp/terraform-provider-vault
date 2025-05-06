@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package secrets
+package secrets_test
 
 import (
 	"fmt"
@@ -18,8 +18,8 @@ import (
 
 func TestAccKVV2Secret(t *testing.T) {
 
-	mount := "uswest-kvv2"
-	name := "pgx-root-user"
+	mount := "my-kvv2"
+	name := "pgx-user"
 	resource.UnitTest(t, resource.TestCase{
 		// Ephemeral resources are only available in 1.10 and later
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -50,7 +50,7 @@ ephemeral "vault_kvv2_secret" "db_secret" {
 }
 
 provider "echo" {
-	data = ephemeral.examplecloud_secret.krb.secret_data
+	data = ephemeral.vault_kvv2_secret.db_secret.data
 }
 
 resource "echo" "test_krb" {}
