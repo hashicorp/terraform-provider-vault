@@ -232,6 +232,42 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 	})
 }
 
+// TestAccDatabaseSecretsMount_postgresql_automatedRootRotation tests that Automated
+// Root Rotation parameters are compatible with the DB Secrets Mount resource
+// Note: update steps are not included since DB mounts can only be configured once
+func TestAccDatabaseSecretsMount_postgresql_automatedRootRotation(t *testing.T) {
+	MaybeSkipDBTests(t, dbEnginePostgres)
+
+	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
+	connURL := values[0]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	resourceName := "vault_database_secrets_mount.test"
+	name := acctest.RandomWithPrefix("db")
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretsMount_postgres_automatedRootRotation(name, backend, connURL, "", 10, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.rotation_period", "10"),
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.rotation_window", "0"),
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.rotation_schedule", ""),
+					resource.TestCheckResourceAttr(resourceName, "postgresql.0.disable_automated_rotation", "false"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"engine_count", "postgresql.0.connection_url", "postgresql.0.verify_connection"),
+		},
+	})
+}
+
 func testAccDatabaseSecretsMount_mssql(name, path, pluginName string, parsedURL *url.URL) string {
 	password, _ := parsedURL.User.Password()
 
@@ -323,4 +359,21 @@ resource "vault_database_secret_backend_role" "test2" {
 		name2, parsedURL2.String(), parsedURL2.User.Username(), password2))
 
 	return result
+}
+
+func testAccDatabaseSecretsMount_postgres_automatedRootRotation(name, path, connURL, schedule string, period, window int, disable bool) string {
+	return fmt.Sprintf(`
+resource "vault_database_secrets_mount" "test" {
+  path = "%s"
+
+  postgresql {
+    name              = "%s"
+    connection_url    = "%s"
+    rotation_period   = "%d"
+    rotation_schedule = "%s"
+    rotation_window   = "%d"
+    disable_automated_rotation = %t
+  }
+}
+`, path, name, connURL, period, schedule, window, disable)
 }

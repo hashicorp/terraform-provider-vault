@@ -1,5 +1,19 @@
 ## Unreleased
 
+## 4.8.0 (Apr 23, 2025)
+
+FEATURES:
+
+* Add support for `recursive` search in `data_vault_namespaces` [#2408](https://github.com/hashicorp/terraform-provider-vault/pull/2408)
+* Add support for `subscribe_event_types` in `data_source_policy_document` [#2445](https://github.com/hashicorp/terraform-provider-vault/pull/2445)
+* Add support for `explicit_max_ttl` in `vault_azure_secret_backend_role` resources. Requires Vault 1.18+ ([#2438](https://github.com/hashicorp/terraform-provider-vault/pull/2438)).
+
+BUGS:
+
+* Fix credential validation failures in `vault_azure_access_credentials` data source caused by Azure RBAC propagation delays using `azure_groups` [#2437](https://github.com/hashicorp/terraform-provider-vault/pull/2437)
+
+## 4.7.0 (Mar 12, 2025)
+
 FEATURES:
 
 * Add resource `vault_generic_secret_item` to allow a more granular management of Vault generic secrets ([#2394](https://github.com/hashicorp/terraform-provider-vault/pull/
@@ -12,10 +26,29 @@ FEATURES:
 * Add support for `not_after` in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_role`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2385](https://github.com/hashicorp/terraform-provider-vault/pull/2385)). 
 * Update `vault_pki_secret_backend_config_acme` to support the `max_ttl` field. [#2411](https://github.com/hashicorp/terraform-provider-vault/pull/2411)
 * Add new data source `vault_ssh_secret_backend_sign`. ([#2409](https://github.com/hashicorp/terraform-provider-vault/pull/2409))
+* Add support for `disabled_validations` in `vault_pki_secret_backend_config_cmpv2` [#2412](https://github.com/hashicorp/terraform-provider-vault/pull/2412)
+* Add `credential_type` and `credential_config` to `database_secret_backend_static_role` to support features like rsa keys for Snowflake DB engines with static roles [#2384](https://github.com/hashicorp/terraform-provider-vault/pull/2384)
+* Add support for missing parameters to `vault_pki_secret_backend_root_sign_intermediate`: `not_before_duration`, `skid` and `use_pss` [#2417](https://github.com/hashicorp/terraform-provider-vault/pull/2417)
+* Add support for `use_pss`, `no_store_metadata`, and `serial_number_source` to `vault_pki_secret_backend_role` [#2420](https://github.com/hashicorp/terraform-provider-vault/pull/2420)
+* Add support for Transit `sign` and `verify` endpoints ([#2418](https://github.com/hashicorp/terraform-provider-vault/pull/2418))
+* Add new data source `vault_pki_secret_backend_cert_metadata` and support for `cert_metadata` in `vault_pki_secret_backend_cert` and `vault_pki_secret_backend_sign` [#2422](https://github.com/hashicorp/terraform-provider-vault/pull/2422)
+* Add support for `max_crl_entries` in `vault_pki_secret_backend_crl_config` [#2423](https://github.com/hashicorp/terraform-provider-vault/pull/2423)
+* Add support for new Automated Root Rotation parameters in several plugins. Requires Vault Enterprise 1.19.0+.
+  * AWS Auth/Secrets ([#2414](https://github.com/hashicorp/terraform-provider-vault/pull/2414))
+  * Azure Auth/Secrets ([#2428](https://github.com/hashicorp/terraform-provider-vault/pull/2428))
+  * DB Secrets ([#2414](https://github.com/hashicorp/terraform-provider-vault/pull/2414)).
+  * LDAP Auth/Secrets ([#2428](https://github.com/hashicorp/terraform-provider-vault/pull/2428))
+  * GCP Auth/Secrets ([#2427](https://github.com/hashicorp/terraform-provider-vault/pull/2427))
+* Add new resource `vault_pki_secret_backend_config_auto_tidy` to set PKI automatic tidy configuration [#1934](https://github.com/hashicorp/terraform-provider-vault/pull/1934)
+* Add support for cross-account management of static roles in AWS Secrets: ([#2413](https://github.com/hashicorp/terraform-provider-vault/pull/2413))
 
 BUGS:
 
 * Do not panic on Vault PKI roles without the cn_validations field: ([#2398](https://github.com/hashicorp/terraform-provider-vault/pull/2398))
+
+IMPROVEMENTS:
+
+* Update pki_secret_backend_crl_config to be more resilent to unknown response fields ([#2429](https://github.com/hashicorp/terraform-provider-vault/pull/2429))
 
 ## 4.6.0 (Jan 15, 2025)
 

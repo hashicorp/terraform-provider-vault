@@ -182,6 +182,62 @@ func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
 	})
 }
 
+// TestAccAWSAuthBackendClient_automatedRotation tests that Automated
+// Root Rotation parameters are compatible with the AWS Auth Backend Client
+// resource
+func TestAccAWSAuthBackendClient_automatedRotation(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	resourceType := "vault_aws_auth_backend_client"
+	resourceName := resourceType + ".test"
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "", 10, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			// zero-out rotation_period
+			{
+				Config: testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "*/20 * * * *", 0, 120, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "120"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * *"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				Config:      testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "", 30, 120, true),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+			},
+			// zero-out rotation_schedule and rotation_window
+			{
+				Config: testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "", 30, 0, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
+		},
+	})
+}
+
 func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_client" {
@@ -405,4 +461,21 @@ resource "vault_aws_auth_backend_client" "client" {
   access_key = "AWSACCESSKEY"
   use_sts_region_from_client = %v
 }`, backend, useSTSRegionFromClient)
+}
+
+func testAccAWSAuthBackendClientConfigAutomatedRootRotation(backend, schedule string, period, window int, disable bool) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "test" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "test" {
+  backend = vault_auth_backend.test.path
+  rotation_period = "%d"
+  rotation_schedule = "%s"
+  rotation_window = "%d"
+  disable_automated_rotation = %t
+}`, backend, period, schedule, window, disable)
 }

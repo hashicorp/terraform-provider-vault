@@ -15,12 +15,13 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func gcpSecretBackendResource(name string) *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: gcpSecretBackendCreate,
 		ReadContext:   provider.ReadContextWrapper(gcpSecretBackendRead),
 		UpdateContext: gcpSecretBackendUpdate,
@@ -111,6 +112,11 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 			},
 		},
 	}, false)
+
+	// Add common automated root rotation schema to the resource.
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -131,6 +137,7 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting GCP backend at %q", path)
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 
 	mountConfig := api.MountConfigInput{
 		DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
@@ -167,6 +174,11 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 			consts.FieldIdentityTokenTTL,
 			consts.FieldServiceAccountEmail,
 		)
+	}
+
+	// Parse automated root rotation fields if running Vault Enterprise 1.19 or newer.
+	if useAPIVer119Ent {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
 	for _, k := range fields {
@@ -234,10 +246,15 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		if err != nil {
 			return diag.FromErr(err)
 		}
+
 		fields := []string{
 			consts.FieldIdentityTokenAudience,
 			consts.FieldIdentityTokenTTL,
 			consts.FieldServiceAccountEmail,
+		}
+
+		if provider.IsAPISupported(meta, provider.VaultVersion119) {
+			fields = append(fields, automatedrotationutil.AutomatedRotationFields...)
 		}
 
 		for _, k := range fields {
@@ -258,7 +275,7 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(e)
 	}
 
-	path := d.Id()
+	_ = d.Id()
 	d.Partial(true)
 
 	path, err := util.Remount(d, client, consts.FieldPath, false)
@@ -267,6 +284,7 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	}
 
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 
 	if d.HasChanges(consts.FieldDefaultLeaseTTL, consts.FieldMaxLeaseTTL, consts.FieldIdentityTokenKey) {
 		config := api.MountConfigInput{
@@ -291,6 +309,7 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	if d.HasChange(consts.FieldCredentials) {
 		data[consts.FieldCredentials] = d.Get(consts.FieldCredentials)
 	}
+
 	if useAPIVer117Ent {
 		if d.HasChange(consts.FieldIdentityTokenAudience) {
 			data[consts.FieldIdentityTokenAudience] = d.Get(consts.FieldIdentityTokenAudience)
@@ -302,6 +321,14 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 		if d.HasChange(consts.FieldServiceAccountEmail) {
 			data[consts.FieldServiceAccountEmail] = d.Get(consts.FieldServiceAccountEmail)
+		}
+	}
+
+	if useAPIVer119Ent {
+		if d.HasChanges(consts.FieldRotationSchedule, consts.FieldRotationPeriod,
+			consts.FieldRotationWindow, consts.FieldDisableAutomatedRotation) {
+			// Parse automated root rotation fields if running Vault Enterprise 1.19 or newer.
+			automatedrotationutil.ParseAutomatedRotationFields(d, data)
 		}
 	}
 

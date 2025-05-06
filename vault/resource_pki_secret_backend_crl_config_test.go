@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func getCRLConfigChecks(resourceName string, isUpdate, unifiedCrl bool) resource.TestCheckFunc {
+func getCRLConfigChecks(resourceName string, isUpdate, unifiedCrl bool, maxCrlEntries int) resource.TestCheckFunc {
 	baseChecks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "expiry", "72h"),
 		resource.TestCheckResourceAttr(resourceName, "disable", "true"),
@@ -54,29 +54,36 @@ func getCRLConfigChecks(resourceName string, isUpdate, unifiedCrl bool) resource
 		resource.TestCheckResourceAttr(resourceName, "unified_crl_on_existing_paths", strconv.FormatBool(unifiedCrl)),
 	}
 
+	v119Checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "max_crl_entries", strconv.FormatInt(int64(maxCrlEntries), 10)),
+	}
+
 	return func(state *terraform.State) error {
 		var checks []resource.TestCheckFunc
 		meta := testProvider.Meta().(*provider.ProviderMeta)
-		isVaultVersion113 := meta.IsAPISupported(provider.VaultVersion113)
 		isVaultVersion112 := meta.IsAPISupported(provider.VaultVersion112)
-		switch {
-		case isVaultVersion113:
+		isVaultVersion113 := meta.IsAPISupported(provider.VaultVersion113)
+		isVaultVersion119 := meta.IsAPISupported(provider.VaultVersion119)
+
+		checks = baseChecks
+		if isVaultVersion112 {
+			if !isUpdate {
+				checks = append(checks, v112BaseChecks...)
+			} else {
+				checks = append(checks, v112UpdateChecks...)
+			}
+		}
+		if isVaultVersion113 {
 			if !isUpdate {
 				checks = append(checks, v113BaseChecks...)
-				checks = append(checks, v112BaseChecks...)
 			} else {
 				checks = append(checks, v113UpdateChecks...)
-				checks = append(checks, v112UpdateChecks...)
 			}
-		case isVaultVersion112:
-			if !isUpdate {
-				checks = append(checks, v112BaseChecks...)
-			} else {
-				checks = append(checks, v112UpdateChecks...)
-			}
-		default:
-			checks = baseChecks
 		}
+		if isVaultVersion119 {
+			checks = append(checks, v119Checks...)
+		}
+
 		return resource.ComposeAggregateTestCheckFunc(checks...)(state)
 	}
 }
@@ -97,6 +104,7 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 			"cross_cluster_revocation",
 			"unified_crl",
 			"unified_crl_on_existing_paths",
+			"max_crl_entries",
 		)
 	})
 
@@ -110,14 +118,26 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 			"cross_cluster_revocation",
 			"unified_crl",
 			"unified_crl_on_existing_paths",
+			"max_crl_entries",
 		)
 	})
 
-	// test against vault-1.13 and above
-	t.Run("vault-1.13-and-above", func(t *testing.T) {
+	// test against vault-1.13 up to and including 1.18
+	t.Run("vault-1.13-to-1.18", func(t *testing.T) {
 		setupCRLConfigTest(t, func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
+			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+			"max_crl_entries",
+		)
+	})
+
+	// test against vault-1.19 and above
+	t.Run("vault-1.19-and-above", func(t *testing.T) {
+		setupCRLConfigTest(t, func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		)
 	})
@@ -133,11 +153,11 @@ func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...str
 	steps := []resource.TestStep{
 		{
 			Config: testPkiSecretBackendCrlConfigConfig_defaults(rootPath),
-			Check:  getCRLConfigChecks(resourceName, false, unifiedCrl),
+			Check:  getCRLConfigChecks(resourceName, false, unifiedCrl, 100000),
 		},
 		{
-			Config: testPkiSecretBackendCrlConfigConfig_explicit(rootPath, unifiedCrl),
-			Check:  getCRLConfigChecks(resourceName, true, unifiedCrl),
+			Config: testPkiSecretBackendCrlConfigConfig_explicit(rootPath, unifiedCrl, 100),
+			Check:  getCRLConfigChecks(resourceName, true, unifiedCrl, 100),
 		},
 		testutil.GetImportTestStep(resourceName, false, nil, ignoreImportFields...),
 	}
@@ -190,7 +210,7 @@ resource "vault_pki_secret_backend_crl_config" "test" {
 `, testPkiSecretBackendCrlConfigConfig_base(rootPath))
 }
 
-func testPkiSecretBackendCrlConfigConfig_explicit(rootPath string, unifiedCrl bool) string {
+func testPkiSecretBackendCrlConfigConfig_explicit(rootPath string, unifiedCrl bool, maxCrlEntries int) string {
 	return fmt.Sprintf(`
 %[1]s
 
@@ -207,6 +227,7 @@ resource "vault_pki_secret_backend_crl_config" "test" {
   cross_cluster_revocation  	= %[2]s
   unified_crl					= %[2]s
   unified_crl_on_existing_paths = %[2]s
+  max_crl_entries				= %[3]d
 }
-`, testPkiSecretBackendCrlConfigConfig_base(rootPath), strconv.FormatBool(unifiedCrl))
+`, testPkiSecretBackendCrlConfigConfig_base(rootPath), strconv.FormatBool(unifiedCrl), maxCrlEntries)
 }

@@ -248,6 +248,18 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Description: "The number of bits to use in the signature algorithm.",
 				ForceNew:    true,
 			},
+			consts.FieldSKID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Value for the Subject Key Identifier field\n  (RFC 5280 Section 4.2.1.2). Specified as a string in hex format.",
+				ForceNew:    true,
+			},
+			consts.FieldUsePSS: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Specifies whether or not to use PSS signatures\n  over PKCS#1v1.5 signatures when a RSA-type issuer is used.",
+				ForceNew:    true,
+			},
 			consts.FieldCertificate: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -277,6 +289,14 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The certificate's serial number, hex formatted.",
+			},
+			consts.FieldNotBeforeDuration: {
+				Type:         schema.TypeString,
+				Required:     false,
+				Optional:     true,
+				Description:  "Specifies the duration by which to backdate the NotBefore property.",
+				ForceNew:     true,
+				ValidateFunc: provider.ValidateDuration,
 			},
 			consts.FieldRevoke: {
 				Type:        schema.TypeBool,
@@ -324,12 +344,15 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldStreetAddress,
 		consts.FieldPostalCode,
 		consts.FieldSignatureBits,
+		consts.FieldSKID,
 		consts.FieldNotAfter,
+		consts.FieldNotBeforeDuration,
 	}
 
 	intermediateSignBooleanAPIFields := []string{
 		consts.FieldExcludeCNFromSans,
 		consts.FieldUseCSRValues,
+		consts.FieldUsePSS,
 	}
 
 	intermediateSignStringArrayFields := []string{
@@ -394,14 +417,14 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 	}
 	log.Printf("[DEBUG] Created root sign-intermediate on PKI secret backend %q", backend)
 
-	certFieldsMap := map[string]string{
-		consts.FieldCertificate:  consts.FieldCertificate,
-		consts.FieldIssuingCA:    consts.FieldIssuingCA,
-		consts.FieldSerialNumber: consts.FieldSerialNumber,
+	computedFields := []string{
+		consts.FieldCertificate,
+		consts.FieldIssuingCA,
+		consts.FieldSerialNumber,
 	}
 
-	for k, v := range certFieldsMap {
-		if err := d.Set(k, resp.Data[v]); err != nil {
+	for _, k := range computedFields {
+		if err := d.Set(k, resp.Data[k]); err != nil {
 			return diag.FromErr(err)
 		}
 	}

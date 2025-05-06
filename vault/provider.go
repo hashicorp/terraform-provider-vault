@@ -171,6 +171,10 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_cert_metadata": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendCertMetadataDataSource()),
+			PathInventory: []string{"/pki/cert-metadata/{serial}"},
+		},
 		"vault_pki_secret_backend_config_cmpv2": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCMPV2DataSource()),
 			PathInventory: []string{"/pki/config/cmp"},
@@ -206,6 +210,14 @@ var (
 		"vault_transform_decode": {
 			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
 			PathInventory: []string{"/transform/decode/{role_name}"},
+		},
+		"vault_transit_sign": {
+			Resource:      UpdateSchemaResource(transitSignDataSource()),
+			PathInventory: []string{"/transit/sign/{name}"},
+		},
+		"vault_transit_verify": {
+			Resource:      UpdateSchemaResource(transitVerifyDataSource()),
+			PathInventory: []string{"/transit/verify/{name}"},
 		},
 	}
 
@@ -618,6 +630,10 @@ var (
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),
 			PathInventory: []string{"/pki/config/urls"},
+		},
+		"vault_pki_secret_backend_config_auto_tidy": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigAutoTidyResource()),
+			PathInventory: []string{"/pki/config/auto-tidy"},
 		},
 		"vault_pki_secret_backend_intermediate_cert_request": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIntermediateCertRequestResource()),

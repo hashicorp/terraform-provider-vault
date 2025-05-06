@@ -33,6 +33,8 @@ resource "vault_azure_secret_backend" "azure" {
   client_id               = "11111111-2222-3333-4444-333333333333"
   identity_token_audience = "<TOKEN_AUDIENCE>"
   identity_token_ttl      = "<TOKEN_TTL>"
+  rotation_schedule       = "0 * * * SAT"
+  rotation_window         = 3600
 }
 ```
 
@@ -44,6 +46,8 @@ resource "vault_azure_secret_backend" "azure" {
   client_id               = "11111111-2222-3333-4444-333333333333"
   client_secret           = "12345678901234567890"
   environment             = "AzurePublicCloud"
+  rotation_schedule       = "0 * * * SAT"
+  rotation_window         = 3600
 }
 ```
 
@@ -92,6 +96,21 @@ The following arguments are supported:
   *Available only for Vault Enterprise*
 
 - `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault 1.17+.
+  *Available only for Vault Enterprise*
+
+- `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
+  A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+  *Available only for Vault Enterprise*
+
+- `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+.
+  *Available only for Vault Enterprise*
+
+- `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled token rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+. *Available only for Vault Enterprise*
+
+- `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
   *Available only for Vault Enterprise*
 
 - `disable_remount` - (Optional) If set, opts out of mount migration on path updates.

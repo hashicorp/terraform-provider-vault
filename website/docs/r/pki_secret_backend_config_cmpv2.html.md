@@ -50,6 +50,7 @@ resource "vault_pki_secret_backend_config_cmpv2" "example" {
     "signature_bits", "exclude_cn_from_sans", "ou", "organization", "country",
     "locality", "province", "street_address", "postal_code", "serial_number",
     "use_pss", "key_type", "key_bits", "add_basic_constraints"]
+  disabled_validations = ["DisableMatchingKeyIdValidation"]
 }
 ```
 
@@ -72,8 +73,10 @@ The following arguments are supported:
 * `enable_sentinel_parsing` - (Optional) If set, parse out fields from the provided CSR making them available for Sentinel policies.
 
 * `enabled` - (Optional) Specifies whether CMPv2 is enabled.
-
+  
 * `audit_fields` - (Optional) Fields parsed from the CSR that appear in the audit and can be used by sentinel policies.
+  
+* `disabled_validations` - (Optional) A comma-separated list of validations not to perform on CMPv2 messages.
 
 <a id="nestedatt--authenticators"></a>
 ### Nested Schema for `authenticators`

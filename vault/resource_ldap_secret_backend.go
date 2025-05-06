@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -130,6 +131,10 @@ func ldapSecretBackendResource() *schema.Resource {
 
 	// Add common mount schema to the resource
 	provider.MustAddSchema(resource, getMountSchema("path", "type"))
+
+	// add automated rotation fields to the resource
+	provider.MustAddSchema(resource, provider.GetAutomatedRootRotationSchema())
+
 	return resource
 }
 
@@ -199,6 +204,12 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 		}
 	}
 
+	// get automated rotation fields
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
+	}
+
 	configPath := fmt.Sprintf("%s/config", path)
 	log.Printf("[DEBUG] Writing %q", configPath)
 	if _, err := client.Logical().Write(configPath, data); err != nil {
@@ -244,6 +255,7 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		consts.FieldUserAttr,
 		consts.FieldUserDN,
 	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion116) {
 		fields = append(fields, consts.FieldSkipStaticRoleImportRotation)
 	}
@@ -253,6 +265,13 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 			if err := d.Set(field, val); err != nil {
 				return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
 			}
+		}
+	}
+
+	// add automated rotation fields automatically
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, path); err != nil {
+			return diag.Errorf("error setting automated rotation fields: %s", err)
 		}
 	}
 

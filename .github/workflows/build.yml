@@ -37,7 +37,7 @@ jobs:
           terraform_wrapper: false
 
       - name: Cache go build
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             ~/.cache/go-build
@@ -58,16 +58,16 @@ jobs:
           make test
   acceptance:
     needs: [go-version, build]
-    runs-on: custom-linux-large
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.14.13-ent"
         - "vault-enterprise:1.15.16-ent"
         - "vault-enterprise:1.16.15-ent"
         - "vault-enterprise:1.17.11-ent"
         - "vault-enterprise:1.18.4-ent"
+        - "vault-enterprise:1.19.0-ent"
         - "vault:latest"
     services:
       vault:
@@ -183,7 +183,7 @@ jobs:
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
       - name: Cache go build
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             ~/.cache/go-build

@@ -4,11 +4,13 @@
 package vault
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -20,16 +22,16 @@ const (
 
 func pkiSecretBackendCrlConfigResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendCrlConfigCreate,
-		Read:   provider.ReadWrapper(pkiSecretBackendCrlConfigRead),
-		Update: pkiSecretBackendCrlConfigUpdate,
-		Delete: pkiSecretBackendCrlConfigDelete,
+		CreateContext: pkiSecretBackendCrlConfigCreate,
+		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendCrlConfigRead),
+		UpdateContext: pkiSecretBackendCrlConfigUpdate,
+		DeleteContext: pkiSecretBackendCrlConfigDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The path of the PKI secret backend the resource belongs to.",
@@ -107,59 +109,44 @@ func pkiSecretBackendCrlConfigResource() *schema.Resource {
 					"cluster-local paths.",
 				Computed: true,
 			},
+			consts.FieldMaxCrlEntries: {
+				Type:     schema.TypeInt,
+				Optional: true,
+				Description: "The maximum number of entries a CRL can contain. This option exists to " +
+					"prevent accidental runaway issuance/revocation from overloading Vault. If set " +
+					"to -1, the limit is disabled.",
+				Computed: true,
+			},
 		},
 	}
 }
 
-func pkiSecretBackendCrlConfigCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendCrlConfigCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.Errorf("failed getting client: %v", e)
 	}
 
-	backend := d.Get("backend").(string)
+	backend := d.Get(consts.FieldBackend).(string)
 	path := pkiSecretBackendCrlConfigPath(backend)
-
-	fields := []string{
-		"expiry",
-		"disable",
-	}
-
-	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		fields = append(fields, []string{
-			"ocsp_disable",
-			"ocsp_expiry",
-			"auto_rebuild",
-			"auto_rebuild_grace_period",
-			"enable_delta",
-			"delta_rebuild_interval",
-		}...)
-	}
-
-	if provider.IsAPISupported(meta, provider.VaultVersion113) {
-		fields = append(fields, []string{
-			"cross_cluster_revocation",
-			"unified_crl",
-			"unified_crl_on_existing_paths",
-		}...)
-	}
+	fields := buildConfigCRLFields(meta)
 
 	data := util.GetAPIRequestDataWithSliceOk(d, fields)
 	log.Printf("[DEBUG] Creating CRL config on PKI secret backend %q", backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating CRL config PKI secret backend %q: %s", backend, err)
+		return diag.Errorf("error creating CRL config PKI secret backend %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Created CRL config on PKI secret backend %q", backend)
 
 	d.SetId(path)
-	return pkiSecretBackendCrlConfigRead(d, meta)
+	return pkiSecretBackendCrlConfigRead(ctx, d, meta)
 }
 
-func pkiSecretBackendCrlConfigRead(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendCrlConfigRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.Errorf("failed getting client: %v", e)
 	}
 
 	path := d.Id()
@@ -168,35 +155,59 @@ func pkiSecretBackendCrlConfigRead(d *schema.ResourceData, meta interface{}) err
 	if err != nil {
 		log.Printf("[WARN] Removing path %q its ID is invalid, err=%s", path, err)
 		d.SetId("")
-		return fmt.Errorf("invalid path ID %q: %w", path, err)
+		return diag.Errorf("invalid path ID %q: %v", path, err)
 	}
 
 	if config == nil {
 		d.SetId("")
-		return nil
+		return diag.Errorf("received nil response from %q", path)
 	}
 
-	if _, ok := d.GetOk("backend"); !ok {
+	if _, ok := d.GetOk(consts.FieldBackend); !ok {
 		// ensure that the backend is set on import
-		if err := d.Set("backend", strings.TrimRight(path, crlConfigPathBase)); err != nil {
-			return err
+		if err := d.Set(consts.FieldBackend, strings.TrimRight(path, crlConfigPathBase)); err != nil {
+			return diag.Errorf("failed setting field %s: %v", consts.FieldBackend, err)
 		}
 	}
 
-	if err := util.SetResourceData(d, config.Data); err != nil {
-		return err
+	for _, field := range buildConfigCRLFields(meta) {
+		if err := d.Set(field, config.Data[field]); err != nil {
+			return diag.Errorf("failed setting field %s: %v", field, err)
+		}
 	}
 
 	return nil
 }
 
-func pkiSecretBackendCrlConfigUpdate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendCrlConfigUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.Errorf("failed getting client: %v", e)
 	}
 
 	path := d.Id()
+	fields := buildConfigCRLFields(meta)
+
+	data := util.GetAPIRequestDataWithSliceOk(d, fields)
+	log.Printf("[DEBUG] Updating CRL config on PKI secret path %q", path)
+	_, err := client.Logical().Write(path, data)
+	if err != nil {
+		return diag.Errorf("error updating CRL config for PKI secret path %q: %s", path, err)
+	}
+	log.Printf("[DEBUG] Updated CRL config on PKI secret path %q", path)
+
+	return pkiSecretBackendCrlConfigRead(ctx, d, meta)
+}
+
+func pkiSecretBackendCrlConfigDelete(_ context.Context, _ *schema.ResourceData, _ interface{}) diag.Diagnostics {
+	return nil
+}
+
+func pkiSecretBackendCrlConfigPath(backend string) string {
+	return strings.Trim(backend, "/") + crlConfigPathBase
+}
+
+func buildConfigCRLFields(meta interface{}) []string {
 	fields := []string{
 		"expiry",
 		"disable",
@@ -221,21 +232,11 @@ func pkiSecretBackendCrlConfigUpdate(d *schema.ResourceData, meta interface{}) e
 		}...)
 	}
 
-	data := util.GetAPIRequestDataWithSliceOk(d, fields)
-	log.Printf("[DEBUG] Updating CRL config on PKI secret path %q", path)
-	_, err := client.Logical().Write(path, data)
-	if err != nil {
-		return fmt.Errorf("error updating CRL config for PKI secret path %q: %s", path, err)
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		fields = append(fields, []string{
+			consts.FieldMaxCrlEntries,
+		}...)
 	}
-	log.Printf("[DEBUG] Updated CRL config on PKI secret path %q", path)
 
-	return pkiSecretBackendCrlConfigRead(d, meta)
-}
-
-func pkiSecretBackendCrlConfigDelete(d *schema.ResourceData, meta interface{}) error {
-	return nil
-}
-
-func pkiSecretBackendCrlConfigPath(backend string) string {
-	return strings.Trim(backend, "/") + crlConfigPathBase
+	return fields
 }
