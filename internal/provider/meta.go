@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	terraformplugintesting "github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 	config "github.com/hashicorp/vault/api/cliconfig"
 	"k8s.io/utils/pointer"
@@ -468,6 +469,11 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 			ns = v.(string)
 		}
 	case *terraform.InstanceState:
+		ns = v.Attributes[consts.FieldNamespace]
+
+	// Allows tests that use new terraform-plugin-testing
+	// to successfully get a client. Only used in tests
+	case *terraformplugintesting.InstanceState:
 		ns = v.Attributes[consts.FieldNamespace]
 	default:
 		return nil, fmt.Errorf("GetClient() called with unsupported type %T", v)
