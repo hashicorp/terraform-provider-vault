@@ -110,7 +110,7 @@ resource "%s" "test" {
   algorithm               = "SHA5120"
 }
 `, mfa.ResourceNameTOTP),
-				ExpectError: regexp.MustCompile(`Error running pre-apply refresh.*`),
+				ExpectError: regexp.MustCompile(`Error: Unsupported value.*`),
 			},
 			{
 				Config: fmt.Sprintf(`
