@@ -479,6 +479,7 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 
 	// Allows tests that use new terraform-plugin-testing
 	// to successfully get a client. Only used in tests
+	// TODO unify the GetClient implementations between providers and directly pass in namespace
 	case *terraformplugintesting.InstanceState:
 		ns = v.Attributes[consts.FieldNamespace]
 	default:
