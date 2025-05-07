@@ -79,8 +79,8 @@ func (l *AuthLoginCert) LoginPath() string {
 
 func (l *AuthLoginCert) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
 	if err := l.AuthLoginCommon.Init(d, authField,
-		func(data *schema.ResourceData) error {
-			return l.checkRequiredFields(d, consts.FieldCertFile, consts.FieldKeyFile)
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.checkRequiredFields(d, params, consts.FieldCertFile, consts.FieldKeyFile)
 		},
 	); err != nil {
 		return nil, err

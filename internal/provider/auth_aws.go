@@ -15,6 +15,19 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+const (
+	envVarAWSAccessKeyID           = "AWS_ACCESS_KEY_ID"
+	envVarAWSSecretAccessKey       = "AWS_SECRET_ACCESS_KEY"
+	envVarAWSSessionToken          = "AWS_SESSION_TOKEN"
+	envVarAWSProfile               = "AWS_PROFILE"
+	envVarAWSSharedCredentialsFile = "AWS_SHARED_CREDENTIALS_FILE"
+	envVarAWSWebIdentityTokenFile  = "AWS_WEB_IDENTITY_TOKEN_FILE"
+	envVarAWSRoleARN               = "AWS_ROLE_ARN"
+	envVarAWSRoleSessionName       = "AWS_ROLE_SESSION_NAME"
+	envVarAWSRegion                = "AWS_REGION"
+	envVarAWSDefaultRegion         = "AWS_DEFAULT_REGION"
+)
+
 func init() {
 	field := consts.FieldAuthLoginAWS
 	if err := globalAuthLoginRegistry.Register(field,
@@ -49,39 +62,33 @@ func GetAWSLoginSchemaResource(authField string) *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: `The AWS access key ID.`,
-				DefaultFunc: schema.EnvDefaultFunc("AWS_ACCESS_KEY_ID", nil),
 			},
 			consts.FieldAWSSecretAccessKey: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  `The AWS secret access key.`,
-				DefaultFunc:  schema.EnvDefaultFunc("AWS_SECRET_ACCESS_KEY", nil),
 				RequiredWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldAWSAccessKeyID)},
 			},
 			consts.FieldAWSSessionToken: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: `The AWS session token.`,
-				DefaultFunc: schema.EnvDefaultFunc("AWS_SESSION_TOKEN", nil),
 			},
 			consts.FieldAWSProfile: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: `The name of the AWS profile.`,
-				DefaultFunc: schema.EnvDefaultFunc("AWS_PROFILE", nil),
 			},
 			consts.FieldAWSSharedCredentialsFile: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: `Path to the AWS shared credentials file.`,
-				DefaultFunc: schema.EnvDefaultFunc("AWS_SHARED_CREDENTIALS_FILE", nil),
 			},
 			consts.FieldAWSWebIdentityTokenFile: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: `Path to the file containing an OAuth 2.0 access token or OpenID ` +
 					`Connect ID token.`,
-				DefaultFunc: schema.EnvDefaultFunc("AWS_WEB_IDENTITY_TOKEN_FILE", nil),
 			},
 			// STS assume role fields
 			consts.FieldAWSRoleARN: {
@@ -89,26 +96,17 @@ func GetAWSLoginSchemaResource(authField string) *schema.Resource {
 				Optional: true,
 				Description: `The ARN of the AWS Role to assume.` +
 					`Used during STS AssumeRole`,
-				DefaultFunc: schema.EnvDefaultFunc("AWS_ROLE_ARN", nil),
 			},
 			consts.FieldAWSRoleSessionName: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: `Specifies the name to attach to the AWS role session. ` +
 					`Used during STS AssumeRole`,
-				DefaultFunc: schema.EnvDefaultFunc("AWS_ROLE_SESSION_NAME", nil),
 			},
 			consts.FieldAWSRegion: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: `The AWS region.`,
-				DefaultFunc: schema.MultiEnvDefaultFunc(
-					[]string{
-						"AWS_REGION",
-						"AWS_DEFAULT_REGION",
-					},
-					nil,
-				),
 			},
 			consts.FieldAWSSTSEndpoint: {
 				Type:             schema.TypeString,
@@ -140,9 +138,13 @@ type AuthLoginAWS struct {
 }
 
 func (l *AuthLoginAWS) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	defaults := l.getDefaults()
 	if err := l.AuthLoginCommon.Init(d, authField,
-		func(data *schema.ResourceData) error {
-			return l.checkRequiredFields(d, consts.FieldRole)
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.setDefaultFields(d, defaults, params)
+		},
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.checkRequiredFields(d, params, consts.FieldRole)
 		},
 	); err != nil {
 		return nil, err
@@ -191,6 +193,58 @@ func (l *AuthLoginAWS) Login(client *api.Client) (*api.Secret, error) {
 	}
 
 	return l.login(client, l.LoginPath(), params)
+}
+
+func (l *AuthLoginAWS) getDefaults() authDefaults {
+	defaults := authDefaults{
+		{
+			field:      consts.FieldAWSAccessKeyID,
+			envVars:    []string{envVarAWSAccessKeyID},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldAWSSecretAccessKey,
+			envVars:    []string{envVarAWSSecretAccessKey},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldAWSSessionToken,
+			envVars:    []string{envVarAWSSessionToken},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldAWSProfile,
+			envVars:    []string{envVarAWSProfile},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldAWSSharedCredentialsFile,
+			envVars:    []string{envVarAWSSharedCredentialsFile},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldAWSWebIdentityTokenFile,
+			envVars:    []string{envVarAWSWebIdentityTokenFile},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldAWSRoleARN,
+			envVars:    []string{envVarAWSRoleARN},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldAWSRoleSessionName,
+			envVars:    []string{envVarAWSRoleSessionName},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldAWSRegion,
+			envVars:    []string{envVarAWSRegion, envVarAWSDefaultRegion},
+			defaultVal: "",
+		},
+	}
+
+	return defaults
 }
 
 func (l *AuthLoginAWS) getLoginData(logger hclog.Logger) (map[string]interface{}, error) {

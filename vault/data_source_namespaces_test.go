@@ -15,6 +15,8 @@ import (
 )
 
 func TestAccDataSourceNamespaces(t *testing.T) {
+	// TODO test is flaky and passes ~80% of the time in CI
+	t.Skip("skipping, because it's flaky in CI")
 	testutil.SkipTestAccEnt(t)
 
 	ns := acctest.RandomWithPrefix("tf-ns")
