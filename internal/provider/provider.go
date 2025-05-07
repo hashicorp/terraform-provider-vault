@@ -178,6 +178,26 @@ func NewProvider(
 					"and the provider namespace is not configured, use the token namespace " +
 					"as the root namespace for all resources.",
 			},
+			consts.FieldClientAuth: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Client authentication credentials.",
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						consts.FieldCertFile: {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Path to a file containing the client certificate.",
+						},
+						consts.FieldKeyFile: {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Path to a file containing the private key that the certificate was issued for.",
+						},
+					},
+				},
+			},
 		},
 		ConfigureFunc:  NewProviderMeta,
 		DataSourcesMap: dataSourcesMap,

@@ -207,6 +207,12 @@ func (p *ProviderMeta) setClient() error {
 		TLSServerName: GetResourceDataStr(d, consts.FieldTLSServerName, api.EnvVaultTLSServerName, ""),
 	}
 
+	if _, ok := d.GetOk(consts.FieldClientAuth); ok {
+		prefix := fmt.Sprintf("%s.0.", consts.FieldClientAuth)
+		tlsConfig.ClientCert = GetResourceDataStr(d, prefix+consts.FieldCertFile, api.EnvVaultClientCert, "")
+		tlsConfig.ClientKey = GetResourceDataStr(d, prefix+consts.FieldKeyFile, api.EnvVaultClientKey, "")
+	}
+
 	err := clientConfig.ConfigureTLS(tlsConfig)
 	if err != nil {
 		return fmt.Errorf("failed to configure TLS for Vault API: %s", err)

@@ -104,7 +104,7 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 	}
 	path := r.path(data.Name.ValueString())
 	// vault returns a nil response on success
-	_, err = client.Logical().Write(path, vaultRequest)
+	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			errutil.VaultCreateErr(err),
@@ -142,7 +142,7 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 	// read the name from the id field to support the import command
 	name := data.ID.ValueString()
 	path := r.path(name)
-	policyResp, err := client.Logical().Read(path)
+	policyResp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			errutil.VaultReadErr(err),
@@ -200,7 +200,7 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 	}
 	path := r.path(data.Name.ValueString())
 	// vault returns a nil response on success
-	_, err = client.Logical().Write(path, vaultRequest)
+	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			errutil.VaultUpdateErr(err),
@@ -237,7 +237,7 @@ func (r *PasswordPolicyResource) Delete(ctx context.Context, req resource.Delete
 
 	path := r.path(data.Name.ValueString())
 
-	_, err = client.Logical().Delete(path)
+	_, err = client.Logical().DeleteWithContext(ctx, path)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			errutil.VaultDeleteErr(err),
