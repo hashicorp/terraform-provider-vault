@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	terraformplugintesting "github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 	config "github.com/hashicorp/vault/api/cliconfig"
 	"k8s.io/utils/pointer"
@@ -475,6 +476,12 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 		}
 	case *terraform.InstanceState:
 		ns = v.Attributes[consts.FieldNamespace]
+
+	// Allows tests that use new terraform-plugin-testing
+	// to successfully get a client. Only used in tests
+	// TODO unify the GetClient implementations between providers and directly pass in namespace
+	case *terraformplugintesting.InstanceState:
+		ns = v.Attributes[consts.FieldNamespace]
 	default:
 		return nil, fmt.Errorf("GetClient() called with unsupported type %T", v)
 	}
@@ -652,6 +659,16 @@ func GetResourceDataBool(d *schema.ResourceData, field, env string, dv bool) boo
 	// we only return this value if it is non-nil, else we return the default
 
 	rawConfig := d.GetRawConfig()
+
+	// Note: the following block is only encountered when setting up the testProvider
+	// RawConfig will only be available during a terraform plan/apply execution
+	// this value will be nil during PreChecks and Destroy operations in tests
+	// the testProvider in those cases is set up using default values
+	if rawConfig.IsNull() {
+		return dv
+	}
+
+	// If RawConfig exists, continue reading values from resource data
 	rawVal := rawConfig.GetAttr(field)
 
 	// We don't care about the underlying value, just detecting if the config value is null (unset) or not.

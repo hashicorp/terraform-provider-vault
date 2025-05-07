@@ -4,9 +4,10 @@
 package vault
 
 import (
+	"context"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -18,7 +19,7 @@ import (
 func TestAccDataSourceRaftAutoPilotState(t *testing.T) {
 	ds := "data.vault_raft_autopilot_state.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
 			testutil.TestEntPreCheck(t)

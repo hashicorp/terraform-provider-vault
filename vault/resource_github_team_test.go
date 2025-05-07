@@ -4,15 +4,16 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -23,9 +24,9 @@ func TestAccGithubTeam_basic(t *testing.T) {
 	resName := "vault_github_team.team"
 	team := "my-team-slugified"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccGithubTeamCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "security"}),
@@ -55,9 +56,9 @@ func TestAccGithubTeam_teamConfigError(t *testing.T) {
 	backend := acctest.RandomWithPrefix("github")
 	team := "Team With Spaces"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccGithubTeamCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccGithubTeamConfig_basic(backend, team, []string{}),
@@ -72,8 +73,8 @@ func TestAccGithubTeam_importBasic(t *testing.T) {
 	resName := "vault_github_team.team"
 	team := "import-team"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "developer"}),

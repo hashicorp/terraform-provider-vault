@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"io/ioutil"
 	"os"
 	"path"
@@ -13,10 +14,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/go-homedir"
 
@@ -62,8 +63,9 @@ func TestProvider(t *testing.T) {
 }
 
 var (
-	testProvider  *schema.Provider
-	testProviders map[string]*schema.Provider
+	testProvider *schema.Provider
+
+	testProviderMutex sync.Mutex
 )
 
 func init() {
@@ -79,29 +81,26 @@ func initTestProvider() {
 			}
 
 			if testProvider == nil {
-				testProvider = Provider()
-				testProviders = map[string]*schema.Provider{
-					providerName: testProvider,
-				}
-				rs := &schema.Resource{
-					Schema: testProvider.Schema,
-				}
-
-				m, err := testProvider.ConfigureFunc(rs.TestResourceData())
+				_, p, err := ProtoV5ProviderServerFactory(context.Background())
 				if err != nil {
 					panic(err)
 				}
+
+				// no need to lock here since sync.Once performs a lock
+				testProvider = p.SchemaProvider()
+				rootProviderResource := &schema.Resource{
+					Schema: p.SchemaProvider().Schema,
+				}
+				rootProviderData := rootProviderResource.TestResourceData()
+				m, err := provider.NewProviderMeta(rootProviderData)
+				if err != nil {
+					panic(err)
+				}
+
 				testProvider.SetMeta(m)
 			}
 		},
 	)
-}
-
-var providerFactories = map[string]func() (*schema.Provider, error){
-	providerName: func() (*schema.Provider, error) {
-		initTestProvider()
-		return testProvider, nil
-	},
 }
 
 // A basic token helper script.
@@ -119,14 +118,27 @@ echo "helper-token"
 //
 // Any tests that use this function will serve as a smoketest to verify the
 // provider schemas match 1-1 so that we may catch runtime errors.
-func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T, v **schema.Provider) map[string]func() (tfprotov5.ProviderServer, error) {
+func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T) map[string]func() (tfprotov5.ProviderServer, error) {
 	providerServerFactory, p, err := ProtoV5ProviderServerFactory(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	providerServer := providerServerFactory()
-	*v = p.SchemaProvider()
+
+	testProviderMutex.Lock()
+	testProvider = p.SchemaProvider()
+	rootProviderResource := &schema.Resource{
+		Schema: p.SchemaProvider().Schema,
+	}
+	rootProviderData := rootProviderResource.TestResourceData()
+	m, err := provider.NewProviderMeta(rootProviderData)
+	if err != nil {
+		panic(err)
+	}
+
+	testProvider.SetMeta(m)
+	testProviderMutex.Unlock()
 
 	return map[string]func() (tfprotov5.ProviderServer, error){
 		providerName: func() (tfprotov5.ProviderServer, error) {
@@ -147,7 +159,6 @@ func testAccProtoV5ProviderFactories(ctx context.Context, t *testing.T, v **sche
 // to follow to verify that switching from SDKv2 to the Framework has not
 // affected your provider's behavior.
 func TestAccMuxServer(t *testing.T) {
-	var p *schema.Provider
 	resource.Test(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
@@ -162,19 +173,22 @@ func TestAccMuxServer(t *testing.T) {
 				Check:  testResourceApproleLoginCheckAttrs(t),
 			},
 			{
-				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 				Config:                   testResourceApproleConfig_basic(),
-				PlanOnly:                 true,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 		},
 	})
 }
 
 func TestAccAuthLoginProviderConfigure(t *testing.T) {
-	var p *schema.Provider
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceApproleConfig_basic(),
@@ -184,7 +198,7 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 	})
 
 	rootProviderResource := &schema.Resource{
-		Schema: p.Schema,
+		Schema: testProvider.Schema,
 	}
 	rootProviderData := rootProviderResource.TestResourceData()
 	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
@@ -193,11 +207,9 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 }
 
 func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
-	var p *schema.Provider
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testHeaderConfig("auth", "123"),
@@ -207,7 +219,7 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 	})
 
 	rootProviderResource := &schema.Resource{
-		Schema: p.Schema,
+		Schema: testProvider.Schema,
 	}
 	rootProviderData := rootProviderResource.TestResourceData()
 	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
@@ -608,11 +620,10 @@ func TestAccTokenName(t *testing.T) {
 		},
 	}
 
-	var p *schema.Provider
 	for _, test := range tests {
 		t.Run(test.WantTokenName, func(t *testing.T) {
 			resource.Test(t, resource.TestCase{
-				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 				PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
@@ -672,11 +683,10 @@ func TestAccChildToken(t *testing.T) {
 		},
 	}
 
-	var p *schema.Provider
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			resource.Test(t, resource.TestCase{
-				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t, &p),
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 				PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
