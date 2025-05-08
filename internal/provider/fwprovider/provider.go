@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
+	secrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -17,6 +19,8 @@ import (
 	sdkv2provider "github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
 )
+
+var _ provider.ProviderWithEphemeralResources = &fwprovider{}
 
 // Ensure the implementation satisfies the provider.Provider interface
 var _ provider.Provider = &fwprovider{}
@@ -206,6 +210,7 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 	}
 	resp.DataSourceData = v
 	resp.ResourceData = v
+	resp.EphemeralResourceData = v
 }
 
 // Resources returns a slice of functions to instantiate each Resource
@@ -217,6 +222,13 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		sys.NewPasswordPolicyResource,
 	}
+}
+
+func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
+	return []func() ephemeral.EphemeralResource{
+		secrets.NewKVV2EphemeralSecretResource,
+	}
+
 }
 
 // DataSources returns a slice of functions to instantiate each DataSource
