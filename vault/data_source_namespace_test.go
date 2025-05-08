@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -23,9 +24,9 @@ func TestAccDataSourceNamespace(t *testing.T) {
 	pathChild := acctest.RandomWithPrefix("tf-child")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testNamespaceDestroy(path),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testNamespaceDestroy(path),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceNamespaceConfig_nested(path, pathChild),
@@ -43,7 +44,7 @@ func TestAccDataSourceNamespace(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
@@ -63,9 +64,9 @@ func TestAccDataSourceNamespace(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testNamespaceDestroy(path),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testNamespaceDestroy(path),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceNamespaceConfig_current(path),

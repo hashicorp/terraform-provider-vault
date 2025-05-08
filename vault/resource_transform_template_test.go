@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -19,9 +20,9 @@ func TestAccTransformTemplate(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testTransformTemplateDestroy,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testTransformTemplateDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testTransformTemplate_basicConfig(path, "regex",

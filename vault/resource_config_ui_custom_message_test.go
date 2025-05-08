@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"testing"
@@ -50,7 +51,7 @@ func TestAccConfigUICustomMessage(t *testing.T) {
 	resourceName := "vault_config_ui_custom_message.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)

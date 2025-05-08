@@ -4,7 +4,9 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -19,9 +21,9 @@ func TestAccSSHSecretBackendCA_basic(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSSHSecretBackendCADestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigGenerated(backend),
@@ -35,9 +37,9 @@ func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSSHSecretBackendCADestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigProvided(backend),
@@ -50,8 +52,8 @@ func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 func TestAccSSHSecretBackend_import(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigGenerated(backend),
@@ -87,9 +89,13 @@ func TestAccSSHSecretBackendCA_Upgrade_key_type(t *testing.T) {
 				Check:  testAccSSHSecretBackendCACheck(backend),
 			},
 			{
-				ProviderFactories: providerFactories,
-				Config:            testAccSSHSecretBackendCAConfigGenerated(backend),
-				PlanOnly:          true,
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+				Config:                   testAccSSHSecretBackendCAConfigGenerated(backend),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 		},
 	})

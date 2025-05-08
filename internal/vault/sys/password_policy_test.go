@@ -5,7 +5,6 @@ package sys_test
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -97,8 +96,8 @@ func TestAccPasswordPolicy_Muxing(t *testing.T) {
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"vault": {
-						// 4.7.0 is not multiplexed
-						VersionConstraint: "4.7.0",
+						// 4.8.0 is not multiplexed
+						VersionConstraint: "4.8.0",
 						Source:            "hashicorp/vault",
 					},
 				},
@@ -112,11 +111,7 @@ func TestAccPasswordPolicy_Muxing(t *testing.T) {
 			{
 				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 				Config:                   testAccPasswordPolicyConfig(policyName, testPolicy),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
+				PlanOnly:                 true,
 			},
 			// update name to ensure resource can get recreated on name updates
 			{

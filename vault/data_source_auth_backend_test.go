@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -17,8 +18,8 @@ import (
 func TestDataSourceAuthBackend(t *testing.T) {
 	path := acctest.RandomWithPrefix("foo")
 	r.Test(t, r.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testDataSourceAuthBackendBasic_config,

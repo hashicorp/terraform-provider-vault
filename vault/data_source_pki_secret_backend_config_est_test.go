@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -18,7 +19,7 @@ func TestAccDataSourcePKISecretConfigEst(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-backend")
 	dataName := "data.vault_pki_secret_backend_config_est.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)

@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -31,8 +32,8 @@ func TestAccAWSAuthBackendSTSRole_withExternalID(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, arn, externalID),
@@ -68,9 +69,9 @@ func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
 	updatedArn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendSTSRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendSTSRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendSTSRoleConfig(backend, accountID, arn, ""),

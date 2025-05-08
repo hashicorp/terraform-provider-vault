@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -24,9 +25,9 @@ func TestAccIdentityGroupAlias(t *testing.T) {
 	nameGithubA := "vault_auth_backend.githubA"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityGroupAliasDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityGroupAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupAliasConfig(group),
@@ -52,9 +53,9 @@ func TestAccIdentityGroupAliasUpdate(t *testing.T) {
 	aliasB := acctest.RandomWithPrefix("B-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityGroupAliasDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityGroupAliasDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupAliasConfigUpdate(suffix, aliasA, nameGithubA, nameGroupA),

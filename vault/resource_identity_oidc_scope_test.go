@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -25,9 +26,9 @@ func TestAccIdentityOIDCScope(t *testing.T) {
 	resourceName := "vault_identity_oidc_scope.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckOIDCScopeDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckOIDCScopeDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOIDCScopeConfig_basic(name),

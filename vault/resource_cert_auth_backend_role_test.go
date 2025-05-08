@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -84,9 +85,9 @@ func TestCertAuthBackend(t *testing.T) {
 
 	resourceName := "vault_cert_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testCertAuthBackendDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCertAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, allowedNames, allowedOrgUnits),
@@ -130,8 +131,8 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
 		},
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testCertAuthBackendDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCertAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testCertAuthBackendConfig_OCSP_default(backend, name),

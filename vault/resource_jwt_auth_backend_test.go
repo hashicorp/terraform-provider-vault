@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -89,10 +90,10 @@ func TestAccJWTAuthBackend(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 		resource.Test(t, resource.TestCase{
-			PreCheck:          func() { testutil.TestAccPreCheck(t) },
-			ProviderFactories: providerFactories,
-			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:             getSteps(path, ""),
+			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:                    getSteps(path, ""),
 		})
 	},
 	)
@@ -102,10 +103,10 @@ func TestAccJWTAuthBackend(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("jwt")
 		resource.Test(t, resource.TestCase{
-			PreCheck:          func() { testutil.TestEntPreCheck(t) },
-			ProviderFactories: providerFactories,
-			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:             getSteps(path, ns),
+			PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:                    getSteps(path, ns),
 		})
 	},
 	)
@@ -143,10 +144,10 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 		resource.Test(t, resource.TestCase{
-			PreCheck:          func() { testutil.TestAccPreCheck(t) },
-			ProviderFactories: providerFactories,
-			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:             getSteps(path, ""),
+			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:                    getSteps(path, ""),
 		})
 	},
 	)
@@ -156,10 +157,10 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("jwt")
 		resource.Test(t, resource.TestCase{
-			PreCheck:          func() { testutil.TestEntPreCheck(t) },
-			ProviderFactories: providerFactories,
-			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:             getSteps(path, ns),
+			PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:                    getSteps(path, ns),
 		})
 	},
 	)
@@ -202,10 +203,10 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 		t.Parallel()
 		path := acctest.RandomWithPrefix("oidc")
 		resource.Test(t, resource.TestCase{
-			PreCheck:          func() { testutil.TestAccPreCheck(t) },
-			ProviderFactories: providerFactories,
-			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:             getSteps(path, ""),
+			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:                    getSteps(path, ""),
 		})
 	},
 	)
@@ -215,10 +216,10 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("oidc")
 		resource.Test(t, resource.TestCase{
-			PreCheck:          func() { testutil.TestEntPreCheck(t) },
-			ProviderFactories: providerFactories,
-			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:             getSteps(path, ns),
+			PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:                    getSteps(path, ns),
 		})
 	},
 	)
@@ -229,8 +230,8 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
 	invalidPath := path + consts.PathDelim
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config:  testAccJWTAuthBackendConfig(invalidPath, "", false),
@@ -263,8 +264,8 @@ func TestJWTAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_jwt_auth_backend.jwt"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTAuthBackendConfig(path, "", false),
@@ -415,8 +416,8 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 	t.Parallel()
 	path := acctest.RandomWithPrefix("jwt")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
@@ -549,8 +550,8 @@ func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
 func TestAccJWTAuthBackendProviderConfig_negative(t *testing.T) {
 	t.Skip(true)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "oidc" {

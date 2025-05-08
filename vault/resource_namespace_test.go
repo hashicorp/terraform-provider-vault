@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -44,9 +45,9 @@ func TestAccNamespace(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testNamespaceDestroy(namespacePath),
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testNamespaceDestroy(namespacePath),
 		Steps: []resource.TestStep{
 			{
 				Config: testNestedNamespaces(namespacePath, 3),

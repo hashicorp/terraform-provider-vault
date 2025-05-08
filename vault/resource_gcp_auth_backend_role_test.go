@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -78,9 +79,9 @@ func testGCPAuthBackendRole_basic(t *testing.T, backend string) {
 
 	resourceName := "vault_gcp_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testGCPAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendRoleConfig_basic(backend, name, serviceAccount, projectId),
@@ -116,9 +117,9 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 
 	resourceName := "vault_gcp_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testGCPAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendRoleConfig_gce(backend, name, projectId),

@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -24,9 +25,9 @@ func TestQuotaLeaseCount(t *testing.T) {
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy:      testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		CheckDestroy:             testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
 		Steps: []resource.TestStep{
 			{
 				Config: testQuotaLeaseCountConfig(ns, name, "", leaseCount),
@@ -63,7 +64,7 @@ func TestQuotaLeaseCountRoot(t *testing.T) {
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion116)
@@ -92,7 +93,7 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
@@ -134,7 +135,7 @@ func TestQuotaLeaseCountInheritable(t *testing.T) {
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
@@ -192,7 +193,7 @@ func TestQuotaLeaseCountWithRoleInheritable(t *testing.T) {
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)

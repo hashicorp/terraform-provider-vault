@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -24,9 +25,9 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-role")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccKubernetesSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccKubernetesSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testKubernetesSecretBackendRole_initialConfig(backend, name),

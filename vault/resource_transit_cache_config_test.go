@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,9 +23,9 @@ func TestAccTransitCacheConfig(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-cache-config")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccTransitCacheConfigCheckDestroyed,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccTransitCacheConfigCheckDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTransitCacheConfig(name, 600),

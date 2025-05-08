@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -24,9 +25,9 @@ func TestAccOktaAuthBackendGroup_basic(t *testing.T) {
 	resourceName := "vault_okta_auth_backend_group.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccOktaAuthBackendGroup_Destroyed(path, "foo"),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccOktaAuthBackendGroup_Destroyed(path, "foo"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthGroupConfig_basic(path, organization),
@@ -56,9 +57,9 @@ func TestAccOktaAuthBackendGroup_specialChar(t *testing.T) {
 	resourceName := "vault_okta_auth_backend_group.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccOktaAuthBackendGroup_Destroyed(path, "foo/bar"),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccOktaAuthBackendGroup_Destroyed(path, "foo/bar"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthGroupConfig_specialChar(path, organization),

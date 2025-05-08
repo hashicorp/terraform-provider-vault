@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -20,9 +21,9 @@ func TestAccTokenAuthBackendRole(t *testing.T) {
 
 	resourceName := "vault_token_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckTokenAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTokenAuthBackendRoleConfig(role),
@@ -43,9 +44,9 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 
 	resourceName := "vault_token_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckTokenAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTokenAuthBackendRoleConfig(role),

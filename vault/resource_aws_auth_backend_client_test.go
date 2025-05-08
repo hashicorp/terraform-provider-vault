@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -21,9 +22,9 @@ import (
 func TestAccAWSAuthBackendClient_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -42,9 +43,9 @@ func TestAccAWSAuthBackendClient_import(t *testing.T) {
 func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -61,9 +62,9 @@ func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws") + "/nested"
 	resource.ParallelTest(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -80,9 +81,9 @@ func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basicWithoutSecretKey(backend),
@@ -108,7 +109,7 @@ func TestAccAWSAuthBackend_wif(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resourceName := "vault_aws_auth_backend_client.client"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
@@ -141,9 +142,9 @@ func TestAccAWSAuthBackend_wif(t *testing.T) {
 func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccAWSAuthBackendClientConfigSTSRegionNoEndpoint(backend),
@@ -160,8 +161,8 @@ func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend, false),
@@ -190,7 +191,7 @@ func TestAccAWSAuthBackendClient_automatedRotation(t *testing.T) {
 	resourceType := "vault_aws_auth_backend_client"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)

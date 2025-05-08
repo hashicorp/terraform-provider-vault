@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -20,9 +21,9 @@ func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityOidcKeyAllowedClientIdDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityOidcKeyAllowedClientIdDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcKeyAllowedClientIdConfig(name),

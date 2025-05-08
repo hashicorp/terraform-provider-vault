@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 )
 
@@ -35,10 +36,7 @@ type PasswordPolicyResource struct {
 // resource schema.
 type PasswordPolicyModel struct {
 	// common fields to all migrated resources
-	ID types.String `tfsdk:"id"`
-
-	// common fields to all resources
-	Namespace types.String `tfsdk:"namespace"`
+	base.BaseModelLegacy
 
 	// fields specific to this resource
 	Name   types.String `tfsdk:"name"`
@@ -97,7 +95,7 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 
 	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -106,13 +104,10 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 	}
 	path := r.path(data.Name.ValueString())
 	// vault returns a nil response on success
-	_, err = client.Logical().Write(path, vaultRequest)
+	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Create Resource",
-			"An unexpected error occurred while attempting to create the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"HTTP Error: "+err.Error(),
+			errutil.VaultCreateErr(err),
 		)
 
 		return
@@ -140,30 +135,24 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 
 	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
 	// read the name from the id field to support the import command
 	name := data.ID.ValueString()
 	path := r.path(name)
-	policyResp, err := client.Logical().Read(path)
+	policyResp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Read Resource from Vault",
-			"An unexpected error occurred while attempting to read the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"HTTP Error: "+err.Error(),
+			errutil.VaultReadErr(err),
 		)
 
 		return
 	}
 	if policyResp == nil {
 		resp.Diagnostics.AddError(
-			"Unable to Read Resource from Vault",
-			"An unexpected error occurred while attempting to read the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"Vault response was nil",
+			errutil.VaultReadResponseNil(),
 		)
 
 		return
@@ -202,7 +191,7 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 
 	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -211,13 +200,10 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 	}
 	path := r.path(data.Name.ValueString())
 	// vault returns a nil response on success
-	_, err = client.Logical().Write(path, vaultRequest)
+	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Update Resource",
-			"An unexpected error occurred while attempting to update the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"HTTP Error: "+err.Error(),
+			errutil.VaultUpdateErr(err),
 		)
 
 		return
@@ -245,19 +231,16 @@ func (r *PasswordPolicyResource) Delete(ctx context.Context, req resource.Delete
 
 	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
 	path := r.path(data.Name.ValueString())
 
-	_, err = client.Logical().Delete(path)
+	_, err = client.Logical().DeleteWithContext(ctx, path)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Delete Resource",
-			"An unexpected error occurred while attempting to delete the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"HTTP Error: "+err.Error(),
+			errutil.VaultDeleteErr(err),
 		)
 
 		return

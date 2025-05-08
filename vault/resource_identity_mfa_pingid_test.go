@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"testing"
@@ -45,8 +46,8 @@ authenticator_url=https://authenticator.pingone.com/pingid/ppm
 
 	importTestStep := testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSettingsFileBase64)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`

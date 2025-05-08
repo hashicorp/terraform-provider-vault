@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -27,8 +28,8 @@ func TestAccIdentityGroupMemberGroupIdsNonExclusive(t *testing.T) {
 	resourceNameDev := "vault_identity_group_member_group_ids.dev"
 	resourceNameTest := "vault_identity_group_member_group_ids.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberGroupIdsConfigNonExclusive(group1, group2),

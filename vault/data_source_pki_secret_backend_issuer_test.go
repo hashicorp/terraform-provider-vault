@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
@@ -20,7 +21,7 @@ func TestAccDataSourcePKISecretIssuer(t *testing.T) {
 	issuerName := acctest.RandomWithPrefix("tf-test-pki-issuer")
 	dataName := "data.vault_pki_secret_backend_issuer.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
@@ -45,7 +46,7 @@ func TestAccDataSourcePKISecretIssuer_verify_disable_fields(t *testing.T) {
 	issuerName := acctest.RandomWithPrefix("tf-test-pki-issuer")
 	dataName := "data.vault_pki_secret_backend_issuer.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)

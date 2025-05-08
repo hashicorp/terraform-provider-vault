@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -21,9 +22,9 @@ func TestAlicloudAuthBackendRole_basic(t *testing.T) {
 	arn := acctest.RandomWithPrefix("acs:ram:123456:tf:role/")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAlicloudAuthBackedRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAlicloudAuthBackedRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAlicloudAuthBackedRoleConfig_basic(backend, name, arn),

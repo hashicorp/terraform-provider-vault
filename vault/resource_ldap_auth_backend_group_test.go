@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -29,9 +30,9 @@ func TestLDAPAuthBackendGroup_import(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend_group.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testLDAPAuthBackendGroupDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendGroupConfig_basic(backend, groupname, policies),
@@ -58,9 +59,9 @@ func TestLDAPAuthBackendGroup_basic(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend_group.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testLDAPAuthBackendGroupDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendGroupConfig_basic(backend, groupname, policies),

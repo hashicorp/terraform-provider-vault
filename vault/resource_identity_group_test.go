@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -25,9 +26,9 @@ func TestAccIdentityGroup(t *testing.T) {
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityGroupDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
@@ -43,9 +44,9 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityGroupDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
@@ -110,9 +111,9 @@ func TestAccIdentityGroupExternal(t *testing.T) {
 
 	resourceName := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityGroupDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
@@ -142,9 +143,9 @@ resource "vault_identity_group" "test_upper" {
 `, group, strings.ToUpper(group[0:1])+group[1:])
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityGroupDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: config,

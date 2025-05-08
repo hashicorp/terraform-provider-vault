@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -16,9 +17,9 @@ import (
 func TestAccAuthBackend_importBasic(t *testing.T) {
 	path := "github-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAuthBackendDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuth_initialConfig(path),

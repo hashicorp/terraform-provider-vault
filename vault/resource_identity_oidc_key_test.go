@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -21,9 +22,9 @@ func TestAccIdentityOidcKey(t *testing.T) {
 
 	resourceName := "vault_identity_oidc_key.key"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityOidcKeyDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityOidcKeyDestroy,
 		Steps: []resource.TestStep{
 			{
 				// Test a create failure
@@ -55,9 +56,9 @@ func TestAccIdentityOidcKeyUpdate(t *testing.T) {
 
 	resourceName := "vault_identity_oidc_key.key"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityOidcKeyDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityOidcKeyDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcKeyConfig(key),

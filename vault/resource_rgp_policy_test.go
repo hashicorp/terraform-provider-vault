@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -18,9 +19,9 @@ import (
 func TestAccRoleGoverningPolicy(t *testing.T) {
 	policyName := acctest.RandomWithPrefix("test-policy")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccRoleGoverningPolicyCheckDestroy,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccRoleGoverningPolicyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleGoverningPolicy(policyName, "soft-mandatory"),

@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -26,7 +27,7 @@ func TestAccDataSourceAWSStaticCredentials(t *testing.T) {
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
 
 		},
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAWSStaticDataSourceConfig(mount, a, s, username),

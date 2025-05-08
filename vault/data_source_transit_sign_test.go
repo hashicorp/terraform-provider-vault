@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -30,8 +31,8 @@ var signInputConfig = "input = \"aGVsbG8gd29ybGQuCg==\""
 func TestDataSourceTransitSign(t *testing.T) {
 	resourceName := "data.vault_transit_sign.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: signVerifyConfig("ecdsa-p256", "", signBlock(signInputConfig)),

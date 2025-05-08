@@ -13,26 +13,21 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
 )
 
-// BaseModel describes common fields for all of the Terraform resource data models
+// BaseModel describes common fields for all Terraform resource data models
 //
-// Ideally this struct would be imbedded into all Resources and DataSources.
-// However, the Terraform Plugin Framework doesn't support unmarshalling nested
-// structs. See https://github.com/hashicorp/terraform-plugin-framework/issues/242
-// So for now, we must duplicate all fields.
+// This struct should be embedded into all Terraform Plugin Framework Resources and Data Sources.
 type BaseModel struct {
 	Namespace types.String `tfsdk:"namespace"`
 }
 
-// BaseModelLegacy describes common fields for all of the Terraform resource
+// BaseModelLegacy describes common fields for all Terraform resource
 // data models that have been migrated from SDKv2 to the TF Plugin Framework.
 //
-// Ideally this struct would be imbedded into all Resources and DataSources.
-// However, the Terraform Plugin Framework doesn't support unmarshalling nested
-// structs. See https://github.com/hashicorp/terraform-plugin-framework/issues/242
-// So for now, we must duplicate all fields.
+// This struct should be embedded into all SDKv2 Resources and Data Sources.
 type BaseModelLegacy struct {
-	ID        types.String `tfsdk:"id"`
-	Namespace types.String `tfsdk:"namespace"`
+	BaseModel
+
+	ID types.String `tfsdk:"id"`
 }
 
 // MustAddBaseSchema adds the schema fields that are required for all net new
@@ -82,6 +77,7 @@ func legacyBaseSchema() map[string]schema.Attribute {
 }
 
 type schemaFunc func() map[string]schema.Attribute
+
 type ephemeralSchemaFunc func() map[string]ephemeralschema.Attribute
 
 func baseSchema() map[string]schema.Attribute {

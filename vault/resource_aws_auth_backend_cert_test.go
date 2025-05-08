@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"testing"
@@ -24,9 +25,9 @@ func TestAccAWSAuthBackendCert_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	name := acctest.RandomWithPrefix("test-cert")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendCertDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendCertDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendCertConfig_basic(backend, name),
@@ -45,9 +46,9 @@ func TestAccAWSAuthBackendCert_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	name := acctest.RandomWithPrefix("test-cert")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendCertDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendCertDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendCertConfig_basic(backend, name),

@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -162,10 +163,10 @@ func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...str
 		testutil.GetImportTestStep(resourceName, false, nil, ignoreImportFields...),
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          preCheck,
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
-		Steps:             steps,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 preCheck,
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps:                    steps,
 	})
 }
 

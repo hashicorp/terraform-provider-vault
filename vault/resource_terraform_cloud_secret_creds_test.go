@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -23,7 +24,7 @@ func TestAccResourceTerraformCloudSecretCredsOrganizationBasic(t *testing.T) {
 	token, organization := vals[0], vals[1]
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -48,7 +49,7 @@ func TestAccResourceTerraformCloudSecretCredsTeamBasic(t *testing.T) {
 	token, organization, teamID := vals[0], vals[1], vals[2]
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -74,7 +75,7 @@ func TestAccResourceTerraformCloudSecretCredsUserBasic(t *testing.T) {
 	token, userID := vals[0], vals[1]
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},

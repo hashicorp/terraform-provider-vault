@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -20,9 +21,9 @@ func TestAuditRequestHeader(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test")
 	newName := acctest.RandomWithPrefix("tf-test-new")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAuditRequestHeaderCheckDestroy(name, newName),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAuditRequestHeaderCheckDestroy(name, newName),
 		Steps: []resource.TestStep{
 			{
 				Config: testAuditRequestHeader_Config(name, false),

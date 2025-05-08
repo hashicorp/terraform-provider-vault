@@ -3,6 +3,7 @@ package fwprovider
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	secrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets"
 	"regexp"
@@ -154,6 +155,24 @@ func (p *fwprovider) Schema(ctx context.Context, req provider.SchemaRequest, res
 							Description: "The header value",
 						},
 					},
+				},
+			},
+			consts.FieldClientAuth: schema.ListNestedBlock{
+				Description: "Client authentication credentials.",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						consts.FieldCertFile: schema.StringAttribute{
+							Required:    true,
+							Description: "Path to a file containing the client certificate.",
+						},
+						consts.FieldKeyFile: schema.StringAttribute{
+							Required:    true,
+							Description: "Path to a file containing the private key that the certificate was issued for.",
+						},
+					},
+				},
+				Validators: []validator.List{
+					listvalidator.SizeAtMost(1),
 				},
 			},
 			consts.FieldAuthLoginAWS:       AuthLoginAWSSchema(),
