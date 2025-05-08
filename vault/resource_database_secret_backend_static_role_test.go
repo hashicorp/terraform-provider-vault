@@ -7,7 +7,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"net/url"
 	"os"
 	"testing"
@@ -93,7 +92,6 @@ func TestAccDatabaseSecretBackendStaticRole_credentialType(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendStaticRole_credentialConfig(t *testing.T) {
-	var p *schema.Provider
 	connURL := testutil.SkipTestEnvUnset(t, "MYSQL_URL")[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
