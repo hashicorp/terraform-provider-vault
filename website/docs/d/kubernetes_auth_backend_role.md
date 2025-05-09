@@ -47,6 +47,8 @@ In addition to the above arguments, the following attributes are exported:
 
 * `bound_service_account_namespaces` - List of namespaces allowed to access this role. If set to "*" all namespaces are allowed, both this and bound_service_account_names can not be set to "*".
 
+* `bound_service_account_namespace_selector` - A label selector for Kubernetes namespaces allowed to access this role. Accepts either a JSON or YAML object. The value should be of type LabelSelector. Currently, label selectors with matchExpressions are not supported. To use label selectors, Vault must have permission to read namespaces on the Kubernetes cluster. If set with bound_service_account_namespaces, the conditions are ORed. Requires Vault v1.16+.
+
 * `audience` - Audience claim to verify in the JWT.
 
 * `alias_name_source` - Method used for generating identity aliases. (vault-1.9+)
