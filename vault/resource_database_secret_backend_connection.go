@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-cty/cty"
 	"log"
 	"regexp"
 	"sort"
@@ -42,6 +43,9 @@ const (
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
+
+	// regex to extract engine name and index from prefixes such as "postgresql.5"
+	databaseEngineNameAndIndexFromPrefixRegex = regexp.MustCompile("^(.+)\\.([0-9]+)$")
 
 	dbEngineCassandra = &dbEngine{
 		name:              "cassandra",
@@ -763,12 +767,16 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 			Description: "The root credential password used in the connection URL",
 			Sensitive:   true,
 		}
-		res.Schema["password_wo"] = &schema.Schema{
+		res.Schema[consts.FieldPasswordWO] = &schema.Schema{
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "Write-only field for the root credential password used in the connection URL",
-			Sensitive:   true,
 			WriteOnly:   true,
+		}
+		res.Schema[consts.FieldPasswordWOVersion] = &schema.Schema{
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Version counter for root credential password write-only field",
 		}
 	}
 
@@ -1793,9 +1801,27 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 	// the old password in the update request would break the connection config. Thus we only send it,
 	// if it actually changed to still support updating it for non-rotated cases.
 	passwordKey := prefix + consts.FieldPassword
-	if v, ok := d.GetOk(passwordKey); ok {
-		if d.IsNewResource() || d.HasChange(passwordKey) {
+	passwordWriteOnlyVersionKey := prefix + consts.FieldPasswordWOVersion
+	if d.IsNewResource() || d.HasChange(passwordKey) || d.HasChange(passwordWriteOnlyVersionKey) {
+		if v, ok := d.GetOk(passwordKey); ok && v != nil {
+			log.Printf("[DEBUG] using persisted password; please use new write-only attributes for security")
 			data[consts.FieldPassword] = v.(string)
+		} else {
+			engineName, engineIdx, err := databaseEngineNameAndIndexFromPrefix(prefix)
+			if err != nil {
+				log.Fatalf("invalid prefix %q for database connection: %s", prefix, err)
+			}
+
+			idx, err := strconv.Atoi(engineIdx)
+			if err != nil {
+				log.Fatalf("unable to convert string index to integer: %s", err)
+			}
+
+			// construct path to use GetRawConfig
+			path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPasswordWO)
+			if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
+				data[consts.FieldPassword] = pwWo.AsString()
+			}
 		}
 	}
 }
@@ -2213,4 +2239,15 @@ func databaseSecretBackendConnectionBackendFromPath(path string) (string, error)
 		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
 	}
 	return res[1], nil
+}
+
+func databaseEngineNameAndIndexFromPrefix(prefix string) (string, string, error) {
+	if !databaseEngineNameAndIndexFromPrefixRegex.MatchString(prefix) {
+		return "", "", fmt.Errorf("no matches found")
+	}
+	res := databaseEngineNameAndIndexFromPrefixRegex.FindStringSubmatch(prefix)
+	if len(res) != 3 {
+		return "", "", fmt.Errorf("unexpected number of matches (%d) for name", len(res))
+	}
+	return res[1], res[2], nil
 }

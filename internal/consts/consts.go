@@ -524,6 +524,11 @@ const (
 	FieldPauseDuration                        = "pause_duration"
 	FieldRevocationQueueSafetyBuffer          = "revocation_queue_safety_buffer"
 
+	FieldPasswordWO           = "password_wo"
+	FieldPasswordWOVersion    = "password_wo_version"
+	FieldCredentialsWO        = "credentials_wo"
+	FieldCredentialsWOVersion = "credentials_wo_version"
+
 	/*
 		common environment variables
 	*/

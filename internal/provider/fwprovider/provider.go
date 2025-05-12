@@ -227,6 +227,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
 	return []func() ephemeral.EphemeralResource{
 		secrets.NewKVV2EphemeralSecretResource,
+		secrets.NewDBEphemeralSecretResource,
 	}
 
 }

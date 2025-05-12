@@ -1263,6 +1263,60 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 	})
 }
 
+func TestDatabaseEngineNameAndIndexFromPrefix(t *testing.T) {
+
+	testcases := []struct {
+		name         string
+		prefix       string
+		expectedName string
+		expectedIdx  string
+		wantErr      bool
+		expectedErr  string
+	}{
+		{
+			name:         "simple",
+			prefix:       "postgresql.0",
+			wantErr:      false,
+			expectedName: "postgresql",
+			expectedIdx:  "0",
+		},
+		{
+			name:         "complex",
+			prefix:       "custom_mssql_db_us-west-2_v2.1.5",
+			wantErr:      false,
+			expectedName: "custom_mssql_db_us-west-2_v2.1",
+			expectedIdx:  "5",
+		},
+		{
+			name:        "invalid",
+			prefix:      "invalid-prefix",
+			wantErr:     true,
+			expectedErr: "no matches found",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			name, idx, err := databaseEngineNameAndIndexFromPrefix(tc.prefix)
+			if tc.wantErr && (err == nil) {
+				t.Fatalf("wanted error %v, got nil", tc.wantErr)
+			}
+
+			if tc.wantErr && (err.Error() != tc.expectedErr) {
+				t.Fatalf("got error %v, wantErr %v", err, tc.wantErr)
+			}
+
+			if name != tc.expectedName {
+				t.Fatalf("got %s, want %s", name, tc.expectedName)
+			}
+
+			if idx != tc.expectedIdx {
+				t.Fatalf("got %s, want %s", idx, tc.expectedIdx)
+			}
+		})
+	}
+}
+
 func TestAccDatabaseSecretBackendConnection_invalid_plugin(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := name + "-plugin"
