@@ -220,8 +220,8 @@ func policyDocumentDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 				return fmt.Errorf("missing field: capabilities")
 			}
 			capList, ok := capVal.([]interface{})
-			if !ok || len(capList) == 0 {
-				return fmt.Errorf("invalid or empty capabilities list, expected a list of strings")
+			if !ok {
+				return fmt.Errorf("invalid capabilities list, expected a list of strings")
 			}
 			rule.Capabilities = policyDecodeConfigListOfStrings(capList)
 
