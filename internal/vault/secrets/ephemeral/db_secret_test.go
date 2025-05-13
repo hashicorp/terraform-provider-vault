@@ -26,6 +26,7 @@ import (
 // see documentation here for more details:
 // https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/ephemeral-resources#using-echo-provider-in-acceptance-tests
 func TestAccDBSecret(t *testing.T) {
+	testutil.SkipTestAcc(t)
 	mount := acctest.RandomWithPrefix("postgres")
 	dbName := acctest.RandomWithPrefix("db")
 	roleName := acctest.RandomWithPrefix("role")

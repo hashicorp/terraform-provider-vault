@@ -25,6 +25,8 @@ import (
 // see documentation here for more details:
 // https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/ephemeral-resources#using-echo-provider-in-acceptance-tests
 func TestAccKVV2Secret(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
 	mount := acctest.RandomWithPrefix("kvv2-mount")
 	name := acctest.RandomWithPrefix("secret")
 	resource.UnitTest(t, resource.TestCase{
