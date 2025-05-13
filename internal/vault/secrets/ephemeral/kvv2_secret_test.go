@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package secrets_test
+package ephemeralsecrets_test
 
 import (
 	"fmt"
@@ -14,12 +14,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"testing"
 )
 
+// TestAccKVV2Secret confirms that a secret written to
+// a KV-V2 store in Vault is correctly read into the ephemeral resource
+//
+// Uses the Echo Provider to test values set in ephemeral resources
+// see documentation here for more details:
+// https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/ephemeral-resources#using-echo-provider-in-acceptance-tests
 func TestAccKVV2Secret(t *testing.T) {
-	// TODO run in CI after fixing
-	t.Skip()
 	mount := acctest.RandomWithPrefix("kvv2-mount")
 	name := acctest.RandomWithPrefix("secret")
 	resource.UnitTest(t, resource.TestCase{
@@ -27,6 +32,7 @@ func TestAccKVV2Secret(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_10_0),
 		},
+		PreCheck: func() { testutil.TestAccPreCheck(t) },
 		// Include the provider we want to test
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		// Include `echo` as a v6 provider from `terraform-plugin-testing`
@@ -34,9 +40,6 @@ func TestAccKVV2Secret(t *testing.T) {
 			"echo": echoprovider.NewProviderServer(),
 		},
 		Steps: []resource.TestStep{
-			{
-				Config: testKVV2Setup(mount, name),
-			},
 			{
 				Config: testKVV2SecretConfig(mount, name),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -47,7 +50,7 @@ func TestAccKVV2Secret(t *testing.T) {
 	})
 }
 
-func testKVV2Setup(mount, name string) string {
+func testKVV2SecretConfig(mount, name string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "kvv2" {
   path        = "%s"
@@ -65,14 +68,11 @@ resource "vault_kv_secret_v2" "secret" {
   )
   data_json_wo_version = 0
 }
-`, mount, name)
-}
 
-func testKVV2SecretConfig(mount, name string) string {
-	return fmt.Sprintf(`
 ephemeral "vault_kvv2_secret" "db_secret" {
-	mount = "%s"
-	name = "%s"
+	mount    = vault_mount.kvv2.path
+	mount_id = vault_mount.kvv2.id
+	name     = vault_kv_secret_v2.secret.name
 }
 
 provider "echo" {

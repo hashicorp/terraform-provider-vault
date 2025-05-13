@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
-	secrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets"
+	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -226,8 +226,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 
 func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
 	return []func() ephemeral.EphemeralResource{
-		secrets.NewKVV2EphemeralSecretResource,
-		secrets.NewDBEphemeralSecretResource,
+		ephemeralsecrets.NewKVV2EphemeralSecretResource,
+		ephemeralsecrets.NewDBEphemeralSecretResource,
 	}
 
 }

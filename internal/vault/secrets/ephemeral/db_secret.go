@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package secrets
+package ephemeralsecrets
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
@@ -32,8 +33,8 @@ type DBEphemeralSecretResource struct {
 // DBEphemeralSecretModel describes the Terraform resource data model to match the
 // resource schema.
 type DBEphemeralSecretModel struct {
-	// common fields to all new FW resources
-	base.BaseModel
+	// common fields to all ephemeral resources
+	base.BaseModelEphemeral
 
 	// fields specific to this resource
 	Mount    types.String `tfsdk:"mount"`
@@ -55,19 +56,19 @@ type DBEphemeralSecretAPIModel struct {
 func (r *DBEphemeralSecretResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"mount": schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Mount path for the DB engine in Vault.",
 				Required:            true,
 			},
-			"name": schema.StringAttribute{
+			consts.FieldName: schema.StringAttribute{
 				MarkdownDescription: " Specifies the name of the role to create credentials against.",
 				Required:            true,
 			},
-			"username": schema.StringAttribute{
+			consts.FieldUsername: schema.StringAttribute{
 				MarkdownDescription: "Username for the newly created DB user.",
 				Computed:            true,
 			},
-			"password": schema.StringAttribute{
+			consts.FieldPassword: schema.StringAttribute{
 				MarkdownDescription: "Password for the newly created DB user.",
 				Computed:            true,
 			},

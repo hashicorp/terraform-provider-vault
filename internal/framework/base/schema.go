@@ -30,6 +30,15 @@ type BaseModelLegacy struct {
 	ID types.String `tfsdk:"id"`
 }
 
+// BaseModelEphemeral describes common fields for all Ephemeral resources.
+//
+// This struct should be embedded into all Ephemeral Resources.
+type BaseModelEphemeral struct {
+	BaseModel
+
+	MountID types.String `tfsdk:"mount_id"`
+}
+
 // MustAddBaseSchema adds the schema fields that are required for all net new
 // resources and data sources built with the TF Plugin Framework.
 //
@@ -103,6 +112,11 @@ func baseEphemeralSchema() map[string]ephemeralschema.Attribute {
 			Validators: []validator.String{
 				validators.PathValidator(),
 			},
+		},
+		consts.FieldMountID: ephemeralschema.StringAttribute{
+			Optional: true,
+			MarkdownDescription: "Terraform ID of the mount resource. Used to defer the provisioning " +
+				"of the ephemeral resource till the apply stage.",
 		},
 	}
 }

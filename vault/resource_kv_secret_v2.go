@@ -217,24 +217,23 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 
 	path := getKVV2Path(mount, name, consts.FieldData)
 
-	data := map[string]interface{}{}
-	if d.IsNewResource() || d.HasChange(consts.FieldDataJSON) || d.HasChange(consts.FieldDataJSONWOVersion) {
-		var secretData map[string]interface{}
-		var buf []byte
+	var buf []byte
+	if v, ok := d.GetOk(consts.FieldDataJSON); ok {
+		buf = []byte(v.(string))
+	} else if d.IsNewResource() || d.HasChange(consts.FieldDataJSONWOVersion) {
+		p := cty.GetAttrPath(consts.FieldDataJSONWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		buf = []byte(woVal.AsString())
+	}
 
-		if v, ok := d.GetOk(consts.FieldDataJSON); ok {
-			buf = []byte(v.(string))
-		} else {
-			p := cty.GetAttrPath(consts.FieldDataJSONWO)
-			woVal, _ := d.GetRawConfigAt(p)
-			buf = []byte(woVal.AsString())
-		}
-		err := json.Unmarshal(buf, &secretData)
-		if err != nil {
-			return diag.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
-		}
+	var secretData map[string]interface{}
+	err := json.Unmarshal(buf, &secretData)
+	if err != nil {
+		return diag.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
+	}
 
-		data["data"] = secretData
+	data := map[string]interface{}{
+		"data": secretData,
 	}
 
 	kvFields := []string{"cas", "options"}

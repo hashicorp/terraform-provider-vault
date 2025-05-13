@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package secrets
+package ephemeralsecrets
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
@@ -34,8 +35,8 @@ type KVV2EphemeralSecretResource struct {
 // KVV2EphemeralSecretModel describes the Terraform resource data model to match the
 // resource schema.
 type KVV2EphemeralSecretModel struct {
-	// common fields to all migrated resources
-	base.BaseModel
+	// common fields to all ephemeral resources
+	base.BaseModelEphemeral
 
 	// fields specific to this resource
 	Mount          types.String `tfsdk:"mount"`
@@ -69,40 +70,40 @@ type Metadata struct {
 func (r *KVV2EphemeralSecretResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"mount": schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Mount path for the KVV2 engine in Vault.",
 				Required:            true,
 			},
-			"name": schema.StringAttribute{
+			consts.FieldName: schema.StringAttribute{
 				MarkdownDescription: "Full name of the secret.",
 				Required:            true,
 			},
-			"version": schema.Int32Attribute{
+			consts.FieldVersion: schema.Int32Attribute{
 				Optional:            true,
 				MarkdownDescription: "Version of the secret to retrieve.",
 			},
-			"data_json": schema.StringAttribute{
+			consts.FieldDataJSON: schema.StringAttribute{
 				MarkdownDescription: "JSON-encoded secret data read from Vault.",
 				Computed:            true,
 			},
-			"data": schema.MapAttribute{
+			consts.FieldData: schema.MapAttribute{
 				MarkdownDescription: "Map of strings read from Vault.",
 				ElementType:         types.StringType,
 				Computed:            true,
 			},
-			"created_time": schema.StringAttribute{
+			consts.FieldCreatedTime: schema.StringAttribute{
 				MarkdownDescription: "Time at which the secret was created.",
 				Computed:            true,
 			},
-			"deletion_time": schema.StringAttribute{
+			consts.FieldDeletionTime: schema.StringAttribute{
 				MarkdownDescription: "Deletion time for the secret.",
 				Computed:            true,
 			},
-			"destroyed": schema.BoolAttribute{
+			consts.FieldDestroyed: schema.BoolAttribute{
 				MarkdownDescription: "Indicates whether the secret has been destroyed.",
 				Computed:            true,
 			},
-			"custom_metadata": schema.MapAttribute{
+			consts.FieldCustomMetadata: schema.MapAttribute{
 				MarkdownDescription: "Custom metadata for the secret.",
 				ElementType:         types.StringType,
 				Computed:            true,

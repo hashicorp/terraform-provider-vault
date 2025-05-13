@@ -523,6 +523,15 @@ const (
 	FieldAcmeAccountSafetyBuffer              = "acme_account_safety_buffer"
 	FieldPauseDuration                        = "pause_duration"
 	FieldRevocationQueueSafetyBuffer          = "revocation_queue_safety_buffer"
+	FieldCreatedTime                          = "created_time"
+	FieldDeletionTime                         = "deletion_time"
+	FieldDestroyed                            = "destroyed"
+
+	/*
+		ephemeral resource constants and write-only attributes
+	*/
+
+	FieldMountID = "mount_id"
 
 	FieldPasswordWO           = "password_wo"
 	FieldPasswordWOVersion    = "password_wo_version"
