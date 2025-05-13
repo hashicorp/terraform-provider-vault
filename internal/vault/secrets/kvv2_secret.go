@@ -198,5 +198,5 @@ func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.Op
 }
 
 func (r *KVV2EphemeralSecretResource) path(mount, name string) string {
-	return fmt.Sprintf("/%s/data/%s", mount, name)
+	return fmt.Sprintf("%s/data/%s", mount, name)
 }

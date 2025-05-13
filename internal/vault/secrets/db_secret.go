@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
-	"log"
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
@@ -99,7 +98,6 @@ func (r *DBEphemeralSecretResource) Open(ctx context.Context, req ephemeral.Open
 		return
 	}
 
-	// read the name from the id field to support the import command
 	path := r.path(data.Mount.ValueString(), data.Name.ValueString())
 
 	secretResp, err := c.Logical().ReadWithContext(ctx, path)
@@ -127,9 +125,6 @@ func (r *DBEphemeralSecretResource) Open(ctx context.Context, req ephemeral.Open
 
 	data.Username = types.StringValue(readResp.Username)
 	data.Password = types.StringValue(readResp.Password)
-
-	log.Printf("[VINAY] Username: %s", data.Username)
-	log.Printf("[VINAY] Password: %s", data.Password)
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }

@@ -1275,14 +1275,14 @@ func TestDatabaseEngineNameAndIndexFromPrefix(t *testing.T) {
 	}{
 		{
 			name:         "simple",
-			prefix:       "postgresql.0",
+			prefix:       "postgresql.0.",
 			wantErr:      false,
 			expectedName: "postgresql",
 			expectedIdx:  "0",
 		},
 		{
 			name:         "complex",
-			prefix:       "custom_mssql_db_us-west-2_v2.1.5",
+			prefix:       "custom_mssql_db_us-west-2_v2.1.5.",
 			wantErr:      false,
 			expectedName: "custom_mssql_db_us-west-2_v2.1",
 			expectedIdx:  "5",

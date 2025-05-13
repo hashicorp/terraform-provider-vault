@@ -45,7 +45,7 @@ var (
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
 
 	// regex to extract engine name and index from prefixes such as "postgresql.5"
-	databaseEngineNameAndIndexFromPrefixRegex = regexp.MustCompile("^(.+)\\.([0-9]+)$")
+	databaseEngineNameAndIndexFromPrefixRegex = regexp.MustCompile("^(.+)\\.([0-9]+)\\.$")
 
 	dbEngineCassandra = &dbEngine{
 		name:              "cassandra",
@@ -1809,12 +1809,14 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 		} else {
 			engineName, engineIdx, err := databaseEngineNameAndIndexFromPrefix(prefix)
 			if err != nil {
-				log.Fatalf("invalid prefix %q for database connection: %s", prefix, err)
+				// this should not happen, since we control how the prefix is created
+				log.Fatalf("[ERROR] invalid prefix %q for database connection: %s", prefix, err)
 			}
 
 			idx, err := strconv.Atoi(engineIdx)
 			if err != nil {
-				log.Fatalf("unable to convert string index to integer: %s", err)
+				// this should not happen, since we control how the index has been set
+				log.Fatalf("[ERROR] unable to convert string index to integer: %s", err)
 			}
 
 			// construct path to use GetRawConfig
