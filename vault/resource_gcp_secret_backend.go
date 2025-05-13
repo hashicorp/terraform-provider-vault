@@ -50,14 +50,10 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 				},
 			},
 			consts.FieldCredentials: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "JSON-encoded credentials to use to connect to GCP",
-				Sensitive:   true,
-				// We rebuild the attached JSON string to a simple singleline
-				// string. This makes terraform not want to change when an extra
-				// space is included in the JSON string. It is also necesarry
-				// when disable_read is false for comparing values.
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "JSON-encoded credentials to use to connect to GCP",
+				Sensitive:     true,
 				StateFunc:     NormalizeDataJSONFunc(name),
 				ValidateFunc:  ValidateDataJSONFunc(name),
 				ConflictsWith: []string{consts.FieldCredentialsWO, consts.FieldCredentialsWOVersion},
@@ -208,7 +204,9 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		credentials = credWo.AsString()
 	}
 
-	data[consts.FieldCredentials] = credentials
+	if credentials != "" {
+		data[consts.FieldCredentials] = credentials
+	}
 
 	if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
 		return diag.Errorf("error writing GCP configuration for %q: %s", path, err)
@@ -329,13 +327,17 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 	data := make(map[string]interface{})
 
-	if d.HasChange(consts.FieldCredentials) || d.HasChange(consts.FieldCredentialsWOVersion) {
-		var credentials string
-		if v, ok := d.GetOk(consts.FieldCredentials); ok {
-			credentials = v.(string)
-		} else if credWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldCredentialsWO)); !credWo.IsNull() {
+	var credentials string
+	if v, ok := d.GetOk(consts.FieldCredentials); ok {
+		credentials = v.(string)
+	} else if d.HasChange(consts.FieldCredentialsWOVersion) {
+		credWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldCredentialsWO))
+		if !credWo.IsNull() {
 			credentials = credWo.AsString()
 		}
+	}
+
+	if credentials != "" {
 		data[consts.FieldCredentials] = credentials
 	}
 

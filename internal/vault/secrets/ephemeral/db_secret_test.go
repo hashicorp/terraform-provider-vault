@@ -56,6 +56,7 @@ func TestAccDBSecret(t *testing.T) {
 				Config: testDBSecretConfig(mount, dbName, roleName, connURL),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("username"), knownvalue.StringRegexp(expectedOutputRegex)),
+					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("password"), knownvalue.StringRegexp(expectedOutputRegex)),
 				},
 			},
 		},
