@@ -1,5 +1,9 @@
 ## Unreleased
 
+BUGS:
+
+* Fix Azure login method and utilize DefaultAzureCredential for authenticating with Azure.
+
 ## 4.8.0 (Apr 23, 2025)
 
 FEATURES:
