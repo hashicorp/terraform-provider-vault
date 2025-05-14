@@ -1512,6 +1512,11 @@ func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix
 		result["password"] = v.(string)
 	}
 
+	// ensure password_wo_version is updated in state
+	if v, ok := d.GetOk(prefix + consts.FieldPasswordWOVersion); ok {
+		result[consts.FieldPasswordWOVersion] = v.(int)
+	}
+
 	return result
 }
 

@@ -526,6 +526,7 @@ const (
 	FieldCreatedTime                          = "created_time"
 	FieldDeletionTime                         = "deletion_time"
 	FieldDestroyed                            = "destroyed"
+	FieldDeleteAllVersions                    = "delete_all_versions"
 
 	/*
 		ephemeral resource constants and write-only attributes

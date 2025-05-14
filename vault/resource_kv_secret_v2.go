@@ -113,7 +113,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 				StateFunc:     NormalizeDataJSONFunc(name),
 				ValidateFunc:  ValidateDataJSONFunc(name),
 				Sensitive:     true,
-				ConflictsWith: []string{consts.FieldDataJSONWO, consts.FieldDataJSONWOVersion},
+				ConflictsWith: []string{consts.FieldDataJSONWO},
 			},
 			consts.FieldDataJSONWO: {
 				Type:          schema.TypeString,
@@ -123,10 +123,10 @@ func kvSecretV2Resource(name string) *schema.Resource {
 				ConflictsWith: []string{consts.FieldDataJSON},
 			},
 			consts.FieldDataJSONWOVersion: {
-				Type:          schema.TypeInt,
-				Optional:      true,
-				Description:   "Version counter for write-only secret data.",
-				ConflictsWith: []string{consts.FieldDataJSON},
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only secret data.",
+				RequiredWith: []string{consts.FieldDataJSONWO},
 			},
 
 			consts.FieldData: {

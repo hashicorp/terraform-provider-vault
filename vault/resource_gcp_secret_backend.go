@@ -56,7 +56,7 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 				Sensitive:     true,
 				StateFunc:     NormalizeDataJSONFunc(name),
 				ValidateFunc:  ValidateDataJSONFunc(name),
-				ConflictsWith: []string{consts.FieldCredentialsWO, consts.FieldCredentialsWOVersion},
+				ConflictsWith: []string{consts.FieldCredentialsWO},
 			},
 			consts.FieldCredentialsWO: {
 				Type:          schema.TypeString,
@@ -67,10 +67,10 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 				ConflictsWith: []string{consts.FieldCredentials},
 			},
 			consts.FieldCredentialsWOVersion: {
-				Type:          schema.TypeInt,
-				Optional:      true,
-				Description:   "Version counter for write-only JSON-encoded credentials",
-				ConflictsWith: []string{consts.FieldCredentials},
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only JSON-encoded credentials",
+				RequiredWith: []string{consts.FieldCredentialsWO},
 			},
 			consts.FieldDescription: {
 				Type:        schema.TypeString,
