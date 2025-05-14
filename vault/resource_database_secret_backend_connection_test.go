@@ -1008,7 +1008,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation(t *
 //   - POSTGRES_URL_ROOTLESS
 //
 // See .github/workflows/build.yml for details.
-func TestAccDatabaseSecretBackendConnection_postgresql_writeOnly(t *testing.T) {
+func TestAccDatabaseSecretBackendConnection_postgresql_password_wo(t *testing.T) {
 	MaybeSkipDBTests(t, dbEnginePostgres)
 
 	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
@@ -1043,6 +1043,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_writeOnly(t *testing.T) {
 						plancheck.ExpectResourceAction(testDefaultDatabaseSecretBackendResource, plancheck.ResourceActionUpdate),
 					},
 				},
+				// successful connection to new username guarantees that password_wo was also updated
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(dbName, mount, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
