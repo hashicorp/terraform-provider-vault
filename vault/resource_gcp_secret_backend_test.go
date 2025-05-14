@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"regexp"
 	"testing"
 
@@ -183,7 +184,11 @@ func TestGCPSecretBackend_credentials_wo(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			//  Write-only attributes are only supported in Terraform 1.11 and later.
+			tfversion.SkipBelow(tfversion.Version1_11_0),
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPSecretBackend_credentialsWO(path, "test", 1),

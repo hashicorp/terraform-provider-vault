@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"reflect"
 	"testing"
 
@@ -266,7 +267,11 @@ func TestAccKVSecretV2_data_json_wo(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-kv")
 	name := acctest.RandomWithPrefix("foo")
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() { testutil.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			//  Write-only attributes are only supported in Terraform 1.11 and later.
+			tfversion.SkipBelow(tfversion.Version1_11_0),
+		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -313,6 +318,10 @@ func TestAccKVSecretV2_WriteOnlyMigration(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
+		},
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			//  Write-only attributes are only supported in Terraform 1.11 and later.
+			tfversion.SkipBelow(tfversion.Version1_11_0),
 		},
 		Steps: []resource.TestStep{
 			{
