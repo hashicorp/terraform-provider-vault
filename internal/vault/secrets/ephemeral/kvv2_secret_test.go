@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"testing"
@@ -30,10 +29,6 @@ func TestAccKVV2Secret(t *testing.T) {
 	mount := acctest.RandomWithPrefix("kvv2-mount")
 	name := acctest.RandomWithPrefix("secret")
 	resource.UnitTest(t, resource.TestCase{
-		// Ephemeral resources are only available in 1.10 and later
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_10_0),
-		},
 		PreCheck: func() { testutil.TestAccPreCheck(t) },
 		// Include the provider we want to test
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,

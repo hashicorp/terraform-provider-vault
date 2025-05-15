@@ -1809,19 +1809,20 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 	passwordWriteOnlyVersionKey := prefix + consts.FieldPasswordWOVersion
 	if d.IsNewResource() || d.HasChange(passwordKey) || d.HasChange(passwordWriteOnlyVersionKey) {
 		if v, ok := d.GetOk(passwordKey); ok && v != nil {
-			log.Printf("[DEBUG] using persisted password; please use new write-only attributes for security")
+			log.Printf("[DEBUG] using persisted password; please use new write-only attributes `password_wo` " +
+				"and `password_wo_version` for security")
 			data[consts.FieldPassword] = v.(string)
-		} else {
+		} else if d.HasChange(passwordWriteOnlyVersionKey) {
 			engineName, engineIdx, err := databaseEngineNameAndIndexFromPrefix(prefix)
 			if err != nil {
 				// this should not happen, since we control how the prefix is created
-				log.Fatalf("[ERROR] invalid prefix %q for database connection: %s", prefix, err)
+				panic(fmt.Sprintf("[ERROR] invalid prefix %q for database connection: %s", prefix, err))
 			}
 
 			idx, err := strconv.Atoi(engineIdx)
 			if err != nil {
 				// this should not happen, since we control how the index has been set
-				log.Fatalf("[ERROR] unable to convert string index to integer: %s", err)
+				panic(fmt.Sprintf("[ERROR] unable to convert string index to integer: %s", err))
 			}
 
 			// construct path to use GetRawConfig

@@ -20,7 +20,7 @@ import (
 func kvSecretV2DataSource() *schema.Resource {
 	return &schema.Resource{
 		ReadContext:        provider.ReadContextWrapper(kvSecretV2DataSourceRead),
-		DeprecationMessage: "Deprecated. Please use new Ephemeral KVV2 Secret resource instead",
+		DeprecationMessage: "Deprecated. Please use new Ephemeral KVV2 Secret resource `vault_kkv2_secret` instead",
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldMount: {

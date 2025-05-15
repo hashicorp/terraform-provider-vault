@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"regexp"
@@ -35,15 +34,14 @@ func TestAccDBSecret(t *testing.T) {
 	connURL := values[0]
 
 	// catch-all regex to ensure all usernames and passwords are set to some value
-	expectedOutputRegex, err := regexp.Compile("^(.+)$")
+	expectedUsernameRegex, err := regexp.Compile("^vault-(.+)-(\\w{20})$")
+	expectedPasswordRegex, err := regexp.Compile("^\\S+$")
 	if err != nil {
 		t.Fatal(err)
 	}
+	templ := `{{ printf \"vault-%s-%s\" (.DisplayName) (random 20) }}`
+
 	resource.UnitTest(t, resource.TestCase{
-		// Ephemeral resources are only available in 1.10 and later
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_10_0),
-		},
 		PreCheck: func() { testutil.TestAccPreCheck(t) },
 		// Include the provider we want to test
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -53,17 +51,17 @@ func TestAccDBSecret(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testDBSecretConfig(mount, dbName, roleName, connURL),
+				Config: testDBSecretConfig(mount, dbName, roleName, connURL, templ),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("username"), knownvalue.StringRegexp(expectedOutputRegex)),
-					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("password"), knownvalue.StringRegexp(expectedOutputRegex)),
+					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("username"), knownvalue.StringRegexp(expectedUsernameRegex)),
+					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("password"), knownvalue.StringRegexp(expectedPasswordRegex)),
 				},
 			},
 		},
 	})
 }
 
-func testDBSecretConfig(mount, dbName, roleName, connUrl string) string {
+func testDBSecretConfig(mount, dbName, roleName, connUrl, templ string) string {
 	return fmt.Sprintf(`
 resource "vault_database_secrets_mount" "test" {
   path = "%s"
@@ -71,7 +69,8 @@ resource "vault_database_secrets_mount" "test" {
   postgresql {
     name              = "%s"
     connection_url    = "%s"
-    allowed_roles = ["*"]
+    allowed_roles     = ["*"]
+    username_template = "%s"
   }
 }
 
@@ -96,5 +95,5 @@ provider "echo" {
 }
 
 resource "echo" "test_db" {}
-`, mount, dbName, connUrl, roleName)
+`, mount, dbName, connUrl, templ, roleName)
 }

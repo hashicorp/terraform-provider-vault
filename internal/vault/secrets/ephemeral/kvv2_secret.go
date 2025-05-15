@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/vault/api"
 	"strconv"
@@ -131,7 +132,7 @@ func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.Op
 
 	c, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error Configuring Resource Client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -152,18 +153,14 @@ func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.Op
 
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Read Resource from Vault",
-			"An unexpected error occurred while attempting to read the resource. "+
-				"Please retry the operation or report this issue to the provider developers.\n\n"+
-				"HTTP Error: "+err.Error(),
+			errutil.VaultReadErr(err),
 		)
 
 		return
 	}
 	if secretResp == nil {
 		resp.Diagnostics.AddError(
-			"Unable to Read Resource from Vault",
-			fmt.Sprintf("No secret found at path %s", path),
+			errutil.VaultReadResponseNil(),
 		)
 
 		return

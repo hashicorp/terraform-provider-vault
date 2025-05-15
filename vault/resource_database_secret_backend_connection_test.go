@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"io/ioutil"
 	"log"
@@ -1023,10 +1022,6 @@ func TestAccDatabaseSecretBackendConnection_postgresql_password_wo(t *testing.T)
 	mount := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEnginePostgres.DefaultPluginName()
 	resource.Test(t, resource.TestCase{
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			//  Write-only attributes are only supported in Terraform 1.11 and later.
-			tfversion.SkipBelow(tfversion.Version1_11_0),
-		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,

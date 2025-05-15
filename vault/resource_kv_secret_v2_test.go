@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"reflect"
 	"testing"
 
@@ -210,54 +209,6 @@ func TestAccKVSecretV2_DisableRead(t *testing.T) {
 	})
 }
 
-// Fadia u have added this
-func TestAccKVSecretV2_UpdateOutsideTerraform(t *testing.T) {
-	// TODO skipping in CI for now. Determine if this is still a valid test case
-	t.Skip()
-	resourceName := "vault_kv_secret_v2.test"
-	mount := acctest.RandomWithPrefix("tf-kv")
-	name := acctest.RandomWithPrefix("foo")
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config: testKVSecretV2Config_initial(mount, name),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
-					resource.TestCheckResourceAttr(resourceName, "delete_all_versions", "true"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.version", "1"),
-				),
-			},
-			{
-				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
-
-					// Simulate external change using Vault CLI
-					path := fmt.Sprintf("%s/data/%s", mount, name)
-					_, err := client.Logical().Write(path, map[string]interface{}{"data": map[string]interface{}{"testkey3": "testvalue3"}})
-					if err != nil {
-						t.Fatalf(fmt.Sprintf("error simulating external change; err=%s", err))
-					}
-
-				},
-
-				Config: testKVSecretV2Config_initial(mount, name),
-
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "data_json", "{\"flag\":false,\"foo\":\"bar\",\"zip\":\"zap\"}"),
-					//we check that the provider updated vault to match the the terraform config therefor creating a new version the secret.
-					resource.TestCheckResourceAttr(resourceName, "metadata.version", "3"),
-				),
-			},
-		},
-	},
-	)
-}
-
 // TestAccKVSecretV2_data_json_wo ensures write-only attribute
 // `data_json_wo` works as expected
 func TestAccKVSecretV2_data_json_wo(t *testing.T) {
@@ -267,11 +218,7 @@ func TestAccKVSecretV2_data_json_wo(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-kv")
 	name := acctest.RandomWithPrefix("foo")
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { testutil.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			//  Write-only attributes are only supported in Terraform 1.11 and later.
-			tfversion.SkipBelow(tfversion.Version1_11_0),
-		},
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -318,10 +265,6 @@ func TestAccKVSecretV2_WriteOnlyMigration(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-		},
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			//  Write-only attributes are only supported in Terraform 1.11 and later.
-			tfversion.SkipBelow(tfversion.Version1_11_0),
 		},
 		Steps: []resource.TestStep{
 			{

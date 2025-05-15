@@ -36,6 +36,19 @@ type BaseModelLegacy struct {
 type BaseModelEphemeral struct {
 	BaseModel
 
+	// In certain cases, ephemeral resources need to defer provisioning
+	// till after certain resources have been created in the Apply step.
+	// However, if each input parameter is already known to the Ephemeral
+	// resource at Plan time, TF will attempt to open and read the ephemeral
+	// resource regardless. For example, if an ephemeral resource depends on a mount
+	// and a name parameter, both of which are known at Plan, then TF will try to read
+	// the Ephemeral secret even if the mount and name have not yet been created.
+	//
+	// In order to defer provisioning of the ephemeral resource, we have it depend on a
+	// computed attribute MountID for a mount resource, thereby forcing it to defer provisioning.
+	// In the TFVP, we know that each Ephemeral resource will definitely have a mount parameter.
+	// Adding in MountID enables Ephemeral resource to defer their provisioning if this attribute is set.
+	// This attribute does not do anything, and only exists to maintain a proper dependency graph.
 	MountID types.String `tfsdk:"mount_id"`
 }
 
