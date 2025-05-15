@@ -66,14 +66,14 @@ resource "vault_kv_secret_v2" "secret" {
   data_json_wo_version = 0
 }
 
-ephemeral "vault_kvv2_secret" "db_secret" {
+ephemeral "vault_kv_secret_v2" "db_secret" {
 	mount    = vault_mount.kvv2.path
 	mount_id = vault_mount.kvv2.id
 	name     = vault_kv_secret_v2.secret.name
 }
 
 provider "echo" {
-	data = ephemeral.vault_kvv2_secret.db_secret.data
+	data = ephemeral.vault_kv_secret_v2.db_secret.data
 }
 
 resource "echo" "test_krb" {}

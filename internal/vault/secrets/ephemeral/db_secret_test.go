@@ -84,14 +84,14 @@ resource "vault_database_secret_backend_role" "role" {
   ]
 }
 
-ephemeral "vault_db_secret" "db_secret" {
+ephemeral "vault_database_secret" "db_secret" {
 	mount    = vault_database_secrets_mount.test.path
 	mount_id = vault_database_secrets_mount.test.id
 	name     = vault_database_secret_backend_role.role.name
 }
 
 provider "echo" {
-	data = ephemeral.vault_db_secret.db_secret
+	data = ephemeral.vault_database_secret.db_secret
 }
 
 resource "echo" "test_db" {}

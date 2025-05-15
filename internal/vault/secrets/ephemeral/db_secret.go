@@ -81,7 +81,7 @@ func (r *DBEphemeralSecretResource) Schema(_ context.Context, _ ephemeral.Schema
 
 // Metadata sets the full name for this resource
 func (r *DBEphemeralSecretResource) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_db_secret"
+	resp.TypeName = req.ProviderTypeName + "_database_secret"
 }
 
 func (r *DBEphemeralSecretResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {

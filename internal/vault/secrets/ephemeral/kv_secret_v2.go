@@ -118,7 +118,7 @@ func (r *KVV2EphemeralSecretResource) Schema(_ context.Context, _ ephemeral.Sche
 
 // Metadata sets the full name for this resource
 func (r *KVV2EphemeralSecretResource) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_kvv2_secret"
+	resp.TypeName = req.ProviderTypeName + "_kv_secret_v2"
 }
 
 func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
