@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"io/ioutil"
 	"log"
@@ -998,6 +999,63 @@ func TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation(t *
 	})
 }
 
+// TestAccDatabaseSecretBackendConnection_postgresql_writeOnly ensures
+// write-only attribute `password_wo` works as expected
+//
+// The test creates users in a Postgres DB
+// To run locally you will need to set the following env vars:
+//   - POSTGRES_URL_TEST
+//   - POSTGRES_URL_ROOTLESS
+//
+// See .github/workflows/build.yml for details.
+func TestAccDatabaseSecretBackendConnection_postgresql_password_wo(t *testing.T) {
+	MaybeSkipDBTests(t, dbEnginePostgres)
+
+	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
+	connURLTemplated := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_ROOTLESS")[0]
+	username1 := acctest.RandomWithPrefix("user1")
+	username2 := acctest.RandomWithPrefix("user2")
+	dbName := acctest.RandomWithPrefix("db")
+	// create database users
+	testutil.CreateTestPGUser(t, connURLTestRoot, username1, "testpassword", testRoleStaticCreate)
+	testutil.CreateTestPGUser(t, connURLTestRoot, username2, "testpassword1", testRoleStaticCreate)
+	mount := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEnginePostgres.DefaultPluginName()
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql_writeOnly(dbName, mount, connURLTemplated, username1, "testpassword", 1),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(dbName, mount, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.connection_url", connURLTemplated),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username1),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password_wo_version", "1"),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql_writeOnly(dbName, mount, connURLTemplated, username2, "testpassword1", 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(testDefaultDatabaseSecretBackendResource, plancheck.ResourceActionUpdate),
+					},
+				},
+				// successful connection to new username guarantees that password_wo was also updated
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(dbName, mount, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.connection_url", connURLTemplated),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username2),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password_wo_version", "2"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineElasticSearch)
 
@@ -1261,6 +1319,60 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestDatabaseEngineNameAndIndexFromPrefix(t *testing.T) {
+
+	testcases := []struct {
+		name         string
+		prefix       string
+		expectedName string
+		expectedIdx  string
+		wantErr      bool
+		expectedErr  string
+	}{
+		{
+			name:         "simple",
+			prefix:       "postgresql.0.",
+			wantErr:      false,
+			expectedName: "postgresql",
+			expectedIdx:  "0",
+		},
+		{
+			name:         "complex",
+			prefix:       "custom_mssql_db_us-west-2_v2.1.5.",
+			wantErr:      false,
+			expectedName: "custom_mssql_db_us-west-2_v2.1",
+			expectedIdx:  "5",
+		},
+		{
+			name:        "invalid",
+			prefix:      "invalid-prefix",
+			wantErr:     true,
+			expectedErr: "no matches found",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			name, idx, err := databaseEngineNameAndIndexFromPrefix(tc.prefix)
+			if tc.wantErr && (err == nil) {
+				t.Fatalf("wanted error %v, got nil", tc.wantErr)
+			}
+
+			if tc.wantErr && (err.Error() != tc.expectedErr) {
+				t.Fatalf("got error %v, wantErr %v", err, tc.wantErr)
+			}
+
+			if name != tc.expectedName {
+				t.Fatalf("got %s, want %s", name, tc.expectedName)
+			}
+
+			if idx != tc.expectedIdx {
+				t.Fatalf("got %s, want %s", idx, tc.expectedIdx)
+			}
+		})
+	}
 }
 
 func TestAccDatabaseSecretBackendConnection_invalid_plugin(t *testing.T) {
@@ -1948,6 +2060,28 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, period, schedule, window, disable, connURL)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_postgresql_writeOnly(name, path, connUrl, username, password string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+
+  postgresql {
+      connection_url          = "%s"
+      username                = "%s"
+      password_wo             = "%s"
+      password_wo_version     = %d
+  }
+}
+`, path, name, connUrl, username, password, version)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, url, username, password, userTempl string) string {

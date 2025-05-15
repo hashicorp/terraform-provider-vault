@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/go-cty/cty"
 	"log"
 	"regexp"
 	"time"
@@ -103,20 +104,35 @@ func kvSecretV2Resource(name string) *schema.Resource {
 			// possible, rather than forcing e.g. all values to be strings.
 			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "JSON-encoded secret data to write.",
 				// We rebuild the attached JSON string to a simple single-line
 				// string. These make Terraform not want to change when an extra
 				// space is included in the JSON string. It is also necessary
 				// when disable_read is false for comparing values.
-				StateFunc:    NormalizeDataJSONFunc(name),
-				ValidateFunc: ValidateDataJSONFunc(name),
-				Sensitive:    true,
+				StateFunc:     NormalizeDataJSONFunc(name),
+				ValidateFunc:  ValidateDataJSONFunc(name),
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldDataJSONWO},
+			},
+			consts.FieldDataJSONWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Write-Only JSON-encoded secret data to write.",
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldDataJSON},
+			},
+			consts.FieldDataJSONWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only secret data.",
+				RequiredWith: []string{consts.FieldDataJSONWO},
 			},
 
 			consts.FieldData: {
 				Type:        schema.TypeMap,
 				Computed:    true,
+				Deprecated:  "Deprecated. Will no longer be set on a read.",
 				Description: "Map of strings read from Vault.",
 				Sensitive:   true,
 			},
@@ -201,8 +217,17 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 
 	path := getKVV2Path(mount, name, consts.FieldData)
 
+	var buf []byte
+	if v, ok := d.GetOk(consts.FieldDataJSON); ok {
+		buf = []byte(v.(string))
+	} else if d.IsNewResource() || d.HasChange(consts.FieldDataJSONWOVersion) {
+		p := cty.GetAttrPath(consts.FieldDataJSONWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		buf = []byte(woVal.AsString())
+	}
+
 	var secretData map[string]interface{}
-	err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &secretData)
+	err := json.Unmarshal(buf, &secretData)
 	if err != nil {
 		return diag.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 	}
@@ -237,8 +262,6 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 }
 
 func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	shouldRead := !d.Get(consts.FieldDisableRead).(bool)
-
 	path := d.Id()
 	if path == "" {
 		return nil
@@ -266,6 +289,8 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 		return diag.FromErr(err)
 	}
 
+	shouldRead := !d.Get(consts.FieldDisableRead).(bool)
+
 	if shouldRead {
 
 		client, e := provider.GetClient(d, meta)
@@ -284,21 +309,9 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 			return nil
 		}
 
-		log.Printf("[DEBUG] secret: %#v", secret)
-
-		data := secret.Data["data"]
-		jsonData, err := json.Marshal(data)
-		if err != nil {
-			return diag.Errorf("error marshaling JSON for %q: %s", path, err)
-		}
-
-		if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
+		// set data to empty map to support migrating from pre-ephemeral schema
+		if err := d.Set(consts.FieldData, map[string]interface{}{}); err != nil {
 			return diag.FromErr(err)
-		}
-		if v, ok := data.(map[string]interface{}); ok {
-			if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
-				return diag.FromErr(err)
-			}
 		}
 
 		if metadata, ok := secret.Data["metadata"]; ok {
