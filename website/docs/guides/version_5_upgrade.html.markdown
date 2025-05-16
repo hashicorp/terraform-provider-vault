@@ -49,7 +49,7 @@ This means that only Vault server version `1.14.x` and greater will be supported
 In order to support Ephemeral resources and Write-Only attributes, Terraform versions `1.11.x `
 and greater are fully supported.
 
-Please see the [Terraform Upgrade Guide](https://www.terraform.io/upgrade-guides/index.html)
+Please see the [Terraform Upgrade Guide](https://developer.hashicorp.com/terraform/language/upgrade-guides)
 for more info about upgrading Terraform.
 
 ## I accidentally upgraded to 5.X, how do I downgrade to 4.X?
@@ -94,13 +94,13 @@ state changes in the meantime.
 
 -> Before upgrading to version `5.X`, it is recommended to upgrade to the most
 recent version of the provider (`4.8.0`) and ensure that your environment
-successfully runs [`terraform plan`](https://www.terraform.io/docs/commands/plan.html)
+successfully runs [`terraform plan`](https://developer.hashicorp.com/terraform/cli/commands/plan)
 without unexpected changes or deprecation notices.
 
-It is recommended to use [version constraints](https://www.terraform.io/docs/configuration/providers.html#provider-versions)
+It is recommended to use [version constraints](https://developer.hashicorp.com/terraform/language/providers/configuration#provider-versions)
 when configuring Terraform providers. If you are following that recommendation,
 update the version constraints in your Terraform configuration and run
-[`terraform init`](https://www.terraform.io/docs/commands/init.html) to download
+[`terraform init`](https://developer.hashicorp.com/terraform/cli/commands/init) to download
 the new version.
 
 If you aren't using version constraints, you can use `terraform init -upgrade`
