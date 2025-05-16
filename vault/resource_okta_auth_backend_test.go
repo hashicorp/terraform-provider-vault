@@ -99,8 +99,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil,
 				"token",
 				"disable_remount",
-				"ttl",
-				"max_ttl"),
+			),
 			{
 				Config: testAccOktaAuthConfig_updated(path, organization),
 				Check: resource.ComposeTestCheckFunc(
@@ -119,8 +118,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil,
 				"token",
 				"disable_remount",
-				"ttl",
-				"max_ttl"),
+			),
 		},
 	})
 }
@@ -186,8 +184,7 @@ func TestAccOktaAuthBackend_remount(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil,
 				"token",
 				"disable_remount",
-				"ttl",
-				"max_ttl"),
+			),
 		},
 	})
 }
@@ -217,8 +214,7 @@ func TestAccOktaAuthBackend_TokenFields(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil,
 				"token",
 				"disable_remount",
-				"ttl",
-				"max_ttl"),
+			),
 		},
 	})
 }
