@@ -31,10 +31,11 @@ references an ephemeral resource must be capable of handling ephemeral data. Due
 in the Vault provider will need to be updated so they include write-only attributes that are
 capable of using ephemeral data while not storing those values in the resource's state.
 
-For the launch of ephemeral resources in `5.X`, three write-only parameters have been added.
+For the launch of ephemeral resources in `5.X`, three write-only parameters have been added to the Vault provider.
 Please refer to the [using write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes)
 page for more details on using the parameters. Apart from these, ephemeral resources can also be used
-to pass values into provider configuration blocks, which are already capable of receiving ephemeral values.
+to pass values into configuration blocks for other providers, since provider blocks are already capable
+of receiving ephemeral values.
 
 The following sections show two examples from the new ephemeral resources' documentation pages, which demonstrate
 how to use and test out the ephemeral resources in their current form.
