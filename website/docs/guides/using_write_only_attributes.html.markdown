@@ -9,7 +9,7 @@ description: |-
 
 # Write-only attributes in the Vault provider
 
-The Vault provider has introduced new write-only attributes for a more secure way to manage data.
+The Vault provider has introduced new write-only attributes (supported from Terraform `v1.11+`) for a more secure way to manage data.
 The new `WriteOnly` attribute accepts values from configuration and will not be stored in plan or state
 providing an additional layer of security and control over data access.
 
@@ -23,7 +23,8 @@ To mark the launch of the feature in `5.X`, the Vault provider has added the fol
 These were chosen due to them being marked as sensitive already in the provider. Although sensitive attributes
 do not appear in `terraform plan`, they are still stored in the Terraform state. Write-only attributes
 allow users to access and use data in their configurations without that data being stored in Terraform state.
-
+Going forward  you may wish to update your configurations to use these write-only attributes, as they will allow
+you to avoid storing credentials and secret values in your Terraform state.
 
 ## Use the Vault provider's new write-only attributes
 
