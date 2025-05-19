@@ -1,5 +1,8 @@
 ## Unreleased
 
+BUGS:
+* fix `vault_policy_document` data source regression to allow empty `capabilities` ([#2466](https://github.com/hashicorp/terraform-provider-vault/pull/2466))
+
 ## 4.8.0 (Apr 23, 2025)
 
 FEATURES:

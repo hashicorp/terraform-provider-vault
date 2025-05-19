@@ -88,6 +88,11 @@ data "vault_policy_document" "test" {
     path                = "secret/test3/"
     capabilities        = ["read", "list"]
   }
+
+ rule {
+    path                = "secret/test4/"
+    capabilities        = []
+  }
 }
 `
 
@@ -124,6 +129,10 @@ path "secret/test2/*" {
 
 path "secret/test3/" {
   capabilities = ["read", "list"]
+}
+
+path "secret/test4/" {
+  capabilities = []
 }
 `
 
