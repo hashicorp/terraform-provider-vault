@@ -141,6 +141,8 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `skip_verification` - (Optional) Skip permissions checks when a connection to Cassandra is first created.
   These checks ensure that Vault is able to create roles, but can be resource intensive in clusters with many roles.
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### Couchbase Configuration Options
 
 * `hosts` - (Required) A set of Couchbase URIs to connect to. Must use `couchbases://` scheme if `tls` is `true`.
@@ -159,6 +161,8 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `bucket_name` - (Optional) Required for Couchbase versions prior to 6.5.0. This is only used to verify vault's connection to the server.
 
 * `username_template` - (Optional) Template describing how dynamic usernames are generated.
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### InfluxDB Configuration Options
 
@@ -185,6 +189,8 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### Redis Configuration Options
 
@@ -214,6 +220,8 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `region` - (Optional) The region where the ElastiCache cluster is hosted. If omitted Vault tries to infer from the environment instead.
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### MongoDB Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -228,6 +236,8 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### MongoDB Atlas Configuration Options
 
@@ -258,6 +268,8 @@ See the [Vault
 * `password` - (Optional) The root credential password used in the connection URL.
 
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### MSSQL Configuration Options
 
@@ -290,6 +302,8 @@ See the [Vault
   See the [Vault
   docs](https://www.vaultproject.io/api/secret/databases/mssql#contained_db)
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### MySQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -321,6 +335,8 @@ See the [Vault
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### PostgreSQL Configuration Options
 
@@ -369,6 +385,8 @@ See the [Vault
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### Oracle Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -397,6 +415,8 @@ See the [Vault
 
 * `disconnect_sessions` - (Optional) Enable the built-in session disconnect mechanism.
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### Elasticsearch Configuration Options
 
 * `url` - (Required) The URL for Elasticsearch's API. https requires certificate
@@ -420,6 +440,8 @@ See the [Vault
 
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation. See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating) for more details.
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### Snowflake Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -441,6 +463,8 @@ See the [Vault
 * `password` - (Optional) The password to be used in the connection.
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### Redshift Configuration Options
 
@@ -464,6 +488,15 @@ See the [Vault
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported for all DBs that support username/password:
+
+* `password_wo` - (Optional) The password for the user. Can be updated.
+  **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
 
