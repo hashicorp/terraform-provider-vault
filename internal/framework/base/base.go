@@ -6,6 +6,7 @@ package base
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -75,5 +76,19 @@ type DataSourceWithConfigure struct {
 func (d *DataSourceWithConfigure) Configure(_ context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
 	if v, ok := request.ProviderData.(*provider.ProviderMeta); ok {
 		d.meta = v
+	}
+}
+
+// EphemeralResourceWithConfigure is a structure to be embedded within an Ephemeral Resource that
+// implements the EphemeralResource with Configure interface.
+type EphemeralResourceWithConfigure struct {
+	withMeta
+}
+
+// Configure enables provider-level data or clients to be set in the
+// provider-defined DataSource type.
+func (r *EphemeralResourceWithConfigure) Configure(_ context.Context, request ephemeral.ConfigureRequest, response *ephemeral.ConfigureResponse) {
+	if v, ok := request.ProviderData.(*provider.ProviderMeta); ok {
+		r.meta = v
 	}
 }
