@@ -99,6 +99,15 @@ for credentials issued by this backend. Defaults to '0'.
 * `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
   *Available only for Vault Enterprise*.
 
+* `credentials_wo_version` - (Optional)  The version of the `credentials_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `credentials_wo` - (Optional) The GCP service account credentials in JSON format. Can be updated.
+  **Note**: This property is write-only and will not be read from the API.
+
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
