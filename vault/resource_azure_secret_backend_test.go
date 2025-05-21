@@ -41,7 +41,7 @@ func TestAzureSecretBackend(t *testing.T) {
 				Config: testAzureSecretBackend_updated(path),
 				Check:  getAzureBackendChecks(resourceName, path, true),
 			},
-			// Clear out previous test step that uses use_microsoft_graph_api
+			// Clear out previous test step
 			// allows for a cleaner import test
 			{
 				Config: testAzureSecretBackend_initialConfig(updatedPath),
@@ -81,26 +81,7 @@ func getAzureBackendChecks(resourceName, path string, isUpdate bool) resource.Te
 	}
 
 	return func(state *terraform.State) error {
-		var checks []resource.TestCheckFunc
-		meta := testProvider.Meta().(*provider.ProviderMeta)
-		var extras []resource.TestCheckFunc
-		// only check use_microsoft_graph_api if Vault version is
-		// < 1.12.0
-		if !meta.IsAPISupported(provider.VaultVersion112) {
-			if !isUpdate {
-				extras = []resource.TestCheckFunc{
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUseMSGraphAPI, "false"),
-				}
-			} else {
-				extras = []resource.TestCheckFunc{
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUseMSGraphAPI, "true"),
-				}
-			}
-			checks = append(baseChecks, extras...)
-		} else {
-			checks = baseChecks
-		}
-		return resource.ComposeAggregateTestCheckFunc(checks...)(state)
+		return resource.ComposeAggregateTestCheckFunc(baseChecks...)(state)
 	}
 }
 
@@ -283,7 +264,6 @@ resource "vault_azure_secret_backend" "test" {
   client_secret           = "098765432109876543214"
   environment             = "AzurePublicCloud"
   disable_remount         = true
-  use_microsoft_graph_api = true
 }`, path)
 }
 
