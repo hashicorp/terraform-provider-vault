@@ -1,5 +1,29 @@
 ## Unreleased
 
+## 5.0.0 (May 21, 2025)
+
+**Important**: `5.X` multiplexes the Vault provider to use the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework),
+upgrades to Terraform `1.11.x`, and adds support for Ephemeral Resources and Write-Only attributes.
+Please refer to the
+[Terraform Vault Provider 5.0.0 Upgrade Guide](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_5_upgrade) for specific
+details around the changes.
+
+VERSION COMPATIBILITY:
+`5.X` is officially supported and tested against Vault server versions >= `1.15.x`.
+`5.X` supports Terraform versions >= `1.11.x` in order to support ephemeral resources and write-only attributes.
+
+BREAKING CHANGES:
+Please refer to the [upgrade topics](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_5_upgrade.html#upgrade-topics)
+in the guide for details on all breaking changes.
+
+FEATURES:
+* Add new ephemeral resources/attributes ([#2457](https://github.com/hashicorp/terraform-provider-vault/pull/2457)):
+  * Add new ephemeral resource `vault_kv_secret_v2`
+  * Add new ephemeral resource `vault_database_secret`
+  * Add new write-only attribute `data_json_wo` (along with `data_json_wo_version`) to resource `vault_kv_secret_v2`
+  * Add new write-only attribute `credentials_wo`, (along with `credentials_wo_version`) to resource `vault_gcp_secret_backend`
+  * Add new write-only attribute `password_wo`, (along with `password_wo_version` to resource) `vault_database_secret_backend_connection`
+
 BUGS:
 * fix `vault_policy_document` data source regression to allow empty `capabilities` ([#2466](https://github.com/hashicorp/terraform-provider-vault/pull/2466))
 
