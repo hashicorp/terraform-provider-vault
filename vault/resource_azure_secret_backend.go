@@ -53,13 +53,6 @@ func azureSecretBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			consts.FieldUseMSGraphAPI: {
-				Deprecated:  "This field is not supported in Vault-1.12+ and is the default behavior. This field will be removed in future version of the provider.",
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Computed:    true,
-				Description: "Use the Microsoft Graph API. Should be set to true on vault-1.10+",
-			},
 			consts.FieldSubscriptionID: {
 				Type:        schema.TypeString,
 				ForceNew:    true,
@@ -196,15 +189,6 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
-	skipMSGraphAPI := provider.IsAPISupported(meta, provider.VaultVersion112)
-	if !skipMSGraphAPI {
-		if v, ok := resp.Data[consts.FieldUseMSGraphAPI]; ok {
-			if err := d.Set(consts.FieldUseMSGraphAPI, v); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-	}
-
 	if v, ok := resp.Data[consts.FieldEnvironment]; ok && v.(string) != "" {
 		if err := d.Set(consts.FieldEnvironment, v); err != nil {
 			return diag.FromErr(err)
@@ -313,18 +297,6 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 		consts.FieldTenantID,
 		consts.FieldClientSecret,
 		consts.FieldSubscriptionID,
-	}
-
-	skipMSGraphAPI := provider.IsAPISupported(meta, provider.VaultVersion112)
-
-	if _, ok := d.GetOk(consts.FieldUseMSGraphAPI); ok {
-		if skipMSGraphAPI {
-			log.Printf("ignoring this field because Vault version is greater than 1.12")
-		}
-	}
-
-	if !skipMSGraphAPI {
-		fields = append(fields, consts.FieldUseMSGraphAPI)
 	}
 
 	data := make(map[string]interface{})

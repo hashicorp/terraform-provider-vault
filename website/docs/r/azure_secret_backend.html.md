@@ -23,7 +23,7 @@ for more details.
 See [use_microsoft_graph_api ](https://www.vaultproject.io/api-docs/secret/azure#use_microsoft_graph_api)
 for more information. The example below demonstrates how to do this. 
 
-## Example Usage: *vault-1.9 and above*
+## Example Usage:
 
 You can setup the Azure secrets engine with Workload Identity Federation (WIF) for a secret-less configuration:
 ```hcl
@@ -40,7 +40,6 @@ resource "vault_azure_secret_backend" "azure" {
 
 ```hcl
 resource "vault_azure_secret_backend" "azure" {
-  use_microsoft_graph_api = true
   subscription_id         = "11111111-2222-3333-4444-111111111111"
   tenant_id               = "11111111-2222-3333-4444-222222222222"
   client_id               = "11111111-2222-3333-4444-333333333333"
@@ -48,19 +47,6 @@ resource "vault_azure_secret_backend" "azure" {
   environment             = "AzurePublicCloud"
   rotation_schedule       = "0 * * * SAT"
   rotation_window         = 3600
-}
-```
-
-## Example Usage: *vault-1.8 and below*
-
-```hcl
-resource "vault_azure_secret_backend" "azure" {
-  use_microsoft_graph_api = false
-  subscription_id         = "11111111-2222-3333-4444-111111111111"
-  tenant_id               = "11111111-2222-3333-4444-222222222222"
-  client_id               = "11111111-2222-3333-4444-333333333333"
-  client_secret           = "12345678901234567890"
-  environment             = "AzurePublicCloud"
 }
 ```
 
@@ -74,10 +60,6 @@ The following arguments are supported:
    *Available only for Vault Enterprise*.
 
 - `subscription_id` (`string: <required>`) - The subscription id for the Azure Active Directory.
-
-- `use_microsoft_graph_api` (`bool: <optional>`) - Indicates whether the secrets engine should use 
-  the Microsoft Graph API. This parameter has been deprecated and will be ignored in `vault-1.12+`. 
-  For more information, please refer to the [Vault docs](https://developer.hashicorp.com/vault/api-docs/secret/azure#use_microsoft_graph_api)
 
 - `tenant_id` (`string: <required>`) - The tenant id for the Azure Active Directory.
 
