@@ -41,8 +41,9 @@ these changes, we don't expect you'll need to make any major refactorings.
 
 ## What Vault server versions are supported in version 5.X?
 
-The Vault provider will be dropping Vault version support for Vault <= `1.13.x`.
-This means that only Vault server version `1.14.x` and greater will be supported.
+The Vault provider will be dropping Vault version support for Vault <= `1.14.x`.
+This means that going forward only Vault server version `1.15.x` and greater will be officially
+tested against.
 
 ## Which Terraform versions are supported?
 
@@ -159,3 +160,7 @@ The following deprecated fields have been removed:
 * `ttl` - removed from the `vault_okta_auth_backend` resource.
 
 * `max_ttl` - removed from the `vault_okta_auth_backend` resource.
+
+### Azure Secret Backend
+
+* `use_microsoft_graph_api` - removed from the `vault_azure_secret_backend` resource.
