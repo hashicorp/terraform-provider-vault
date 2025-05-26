@@ -48,6 +48,12 @@ func quotaRateLimitResource() *schema.Resource {
 				Description:  "The maximum number of requests at any given second to be allowed by the quota rule. The rate must be positive.",
 				ValidateFunc: validation.FloatAtLeast(0.0),
 			},
+			"secondary_rate": {
+				Type:         schema.TypeFloat,
+				Optional:     false,
+				Description:  `Only available when using the "entity_then_ip" or "entity_then_none" group_by modes. This is the rate limit applied to the requests that fall under the "ip" or "none" groupings, while the authenticated requests that contain an entity ID are subject to the "rate" field instead. Defaults to the same value as "rate".`,
+				ValidateFunc: validation.FloatAtLeast(0.0),
+			},
 			"interval": {
 				Type:         schema.TypeInt,
 				Optional:     true,
@@ -70,6 +76,18 @@ func quotaRateLimitResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "If set to true on a quota where path is set to a namespace, the same quota will be cumulatively applied to all child namespace. The inheritable parameter cannot be set to true if the path does not specify a namespace. Only the quotas associated with the root namespace are inheritable by default.",
+			},
+			"group_by": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `Attribute by which to group requests by. Valid group_by modes are: 1) "ip" that groups` +
+					` requests by their source IP address (group_by defaults to ip if unset); 2) "none" that groups all` +
+					` requests that match the rate limit quota rule together; 3) "entity_then_ip" that groups requests` +
+					` by their entity ID for authenticated requests that carry one, or by their IP for unauthenticated` +
+					` requests (or requests whose authentication is not connected to an entity); and 4) "entity_then_none"` +
+					` which also groups requests by their entity ID when available, but the rest is all grouped together` +
+					` (i.e. unauthenticated or with authentication not connected to an entity).`,
+				ValidateFunc: validation.StringInSlice([]string{"ip", "none", "entity_then_ip", "entity_then_none"}, false),
 			},
 		},
 	}
@@ -109,6 +127,20 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 		if v, ok := d.GetOk(consts.FieldRole); ok {
 			data[consts.FieldRole] = v
 		}
+	}
+
+	if v, ok := d.GetOk("group_by"); ok {
+		if !provider.IsAPISupported(meta, provider.VaultVersion120) {
+			return fmt.Errorf("group_by is only supported in Vault 1.20 and later")
+		}
+		data["group_by"] = v
+	}
+
+	if v, ok := d.GetOk("secondary_rate"); ok {
+		if !provider.IsAPISupported(meta, provider.VaultVersion120) {
+			return fmt.Errorf("secondary_rate is only supported in Vault 1.20 and later")
+		}
+		data["secondary_rate"] = v
 	}
 
 	_, err := client.Logical().Write(path, data)
@@ -151,6 +183,10 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 		if _, ok := d.GetOkExists("inheritable"); ok {
 			fields = append(fields, "inheritable")
 		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion120) {
+		fields = append(fields, "group_by", "secondary_rate")
 	}
 
 	for _, k := range fields {
