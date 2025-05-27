@@ -466,6 +466,7 @@ const (
 	FieldAssumeRoleArn                 = "assume_role_arn"
 	FieldAssumeRoleSessionName         = "assume_role_session_name"
 	FieldMaxCrlEntries                 = "max_crl_entries"
+	FieldChallenge                     = "challenge"
 
 	FieldDisableCriticalExtensionChecks = "disable_critical_extension_checks"
 	FieldDisablePathLengthChecks        = "disable_path_length_checks"
@@ -623,6 +624,7 @@ const (
 	VaultVersion118  = "1.18.0"
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
+	VaultVersion120  = "1.20.0"
 
 	/*
 		Vault auth methods

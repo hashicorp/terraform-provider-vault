@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES
+* Add new resource `vault_scep_auth_backend_role` to manage roles in a SCEP auth backend. [#2479](https://github.com/hashicorp/terraform-provider-vault/pull/2479).
+
 ## 5.0.0 (May 21, 2025)
 
 **Important**: `5.X` multiplexes the Vault provider to use the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework),
