@@ -19,7 +19,7 @@ resource "vault_auth_backend" "scep" {
 }
 
 resource "vault_scep_auth_backend_role" "scep" {
-    backend        = vault_auth_backend.cert.path
+    backend        = vault_auth_backend.scep.path
     name           = "scep_challenge"
     auth_type      = "static-challenge"
     challenge      = "well known secret"
@@ -70,14 +70,14 @@ These arguments are common across several Authentication Token resources since V
   as well.
 
 * `token_explicit_max_ttl` - (Optional) If set, will encode an
-  [explicit max TTL](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls)
+  [explicit max TTL](https://developer.hashicorp.com/vault/docs/concepts/tokens#token-time-to-live-periodic-tokens-and-explicit-max-ttls)
   onto the token in number of seconds. This is a hard cap even if `token_ttl` and
   `token_max_ttl` would otherwise allow a renewal.
 
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/auth/cert#token_num_uses)
+* `token_num_uses` - (Optional) The [maximum number](https://developer.hashicorp.com/vault/api-docs/auth/scep#token_num_uses)
    of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
@@ -86,7 +86,7 @@ These arguments are common across several Authentication Token resources since V
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
 
-For more details on the usage of each argument consult the [Vault Cert API documentation](https://www.vaultproject.io/api-docs/auth/cert).
+For more details on the usage of each argument consult the [Vault SCEP API documentation](https://developer.hashicorp.com/vault/docs/auth/scep).
 
 ## Attribute Reference
 
