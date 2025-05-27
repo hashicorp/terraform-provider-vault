@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add support for managed key parameters in the SSH CA config endpoint ([#2480](https://github.com/hashicorp/terraform-provider-vault/pull/2480))
+
 ## 5.0.0 (May 21, 2025)
 
 **Important**: `5.X` multiplexes the Vault provider to use the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework),
