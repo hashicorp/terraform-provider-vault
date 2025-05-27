@@ -1,31 +1,32 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_cert_auth_backend_role resource"
-sidebar_current: "docs-vault-resource-cert-auth-backend-role"
+page_title: "Vault: vault_scep_auth_backend_role resource"
+sidebar_current: "docs-vault-resource-scep-auth-backend-role"
 description: |-
-  Managing roles in an Cert auth backend in Vault
+  Managing roles in an SCEP auth backend in Vault
 ---
 
-# vault\_cert\_auth\_backend\_role
+# vault\_scep\_auth\_backend\_role
 
-Provides a resource to create a role in an [Cert auth backend within Vault](https://www.vaultproject.io/docs/auth/cert.html).
+Provides a resource to create a role in an [SCEP auth backend within Vault](https://developer.hashicorp.com/vault/docs/auth/scep).
 
 ## Example Usage
 
 ```hcl
-resource "vault_auth_backend" "cert" {
-    path = "cert"
-    type = "cert"
+resource "vault_auth_backend" "scep" {
+    path = "scep"
+    type = "scep"
 }
 
-resource "vault_cert_auth_backend_role" "cert" {
-    name           = "foo"
-    certificate    = file("/path/to/certs/ca-cert.pem")
+resource "vault_scep_auth_backend_role" "scep" {
     backend        = vault_auth_backend.cert.path
-    allowed_names  = ["foo.example.org", "baz.example.org"]
+    name           = "scep_challenge"
+    auth_type      = "static-challenge"
+    challenge      = "well known secret"
+    token_type     = "batch"
     token_ttl      = 300
     token_max_ttl  = 600
-    token_policies = ["foo"]
+    token_policies = ["scep-clients"]
 }
 ```
 
@@ -38,50 +39,13 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
-* `backend` - (Optional string: "cert") Path to the mounted Cert auth backend
+* `backend` - (Optional string: "scep") Path to the mounted SCEP auth backend
 
 * `name` - (Required string) Name of the role
 
-* `certificate` - (Required string) CA certificate used to validate client certificates
+* `auth_type` - (Required string) The authentication type to use
 
-* `allowed_names` - (Optional string) DEPRECATED: Please use the individual `allowed_X_sans` parameters instead. Allowed subject names for authenticated client certificates
-
-* `allowed_common_names` - (Optional array: []) Allowed the common names for authenticated client certificates
-
-* `allowed_dns_sans` - (Optional array: []) Allowed alternative dns names for authenticated client certificates
-
-* `allowed_email_sans` - (Optional array: []) Allowed emails for authenticated client certificates
-
-* `allowed_uri_sans` - (Optional array: []) Allowed URIs for authenticated client certificates
-
-* `allowed_organizational_units` - (Optional array: []) Allowed organization units for authenticated client certificates.
-
-* `required_extensions` - (Optional array: []) TLS extensions required on
-  client certificates
-
-* `display_name` - (Optional string: "") The name to display on tokens issued under this role.
-
-* `ocsp_enabled` (Optional bool: false) - If enabled, validate certificates'
-  revocation status using OCSP. Requires Vault version 1.13+.
-
-* `ocsp_ca_certificates` (Optional string: "") Any additional CA certificates
-  needed to verify OCSP responses. Provided as base64 encoded PEM data.
-  Requires Vault version 1.13+.
-
-* `ocsp_servers_override` (Optional array: []): A comma-separated list of OCSP
-  server addresses. If unset, the OCSP server is determined from the
-  AuthorityInformationAccess extension on the certificate being inspected.
-  Requires Vault version 1.13+.
-
-* `ocsp_fail_open` (Optional bool: false) - If true and an OCSP response cannot
-  be fetched or is of an unknown status, the login will proceed as if the
-  certificate has not been revoked.
-  Requires Vault version 1.13+.
-
-* `ocsp_query_all_servers` (Optional bool: false) - If set to true, rather than
-  accepting the first successful OCSP response, query all servers and consider
-  the certificate valid only if all servers agree.
-  Requires Vault version 1.13+.
+* `challenge` - (Optional) The static challenge to use if auth_type is `"static-challenge"`, not used for other auth types
 
 ### Common Token Arguments
 

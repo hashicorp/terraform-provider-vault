@@ -397,6 +397,10 @@ var (
 			Resource:      UpdateSchemaResource(certAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/cert/certs/{name}"},
 		},
+		"vault_scep_auth_backend_role": {
+			Resource:      UpdateSchemaResource(scepAuthBackendRoleResource()),
+			PathInventory: []string{"/auth/scep/role/{name}"},
+		},
 		"vault_generic_endpoint": {
 			Resource:      UpdateSchemaResource(genericEndpointResource("vault_generic_endpoint")),
 			PathInventory: []string{GenericPath},
