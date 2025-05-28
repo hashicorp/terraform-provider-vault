@@ -7,6 +7,7 @@ FEATURES:
 
 * Add support for `group_by` and `secondary_rate` on resource `vault_quota_rate_limit`. Requires Vault Enterprise 1.20.0+ ([#2476](https://github.com/hashicorp/terraform-provider-vault/pull/2476))
 * Add support for Transit CMAC endpoint ([#2488](https://github.com/hashicorp/terraform-provider-vault/pull/2488))
+* Add support `tls_ca` and `tls_certificate_key` for mongodb connections [#2482](https://github.com/hashicorp/terraform-provider-vault/pull/2482)
 
 ## 5.0.0 (May 21, 2025)
 
