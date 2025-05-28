@@ -120,11 +120,14 @@ func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
 	if keyBits, ok := d.Get("key_bits").(int); ok {
 		data["key_bits"] = keyBits
 	}
-	if managedKeyName, ok := d.Get("managed_key_name").(string); ok {
-		data["managed_key_name"] = managedKeyName
-	}
-	if managedKeyId, ok := d.Get("managed_key_id").(string); ok {
-		data["managed_key_id"] = managedKeyId
+
+	if provider.IsAPISupported(meta, provider.VaultVersion120) {
+		if managedKeyName, ok := d.Get("managed_key_name").(string); ok {
+			data["managed_key_name"] = managedKeyName
+		}
+		if managedKeyId, ok := d.Get("managed_key_id").(string); ok {
+			data["managed_key_id"] = managedKeyId
+		}
 	}
 
 	log.Printf("[DEBUG] Writing CA information on SSH backend %q", backend)
