@@ -501,6 +501,8 @@ const (
 	FieldHybridKeyTypePQC         = "hybrid_key_type_pqc"
 	FieldSignatureContext         = "signature_context"
 	FieldDisableAutomatedRotation = "disable_automated_rotation"
+	FieldMACLength                = "mac_length"
+	FieldURLMACLength             = "url_mac_length"
 
 	FieldIntervalDuration                     = "interval_duration"
 	FieldMaintainStoredCertificateCounts      = "maintain_stored_certificate_counts"
