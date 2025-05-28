@@ -68,11 +68,13 @@ func sshSecretBackendCAResource() *schema.Resource {
 			"managed_key_name": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "The name of the managed key to use. When using a managed key, this field or managed_key_id is required.",
 			},
 			"managed_key_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "The id of the managed key to use. When using a managed key, this field or managed_key_name is required.",
 			},
 			"private_key": {
