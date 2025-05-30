@@ -256,8 +256,15 @@ resource "vault_quota_rate_limit" "foobar" {
 				Config: getConfig(""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "group_by", "ip"),
-					resource.TestCheckResourceAttr(resourceName, "secondary_rate", "0"),
+					func(state *terraform.State) error {
+						if v, ok := state.RootModule().Resources[resourceName].Primary.Attributes["group_by"]; ok {
+							return fmt.Errorf("group_by should not be set, got %s", v)
+						}
+						if v, ok := state.RootModule().Resources[resourceName].Primary.Attributes["secondary_rate"]; ok {
+							return fmt.Errorf("group_by should not be set, got %s", v)
+						}
+						return nil
+					},
 				),
 			},
 			{
@@ -271,12 +278,17 @@ resource "vault_quota_rate_limit" "foobar" {
 				ExpectError: regexp.MustCompile(`Error: expected group_by to be one of`),
 			},
 			{
-				// group_by can be explicitly set to "ip", secondary_rate remains 0
+				// group_by can be explicitly set to "ip", secondary_rate remains unset
 				Config: getConfig("group_by = \"ip\""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "group_by", "ip"),
-					resource.TestCheckResourceAttr(resourceName, "secondary_rate", "0"),
+					func(state *terraform.State) error {
+						if v, ok := state.RootModule().Resources[resourceName].Primary.Attributes["secondary_rate"]; ok {
+							return fmt.Errorf("group_by should not be set, got %s", v)
+						}
+						return nil
+					},
 				),
 			},
 			{
@@ -289,17 +301,27 @@ resource "vault_quota_rate_limit" "foobar" {
 				),
 			},
 			{
+				// group_by can be explicitly set to "entity_then_none", secondary_rate doesn't become unset but it's at
+				// least the zero value, while on the backend it should be 10 as it defaults to the rate value
 				Config: getConfig("group_by = \"entity_then_none\""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "group_by", "entity_then_none"),
-					resource.TestCheckResourceAttr(resourceName, "secondary_rate", "10"),
+					// this is actually undesirable, but the TF SDKv2 has issues with unset vs zero values
+					resource.TestCheckResourceAttr(resourceName, "secondary_rate", "0"),
+				),
+			},
+			{
+				Config: getConfig("group_by = \"none\""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "group_by", "none"),
+					// this is actually undesirable, but the TF SDKv2 has issues with unset vs zero values
+					resource.TestCheckResourceAttr(resourceName, "secondary_rate", "0"),
 				),
 			},
 		},
 	})
-	// TODO: a test case that transforms an entity-based rate limit back to a normal one, see if secondary_rate is left behind
-	// TODO: check that field validation doesn't create the TF resource
 }
 
 func testQuotaRateLimitCheckDestroy(rateLimits []string) resource.TestCheckFunc {
