@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -28,7 +29,7 @@ func quotaRateLimitResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-
+		CustomizeDiff: quotaRateLimitCustomizeDiff,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -50,7 +51,8 @@ func quotaRateLimitResource() *schema.Resource {
 			},
 			"secondary_rate": {
 				Type:         schema.TypeFloat,
-				Optional:     false,
+				Optional:     true,
+				Computed:     true,
 				Description:  `Only available when using the "entity_then_ip" or "entity_then_none" group_by modes. This is the rate limit applied to the requests that fall under the "ip" or "none" groupings, while the authenticated requests that contain an entity ID are subject to the "rate" field instead. Defaults to the same value as "rate".`,
 				ValidateFunc: validation.FloatAtLeast(0.0),
 			},
@@ -80,6 +82,7 @@ func quotaRateLimitResource() *schema.Resource {
 			"group_by": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				Description: `Attribute by which to group requests by. Valid group_by modes are: 1) "ip" that groups` +
 					` requests by their source IP address (group_by defaults to ip if unset); 2) "none" that groups all` +
 					` requests that match the rate limit quota rule together; 3) "entity_then_ip" that groups requests` +
@@ -91,6 +94,21 @@ func quotaRateLimitResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+func quotaRateLimitCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	// cross-field validation: secondary_rate can only be set if group_by is set to "entity_then_ip" or "entity_then_none"
+	if _, ok := d.GetOk("secondary_rate"); ok {
+		groupBy, ok := d.GetOk("group_by")
+		if !ok {
+			return fmt.Errorf("secondary_rate can only be set if group_by is set to 'entity_then_ip' or 'entity_then_none'")
+		}
+		if groupBy != "entity_then_ip" && groupBy != "entity_then_none" {
+			return fmt.Errorf("secondary_rate can only be set if group_by is set to 'entity_then_ip' or 'entity_then_none', but got %s", groupBy)
+		}
+	}
+
+	return nil
 }
 
 func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
@@ -131,6 +149,7 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("group_by"); ok {
 		if !provider.IsAPISupported(meta, provider.VaultVersion120) {
+			d.SetId("")
 			return fmt.Errorf("group_by is only supported in Vault 1.20 and later")
 		}
 		data["group_by"] = v
@@ -138,6 +157,7 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("secondary_rate"); ok {
 		if !provider.IsAPISupported(meta, provider.VaultVersion120) {
+			d.SetId("")
 			return fmt.Errorf("secondary_rate is only supported in Vault 1.20 and later")
 		}
 		data["secondary_rate"] = v
@@ -178,20 +198,21 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		fields = append(fields, consts.FieldRole)
 	}
-
-	if provider.IsAPISupported(meta, provider.VaultVersion115) {
-		if _, ok := d.GetOkExists("inheritable"); ok {
-			fields = append(fields, "inheritable")
-		}
-	}
-
 	if provider.IsAPISupported(meta, provider.VaultVersion120) {
 		fields = append(fields, "group_by", "secondary_rate")
+	}
+
+	// If not explicitly set by the user the backend will use a sane default depending on the path, but we can't
+	// reflect it on the state because the field is not computed. We could make it optional+computed, but making it
+	// computed would mean a diff on upgrade, which could be considered a breaking change.
+	if _, ok := d.GetOkExists("inheritable"); ok {
+		fields = append(fields, "inheritable")
 	}
 
 	for _, k := range fields {
 		v, ok := resp.Data[k]
 		if ok {
+			fmt.Printf("[DEBUG] Resource Rate Limit Quota %s: %s = %v\n", name, k, v)
 			if err := d.Set(k, v); err != nil {
 				return fmt.Errorf("error setting %s for Resource Rate Limit Quota %s: %q", k, name, err)
 			}
@@ -202,6 +223,7 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
+	fmt.Printf("[DEBUG] updating Resource Rate Limit Quota %s\n", d.Id())
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -224,21 +246,40 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["block_interval"] = v
 	}
 
+	if v, ok := d.GetOk("group_by"); ok {
+		if !provider.IsAPISupported(meta, provider.VaultVersion120) {
+			return fmt.Errorf("group_by is only supported in Vault 1.20 and later")
+		}
+		data["group_by"] = v
+	}
+
+	if v, ok := d.GetOk("secondary_rate"); ok {
+		if !provider.IsAPISupported(meta, provider.VaultVersion120) {
+			return fmt.Errorf("secondary_rate is only supported in Vault 1.20 and later")
+		}
+		data["secondary_rate"] = v
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		// we should probably fail if the field is set on an unsupported version instead of ignoring it, but changin
+		// that would be a breaking change
 		if v, ok := d.GetOkExists("inheritable"); ok {
 			data["inheritable"] = v.(bool)
 		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		// we should probably fail if the field is set on an unsupported version instead of ignoring it, but changin
+		// that would be a breaking change
 		if v, ok := d.GetOk(consts.FieldRole); ok {
 			data[consts.FieldRole] = v
 		}
 	}
 
+	fmt.Printf("[DEBUG] Writing data for Resource Rate Limit Quota %s: %v\n", name, data)
+
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		d.SetId("")
 		return fmt.Errorf("Error updating Resource Rate Limit Quota %s: %s", name, err)
 	}
 	log.Printf("[DEBUG] Updated Resource Rate Limit Quota %s", name)
