@@ -139,8 +139,7 @@ func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{})
 
 	log.Printf("[DEBUG] Writing Terraform Cloud configuration to %q", configPath)
 	data := map[string]interface{}{
-		consts.FieldAddress: address,
-		// consts.FieldToken:     token,
+		consts.FieldAddress:  address,
 		consts.FieldBasePath: basePath,
 	}
 	var token string
