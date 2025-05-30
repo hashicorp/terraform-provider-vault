@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add new resource `vault_ldap_group_policy_attachment` to manage policies
+
 ## 5.0.0 (May 21, 2025)
 
 **Important**: `5.X` multiplexes the Vault provider to use the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework),

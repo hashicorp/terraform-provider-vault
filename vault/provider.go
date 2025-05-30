@@ -441,6 +441,10 @@ var (
 			Resource:      UpdateSchemaResource(ldapAuthBackendGroupResource()),
 			PathInventory: []string{"/auth/ldap/groups/{name}"},
 		},
+		"vault_ldap_group_policy_attachment": {
+			Resource:      UpdateSchemaResource(ldapGroupPolicyAttachmentResource()),
+			PathInventory: []string{"/auth/ldap/groups/{name}"},
+		},
 		"vault_ldap_secret_backend": {
 			Resource:      UpdateSchemaResource(ldapSecretBackendResource()),
 			PathInventory: []string{"/ldap/config"},
