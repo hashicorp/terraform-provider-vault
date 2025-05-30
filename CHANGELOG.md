@@ -1,7 +1,7 @@
 ## Unreleased
 
 FEATURES:
-* `vault_terraform_cloud_secret_backend` now supports a write-only token argument.
+* `vault_terraform_cloud_secret_backend` now supports a write-only token argument ([2483](https://github.com/hashicorp/terraform-provider-vault/pull/2483)).
 
 ## 5.0.0 (May 21, 2025)
 
