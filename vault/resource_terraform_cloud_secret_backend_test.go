@@ -98,6 +98,46 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 	})
 }
 
+func TestTerraformCloudSecretBackend_token_wo(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
+	token := os.Getenv("TEST_TF_TOKEN")
+
+	resourceType := "vault_terraform_cloud_secret_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				Config: testTerraformCloudSecretBackend_token_wo_initialConfig(backend, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "https://app.terraform.io"),
+					resource.TestCheckResourceAttr(resourceName, "token_wo_version", "1"),
+					resource.TestCheckResourceAttr(resourceName, "base_path", "/api/v2/"),
+				),
+			},
+			{
+				Config: testTerraformCloudSecretBackend_updateConfig(backend, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "0"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "0"),
+					resource.TestCheckResourceAttr(resourceName, "address", "https://app.terraform.io/not"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "base_path", "/not/api/v2/"),
+				),
+			},
+		},
+	})
+}
+
 func testTerraformCloudSecretBackend_initialConfig(path, token string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
@@ -117,5 +157,17 @@ resource "vault_terraform_cloud_secret_backend" "test" {
   address = "https://app.terraform.io/not"
   token = "%s"
   base_path = "/not/api/v2/"
+}`, path, token)
+}
+
+func testTerraformCloudSecretBackend_token_wo_initialConfig(path, token string) string {
+	return fmt.Sprintf(`
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend = "%s"
+  description = "test description"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  token_wo = "%s"
+  token_wo_version = 1
 }`, path, token)
 }
