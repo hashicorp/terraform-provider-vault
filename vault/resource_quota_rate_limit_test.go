@@ -217,6 +217,7 @@ func TestQuotaRateLimitWithNamespaceInheritable(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "inheritable", "false"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
@@ -320,6 +321,7 @@ resource "vault_quota_rate_limit" "foobar" {
 					resource.TestCheckResourceAttr(resourceName, "secondary_rate", "0"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
