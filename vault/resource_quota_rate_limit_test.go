@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -216,6 +217,102 @@ func TestQuotaRateLimitWithNamespaceInheritable(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "inheritable", "false"),
 				),
 			},
+			// TODO: fix the inheritable field to work with tf import
+			// testutil.GetImportTestStep(resourceName, false, nil),
+		},
+	})
+}
+
+func TestQuotaRateLimitGroupBy(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test")
+	ns := "ns-" + name
+	rateLimit := randomQuotaRateString()
+	newRateLimit := randomQuotaRateString()
+	resourceName := "vault_quota_rate_limit.foobar"
+
+	getConfig := func(resourceAddon string) string {
+		return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+	path = "%s"
+	}
+
+resource "vault_quota_rate_limit" "foobar" {
+  name = "%s"
+  path = "${vault_namespace.test.path}/"
+  rate = 10
+  %s
+}
+`, ns, name, resourceAddon)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+		},
+		CheckDestroy: testQuotaRateLimitCheckDestroy([]string{rateLimit, newRateLimit}),
+		Steps: []resource.TestStep{
+			{
+				// RLQ default to group_by = "ip". secondary_rate for unsupported group_by values is 0
+				Config: getConfig(""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "group_by", "ip"),
+					resource.TestCheckResourceAttr(resourceName, "secondary_rate", "0"),
+				),
+			},
+			{
+				// secondary_rate is only allowed for entity-based group_by values
+				Config:      getConfig("secondary_rate = 5"),
+				ExpectError: regexp.MustCompile(`secondary_rate can only be set if group_by is set to 'entity_then_ip' or 'entity_then_none'`),
+			},
+			{
+				// group_by cannot be explicitly set to an empty string, the API allows it but the provider does not
+				Config:      getConfig("group_by = \"\""),
+				ExpectError: regexp.MustCompile(`Error: expected group_by to be one of`),
+			},
+			{
+				// group_by can be explicitly set to "ip", secondary_rate remains 0
+				Config: getConfig("group_by = \"ip\""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "group_by", "ip"),
+					resource.TestCheckResourceAttr(resourceName, "secondary_rate", "0"),
+				),
+			},
+			{
+				// group_by can be explicitly set to "entity_then_ip", secondary_rate can then be set
+				Config: getConfig("group_by = \"entity_then_ip\"\nsecondary_rate = 5"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "group_by", "entity_then_ip"),
+					resource.TestCheckResourceAttr(resourceName, "secondary_rate", "5"),
+				),
+			},
+			{
+				Config: getConfig("group_by = \"entity_then_none\""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "group_by", "entity_then_none"),
+					// this is actually an issue with the TF SDKv2, it does not distinguish between unset and zero values
+					// so even tho ideally we'd like to have secondary_rate unset, defaulting back to rate which is 10,
+					// it will actually remain 5 because that value is still in the state. If we instead used the same
+					// approach as the inheritable field then TF import wouldn't work with hese new fields.
+					resource.TestCheckResourceAttr(resourceName, "secondary_rate", "5"),
+				),
+			},
+			{
+				// we actually need to explicitly set secondary_rate to 0, otherwise the old value of 5 will remain in
+				// the state which causes the validation to fail because secondary_rate is not allowed for group_by = "none"
+				Config: getConfig("group_by = \"none\"\nsecondary_rate = 0"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "group_by", "none"),
+					resource.TestCheckResourceAttr(resourceName, "secondary_rate", "0"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
