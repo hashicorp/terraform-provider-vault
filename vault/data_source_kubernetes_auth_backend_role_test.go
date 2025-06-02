@@ -146,6 +146,8 @@ func TestAccKubernetesAuthBackendRoleDataSource_full(t *testing.T) {
 						"bound_service_account_namespaces.0", "example"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
 						"bound_service_account_namespaces.#", "1"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespace_selector", "{\"matchLabels\":{\"env\":\"dev\"}}"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
 						"token_policies.0", "default"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
