@@ -150,7 +150,7 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOk("group_by"); ok {
 		if !provider.IsAPISupported(meta, provider.VaultVersion120) {
 			d.SetId("")
-			return fmt.Errorf("group_by is only supported in Vault 1.20 and later")
+			return fmt.Errorf("group_by is only supported in Vault Enterprise 1.20 and later")
 		}
 		data["group_by"] = v
 	}
@@ -158,7 +158,7 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOk("secondary_rate"); ok {
 		if !provider.IsAPISupported(meta, provider.VaultVersion120) {
 			d.SetId("")
-			return fmt.Errorf("secondary_rate is only supported in Vault 1.20 and later")
+			return fmt.Errorf("secondary_rate is only supported in Vault Enterprise 1.20 and later")
 		}
 		data["secondary_rate"] = v
 	}
@@ -250,14 +250,14 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("group_by"); ok {
 		if !provider.IsAPISupported(meta, provider.VaultVersion120) {
-			return fmt.Errorf("group_by is only supported in Vault 1.20 and later")
+			return fmt.Errorf("group_by is only supported in Vault Enterpprise 1.20 and later")
 		}
 		data["group_by"] = v
 	}
 
 	if v, ok := d.GetOk("secondary_rate"); ok {
 		if !provider.IsAPISupported(meta, provider.VaultVersion120) {
-			return fmt.Errorf("secondary_rate is only supported in Vault 1.20 and later")
+			return fmt.Errorf("secondary_rate is only supported in Vault Enterprise 1.20 and later")
 		}
 		data["secondary_rate"] = v
 	}
