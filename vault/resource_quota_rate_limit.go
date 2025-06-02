@@ -52,6 +52,7 @@ func quotaRateLimitResource() *schema.Resource {
 			"secondary_rate": {
 				Type:         schema.TypeFloat,
 				Optional:     true,
+				Computed:     true,
 				Description:  `Only available when using the "entity_then_ip" or "entity_then_none" group_by modes. This is the rate limit applied to the requests that fall under the "ip" or "none" groupings, while the authenticated requests that contain an entity ID are subject to the "rate" field instead. Defaults to the same value as "rate".`,
 				ValidateFunc: validation.FloatAtLeast(0.0),
 			},
@@ -81,6 +82,7 @@ func quotaRateLimitResource() *schema.Resource {
 			"group_by": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				Description: `Attribute by which to group requests by. Valid group_by modes are: 1) "ip" that groups` +
 					` requests by their source IP address (group_by defaults to ip if unset); 2) "none" that groups all` +
 					` requests that match the rate limit quota rule together; 3) "entity_then_ip" that groups requests` +
@@ -197,6 +199,10 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 		fields = append(fields, consts.FieldRole)
 	}
 
+	// If not explicitly set by the user the backend will use a sane default depending on the path, but we can't
+	// reflect it on the state because the field is not computed. We could make it optional+computed, but making it
+	// computed would mean a diff on upgrade, which could be considered a breaking change. This approach also doesn't
+	// work with the import command.
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
 		if _, ok := d.GetOkExists("inheritable"); ok {
 			fields = append(fields, "inheritable")
@@ -204,12 +210,7 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion120) {
-		if _, ok := d.GetOk("group_by"); ok {
-			fields = append(fields, "group_by")
-		}
-		if _, ok := d.GetOk("secondary_rate"); ok {
-			fields = append(fields, "secondary_rate")
-		}
+		fields = append(fields, "group_by", "secondary_rate")
 	}
 
 	for _, k := range fields {
