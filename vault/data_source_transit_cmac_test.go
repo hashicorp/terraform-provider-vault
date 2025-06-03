@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -63,7 +64,10 @@ func TestDataSourceTransitCMAC(t *testing.T) {
 	verifyResourceName := "data.vault_transit_verify.test"
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: cmacConfig("aes128-cmac", cmacBlocks),
