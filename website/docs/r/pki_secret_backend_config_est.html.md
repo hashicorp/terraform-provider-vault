@@ -90,9 +90,9 @@ The following arguments are supported:
 <a id="nestedatt--authenticators"></a>
 ### Nested Schema for `authenticators`
 
-* `cert` - "The accessor (required) and cert_role (optional) properties for cert auth backends".
+* `cert` - The accessor (required) and cert_role (optional) properties for cert auth backends.
 
-* `userpass` - "The accessor (required) property for user pass auth backends".
+* `userpass` - The accessor (required) property for user pass auth backends.
 
 ## Attributes Reference
 
