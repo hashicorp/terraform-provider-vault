@@ -39,13 +39,13 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
-* `backend` - (Optional string: "scep") Path to the mounted SCEP auth backend
+* `backend` - (Optional string: "scep") Path to the mounted SCEP auth backend.
 
-* `name` - (Required string) Name of the role
+* `name` - (Required string) Name of the role.
 
-* `auth_type` - (Required string) The authentication type to use
+* `auth_type` - (Required string) The authentication type to use. This can be either "static-challenge" or "intune".
 
-* `challenge` - (Optional) The static challenge to use if auth_type is `"static-challenge"`, not used for other auth types
+* `challenge` - (Optional) The static challenge to use if auth_type is "static-challenge", not used for other auth types.
 
 ### Common Token Arguments
 

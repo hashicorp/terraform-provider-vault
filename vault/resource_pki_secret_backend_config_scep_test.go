@@ -203,3 +203,78 @@ data "vault_pki_secret_backend_config_scep" "test" {
 }
 `, pkiPath)
 }
+
+func TestAccPKISecretBackendConfigScep_Docs(t *testing.T) {
+	t.Parallel()
+
+	backend := acctest.RandomWithPrefix("tf-test-pki")
+	resourceType := "vault_pki_secret_backend_config_scep"
+	resourceBackend := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPKISecretBackendConfigScepDocExample(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldEnabled, "true"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDefaultPathPolicy, "sign-verbatim"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAllowedEncryptionAlgorithms+".#", "4"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAllowedDigestAlgorithms+".#", "3"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldRestrictCAChainToIssuer, "true"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".#", "1"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.%", "2"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.scep.%", "2"),
+					resource.TestCheckResourceAttrSet(resourceBackend, consts.FieldAuthenticators+".0.scep.accessor"),
+					resource.TestCheckResourceAttrSet(resourceBackend, consts.FieldAuthenticators+".0.scep.scep_role"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".#", "1"),
+					resource.TestCheckResourceAttrSet(resourceBackend, consts.FieldLastUpdated),
+				),
+			},
+			testutil.GetImportTestStep(resourceBackend, false, nil),
+		},
+	})
+}
+
+func testAccPKISecretBackendConfigScepDocExample(pkiPath string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "scep" {
+    path = "scep-auth"
+    type = "scep"
+}
+
+resource "vault_scep_auth_backend_role" "scep_challenge" {
+    backend		 = vault_auth_backend.scep.id
+    name		 = "scep-auth"
+    display_name = "Static challenge for SCEP clients"
+    auth_type	 = "static-challenge"
+    challenge	 = "ac7e4ada-c8ef-4393-9098-d69d08736833"
+}
+
+resource "vault_mount" "pki" {
+	path        = "%s"
+	type        = "pki"
+    description = "PKI secret engine mount"
+}
+
+resource "vault_pki_secret_backend_config_scep" "test" {
+  backend					  = vault_mount.pki.path
+  enabled					  = true
+  default_path_policy		  = "sign-verbatim"
+  restrict_ca_chain_to_issuer = true
+  authenticators {
+    scep = { 
+      accessor = vault_auth_backend.scep.accessor
+      scep_role = vault_scep_auth_backend_role.scep_challenge.name 
+    }
+  }
+}
+`, pkiPath)
+}
