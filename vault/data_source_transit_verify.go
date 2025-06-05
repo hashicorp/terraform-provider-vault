@@ -210,6 +210,8 @@ func convertBatchResults(rawResults interface{}) ([]map[string]interface{}, erro
 				stringMap[k] = v
 			}
 		}
+
+		batchResults = append(batchResults, stringMap)
 	}
 
 	return batchResults, nil
