@@ -67,7 +67,7 @@ func TestDataSourceTransitCMAC(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		Steps: []resource.TestStep{
