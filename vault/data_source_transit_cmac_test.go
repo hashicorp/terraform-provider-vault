@@ -6,11 +6,12 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -60,6 +61,7 @@ data "vault_transit_verify" "test" {
 `
 
 func TestDataSourceTransitCMAC(t *testing.T) {
+	backend := acctest.RandomWithPrefix("transit")
 	cmacResourceName := "data.vault_transit_cmac.test"
 	verifyResourceName := "data.vault_transit_verify.test"
 	resource.Test(t, resource.TestCase{
@@ -70,14 +72,14 @@ func TestDataSourceTransitCMAC(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: cmacConfig("aes128-cmac", cmacBlocks),
+				Config: cmacConfig(backend, "aes128-cmac", cmacBlocks),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(cmacResourceName, "cmac"),
 					resource.TestCheckResourceAttr(verifyResourceName, "valid", "true"),
 				),
 			},
 			{
-				Config: cmacConfig("aes128-cmac", cmacBatchInputBlocks),
+				Config: cmacConfig(backend, "aes128-cmac", cmacBatchInputBlocks),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(cmacResourceName, "batch_results.#"),
 					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.0.valid", "true"),
@@ -89,10 +91,10 @@ func TestDataSourceTransitCMAC(t *testing.T) {
 	})
 }
 
-func cmacConfig(keyType, blocks string) string {
+func cmacConfig(backend, keyType, blocks string) string {
 	baseConfig := `
 resource "vault_mount" "test" {
-  path        = "transit"
+  path        = "%s"
   type        = "transit"
   description = "This is an example mount"
 }
@@ -106,5 +108,5 @@ resource "vault_transit_secret_backend_key" "test" {
 
 %s
 `
-	return fmt.Sprintf(baseConfig, keyType, blocks)
+	return fmt.Sprintf(baseConfig, backend, keyType, blocks)
 }
