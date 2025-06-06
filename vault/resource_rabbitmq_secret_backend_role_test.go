@@ -269,14 +269,14 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
   backend = vault_rabbitmq_secret_backend.test.path
   name = "%s"
   tags = %q
-    
+
   vhost_topic {
     vhost {
 		topic = "amq.topic"
 		read = ".*"
 		write = ""
 	}
-	
+
 	host = "/"
   }
 }
@@ -305,7 +305,7 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
 		read = ""
 		write = ".*"
 	}
-	
+
 	host = "/"
   }
 }
@@ -328,13 +328,6 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
   backend = vault_rabbitmq_secret_backend.test.path
   name = "%s"
   tags = "management"
-  
-  vhost {
-    host = "/gamma"
-    configure = ".*"
-    read = ".*"
-    write = ".*"
-  }
 
   vhost {
     host = "/alpha"
@@ -345,6 +338,13 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
 
   vhost {
     host = "/beta"
+    configure = ".*"
+    read = ".*"
+    write = ".*"
+  }
+
+  vhost {
+    host = "/gamma"
     configure = ".*"
     read = ".*"
     write = ".*"
