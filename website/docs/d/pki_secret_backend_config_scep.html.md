@@ -68,7 +68,7 @@ The following arguments are supported:
 
 * `cert` - The accessor and cert_role properties for cert auth backends.
  
-* `userpass` - The accessor property for user pass auth backends.
+* `scep` - The accessor property for scep auth backends.
 
 <a id="nestedatt--externalvalidation"></a>
 ### Nested Schema for `external_validation`
