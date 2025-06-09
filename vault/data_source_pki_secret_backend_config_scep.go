@@ -159,7 +159,7 @@ func readScepConfig(ctx context.Context, d *schema.ResourceData, client *api.Cli
 }
 
 // verifyPkiScepFeatureSupported verifies that we are talking to a Vault enterprise edition
-// and its version 1.16.0 or higher, returns nil if the above is met, otherwise an error
+// and its version 1.20.0 or higher, returns nil if the above is met, otherwise an error
 func verifyPkiScepFeatureSupported(meta interface{}) error {
 	currentVersion := meta.(*provider.ProviderMeta).GetVaultVersion()
 
