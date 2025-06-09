@@ -155,6 +155,31 @@ func TestAccRabbitMQSecretBackendRole_topic(t *testing.T) {
 	})
 }
 
+func TestAccRabbitMQSecretBackendRole_vhostOrdering(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
+	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
+	resourceName := "vault_rabbitmq_secret_backend_role.test"
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccRabbitMQSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRabbitMQSecretBackendRoleConfig_multipleVhosts(name, backend, connectionUri, username, password),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("%s", name)),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "vhost.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "vhost.0.host", "/alpha"),
+					resource.TestCheckResourceAttr(resourceName, "vhost.1.host", "/beta"),
+					resource.TestCheckResourceAttr(resourceName, "vhost.2.host", "/gamma"),
+				),
+			},
+		},
+	})
+}
+
 func testAccRabbitMQSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_rabbitmq_secret_backend_role" {
@@ -245,14 +270,14 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
   backend = vault_rabbitmq_secret_backend.test.path
   name = "%s"
   tags = %q
-    
+
   vhost_topic {
     vhost {
 		topic = "amq.topic"
 		read = ".*"
 		write = ""
 	}
-	
+
 	host = "/"
   }
 }
@@ -281,9 +306,50 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
 		read = ""
 		write = ".*"
 	}
-	
+
 	host = "/"
   }
 }
 `, path, connectionUri, username, password, name, testAccRabbitMQSecretBackendRoleTags_updated)
+}
+
+func testAccRabbitMQSecretBackendRoleConfig_multipleVhosts(name, path, connectionUri, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_rabbitmq_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  connection_uri = "%s"
+  username = "%s"
+  password = "%s"
+}
+
+resource "vault_rabbitmq_secret_backend_role" "test" {
+  backend = vault_rabbitmq_secret_backend.test.path
+  name = "%s"
+  tags = "management"
+
+  vhost {
+    host = "/alpha"
+    configure = ".*"
+    read = ".*"
+    write = ".*"
+  }
+
+  vhost {
+    host = "/beta"
+    configure = ".*"
+    read = ".*"
+    write = ".*"
+  }
+
+  vhost {
+    host = "/gamma"
+    configure = ".*"
+    read = ".*"
+    write = ".*"
+  }
+}
+`, path, connectionUri, username, password, name)
 }
