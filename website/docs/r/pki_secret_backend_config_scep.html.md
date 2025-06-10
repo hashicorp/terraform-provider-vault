@@ -83,7 +83,7 @@ The following arguments are supported:
 <a id="nestedatt--externalvalidation"></a>
 ### Nested Schema for `external_validation`
 
-* `intune` - The tenant_id (required), client_id (required), client_secret (required) and environment (optional) properties for Microsoft Intune validation of SCEP requests.
+* `intune` - The tenant_id, client_id, client_secret and environment properties for Microsoft Intune validation of SCEP requests.
 
 ## Attributes Reference
 

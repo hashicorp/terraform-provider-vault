@@ -161,22 +161,22 @@ func pkiSecretBackendConfigScepWrite(ctx context.Context, d *schema.ResourceData
 }
 
 func getListOfNotEmptyMaps(d *schema.ResourceData, field string) (any, bool) {
-	if raw, ok := d.GetOk(field); !ok {
+	raw, ok := d.GetOk(field)
+	if !ok {
 		return nil, false
-	} else {
-		listOfMaps := raw.([]any)
-		if len(listOfMaps) == 0 {
-			return nil, false
-		}
-		mapOfMaps := listOfMaps[0].(map[string]any)
-		for k, v := range mapOfMaps {
-			if len(v.(map[string]any)) == 0 {
-				delete(mapOfMaps, k)
-			}
-		}
-
-		return mapOfMaps, len(mapOfMaps) > 0
 	}
+	listOfMaps := raw.([]any)
+	if len(listOfMaps) == 0 {
+		return nil, false
+	}
+	mapOfMaps := listOfMaps[0].(map[string]any)
+	for k, v := range mapOfMaps {
+		if len(v.(map[string]any)) == 0 {
+			delete(mapOfMaps, k)
+		}
+	}
+
+	return mapOfMaps, len(mapOfMaps) > 0
 }
 
 func pkiSecretBackendConfigScepRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
