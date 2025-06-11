@@ -33,9 +33,10 @@ func transitCMACDataSource() *schema.Resource {
 				Description: "The version of the key to use",
 			},
 			consts.FieldInput: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Specifies the base64 encoded input data. One of input or batch_input must be supplied.",
+				Type:         schema.TypeString,
+				Optional:     true,
+				AtLeastOneOf: []string{consts.FieldInput, consts.FieldBatchInput},
+				Description:  "Specifies the base64 encoded input data. One of input or batch_input must be supplied.",
 			},
 			consts.FieldMACLength: {
 				Type:        schema.TypeInt,
@@ -48,10 +49,11 @@ func transitCMACDataSource() *schema.Resource {
 				Description: "Specifies the MAC length to use (URL parameter). If provided, this value overrides mac_length. The url_mac_length cannot be larger than the cipher's block size.",
 			},
 			consts.FieldBatchInput: {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Specifies a list of items for processing. When this parameter is set, any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input. If the input data value of an item is invalid, the corresponding item in the 'batch_results' will have the key 'error' with a value describing the error.",
-				Elem:        &schema.Schema{Type: schema.TypeMap},
+				Type:         schema.TypeList,
+				Optional:     true,
+				AtLeastOneOf: []string{consts.FieldInput, consts.FieldBatchInput},
+				Description:  "Specifies a list of items for processing. When this parameter is set, any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input. If the input data value of an item is invalid, the corresponding item in the 'batch_results' will have the key 'error' with a value describing the error.",
+				Elem:         &schema.Schema{Type: schema.TypeMap},
 			},
 			consts.FieldCMAC: {
 				Type:        schema.TypeString,
