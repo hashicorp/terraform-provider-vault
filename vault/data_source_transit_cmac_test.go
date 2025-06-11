@@ -35,9 +35,15 @@ data "vault_transit_cmac" "test" {
     name        = vault_transit_secret_backend_key.test.name
 	batch_input = [
 		{
+		  reference = "1"
 		  input = "adba32=="
 		},
 		{
+		  reference = "2"
+		  input = "aGVsbG8gd29ybGQuCg=="
+		},
+		{
+		  reference = "3"
 		  input = "aGVsbG8gd29ybGQuCg=="
 		}
     ]
@@ -45,16 +51,26 @@ data "vault_transit_cmac" "test" {
 data "vault_transit_verify" "test" {
     path        = vault_mount.test.path
     name        = vault_transit_secret_backend_key.test.name
-	input       = "aGVsbG8gd29ybGQuCg=="
-    cmac        = data.vault_transit_cmac.test.cmac
 	batch_input = [
 		{
+		  reference = "1"
 		  input = "adba32=="
           cmac  = data.vault_transit_cmac.test.batch_results.0.cmac
 		},
 		{
+		  reference = "2"
 		  input = "aGVsbG8gd29ybGQuCg=="
           cmac  = data.vault_transit_cmac.test.batch_results.1.cmac
+		},
+		{
+		  reference = "3"
+		  input = "aGVsbG8gd29ybGQuCg=="
+          cmac  = data.vault_transit_cmac.test.batch_results.2.cmac
+		},
+		{
+		  reference = "4"
+		  input = "aGVsbG8gd29ybGQuCg=="
+		  cmac = "bad-cmac"
 		}
     ]
 }
@@ -81,9 +97,20 @@ func TestDataSourceTransitCMAC(t *testing.T) {
 			{
 				Config: cmacConfig(backend, "aes128-cmac", cmacBatchInputBlocks),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet(cmacResourceName, "batch_results.#"),
+					resource.TestCheckResourceAttr(cmacResourceName, "batch_results.#", "3"),
+					resource.TestCheckResourceAttrSet(cmacResourceName, "batch_results.0.reference"),
+					resource.TestCheckResourceAttrSet(cmacResourceName, "batch_results.1.reference"),
+					resource.TestCheckResourceAttrSet(cmacResourceName, "batch_results.2.reference"),
+					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.#", "4"),
+					resource.TestCheckResourceAttrSet(verifyResourceName, "batch_results.0.reference"),
+					resource.TestCheckResourceAttrSet(verifyResourceName, "batch_results.1.reference"),
+					resource.TestCheckResourceAttrSet(verifyResourceName, "batch_results.2.reference"),
+					resource.TestCheckResourceAttrSet(verifyResourceName, "batch_results.3.reference"),
+					resource.TestCheckResourceAttrSet(verifyResourceName, "batch_results.3.error"),
 					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.0.valid", "true"),
 					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.1.valid", "true"),
+					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.2.valid", "true"),
+					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.3.valid", "false"),
 				),
 			},
 		},
