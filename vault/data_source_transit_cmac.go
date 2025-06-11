@@ -6,6 +6,7 @@ package vault
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -73,9 +74,9 @@ func transitCMACDataSource() *schema.Resource {
 }
 
 func transitCMACDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return e
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return err
 	}
 
 	path := d.Get(consts.FieldPath).(string)
@@ -83,18 +84,22 @@ func transitCMACDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	payload := map[string]interface{}{}
 
-	signAPIStringFields := []string{
-		consts.FieldKeyVersion,
-		consts.FieldInput,
-		consts.FieldSignatureContext,
-		consts.FieldMACLength,
-		consts.FieldURLMACLength,
-		consts.FieldBatchInput,
-	}
+	if batchInput, ok := d.GetOk(consts.FieldBatchInput); ok {
+		payload[consts.FieldBatchInput], err = convertBatchInput(batchInput)
+		if err != nil {
+			return err
+		}
+	} else {
+		cmacAPIFields := []string{
+			consts.FieldKeyVersion,
+			consts.FieldInput,
+			consts.FieldMACLength,
+		}
 
-	for _, f := range signAPIStringFields {
-		if v, ok := d.GetOk(f); ok {
-			payload[f] = v
+		for _, f := range cmacAPIFields {
+			if v, ok := d.GetOk(f); ok {
+				payload[f] = v
+			}
 		}
 	}
 
@@ -129,4 +134,44 @@ func transitCMACDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
+}
+
+// when batch_input is provided as a map, all of the fields get parsed as strings,
+// which results in an error if mac_length is included, because Vault expects an int.
+// convertBatchInput converts these values to integers to avoid this error
+func convertBatchInput(batchInput interface{}) ([]map[string]interface{}, error) {
+	convertedBatchInput := make([]map[string]interface{}, 0)
+
+	inputList, ok := batchInput.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected batch_input to be a slice, got %T", batchInput)
+	}
+
+	for _, input := range inputList {
+		inputMap, ok := input.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("expected batch_input element to be a map, got %T", input)
+		}
+
+		if macLength, ok := inputMap[consts.FieldMACLength]; ok {
+			intMacLength, err := strconv.Atoi(macLength.(string))
+			if err != nil {
+				return nil, fmt.Errorf("error converting mac_length to int: %s", err)
+			}
+
+			inputMap[consts.FieldMACLength] = intMacLength
+		}
+		if keyVersion, ok := inputMap[consts.FieldKeyVersion]; ok {
+			intKeyVersion, err := strconv.Atoi(keyVersion.(string))
+			if err != nil {
+				return nil, fmt.Errorf("error converting key_version to int: %s", err)
+			}
+
+			inputMap[consts.FieldKeyVersion] = intKeyVersion
+		}
+
+		convertedBatchInput = append(convertedBatchInput, inputMap)
+	}
+
+	return convertedBatchInput, nil
 }

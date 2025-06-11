@@ -45,6 +45,7 @@ data "vault_transit_cmac" "test" {
 		{
 		  reference = "3"
 		  input = "aGVsbG8gd29ybGQuCg=="
+		  mac_length = 1
 		}
     ]
 }
