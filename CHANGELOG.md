@@ -1,6 +1,7 @@
 ## Unreleased
 
 FEATURES:
+* Add support for key_usage to `vault_pki_secret_backend_root_sign_intermediate` ([#2421])(https://github.com/hashicorp/terraform-provider-vault/pull/2421)
 * Add support for Transit CMAC endpoint ([#2488](https://github.com/hashicorp/terraform-provider-vault/pull/2488))
 
 ## 5.0.0 (May 21, 2025)
