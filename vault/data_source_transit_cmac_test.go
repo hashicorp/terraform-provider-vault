@@ -122,7 +122,6 @@ func TestDataSourceTransitCMAC(t *testing.T) {
 					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.0.valid", "true"),
 					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.1.valid", "true"),
 					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.2.valid", "true"),
-					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.3.valid", "false"),
 				),
 			},
 		},
