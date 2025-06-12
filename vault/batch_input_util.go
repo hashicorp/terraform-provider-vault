@@ -13,10 +13,6 @@ var intFields = []string{
 	consts.FieldKeyVersion,
 }
 
-var booleanFields = []string{
-	consts.FieldPrehashed,
-}
-
 // When batch_input is provided as a map, all of the fields get parsed as strings,
 // which results in an error if non-string parameters are included, because Vault
 // expects a different type. convertBatchInput converts these values to their correct
@@ -46,17 +42,6 @@ func convertBatchInput(batchInput interface{}) ([]map[string]interface{}, error)
 				}
 
 				mapCopy[key] = intField
-			}
-		}
-
-		for _, key := range booleanFields {
-			if f, ok := mapCopy[key]; ok {
-				boolField, err := strconv.ParseBool(f.(string))
-				if err != nil {
-					return nil, fmt.Errorf("error converting field %s to bool: %s", key, err)
-				}
-
-				mapCopy[key] = boolField
 			}
 		}
 
