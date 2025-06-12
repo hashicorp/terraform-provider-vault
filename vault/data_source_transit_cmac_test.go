@@ -20,12 +20,14 @@ data "vault_transit_cmac" "test" {
     path        = vault_mount.test.path
     name        = vault_transit_secret_backend_key.test.name
 	input       = "aGVsbG8gd29ybGQuCg=="
+	%s
 }
 data "vault_transit_verify" "test" {
     path        = vault_mount.test.path
     name        = vault_transit_secret_backend_key.test.name
 	input       = "aGVsbG8gd29ybGQuCg=="
     cmac        = data.vault_transit_cmac.test.cmac
+	%s
 }
 `
 
@@ -67,6 +69,7 @@ data "vault_transit_verify" "test" {
 		  reference = "3"
 		  input = "aGVsbG8gd29ybGQuCg=="
           cmac  = data.vault_transit_cmac.test.batch_results.2.cmac
+		  mac_length = 1
 		},
 		{
 		  reference = "4"
@@ -89,8 +92,16 @@ func TestDataSourceTransitCMAC(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: cmacConfig(backend, "aes128-cmac", cmacBlocks),
+				Config: cmacConfig(backend, "aes128-cmac", fmt.Sprintf(cmacBlocks, "", "")),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(cmacResourceName, "cmac"),
+					resource.TestCheckResourceAttr(verifyResourceName, "valid", "true"),
+				),
+			},
+			{
+				Config: cmacConfig(backend, "aes128-cmac", fmt.Sprintf(cmacBlocks, "mac_length = 1", "mac_length = 1")),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(cmacResourceName, "mac_length", "1"),
 					resource.TestCheckResourceAttrSet(cmacResourceName, "cmac"),
 					resource.TestCheckResourceAttr(verifyResourceName, "valid", "true"),
 				),

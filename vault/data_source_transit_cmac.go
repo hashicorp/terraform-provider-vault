@@ -6,7 +6,6 @@ package vault
 import (
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -134,44 +133,4 @@ func transitCMACDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
-}
-
-// when batch_input is provided as a map, all of the fields get parsed as strings,
-// which results in an error if mac_length is included, because Vault expects an int.
-// convertBatchInput converts these values to integers to avoid this error
-func convertBatchInput(batchInput interface{}) ([]map[string]interface{}, error) {
-	convertedBatchInput := make([]map[string]interface{}, 0)
-
-	inputList, ok := batchInput.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("expected batch_input to be a slice, got %T", batchInput)
-	}
-
-	for _, input := range inputList {
-		inputMap, ok := input.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("expected batch_input element to be a map, got %T", input)
-		}
-
-		if macLength, ok := inputMap[consts.FieldMACLength]; ok {
-			intMacLength, err := strconv.Atoi(macLength.(string))
-			if err != nil {
-				return nil, fmt.Errorf("error converting mac_length to int: %s", err)
-			}
-
-			inputMap[consts.FieldMACLength] = intMacLength
-		}
-		if keyVersion, ok := inputMap[consts.FieldKeyVersion]; ok {
-			intKeyVersion, err := strconv.Atoi(keyVersion.(string))
-			if err != nil {
-				return nil, fmt.Errorf("error converting key_version to int: %s", err)
-			}
-
-			inputMap[consts.FieldKeyVersion] = intKeyVersion
-		}
-
-		convertedBatchInput = append(convertedBatchInput, inputMap)
-	}
-
-	return convertedBatchInput, nil
 }
