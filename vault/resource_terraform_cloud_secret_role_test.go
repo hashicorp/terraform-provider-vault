@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestTerraformCloudSecretRole(t *testing.T) {
+func TestTerraformCloudSecretRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-backend")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	organization := "hashicorp-vault-testing"
@@ -215,24 +215,24 @@ resource "vault_terraform_cloud_secret_role" "test_user" {
 
 func testTerraformCloudSecretRole_optionsInitialConfig(backend, token, name, teamId string) string {
 	return fmt.Sprintf(`
-// resource "vault_terraform_cloud_secret_backend" "test" {
-//   backend     = "terraform"
-//   description = "test description"
-//   token       = "%s"
-// }
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend     = "%s"
+  description = "test description"
+  token       = "%s"
+}
 
-// resource "vault_terraform_cloud_secret_role" "test_team" {"
-//   backend         = "terraform"
-//   name            = "%[3]s_team_id"
-//   team_id         = "%[4]s"
-//   credential_type = "team"
-//   description     = "team role"
-//   ttl             = 100
-//   max_ttl         = 200
-// }
+resource "vault_terraform_cloud_secret_role" "test_team" {
+  backend         = vault_terraform_cloud_secret_backend.test.backend
+  name            = "%[3]s_team_id"
+  team_id         = "%[4]s"
+  credential_type = "team"
+  description     = "team role"
+  ttl             = 100
+  max_ttl         = 200
+}
 
 resource "vault_terraform_cloud_secret_role" "test_team_legacy" {
-  backend         = "terraform"
+  backend         = vault_terraform_cloud_secret_backend.test.backend
   name            = "%[3]s_team_legacy_id"
   team_id         = "%[4]s"
   credential_type = "team_legacy"
@@ -242,24 +242,24 @@ resource "vault_terraform_cloud_secret_role" "test_team_legacy" {
 
 func testTerraformCloudSecretRole_optionsUpdatedConfig(backend, token, name, teamId string) string {
 	return fmt.Sprintf(`
-// resource "vault_terraform_cloud_secret_backend" "test" {
-//   backend     = "terraform"
-//   description = "test description"
-//   token       = "%s"
-// }
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend     = "%s"
+  description = "test description"
+  token       = "%s"
+}
 
-// resource "vault_terraform_cloud_secret_role" "test_team" {
-//   backend         = "terraform"
-//   name            = "%[3]s_team_id"
-//   team_id         = "%[4]s"
-//   credential_type = "team"
-//   description     = "team role2"
-//   ttl             = 200
-//   max_ttl         = 300
-// }
+resource "vault_terraform_cloud_secret_role" "test_team" {
+  backend         = vault_terraform_cloud_secret_backend.test.backend
+  name            = "%[3]s_team_id"
+  team_id         = "%[4]s"
+  credential_type = "team"
+  description     = "team role2"
+  ttl             = 200
+  max_ttl         = 300
+}
 
 resource "vault_terraform_cloud_secret_role" "test_team_legacy" {
-  backend         = "terraform"
+  backend         = vault_terraform_cloud_secret_backend.test.backend
   name            = "%[3]s_team_legacy_id"
   team_id         = "%[4]s"
   credential_type = "team_legacy"
