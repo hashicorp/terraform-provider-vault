@@ -2,6 +2,8 @@
 
 * Add support for key_usage to `vault_pki_secret_backend_root_sign_intermediate` ([#2421])(https://github.com/hashicorp/terraform-provider-vault/pull/2421)
 
+* New parameters for `vault_terraform_cloud_secret_role` to support multi-team tokens, by @drewmullen ([#2498](https://github.com/hashicorp/terraform-provider-vault/pull/2498))
+
 
 ## 5.0.0 (May 21, 2025)
 
