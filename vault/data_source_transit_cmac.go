@@ -84,7 +84,7 @@ func transitCMACDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	payload := map[string]interface{}{}
 
 	if batchInput, ok := d.GetOk(consts.FieldBatchInput); ok {
-		payload[consts.FieldBatchInput], err = convertBatchInput(batchInput)
+		payload[consts.FieldBatchInput], err = convertBatchInput(batchInput, []string{consts.FieldKeyVersion, consts.FieldMACLength})
 		if err != nil {
 			return err
 		}

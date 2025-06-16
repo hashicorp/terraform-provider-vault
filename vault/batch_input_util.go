@@ -4,20 +4,13 @@ import (
 	"fmt"
 	"maps"
 	"strconv"
-
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
-
-var intFields = []string{
-	consts.FieldMACLength,
-	consts.FieldKeyVersion,
-}
 
 // When batch_input is provided as a map, all of the fields get parsed as strings,
 // which results in an error if non-string parameters are included, because Vault
 // expects a different type. convertBatchInput converts these values to their correct
 // types to avoid this error
-func convertBatchInput(batchInput interface{}) ([]map[string]interface{}, error) {
+func convertBatchInput(batchInput interface{}, intFields []string) ([]map[string]interface{}, error) {
 	convertedBatchInput := make([]map[string]interface{}, 0)
 
 	inputList, ok := batchInput.([]interface{})

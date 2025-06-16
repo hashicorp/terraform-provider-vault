@@ -131,7 +131,7 @@ func transitVerifyDataSourceRead(d *schema.ResourceData, meta interface{}) error
 	payload := map[string]interface{}{}
 
 	if batchInput, ok := d.GetOk(consts.FieldBatchInput); ok {
-		payload[consts.FieldBatchInput], e = convertBatchInput(batchInput)
+		payload[consts.FieldBatchInput], e = convertBatchInput(batchInput, []string{consts.FieldKeyVersion, consts.FieldMACLength})
 		if e != nil {
 			return e
 		}
@@ -146,7 +146,6 @@ func transitVerifyDataSourceRead(d *schema.ResourceData, meta interface{}) error
 		consts.FieldReference,
 		consts.FieldContext,
 		consts.FieldSignatureContext,
-		consts.FieldPrehashed,
 		consts.FieldSignatureAlgorithm,
 		consts.FieldMarshalingAlgorithm,
 		consts.FieldSaltLength,
