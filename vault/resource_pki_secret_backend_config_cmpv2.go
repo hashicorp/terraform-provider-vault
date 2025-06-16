@@ -118,8 +118,14 @@ func pkiSecretBackendConfigCMPV2Write(ctx context.Context, d *schema.ResourceDat
 		}
 	}
 
-	if authenticators, ok := getListOfNotEmptyMaps(d, consts.FieldAuthenticators); ok {
-		data[consts.FieldAuthenticators] = authenticators
+	if authenticatorsRaw, ok := d.GetOk(consts.FieldAuthenticators); ok {
+		authenticators := authenticatorsRaw.([]interface{})
+		var authenticator interface{}
+		if len(authenticators) > 0 {
+			authenticator = authenticators[0]
+		}
+
+		data[consts.FieldAuthenticators] = authenticator
 	}
 
 	log.Printf("[DEBUG] Updating CMPv2 config on PKI secret backend %q:\n%v", backend, data)
