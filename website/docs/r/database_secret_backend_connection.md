@@ -462,6 +462,8 @@ See the [Vault
 
 * `password` - (Optional) The password to be used in the connection.
 
+* `private_key` - (Optional) The private key associated with the Snowflake user.
+
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
 * `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).

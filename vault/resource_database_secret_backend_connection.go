@@ -8,13 +8,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-cty/cty"
 	"log"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-cty/cty"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
@@ -34,6 +35,7 @@ type connectionStringConfig struct {
 	includeUserPass         bool
 	includeDisableEscaping  bool
 	isCloud                 bool
+	includePrivateKey       bool
 }
 
 const (
@@ -694,7 +696,8 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Optional:    true,
 			Description: "Connection parameters for the snowflake-database-plugin plugin.",
 			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
+				includeUserPass:   true,
+				includePrivateKey: true,
 			}),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineSnowflake.Name(), dbEngineTypes),
@@ -755,6 +758,7 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 			},
 		},
 	}
+
 	if config.includeUserPass {
 		res.Schema["username"] = &schema.Schema{
 			Type:        schema.TypeString,
@@ -777,6 +781,15 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Description: "Version counter for root credential password write-only field",
+		}
+	}
+
+	if config.includePrivateKey {
+		res.Schema[consts.FieldPrivateKey] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The private key configured for the admin user in Snowflake.",
+			Sensitive:   true,
 		}
 	}
 
@@ -1013,7 +1026,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineRedisElastiCache:
 		setRedisElastiCacheDatabaseConnectionData(d, prefix, data)
 	case dbEngineSnowflake:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setDatabaseConnectionDataWithUserPassAndPrivateKey(d, prefix, data)
 	case dbEngineRedshift:
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	default:
@@ -1800,7 +1813,7 @@ func setOracleDatabaseConnectionData(d *schema.ResourceData, prefix string, data
 func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
 
-	data["username"] = d.Get(prefix + "username")
+	data[consts.FieldUsername] = d.Get(prefix + consts.FieldUsername)
 
 	// Vault does not return the password in the API. If the root credentials have been rotated, sending
 	// the old password in the update request would break the connection config. Thus we only send it,
@@ -1838,6 +1851,12 @@ func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix
 	setDatabaseConnectionDataWithUserPass(d, prefix, data)
 
 	data["disable_escaping"] = d.Get(prefix + "disable_escaping")
+}
+
+func setDatabaseConnectionDataWithUserPassAndPrivateKey(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+
+	data[consts.FieldPrivateKey] = d.Get(prefix + consts.FieldPrivateKey)
 }
 
 func databaseSecretBackendConnectionCreateOrUpdate(
