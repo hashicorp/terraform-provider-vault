@@ -20,80 +20,82 @@ func pkiSecretBackendConfigScepDataSource() *schema.Resource {
 	return &schema.Resource{
 		Description: "Reads Vault PKI SCEP configuration",
 		ReadContext: provider.ReadContextWrapper(readPKISecretBackendConfigScep),
-		Schema: map[string]*schema.Schema{
-			consts.FieldBackend: {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "Path where PKI engine is mounted",
-			},
-			consts.FieldEnabled: {
-				Type:        schema.TypeBool,
-				Computed:    true,
-				Description: "Specifies whether SCEP is enabled",
-			},
-			consts.FieldDefaultPathPolicy: {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: `Specifies the policy to be used for non-role-qualified SCEP requests; valid values are 'sign-verbatim', or "role:<role_name>" to specify a role to use as this policy.`,
-			},
-			consts.FieldAllowedEncryptionAlgorithms: {
-				Type:        schema.TypeList,
-				Computed:    true,
-				Description: "List of allowed encryption algorithms for SCEP requests",
-				Elem:        &schema.Schema{Type: schema.TypeString},
-			},
-			consts.FieldAllowedDigestAlgorithms: {
-				Type:        schema.TypeList,
-				Computed:    true,
-				Description: "List of allowed digest algorithms for SCEP requests",
-				Elem:        &schema.Schema{Type: schema.TypeString},
-			},
-			consts.FieldRestrictCAChainToIssuer: {
-				Type:        schema.TypeBool,
-				Computed:    true,
-				Description: "If true, only return the issuer CA, otherwise the entire CA certificate chain will be returned if available from the PKI mount",
-			},
-			consts.FieldAuthenticators: {
-				Type:        schema.TypeList,
-				Computed:    true,
-				Description: "Lists the mount accessors SCEP should delegate authentication requests towards",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"cert": {
-							Type:        schema.TypeMap,
-							Optional:    true,
-							Description: "The accessor and cert_role properties for cert auth backends",
-						},
-						"scep": {
-							Type:        schema.TypeMap,
-							Optional:    true,
-							Description: "The accessor property for SCEP auth backends",
-						},
-					},
+		Schema:      pkiSecretBackendConfigScepDataSourceSchema,
+	}
+}
+
+var pkiSecretBackendConfigScepDataSourceSchema = map[string]*schema.Schema{
+	consts.FieldBackend: {
+		Type:        schema.TypeString,
+		Required:    true,
+		ForceNew:    true,
+		Description: "Path where PKI engine is mounted",
+	},
+	consts.FieldEnabled: {
+		Type:        schema.TypeBool,
+		Computed:    true,
+		Description: "Specifies whether SCEP is enabled",
+	},
+	consts.FieldDefaultPathPolicy: {
+		Type:        schema.TypeString,
+		Computed:    true,
+		Description: `Specifies the policy to be used for non-role-qualified SCEP requests; valid values are 'sign-verbatim', or "role:<role_name>" to specify a role to use as this policy.`,
+	},
+	consts.FieldAllowedEncryptionAlgorithms: {
+		Type:        schema.TypeList,
+		Computed:    true,
+		Description: "List of allowed encryption algorithms for SCEP requests",
+		Elem:        &schema.Schema{Type: schema.TypeString},
+	},
+	consts.FieldAllowedDigestAlgorithms: {
+		Type:        schema.TypeList,
+		Computed:    true,
+		Description: "List of allowed digest algorithms for SCEP requests",
+		Elem:        &schema.Schema{Type: schema.TypeString},
+	},
+	consts.FieldRestrictCAChainToIssuer: {
+		Type:        schema.TypeBool,
+		Computed:    true,
+		Description: "If true, only return the issuer CA, otherwise the entire CA certificate chain will be returned if available from the PKI mount",
+	},
+	consts.FieldAuthenticators: {
+		Type:        schema.TypeList,
+		Computed:    true,
+		Description: "Lists the mount accessors SCEP should delegate authentication requests towards",
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"cert": {
+					Type:        schema.TypeMap,
+					Optional:    true,
+					Description: "The accessor and cert_role properties for cert auth backends",
 				},
-			},
-			consts.FieldExternalValidation: {
-				Type:        schema.TypeList,
-				Computed:    true,
-				Description: "Lists the 3rd party validation of SCEP requests",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"intune": {
-							Type:        schema.TypeMap,
-							Optional:    true,
-							Description: "The credentials to enable Microsoft Intune validation of SCEP requests",
-						},
-					},
+				"scep": {
+					Type:        schema.TypeMap,
+					Optional:    true,
+					Description: "The accessor property for SCEP auth backends",
 				},
-			},
-			consts.FieldLastUpdated: {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "A read-only timestamp representing the last time the configuration was updated",
 			},
 		},
-	}
+	},
+	consts.FieldExternalValidation: {
+		Type:        schema.TypeList,
+		Computed:    true,
+		Description: "Lists the 3rd party validation of SCEP requests",
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"intune": {
+					Type:        schema.TypeMap,
+					Optional:    true,
+					Description: "The credentials to enable Microsoft Intune validation of SCEP requests",
+				},
+			},
+		},
+	},
+	consts.FieldLastUpdated: {
+		Type:        schema.TypeString,
+		Computed:    true,
+		Description: "A read-only timestamp representing the last time the configuration was updated",
+	},
 }
 
 func readPKISecretBackendConfigScep(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -127,31 +129,22 @@ func readScepConfig(ctx context.Context, d *schema.ResourceData, client *api.Cli
 
 	d.SetId(path)
 
-	keyComputedFields := []string{
-		consts.FieldEnabled,
-		consts.FieldDefaultPathPolicy,
-		consts.FieldAllowedEncryptionAlgorithms,
-		consts.FieldAllowedDigestAlgorithms,
-		consts.FieldRestrictCAChainToIssuer,
-		consts.FieldLastUpdated,
-	}
-
-	for _, k := range keyComputedFields {
-		if fieldVal, ok := resp.Data[k]; ok {
-			if err := d.Set(k, fieldVal); err != nil {
-				return fmt.Errorf("failed setting field [%s] with val [%s]: %w", k, fieldVal, err)
+	for field := range pkiSecretBackendConfigScepDataSourceSchema {
+		switch field {
+		case consts.FieldBackend, consts.FieldNamespace:
+			continue
+		case consts.FieldAuthenticators, consts.FieldExternalValidation:
+			// note that it is OK to set nil values, since these fields are "computed"
+			value := resp.Data[field]
+			if err := d.Set(field, []any{value}); err != nil {
+				return fmt.Errorf("failed setting field [%s] with val [%s]: %w", field, value, err)
 			}
-		}
-	}
-
-	if authenticators, authOk := resp.Data[consts.FieldAuthenticators]; authOk {
-		if err := d.Set(consts.FieldAuthenticators, []interface{}{authenticators}); err != nil {
-			return fmt.Errorf("failed setting field [%s] with val [%s]: %w", consts.FieldAuthenticators, authenticators, err)
-		}
-	}
-	if externalValidation, validationOk := resp.Data[consts.FieldExternalValidation]; validationOk {
-		if err := d.Set(consts.FieldExternalValidation, []interface{}{externalValidation}); err != nil {
-			return fmt.Errorf("failed setting field [%s] with val [%s]: %w", consts.FieldExternalValidation, externalValidation, err)
+		default:
+			if value, ok := resp.Data[field]; ok {
+				if err := d.Set(field, value); err != nil {
+					return fmt.Errorf("failed setting field [%s] with val [%s]: %w", field, value, err)
+				}
+			}
 		}
 	}
 
