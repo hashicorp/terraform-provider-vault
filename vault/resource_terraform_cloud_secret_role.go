@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -42,6 +43,18 @@ func terraformCloudSecretRoleResource() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Description: "The path of the Terraform Cloud Secret Backend the role belongs to.",
+			},
+			"credential_type": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "The type of credential to generate. Valid values are 'team', 'team_legacy', 'user', or 'organization'.",
+				ValidateFunc: validation.StringInSlice([]string{"team", "team_legacy", "user", "organization"}, false),
+			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Description of the role. This is used as a prefix to help identify the token in the HCP Terraform UI. Only valid with 'team' or 'user' credential types.",
 			},
 			"organization": {
 				Type:        schema.TypeString,
@@ -99,20 +112,26 @@ func terraformCloudSecretRoleWrite(d *schema.ResourceData, meta interface{}) err
 
 	payload := map[string]interface{}{}
 
-	if v, ok := d.GetOkExists("max_ttl"); ok {
+	if v, ok := d.GetOk("max_ttl"); ok {
 		payload["max_ttl"] = v
 	}
-	if v, ok := d.GetOkExists("ttl"); ok {
+	if v, ok := d.GetOk("ttl"); ok {
 		payload["ttl"] = v
 	}
-	if v, ok := d.GetOkExists("organization"); ok {
+	if v, ok := d.GetOk("organization"); ok {
 		payload["organization"] = v
 	}
-	if v, ok := d.GetOkExists("team_id"); ok {
+	if v, ok := d.GetOk("team_id"); ok {
 		payload["team_id"] = v
 	}
-	if v, ok := d.GetOkExists("user_id"); ok {
+	if v, ok := d.GetOk("user_id"); ok {
 		payload["user_id"] = v
+	}
+	if v, ok := d.GetOk("credential_type"); ok {
+		payload["credential_type"] = v
+	}
+	if v, ok := d.GetOk("description"); ok {
+		payload["description"] = v
 	}
 
 	log.Printf("[DEBUG] Configuring Terraform Cloud secrets backend role at %q", path)
@@ -167,6 +186,12 @@ func terraformCloudSecretRoleRead(d *schema.ResourceData, meta interface{}) erro
 	d.Set("user_id", data["user_id"])
 	d.Set("max_ttl", data["max_ttl"])
 	d.Set("ttl", data["ttl"])
+	if data["description"] != nil {
+		d.Set("description", data["description"])
+	}
+	if data["credential_type"] != nil {
+		d.Set("credential_type", data["credential_type"])
+	}
 
 	return nil
 }
