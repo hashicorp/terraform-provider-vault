@@ -100,6 +100,7 @@ func (r *TerraformTeamTokenEphemeralSecretResource) Open(ctx context.Context, re
 		return
 	}
 
+	// Default values for optional fields
 	if data.Mount.IsNull() || data.Mount.ValueString() == "" {
 		data.Mount = types.StringValue("terraform")
 	}
@@ -137,10 +138,6 @@ func (r *TerraformTeamTokenEphemeralSecretResource) Open(ctx context.Context, re
 		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
 		return
 	}
-
-	// TODO set default values for
-	// RevokeOnClose
-	// Mount
 
 	data.Token = types.StringValue(readResp.Token)
 	privateData, _ := json.Marshal(PrivateData{
