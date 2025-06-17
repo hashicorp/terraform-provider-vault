@@ -25,7 +25,7 @@ import (
 // Uses the Echo Provider to test values set in ephemeral resources
 // see documentation here for more details:
 // https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/ephemeral-resources#using-echo-provider-in-acceptance-tests
-func TestAccTFToken(t *testing.T) {
+func TestAccTFToken_basic(t *testing.T) {
 	testutil.SkipTestAcc(t)
 	tfName := acctest.RandomWithPrefix("tf")
 
@@ -73,17 +73,16 @@ resource "vault_terraform_cloud_secret_role" "test_team" {
   description     = "%[2]s team role"
 }
 
-ephemeral "vault_terraform_token" "unrevoked" {
+ephemeral "vault_terraform_token" "tf_token" {
   mount           = vault_terraform_cloud_secret_backend.test.backend
   role_name       = vault_terraform_cloud_secret_role.test_team.name
   mount_id        = vault_terraform_cloud_secret_backend.test.id
-  revoke_on_close = terraform.applying ? true : false
 }
 
 provider "echo" {
-  data = ephemeral.vault_terraform_token.unrevoked
+  data = ephemeral.vault_terraform_token.tf_token
 }
 
-resource "echo" "unrevoked" {}
+resource "echo" "tf_token" {}
 `, configToken, tfName, tfTeamId)
 }
