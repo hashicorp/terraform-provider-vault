@@ -19,13 +19,13 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-// TestAccTFTeamToken confirms that a dynamic terraform team token
+// TestAccTFToken confirms that a dynamic terraform token
 // can be read from Vault for a created terraform role
 //
 // Uses the Echo Provider to test values set in ephemeral resources
 // see documentation here for more details:
 // https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/ephemeral-resources#using-echo-provider-in-acceptance-tests
-func TestAccTFTeamToken(t *testing.T) {
+func TestAccTFToken(t *testing.T) {
 	testutil.SkipTestAcc(t)
 	tfName := acctest.RandomWithPrefix("tf")
 
@@ -33,13 +33,10 @@ func TestAccTFTeamToken(t *testing.T) {
 	configToken := values[0]
 	tfTeamID := values[1]
 
-	// // catch-all regex to ensure all usernames and passwords are set to some value
 	expectedTokenRegex, err := regexp.Compile("atlasv1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// templ := `{{ printf \"vault-%s-%s\" (.DisplayName) (random 20) }}`
-
 	resource.UnitTest(t, resource.TestCase{
 		PreCheck: func() { testutil.TestAccPreCheck(t) },
 		// Include the provider we want to test
@@ -50,21 +47,16 @@ func TestAccTFTeamToken(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testTFTeamTokenConfig(configToken, tfName, tfTeamID),
+				Config: testTFTokenConfig(configToken, tfName, tfTeamID),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.tf_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(expectedTokenRegex)),
-					// statecheck.ExpectKnownValue("echo.test_tf", tfjsonpath.New("data").AtMapKey("password"), knownvalue.StringRegexp(expectedPasswordRegex)),
-					// check if revoke_on_close is set to true
-					// if true, validate the token is revoked in API
-					// else, validate the token still exists in API
-					// TODO: update test config
 				},
 			},
 		},
 	})
 }
 
-func testTFTeamTokenConfig(configToken, tfName, tfTeamId string) string {
+func testTFTokenConfig(configToken, tfName, tfTeamId string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
   token       = "%[1]s"
@@ -77,19 +69,21 @@ resource "vault_terraform_cloud_secret_role" "test_team" {
   team_id         = "%[3]s"
   credential_type = "team"
   ttl             = 120
+  max_ttl		  = 240
   description     = "%[2]s team role"
 }
 
-ephemeral "vault_terraform_team_token" "tf_token" {
+ephemeral "vault_terraform_token" "unrevoked" {
   mount           = vault_terraform_cloud_secret_backend.test.backend
   role_name       = vault_terraform_cloud_secret_role.test_team.name
+  mount_id        = vault_terraform_cloud_secret_backend.test.id
   revoke_on_close = terraform.applying ? true : false
 }
 
 provider "echo" {
-  data = ephemeral.vault_terraform_team_token.tf_token
+  data = ephemeral.vault_terraform_token.unrevoked
 }
 
-resource "echo" "tf_token" {}
+resource "echo" "unrevoked" {}
 `, configToken, tfName, tfTeamId)
 }
