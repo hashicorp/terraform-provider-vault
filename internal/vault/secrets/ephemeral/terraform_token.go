@@ -19,22 +19,22 @@ import (
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
-var _ ephemeral.EphemeralResource = &TerraformTeamTokenEphemeralSecretResource{}
+var _ ephemeral.EphemeralResource = &TerraformTokenEphemeralSecretResource{}
 
-// NewTerraformTeamTokenEphemeralSecretResource returns the implementation for this resource to be
+// NewTerraformTokenEphemeralSecretResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider
-var NewTerraformTeamTokenEphemeralSecretResource = func() ephemeral.EphemeralResource {
-	return &TerraformTeamTokenEphemeralSecretResource{}
+var NewTerraformTokenEphemeralSecretResource = func() ephemeral.EphemeralResource {
+	return &TerraformTokenEphemeralSecretResource{}
 }
 
-// TerraformTeamTokenEphemeralSecretResource implements the methods that define this resource
-type TerraformTeamTokenEphemeralSecretResource struct {
+// TerraformTokenEphemeralSecretResource implements the methods that define this resource
+type TerraformTokenEphemeralSecretResource struct {
 	base.EphemeralResourceWithConfigure
 }
 
-// TerraformTeamTokenEphemeralSecretModel describes the Terraform resource data model to match the
+// TerraformTokenEphemeralSecretModel describes the Terraform resource data model to match the
 // resource schema.
-type TerraformTeamTokenEphemeralSecretModel struct {
+type TerraformTokenEphemeralSecretModel struct {
 	// common fields to all ephemeral resources
 	base.BaseModelEphemeral
 
@@ -45,8 +45,8 @@ type TerraformTeamTokenEphemeralSecretModel struct {
 	RevokeOnClose types.Bool   `tfsdk:"revoke_on_close"`
 }
 
-// TerraformTeamTokenEphemeralSecretAPIModel describes the Vault API data model.
-type TerraformTeamTokenEphemeralSecretAPIModel struct {
+// TerraformTokenEphemeralSecretAPIModel describes the Vault API data model.
+type TerraformTokenEphemeralSecretAPIModel struct {
 	Token string `json:"token" mapstructure:"token"`
 }
 
@@ -60,7 +60,7 @@ type PrivateData struct {
 // the resource's configuration, plan, and state
 //
 // https://developer.hashicorp.com/terraform/plugin/framework/resources#schema-method
-func (r *TerraformTeamTokenEphemeralSecretResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
+func (r *TerraformTokenEphemeralSecretResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldRoleName: schema.StringAttribute{
@@ -74,25 +74,26 @@ func (r *TerraformTeamTokenEphemeralSecretResource) Schema(_ context.Context, _ 
 			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Mount path for the Terraform engine in Vault. Default is `terraform`.",
 				Optional:            true,
+				Computed:            true,
 			},
 			consts.FieldToken: schema.StringAttribute{
 				MarkdownDescription: "Token requested from Vault.",
 				Computed:            true,
 			},
 		},
-		MarkdownDescription: "Provides an ephemeral resource to read a Terraform Team Token from Vault.",
+		MarkdownDescription: "Provides an ephemeral resource to read a Terraform Token from Vault.",
 	}
 
 	base.MustAddBaseEphemeralSchema(&resp.Schema)
 }
 
 // Metadata sets the full name for this resource
-func (r *TerraformTeamTokenEphemeralSecretResource) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_terraform_team_token"
+func (r *TerraformTokenEphemeralSecretResource) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_terraform_token"
 }
 
-func (r *TerraformTeamTokenEphemeralSecretResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
-	var data TerraformTeamTokenEphemeralSecretModel
+func (r *TerraformTokenEphemeralSecretResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
+	var data TerraformTokenEphemeralSecretModel
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
@@ -132,7 +133,7 @@ func (r *TerraformTeamTokenEphemeralSecretResource) Open(ctx context.Context, re
 		return
 	}
 
-	var readResp TerraformTeamTokenEphemeralSecretAPIModel
+	var readResp TerraformTokenEphemeralSecretAPIModel
 	err = model.ToAPIModel(secretResp.Data, &readResp)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
@@ -149,11 +150,11 @@ func (r *TerraformTeamTokenEphemeralSecretResource) Open(ctx context.Context, re
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
-func (r *TerraformTeamTokenEphemeralSecretResource) path(mount, roleName string) string {
+func (r *TerraformTokenEphemeralSecretResource) path(mount, roleName string) string {
 	return fmt.Sprintf("/%s/creds/%s", mount, roleName)
 }
 
-func (e *TerraformTeamTokenEphemeralSecretResource) Close(ctx context.Context, req ephemeral.CloseRequest, resp *ephemeral.CloseResponse) {
+func (e *TerraformTokenEphemeralSecretResource) Close(ctx context.Context, req ephemeral.CloseRequest, resp *ephemeral.CloseResponse) {
 	privateBytes, diags := req.Private.GetKey(ctx, "private_data")
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
