@@ -460,7 +460,9 @@ See the [Vault
 
 * `username` - (Optional) The username to be used in the connection (the account admin level).
 
-* `password` - (Optional) The password to be used in the connection.
+* `password` - **Deprecated** (Optional) The password to be used in the connection. Please begin migrating to key-pair authentication by [November 2025](https://www.snowflake.com/en/blog/blocking-single-factor-password-authentification/).
+
+* `private_key` - (Optional) The private key associated with the Snowflake user.
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
