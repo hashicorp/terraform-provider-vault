@@ -692,13 +692,10 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.Name(), dbEngineTypes),
 		},
 		dbEngineSnowflake.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the snowflake-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass:   true,
-				includePrivateKey: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the snowflake-database-plugin plugin.",
+			Elem:          snowflakeConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineSnowflake.Name(), dbEngineTypes),
 		},
@@ -790,6 +787,7 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 			Optional:    true,
 			Description: "The private key configured for the admin user in Snowflake.",
 			Sensitive:   true,
+			WriteOnly:   true,
 		}
 	}
 
@@ -927,6 +925,18 @@ func oracleConnectionStringResource() *schema.Resource {
 		Description: "Set to true to disconnect any open sessions prior to running the revocation statements.",
 		Default:     true,
 	}
+
+	return r
+}
+
+func snowflakeConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass:   true,
+		includePrivateKey: true,
+	})
+
+	r.Schema[consts.FieldPassword].Deprecated = "Snowflake is ending support for single-factor password authentication " +
+		"by November 2025. Refer to the documentation for more information on migrating to key-pair authentication."
 
 	return r
 }
