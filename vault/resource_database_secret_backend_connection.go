@@ -782,12 +782,17 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 	}
 
 	if config.includePrivateKey {
-		res.Schema[consts.FieldPrivateKey] = &schema.Schema{
+		res.Schema[consts.FieldPrivateKeyWO] = &schema.Schema{
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The private key configured for the admin user in Snowflake.",
 			Sensitive:   true,
 			WriteOnly:   true,
+		}
+		res.Schema[consts.FieldPrivateKeyWOVersion] = &schema.Schema{
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Version counter for the private key key-pair credentials write-only field",
 		}
 	}
 
@@ -1509,6 +1514,11 @@ func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix st
 		}
 	}
 
+	// ensure private_key_wo_version is updated in state
+	if v, ok := d.GetOk(prefix + consts.FieldPrivateKeyWOVersion); ok {
+		result[consts.FieldPrivateKeyWOVersion] = v.(int)
+	}
+
 	if v, ok := d.GetOk(prefix + "username_template"); ok {
 		result["username_template"] = v.(string)
 	} else {
@@ -1866,7 +1876,30 @@ func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix
 func setDatabaseConnectionDataWithUserPassAndPrivateKey(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionDataWithUserPass(d, prefix, data)
 
-	data[consts.FieldPrivateKey] = d.Get(prefix + consts.FieldPrivateKey)
+	// data[consts.FieldPrivateKey] = d.Get(prefix + consts.FieldPrivateKey)
+
+	privateKeyWriteOnlyVersionKey := prefix + consts.FieldPrivateKeyWOVersion
+	if d.IsNewResource() || d.HasChange(privateKeyWriteOnlyVersionKey) {
+		if d.HasChange(privateKeyWriteOnlyVersionKey) {
+			engineName, engineIdx, err := databaseEngineNameAndIndexFromPrefix(prefix)
+			if err != nil {
+				// this should not happen, since we control how the prefix is created
+				panic(fmt.Sprintf("[ERROR] invalid prefix %q for database connection: %s", prefix, err))
+			}
+
+			idx, err := strconv.Atoi(engineIdx)
+			if err != nil {
+				// this should not happen, since we control how the index has been set
+				panic(fmt.Sprintf("[ERROR] unable to convert string index to integer: %s", err))
+			}
+
+			// construct path to use GetRawConfig
+			path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPrivateKeyWO)
+			if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
+				data[consts.FieldPrivateKeyWO] = pwWo.AsString()
+			}
+		}
+	}
 }
 
 func databaseSecretBackendConnectionCreateOrUpdate(
