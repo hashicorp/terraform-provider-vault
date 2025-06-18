@@ -1,6 +1,7 @@
 ## Unreleased
 
 * Add support for key_usage to `vault_pki_secret_backend_root_sign_intermediate` ([#2421])(https://github.com/hashicorp/terraform-provider-vault/pull/2421)
+* Add new ephemeral resource `vault_transit_decrypt`
 
 
 ## 5.0.0 (May 21, 2025)
