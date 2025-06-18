@@ -6,10 +6,11 @@ package fwprovider
 import (
 	"context"
 	"fmt"
+	"regexp"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
-	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -231,6 +232,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 	return []func() ephemeral.EphemeralResource{
 		ephemeralsecrets.NewKVV2EphemeralSecretResource,
 		ephemeralsecrets.NewDBEphemeralSecretResource,
+		ephemeralsecrets.NewTransitDecryptEphemeralSecretResource,
 	}
 
 }
