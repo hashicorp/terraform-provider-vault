@@ -1868,10 +1868,6 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 }
 
 func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
-	if !provider.IsAPISupported(meta, provider.VaultVersion120) {
-		panic(fmt.Sprintf("[ERROR] field %q can only be used with Vault version %s or newer", consts.FieldPrivateKeyWO, provider.VaultVersion120))
-	}
-
 	// Once password auth for snowflake is removed, this can be changed to setDatabaseConnectionData.
 	// The username field is set below in anticipation of that change.
 	setDatabaseConnectionDataWithUserPass(d, prefix, data)
@@ -1893,7 +1889,14 @@ func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, pref
 
 		// construct path to use GetRawConfig
 		path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPrivateKeyWO)
-		if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
+
+		// ensure Vault version has private key support
+		vaultVersion120Check := provider.IsAPISupported(meta, provider.VaultVersion120)
+		if !vaultVersion120Check {
+			log.Printf("[WARN] field %q can only be used with Vault version %s or newer", consts.FieldPrivateKeyWO, provider.VaultVersion120)
+		}
+
+		if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() && vaultVersion120Check {
 			data[consts.FieldPrivateKey] = pwWo.AsString()
 		}
 	}
