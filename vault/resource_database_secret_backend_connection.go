@@ -1872,8 +1872,9 @@ func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, pref
 		panic(fmt.Sprintf("[ERROR] field %q can only be used with Vault version %s or newer", consts.FieldPrivateKeyWO, provider.VaultVersion120))
 	}
 
-	setDatabaseConnectionData(d, prefix, data)
-
+	// Once password auth for snowflake is removed, this can be changed to setDatabaseConnectionData.
+	// The username field is set below in anticipation of that change.
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	data[consts.FieldUsername] = d.Get(prefix + consts.FieldUsername)
 
 	privateKeyWriteOnlyVersionKey := prefix + consts.FieldPrivateKeyWOVersion
