@@ -1041,7 +1041,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineRedisElastiCache:
 		setRedisElastiCacheDatabaseConnectionData(d, prefix, data)
 	case dbEngineSnowflake:
-		setDatabaseConnectionDataWithUserAndPrivateKey(d, prefix, data)
+		setDatabaseConnectionDataWithUserAndPrivateKey(d, prefix, data, meta)
 	case dbEngineRedshift:
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	default:
@@ -1867,13 +1867,11 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 	}
 }
 
-func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix string, data map[string]interface{}) {
-	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
+	if !provider.IsAPISupported(meta, provider.VaultVersion120) {
+		panic(fmt.Sprintf("[ERROR] field %q can only be used with Vault version %s or newer", consts.FieldPrivateKeyWO, provider.VaultVersion120))
+	}
 
-	data["disable_escaping"] = d.Get(prefix + "disable_escaping")
-}
-
-func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
 
 	privateKeyWriteOnlyVersionKey := prefix + consts.FieldPrivateKeyWOVersion
@@ -1898,6 +1896,12 @@ func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, pref
 			}
 		}
 	}
+}
+
+func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+
+	data["disable_escaping"] = d.Get(prefix + "disable_escaping")
 }
 
 func databaseSecretBackendConnectionCreateOrUpdate(
