@@ -1041,7 +1041,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineRedisElastiCache:
 		setRedisElastiCacheDatabaseConnectionData(d, prefix, data)
 	case dbEngineSnowflake:
-		setDatabaseConnectionDataWithUserPassAndPrivateKey(d, prefix, data)
+		setDatabaseConnectionDataWithUserAndPrivateKey(d, prefix, data)
 	case dbEngineRedshift:
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	default:
@@ -1873,10 +1873,8 @@ func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix
 	data["disable_escaping"] = d.Get(prefix + "disable_escaping")
 }
 
-func setDatabaseConnectionDataWithUserPassAndPrivateKey(d *schema.ResourceData, prefix string, data map[string]interface{}) {
-	setDatabaseConnectionDataWithUserPass(d, prefix, data)
-
-	// data[consts.FieldPrivateKey] = d.Get(prefix + consts.FieldPrivateKey)
+func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionData(d, prefix, data)
 
 	privateKeyWriteOnlyVersionKey := prefix + consts.FieldPrivateKeyWOVersion
 	if d.IsNewResource() || d.HasChange(privateKeyWriteOnlyVersionKey) {
@@ -1896,7 +1894,7 @@ func setDatabaseConnectionDataWithUserPassAndPrivateKey(d *schema.ResourceData, 
 			// construct path to use GetRawConfig
 			path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPrivateKeyWO)
 			if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
-				data[consts.FieldPrivateKeyWO] = pwWo.AsString()
+				data[consts.FieldPrivateKey] = pwWo.AsString()
 			}
 		}
 	}

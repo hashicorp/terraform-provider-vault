@@ -1202,7 +1202,8 @@ func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username", username),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.password", privateKey),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.private_key_wo", privateKey),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.private_key_wo_version", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username_template", userTempl),
 				),
 			},
@@ -2160,9 +2161,10 @@ resource "vault_database_secret_backend_connection" "test" {
   snowflake {
     connection_url = "%s"
     username = "%s"
-    private_key = <<-EOT
+    private_key_wo = <<-EOT
 %s
 EOT
+    private_key_wo_version = 1
     username_template = "%s"
   }
 }
