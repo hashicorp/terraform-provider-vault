@@ -1874,26 +1874,26 @@ func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, pref
 
 	setDatabaseConnectionData(d, prefix, data)
 
+	data[consts.FieldUsername] = d.Get(prefix + consts.FieldUsername)
+
 	privateKeyWriteOnlyVersionKey := prefix + consts.FieldPrivateKeyWOVersion
 	if d.IsNewResource() || d.HasChange(privateKeyWriteOnlyVersionKey) {
-		if d.HasChange(privateKeyWriteOnlyVersionKey) {
-			engineName, engineIdx, err := databaseEngineNameAndIndexFromPrefix(prefix)
-			if err != nil {
-				// this should not happen, since we control how the prefix is created
-				panic(fmt.Sprintf("[ERROR] invalid prefix %q for database connection: %s", prefix, err))
-			}
+		engineName, engineIdx, err := databaseEngineNameAndIndexFromPrefix(prefix)
+		if err != nil {
+			// this should not happen, since we control how the prefix is created
+			panic(fmt.Sprintf("[ERROR] invalid prefix %q for database connection: %s", prefix, err))
+		}
 
-			idx, err := strconv.Atoi(engineIdx)
-			if err != nil {
-				// this should not happen, since we control how the index has been set
-				panic(fmt.Sprintf("[ERROR] unable to convert string index to integer: %s", err))
-			}
+		idx, err := strconv.Atoi(engineIdx)
+		if err != nil {
+			// this should not happen, since we control how the index has been set
+			panic(fmt.Sprintf("[ERROR] unable to convert string index to integer: %s", err))
+		}
 
-			// construct path to use GetRawConfig
-			path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPrivateKeyWO)
-			if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
-				data[consts.FieldPrivateKey] = pwWo.AsString()
-			}
+		// construct path to use GetRawConfig
+		path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPrivateKeyWO)
+		if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
+			data[consts.FieldPrivateKey] = pwWo.AsString()
 		}
 	}
 }
