@@ -22,6 +22,18 @@
                     <a href="/docs/providers/vault/guides/version_4_upgrade.html">4.0.0 Upgrade Guide</a>
                 </li>
 
+                <li<%= sidebar_current("docs-vault-provider-version-5-upgrade") %>>
+                    <a href="/docs/providers/vault/guides/version_5_upgrade.html">5.0.0 Upgrade Guide</a>
+                </li>
+
+                <li<%= sidebar_current("docs-use-ephemeral-resources-in-the-vault-provider") %>>
+                    <a href="/docs/providers/vault/guides/using_ephemeral_resources.html">Use ephemeral resources in the Vault provider</a>
+                </li>
+
+                <li<%= sidebar_current("docs-use-write-only-attributes-in-the-vault-provider") %>>
+                    <a href="/docs/providers/vault/guides/using_write_only_attributes.html">Use write-only attributes in the Vault provider</a>
+                </li>
+
                 <li<%= sidebar_current("docs-vault-pki-multi-issuer-upgrade") %>>
                     <a href="/docs/providers/vault/guides/pki_multi_issuer_upgrade.html">PKI Multi-Issuer Upgrade Guide</a>
                 </li>
@@ -159,6 +171,20 @@
 
                         <li<%= sidebar_current("docs-vault-datasource-namespaces") %>>
                             <a href="/docs/providers/vault/d/namespaces.html">vault_namespaces</a>
+                        </li>
+
+                    </ul>
+                </li>
+
+                <li<%= sidebar_current("docs-vault-ephemeral") %>>
+                    <a href="#">Ephemeral Resources</a>
+                    <ul class="nav nav-visible">
+
+                        <li<%= sidebar_current("docs-vault-ephemeral-kv-secret-v2") %>>
+                            <a href="/docs/providers/vault/ephemeral-resources/kv_secret_v2.html">vault_kv_secret_v2</a>
+                        </li>
+                        <li<%= sidebar_current("docs-vault-ephemeral-database-secret") %>>
+                            <a href="/docs/providers/vault/ephemeral-resources/database_secret.html">vault_database_secret</a>
                         </li>
 
                     </ul>
@@ -559,6 +585,10 @@
 
                         <li<%= sidebar_current("docs-vault-resource-pki-secret-backend-config-acme") %>>
                             <a href="/docs/providers/vault/r/pki_secret_backend_config_acme.html">vault_pki_secret_backend_config_acme</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-pki-secret-backend-config-auto-tidy") %>>
+                            <a href="/docs/providers/vault/r/pki_secret_backend_config_auto_tidy.html">vault_pki_secret_backend_config_auto_tidy</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-pki-secret-backend-config-ca") %>>

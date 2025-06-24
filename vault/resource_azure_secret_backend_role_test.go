@@ -4,14 +4,15 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -54,7 +55,7 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 	}
 
 	isVaultVersion116 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion116)
-	if !isVaultVersion116 {
+	if isVaultVersion116 {
 		azureRoleInitialCheckFuncs = append(azureRoleInitialCheckFuncs,
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "sign_in_audience", "AzureADMyOrg"),
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "tags.#", "1"),
@@ -66,8 +67,16 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "tags.1", "project:vault_testing"))
 	}
 
+	isVaultVersion118 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion118)
+	if isVaultVersion118 {
+		azureRoleInitialCheckFuncs = append(azureRoleInitialCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "explicit_max_ttl", "0"))
+		azureRoleUpdatedCheckFuncs = append(azureRoleUpdatedCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "explicit_max_ttl", "2592000"))
+	}
+
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -116,7 +125,7 @@ func TestAzureSecretBackendRole_AzureGroups(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-azure")
 	role := acctest.RandomWithPrefix("tf-test-azure-role")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -208,7 +217,8 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
  role             = "%[6]s-azure-roles"
  ttl              = 300
  max_ttl          = 600
- description	   = "Test for Vault Provider"
+ explicit_max_ttl = 0
+ description	  = "Test for Vault Provider"
  sign_in_audience = "AzureADMyOrg"
  tags             = ["team:engineering"]
 
@@ -259,6 +269,7 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
   role        	   = "%[6]s-azure-roles"
   ttl        	   = 600
   max_ttl    	   = 900
+  explicit_max_ttl = 2592000
   description 	   = "Test for Vault Provider"
   sign_in_audience = "AzureADMultipleOrgs"
   tags       	   = ["environment:development","project:vault_testing"]
@@ -306,11 +317,14 @@ resource "vault_azure_secret_backend" "azure" {
 }
 
 resource "vault_azure_secret_backend_role" "test_azure_roles" {
-  backend     = vault_azure_secret_backend.azure.path
-  role        = "%[6]s-azure-roles"
-  ttl         = 300
-  max_ttl     = 600
-  description = "Test for Vault Provider"
+  backend          = vault_azure_secret_backend.azure.path
+  role             = "%[6]s-azure-roles"
+  ttl              = 300
+  max_ttl          = 600
+  explicit_max_ttl = 0
+  description      = "Test for Vault Provider"
+  sign_in_audience = "AzureADMultipleOrgs"
+  tags       	   = ["environment:development","project:vault_testing"]
 
   azure_roles {
     role_name = "Reader"

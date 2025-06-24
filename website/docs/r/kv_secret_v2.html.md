@@ -80,6 +80,8 @@ The following arguments are supported:
   KV secret. Refer to the
   [Configuration Options](#custom-metadata-configuration-options) for more info.
 
+* `data_json_wo_version` - (Optional) The version of the `data_json_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ## Required Vault Capabilities
 
 Use of this resource requires the `create` or `update` capability
@@ -99,16 +101,23 @@ and the `read` capability for drift detection (by default).
 
 * `data` - (Optional) A string to string map describing the secret.
 
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `data_json_wo` - (Optional) JSON-encoded secret data to write to Vault. Can be updated.
+  **Note**: This property is write-only and will not be read from the API.
+
 ## Attributes Reference
 
 The following attributes are exported in addition to the above:
 
 * `path` - Full path where the KV-V2 secret will be written.
 
-* `data` - A mapping whose keys are the top-level data keys returned from
-Vault and whose values are the corresponding values. This map can only
-represent string data, so any non-string values returned from Vault are
-serialized as JSON.
+* `data` - **Deprecated. Please use new ephemeral resource `vault_kv_secret_v2` to read back
+  secret data from Vault**. A mapping whose keys are the top-level data keys returned from
+  Vault and whose values are the corresponding values. This map can only represent string data,
+  so any non-string values returned from Vault are serialized as JSON.
 
 * `metadata` - Metadata associated with this secret read from Vault.
 

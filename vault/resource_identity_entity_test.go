@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
@@ -27,9 +28,9 @@ func TestAccIdentityEntity(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -44,9 +45,9 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -73,9 +74,9 @@ func TestAccIdentityEntityUpdateRemoveValues(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),
@@ -103,9 +104,9 @@ func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
 
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckIdentityEntityDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityConfig(entity),

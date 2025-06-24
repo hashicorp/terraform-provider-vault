@@ -190,6 +190,22 @@ func TestAuthLoginCert_LoginPath(t *testing.T) {
 }
 
 func TestAuthLoginCert_Login(t *testing.T) {
+	// Since Auth Cert login clones the Vault client,
+	// this test will fail if VAULT_TOKEN environment variable is set
+
+	env := "VAULT_TOKEN"
+	originalValue, exists := os.LookupEnv(env)
+
+	t.Setenv(env, "") // Unset the environment variable
+
+	t.Cleanup(func() {
+		if exists {
+			t.Setenv(env, originalValue) // Restore original value
+		} else {
+			os.Unsetenv(env) // Unset if it didn't exist initially
+		}
+	})
+
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		role := "default"
 		if t.params != nil {
@@ -261,8 +277,9 @@ func TestAuthLoginCert_Login(t *testing.T) {
 					},
 				},
 			},
-			tls:     true,
-			wantErr: false,
+			tls:        true,
+			wantErr:    false,
+			cloneToken: true,
 		},
 		{
 			name: "named-role",
@@ -296,8 +313,9 @@ func TestAuthLoginCert_Login(t *testing.T) {
 					},
 				},
 			},
-			tls:     true,
-			wantErr: false,
+			tls:        true,
+			wantErr:    false,
+			cloneToken: true,
 		},
 		{
 			name: "error-vault-token-set",
@@ -317,9 +335,10 @@ func TestAuthLoginCert_Login(t *testing.T) {
 			handler: &testLoginHandler{
 				handlerFunc: handlerFunc,
 			},
-			token:     "foo",
-			wantErr:   true,
-			expectErr: errors.New("vault login client has a token set"),
+			token:      "foo",
+			cloneToken: true,
+			wantErr:    true,
+			expectErr:  errors.New("vault login client has a token set"),
 		},
 		{
 			name: "error-uninitialized",

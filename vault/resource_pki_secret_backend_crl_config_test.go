@@ -4,14 +4,15 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -122,7 +123,7 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 		)
 	})
 
-	// test against vault-1.13 and above
+	// test against vault-1.13 up to and including 1.18
 	t.Run("vault-1.13-to-1.18", func(t *testing.T) {
 		setupCRLConfigTest(t, func() {
 			testutil.TestAccPreCheck(t)
@@ -162,10 +163,10 @@ func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...str
 		testutil.GetImportTestStep(resourceName, false, nil, ignoreImportFields...),
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          preCheck,
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
-		Steps:             steps,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 preCheck,
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps:                    steps,
 	})
 }
 

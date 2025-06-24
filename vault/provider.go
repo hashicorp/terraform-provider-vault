@@ -587,10 +587,6 @@ var (
 			Resource:      UpdateSchemaResource(rabbitMQSecretBackendRoleResource()),
 			PathInventory: []string{"/rabbitmq/roles/{name}"},
 		},
-		"vault_password_policy": {
-			Resource:      UpdateSchemaResource(passwordPolicyResource()),
-			PathInventory: []string{"/sys/policy/password/{name}"},
-		},
 		"vault_pki_secret_backend_cert": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendCertResource()),
 			PathInventory: []string{"/pki/issue/{role}"},
@@ -622,6 +618,10 @@ var (
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),
 			PathInventory: []string{"/pki/config/urls"},
+		},
+		"vault_pki_secret_backend_config_auto_tidy": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigAutoTidyResource()),
+			PathInventory: []string{"/pki/config/auto-tidy"},
 		},
 		"vault_pki_secret_backend_intermediate_cert_request": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIntermediateCertRequestResource()),

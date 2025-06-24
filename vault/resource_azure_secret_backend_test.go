@@ -4,12 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -25,7 +27,7 @@ func TestAzureSecretBackend(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -39,7 +41,7 @@ func TestAzureSecretBackend(t *testing.T) {
 				Config: testAzureSecretBackend_updated(path),
 				Check:  getAzureBackendChecks(resourceName, path, true),
 			},
-			// Clear out previous test step that uses use_microsoft_graph_api
+			// Clear out previous test step
 			// allows for a cleaner import test
 			{
 				Config: testAzureSecretBackend_initialConfig(updatedPath),
@@ -79,26 +81,7 @@ func getAzureBackendChecks(resourceName, path string, isUpdate bool) resource.Te
 	}
 
 	return func(state *terraform.State) error {
-		var checks []resource.TestCheckFunc
-		meta := testProvider.Meta().(*provider.ProviderMeta)
-		var extras []resource.TestCheckFunc
-		// only check use_microsoft_graph_api if Vault version is
-		// < 1.12.0
-		if !meta.IsAPISupported(provider.VaultVersion112) {
-			if !isUpdate {
-				extras = []resource.TestCheckFunc{
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUseMSGraphAPI, "false"),
-				}
-			} else {
-				extras = []resource.TestCheckFunc{
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUseMSGraphAPI, "true"),
-				}
-			}
-			checks = append(baseChecks, extras...)
-		} else {
-			checks = baseChecks
-		}
-		return resource.ComposeAggregateTestCheckFunc(checks...)(state)
+		return resource.ComposeAggregateTestCheckFunc(baseChecks...)(state)
 	}
 }
 
@@ -111,7 +94,7 @@ func TestAccAzureSecretBackend_wif(t *testing.T) {
 	resourceType := "vault_azure_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
@@ -151,7 +134,7 @@ func TestAccAzureSecretBackend_MountConfig(t *testing.T) {
 	resourceType := "vault_azure_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
@@ -232,7 +215,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -245,6 +228,73 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 			{
 				Config: testAzureSecretBackend_remount(updatedPath),
 				Check:  resource.ComposeTestCheckFunc(azureUpdatedCheckFuncs...),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-azure")
+
+	resourceType := "vault_azure_secret_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				// normal period setting
+				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "", 0, 600, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				// switch to schedule
+				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "*/20 * * * SAT", 0, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SAT"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				// disable it
+				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "", 0, 0, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
+				),
+			},
+			{
+				// do an error
+				Config:      testAccAzureSecretBackendConfig_automatedRotation(backend, "", 900, 600, false),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+			},
+			{ // try again but with schedule (from nothing
+				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "*/20 * * * SUN", 3600, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SUN"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount),
 		},
@@ -274,7 +324,6 @@ resource "vault_azure_secret_backend" "test" {
   client_secret           = "098765432109876543214"
   environment             = "AzurePublicCloud"
   disable_remount         = true
-  use_microsoft_graph_api = true
 }`, path)
 }
 
@@ -349,4 +398,19 @@ resource "vault_azure_secret_backend" "test" {
   listing_visibility          = "unauth"
 }`, path)
 	}
+}
+
+func testAccAzureSecretBackendConfig_automatedRotation(path string, rotationSchedule string, rotationWindow, rotationPeriod int, disableRotation bool) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "test" {
+  path 					  = "%s"
+  subscription_id         = "11111111-2222-3333-4444-111111111111"
+  tenant_id               = "22222222-3333-4444-5555-333333333333"
+  client_id               = "22222222-3333-4444-5555-444444444444"
+  rotation_schedule       = "%s"
+  rotation_window         = "%d"
+  rotation_period         = "%d"
+  disable_automated_rotation = %t
+}
+`, path, rotationSchedule, rotationWindow, rotationPeriod, disableRotation)
 }

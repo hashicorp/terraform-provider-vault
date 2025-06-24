@@ -24,6 +24,8 @@ for more details.
 resource "vault_aws_secret_backend" "aws" {
   access_key = "AKIA....."
   secret_key = "AWS secret key"
+  rotation_schedule = "0 * * * SAT"
+  rotation_window = 3600
 }
 ```
 
@@ -32,6 +34,8 @@ resource "vault_aws_secret_backend" "aws" {
   identity_token_audience   = "<TOKEN_AUDIENCE>"
   identity_token_ttl        = "<TOKEN_TTL>"
   role_arn		    = "<AWS_ROLE_ARN>"
+  rotation_schedule = "0 * * * SAT"
+  rotation_window = 3600
 }
 ```
 
@@ -89,8 +93,6 @@ for credentials issued by this backend.
 
 * `sts_fallback_regions` - (Optional) Ordered list of `sts_region`s matching the fallback endpoints. Should correspond in order with those endpoints. Requires Vault 1.19+
 
-* `username_template` - (Optional)  Template describing how dynamic usernames are generated. The username template is used to generate both IAM usernames (capped at 64 characters) and STS usernames (capped at 32 characters). If no template is provided the field defaults to the template:
-
 * `local` - (Optional) Specifies whether the secrets mount will be marked as local. Local mounts are not replicated to performance replicas.
 
 * `identity_token_audience` - (Optional) The audience claim value. Requires Vault 1.16+.
@@ -100,6 +102,20 @@ for credentials issued by this backend.
 * `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault 1.16+.
 
 * `role_arn` - (Optional) Role ARN to assume for plugin identity token federation. Requires Vault 1.16+.
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential. 
+A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+
+* `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+.
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+a rotation when a scheduled token rotation occurs. The default rotation window is
+unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+.
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
+
+* `username_template` - (Optional)  Template describing how dynamic usernames are generated. The username template is used to generate both IAM usernames (capped at 64 characters) and STS usernames (capped at 32 characters). If no template is provided the field defaults to the template:
 
 ```
 {{ if (eq .Type "STS") }}

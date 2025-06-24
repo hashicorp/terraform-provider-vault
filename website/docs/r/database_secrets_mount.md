@@ -37,6 +37,8 @@ resource "vault_database_secrets_mount" "db" {
     allowed_roles = [
       "dev1",
     ]
+    rotation_schedule = "0 * * * SAT"
+    rotation_window   = 3600
   }
 
   postgresql {
@@ -48,6 +50,8 @@ resource "vault_database_secrets_mount" "db" {
     allowed_roles = [
       "dev2",
     ]
+    rotation_schedule = "0 * * * SAT"
+    rotation_window   = 3600
   }
 }
 
@@ -112,6 +116,18 @@ The following arguments are common to all database engines:
 * `root_rotation_statements` - (Optional) A list of database statements to be executed to rotate the root user's credentials.
 
 * `data` - (Optional) A map of sensitive data to pass to the endpoint. Useful for templated connection strings.
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
+  A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+
+* `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+.
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled token rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+.
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
 
 Supported list of database secrets engines that can be configured:
 
@@ -195,6 +211,8 @@ Supported list of database secrets engines that can be configured:
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### Couchbase Configuration Options
 
 * `hosts` - (Required) A set of Couchbase URIs to connect to. Must use `couchbases://` scheme if `tls` is `true`.
@@ -213,6 +231,8 @@ Supported list of database secrets engines that can be configured:
 * `bucket_name` - (Optional) Required for Couchbase versions prior to 6.5.0. This is only used to verify vault's connection to the server.
 
 * `username_template` - (Optional) Template describing how dynamic usernames are generated.
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
  
 ### Elasticsearch Configuration Options
 
@@ -237,6 +257,8 @@ Supported list of database secrets engines that can be configured:
 
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.  
   See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating) for more details.
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### InfluxDB Configuration Options
 
@@ -264,6 +286,8 @@ Supported list of database secrets engines that can be configured:
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### MongoDB Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information.  
@@ -275,6 +299,8 @@ Supported list of database secrets engines that can be configured:
 
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.  
   See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### MongoDB Atlas Configuration Options
 
@@ -304,6 +330,8 @@ Supported list of database secrets engines that can be configured:
 
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### MSSQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information.  
@@ -331,6 +359,8 @@ Supported list of database secrets engines that can be configured:
   Contained Database, e.g. AzureSQL.  
   See [Vault docs](https://www.vaultproject.io/api/secret/databases/mssql#contained_db)
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### MySQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information.  
@@ -356,6 +386,8 @@ Supported list of database secrets engines that can be configured:
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.  
    See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### Oracle Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information.  
@@ -376,6 +408,8 @@ Supported list of database secrets engines that can be configured:
 
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.  
   See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### PostgreSQL Configuration Options
 
@@ -400,6 +434,8 @@ Supported list of database secrets engines that can be configured:
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
   See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### Redis Configuration Options
 
 * `host` - (Required) The host to connect to.
@@ -418,6 +454,8 @@ Supported list of database secrets engines that can be configured:
 
 * `ca_cert` - (Optional) The contents of a PEM-encoded CA cert file to use to verify the Redis server's identity.
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
 ### Redis ElastiCache Configuration Options
 
 * `url` - (Required) The configuration endpoint for the ElastiCache cluster to connect to.
@@ -430,6 +468,8 @@ Supported list of database secrets engines that can be configured:
 
 * `region` - (Optional) The AWS region where the ElastiCache cluster is hosted.
   If omitted the plugin tries to infer the region from the environment.
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### AWS Redshift Configuration Options
 
@@ -452,6 +492,7 @@ Supported list of database secrets engines that can be configured:
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### Snowflake Configuration Options
 
@@ -472,6 +513,15 @@ Supported list of database secrets engines that can be configured:
 * `password` - (Optional) The password to be used in the connection.
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
+
+* `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported for all DBs that support username/password:
+
+* `password_wo` - (Optional) The password for the user. Can be updated.
+  **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
 

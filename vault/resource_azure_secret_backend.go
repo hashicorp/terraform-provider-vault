@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"strings"
 
@@ -17,7 +18,7 @@ import (
 )
 
 func azureSecretBackendResource() *schema.Resource {
-	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: azureSecretBackendCreate,
 		ReadContext:   provider.ReadContextWrapper(azureSecretBackendRead),
 		UpdateContext: azureSecretBackendUpdate,
@@ -47,13 +48,6 @@ func azureSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
-			},
-			consts.FieldUseMSGraphAPI: {
-				Deprecated:  "This field is not supported in Vault-1.12+ and is the default behavior. This field will be removed in future version of the provider.",
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Computed:    true,
-				Description: "Use the Microsoft Graph API. Should be set to true on vault-1.10+",
 			},
 			consts.FieldSubscriptionID: {
 				Type:        schema.TypeString,
@@ -106,13 +100,16 @@ func azureSecretBackendResource() *schema.Resource {
 	}, false)
 
 	// Add common mount schema to the resource
-	provider.MustAddSchema(resource, getMountSchema(
+	provider.MustAddSchema(r, getMountSchema(
 		consts.FieldPath,
 		consts.FieldType,
 		consts.FieldDescription,
 		consts.FieldIdentityTokenKey,
 	))
-	return resource
+
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func azureSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -162,15 +159,6 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 	for _, k := range []string{consts.FieldClientID, consts.FieldSubscriptionID, consts.FieldTenantID} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-	}
-
-	skipMSGraphAPI := provider.IsAPISupported(meta, provider.VaultVersion112)
-	if !skipMSGraphAPI {
-		if v, ok := resp.Data[consts.FieldUseMSGraphAPI]; ok {
-			if err := d.Set(consts.FieldUseMSGraphAPI, v); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -261,18 +249,6 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 		consts.FieldSubscriptionID,
 	}
 
-	skipMSGraphAPI := provider.IsAPISupported(meta, provider.VaultVersion112)
-
-	if _, ok := d.GetOk(consts.FieldUseMSGraphAPI); ok {
-		if skipMSGraphAPI {
-			log.Printf("ignoring this field because Vault version is greater than 1.12")
-		}
-	}
-
-	if !skipMSGraphAPI {
-		fields = append(fields, consts.FieldUseMSGraphAPI)
-	}
-
 	data := make(map[string]interface{})
 	for _, k := range fields {
 		if d.IsNewResource() {
@@ -290,6 +266,11 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 		if v, ok := d.GetOk(consts.FieldIdentityTokenTTL); ok && v != 0 {
 			data[consts.FieldIdentityTokenTTL] = v.(int)
 		}
+	}
+
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
 	return data

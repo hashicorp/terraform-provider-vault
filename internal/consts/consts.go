@@ -41,6 +41,7 @@ const (
 	FieldNamespaceID                   = "namespace_id"
 	FieldNamespacePath                 = "namespace_path"
 	FieldPathFQ                        = "path_fq"
+	FieldPathsFQ                       = "paths_fq"
 	FieldData                          = "data"
 	FieldDisableRead                   = "disable_read"
 	FieldName                          = "name"
@@ -436,7 +437,6 @@ const (
 	FieldAllowedResponseHeaders        = "allowed_response_headers"
 	FieldDelegatedAuthAccessors        = "delegated_auth_accessors"
 	FieldPluginVersion                 = "plugin_version"
-	FieldUseMSGraphAPI                 = "use_microsoft_graph_api"
 	FieldEnabled                       = "enabled"
 	FieldDefaultMount                  = "default_mount"
 	FieldDefaultPathPolicy             = "default_path_policy"
@@ -463,6 +463,8 @@ const (
 	FieldEabKey                        = "key"
 	FieldAcmeDirectory                 = "acme_directory"
 	FieldEabId                         = "eab_id"
+	FieldAssumeRoleArn                 = "assume_role_arn"
+	FieldAssumeRoleSessionName         = "assume_role_session_name"
 	FieldMaxCrlEntries                 = "max_crl_entries"
 
 	FieldDisableCriticalExtensionChecks = "disable_critical_extension_checks"
@@ -500,11 +502,50 @@ const (
 	FieldSignatureContext         = "signature_context"
 	FieldDisableAutomatedRotation = "disable_automated_rotation"
 
+	FieldIntervalDuration                     = "interval_duration"
+	FieldMaintainStoredCertificateCounts      = "maintain_stored_certificate_counts"
+	FieldMinStartupBackoffDuration            = "min_startup_backoff_duration"
+	FieldMaxStartupBackoffDuration            = "max_startup_backoff_duration"
+	FieldPublishStoredCertificateCountMetrics = "publish_stored_certificate_count_metrics"
+	FieldTidyCertStore                        = "tidy_cert_store"
+	FieldTidyRevokedCerts                     = "tidy_revoked_certs"
+	FieldTidyRevokedCertIssuerAssociations    = "tidy_revoked_cert_issuer_associations"
+	FieldTidyExpiredIssuers                   = "tidy_expired_issuers"
+	FieldTidyMoveLegacyCaBundle               = "tidy_move_legacy_ca_bundle"
+	FieldTidyCrossClusterRevokedCerts         = "tidy_cross_cluster_revoked_certs"
+	FieldTidyCertMetadata                     = "tidy_cert_metadata"
+	FieldTidyCmpv2NonceStore                  = "tidy_cmpv2_nonce_store"
+	FieldTidyAcme                             = "tidy_acme"
+	FieldTidyRevocationQueue                  = "tidy_revocation_queue"
+	FieldSafetyBuffer                         = "safety_buffer"
+	FieldIssuerSafetyBuffer                   = "issuer_safety_buffer"
+	FieldAcmeAccountSafetyBuffer              = "acme_account_safety_buffer"
+	FieldPauseDuration                        = "pause_duration"
+	FieldRevocationQueueSafetyBuffer          = "revocation_queue_safety_buffer"
+	FieldCreatedTime                          = "created_time"
+	FieldDeletionTime                         = "deletion_time"
+	FieldDestroyed                            = "destroyed"
+	FieldDeleteAllVersions                    = "delete_all_versions"
+
+	/*
+		ephemeral resource constants and write-only attributes
+	*/
+
+	FieldMountID = "mount_id"
+
+	FieldPasswordWO           = "password_wo"
+	FieldPasswordWOVersion    = "password_wo_version"
+	FieldCredentialsWO        = "credentials_wo"
+	FieldCredentialsWOVersion = "credentials_wo_version"
+	FieldDataJSONWO           = "data_json_wo"
+	FieldDataJSONWOVersion    = "data_json_wo_version"
+
 	/*
 		common environment variables
 	*/
 	EnvVarVaultNamespaceImport = "TERRAFORM_VAULT_NAMESPACE_IMPORT"
-	EnvVarSkipChildToken       = "TERRAFORM_VAULT_SKIP_CHILD_TOKEN"
+	// EnvVarSkipChildToken to allow user from creating child tokens
+	EnvVarSkipChildToken = "TERRAFORM_VAULT_SKIP_CHILD_TOKEN"
 	// EnvVarUsername to get the username for the userpass auth method
 	EnvVarUsername = "TERRAFORM_VAULT_USERNAME"
 	// EnvVarPassword to get the password for the userpass auth method

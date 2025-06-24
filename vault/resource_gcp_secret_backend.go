@@ -6,6 +6,8 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 )
 
 func gcpSecretBackendResource(name string) *schema.Resource {
@@ -44,16 +47,27 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 				},
 			},
 			consts.FieldCredentials: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "JSON-encoded credentials to use to connect to GCP",
-				Sensitive:   true,
-				// We rebuild the attached JSON string to a simple singleline
-				// string. This makes terraform not want to change when an extra
-				// space is included in the JSON string. It is also necesarry
-				// when disable_read is false for comparing values.
-				StateFunc:    NormalizeDataJSONFunc(name),
-				ValidateFunc: ValidateDataJSONFunc(name),
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "JSON-encoded credentials to use to connect to GCP",
+				Sensitive:     true,
+				StateFunc:     NormalizeDataJSONFunc(name),
+				ValidateFunc:  ValidateDataJSONFunc(name),
+				ConflictsWith: []string{consts.FieldCredentialsWO},
+			},
+			consts.FieldCredentialsWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Write-only JSON-encoded credentials to use to connect to GCP",
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldCredentials},
+			},
+			consts.FieldCredentialsWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only JSON-encoded credentials",
+				RequiredWith: []string{consts.FieldCredentialsWO},
 			},
 			consts.FieldDescription: {
 				Type:        schema.TypeString,
@@ -120,6 +134,9 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 		consts.FieldLocal,
 	))
 
+	// Add common automated root rotation schema to the resource.
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
 	return r
 }
 
@@ -136,6 +153,9 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting GCP backend at %q", path)
 
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+
 	if err := createMount(ctx, d, meta, client, path, consts.MountTypeGCP); err != nil {
 		return diag.FromErr(err)
 	}
@@ -146,11 +166,8 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 	log.Printf("[DEBUG] Writing GCP configuration to %q", configPath)
 
 	data := map[string]interface{}{}
-	fields := []string{
-		consts.FieldCredentials,
-	}
+	fields := []string{}
 
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
 		fields = append(fields,
 			consts.FieldIdentityTokenAudience,
@@ -159,10 +176,26 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		)
 	}
 
+	// Parse automated root rotation fields if running Vault Enterprise 1.19 or newer.
+	if useAPIVer119Ent {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
+	}
+
 	for _, k := range fields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v
 		}
+	}
+
+	var credentials string
+	if v, ok := d.GetOk(consts.FieldCredentials); ok {
+		credentials = v.(string)
+	} else if credWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldCredentialsWO)); !credWo.IsNull() {
+		credentials = credWo.AsString()
+	}
+
+	if credentials != "" {
+		data[consts.FieldCredentials] = credentials
 	}
 
 	if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
@@ -198,10 +231,15 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		if err != nil {
 			return diag.FromErr(err)
 		}
+
 		fields := []string{
 			consts.FieldIdentityTokenAudience,
 			consts.FieldIdentityTokenTTL,
 			consts.FieldServiceAccountEmail,
+		}
+
+		if provider.IsAPISupported(meta, provider.VaultVersion119) {
+			fields = append(fields, automatedrotationutil.AutomatedRotationFields...)
 		}
 
 		for _, k := range fields {
@@ -229,13 +267,43 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	}
 	path := d.Id()
 
-	data := make(map[string]interface{})
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 
-	if d.HasChange(consts.FieldCredentials) {
-		data[consts.FieldCredentials] = d.Get(consts.FieldCredentials)
+	if d.HasChanges(consts.FieldDefaultLeaseTTL, consts.FieldMaxLeaseTTL, consts.FieldIdentityTokenKey) {
+		config := api.MountConfigInput{
+			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
+		}
+
+		if useAPIVer117Ent {
+			config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
+		}
+
+		log.Printf("[DEBUG] Updating mount config for %q", path)
+		err := client.Sys().TuneMountWithContext(ctx, path, config)
+		if err != nil {
+			return diag.Errorf("error updating mount config for %q: %s", path, err)
+		}
+		log.Printf("[DEBUG] Updated mount config for %q", path)
 	}
 
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	data := make(map[string]interface{})
+
+	var credentials string
+	if v, ok := d.GetOk(consts.FieldCredentials); ok {
+		credentials = v.(string)
+	} else if d.HasChange(consts.FieldCredentialsWOVersion) {
+		credWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldCredentialsWO))
+		if !credWo.IsNull() {
+			credentials = credWo.AsString()
+		}
+	}
+
+	if credentials != "" {
+		data[consts.FieldCredentials] = credentials
+	}
+
 	if useAPIVer117Ent {
 		if d.HasChange(consts.FieldIdentityTokenAudience) {
 			data[consts.FieldIdentityTokenAudience] = d.Get(consts.FieldIdentityTokenAudience)
@@ -247,6 +315,14 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 		if d.HasChange(consts.FieldServiceAccountEmail) {
 			data[consts.FieldServiceAccountEmail] = d.Get(consts.FieldServiceAccountEmail)
+		}
+	}
+
+	if useAPIVer119Ent {
+		if d.HasChanges(consts.FieldRotationSchedule, consts.FieldRotationPeriod,
+			consts.FieldRotationWindow, consts.FieldDisableAutomatedRotation) {
+			// Parse automated root rotation fields if running Vault Enterprise 1.19 or newer.
+			automatedrotationutil.ParseAutomatedRotationFields(d, data)
 		}
 	}
 

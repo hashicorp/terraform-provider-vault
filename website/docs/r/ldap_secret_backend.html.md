@@ -22,12 +22,14 @@ for more details.
 ```hcl
 
 resource "vault_ldap_secret_backend" "config" {
-  path          = "my-custom-ldap"
-  binddn        = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
-  bindpass      = "SuperSecretPassw0rd"
-  url           = "ldaps://localhost"
-  insecure_tls  = "true"
-  userdn        = "CN=Users,DC=corp,DC=example,DC=net"
+  path              = "my-custom-ldap"
+  binddn            = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
+  bindpass          = "SuperSecretPassw0rd"
+  url               = "ldaps://localhost"
+  insecure_tls      = "true"
+  userdn            = "CN=Users,DC=corp,DC=example,DC=net"
+  rotation_schedule = "0 * * * SAT"
+  rotation_window   = 3600
 }
 ```
 
@@ -89,6 +91,18 @@ The following arguments are supported:
 
 * `skip_static_role_import_rotation` - (Optional) If set to true, static roles will not be rotated during import.
   Defaults to false. Requires Vault 1.16 or above.
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
+  A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+
+* `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+.
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled token rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+.
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
 
 ## Attributes Reference
 

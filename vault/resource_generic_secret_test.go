@@ -4,13 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -24,8 +25,8 @@ func TestResourceGenericSecret(t *testing.T) {
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resourceName := "vault_generic_secret.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(mount, name),
@@ -51,8 +52,8 @@ func TestResourceGenericSecretNS(t *testing.T) {
 	resourceName := "vault_generic_secret.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfigNS(ns, mount, name),
@@ -100,8 +101,8 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(mount, name),
@@ -136,9 +137,9 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	resourceName := "vault_generic_secret.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAllVersionDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAllVersionDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig_v2(path, false),
