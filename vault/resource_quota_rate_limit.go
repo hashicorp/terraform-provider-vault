@@ -83,13 +83,14 @@ func quotaRateLimitResource() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
-				Description: `Attribute by which to group requests by. Valid group_by modes are: 1) "ip" that groups` +
-					` requests by their source IP address (group_by defaults to ip if unset); 2) "none" that groups all` +
-					` requests that match the rate limit quota rule together; 3) "entity_then_ip" that groups requests` +
-					` by their entity ID for authenticated requests that carry one, or by their IP for unauthenticated` +
-					` requests (or requests whose authentication is not connected to an entity); and 4) "entity_then_none"` +
-					` which also groups requests by their entity ID when available, but the rest is all grouped together` +
-					` (i.e. unauthenticated or with authentication not connected to an entity).`,
+				Description: `Attribute used to group requests for rate limiting. Limits are enforced independently` +
+					` for each group. Valid group_by modes are: 1) "ip" that groups requests by their source IP` +
+					` address (group_by defaults to ip if unset); 2) "none" that groups all requests that match the` +
+					` rate limit quota rule together; 3) "entity_then_ip" that groups requests by their entity ID for` +
+					` authenticated requests that carry one, or by their IP for unauthenticated requests (or requests` +
+					` whose authentication is not connected to an entity); and 4) "entity_then_none" which also` +
+					` groups requests by their entity ID when available, but the rest is all grouped together (i.e.` +
+					` unauthenticated or with authentication not connected to an entity).`,
 				ValidateFunc: validation.StringInSlice([]string{"ip", "none", "entity_then_ip", "entity_then_none"}, false),
 			},
 		},
@@ -263,7 +264,7 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
-		// we should probably fail if the field is set on an unsupported version instead of ignoring it, but changin
+		// we should probably fail if the field is set on an unsupported version instead of ignoring it, but changing
 		// that would be a breaking change
 		if v, ok := d.GetOkExists("inheritable"); ok {
 			data["inheritable"] = v.(bool)
@@ -271,7 +272,7 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		// we should probably fail if the field is set on an unsupported version instead of ignoring it, but changin
+		// we should probably fail if the field is set on an unsupported version instead of ignoring it, but changing
 		// that would be a breaking change
 		if v, ok := d.GetOk(consts.FieldRole); ok {
 			data[consts.FieldRole] = v
