@@ -1892,12 +1892,13 @@ func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, pref
 
 		// ensure Vault version has private key support
 		vaultVersion120Check := provider.IsAPISupported(meta, provider.VaultVersion120)
-		if !vaultVersion120Check {
-			log.Printf("[WARN] field %q can only be used with Vault version %s or newer", consts.FieldPrivateKeyWO, provider.VaultVersion120)
-		}
 
-		if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() && vaultVersion120Check {
-			data[consts.FieldPrivateKey] = pwWo.AsString()
+		if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
+			if vaultVersion120Check {
+				data[consts.FieldPrivateKey] = pwWo.AsString()
+			} else {
+				log.Printf("[WARN] field %q can only be used with Vault version %s or newer", consts.FieldPrivateKeyWO, provider.VaultVersion120)
+			}
 		}
 	}
 }
