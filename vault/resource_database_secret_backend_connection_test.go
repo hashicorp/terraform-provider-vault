@@ -9,8 +9,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -20,6 +18,9 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -1135,7 +1136,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	})
 }
 
-func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
+func TestAccDatabaseSecretBackendConnection_snowflake_userpass(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineSnowflake)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -1149,7 +1150,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 	userTempl := "{{.DisplayName}}"
 
-	config := testAccDatabaseSecretBackendConnectionConfig_snowflake(name, backend, connURL, username, password, userTempl)
+	config := testAccDatabaseSecretBackendConnectionConfig_snowflake_userpass(name, backend, connURL, username, password, userTempl)
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
@@ -1165,6 +1166,63 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.password", password),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username_template", userTempl),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineSnowflake)
+
+	// TODO: make these fatal once we auto provision the required test infrastructure.
+	values := testutil.SkipTestEnvUnset(t, "SNOWFLAKE_URL")
+	connURL := values[0]
+
+	username := os.Getenv("SNOWFLAKE_USERNAME")
+	privateKey := os.Getenv("SNOWFLAKE_PRIVATE_KEY")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineSnowflake.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+	userTempl := "{{.DisplayName}}"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username, userTempl, privateKey, "1"),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.private_key_wo_version", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username_template", userTempl),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username+"new", userTempl, privateKey, "2"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(testDefaultDatabaseSecretBackendResource, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username", username+"new"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.private_key_wo_version", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username_template", userTempl),
 				),
 			},
@@ -1322,7 +1380,6 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 }
 
 func TestDatabaseEngineNameAndIndexFromPrefix(t *testing.T) {
-
 	testcases := []struct {
 		name         string
 		prefix       string
@@ -2084,7 +2141,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connUrl, username, password, version)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, url, username, password, userTempl string) string {
+func testAccDatabaseSecretBackendConnectionConfig_snowflake_userpass(name, path, url, username, password, userTempl string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -2105,6 +2162,32 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, url, username, password, userTempl)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, path, url, username, userTempl, privateKey, privateKeyVersion string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  snowflake {
+    connection_url = "%s"
+    username = "%s"
+	 username_template = "%s"
+    private_key_wo = <<-EOT
+%s
+EOT
+    private_key_wo_version = "%s"
+  }
+}
+`, path, name, url, username, userTempl, privateKey, privateKeyVersion)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_redis(name, path, host, port, username, password, allowedRoles string) string {
