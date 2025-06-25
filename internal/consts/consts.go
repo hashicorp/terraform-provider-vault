@@ -466,6 +466,7 @@ const (
 	FieldAssumeRoleArn                 = "assume_role_arn"
 	FieldAssumeRoleSessionName         = "assume_role_session_name"
 	FieldMaxCrlEntries                 = "max_crl_entries"
+	FieldOCIHomeTenancyID              = "home_tenancy_id"
 
 	FieldDisableCriticalExtensionChecks = "disable_critical_extension_checks"
 	FieldDisablePathLengthChecks        = "disable_path_length_checks"
