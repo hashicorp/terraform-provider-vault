@@ -462,7 +462,7 @@ See the [Vault
 
 * `password` - **Deprecated** (Optional) The password to be used in the connection. Please migrate to key-pair authentication by [November 2025](https://www.snowflake.com/en/blog/blocking-single-factor-password-authentification/).
 
-* `private_key` - (Optional) The private key associated with the Snowflake user.
+* `private_key_wo_version` - (Optional)  The version of the `private_key_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
@@ -498,6 +498,11 @@ See the [Vault
 The following write-only attributes are supported for all DBs that support username/password:
 
 * `password_wo` - (Optional) The password for the user. Can be updated.
+  **Note**: This property is write-only and will not be read from the API.
+
+The following write-only attribute is supported only for Snowflake DB:
+
+* `private_key_wo` - (Optional) The private key associated with the Snowflake user.
   **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
