@@ -1,6 +1,7 @@
 ## Unreleased
 
 FEATURES:
+* Add support for key_usage to `vault_pki_secret_backend_root_sign_intermediate` ([#2421])(https://github.com/hashicorp/terraform-provider-vault/pull/2421)
 * Add support for `group_by` and `secondary_rate` on resource `vault_quota_rate_limit`. Requires Vault Enterprise 1.20.0+ ([#2476](https://github.com/hashicorp/terraform-provider-vault/pull/2476))
 
 ## 5.0.0 (May 21, 2025)
