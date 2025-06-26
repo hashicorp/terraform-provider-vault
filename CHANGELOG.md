@@ -6,6 +6,7 @@ FEATURES:
 * Add private_key_wo and private_key_wo_version fields to Snowflake DB secrets engine config ([#2508])(https://github.com/hashicorp/terraform-provider-vault/pull/2508)
 
 * Add support for `group_by` and `secondary_rate` on resource `vault_quota_rate_limit`. Requires Vault Enterprise 1.20.0+ ([#2476](https://github.com/hashicorp/terraform-provider-vault/pull/2476))
+* Add support for Transit CMAC endpoint ([#2488](https://github.com/hashicorp/terraform-provider-vault/pull/2488))
 
 ## 5.0.0 (May 21, 2025)
 

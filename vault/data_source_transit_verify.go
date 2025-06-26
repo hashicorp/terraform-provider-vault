@@ -6,7 +6,6 @@ package vault
 import (
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -98,6 +97,11 @@ func transitVerifyDataSource() *schema.Resource {
 				Default:     "auto",
 				Description: "The salt length used to sign. This currently only applies to the RSA PSS signature scheme.",
 			},
+			consts.FieldMACLength: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Specifies the MAC length used to generate a CMAC. The mac_length cannot be larger than the cipher's block size.",
+			},
 			consts.FieldValid: {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -126,6 +130,13 @@ func transitVerifyDataSourceRead(d *schema.ResourceData, meta interface{}) error
 
 	payload := map[string]interface{}{}
 
+	if batchInput, ok := d.GetOk(consts.FieldBatchInput); ok {
+		payload[consts.FieldBatchInput], e = convertBatchInput(batchInput, []string{consts.FieldKeyVersion, consts.FieldMACLength})
+		if e != nil {
+			return e
+		}
+	}
+
 	verifyAPIStringFields := []string{
 		consts.FieldHashAlgorithm,
 		consts.FieldInput,
@@ -133,13 +144,12 @@ func transitVerifyDataSourceRead(d *schema.ResourceData, meta interface{}) error
 		consts.FieldHMAC,
 		consts.FieldCMAC,
 		consts.FieldReference,
-		consts.FieldBatchInput,
 		consts.FieldContext,
 		consts.FieldSignatureContext,
-		consts.FieldPrehashed,
 		consts.FieldSignatureAlgorithm,
 		consts.FieldMarshalingAlgorithm,
 		consts.FieldSaltLength,
+		consts.FieldMACLength,
 	}
 
 	for _, f := range verifyAPIStringFields {
@@ -184,33 +194,4 @@ func transitVerifyDataSourceRead(d *schema.ResourceData, meta interface{}) error
 	}
 
 	return nil
-}
-
-// The code that does the parsing for maps will panic if given a map with a mix of boolean
-// and string values. This function converts booleans to strings to avoid the error.
-func convertBatchResults(rawResults interface{}) ([]map[string]interface{}, error) {
-	batchResultsList, ok := rawResults.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("unexpected batch_results type %T", rawResults)
-	}
-
-	var batchResults []map[string]interface{}
-	for _, result := range batchResultsList {
-		resultMap, ok := result.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("unexpected element type %T", result)
-		}
-
-		stringMap := make(map[string]interface{})
-		for k, v := range resultMap {
-			switch v.(type) {
-			case bool:
-				stringMap[k] = strconv.FormatBool(v.(bool))
-			default:
-				stringMap[k] = v
-			}
-		}
-	}
-
-	return batchResults, nil
 }
