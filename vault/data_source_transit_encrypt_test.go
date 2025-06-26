@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -20,7 +20,26 @@ func TestDataSourceTransitEncrypt(t *testing.T) {
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testDataSourceTransitEncrypt_config,
+				Config: fmt.Sprintf(testDataSourceTransitEncrypt_config, "", ""),
+				Check:  testDataSourceTransitEncrypt_check,
+			},
+			{
+				Config: fmt.Sprintf(testDataSourceTransitEncrypt_config, `type = "rsa-2048"`, ""),
+				Check:  testDataSourceTransitEncrypt_check,
+			},
+		},
+	})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion121)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testDataSourceTransitEncrypt_config, `type = "aes128-cbc"`, `iv = "YmxvY2stc2l6ZS12YWx1ZQ=="`),
 				Check:  testDataSourceTransitEncrypt_check,
 			},
 		},
@@ -38,12 +57,14 @@ resource "vault_transit_secret_backend_key" "test" {
   name  		   = "test"
   backend 		   = vault_mount.test.path
   deletion_allowed = true
+  %s
 }
 
 data "vault_transit_encrypt" "test" {
     backend     = vault_mount.test.path
     key         = vault_transit_secret_backend_key.test.name
 	plaintext   = "foo"
+    %s
 }
 
 data "vault_transit_decrypt" "test" {

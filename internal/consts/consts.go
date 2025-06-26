@@ -501,6 +501,10 @@ const (
 	FieldHybridKeyTypePQC         = "hybrid_key_type_pqc"
 	FieldSignatureContext         = "signature_context"
 	FieldDisableAutomatedRotation = "disable_automated_rotation"
+	FieldKey                      = "key"
+	FieldPlaintext                = "plaintext"
+	FieldCiphertext               = "ciphertext"
+	FieldIV                       = "iv"
 
 	FieldIntervalDuration                     = "interval_duration"
 	FieldMaintainStoredCertificateCounts      = "maintain_stored_certificate_counts"
@@ -624,6 +628,7 @@ const (
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
 	VaultVersion120  = "1.20.0"
+	VaultVersion121  = "1.21.0"
 
 	/*
 		Vault auth methods

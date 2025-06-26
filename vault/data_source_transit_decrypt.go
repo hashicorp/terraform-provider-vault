@@ -6,6 +6,7 @@ package vault
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -17,31 +18,36 @@ func transitDecryptDataSource() *schema.Resource {
 		Read: provider.ReadWrapper(transitDecryptDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
-			"key": {
+			consts.FieldKey: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the decryption key to use.",
 			},
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The Transit secret backend the key belongs to.",
 			},
-			"plaintext": {
+			consts.FieldPlaintext: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Decrypted plain text",
 				Sensitive:   true,
 			},
-			"context": {
+			consts.FieldContext: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Specifies the context for key derivation",
 			},
-			"ciphertext": {
+			consts.FieldCiphertext: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Transit encrypted cipher text.",
+			},
+			consts.FieldIV: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The IV used to create the ciphertext. ",
 			},
 		},
 	}
@@ -53,14 +59,16 @@ func transitDecryptDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 		return e
 	}
 
-	backend := d.Get("backend").(string)
-	key := d.Get("key").(string)
-	ciphertext := d.Get("ciphertext").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	key := d.Get(consts.FieldKey).(string)
+	ciphertext := d.Get(consts.FieldCiphertext).(string)
+	iv := d.Get(consts.FieldIV).(string)
 
 	context := base64.StdEncoding.EncodeToString([]byte(d.Get("context").(string)))
 	payload := map[string]interface{}{
-		"ciphertext": ciphertext,
-		"context":    context,
+		consts.FieldCiphertext: ciphertext,
+		consts.FieldContext:    context,
+		consts.FieldIV:         iv,
 	}
 
 	decryptedData, err := client.Logical().Write(backend+"/decrypt/"+key, payload)
@@ -68,10 +76,10 @@ func transitDecryptDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 		return fmt.Errorf("issue encrypting with key: %s", err)
 	}
 
-	plaintext, _ := base64.StdEncoding.DecodeString(decryptedData.Data["plaintext"].(string))
+	plaintext, _ := base64.StdEncoding.DecodeString(decryptedData.Data[consts.FieldPlaintext].(string))
 
 	d.SetId(base64.StdEncoding.EncodeToString([]byte(ciphertext)))
-	d.Set("plaintext", string(plaintext))
+	d.Set(consts.FieldPlaintext, string(plaintext))
 
 	return nil
 }
