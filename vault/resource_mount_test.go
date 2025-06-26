@@ -245,7 +245,7 @@ func TestResourceMount_IDTokenKey(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -262,10 +262,9 @@ func TestResourceMount_IDTokenKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
 					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "hidden"),
-					// @TODO add these back in when Vault 1.16.3 is released
-					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "2"),
-					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
-					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
 				),
 			},
 			{
@@ -283,17 +282,13 @@ func TestResourceMount_IDTokenKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.2", "header3"),
 					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
 					resource.TestCheckResourceAttr(resourceName, "identity_token_key", "my-key"),
-					// @TODO add these back in when Vault 1.16.3 is released
-					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "3"),
-					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
-					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
-					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.2", "header3"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.2", "header3"),
 				),
 			},
-			// @TODO remove ignore_fields once Vault 1.16.3 is released
-			testutil.GetImportTestStep(resourceName, false, nil,
-				"delegated_auth_accessors",
-			),
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
