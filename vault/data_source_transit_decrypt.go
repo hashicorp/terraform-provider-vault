@@ -44,11 +44,6 @@ func transitDecryptDataSource() *schema.Resource {
 				Required:    true,
 				Description: "Transit encrypted cipher text.",
 			},
-			consts.FieldIV: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The IV used to create the ciphertext. ",
-			},
 		},
 	}
 }
@@ -62,13 +57,11 @@ func transitDecryptDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 	backend := d.Get(consts.FieldBackend).(string)
 	key := d.Get(consts.FieldKey).(string)
 	ciphertext := d.Get(consts.FieldCiphertext).(string)
-	iv := d.Get(consts.FieldIV).(string)
 
 	context := base64.StdEncoding.EncodeToString([]byte(d.Get("context").(string)))
 	payload := map[string]interface{}{
 		consts.FieldCiphertext: ciphertext,
 		consts.FieldContext:    context,
-		consts.FieldIV:         iv,
 	}
 
 	decryptedData, err := client.Logical().Write(backend+"/decrypt/"+key, payload)

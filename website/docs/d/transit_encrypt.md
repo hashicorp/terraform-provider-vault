@@ -45,6 +45,8 @@ Each document configuration may have one or more `rule` blocks, which each accep
 
 * `key_version` - (Optional) The version of the key to use for encryption. If not set, uses the latest version. Must be greater than or equal to the key's `min_encryption_version`, if set.
 
+* `iv` - (Optional) The IV to use when encrypting with an AES-CBC key.
+
 ## Attributes Reference
 
 * `ciphertext` - Encrypted ciphertext returned from Vault

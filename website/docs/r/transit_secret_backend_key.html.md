@@ -40,7 +40,7 @@ The following arguments are supported:
 
 * `name` - (Required) The name to identify this key within the backend. Must be unique within the backend.
 
-* `type` - (Optional) Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `hmac`, `rsa-2048`, `rsa-3072` and `rsa-4096`.
+* `type` - (Optional) Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `hmac`, `rsa-2048`, `rsa-3072`, `rsa-4096`, `ml-dsa`, `hybrid`, `aes128-cmac`, `aes192-cmac`, `aes256-cmac`, `aes128-cbc`, and `aes256-cbc`.
     * Refer to the Vault documentation on transit key types for more information: [Key Types](https://www.vaultproject.io/docs/secrets/transit#key-types)
 
 * `deletion_allowed` - (Optional) Specifies if the keyring is allowed to be deleted. Must be set to 'true' before terraform will be able to destroy keys.
