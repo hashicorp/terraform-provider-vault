@@ -115,10 +115,6 @@ func kmipSecretBackendResource() *schema.Resource {
 		consts.FieldPath,
 		consts.FieldType,
 		consts.FieldDescription,
-		consts.FieldDefaultLeaseTTL,
-		consts.FieldMaxLeaseTTL,
-		consts.FieldIdentityTokenKey,
-		consts.FieldLocal,
 	))
 
 	return r
@@ -148,8 +144,10 @@ func kmipSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta i
 		return diag.FromErr(e)
 	}
 
-	if err := updateMount(ctx, d, meta, true); err != nil {
-		return diag.FromErr(err)
+	if !d.IsNewResource() {
+		if err := updateMount(ctx, d, meta, true); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	path := d.Id()
