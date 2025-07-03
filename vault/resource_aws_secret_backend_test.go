@@ -297,6 +297,7 @@ func TestAccAWSSecretBackendRole_MountConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
 					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "hidden"),
+					resource.TestCheckResourceAttr(resourceName, "force_no_cache", "true"),
 				),
 			},
 			{
@@ -316,6 +317,7 @@ func TestAccAWSSecretBackendRole_MountConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.2", "header3"),
 					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
+					resource.TestCheckResourceAttr(resourceName, "force_no_cache", "true"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
@@ -340,6 +342,7 @@ resource "vault_aws_secret_backend" "test" {
   allowed_response_headers    = ["header1", "header2"]
   delegated_auth_accessors    = ["header1", "header2"]
   listing_visibility          = "hidden"
+  force_no_cache              = true
 }`, path)
 	} else {
 		return fmt.Sprintf(`
@@ -354,6 +357,7 @@ resource "vault_aws_secret_backend" "test" {
   allowed_response_headers    = ["header1", "header2", "header3"]
   delegated_auth_accessors    = ["header1", "header2"]
   listing_visibility          = "unauth"
+  force_no_cache              = true
 }`, path)
 	}
 }
