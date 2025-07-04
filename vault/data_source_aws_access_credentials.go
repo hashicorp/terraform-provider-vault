@@ -4,16 +4,17 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"github.com/aws/smithy-go"
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -180,30 +181,29 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
 	d.Set(consts.FieldLeaseRenewable, secret.Renewable)
 
-	awsConfig := &aws.Config{
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
-		HTTPClient:  cleanhttp.DefaultClient(),
+	// Create AWS config with static credentials
+	awsConfig, err := config.LoadDefaultConfig(context.Background(),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, securityToken)),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+	)
+	if err != nil {
+		return fmt.Errorf("error creating AWS config: %s", err)
 	}
 
 	region := d.Get("region").(string)
 	if region != "" {
-		awsConfig.Region = &region
+		awsConfig.Region = region
 	}
 
-	sess, err := session.NewSession(awsConfig)
-	if err != nil {
-		return fmt.Errorf("error creating AWS session: %s", err)
-	}
-
-	iamconn := iam.New(sess)
-	stsconn := sts.New(sess)
+	iamconn := iam.NewFromConfig(awsConfig)
+	stsconn := sts.NewFromConfig(awsConfig)
 
 	// Different types of AWS credentials have different behavior around consistency.
 	// See https://www.vaultproject.io/docs/secrets/aws/index.html#usage for more.
 	if credType == "sts" {
 		// STS credentials are immediately consistent. Let's ensure they're working.
 		log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
-		if _, err := stsconn.GetCallerIdentity(&sts.GetCallerIdentityInput{}); err != nil {
+		if _, err := stsconn.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{}); err != nil {
 			return err
 		}
 		return nil
@@ -218,7 +218,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	// validateCreds is a retry function, which will be retried until it succeeds.
 	validateCreds := func() *retry.RetryError {
 		log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
-		if _, err := iamconn.GetUser(nil); err != nil && isAWSAuthError(err) {
+		if _, err := iamconn.GetUser(context.Background(), &iam.GetUserInput{}); err != nil && isAWSAuthError(err) {
 			sequentialSuccesses = 0
 			log.Printf("[DEBUG] AWS auth error checking if creds %q are valid, is retryable", secret.LeaseID)
 			return retry.RetryableError(err)
@@ -247,18 +247,12 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 }
 
 func isAWSAuthError(err error) bool {
-	awsErr, ok := err.(awserr.Error)
-	if !ok {
-		return false
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		switch apiErr.ErrorCode() {
+		case "AccessDenied", "ValidationError", "InvalidClientTokenId":
+			return true
+		}
 	}
-	switch awsErr.Code() {
-	case "AccessDenied":
-		return true
-	case "ValidationError":
-		return true
-	case "InvalidClientTokenId":
-		return true
-	default:
-		return false
-	}
+	return false
 }
