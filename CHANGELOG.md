@@ -7,6 +7,8 @@ FEATURES:
 
 * Add support for `group_by` and `secondary_rate` on resource `vault_quota_rate_limit`. Requires Vault Enterprise 1.20.0+ ([#2476](https://github.com/hashicorp/terraform-provider-vault/pull/2476))
 * Add support for Transit CMAC endpoint ([#2488](https://github.com/hashicorp/terraform-provider-vault/pull/2488))
+* Add support for AWS SSO profiles ([#1808](https://github.com/hashicorp/terraform-provider-vault/issues/1808))
+* Add support for role assumption in `auth_login_aws` for all credential sources ([#1672](https://github.com/hashicorp/terraform-provider-vault/issues/1672))
 
 ## 5.0.0 (May 21, 2025)
 
