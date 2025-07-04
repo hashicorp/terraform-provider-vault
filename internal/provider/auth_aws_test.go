@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -20,6 +22,42 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
+
+// helper function to create temp profile and shared credential config files
+func setupTestAWSProfile(t *testing.T, profileName string) (configFile, credentialsFile string, cleanup func()) {
+	tempDir, err := os.MkdirTemp("", "aws-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+
+	configFile = filepath.Join(tempDir, "config")
+	configContent := fmt.Sprintf(`[profile %s]
+region = us-east-1
+output = json
+`, profileName)
+
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		os.RemoveAll(tempDir)
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+
+	credentialsFile = filepath.Join(tempDir, "credentials")
+	credentialsContent := fmt.Sprintf(`[%s]
+aws_access_key_id = profile-access-key
+aws_secret_access_key = profile-secret-key
+`, profileName)
+
+	if err := os.WriteFile(credentialsFile, []byte(credentialsContent), 0644); err != nil {
+		os.RemoveAll(tempDir)
+		t.Fatalf("Failed to write credentials file: %v", err)
+	}
+
+	cleanup = func() {
+		os.RemoveAll(tempDir)
+	}
+
+	return configFile, credentialsFile, cleanup
+}
 
 // AWS auth initialization with various parameter combinations
 func TestAuthLoginAWS_Init(t *testing.T) {
@@ -727,20 +765,22 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 		expectStaticCredentials bool
 		expectAssumeRole        bool
 		expectSharedCredentials bool
-		skipIfNoProfile         bool
+		generateProfile         bool
 		expectRegion            string
 	}{
+		// simple cases w or w/o role assumption
 		{
 			name: "static-credentials-only",
 			params: map[string]interface{}{
 				consts.FieldAWSAccessKeyID:     "test-key",
 				consts.FieldAWSSecretAccessKey: "test-secret",
-				consts.FieldAWSRegion:          "us-west-2",
+				consts.FieldAWSRegion:          "us-east-1",
 			},
 			expectStaticCredentials: true,
 			expectAssumeRole:        false,
 			expectSharedCredentials: false,
-			expectRegion:            "us-west-2",
+			generateProfile:         false,
+			expectRegion:            "us-east-1",
 		},
 		{
 			name: "static-credentials-with-role",
@@ -754,6 +794,7 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 			expectStaticCredentials: false, // Role assumption should wrap static credentials
 			expectAssumeRole:        true,
 			expectSharedCredentials: false,
+			generateProfile:         false,
 			expectRegion:            "us-east-1",
 		},
 		{
@@ -766,7 +807,7 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 			expectStaticCredentials: false,
 			expectAssumeRole:        true,
 			expectSharedCredentials: false,
-			skipIfNoProfile:         true, // profiles might not be present in the testing environment, ok to fail
+			generateProfile:         true,
 		},
 		{
 			name: "profile-only",
@@ -776,26 +817,96 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 			expectStaticCredentials: false,
 			expectAssumeRole:        false,
 			expectSharedCredentials: true,
-			skipIfNoProfile:         true, // profiles might not be present in the testing environment, ok to fail
+			generateProfile:         true,
 		},
+
+		// precedence tests - when multiple credential sources are available
 		{
-			name: "environment-credentials-fallback",
+			name: "precedence-static-over-profile",
 			params: map[string]interface{}{
-				// no explicit credential fields, hence should fallback to env vars
-				consts.FieldAWSRegion: "us-west-1",
+				// Both static and profile credentials provided
+				consts.FieldAWSAccessKeyID:     "test-key",
+				consts.FieldAWSSecretAccessKey: "test-secret",
+				consts.FieldAWSProfile:         "test-profile",
+				consts.FieldAWSRegion:          "us-east-1",
 			},
-			expectStaticCredentials: false,
+			expectStaticCredentials: true, // static should take precedence
 			expectAssumeRole:        false,
 			expectSharedCredentials: false,
-			expectRegion:            "us-west-1",
+			generateProfile:         true, // profile mentioned but won't be used
+			expectRegion:            "us-east-1",
+		},
+		{
+			name: "precedence-role-over-static",
+			params: map[string]interface{}{
+				// Both static credentials and role provided
+				consts.FieldAWSAccessKeyID:     "test-key",
+				consts.FieldAWSSecretAccessKey: "test-secret",
+				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/TestRole",
+				consts.FieldAWSRoleSessionName: "test-session",
+				consts.FieldAWSRegion:          "us-east-1",
+			},
+			expectStaticCredentials: false, // Role should take precedence over static
+			expectAssumeRole:        true,
+			expectSharedCredentials: false,
+			generateProfile:         false,
+			expectRegion:            "us-east-1",
+		},
+		{
+			name: "precedence-static-and-profile-with-role",
+			params: map[string]interface{}{
+				// Static, profile, and role all provided
+				consts.FieldAWSAccessKeyID:     "test-key",
+				consts.FieldAWSSecretAccessKey: "test-secret",
+				consts.FieldAWSProfile:         "test-profile",
+				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/TestRole",
+				consts.FieldAWSRoleSessionName: "test-session",
+				consts.FieldAWSRegion:          "us-east-1",
+			},
+			expectStaticCredentials: false, // Role takes precedence
+			expectAssumeRole:        true,  // Role wraps the static credentials (not profile)
+			expectSharedCredentials: false,
+			generateProfile:         true, // profile mentioned but won't be used
+			expectRegion:            "us-east-1",
+		},
+		{
+			name: "precedence-web-identity-over-static",
+			params: map[string]interface{}{
+				// Static credentials and web identity token
+				consts.FieldAWSAccessKeyID:          "test-key",
+				consts.FieldAWSSecretAccessKey:      "test-secret",
+				consts.FieldAWSRoleARN:              "arn:aws:iam::123456789012:role/TestRole",
+				consts.FieldAWSWebIdentityTokenFile: "/tmp/token",
+				consts.FieldAWSRegion:               "us-east-1",
+			},
+			expectStaticCredentials: false, // Web identity role assumption takes precedence
+			expectAssumeRole:        true,  // implies AssumeRoleWithWebIdentity
+			expectSharedCredentials: false,
+			generateProfile:         false,
+			expectRegion:            "us-east-1",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var cleanup func()
+			params := tt.params
+			// setup test AWS profile if needed
+			if tt.generateProfile {
+				configFile, credentialsFile, cleanupFunc := setupTestAWSProfile(t, "test-profile")
+				cleanup = cleanupFunc
+
+				t.Setenv("AWS_CONFIG_FILE", configFile)
+				t.Setenv("AWS_SHARED_CREDENTIALS_FILE", credentialsFile)
+			}
+
+			if cleanup != nil {
+				defer cleanup()
+			}
+
 			l := &AuthLoginAWS{
 				AuthLoginCommon: AuthLoginCommon{
-					params: tt.params,
+					params: params,
 				},
 			}
 
@@ -843,13 +954,6 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 			ctx := context.Background()
 			cfg, err := buildAWSConfig(ctx, &credParams)
 
-			if tt.skipIfNoProfile && err != nil {
-				// in automations we can expect errors when profile doesn't exist
-				if strings.Contains(err.Error(), "profile") || strings.Contains(err.Error(), "config") {
-					t.Skipf("Skipping test that requires AWS profile: %v", err)
-				}
-			}
-
 			if err != nil {
 				t.Fatalf("buildAWSConfig() failed: %v", err)
 			}
@@ -869,33 +973,21 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 				t.Errorf("Expected config region %s, got %s", tt.expectRegion, cfg.Region)
 			}
 
-			// for static-credentials-with-role skip cred retrieval, since test role doesn't exist
-			// unexported field CredentialsCache.provider stores the real provider, but not accessible without reflection
-			if tt.name == "static-credentials-with-role" {
-				t.Log("Skipping credential retrieval for static-credentials-with-role to avoid AWS API calls")
-				return
-			}
-
 			// retrieve creds for non-role tests
-			if !tt.expectAssumeRole {
-				creds, err := cfg.Credentials.Retrieve(ctx)
-				if err != nil && tt.skipIfNoProfile {
-					if strings.Contains(err.Error(), "profile") || strings.Contains(err.Error(), "credentials") {
-						t.Skipf("Skipping credential retrieval test due to missing profile: %v", err)
-					}
-				}
+			//if !tt.expectAssumeRole {
+			creds, err := cfg.Credentials.Retrieve(ctx)
 
-				if err != nil {
-					t.Fatalf("Failed to retrieve credentials: %v", err)
-				}
+			if err != nil {
+				t.Fatalf("Failed to retrieve credentials: %v", err)
+			}
 
-				// verify the credential source for non-role cases
-				if tt.expectStaticCredentials {
-					if credParams.AccessKey != "" && creds.AccessKeyID != credParams.AccessKey {
-						t.Errorf("Expected static credentials with AccessKey %s, got %s", credParams.AccessKey, creds.AccessKeyID)
-					}
+			// verify the credential source for non-role cases
+			if tt.expectStaticCredentials {
+				if credParams.AccessKey != "" && creds.AccessKeyID != credParams.AccessKey {
+					t.Errorf("Expected static credentials with AccessKey %s, got %s", credParams.AccessKey, creds.AccessKeyID)
 				}
 			}
+			//}
 
 			t.Logf("Successfully built AWS config for scenario: %s", tt.name)
 			if tt.expectStaticCredentials {

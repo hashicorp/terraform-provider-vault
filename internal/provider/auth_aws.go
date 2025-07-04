@@ -510,7 +510,6 @@ func buildAWSConfig(ctx context.Context, p *credentialsParams) (*aws.Config, err
 	return &cfg, nil
 }
 
-// customSTSResolver implements the STS EndpointResolverV2 interface
 type customSTSResolver struct {
 	endpoint string
 }
@@ -525,7 +524,6 @@ func (r customSTSResolver) ResolveEndpoint(_ context.Context, _ sts.EndpointPara
 	}, nil
 }
 
-// customIAMResolver implements the IAM EndpointResolverV2 interface
 type customIAMResolver struct {
 	endpoint string
 }
