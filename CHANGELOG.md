@@ -9,6 +9,7 @@ FEATURES:
 * Add support for Transit CMAC endpoint ([#2488](https://github.com/hashicorp/terraform-provider-vault/pull/2488))
 
 * Add new resource `vault_scep_auth_backend_role` to manage roles in a SCEP auth backend. [#2479](https://github.com/hashicorp/terraform-provider-vault/pull/2479).
+* Add new datasource and resource `vault_pki_secret_backend_config_scep` for PKI SCEP configuration. [#2487](https://github.com/hashicorp/terraform-provider-vault/pull/2487).
 
 ## 5.0.0 (May 21, 2025)
 
