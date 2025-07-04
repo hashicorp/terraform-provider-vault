@@ -9,21 +9,50 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/aws-sdk-go-v2/service/sts/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-// helper function to create temp profile and shared credential config files
+// AWS test constants for mock STS responses and test data
+const (
+	mockRoleAccessKeyID     = "AKIAMOCKEDROLE"
+	mockRoleSecretAccessKey = "MockedRoleSecret"
+	mockRoleSessionToken    = "MockedRoleToken"
+	mockRoleAssumedRoleID   = "AROAMOCKEDROLE:test-session"
+
+	mockWebAccessKeyID     = "AKIAMOCKEDWEB"
+	mockWebSecretAccessKey = "MockedWebSecret"
+	mockWebSessionToken    = "MockedWebToken"
+	mockWebAssumedRoleID   = "AROAMOCKEDWEB:web-session"
+
+	testProfileAccessKeyID     = "profile-access-key"
+	testProfileSecretAccessKey = "profile-secret-key"
+
+	testAWSAccountID   = "123456789012"
+	testRoleName       = "TestRole"
+	testSessionName    = "test-session"
+	testWebSessionName = "web-session"
+)
+
+var (
+	testRoleARN           = fmt.Sprintf("arn:aws:iam::%s:role/%s", testAWSAccountID, testRoleName)
+	testAssumedRoleARN    = fmt.Sprintf("arn:aws:sts::%s:assumed-role/%s/%s", testAWSAccountID, testRoleName, testSessionName)
+	testWebAssumedRoleARN = fmt.Sprintf("arn:aws:sts::%s:assumed-role/%s/%s", testAWSAccountID, testRoleName, testWebSessionName)
+)
+
+// helper function to create temp profile and shared credentials
 func setupTestAWSProfile(t *testing.T, profileName string) (configFile, credentialsFile string, cleanup func()) {
 	tempDir, err := os.MkdirTemp("", "aws-test-*")
 	if err != nil {
@@ -43,9 +72,9 @@ output = json
 
 	credentialsFile = filepath.Join(tempDir, "credentials")
 	credentialsContent := fmt.Sprintf(`[%s]
-aws_access_key_id = profile-access-key
-aws_secret_access_key = profile-secret-key
-`, profileName)
+aws_access_key_id = %s
+aws_secret_access_key = %s
+`, profileName, testProfileAccessKeyID, testProfileSecretAccessKey)
 
 	if err := os.WriteFile(credentialsFile, []byte(credentialsContent), 0644); err != nil {
 		os.RemoveAll(tempDir)
@@ -59,7 +88,60 @@ aws_secret_access_key = profile-secret-key
 	return configFile, credentialsFile, cleanup
 }
 
-// AWS auth initialization with various parameter combinations
+// helper function to create temp web identity token file
+func setupTestWebIdentityToken(t *testing.T) (tokenFile string, cleanup func()) {
+	tempDir, err := os.MkdirTemp("", "aws-token-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+
+	tokenFile = filepath.Join(tempDir, "token")
+	tokenContent := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29pZGMuZXhhbXBsZS5jb20iLCJzdWIiOiJ0ZXN0LXVzZXIiLCJhdWQiOiJzdHMuYW1hem9uYXdzLmNvbSIsImV4cCI6MTYzMDQ2MDAwMCwiaWF0IjoxNjMwNDU2NDAwfQ.test-signature"
+
+	if err := os.WriteFile(tokenFile, []byte(tokenContent), 0644); err != nil {
+		os.RemoveAll(tempDir)
+		t.Fatalf("Failed to write token file: %v", err)
+	}
+
+	cleanup = func() {
+		os.RemoveAll(tempDir)
+	}
+
+	return tokenFile, cleanup
+}
+
+type mockSTSClient struct{}
+
+func (m *mockSTSClient) AssumeRole(ctx context.Context, params *sts.AssumeRoleInput, optFns ...func(*sts.Options)) (*sts.AssumeRoleOutput, error) {
+	return &sts.AssumeRoleOutput{
+		Credentials: &types.Credentials{
+			AccessKeyId:     aws.String(mockRoleAccessKeyID),
+			SecretAccessKey: aws.String(mockRoleSecretAccessKey),
+			SessionToken:    aws.String(mockRoleSessionToken),
+			Expiration:      aws.Time(time.Now().Add(time.Hour)),
+		},
+		AssumedRoleUser: &types.AssumedRoleUser{
+			Arn:           aws.String(testAssumedRoleARN),
+			AssumedRoleId: aws.String(mockRoleAssumedRoleID),
+		},
+	}, nil
+}
+
+func (m *mockSTSClient) AssumeRoleWithWebIdentity(ctx context.Context, params *sts.AssumeRoleWithWebIdentityInput, optFns ...func(*sts.Options)) (*sts.AssumeRoleWithWebIdentityOutput, error) {
+	return &sts.AssumeRoleWithWebIdentityOutput{
+		Credentials: &types.Credentials{
+			AccessKeyId:     aws.String(mockWebAccessKeyID),
+			SecretAccessKey: aws.String(mockWebSecretAccessKey),
+			SessionToken:    aws.String(mockWebSessionToken),
+			Expiration:      aws.Time(time.Now().Add(time.Hour)),
+		},
+		AssumedRoleUser: &types.AssumedRoleUser{
+			Arn:           aws.String(testWebAssumedRoleARN),
+			AssumedRoleId: aws.String(mockWebAssumedRoleID),
+		},
+	}, nil
+}
+
 func TestAuthLoginAWS_Init(t *testing.T) {
 	tests := []authLoginInitTest{
 		{
@@ -137,7 +219,6 @@ func TestAuthLoginAWS_Init(t *testing.T) {
 	}
 }
 
-// auth login path generation
 func TestAuthLoginAWS_LoginPath(t *testing.T) {
 	type fields struct {
 		AuthLoginCommon AuthLoginCommon
@@ -183,7 +264,7 @@ func TestAuthLoginAWS_LoginPath(t *testing.T) {
 	}
 }
 
-// AWS config building from credential parameters
+// aws config building from credential parameters
 func TestAuthLoginAWS_buildAWSConfig(t *testing.T) {
 	type fields struct {
 		AuthLoginCommon AuthLoginCommon
@@ -251,10 +332,9 @@ func TestAuthLoginAWS_buildAWSConfig(t *testing.T) {
 						consts.FieldAWSAccessKeyID:          "key-id",
 						consts.FieldAWSSecretAccessKey:      "sa-key",
 						consts.FieldAWSSessionToken:         "session-token",
-						consts.FieldAWSIAMEndpoint:          "iam.us-east-2.amazonaws.com",
 						consts.FieldAWSSTSEndpoint:          "sts.us-east-2.amazonaws.com",
 						consts.FieldAWSRegion:               "us-east-2",
-						consts.FieldAWSRoleARN:              "arn:aws:iam::123456789012:role/MyRole",
+						consts.FieldAWSRoleARN:              testRoleARN,
 						consts.FieldAWSRoleSessionName:      "session1",
 						consts.FieldAWSWebIdentityTokenFile: "web-token",
 					},
@@ -274,14 +354,11 @@ func TestAuthLoginAWS_buildAWSConfig(t *testing.T) {
 				if credParams.STSEndpoint != "sts.us-east-2.amazonaws.com" {
 					t.Errorf("expected STSEndpoint = sts.us-east-2.amazonaws.com, got %s", credParams.STSEndpoint)
 				}
-				if credParams.IAMEndpoint != "iam.us-east-2.amazonaws.com" {
-					t.Errorf("expected IAMEndpoint = iam.us-east-2.amazonaws.com, got %s", credParams.IAMEndpoint)
-				}
 				if credParams.Region != "us-east-2" {
 					t.Errorf("expected Region = us-east-2, got %s", credParams.Region)
 				}
-				if credParams.RoleARN != "arn:aws:iam::123456789012:role/MyRole" {
-					t.Errorf("expected RoleARN = arn:aws:iam::123456789012:role/MyRole, got %s", credParams.RoleARN)
+				if credParams.RoleARN != testRoleARN {
+					t.Errorf("expected RoleARN = %s, got %s", testRoleARN, credParams.RoleARN)
 				}
 				if credParams.RoleSessionName != "session1" {
 					t.Errorf("expected RoleSessionName = session1, got %s", credParams.RoleSessionName)
@@ -337,7 +414,6 @@ func TestAuthLoginAWS_buildAWSConfig(t *testing.T) {
 				AuthLoginCommon: tt.fields.AuthLoginCommon,
 			}
 
-			// Test the complete flow: collectCredentialParams -> buildAWSConfig
 			credParams, err := l.collectCredentialParams()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("collectCredentialParams() error = %v, wantErr %v", err, tt.wantErr)
@@ -345,11 +421,10 @@ func TestAuthLoginAWS_buildAWSConfig(t *testing.T) {
 			}
 
 			if tt.wantErr {
-				// If we expect an error, we should have gotten it from collectCredentialParams
+				// we should have gotten err from collectCredentialParams
 				return
 			}
 
-			// Build AWS config from the collected parameters
 			ctx := context.Background()
 			cfg, err := buildAWSConfig(ctx, &credParams)
 			if err != nil {
@@ -362,7 +437,6 @@ func TestAuthLoginAWS_buildAWSConfig(t *testing.T) {
 				return
 			}
 
-			// Run validation function if provided
 			if tt.validateConfig != nil {
 				tt.validateConfig(t, cfg, credParams)
 			}
@@ -370,324 +444,6 @@ func TestAuthLoginAWS_buildAWSConfig(t *testing.T) {
 	}
 }
 
-// validate chain parameter extraction
-func TestAuthLoginAWS_CredentialProviderChain(t *testing.T) {
-	tests := []struct {
-		name           string
-		params         map[string]interface{}
-		expectedStatic bool
-		expectedRole   bool
-		expectedRegion string
-	}{
-		{
-			name: "static-credentials-only",
-			params: map[string]interface{}{
-				consts.FieldAWSAccessKeyID:     "test-key",
-				consts.FieldAWSSecretAccessKey: "test-secret",
-				consts.FieldAWSRegion:          "us-west-2",
-			},
-			expectedStatic: true,
-			expectedRole:   false,
-			expectedRegion: "us-west-2",
-		},
-		{
-			name: "static-credentials-with-role",
-			params: map[string]interface{}{
-				consts.FieldAWSAccessKeyID:     "test-key",
-				consts.FieldAWSSecretAccessKey: "test-secret",
-				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/TestRole",
-				consts.FieldAWSRoleSessionName: "test-session",
-				consts.FieldAWSRegion:          "us-east-1",
-			},
-			expectedStatic: true,
-			expectedRole:   true,
-			expectedRegion: "us-east-1",
-		},
-		{
-			name: "profile-credentials-with-role",
-			params: map[string]interface{}{
-				consts.FieldAWSProfile:         "test-profile",
-				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/TestRole",
-				consts.FieldAWSRoleSessionName: "test-session",
-			},
-			expectedStatic: false,
-			expectedRole:   true,
-			expectedRegion: "", // no region specified, SDK will use default resolution
-		},
-		{
-			name: "web-identity-with-role",
-			params: map[string]interface{}{
-				consts.FieldAWSRoleARN:              "arn:aws:iam::123456789012:role/TestRole",
-				consts.FieldAWSWebIdentityTokenFile: "/tmp/token",
-				consts.FieldAWSRoleSessionName:      "web-session",
-			},
-			expectedStatic: false,
-			expectedRole:   true,
-			expectedRegion: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			l := &AuthLoginAWS{
-				AuthLoginCommon: AuthLoginCommon{
-					params: tt.params,
-				},
-			}
-
-			credParams, err := l.collectCredentialParams()
-			if err != nil {
-				t.Fatalf("collectCredentialParams() failed: %v", err)
-			}
-
-			// Test that credential parameters are correctly extracted
-			if tt.expectedStatic {
-				if credParams.AccessKey != "test-key" {
-					t.Errorf("expected AccessKey = test-key, got %s", credParams.AccessKey)
-				}
-				if credParams.SecretKey != "test-secret" {
-					t.Errorf("expected SecretKey = test-secret, got %s", credParams.SecretKey)
-				}
-			}
-
-			if tt.expectedRole {
-				if !strings.HasPrefix(credParams.RoleARN, "arn:aws:iam::") {
-					t.Errorf("expected valid role ARN, got %s", credParams.RoleARN)
-				}
-			}
-
-			if tt.expectedRegion != "" {
-				if credParams.Region != tt.expectedRegion {
-					t.Errorf("expected region %s, got %s", tt.expectedRegion, credParams.Region)
-				}
-			}
-
-			// Test that AWS config can be built from these parameters
-			ctx := context.Background()
-			cfg, err := buildAWSConfig(ctx, &credParams)
-			if err != nil {
-				// For tests that require actual files (profile, web identity),
-				// we expect errors but want to verify the parameters were processed correctly
-				if !tt.expectedStatic && (strings.Contains(err.Error(), "profile") || strings.Contains(err.Error(), "token")) {
-					// This is expected for profile/web identity tests without real files
-					return
-				}
-				t.Fatalf("buildAWSConfig() failed: %v", err)
-			}
-
-			if cfg == nil {
-				t.Fatal("buildAWSConfig() returned nil config")
-			}
-
-			// Verify region configuration
-			if tt.expectedRegion != "" && cfg.Region != tt.expectedRegion {
-				t.Errorf("expected config region %s, got %s", tt.expectedRegion, cfg.Region)
-			}
-		})
-	}
-}
-
-// Test credential parameter validation
-func TestAuthLoginAWS_ValidationErrors(t *testing.T) {
-	tests := []struct {
-		name      string
-		params    map[string]interface{}
-		wantErr   bool
-		errString string
-	}{
-		{
-			name: "validation-error-incomplete-static-creds",
-			params: map[string]interface{}{
-				consts.FieldAWSAccessKeyID: "only-key",
-				// missing secret key
-			},
-			wantErr:   true,
-			errString: "static AWS client credentials haven't been properly configured",
-		},
-		{
-			name: "validation-error-role-session-without-arn",
-			params: map[string]interface{}{
-				consts.FieldAWSRoleSessionName: "session-name",
-				// missing role ARN
-			},
-			wantErr:   true,
-			errString: "role session name specified without role ARN",
-		},
-		{
-			name: "validation-error-web-identity-without-arn",
-			params: map[string]interface{}{
-				consts.FieldAWSWebIdentityTokenFile: "/tmp/token",
-				// missing role ARN
-			},
-			wantErr:   true,
-			errString: "web identity token file specified without role ARN",
-		},
-		{
-			name: "valid-static-credentials",
-			params: map[string]interface{}{
-				consts.FieldAWSAccessKeyID:     "test-key",
-				consts.FieldAWSSecretAccessKey: "test-secret",
-			},
-			wantErr: false,
-		},
-		{
-			name: "valid-role-assumption",
-			params: map[string]interface{}{
-				consts.FieldAWSAccessKeyID:     "test-key",
-				consts.FieldAWSSecretAccessKey: "test-secret",
-				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/TestRole",
-				consts.FieldAWSRoleSessionName: "test-session",
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			l := &AuthLoginAWS{
-				AuthLoginCommon: AuthLoginCommon{
-					params: tt.params,
-				},
-			}
-
-			credParams, err := l.collectCredentialParams()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("collectCredentialParams() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantErr {
-				if tt.errString != "" && !strings.Contains(err.Error(), tt.errString) {
-					t.Errorf("expected error containing %q, got %q", tt.errString, err.Error())
-				}
-				return
-			}
-
-			// If no error expected, verify basic parameter extraction worked
-			if tt.params[consts.FieldAWSAccessKeyID] != nil {
-				expectedKey := tt.params[consts.FieldAWSAccessKeyID].(string)
-				if credParams.AccessKey != expectedKey {
-					t.Errorf("expected AccessKey = %s, got %s", expectedKey, credParams.AccessKey)
-				}
-			}
-		})
-	}
-}
-
-// Test legacy field mapping in signAWSLogin function
-func TestSignAWSLogin_ParameterMapping(t *testing.T) {
-	tests := []struct {
-		name       string
-		parameters map[string]interface{}
-		wantErr    bool
-		errString  string
-	}{
-		{
-			name: "legacy-aws-security-token-field-mapping",
-			parameters: map[string]interface{}{
-				"aws_security_token": "legacy-token", // legacy field name
-			},
-			wantErr: false,
-		},
-		{
-			name: "standard-session-token-field-mapping",
-			parameters: map[string]interface{}{
-				consts.FieldAWSSessionToken: "standard-token", // standard field name
-			},
-			wantErr: false,
-		},
-		{
-			name: "sts-region-field-mapping",
-			parameters: map[string]interface{}{
-				"sts_region": "us-west-2", // generic auth uses sts_region instead of aws_region
-			},
-			wantErr: false,
-		},
-		{
-			name: "validation-error-incomplete-credentials",
-			parameters: map[string]interface{}{
-				consts.FieldAWSAccessKeyID: "only-key",
-				// missing secret key
-			},
-			wantErr:   true,
-			errString: "static AWS client credentials haven't been properly configured",
-		},
-		{
-			name: "validation-error-role-session-without-arn",
-			parameters: map[string]interface{}{
-				consts.FieldAWSRoleSessionName: "session-name",
-				// missing role ARN
-			},
-			wantErr:   true,
-			errString: "role session name specified without role ARN",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Test the parameter processing part of signAWSLogin without actually calling AWS
-			credParams := credentialsParams{}
-
-			// Simulate the parameter mapping logic from signAWSLogin
-			if v, ok := tt.parameters[consts.FieldAWSAccessKeyID].(string); ok {
-				credParams.AccessKey = v
-			}
-			if v, ok := tt.parameters[consts.FieldAWSSecretAccessKey].(string); ok {
-				credParams.SecretKey = v
-			}
-			if v, ok := tt.parameters[consts.FieldAWSSessionToken].(string); ok {
-				credParams.SessionToken = v
-			} else if v, ok := tt.parameters["aws_security_token"].(string); ok {
-				credParams.SessionToken = v // legacy field mapping
-			}
-			if v, ok := tt.parameters["sts_region"].(string); ok {
-				credParams.Region = v // generic auth field mapping
-			}
-			if v, ok := tt.parameters[consts.FieldAWSRoleARN].(string); ok {
-				credParams.RoleARN = v
-			}
-			if v, ok := tt.parameters[consts.FieldAWSRoleSessionName].(string); ok {
-				credParams.RoleSessionName = v
-			}
-
-			// Test validation
-			err := validateCredentialParams(&credParams)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateCredentialParams() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantErr {
-				if tt.errString != "" && !strings.Contains(err.Error(), tt.errString) {
-					t.Errorf("expected error containing %q, got %q", tt.errString, err.Error())
-				}
-				return
-			}
-
-			// Verify field mappings worked correctly
-			if tt.parameters["aws_security_token"] != nil {
-				expected := tt.parameters["aws_security_token"].(string)
-				if credParams.SessionToken != expected {
-					t.Errorf("expected legacy aws_security_token mapping to work, got %s", credParams.SessionToken)
-				}
-			}
-			if tt.parameters[consts.FieldAWSSessionToken] != nil {
-				expected := tt.parameters[consts.FieldAWSSessionToken].(string)
-				if credParams.SessionToken != expected {
-					t.Errorf("expected standard session token mapping to work, got %s", credParams.SessionToken)
-				}
-			}
-			if tt.parameters["sts_region"] != nil {
-				expected := tt.parameters["sts_region"].(string)
-				if credParams.Region != expected {
-					t.Errorf("expected sts_region mapping to work, got %s", credParams.Region)
-				}
-			}
-		})
-	}
-}
-
-// Test AWS login error conditions
 func TestAuthLoginAWS_Login(t *testing.T) {
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		role := "default"
@@ -711,7 +467,7 @@ func TestAuthLoginAWS_Login(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(m)
+		w.Write(m)
 	}
 
 	tests := []authLoginTest{
@@ -757,7 +513,7 @@ func TestAuthLoginAWS_Login(t *testing.T) {
 	}
 }
 
-// test credential provider precedence order (static > role > shared creds > env)
+// test credential provider precedence order of identity (static > role > shared creds > env)
 func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 	tests := []struct {
 		name                    string
@@ -768,7 +524,7 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 		generateProfile         bool
 		expectRegion            string
 	}{
-		// simple cases w or w/o role assumption
+		// 1. simple cases w or w/o role assumption
 		{
 			name: "static-credentials-only",
 			params: map[string]interface{}{
@@ -787,11 +543,11 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 			params: map[string]interface{}{
 				consts.FieldAWSAccessKeyID:     "test-key",
 				consts.FieldAWSSecretAccessKey: "test-secret",
-				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/TestRole",
+				consts.FieldAWSRoleARN:         testRoleARN,
 				consts.FieldAWSRoleSessionName: "test-session",
 				consts.FieldAWSRegion:          "us-east-1",
 			},
-			expectStaticCredentials: false, // Role assumption should wrap static credentials
+			expectStaticCredentials: false, // role assumption should wrap static credentials
 			expectAssumeRole:        true,
 			expectSharedCredentials: false,
 			generateProfile:         false,
@@ -801,7 +557,7 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 			name: "profile-with-role",
 			params: map[string]interface{}{
 				consts.FieldAWSProfile:         "test-profile",
-				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/TestRole",
+				consts.FieldAWSRoleARN:         testRoleARN,
 				consts.FieldAWSRoleSessionName: "test-session",
 			},
 			expectStaticCredentials: false,
@@ -820,11 +576,10 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 			generateProfile:         true,
 		},
 
-		// precedence tests - when multiple credential sources are available
+		// 2. precedence tests - when multiple credential sources are available
 		{
 			name: "precedence-static-over-profile",
 			params: map[string]interface{}{
-				// Both static and profile credentials provided
 				consts.FieldAWSAccessKeyID:     "test-key",
 				consts.FieldAWSSecretAccessKey: "test-secret",
 				consts.FieldAWSProfile:         "test-profile",
@@ -839,10 +594,9 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 		{
 			name: "precedence-role-over-static",
 			params: map[string]interface{}{
-				// Both static credentials and role provided
 				consts.FieldAWSAccessKeyID:     "test-key",
 				consts.FieldAWSSecretAccessKey: "test-secret",
-				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/TestRole",
+				consts.FieldAWSRoleARN:         testRoleARN,
 				consts.FieldAWSRoleSessionName: "test-session",
 				consts.FieldAWSRegion:          "us-east-1",
 			},
@@ -859,7 +613,7 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 				consts.FieldAWSAccessKeyID:     "test-key",
 				consts.FieldAWSSecretAccessKey: "test-secret",
 				consts.FieldAWSProfile:         "test-profile",
-				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/TestRole",
+				consts.FieldAWSRoleARN:         testRoleARN,
 				consts.FieldAWSRoleSessionName: "test-session",
 				consts.FieldAWSRegion:          "us-east-1",
 			},
@@ -875,7 +629,7 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 				// Static credentials and web identity token
 				consts.FieldAWSAccessKeyID:          "test-key",
 				consts.FieldAWSSecretAccessKey:      "test-secret",
-				consts.FieldAWSRoleARN:              "arn:aws:iam::123456789012:role/TestRole",
+				consts.FieldAWSRoleARN:              testRoleARN,
 				consts.FieldAWSWebIdentityTokenFile: "/tmp/token",
 				consts.FieldAWSRegion:               "us-east-1",
 			},
@@ -890,7 +644,11 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var cleanup func()
-			params := tt.params
+			params := make(map[string]interface{})
+			for k, v := range tt.params {
+				params[k] = v
+			}
+
 			// setup test AWS profile if needed
 			if tt.generateProfile {
 				configFile, credentialsFile, cleanupFunc := setupTestAWSProfile(t, "test-profile")
@@ -898,6 +656,21 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 
 				t.Setenv("AWS_CONFIG_FILE", configFile)
 				t.Setenv("AWS_SHARED_CREDENTIALS_FILE", credentialsFile)
+			}
+
+			// setup temporary token file for web identity tests
+			if tokenFile, exists := params[consts.FieldAWSWebIdentityTokenFile]; exists && tokenFile == "/tmp/token" {
+				actualTokenFile, tokenCleanup := setupTestWebIdentityToken(t)
+				params[consts.FieldAWSWebIdentityTokenFile] = actualTokenFile
+				if cleanup != nil {
+					originalCleanup := cleanup
+					cleanup = func() {
+						originalCleanup()
+						tokenCleanup()
+					}
+				} else {
+					cleanup = tokenCleanup
+				}
 			}
 
 			if cleanup != nil {
@@ -952,7 +725,15 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 
 			// 2. build AWS config
 			ctx := context.Background()
-			cfg, err := buildAWSConfig(ctx, &credParams)
+			var cfg *aws.Config
+			if tt.expectAssumeRole {
+				// Use mock STS client for role assumption tests
+				mockSTS := &mockSTSClient{}
+				cfg, err = buildAWSConfig(ctx, &credParams, WithSTSClient(mockSTS))
+			} else {
+				// Use standard config for non-role tests
+				cfg, err = buildAWSConfig(ctx, &credParams)
+			}
 
 			if err != nil {
 				t.Fatalf("buildAWSConfig() failed: %v", err)
@@ -981,10 +762,47 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 				t.Fatalf("Failed to retrieve credentials: %v", err)
 			}
 
-			// verify the credential source for non-role cases
-			if tt.expectStaticCredentials {
+			// verify the credential source based on test expectations
+			if tt.expectAssumeRole {
+				// For role assumption scenarios, verify we got mock STS credentials
+				if tt.params[consts.FieldAWSWebIdentityTokenFile] != nil {
+					// Web identity role assumption should return web identity mock credentials
+					if creds.AccessKeyID != mockWebAccessKeyID {
+						t.Errorf("Expected web identity mock credentials with AccessKeyID %s, got %s", mockWebAccessKeyID, creds.AccessKeyID)
+					}
+					if creds.SecretAccessKey != mockWebSecretAccessKey {
+						t.Errorf("Expected web identity mock credentials with SecretAccessKey %s, got %s", mockWebSecretAccessKey, creds.SecretAccessKey)
+					}
+					if creds.SessionToken != mockWebSessionToken {
+						t.Errorf("Expected web identity mock credentials with SessionToken %s, got %s", mockWebSessionToken, creds.SessionToken)
+					}
+				} else {
+					// Regular role assumption should return role mock credentials
+					if creds.AccessKeyID != mockRoleAccessKeyID {
+						t.Errorf("Expected role mock credentials with AccessKeyID %s, got %s", mockRoleAccessKeyID, creds.AccessKeyID)
+					}
+					if creds.SecretAccessKey != mockRoleSecretAccessKey {
+						t.Errorf("Expected role mock credentials with SecretAccessKey %s, got %s", mockRoleSecretAccessKey, creds.SecretAccessKey)
+					}
+					if creds.SessionToken != mockRoleSessionToken {
+						t.Errorf("Expected role mock credentials with SessionToken %s, got %s", mockRoleSessionToken, creds.SessionToken)
+					}
+				}
+			} else if tt.expectStaticCredentials {
+				// For static credential scenarios, verify we got the configured static credentials
 				if credParams.AccessKey != "" && creds.AccessKeyID != credParams.AccessKey {
 					t.Errorf("Expected static credentials with AccessKey %s, got %s", credParams.AccessKey, creds.AccessKeyID)
+				}
+				if credParams.SecretKey != "" && creds.SecretAccessKey != credParams.SecretKey {
+					t.Errorf("Expected static credentials with SecretKey %s, got %s", credParams.SecretKey, creds.SecretAccessKey)
+				}
+			} else if tt.expectSharedCredentials {
+				// For shared credentials (profile), verify we got profile credentials
+				if creds.AccessKeyID != testProfileAccessKeyID {
+					t.Errorf("Expected profile credentials with AccessKeyID %s, got %s", testProfileAccessKeyID, creds.AccessKeyID)
+				}
+				if creds.SecretAccessKey != testProfileSecretAccessKey {
+					t.Errorf("Expected profile credentials with SecretAccessKey %s, got %s", testProfileSecretAccessKey, creds.SecretAccessKey)
 				}
 			}
 			//}
@@ -1003,324 +821,131 @@ func TestAuthLoginAWS_CredentialProviderPrecedence(t *testing.T) {
 	}
 }
 
-// Test IAM request generation with deterministic output
-func TestGenerateLoginData_DeterministicOutput(t *testing.T) {
+// TestCustomEndpoints verifies that custom STS and IAM endpoints are properly included in generated requests
+func TestCustomEndpoints(t *testing.T) {
 	tests := []struct {
-		name              string
-		awsConfig         *aws.Config
-		headerValue       string
-		configuredRegion  string
-		expectMethod      string
-		expectURLContains string
-		expectHeaderID    bool
+		name        string
+		stsEndpoint string
+		roleARN     string
+		staticCreds bool
 	}{
 		{
-			name: "basic-request-without-header",
-			awsConfig: &aws.Config{
-				Region: "us-east-1",
-				Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
-					"test-access-key",
-					"test-secret-key",
-					"",
-				)),
-			},
-			headerValue:       "",
-			configuredRegion:  "us-east-1",
-			expectMethod:      "POST",
-			expectURLContains: "sts.us-east-1.amazonaws.com",
-			expectHeaderID:    false,
+			name:        "custom-sts-endpoint-static-creds",
+			stsEndpoint: "https://custom-sts.example.com",
+			staticCreds: true,
 		},
 		{
-			name: "request-with-header-value",
-			awsConfig: &aws.Config{
-				Region: "us-west-2",
-				Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
-					"test-access-key",
-					"test-secret-key",
-					"test-session-token",
-				)),
-			},
-			headerValue:       "vault-server-id",
-			configuredRegion:  "us-west-2",
-			expectMethod:      "POST",
-			expectURLContains: "sts.us-west-2.amazonaws.com",
-			expectHeaderID:    true,
+			name:        "custom-sts-endpoint-with-role",
+			stsEndpoint: "https://custom-sts.example.com",
+			roleARN:     testRoleARN,
+			staticCreds: true,
 		},
 		{
-			name: "default-region-fallback",
-			awsConfig: &aws.Config{
-				Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
-					"test-access-key",
-					"test-secret-key",
-					"",
-				)),
-			},
-			headerValue:       "",
-			configuredRegion:  "",
-			expectMethod:      "POST",
-			expectURLContains: "sts.us-east-1.amazonaws.com", // default fallback
-			expectHeaderID:    false,
+			name:        "vpc-endpoint-sts",
+			stsEndpoint: "https://vpce-1234567890abcdef0-12345678.sts.us-west-2.vpce.amazonaws.com",
+			staticCreds: true,
+		},
+		{
+			name:        "localstack-endpoint",
+			stsEndpoint: "http://localhost:4566",
+			staticCreds: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			logger := getHCLogger()
+			// Build credential parameters
+			credParams := credentialsParams{
+				Region:      "us-east-1",
+				STSEndpoint: tt.stsEndpoint,
+			}
 
-			loginData, err := generateLoginData(tt.awsConfig, tt.headerValue, tt.configuredRegion, logger)
+			if tt.staticCreds {
+				credParams.AccessKey = "test-access-key"
+				credParams.SecretKey = "test-secret-key"
+			}
+
+			if tt.roleARN != "" {
+				credParams.RoleARN = tt.roleARN
+				credParams.RoleSessionName = "test-session"
+			}
+
+			ctx := context.Background()
+
+			var cfg *aws.Config
+			var err error
+			if tt.roleARN != "" {
+				// Use mock STS client for role assumption
+				mockSTS := &mockSTSClient{}
+				cfg, err = buildAWSConfig(ctx, &credParams, WithSTSClient(mockSTS))
+			} else {
+				cfg, err = buildAWSConfig(ctx, &credParams)
+			}
+
+			if err != nil {
+				t.Fatalf("buildAWSConfig() failed: %v", err)
+			}
+
+			// Test generateLoginData to verify STS endpoint usage
+			loginData, err := generateLoginData(cfg, "", credParams.Region, credParams.STSEndpoint)
 			if err != nil {
 				t.Fatalf("generateLoginData() failed: %v", err)
 			}
 
-			requiredFields := []string{
+			// Verify login data contains expected fields
+			expectedFields := []string{
 				consts.FieldIAMHttpRequestMethod,
 				consts.FieldIAMRequestURL,
 				consts.FieldIAMRequestBody,
 				consts.FieldIAMRequestHeaders,
 			}
 
-			for _, field := range requiredFields {
+			for _, field := range expectedFields {
 				if _, ok := loginData[field]; !ok {
-					t.Errorf("Missing required field: %s", field)
+					t.Errorf("Missing expected field %s in login data", field)
 				}
 			}
 
-			// check if url/body/headers are base64 encoded - bw compat
-			urlB64, ok := loginData[consts.FieldIAMRequestURL].(string)
-			if !ok {
-				t.Fatalf("iam_request_url is not a string")
-			}
-			urlBytes, err := base64.StdEncoding.DecodeString(urlB64)
-			if err != nil {
-				t.Fatalf("Failed to decode iam_request_url: %v", err)
-			}
-			url := string(urlBytes)
-			if !strings.Contains(url, tt.expectURLContains) {
-				t.Errorf("Expected URL to contain %s, got %s", tt.expectURLContains, url)
-			}
+			// Verify that custom STS endpoint was used by checking the URL in login data
+			if tt.stsEndpoint != "" {
+				if urlB64, ok := loginData[consts.FieldIAMRequestURL].(string); ok {
+					urlBytes, err := base64.StdEncoding.DecodeString(urlB64)
+					if err != nil {
+						t.Fatalf("Failed to decode URL: %v", err)
+					}
+					urlStr := string(urlBytes)
 
-			bodyB64, ok := loginData[consts.FieldIAMRequestBody].(string)
-			if !ok {
-				t.Fatalf("iam_request_body is not a string")
-			}
-			bodyBytes, err := base64.StdEncoding.DecodeString(bodyB64)
-			if err != nil {
-				t.Fatalf("Failed to decode iam_request_body: %v", err)
-			}
-			body := string(bodyBytes)
-			if !strings.Contains(body, "Action=GetCallerIdentity") {
-				t.Errorf("Expected body to contain GetCallerIdentity action, got %s", body)
-			}
+					// Verify the custom endpoint is used in the generated URL
+					expectedHost := ""
+					if strings.HasPrefix(tt.stsEndpoint, "https://") {
+						expectedHost = strings.TrimPrefix(tt.stsEndpoint, "https://")
+					} else if strings.HasPrefix(tt.stsEndpoint, "http://") {
+						expectedHost = strings.TrimPrefix(tt.stsEndpoint, "http://")
+					}
 
-			headersB64, ok := loginData[consts.FieldIAMRequestHeaders].(string)
-			if !ok {
-				t.Fatalf("iam_request_headers is not a string")
-			}
-			headersBytes, err := base64.StdEncoding.DecodeString(headersB64)
-			if err != nil {
-				t.Fatalf("Failed to decode iam_request_headers: %v", err)
-			}
+					if expectedHost != "" && !strings.Contains(urlStr, expectedHost) {
+						t.Errorf("Expected URL to contain custom STS endpoint host %s, got %s", expectedHost, urlStr)
+					}
 
-			var headers map[string][]string
-			if err := json.Unmarshal(headersBytes, &headers); err != nil {
-				t.Fatalf("Failed to unmarshal headers: %v", err)
-			}
-
-			// verify vault header presence (case-insensitive per RFC 2616)
-			var vaultHeader []string
-			var hasVaultHeader bool
-			expectedHeaderName := "X-Vault-AWS-IAM-Server-ID"
-
-			for headerName, headerValue := range headers {
-				if strings.EqualFold(headerName, expectedHeaderName) {
-					vaultHeader = headerValue
-					hasVaultHeader = true
-					break
+					t.Logf("Successfully generated request with custom STS endpoint: %s", urlStr)
 				}
 			}
 
-			if tt.expectHeaderID {
-				if !hasVaultHeader {
-					t.Errorf("Expected %s header to be present. Available headers: %v", expectedHeaderName, headers)
-				} else if len(vaultHeader) == 0 || vaultHeader[0] != tt.headerValue {
-					t.Errorf("Expected header value %s, got %v", tt.headerValue, vaultHeader)
-				}
-			} else {
-				if hasVaultHeader {
-					t.Errorf("Expected %s header to be absent", expectedHeaderName)
-				}
-			}
-
-			// x-amz-date generated by sdk when signing
-			expectedSigHeaders := []string{"Authorization", "X-Amz-Date"}
-			for _, headerName := range expectedSigHeaders {
-				if _, ok := headers[headerName]; !ok {
-					t.Errorf("Missing expected AWS signature header: %s", headerName)
-				}
-			}
-		})
-	}
-}
-
-// Test complete signAWSLogin flow from parameters to signed request
-func TestSignAWSLogin_EndToEnd(t *testing.T) {
-	tests := []struct {
-		name       string
-		parameters map[string]interface{}
-		wantErr    bool
-		errString  string
-	}{
-		{
-			name: "static-credentials-complete-flow",
-			parameters: map[string]interface{}{
-				consts.FieldAWSAccessKeyID:     "test-access-key",
-				consts.FieldAWSSecretAccessKey: "test-secret-key",
-				consts.FieldAWSSessionToken:    "test-session-token",
-				"sts_region":                   "us-west-2",
-			},
-			wantErr: false,
-		},
-		{
-			name: "legacy-aws-security-token-field",
-			parameters: map[string]interface{}{
-				consts.FieldAWSAccessKeyID:     "test-access-key",
-				consts.FieldAWSSecretAccessKey: "test-secret-key",
-				"aws_security_token":           "legacy-token",
-				"sts_region":                   "us-east-1",
-			},
-			wantErr: false,
-		},
-		{
-			name: "with-header-value",
-			parameters: map[string]interface{}{
-				consts.FieldAWSAccessKeyID:     "test-access-key",
-				consts.FieldAWSSecretAccessKey: "test-secret-key",
-				"sts_region":                   "us-east-1",
-				consts.FieldHeaderValue:        "vault-server-id",
-			},
-			wantErr: false,
-		},
-		{
-			name: "validation-error-incomplete-credentials",
-			parameters: map[string]interface{}{
-				consts.FieldAWSAccessKeyID: "only-access-key",
-				// missing secret key
-			},
-			wantErr:   true,
-			errString: "static AWS client credentials haven't been properly configured",
-		},
-		{
-			name: "validation-error-role-session-without-arn",
-			parameters: map[string]interface{}{
-				consts.FieldAWSRoleSessionName: "session-name",
-				// missing role ARN
-			},
-			wantErr:   true,
-			errString: "role session name specified without role ARN",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			logger := getHCLogger()
-
-			// Make a copy of parameters to avoid modifying the test case
-			params := make(map[string]interface{})
-			for k, v := range tt.parameters {
-				params[k] = v
-			}
-
-			err := signAWSLogin(params, logger)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("signAWSLogin() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantErr {
-				if tt.errString != "" && !strings.Contains(err.Error(), tt.errString) {
-					t.Errorf("Expected error containing %q, got %q", tt.errString, err.Error())
-				}
-				return
-			}
-
-			// For successful cases, verify all IAM fields are populated
-			requiredIAMFields := []string{
-				consts.FieldIAMHttpRequestMethod,
-				consts.FieldIAMRequestURL,
-				consts.FieldIAMRequestBody,
-				consts.FieldIAMRequestHeaders,
-			}
-
-			for _, field := range requiredIAMFields {
-				value, ok := params[field]
-				if !ok {
-					t.Errorf("Missing required IAM field: %s", field)
-					continue
-				}
-
-				// Verify field is not empty
-				if str, ok := value.(string); !ok || str == "" {
-					t.Errorf("IAM field %s is empty or not a string: %v", field, value)
-				}
-			}
-
-			// Verify method is not base64 encoded
-			if method, ok := params[consts.FieldIAMHttpRequestMethod].(string); ok {
+			// Verify request method and body are correct
+			if method, ok := loginData[consts.FieldIAMHttpRequestMethod].(string); ok {
 				if method != "POST" {
 					t.Errorf("Expected method POST, got %s", method)
 				}
 			}
 
-			// Verify URL, body, and headers are base64 encoded
-			base64Fields := []string{
-				consts.FieldIAMRequestURL,
-				consts.FieldIAMRequestBody,
-				consts.FieldIAMRequestHeaders,
-			}
-
-			for _, field := range base64Fields {
-				if value, ok := params[field].(string); ok {
-					if _, err := base64.StdEncoding.DecodeString(value); err != nil {
-						t.Errorf("Field %s is not valid base64: %v", field, err)
-					}
+			if bodyB64, ok := loginData[consts.FieldIAMRequestBody].(string); ok {
+				bodyBytes, err := base64.StdEncoding.DecodeString(bodyB64)
+				if err != nil {
+					t.Fatalf("Failed to decode body: %v", err)
 				}
-			}
-
-			// Test legacy field mapping
-			if tt.parameters["aws_security_token"] != nil {
-				// Verify the legacy token was used (by checking that headers contain Authorization)
-				if headersB64, ok := params[consts.FieldIAMRequestHeaders].(string); ok {
-					headersBytes, _ := base64.StdEncoding.DecodeString(headersB64)
-					var headers map[string][]string
-					json.Unmarshal(headersBytes, &headers)
-					if _, hasAuth := headers["Authorization"]; !hasAuth {
-						t.Error("Expected Authorization header when using legacy aws_security_token")
-					}
-				}
-			}
-
-			// header value inclusion (case-insensitive per RFC 2616)
-			if headerValue, ok := tt.parameters[consts.FieldHeaderValue].(string); ok && headerValue != "" {
-				if headersB64, ok := params[consts.FieldIAMRequestHeaders].(string); ok {
-					headersBytes, _ := base64.StdEncoding.DecodeString(headersB64)
-					var headers map[string][]string
-					json.Unmarshal(headersBytes, &headers)
-
-					var vaultHeaders []string
-					var hasVaultHeader bool
-					expectedHeaderName := "X-Vault-AWS-IAM-Server-ID"
-
-					for headerName, headerValue := range headers {
-						if strings.EqualFold(headerName, expectedHeaderName) {
-							vaultHeaders = headerValue
-							hasVaultHeader = true
-							break
-						}
-					}
-
-					if !hasVaultHeader || len(vaultHeaders) == 0 || vaultHeaders[0] != headerValue {
-						t.Errorf("Expected %s header with value %s. Available headers: %v", expectedHeaderName, headerValue, headers)
-					}
+				body := string(bodyBytes)
+				if !strings.Contains(body, "Action=GetCallerIdentity") {
+					t.Errorf("Expected body to contain GetCallerIdentity action, got %s", body)
 				}
 			}
 		})

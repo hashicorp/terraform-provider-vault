@@ -10,8 +10,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -20,9 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
-	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	smithyendpoints "github.com/aws/smithy-go/endpoints"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -42,6 +40,11 @@ const (
 	envVarAWSRoleSessionName       = "AWS_ROLE_SESSION_NAME"
 	envVarAWSRegion                = "AWS_REGION"
 	envVarAWSDefaultRegion         = "AWS_DEFAULT_REGION"
+)
+
+const (
+	DefaultRegion   = "us-east-1"
+	DefaultEndpoint = "https://sts.amazonaws.com"
 )
 
 func init() {
@@ -106,7 +109,6 @@ func GetAWSLoginSchemaResource(authField string) *schema.Resource {
 				Description: `Path to the file containing an OAuth 2.0 access token or OpenID ` +
 					`Connect ID token.`,
 			},
-			// STS assume role fields
 			consts.FieldAWSRoleARN: {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -130,6 +132,7 @@ func GetAWSLoginSchemaResource(authField string) *schema.Resource {
 				Description:      `The STS endpoint URL.`,
 				ValidateDiagFunc: GetValidateDiagURI([]string{"https", "http"}),
 			},
+			// aws_iam_endpoint should be deprecated, not used in aws auth
 			consts.FieldAWSIAMEndpoint: {
 				Type:             schema.TypeString,
 				Optional:         true,
@@ -279,7 +282,7 @@ func (l *AuthLoginAWS) getLoginData(ctx context.Context, logger hclog.Logger) (m
 		headerValue = v
 	}
 
-	return generateLoginData(awsCfg, headerValue, credParams.Region, logger)
+	return generateLoginData(awsCfg, headerValue, credParams.Region, credParams.STSEndpoint)
 }
 
 // collectCredentialParams converts TF schema params + env-defaults into credentialsParams
@@ -320,6 +323,7 @@ func (l *AuthLoginAWS) collectCredentialParams() (credentialsParams, error) {
 		credParams.IAMEndpoint = v
 	}
 
+	// TODO Remove
 	if err := validateCredentialParams(&credParams); err != nil {
 		return credParams, err
 	}
@@ -327,14 +331,15 @@ func (l *AuthLoginAWS) collectCredentialParams() (credentialsParams, error) {
 	return credParams, nil
 }
 
-// validateCredentialParams implements several relevant chacks provided in the original awsutil package
+// TODO Use native schema validators and remove this function
 func validateCredentialParams(p *credentialsParams) error {
-	// Have one or the other but not both and not neither
-	if (p.AccessKey != "" && p.SecretKey == "") || (p.AccessKey == "" && p.SecretKey != "") {
-		return fmt.Errorf("static AWS client credentials haven't been properly configured (the access key or secret key were provided but not both)")
+	if p.AccessKey != "" && p.SecretKey == "" {
+		return fmt.Errorf("static AWS client credentials haven't been properly configured (access key provided but secret key missing)")
+	}
+	if p.AccessKey == "" && p.SecretKey != "" {
+		return fmt.Errorf("static AWS client credentials haven't been properly configured (secret key provided but access key missing)")
 	}
 
-	// Role-related field validation - matching original awsutil logic
 	if p.RoleARN == "" {
 		if p.RoleSessionName != "" {
 			return fmt.Errorf("role session name specified without role ARN")
@@ -348,7 +353,6 @@ func validateCredentialParams(p *credentialsParams) error {
 }
 
 // signAWSLogin is for use by the generic auth method
-// Build credentials using legacy awsutil-style credential chain for backward compatibility
 func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error {
 	credParams := credentialsParams{}
 
@@ -365,24 +369,11 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 		// leaving this here so that it does not break any pre-existing configurations.
 		credParams.SessionToken = v
 	}
-	if v, ok := parameters[consts.FieldAWSRoleARN].(string); ok {
-		credParams.RoleARN = v
-	}
-	if v, ok := parameters[consts.FieldAWSRoleSessionName].(string); ok {
-		credParams.RoleSessionName = v
-	}
 	// generic auth_login uses "sts_region" field name, not "aws_region"
 	if v, ok := parameters["sts_region"].(string); ok {
 		credParams.Region = v
 	}
-	if v, ok := parameters[consts.FieldAWSSTSEndpoint].(string); ok {
-		credParams.STSEndpoint = v
-	}
-	if v, ok := parameters[consts.FieldAWSIAMEndpoint].(string); ok {
-		credParams.IAMEndpoint = v
-	}
 
-	// Apply same validation for backward compatibility
 	if err := validateCredentialParams(&credParams); err != nil {
 		return err
 	}
@@ -397,8 +388,7 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 		headerValue = v
 	}
 
-	// Generate login data using the backward-compatible implementation
-	loginData, err := generateLoginData(awsCfg, headerValue, credParams.Region, logger)
+	loginData, err := generateLoginData(awsCfg, headerValue, credParams.Region, credParams.STSEndpoint)
 	if err != nil {
 		return fmt.Errorf("failed to generate AWS login data: %s", err)
 	}
@@ -426,7 +416,7 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 	return nil
 }
 
-// credentialsParams mirrors the fields we needed from awsutil.CredentialsConfig
+// credentialsParams mirrors the param fields from awsutil.CredentialsConfig
 type credentialsParams struct {
 	AccessKey            string
 	SecretKey            string
@@ -441,17 +431,32 @@ type credentialsParams struct {
 	IAMEndpoint          string
 }
 
-// buildAWSConfig constructs an *aws.Config whose final credentials exactly follow the
-// HashiCorp AWS provider precedence (static keys > assume-role/web-identity > env >
-// shared files > container/IMDS). It never lets AWS_PROFILE become the *final* identity
-// when RoleARN or explicit keys are supplied.
-func buildAWSConfig(ctx context.Context, p *credentialsParams) (*aws.Config, error) {
+type buildAWSConfigOption func(*buildAWSConfigOpts)
+
+type buildAWSConfigOpts struct {
+	stsClient STSAssumeRoleAPI
+}
+
+func WithSTSClient(c STSAssumeRoleAPI) buildAWSConfigOption {
+	return func(o *buildAWSConfigOpts) {
+		o.stsClient = c
+	}
+}
+
+// buildAWSConfig constructs an *aws.Config whose final credentials exactly follow the aws tf provider identity precedence
+// static keys > (web-identity > assume-role) > env > shared files > IMDS
+func buildAWSConfig(ctx context.Context, p *credentialsParams, opts ...buildAWSConfigOption) (*aws.Config, error) {
+	var o buildAWSConfigOpts
+	for _, apply := range opts {
+		apply(&o)
+	}
+
 	loadOpts := make([]func(*config.LoadOptions) error, 0)
 
-	// Region & shared-config locations
 	if p.Region != "" {
 		loadOpts = append(loadOpts, config.WithRegion(p.Region))
 	}
+	// shared-config locations
 	if p.Filename != "" {
 		loadOpts = append(loadOpts, config.WithSharedCredentialsFiles([]string{p.Filename}))
 	}
@@ -459,28 +464,28 @@ func buildAWSConfig(ctx context.Context, p *credentialsParams) (*aws.Config, err
 		loadOpts = append(loadOpts, config.WithSharedConfigProfile(p.Profile))
 	}
 
-	// 1. Explicit static keys override everything
 	if p.AccessKey != "" && p.SecretKey != "" {
 		staticProv := credentials.NewStaticCredentialsProvider(p.AccessKey, p.SecretKey, p.SessionToken)
 		loadOpts = append(loadOpts, config.WithCredentialsProvider(staticProv))
 	}
 
+	// if previous not present, fallback to IMDS
 	cfg, err := config.LoadDefaultConfig(ctx, loadOpts...)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Explicit assume-role / web-identity override any provider selected above
+	// explicit assume-role / web-identity override any provider selected above
 	if p.RoleARN != "" {
+		// create client with custom endpoint support
+		roleSTSClient := o.stsClient
+		if roleSTSClient == nil {
+			roleSTSClient = createSTSClient(&cfg, p.STSEndpoint)
+		}
+
 		if p.WebIdentityTokenFile != "" {
-			// Use web identity role provider - this takes precedence over regular assume role
-			// when both RoleARN and WebIdentityTokenFile are provided, matching awsutil behavior
-
-			// For web identity, we need to create the STS client with custom endpoint and then
-			// use it to create the web identity provider manually instead of using config options
-			stsClient := createSTSClient(cfg, p.STSEndpoint)
-
-			webIdentityProv := stscreds.NewWebIdentityRoleProvider(stsClient, p.RoleARN, stscreds.IdentityTokenFile(p.WebIdentityTokenFile),
+			// use web identity role provider - this takes precedence over regular assume role, just as in awsutil
+			webIdentityProv := stscreds.NewWebIdentityRoleProvider(roleSTSClient, p.RoleARN, stscreds.IdentityTokenFile(p.WebIdentityTokenFile),
 				func(o *stscreds.WebIdentityRoleOptions) {
 					if p.RoleSessionName != "" {
 						o.RoleSessionName = p.RoleSessionName
@@ -490,16 +495,13 @@ func buildAWSConfig(ctx context.Context, p *credentialsParams) (*aws.Config, err
 
 			cfg.Credentials = aws.NewCredentialsCache(webIdentityProv)
 		} else {
-			// Use regular assume role provider
-			stsClient := createSTSClient(cfg, p.STSEndpoint)
-
-			assumeProv := stscreds.NewAssumeRoleProvider(stsClient, p.RoleARN,
+			// use regular assume role provider
+			assumeProv := stscreds.NewAssumeRoleProvider(roleSTSClient, p.RoleARN,
 				func(o *stscreds.AssumeRoleOptions) {
+					// bw compat: if empty, stscreds generates a unique name
 					if p.RoleSessionName != "" {
 						o.RoleSessionName = p.RoleSessionName
 					}
-					// when empty, stscreds will automatically generate a unique
-					// name (same behaviour as the original implementation).
 				},
 			)
 
@@ -510,101 +512,64 @@ func buildAWSConfig(ctx context.Context, p *credentialsParams) (*aws.Config, err
 	return &cfg, nil
 }
 
-type customSTSResolver struct {
-	endpoint string
-}
-
-func (r customSTSResolver) ResolveEndpoint(_ context.Context, _ sts.EndpointParameters) (smithyendpoints.Endpoint, error) {
-	uri, err := url.Parse(r.endpoint)
-	if err != nil {
-		return smithyendpoints.Endpoint{}, err
+// createSTSClient creates an client for custom endpoint
+func createSTSClient(cfg *aws.Config, stsEndpoint string) *sts.Client {
+	if stsEndpoint != "" {
+		return sts.NewFromConfig(*cfg, func(o *sts.Options) {
+			o.BaseEndpoint = aws.String(stsEndpoint)
+		})
 	}
-	return smithyendpoints.Endpoint{
-		URI: *uri,
-	}, nil
+	return sts.NewFromConfig(*cfg)
 }
 
-type customIAMResolver struct {
-	endpoint string
-}
-
-func (r customIAMResolver) ResolveEndpoint(_ context.Context, _ iam.EndpointParameters) (smithyendpoints.Endpoint, error) {
-	uri, err := url.Parse(r.endpoint)
-	if err != nil {
-		return smithyendpoints.Endpoint{}, err
+// generateLoginData constructs the sts request and signs it
+// based on https://github.com/hashicorp/go-secure-stdlib/blob/awsutil/v0.2.3/awsutil/generate_credentials.go#L372
+func generateLoginData(awsConfig *aws.Config, headerValue, configRegion, stsEndpoint string) (map[string]interface{}, error) {
+	// exactly replicates the awsutil logic for STS signingEndpoint resolution
+	// see https://github.com/hashicorp/go-secure-stdlib/blob/72fcd87cb5f9ca0a9c5a7f229c43ce3afb776bca/awsutil/generate_credentials.go#L423
+	// two cases:
+	// 	- if region is not provided with parameters or shared credentials, use default region and global endpoint
+	//  - if region is provided, construct regional endpoint, but requires use_sts_region_from_client=true
+	// see https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/aws_auth_backend_client#use_sts_region_from_client
+	signingRegion := awsConfig.Region
+	if signingRegion == "" {
+		signingRegion = configRegion
 	}
-	return smithyendpoints.Endpoint{
-		URI: *uri,
-	}, nil
-}
-
-// createSTSClient creates an STS client with optional custom endpoint resolver
-func createSTSClient(cfg aws.Config, endpoint string) *sts.Client {
-	if endpoint != "" {
-		// Create custom endpoint resolver for STS
-		resolver := customSTSResolver{endpoint: endpoint}
-		return sts.NewFromConfig(cfg, sts.WithEndpointResolverV2(resolver))
-	}
-	return sts.NewFromConfig(cfg)
-}
-
-// createIAMClient creates an IAM client with optional custom endpoint resolver
-func createIAMClient(cfg aws.Config, endpoint string) *iam.Client {
-	if endpoint != "" {
-		// Create custom endpoint resolver for IAM
-		resolver := customIAMResolver{endpoint: endpoint}
-		return iam.NewFromConfig(cfg, iam.WithEndpointResolverV2(resolver))
-	}
-	return iam.NewFromConfig(cfg)
-}
-
-// FetchTokenContents allows the use of the content of a token in the
-// WebIdentityProvider, instead of the path to a token. Useful with a
-// serviceaccount token requested directly from the EKS/K8s API, for example.
-// This matches the awsutil implementation for future extensibility.
-type FetchTokenContents []byte
-
-var _ stscreds.IdentityTokenRetriever = (*FetchTokenContents)(nil)
-
-func (f FetchTokenContents) GetIdentityToken() ([]byte, error) {
-	return f, nil
-}
-
-// generateLoginData creates the necessary login data for AWS authentication
-func generateLoginData(awsConfig *aws.Config, headerValue, configuredRegion string, logger hclog.Logger) (map[string]interface{}, error) {
-	region := configuredRegion
-	if region == "" {
-		region = "us-east-1"
+	if signingRegion == "" {
+		signingRegion = DefaultRegion
 	}
 
-	logger.Debug("generating AWS login data", "region", region, "has_header_value", headerValue != "")
+	var signingEndpoint string
+	if stsEndpoint != "" {
+		signingEndpoint = stsEndpoint
+	} else if signingRegion == DefaultRegion {
+		signingEndpoint = DefaultEndpoint
+	} else {
+		signingEndpoint = fmt.Sprintf("https://sts.%s.amazonaws.com", signingRegion)
+	}
 
-	// Build unsigned STS request
+	log.Printf("[DEBUG] generating AWS login data: configRegion=%s, awsRegion=%s, signingRegion=%s, has_header_value=%t, sts_endpoint=%s, signingEndpoint=%s", configRegion, awsConfig.Region, signingRegion, headerValue != "", stsEndpoint, signingEndpoint)
+
+	// aws sdk v1 exposes a request object through helpers, e.g. svc.GetCallerIdentityRequest
+	// v2 does not, so the request is constructed manually
 	const bodyStr = "Action=GetCallerIdentity&Version=2011-06-15"
-	endpoint := fmt.Sprintf("https://sts.%s.amazonaws.com", region)
-
-	req, err := http.NewRequest(http.MethodPost, endpoint, strings.NewReader(bodyStr))
+	req, err := http.NewRequest(http.MethodPost, signingEndpoint, strings.NewReader(bodyStr))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 	if headerValue != "" {
 		req.Header.Set("X-Vault-AWS-IAM-Server-ID", headerValue)
 	}
-
-	// Get credentials and sign the request
 	creds, err := awsConfig.Credentials.Retrieve(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve AWS credentials: %w", err)
 	}
-
-	// Calculate SHA-256 hash of the body for payload hash
 	hash := sha256.Sum256([]byte(bodyStr))
 	payloadHash := hex.EncodeToString(hash[:])
-
+	// sign the request
 	signer := v4.NewSigner()
-	err = signer.SignHTTP(context.Background(), creds, req, payloadHash, "sts", region, time.Now())
+	err = signer.SignHTTP(context.Background(), creds, req, payloadHash, "sts", signingRegion, time.Now())
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign HTTP request: %w", err)
 	}
@@ -614,10 +579,17 @@ func generateLoginData(awsConfig *aws.Config, headerValue, configuredRegion stri
 		return nil, fmt.Errorf("failed to marshal headers: %w", err)
 	}
 
+	// b64 is not a requirement, but since previous versions used it, we have to stick to it for bw compat
 	return map[string]interface{}{
 		consts.FieldIAMHttpRequestMethod: req.Method,
 		consts.FieldIAMRequestURL:        base64.StdEncoding.EncodeToString([]byte(req.URL.String())),
 		consts.FieldIAMRequestBody:       base64.StdEncoding.EncodeToString([]byte(bodyStr)),
 		consts.FieldIAMRequestHeaders:    base64.StdEncoding.EncodeToString(headersJSON),
 	}, nil
+}
+
+// STSAssumeRoleAPI interface for mocking STS assume role operations in tests
+type STSAssumeRoleAPI interface {
+	AssumeRole(ctx context.Context, params *sts.AssumeRoleInput, optFns ...func(*sts.Options)) (*sts.AssumeRoleOutput, error)
+	AssumeRoleWithWebIdentity(ctx context.Context, params *sts.AssumeRoleWithWebIdentityInput, optFns ...func(*sts.Options)) (*sts.AssumeRoleWithWebIdentityOutput, error)
 }
