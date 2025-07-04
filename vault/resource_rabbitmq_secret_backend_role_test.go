@@ -154,31 +154,6 @@ func TestAccRabbitMQSecretBackendRole_topic(t *testing.T) {
 	})
 }
 
-func TestAccRabbitMQSecretBackendRole_vhostOrdering(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	resourceName := "vault_rabbitmq_secret_backend_role.test"
-	connectionUri, username, password := testutil.GetTestRMQCreds(t)
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccRabbitMQSecretBackendRoleCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccRabbitMQSecretBackendRoleConfig_multipleVhosts(name, backend, connectionUri, username, password),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("%s", name)),
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "vhost.#", "3"),
-					resource.TestCheckResourceAttr(resourceName, "vhost.0.host", "/alpha"),
-					resource.TestCheckResourceAttr(resourceName, "vhost.1.host", "/beta"),
-					resource.TestCheckResourceAttr(resourceName, "vhost.2.host", "/gamma"),
-				),
-			},
-		},
-	})
-}
-
 func testAccRabbitMQSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_rabbitmq_secret_backend_role" {
@@ -312,43 +287,34 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
 `, path, connectionUri, username, password, name, testAccRabbitMQSecretBackendRoleTags_updated)
 }
 
-func testAccRabbitMQSecretBackendRoleConfig_multipleVhosts(name, path, connectionUri, username, password string) string {
-	return fmt.Sprintf(`
-resource "vault_rabbitmq_secret_backend" "test" {
-  path = "%s"
-  description = "test description"
-  default_lease_ttl_seconds = 3600
-  max_lease_ttl_seconds = 86400
-  connection_uri = "%s"
-  username = "%s"
-  password = "%s"
-}
+func TestFlattenRabbitMQSecretBackendRoleVhost_Order(t *testing.T) {
+	input := map[string]interface{}{
+		"b-vhost": map[string]interface{}{
+			"configure": "c1",
+			"read":      "r1",
+			"write":     "w1",
+		},
+		"a-vhost": map[string]interface{}{
+			"configure": "c2",
+			"read":      "r2",
+			"write":     "w2",
+		},
+		"c-vhost": map[string]interface{}{
+			"configure": "c3",
+			"read":      "r3",
+			"write":     "w3",
+		},
+	}
 
-resource "vault_rabbitmq_secret_backend_role" "test" {
-  backend = vault_rabbitmq_secret_backend.test.path
-  name = "%s"
-  tags = "management"
+	result := flattenRabbitMQSecretBackendRoleVhost(input)
 
-  vhost {
-    host = "/alpha"
-    configure = ".*"
-    read = ".*"
-    write = ".*"
-  }
-
-  vhost {
-    host = "/beta"
-    configure = ".*"
-    read = ".*"
-    write = ".*"
-  }
-
-  vhost {
-    host = "/gamma"
-    configure = ".*"
-    read = ".*"
-    write = ".*"
-  }
-}
-`, path, connectionUri, username, password, name)
+	expectedOrder := []string{"a-vhost", "b-vhost", "c-vhost"}
+	if len(result) != len(expectedOrder) {
+		t.Fatalf("expected %d vhosts, got %d", len(expectedOrder), len(result))
+	}
+	for i, expectedHost := range expectedOrder {
+		if result[i]["host"] != expectedHost {
+			t.Errorf("expected host at index %d to be %q, got %q", i, expectedHost, result[i]["host"])
+		}
+	}
 }
