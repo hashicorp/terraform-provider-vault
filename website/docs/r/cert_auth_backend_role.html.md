@@ -1,6 +1,6 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_auth_backend resource"
+page_title: "Vault: vault_cert_auth_backend_role resource"
 sidebar_current: "docs-vault-resource-cert-auth-backend-role"
 description: |-
   Managing roles in an Cert auth backend in Vault

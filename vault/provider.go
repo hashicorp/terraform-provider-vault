@@ -179,6 +179,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstDataSource()),
 			PathInventory: []string{"/pki/config/est"},
 		},
+		"vault_pki_secret_backend_config_scep": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigScepDataSource()),
+			PathInventory: []string{"/pki/config/scep"},
+		},
 		"vault_pki_secret_backend_issuer": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
 			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
@@ -396,6 +400,10 @@ var (
 		"vault_cert_auth_backend_role": {
 			Resource:      UpdateSchemaResource(certAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/cert/certs/{name}"},
+		},
+		"vault_scep_auth_backend_role": {
+			Resource:      UpdateSchemaResource(scepAuthBackendRoleResource()),
+			PathInventory: []string{"/auth/scep/role/{name}"},
 		},
 		"vault_generic_endpoint": {
 			Resource:      UpdateSchemaResource(genericEndpointResource("vault_generic_endpoint")),
@@ -618,6 +626,10 @@ var (
 		"vault_pki_secret_backend_config_est": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstResource()),
 			PathInventory: []string{"/pki/config/est"},
+		},
+		"vault_pki_secret_backend_config_scep": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigScepResource()),
+			PathInventory: []string{"/pki/config/scep"},
 		},
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),
