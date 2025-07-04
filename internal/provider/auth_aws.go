@@ -323,33 +323,7 @@ func (l *AuthLoginAWS) collectCredentialParams() (credentialsParams, error) {
 		credParams.IAMEndpoint = v
 	}
 
-	// TODO Remove
-	if err := validateCredentialParams(&credParams); err != nil {
-		return credParams, err
-	}
-
 	return credParams, nil
-}
-
-// TODO Use native schema validators and remove this function
-func validateCredentialParams(p *credentialsParams) error {
-	if p.AccessKey != "" && p.SecretKey == "" {
-		return fmt.Errorf("static AWS client credentials haven't been properly configured (access key provided but secret key missing)")
-	}
-	if p.AccessKey == "" && p.SecretKey != "" {
-		return fmt.Errorf("static AWS client credentials haven't been properly configured (secret key provided but access key missing)")
-	}
-
-	if p.RoleARN == "" {
-		if p.RoleSessionName != "" {
-			return fmt.Errorf("role session name specified without role ARN")
-		}
-		if p.WebIdentityTokenFile != "" {
-			return fmt.Errorf("web identity token file specified without role ARN")
-		}
-	}
-
-	return nil
 }
 
 // signAWSLogin is for use by the generic auth method
@@ -372,10 +346,6 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 	// generic auth_login uses "sts_region" field name, not "aws_region"
 	if v, ok := parameters["sts_region"].(string); ok {
 		credParams.Region = v
-	}
-
-	if err := validateCredentialParams(&credParams); err != nil {
-		return err
 	}
 
 	awsCfg, err := buildAWSConfig(context.Background(), &credParams)
