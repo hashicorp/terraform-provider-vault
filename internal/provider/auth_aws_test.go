@@ -4,7 +4,6 @@
 package provider
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -142,16 +140,15 @@ func TestAuthLoginAWS_LoginPath(t *testing.T) {
 	}
 }
 
-func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
+func TestAuthLoginAWS_collectCredentialParams(t *testing.T) {
 	type fields struct {
 		AuthLoginCommon AuthLoginCommon
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		logger  hclog.Logger
-		want    *awsutil.CredentialsConfig
-		wantErr bool
+		name   string
+		fields fields
+		logger hclog.Logger
+		want   credentialsParams
 	}{
 		{
 			name: "static-creds",
@@ -164,12 +161,10 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 				},
 			},
 			logger: hclog.NewNullLogger(),
-			want: &awsutil.CredentialsConfig{
-				Region:    "us-east-1",
+			want: credentialsParams{
 				AccessKey: "key-id",
 				SecretKey: "sa-key",
 			},
-			wantErr: false,
 		},
 		{
 			name: "static-creds-with-profile",
@@ -182,12 +177,10 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 				},
 			},
 			logger: hclog.NewNullLogger(),
-			want: &awsutil.CredentialsConfig{
-				Region:   "us-east-1",
+			want: credentialsParams{
 				Filename: "credentials",
 				Profile:  "profile1",
 			},
-			wantErr: false,
 		},
 		{
 			name: "all",
@@ -209,12 +202,12 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 				},
 			},
 			logger: hclog.NewNullLogger(),
-			want: &awsutil.CredentialsConfig{
-				AccessKey:    "key-id",
-				SecretKey:    "sa-key",
-				SessionToken: "session-token",
-				// Note: IAMEndpointResolver and STSEndpointResolver are no longer simple strings in v2
-				// They require EndpointResolverV2 types, so we'll skip them in this test
+			want: credentialsParams{
+				AccessKey:            "key-id",
+				SecretKey:            "sa-key",
+				SessionToken:         "session-token",
+				STSEndpoint:          "sts.us-east-2.amazonaws.com",
+				IAMEndpoint:          "iam.us-east-2.amazonaws.com",
 				Region:               "us-east-2",
 				Filename:             "credentials",
 				Profile:              "profile1",
@@ -222,7 +215,6 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 				RoleSessionName:      "session1",
 				WebIdentityTokenFile: "web-token",
 			},
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -230,19 +222,9 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 			l := &AuthLoginAWS{
 				AuthLoginCommon: tt.fields.AuthLoginCommon,
 			}
-			got, err := l.getCredentialsConfig(context.Background(), tt.logger)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getCredentialsConfig() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if got.HTTPClient == nil {
-				t.Errorf("getCredentialsConfig() HTTPClient not initialized")
-			}
-			// set HTTPClient to nil
-			got.HTTPClient = nil
+			got := l.collectCredentialParams(tt.logger)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getCredentialsConfig() got = %v, want %v", got, tt.want)
+				t.Errorf("collectCredentialParams() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
