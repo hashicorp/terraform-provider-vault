@@ -4,13 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
@@ -22,9 +23,9 @@ import (
 func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityEntityPoliciesDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityPoliciesConfigExclusive(entity),
@@ -46,9 +47,9 @@ func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityEntityPoliciesDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityPoliciesConfigNonExclusive(entity),

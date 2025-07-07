@@ -75,7 +75,7 @@ func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.Resource
 			return diag.FromErr(err)
 		}
 	} else {
-		if err := updateMount(ctx, d, meta, true); err != nil {
+		if err := updateMount(ctx, d, meta, true, false); err != nil {
 			return diag.FromErr(err)
 		}
 		path = d.Id()
@@ -140,7 +140,7 @@ func kubernetesSecretBackendRead(ctx context.Context, d *schema.ResourceData, me
 		}
 	}
 
-	if err := readMount(ctx, d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 

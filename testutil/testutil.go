@@ -32,8 +32,8 @@ import (
 
 	"github.com/coreos/pkg/multierror"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/go-homedir"
 
@@ -148,6 +148,23 @@ func GetTestAzureConf(t *testing.T) *AzureTestConf {
 		ClientID:       v[2],
 		ClientSecret:   v[3],
 		Scope:          v[4],
+	}
+}
+
+func GetTestAzureConfForGroups(t *testing.T) *AzureTestConf {
+	t.Helper()
+
+	v := SkipTestEnvUnset(t,
+		"AZURE_SUBSCRIPTION_ID",
+		"AZURE_TENANT_ID",
+		"AZURE_CLIENT_ID",
+		"AZURE_CLIENT_SECRET")
+
+	return &AzureTestConf{
+		SubscriptionID: v[0],
+		TenantID:       v[1],
+		ClientID:       v[2],
+		ClientSecret:   v[3],
 	}
 }
 
@@ -785,6 +802,44 @@ func CheckJSONData(resourceName, attr, expected string) resource.TestCheckFunc {
 		}
 
 		return nil
+	}
+}
+
+// GetImportTestStepNS returns an import TestStep for namespace and resource name.
+//
+// NOTE: Should be called with GetImportTestStepNSCleanup
+//
+// Optionally include field names that should be ignored during the import
+// verification, typically ignore fields should only be provided for values
+// that are not returned from the provisioning API.
+func GetImportTestStepNS(t *testing.T, namespace, resourceName, config string, ignoreFields ...string) resource.TestStep {
+	return resource.TestStep{
+		// Two steps are needed when testing import because the
+		// tf-plugin-sdk does not allow specifying environment variables.
+		// It is possible that this will cause issues if we ever want to
+		// support parallel tests.
+		PreConfig: func() {
+			t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
+		},
+		ImportState:             true,
+		ImportStateVerify:       true,
+		ImportStateVerifyIgnore: ignoreFields,
+		ResourceName:            resourceName,
+	}
+}
+
+// GetImportTestStepNSCleanup return a cleanup TestStep for namespace and
+// resource name to unset env vars.
+//
+// NOTE: Should be called after GetImportTestStepNS
+func GetImportTestStepNSCleanup(t *testing.T, config string) resource.TestStep {
+	return resource.TestStep{
+		// needed for the import step above
+		Config: config,
+		PreConfig: func() {
+			os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+		},
+		PlanOnly: true,
 	}
 }
 

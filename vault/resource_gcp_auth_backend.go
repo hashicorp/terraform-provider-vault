@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -130,6 +131,8 @@ func gcpAuthBackendResource() *schema.Resource {
 		consts.FieldLocal,
 		consts.FieldIdentityTokenKey,
 	))
+	// Add common automated root rotation schema to the resource.
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
 
 	return r
 }
@@ -229,6 +232,8 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 
 	gcpPath := d.Id()
 	path := gcpAuthBackendConfigPath(gcpPath)
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 
 	if !d.IsNewResource() {
 		newMount, err := util.Remount(d, client, consts.FieldPath, true)
@@ -246,8 +251,8 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 
 	data := map[string]interface{}{}
 
-	if v, ok := d.GetOk(consts.FieldCredentials); ok {
-		data[consts.FieldCredentials] = v
+	if d.HasChange(consts.FieldCredentials) {
+		data[consts.FieldCredentials] = d.Get(consts.FieldCredentials)
 	}
 
 	epField := consts.FieldCustomEndpoint
@@ -262,8 +267,7 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		data[consts.FieldCustomEndpoint] = endpoints
 	}
 
-	useAPIver117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-	if useAPIver117Ent {
+	if useAPIVer117Ent {
 		fields := []string{
 			consts.FieldIdentityTokenAudience,
 			consts.FieldIdentityTokenTTL,
@@ -275,6 +279,11 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 				data[k] = v
 			}
 		}
+	}
+
+	if useAPIVer119Ent {
+		// Parse automated root rotation fields if running Vault Enterprise 1.19 or newer.
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
 	log.Printf("[DEBUG] Writing %s config at path %q", gcpAuthType, path)
@@ -319,13 +328,18 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		consts.FieldLocal,
 	}
 
-	useAPIver117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-	if useAPIver117Ent {
-		params = append(params,
-			consts.FieldIdentityTokenAudience,
-			consts.FieldIdentityTokenTTL,
-			consts.FieldServiceAccountEmail,
-		)
+	if provider.IsEnterpriseSupported(meta) {
+		if provider.IsAPISupported(meta, provider.VaultVersion117) {
+			params = append(params,
+				consts.FieldIdentityTokenAudience,
+				consts.FieldIdentityTokenTTL,
+				consts.FieldServiceAccountEmail,
+			)
+		}
+
+		if provider.IsAPISupported(meta, provider.VaultVersion119) {
+			params = append(params, automatedrotationutil.AutomatedRotationFields...)
+		}
 	}
 
 	for _, param := range params {

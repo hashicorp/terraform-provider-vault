@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -21,7 +23,7 @@ const (
 )
 
 func awsAuthBackendClientResource() *schema.Resource {
-	return &schema.Resource{
+	r := &schema.Resource{
 		CreateContext: awsAuthBackendWrite,
 		ReadContext:   provider.ReadContextWrapper(awsAuthBackendRead),
 		UpdateContext: awsAuthBackendWrite,
@@ -109,6 +111,11 @@ func awsAuthBackendClientResource() *schema.Resource {
 			},
 		},
 	}
+
+	// Add common automated root rotation schema to the resource
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -156,6 +163,11 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		data[consts.FieldIdentityTokenAudience] = identityTokenAud
 		data[consts.FieldRoleArn] = roleArn
 		data[consts.FieldIdentityTokenTTL] = identityTokenTTL
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		// parse automated root rotation fields if Enterprise 1.19 server
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
 	// sts_endpoint and sts_region are required to be set together
@@ -236,6 +248,12 @@ func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 					return diag.FromErr(err)
 				}
 			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, secret, d.Id()); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 

@@ -4,13 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -34,9 +35,9 @@ func TestLDAPAuthBackendUser_basic(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend_user.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testLDAPAuthBackendUserDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendUserConfig_basic(backend, username, policies, groups),
@@ -63,9 +64,9 @@ func TestLDAPAuthBackendUser_noGroups(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend_user.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testLDAPAuthBackendUserDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendUserConfig_basic(backend, username, policies, groups),
@@ -94,9 +95,9 @@ func TestLDAPAuthBackendUser_oneGroup(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend_user.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testLDAPAuthBackendUserDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendUserConfig_basic(backend, username, policies, groups),

@@ -66,6 +66,12 @@ func kubernetesAuthBackendConfigDataSource() *schema.Resource {
 				Optional:    true,
 				Description: "Optional disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.",
 			},
+			fieldUseAnnotationsAsAliasMetadata: {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Optional:    true,
+				Description: "Use annotations from the client token's associated service account as alias metadata for the Vault entity.",
+			},
 		},
 	}
 }
@@ -104,6 +110,13 @@ func kubernetesAuthBackendConfigDataSourceRead(d *schema.ResourceData, meta inte
 	d.Set(consts.FieldIssuer, resp.Data[consts.FieldIssuer])
 	d.Set(consts.FieldDisableISSValidation, resp.Data[consts.FieldDisableISSValidation])
 	d.Set(consts.FieldDisableLocalCAJWT, resp.Data[consts.FieldDisableLocalCAJWT])
+
+	if provider.IsAPISupported(meta, provider.VaultVersion116) {
+		err := d.Set(fieldUseAnnotationsAsAliasMetadata, resp.Data[fieldUseAnnotationsAsAliasMetadata])
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

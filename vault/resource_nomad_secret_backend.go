@@ -196,8 +196,10 @@ func readNomadAccessConfigResource(ctx context.Context, d *schema.ResourceData, 
 
 	backend := d.Id()
 
-	d.Set("backend", backend)
-	if err := readMount(ctx, d, meta, true); err != nil {
+	if err := d.Set("backend", backend); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := readMount(ctx, d, meta, true, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -275,7 +277,6 @@ func readNomadAccessConfigResource(ctx context.Context, d *schema.ResourceData, 
 }
 
 func updateNomadAccessConfigResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	backend := d.Id()
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -284,12 +285,14 @@ func updateNomadAccessConfigResource(ctx context.Context, d *schema.ResourceData
 
 	data := map[string]interface{}{}
 
-	backend, err := util.Remount(d, client, consts.FieldBackend, false)
-	if err != nil {
-		return diag.FromErr(e)
+	if err := updateMount(ctx, d, meta, true, true); err != nil {
+		return diag.FromErr(err)
 	}
 
-	if err := updateMount(ctx, d, meta, true); err != nil {
+	// Remount backend after updating in case needed.
+	// we remount in a separate step due to the resource using the legacy "backend" field
+	backend, err := util.Remount(d, client, consts.FieldBackend, false)
+	if err != nil {
 		return diag.FromErr(err)
 	}
 

@@ -4,14 +4,15 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -23,9 +24,9 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testLDAPAuthBackendDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
@@ -58,9 +59,9 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testLDAPAuthBackendDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
@@ -96,8 +97,8 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
@@ -118,6 +119,39 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 	})
 }
 
+func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-auth-ldap")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-ldap-updated")
+
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_automatedRotation(path, true, true, "* * * * *", 10, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_automatedRotation(updatedPath, true, true, "", 0, 10, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldBindPass, consts.FieldDisableRemount),
+		},
+	})
+}
+
 func TestLDAPAuthBackend_authMountSchema(t *testing.T) {
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-ldap")
@@ -125,8 +159,8 @@ func TestLDAPAuthBackend_authMountSchema(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccLDAPAuthBackendConfig_authMountSchema(path, false),
@@ -337,11 +371,19 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 			"groupdn":              "groupdn",
 			"groupattr":            "groupattr",
 			"use_token_groups":     "use_token_groups",
+			"connection_timeout":   "connection_timeout",
 		}
 
 		isVaultVersion111 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion111)
 		if isVaultVersion111 {
 			attrs["max_page_size"] = "max_page_size"
+		}
+
+		if provider.IsEnterpriseSupported(testProvider.Meta()) && provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119) {
+			attrs["rotation_schedule"] = "rotation_schedule"
+			attrs["rotation_window"] = "rotation_window"
+			attrs["rotation_period"] = "rotation_period"
+			attrs["disable_automated_rotation"] = "disable_automated_rotation"
 		}
 
 		for _, v := range commonTokenFields {
@@ -385,7 +427,8 @@ resource "vault_ldap_auth_backend" "test" {
     description            = "example"
     userfilter             = "({{.UserAttr}}={{.Username}})"
     username_as_alias      = true
-    use_token_groups = %s
+    use_token_groups       = %s
+    connection_timeout     = 30
 }
 `, path, local, use_token_groups)
 }
@@ -485,4 +528,21 @@ EOT
     use_token_groups = %s
 }
 `, path, local, use_token_groups)
+}
+
+func testLDAPAuthBackendConfig_automatedRotation(path string, useTokenGroups, local bool, schedule string, window, period int, disable bool) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path                   = "%s"
+    local                  = %t
+    url                    = "ldaps://example.org"
+    binddn                 = "cn=example.com"
+    bindpass               = "supersecurepassword"
+    use_token_groups = %t
+	 rotation_schedule = "%s"
+    rotation_window   = "%d"
+    rotation_period   = "%d"
+    disable_automated_rotation = %t
+}
+`, path, local, useTokenGroups, schedule, window, period, disable)
 }

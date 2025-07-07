@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"strings"
 
@@ -190,6 +191,11 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed:  true,
 			Sensitive: true,
 		},
+		consts.FieldConnectionTimeout: {
+			Type:     schema.TypeInt,
+			Optional: true,
+			Computed: true,
+		},
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
@@ -224,6 +230,9 @@ func ldapAuthBackendResource() *schema.Resource {
 		consts.FieldLocal,
 		consts.FieldTokenType,
 	))
+
+	// add automated rotation fields to the resource
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
 
 	return r
 }
@@ -300,6 +309,11 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		}
 	}
 
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
+	}
+
 	if v, ok := d.GetOk(consts.FieldBindPass); ok {
 		data[consts.FieldBindPass] = v.(string)
 	}
@@ -310,6 +324,10 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 
 	if v, ok := d.GetOk(consts.FieldClientTLSKey); ok {
 		data[consts.FieldClientTLSKey] = v.(string)
+	}
+
+	if v, ok := d.GetOk(consts.FieldConnectionTimeout); ok {
+		data[consts.FieldConnectionTimeout] = v
 	}
 
 	updateTokenFields(d, data, false)
@@ -377,6 +395,19 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	if useAPIVer111 {
 		if err := d.Set(consts.FieldMaxPageSize, resp.Data[consts.FieldMaxPageSize]); err != nil {
 			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldMaxPageSize, path, err)
+		}
+	}
+
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, d.Id()); err != nil {
+			return diag.Errorf("error reading rotation fields from LDAP Auth Backend %q: %q", path, err)
+		}
+	}
+
+	if v, ok := resp.Data[consts.FieldConnectionTimeout]; ok {
+		if err := d.Set(consts.FieldConnectionTimeout, v); err != nil {
+			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldConnectionTimeout, path, err)
 		}
 	}
 

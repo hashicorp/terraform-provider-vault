@@ -115,10 +115,6 @@ func kmipSecretBackendResource() *schema.Resource {
 		consts.FieldPath,
 		consts.FieldType,
 		consts.FieldDescription,
-		consts.FieldDefaultLeaseTTL,
-		consts.FieldMaxLeaseTTL,
-		consts.FieldIdentityTokenKey,
-		consts.FieldLocal,
 	))
 
 	return r
@@ -147,18 +143,14 @@ func kmipSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta i
 	if e != nil {
 		return diag.FromErr(e)
 	}
+
+	if !d.IsNewResource() {
+		if err := updateMount(ctx, d, meta, true, false); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	path := d.Id()
-
-	path, err := util.Remount(d, client, consts.FieldPath, false)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	log.Printf("[DEBUG] Updating mount %s in Vault", path)
-
-	if err := updateMount(ctx, d, meta, true); err != nil {
-		return diag.FromErr(err)
-	}
 
 	data := map[string]interface{}{}
 	configPath := fmt.Sprintf("%s/config", path)
@@ -216,7 +208,7 @@ func kmipSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta int
 		return diag.FromErr(err)
 	}
 
-	if err := readMount(ctx, d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 

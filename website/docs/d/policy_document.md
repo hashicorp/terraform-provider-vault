@@ -39,6 +39,8 @@ Each document configuration may have one or more `rule` blocks, which each accep
 
 * `required_parameters` - (Optional) A list of parameters that must be specified.
 
+* `subscribe_event_types` - (Optional) A list of event types to subscribe to when using `subscribe` capability.
+
 * `allowed_parameter` - (Optional) Whitelists a list of keys and values that are permitted on the given path. See [Parameters](#Parameters) below.
 
 * `denied_parameter` - (Optional) Blacklists a list of parameter and values. Any values specified here take precedence over `allowed_parameter`. See [Parameters](#Parameters) below.

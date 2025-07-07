@@ -58,6 +58,14 @@ func getMountSchema(excludes ...string) schemaMap {
 			Description: "Maximum possible lease duration for tokens and secrets in seconds",
 		},
 
+		// this field is cannot be tuned
+		consts.FieldForceNoCache: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "If set to true, disables caching.",
+		},
+
 		consts.FieldAuditNonHMACRequestKeys: {
 			Type:        schema.TypeList,
 			Computed:    true,
@@ -74,19 +82,56 @@ func getMountSchema(excludes ...string) schemaMap {
 			Elem:        &schema.Schema{Type: schema.TypeString},
 		},
 
-		consts.FieldAccessor: {
+		consts.FieldListingVisibility: {
 			Type:        schema.TypeString,
-			Computed:    true,
-			Description: "Accessor of the mount",
+			Optional:    true,
+			Description: "Specifies whether to show this mount in the UI-specific listing endpoint",
 		},
 
-		consts.FieldLocal: {
-			Type:        schema.TypeBool,
-			Required:    false,
+		consts.FieldPassthroughRequestHeaders: {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description: "List of headers to allow and pass from the request to the plugin",
+		},
+
+		consts.FieldAllowedResponseHeaders: {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description: "List of headers to allow and pass from the request to the plugin",
+		},
+
+		consts.FieldPluginVersion: {
+			Type:        schema.TypeString,
 			Optional:    true,
-			Computed:    false,
-			ForceNew:    true,
-			Description: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
+			Description: "Specifies the semantic version of the plugin to use, e.g. 'v1.0.0'",
+		},
+
+		consts.FieldAllowedManagedKeys: {
+			Type:        schema.TypeSet,
+			Optional:    true,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "List of managed key registry entry names that the mount in question is allowed to access",
+		},
+
+		consts.FieldDelegatedAuthAccessors: {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description: "List of headers to allow and pass from the request to the plugin",
+		},
+
+		consts.FieldIdentityTokenKey: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The key to use for signing plugin workload identity tokens",
 		},
 
 		consts.FieldOptions: {
@@ -115,56 +160,19 @@ func getMountSchema(excludes ...string) schemaMap {
 			Description: "Enable the secrets engine to access Vault's external entropy source",
 		},
 
-		consts.FieldAllowedManagedKeys: {
-			Type:        schema.TypeSet,
+		consts.FieldLocal: {
+			Type:        schema.TypeBool,
+			Required:    false,
 			Optional:    true,
-			Elem:        &schema.Schema{Type: schema.TypeString},
-			Description: "List of managed key registry entry names that the mount in question is allowed to access",
+			Computed:    false,
+			ForceNew:    true,
+			Description: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
 		},
 
-		consts.FieldListingVisibility: {
+		consts.FieldAccessor: {
 			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Specifies whether to show this mount in the UI-specific listing endpoint",
-		},
-
-		consts.FieldPassthroughRequestHeaders: {
-			Type:     schema.TypeList,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Description: "List of headers to allow and pass from the request to the plugin",
-		},
-
-		consts.FieldAllowedResponseHeaders: {
-			Type:     schema.TypeList,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Description: "List of headers to allow and pass from the request to the plugin",
-		},
-
-		consts.FieldDelegatedAuthAccessors: {
-			Type:     schema.TypeList,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Description: "List of headers to allow and pass from the request to the plugin",
-		},
-
-		consts.FieldPluginVersion: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Specifies the semantic version of the plugin to use, e.g. 'v1.0.0'",
-		},
-
-		consts.FieldIdentityTokenKey: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "The key to use for signing plugin workload identity tokens",
+			Computed:    true,
+			Description: "Accessor of the mount",
 		},
 	}
 	for _, v := range excludes {
@@ -209,6 +217,7 @@ func createMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
+			ForceNoCache:    d.Get(consts.FieldForceNoCache).(bool),
 		},
 		Local:                 d.Get(consts.FieldLocal).(bool),
 		Options:               mountOptions(d),
@@ -264,7 +273,7 @@ func createMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 }
 
 func mountUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	err := updateMount(ctx, d, meta, false)
+	err := updateMount(ctx, d, meta, false, false)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -272,7 +281,7 @@ func mountUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 	return nil
 }
 
-func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool) error {
+func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool, skipRemount bool) error {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return err
@@ -299,18 +308,20 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 
 	path := d.Id()
 
-	if d.HasChange(consts.FieldPath) {
-		newPath := d.Get(consts.FieldPath).(string)
+	if !skipRemount {
+		if d.HasChange(consts.FieldPath) {
+			newPath := d.Get(consts.FieldPath).(string)
 
-		log.Printf("[DEBUG] Remount %s to %s in Vault", path, newPath)
+			log.Printf("[DEBUG] Remount %s to %s in Vault", path, newPath)
 
-		err := client.Sys().RemountWithContext(ctx, d.Id(), newPath)
-		if err != nil {
-			return fmt.Errorf("error remounting in Vault: %s", err)
+			err := client.Sys().RemountWithContext(ctx, d.Id(), newPath)
+			if err != nil {
+				return fmt.Errorf("error remounting in Vault: %s", err)
+			}
+
+			d.SetId(newPath)
+			path = newPath
 		}
-
-		d.SetId(newPath)
-		path = newPath
 	}
 
 	if d.HasChange(consts.FieldAllowedManagedKeys) {
@@ -360,7 +371,7 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 		break
 	}
 
-	return readMount(ctx, d, meta, excludeType)
+	return readMount(ctx, d, meta, excludeType, skipRemount)
 }
 
 func mountDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -381,7 +392,7 @@ func mountDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 }
 
 func mountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	err := readMount(ctx, d, meta, false)
+	err := readMount(ctx, d, meta, false, false)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -389,7 +400,7 @@ func mountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) di
 	return nil
 }
 
-func readMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool) error {
+func readMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool, excludePath bool) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -428,13 +439,21 @@ func readMount(ctx context.Context, d *schema.ResourceData, meta interface{}, ex
 		d.Set(consts.FieldType, mount.Type)
 	}
 
-	if err := d.Set(consts.FieldPath, path); err != nil {
-		return err
+	// some legacy resources use field "backend" instead of "path"
+	// legacy resources will set the backend parameter in their code
+	if !excludePath {
+		if err := d.Set(consts.FieldPath, path); err != nil {
+			return err
+		}
 	}
+
 	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
 		return err
 	}
 	if err := d.Set(consts.FieldDefaultLeaseTTL, mount.Config.DefaultLeaseTTL); err != nil {
+		return err
+	}
+	if err := d.Set(consts.FieldForceNoCache, mount.Config.ForceNoCache); err != nil {
 		return err
 	}
 	if err := d.Set(consts.FieldMaxLeaseTTL, mount.Config.MaxLeaseTTL); err != nil {

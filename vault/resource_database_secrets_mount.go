@@ -6,9 +6,10 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"sync"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -120,6 +121,8 @@ func databaseSecretsMountResource() *schema.Resource {
 	}
 }
 
+// getDatabaseSecretsMountSchema is used to define the schema for
+// vault_database_secrets_mount
 func getDatabaseSecretsMountSchema() schemaMap {
 	s := getMountSchema("type")
 	for k, v := range getDatabaseSchema(schema.TypeList) {
@@ -151,8 +154,14 @@ func addCommonDatabaseSchema(s *schema.Schema) {
 	}
 }
 
+// getCommonDatabaseSchema is used to define the common schema for both
+// database resources:
+//   - vault_database_secrets_mount
+//   - vault_database_secret_backend_connection
+//
+// New fields on the DB /config endpoint should be added here.
 func getCommonDatabaseSchema() schemaMap {
-	return schemaMap{
+	s := schemaMap{
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
@@ -206,8 +215,17 @@ func getCommonDatabaseSchema() schemaMap {
 			Sensitive: false,
 		},
 	}
+
+	// add common automated root rotation parameters
+	for k, v := range provider.GetAutomatedRootRotationSchema() {
+		s[k] = v
+	}
+
+	return s
 }
 
+// setCommonDatabaseSchema is used to define the schema for
+// vault_database_secret_backend_connection
 func setCommonDatabaseSchema(s schemaMap) schemaMap {
 	for k, v := range getCommonDatabaseSchema() {
 		s[k] = v
@@ -247,7 +265,7 @@ func databaseSecretsMountCreateOrUpdate(ctx context.Context, d *schema.ResourceD
 					return diag.Errorf("duplicate name %q for engine %#v", name, engine)
 				}
 				seen[name] = true
-				if err := writeDatabaseSecretConfig(d, client, engine, i, true, path, meta); err != nil {
+				if err := writeDatabaseSecretConfig(ctx, d, client, engine, i, true, path, meta); err != nil {
 					return diag.FromErr(err)
 				}
 				count++
@@ -274,7 +292,7 @@ func databaseSecretsMountRead(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.FromErr(e)
 	}
 
-	if e := readMount(ctx, d, meta, true); e != nil {
+	if e := readMount(ctx, d, meta, true, false); e != nil {
 		return diag.FromErr(e)
 	}
 
@@ -285,7 +303,7 @@ func databaseSecretsMountRead(ctx context.Context, d *schema.ResourceData, meta 
 		return nil
 	}
 
-	resp, err := client.Logical().List(root + "/config")
+	resp, err := client.Logical().ListWithContext(ctx, root+"/config")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -342,7 +360,7 @@ func readDBEngineConfig(d *schema.ResourceData, client *api.Client, store *dbCon
 		return err
 	}
 
-	for k, v := range getDBCommonConfig(d, resp, engine, idx, true, name) {
+	for k, v := range getDBCommonConfig(d, resp, engine, idx, true, name, meta) {
 		result[k] = v
 	}
 

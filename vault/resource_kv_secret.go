@@ -100,8 +100,6 @@ func kvSecretRead(_ context.Context, d *schema.ResourceData, meta interface{}) d
 		return nil
 	}
 
-	log.Printf("[DEBUG] secret: %#v", secret)
-
 	data := secret.Data
 	jsonData, err := json.Marshal(data)
 	if err != nil {

@@ -75,3 +75,22 @@ In addition to the arguments above, the following attributes are exported:
   CAChain field from, when non-empty.
 
 * `usage` - Allowed usages for this issuer.
+
+* `disable_critical_extension_checks` - This determines whether this
+  issuer is able to issue certificates where the chain of trust (including the
+  issued certificate) contain critical extensions not processed by Vault.
+
+* `disable_path_length_checks` - This determines whether this issuer
+  is able to issue certificates where the chain of trust (including the final
+  issued certificate) is longer than allowed by a certificate authority in that
+  chain.
+
+* `disable_name_checks` - This determines whether this issuer is able
+  to issue certificates where the chain of trust (including the final issued
+  certificate) contains a link in which the subject of the issuing certificate
+  does not match the named issuer of the certificate it signed.
+
+* `disable_name_constraint_checks` - This determines whether this
+  issuer is able to issue certificates where the chain of trust (including the
+  final issued certificate) violates the name constraints critical extension of
+  one of the issuer certificates in the chain.

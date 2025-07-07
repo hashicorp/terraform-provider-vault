@@ -33,11 +33,11 @@ jobs:
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.7.*'
+          terraform_version: '1.11.*'
           terraform_wrapper: false
 
       - name: Cache go build
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             ~/.cache/go-build
@@ -58,16 +58,16 @@ jobs:
           make test
   acceptance:
     needs: [go-version, build]
-    runs-on: custom-linux-large
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.13.13-ent"
-        - "vault-enterprise:1.14.13-ent"
-        - "vault-enterprise:1.15.12-ent"
-        - "vault-enterprise:1.16.6-ent"
-        - "vault-enterprise:1.17.2-ent"
+        - "vault-enterprise:1.15.16-ent"
+        - "vault-enterprise:1.16.21-ent"
+        - "vault-enterprise:1.17.17-ent"
+        - "vault-enterprise:1.18.10-ent"
+        - "vault-enterprise:1.19.5-ent"
         - "vault:latest"
     services:
       vault:
@@ -101,7 +101,7 @@ jobs:
         ports:
           - 1433:1433
       mongo:
-        image: docker.mirror.hashicorp.services/mongo:latest
+        image: mongo:latest
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: mongodb
@@ -165,7 +165,7 @@ jobs:
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.7.*'
+          terraform_version: '1.11.*'
           terraform_wrapper: false
       - name: Check Terraform CLI version
         run: terraform --version
@@ -183,7 +183,7 @@ jobs:
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
       - name: Cache go build
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             ~/.cache/go-build
@@ -205,7 +205,16 @@ jobs:
           MYSQL_CONNECTION_PASSWORD: "mysql"
           MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
+          # POSTGRES_URL is the standard root conn URL for Vault
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
+          # POSTGRES_URL_TEST is used by the TFVP test to connect directly to
+          # the postgres container so that it can create static users.
+          # Note: the host is "localhost" because the TFVP tests do not run in
+          # the same docker network.
+          POSTGRES_URL_TEST: "postgres://postgres:secret@localhost:5432/database?sslmode=disable"
+          # POSTGRES_URL_ROOTLESS is used by Vault to connect to the postgres
+          # container for "rootless" static roles".
+          POSTGRES_URL_ROOTLESS: "postgres://{{username}}:{{password}}@postgres:5432/database?sslmode=disable"
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password

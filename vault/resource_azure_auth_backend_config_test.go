@@ -4,13 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -19,9 +20,9 @@ import (
 func TestAccAzureAuthBackendConfig_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("azure/foo/bar")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAzureAuthBackendConfigDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAzureAuthBackendConfig_basic(backend),
@@ -40,9 +41,9 @@ func TestAccAzureAuthBackendConfig_import(t *testing.T) {
 func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("azure")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckAzureAuthBackendConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAzureAuthBackendConfig_basic(backend),
@@ -63,7 +64,7 @@ func TestAccAzureAuthBackend_wif(t *testing.T) {
 	resourceType := "vault_azure_auth_backend_config"
 	resourceName := resourceType + ".config"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
@@ -92,6 +93,73 @@ func TestAccAzureAuthBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
 				),
 			},
+		},
+	})
+}
+
+func TestAccAzureAuthBackendConfig_automatedRotation(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-azure")
+
+	resourceType := "vault_azure_auth_backend_config"
+	resourceName := resourceType + ".config"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				// normal period setting
+				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, 600, "", 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				// switch to schedule
+				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, 0, "*/20 * * * SAT", 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SAT"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				// disable it
+				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, 0, "", 0, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
+				),
+			},
+			{
+				// do an error
+				Config:      testAccAzureAuthBackendConfig_automatedRotation(backend, 600, "", 900, false),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+			},
+			{ // try again but with schedule (from nothing
+				Config: testAccAzureAuthBackendConfig_automatedRotation(backend, 0, "*/20 * * * SUN", 3600, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SUN"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret),
 		},
 	})
 }
@@ -225,4 +293,24 @@ resource "vault_azure_auth_backend_config" "config" {
   identity_token_audience = "wif-audience-updated"
   identity_token_ttl 	  = 1800
 }`, backend)
+}
+
+func testAccAzureAuthBackendConfig_automatedRotation(backend string, periodDuration int, scheduleString string, windowDuration int, disableRotation bool) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  path = "%s"
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend = vault_auth_backend.azure.path
+  tenant_id = "11111111-2222-3333-4444-555555555555"
+  client_id = "11111111-2222-3333-4444-555555555555"
+  client_secret = "12345678901234567890"
+  resource = "http://vault.hashicorp.com"
+  rotation_period = "%d"
+  rotation_schedule = "%s"
+  rotation_window = "%d"
+  disable_automated_rotation = %t
+}`, backend, periodDuration, scheduleString, windowDuration, disableRotation)
 }

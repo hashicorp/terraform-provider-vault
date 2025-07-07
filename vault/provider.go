@@ -167,6 +167,14 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_cert_metadata": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendCertMetadataDataSource()),
+			PathInventory: []string{"/pki/cert-metadata/{serial}"},
+		},
+		"vault_pki_secret_backend_config_cmpv2": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCMPV2DataSource()),
+			PathInventory: []string{"/pki/config/cmp"},
+		},
 		"vault_pki_secret_backend_config_est": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstDataSource()),
 			PathInventory: []string{"/pki/config/est"},
@@ -187,6 +195,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
 			PathInventory: []string{"/pki/keys"},
 		},
+		"vault_ssh_secret_backend_sign": {
+			Resource:      UpdateSchemaResource(sshSecretBackendSignDataSource()),
+			PathInventory: []string{"/ssh/sign"},
+		},
 		"vault_transform_encode": {
 			Resource:      UpdateSchemaResource(transformEncodeDataSource()),
 			PathInventory: []string{"/transform/encode/{role_name}"},
@@ -194,6 +206,14 @@ var (
 		"vault_transform_decode": {
 			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
 			PathInventory: []string{"/transform/decode/{role_name}"},
+		},
+		"vault_transit_sign": {
+			Resource:      UpdateSchemaResource(transitSignDataSource()),
+			PathInventory: []string{"/transit/sign/{name}"},
+		},
+		"vault_transit_verify": {
+			Resource:      UpdateSchemaResource(transitVerifyDataSource()),
+			PathInventory: []string{"/transit/verify/{name}"},
 		},
 	}
 
@@ -567,10 +587,6 @@ var (
 			Resource:      UpdateSchemaResource(rabbitMQSecretBackendRoleResource()),
 			PathInventory: []string{"/rabbitmq/roles/{name}"},
 		},
-		"vault_password_policy": {
-			Resource:      UpdateSchemaResource(passwordPolicyResource()),
-			PathInventory: []string{"/sys/policy/password/{name}"},
-		},
 		"vault_pki_secret_backend_cert": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendCertResource()),
 			PathInventory: []string{"/pki/issue/{role}"},
@@ -578,6 +594,10 @@ var (
 		"vault_pki_secret_backend_crl_config": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendCrlConfigResource()),
 			PathInventory: []string{"/pki/config/crl"},
+		},
+		"vault_pki_secret_backend_config_acme": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigACMEResource()),
+			PathInventory: []string{"/pki/config/acme"},
 		},
 		"vault_pki_secret_backend_config_ca": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCAResource()),
@@ -587,6 +607,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigClusterResource()),
 			PathInventory: []string{"/pki/config/cluster"},
 		},
+		"vault_pki_secret_backend_config_cmpv2": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCMPV2Resource()),
+			PathInventory: []string{"/pki/config/cmp"},
+		},
 		"vault_pki_secret_backend_config_est": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstResource()),
 			PathInventory: []string{"/pki/config/est"},
@@ -594,6 +618,10 @@ var (
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),
 			PathInventory: []string{"/pki/config/urls"},
+		},
+		"vault_pki_secret_backend_config_auto_tidy": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigAutoTidyResource()),
+			PathInventory: []string{"/pki/config/auto-tidy"},
 		},
 		"vault_pki_secret_backend_intermediate_cert_request": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIntermediateCertRequestResource()),
@@ -630,6 +658,10 @@ var (
 		"vault_pki_secret_backend_config_issuers": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigIssuers()),
 			PathInventory: []string{"/pki/config/issuers"},
+		},
+		"vault_pki_secret_backend_acme_eab": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendAcmeEabResource()),
+			PathInventory: []string{"/pki/acme/new-eab"},
 		},
 		"vault_quota_lease_count": {
 			Resource:      UpdateSchemaResource(quotaLeaseCountResource()),

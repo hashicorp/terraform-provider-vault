@@ -4,13 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -21,9 +22,9 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testTransitSecretBackendKeyCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testTransitSecretBackendKeyConfig_basic(name, backend),
@@ -90,9 +91,9 @@ func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testTransitSecretBackendKeyCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testTransitSecretBackendKeyConfig_rsa4096(name, backend),
@@ -151,7 +152,7 @@ func TestTransitSecretBackendKey_hmac(t *testing.T) {
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)

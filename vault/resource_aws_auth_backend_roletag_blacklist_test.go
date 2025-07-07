@@ -4,14 +4,15 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -20,9 +21,9 @@ import (
 func TestAccAWSAuthBackendRoleTagBlacklist_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleTagBlacklistConfig_basic(backend),
@@ -40,9 +41,9 @@ func TestAccAWSAuthBackendRoleTagBlacklist_import(t *testing.T) {
 func TestAccAWSAuthBackendRoleTagBlacklist_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleTagBlacklistConfig_basic(backend),
@@ -55,9 +56,9 @@ func TestAccAWSAuthBackendRoleTagBlacklist_basic(t *testing.T) {
 func TestAccAWSAuthBackendRoleTagBlacklist_updated(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleTagBlacklistConfig_basic(backend),
