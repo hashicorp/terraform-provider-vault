@@ -303,8 +303,8 @@ func TestJWTAuthBackend_authMountSchema(t *testing.T) {
 	resourceName := "vault_jwt_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTAuthBackendConfig_authMountSchema(path, false),
