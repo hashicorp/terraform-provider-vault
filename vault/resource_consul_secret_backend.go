@@ -202,7 +202,7 @@ func consulSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta i
 	if err := d.Set("path", path); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := readMount(ctx, d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -222,7 +222,7 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 		return diag.FromErr(e)
 	}
 
-	if err := updateMount(ctx, d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 

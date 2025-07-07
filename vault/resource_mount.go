@@ -273,7 +273,7 @@ func createMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 }
 
 func mountUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	err := updateMount(ctx, d, meta, false)
+	err := updateMount(ctx, d, meta, false, false)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -281,7 +281,7 @@ func mountUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 	return nil
 }
 
-func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool) error {
+func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool, skipRemount bool) error {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return err
@@ -308,18 +308,20 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 
 	path := d.Id()
 
-	if d.HasChange(consts.FieldPath) {
-		newPath := d.Get(consts.FieldPath).(string)
+	if !skipRemount {
+		if d.HasChange(consts.FieldPath) {
+			newPath := d.Get(consts.FieldPath).(string)
 
-		log.Printf("[DEBUG] Remount %s to %s in Vault", path, newPath)
+			log.Printf("[DEBUG] Remount %s to %s in Vault", path, newPath)
 
-		err := client.Sys().RemountWithContext(ctx, d.Id(), newPath)
-		if err != nil {
-			return fmt.Errorf("error remounting in Vault: %s", err)
+			err := client.Sys().RemountWithContext(ctx, d.Id(), newPath)
+			if err != nil {
+				return fmt.Errorf("error remounting in Vault: %s", err)
+			}
+
+			d.SetId(newPath)
+			path = newPath
 		}
-
-		d.SetId(newPath)
-		path = newPath
 	}
 
 	if d.HasChange(consts.FieldAllowedManagedKeys) {
@@ -369,7 +371,7 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 		break
 	}
 
-	return readMount(ctx, d, meta, excludeType)
+	return readMount(ctx, d, meta, excludeType, skipRemount)
 }
 
 func mountDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -390,7 +392,7 @@ func mountDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 }
 
 func mountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	err := readMount(ctx, d, meta, false)
+	err := readMount(ctx, d, meta, false, false)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -398,7 +400,7 @@ func mountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) di
 	return nil
 }
 
-func readMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool) error {
+func readMount(ctx context.Context, d *schema.ResourceData, meta interface{}, excludeType bool, excludePath bool) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -437,9 +439,14 @@ func readMount(ctx context.Context, d *schema.ResourceData, meta interface{}, ex
 		d.Set(consts.FieldType, mount.Type)
 	}
 
-	if err := d.Set(consts.FieldPath, path); err != nil {
-		return err
+	// some legacy resources use field "backend" instead of "path"
+	// legacy resources will set the backend parameter in their code
+	if !excludePath {
+		if err := d.Set(consts.FieldPath, path); err != nil {
+			return err
+		}
 	}
+
 	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
 		return err
 	}

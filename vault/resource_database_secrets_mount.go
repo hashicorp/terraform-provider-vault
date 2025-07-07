@@ -292,7 +292,7 @@ func databaseSecretsMountRead(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.FromErr(e)
 	}
 
-	if e := readMount(ctx, d, meta, true); e != nil {
+	if e := readMount(ctx, d, meta, true, false); e != nil {
 		return diag.FromErr(e)
 	}
 

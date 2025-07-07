@@ -374,7 +374,7 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.FromErr(err)
 	}
 
-	if err := readMount(ctx, d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -393,7 +393,7 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 	d.Partial(true)
 
-	if err := updateMount(ctx, d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 	path := d.Id()

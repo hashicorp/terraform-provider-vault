@@ -188,7 +188,7 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
-	if err := readMount(ctx, d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -201,7 +201,7 @@ func azureSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.FromErr(e)
 	}
 
-	if err := updateMount(ctx, d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 

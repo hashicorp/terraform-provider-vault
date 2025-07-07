@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"log"
 	"strings"
 
@@ -136,7 +137,7 @@ func terraformCloudSecretBackendRead(ctx context.Context, d *schema.ResourceData
 	if err := d.Set("backend", backend); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := readMount(ctx, d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true, true); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -163,10 +164,17 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(e)
 	}
 
-	if err := updateMount(ctx, d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true, true); err != nil {
 		return diag.FromErr(err)
 	}
-	backend := d.Id()
+
+	// Remount backend after updating in case needed.
+	// we remount in a separate step due to the resource using the legacy "backend" field
+	backend, err := util.Remount(d, client, consts.FieldBackend, false)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
 	if d.HasChange("address") || d.HasChange("token") || d.HasChange("base_path") {

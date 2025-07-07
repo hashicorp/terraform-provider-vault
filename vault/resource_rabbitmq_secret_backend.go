@@ -148,7 +148,7 @@ func rabbitMQSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta
 	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := readMount(ctx, d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -165,7 +165,7 @@ func rabbitMQSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, me
 
 	d.Partial(true)
 
-	if err := updateMount(ctx, d, meta, true); err != nil {
+	if err := updateMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 	path := d.Id()

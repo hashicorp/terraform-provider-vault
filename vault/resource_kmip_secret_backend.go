@@ -145,7 +145,7 @@ func kmipSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta i
 	}
 
 	if !d.IsNewResource() {
-		if err := updateMount(ctx, d, meta, true); err != nil {
+		if err := updateMount(ctx, d, meta, true, false); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -208,7 +208,7 @@ func kmipSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta int
 		return diag.FromErr(err)
 	}
 
-	if err := readMount(ctx, d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
