@@ -264,7 +264,7 @@ func oktaAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inte
 	if err := createAuthMount(ctx, d, meta, client, &createMountRequestParams{
 		Path:          path,
 		MountType:     oktaAuthType,
-		SkipTokenType: false,
+		SkipTokenType: true,
 	}); err != nil {
 		return diag.FromErr(err)
 	}
@@ -375,7 +375,7 @@ func oktaAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		consts.FieldToken:        d.Get(consts.FieldToken),
 	}
 
-	updateTokenFields(d, configuration, false)
+	updateTokenFields(d, configuration, d.IsNewResource())
 
 	_, err := client.Logical().WriteWithContext(ctx, oktaConfigEndpoint(path), configuration)
 	if err != nil {

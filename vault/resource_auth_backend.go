@@ -124,7 +124,7 @@ func authBackendDelete(ctx context.Context, d *schema.ResourceData, meta interfa
 }
 
 func authBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if err := readAuthMount(ctx, d, meta, true, false); err != nil {
+	if err := readAuthMount(ctx, d, meta, false, false); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
