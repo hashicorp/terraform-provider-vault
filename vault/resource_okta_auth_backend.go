@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 var oktaAuthType = "okta"
@@ -199,7 +198,7 @@ func oktaAuthBackendResource() *schema.Resource {
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: oktaAuthBackendWrite,
 		DeleteContext: oktaAuthBackendDelete,
 		ReadContext:   provider.ReadContextWrapper(oktaAuthBackendRead),
@@ -210,6 +209,17 @@ func oktaAuthBackendResource() *schema.Resource {
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema:        fields,
 	}, false)
+
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getAuthMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldAccessor,
+		consts.FieldTokenType,
+	))
+
+	return r
 }
 
 func normalizeOktaTTL(i interface{}) string {
@@ -247,18 +257,18 @@ func oktaAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	authType := oktaAuthType
-	desc := d.Get(consts.FieldDescription).(string)
 	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
-	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
-		Type:        authType,
-		Description: desc,
-	})
-	if err != nil {
-		return diag.Errorf("error writing to Vault: %s", err)
+	if err := createAuthMount(ctx, d, meta, client, &createMountRequestParams{
+		Path:          path,
+		MountType:     oktaAuthType,
+		SkipTokenType: true,
+	}); err != nil {
+		return diag.FromErr(err)
 	}
+
 	log.Printf("[INFO] Enabled okta auth backend at '%s'", path)
 
 	d.SetId(path)
@@ -270,17 +280,7 @@ func oktaAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta int
 	if e != nil {
 		return diag.FromErr(e)
 	}
-
-	path := d.Id()
-
-	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
-
-	err := client.Sys().DisableAuthWithContext(ctx, path)
-	if err != nil {
-		return diag.Errorf("error disabling auth from Vault: %s", err)
-	}
-
-	return nil
+	return authMountDisable(ctx, client, d.Id())
 }
 
 func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -292,24 +292,7 @@ func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	path := d.Id()
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
 
-	mount, err := mountutil.GetAuthMount(ctx, client, path)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", path)
-			d.SetId("")
-			return nil
-		}
-		return diag.FromErr(err)
-	}
-
-	if err := d.Set(consts.FieldPath, path); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
+	if err := readAuthMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -376,6 +359,11 @@ func oktaAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		if e != nil {
 			return diag.FromErr(e)
 		}
+
+		// tune auth mount if needed
+		if err := updateAuthMount(ctx, d, meta, true, false); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
@@ -387,7 +375,7 @@ func oktaAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		consts.FieldToken:        d.Get(consts.FieldToken),
 	}
 
-	updateTokenFields(d, configuration, false)
+	updateTokenFields(d, configuration, d.IsNewResource())
 
 	_, err := client.Logical().WriteWithContext(ctx, oktaConfigEndpoint(path), configuration)
 	if err != nil {

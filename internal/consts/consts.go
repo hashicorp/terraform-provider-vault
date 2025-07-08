@@ -527,6 +527,8 @@ const (
 	FieldDestroyed                            = "destroyed"
 	FieldDeleteAllVersions                    = "delete_all_versions"
 	FieldForceNoCache                         = "force_no_cache"
+	FieldTokenType                            = "token_type"
+	FieldUserLockoutConfig                    = "user_lockout_config"
 
 	/*
 		ephemeral resource constants and write-only attributes

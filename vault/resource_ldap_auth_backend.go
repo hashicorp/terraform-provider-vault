@@ -12,12 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 const ldapAuthType string = "ldap"
@@ -224,6 +221,16 @@ func ldapAuthBackendResource() *schema.Resource {
 		Schema:        fields,
 	}, true)
 
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getAuthMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldAccessor,
+		consts.FieldLocal,
+		consts.FieldTokenType,
+	))
+
 	// add automated rotation fields to the resource
 	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
 
@@ -241,16 +248,13 @@ func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	path := d.Get("path").(string)
-	options := &api.EnableAuthOptions{
-		Type:        ldapAuthType,
-		Description: d.Get("description").(string),
-		Local:       d.Get("local").(bool),
-	}
-
 	log.Printf("[DEBUG] Enabling LDAP auth backend %q", path)
-	err := client.Sys().EnableAuthWithOptions(path, options)
-	if err != nil {
-		return diag.Errorf("error enabling ldap auth backend %q: %s", path, err)
+	if err := createAuthMount(ctx, d, meta, client, &createMountRequestParams{
+		Path:          path,
+		MountType:     ldapAuthType,
+		SkipTokenType: true,
+	}); err != nil {
+		return diag.FromErr(err)
 	}
 	log.Printf("[DEBUG] Enabled LDAP auth backend %q", path)
 
@@ -274,6 +278,15 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		}
 
 		path = ldapAuthBackendConfigPath(newMount)
+
+	}
+
+	// for LDAP, user_lockout_config can only be configured on tune calls
+	// we always check if we need to tune the mount, even if it's a new resource
+
+	// tune auth mount if needed
+	if err := updateAuthMount(ctx, d, meta, true, true); err != nil {
+		return diag.FromErr(err)
 	}
 
 	data := map[string]interface{}{}
@@ -338,20 +351,9 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 
 	path := d.Id()
 
-	mount, err := mountutil.GetAuthMount(ctx, client, path)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", path)
-			d.SetId("")
-			return nil
-		}
+	if err := readAuthMount(ctx, d, meta, true, true); err != nil {
 		return diag.FromErr(err)
 	}
-
-	d.Set(consts.FieldPath, path)
-	d.Set(consts.FieldDescription, mount.Description)
-	d.Set(consts.FieldAccessor, mount.Accessor)
-	d.Set(consts.FieldLocal, mount.Local)
 
 	path = ldapAuthBackendConfigPath(path)
 
@@ -417,19 +419,10 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	return diags
 }
 
-func ldapAuthBackendDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func ldapAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
-	path := d.Id()
-
-	log.Printf("[DEBUG] Deleting LDAP auth backend %q", path)
-	err := client.Sys().DisableAuth(path)
-	if err != nil {
-		return diag.Errorf("error deleting ldap auth backend %q: %q", path, err)
-	}
-	log.Printf("[DEBUG] Deleted LDAP auth backend %q", path)
-
-	return nil
+	return authMountDisable(ctx, client, d.Id())
 }
