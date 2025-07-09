@@ -1,8 +1,6 @@
 module github.com/hashicorp/terraform-provider-vault
 
-go 1.23.3
-
-toolchain go1.23.4
+go 1.24.3
 
 require (
 	cloud.google.com/go/compute/metadata v0.6.0

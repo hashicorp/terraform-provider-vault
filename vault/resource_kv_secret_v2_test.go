@@ -322,7 +322,7 @@ func readKVData(t *testing.T, mount, name string) {
 	path := fmt.Sprintf("%s/data/%s", mount, name)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		t.Fatalf(fmt.Sprintf("error reading from Vault; err=%s", err))
+		t.Fatalf("error reading from Vault; err=%s", err)
 	}
 
 	if resp == nil {
@@ -372,7 +372,7 @@ func writeKVData(t *testing.T, mount, name string) {
 	path := fmt.Sprintf("%s/data/%s", mount, name)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		t.Fatalf(fmt.Sprintf("error writing to Vault; err=%s", err))
+		t.Fatalf("error writing to Vault; err=%s", err)
 	}
 
 	if resp == nil {
@@ -389,7 +389,7 @@ func mountKVEngine(t *testing.T, mount, name string) {
 		Description: "Mount for testing KV datasource",
 	})
 	if err != nil {
-		t.Fatalf(fmt.Sprintf("error mounting kvv2 engine; err=%s", err))
+		t.Fatalf("error mounting kvv2 engine; err=%s", err)
 	}
 }
 
