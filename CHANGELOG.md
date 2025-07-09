@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add support for managed key parameters in the SSH CA config endpoint ([#2480](https://github.com/hashicorp/terraform-provider-vault/pull/2480))
+
 ## 5.1.0 (Jul 9, 2025)
 
 FEATURES:

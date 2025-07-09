@@ -65,6 +65,18 @@ func sshSecretBackendCAResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Specifies the desired key bits for the generated SSH CA key when `generate_signing_key` is set to `true`.",
 			},
+			"managed_key_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The name of the managed key to use. When using a managed key, this field or managed_key_id is required.",
+			},
+			"managed_key_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The id of the managed key to use. When using a managed key, this field or managed_key_name is required.",
+			},
 			"private_key": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -107,6 +119,15 @@ func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	if keyBits, ok := d.Get("key_bits").(int); ok {
 		data["key_bits"] = keyBits
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion120) {
+		if managedKeyName, ok := d.Get("managed_key_name").(string); ok {
+			data["managed_key_name"] = managedKeyName
+		}
+		if managedKeyId, ok := d.Get("managed_key_id").(string); ok {
+			data["managed_key_id"] = managedKeyId
+		}
 	}
 
 	log.Printf("[DEBUG] Writing CA information on SSH backend %q", backend)
