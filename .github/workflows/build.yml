@@ -63,11 +63,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.15.16-ent"
-        - "vault-enterprise:1.16.15-ent"
-        - "vault-enterprise:1.17.11-ent"
-        - "vault-enterprise:1.18.4-ent"
-        - "vault-enterprise:1.19.0-ent"
+        - "vault-enterprise:1.16.21-ent"
+        - "vault-enterprise:1.17.17-ent"
+        - "vault-enterprise:1.18.10-ent"
+        - "vault-enterprise:1.19.5-ent"
+        - "vault-enterprise:1.20.0-ent"
         - "vault:latest"
     services:
       vault:

@@ -66,7 +66,7 @@ resource "vault_kv_secret_v2" "db_root" {
   data_json_wo_version = 1
 }
 
-ephemeral "vault_kvv2_secret" "db_secret" {
+ephemeral "vault_kv_secret_v2" "db_secret" {
   mount = vault_mount.kvv2.path
   name = vault_kv_secret_v2.db_root.name
   mount_id = vault_mount.kvv2.id
@@ -78,7 +78,7 @@ be known only after `vault_mount` has been created. Hence, you will see that the
 is deferred until the apply step:
 
 ```
-ephemeral.vault_kvv2_secret.db_secret: Configuration unknown, deferring...
+ephemeral.vault_kv_secret_v2.db_secret: Configuration unknown, deferring...
 
 Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
   + create
@@ -101,10 +101,10 @@ vault_mount.kvv2: Creating...
 vault_mount.kvv2: Creation complete after 0s [id=my-kvv2]
 vault_kv_secret_v2.db_root: Creating...
 vault_kv_secret_v2.db_root: Creation complete after 0s [id=my-kvv2/data/pgx-user]
-ephemeral.vault_kvv2_secret.db_secret: Opening...
-ephemeral.vault_kvv2_secret.db_secret: Opening complete after 0s
-ephemeral.vault_kvv2_secret.db_secret: Closing...
-ephemeral.vault_kvv2_secret.db_secret: Closing complete after 0s
+ephemeral.vault_kv_secret_v2.db_secret: Opening...
+ephemeral.vault_kv_secret_v2.db_secret: Opening complete after 0s
+ephemeral.vault_kv_secret_v2.db_secret: Closing...
+ephemeral.vault_kv_secret_v2.db_secret: Closing complete after 0s
 
 Apply complete! Resources: 2 added, 0 changed, 0 destroyed
 ```
@@ -117,7 +117,7 @@ If the provisioning of the resource does not need to be deferred to the apply st
 be omitted from the configuration:
 
 ```hcl
-ephemeral "vault_kvv2_secret" "db_secret" {
+ephemeral "vault_kv_secret_v2" "db_secret" {
   mount = vault_mount.kvv2.path
   name = vault_kv_secret_v2.db_root.name
 }
@@ -134,7 +134,7 @@ provider "vault" {
 }
 
 # Securely obtain an already provisioned secret from Vault
-ephemeral "vault_kvv2_secret" "db_secret" {
+ephemeral "vault_kv_secret_v2" "db_secret" {
   mount = "my-kvv2"
   name = "pgx-root"
 }
@@ -154,7 +154,7 @@ resource "vault_database_secret_backend_connection" "postgres" {
   postgresql {
     connection_url = "postgresql://{{username}}:{{password}}@localhost:5432/postgres"
     username = "postgres"
-    password_wo = tostring(ephemeral.vault_kvv2_secret.db_secret.data.password)
+    password_wo = tostring(ephemeral.vault_kv_secret_v2.db_secret.data.password)
     password_wo_version = 1
   }
 }

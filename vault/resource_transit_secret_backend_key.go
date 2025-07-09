@@ -340,7 +340,7 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 
 	ikeys := secret.Data["keys"]
 	keys := []interface{}{}
-	if ikeys != nil || secret.Data["type"] != "hmac" { // hmac type does not return keys
+	if ikeys != nil {
 		ikeys := secret.Data["keys"].(map[string]interface{})
 		for _, v := range ikeys {
 			// Data structure of "keys" differs depending on encryption key type. Sometimes it's a single integer hash,

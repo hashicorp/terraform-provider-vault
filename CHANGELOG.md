@@ -3,6 +3,19 @@
 FEATURES:
 * Add support for managed key parameters in the SSH CA config endpoint ([#2480](https://github.com/hashicorp/terraform-provider-vault/pull/2480))
 
+## 5.1.0 (Jul 9, 2025)
+
+FEATURES:
+* Add support for key_usage to `vault_pki_secret_backend_root_sign_intermediate` ([#2421])(https://github.com/hashicorp/terraform-provider-vault/pull/2421)
+
+* Add `private_key_wo` and `private_key_wo_version` fields to Snowflake DB secrets engine config ([#2508])(https://github.com/hashicorp/terraform-provider-vault/pull/2508)
+
+* Add support for `group_by` and `secondary_rate` on resource `vault_quota_rate_limit`. Requires Vault Enterprise 1.20.0+ ([#2476](https://github.com/hashicorp/terraform-provider-vault/pull/2476))
+* Add support for Transit CMAC endpoint ([#2488](https://github.com/hashicorp/terraform-provider-vault/pull/2488))
+
+* Add new resource `vault_scep_auth_backend_role` to manage roles in a SCEP auth backend. [#2479](https://github.com/hashicorp/terraform-provider-vault/pull/2479).
+* Add new datasource and resource `vault_pki_secret_backend_config_scep` for PKI SCEP configuration. [#2487](https://github.com/hashicorp/terraform-provider-vault/pull/2487).
+
 ## 5.0.0 (May 21, 2025)
 
 **Important**: `5.X` multiplexes the Vault provider to use the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework),

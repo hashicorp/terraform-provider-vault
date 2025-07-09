@@ -80,7 +80,7 @@ func TestDataSourceKVV2Secret_deletedSecret(t *testing.T) {
 						Description: "Mount for testing KV datasource",
 					})
 					if err != nil {
-						t.Fatalf(fmt.Sprintf("error mounting kvv2 engine; err=%s", err))
+						t.Fatalf("error mounting kvv2 engine; err=%s", err)
 					}
 
 					m := map[string]interface{}{
@@ -96,7 +96,7 @@ func TestDataSourceKVV2Secret_deletedSecret(t *testing.T) {
 					path := fmt.Sprintf("%s/data/%s", mount, name)
 					resp, err := client.Logical().Write(path, data)
 					if err != nil {
-						t.Fatalf(fmt.Sprintf("error writing to Vault; err=%s", err))
+						t.Fatalf("error writing to Vault; err=%s", err)
 					}
 
 					if resp == nil {
