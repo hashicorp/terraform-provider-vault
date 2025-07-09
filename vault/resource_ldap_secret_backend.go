@@ -147,11 +147,11 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 	path := d.Get(consts.FieldPath).(string)
 	log.Printf("[DEBUG] Mounting LDAP mount at %q", path)
 	if d.IsNewResource() {
-		if err := createMount(d, client, path, consts.MountTypeLDAP); err != nil {
+		if err := createMount(ctx, d, meta, client, path, consts.MountTypeLDAP); err != nil {
 			return diag.FromErr(err)
 		}
 	} else {
-		if err := updateMount(d, meta, true); err != nil {
+		if err := updateMount(ctx, d, meta, true, false); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -205,7 +205,6 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 	}
 
 	// get automated rotation fields
-
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
@@ -255,7 +254,6 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		consts.FieldUserAttr,
 		consts.FieldUserDN,
 	}
-
 	if provider.IsAPISupported(meta, provider.VaultVersion116) {
 		fields = append(fields, consts.FieldSkipStaticRoleImportRotation)
 	}
@@ -268,15 +266,15 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
+	if err := readMount(ctx, d, meta, true, false); err != nil {
+		return diag.FromErr(err)
+	}
+
 	// add automated rotation fields automatically
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, path); err != nil {
 			return diag.Errorf("error setting automated rotation fields: %s", err)
 		}
-	}
-
-	if err := readMount(d, meta, true); err != nil {
-		return diag.FromErr(err)
 	}
 
 	return nil

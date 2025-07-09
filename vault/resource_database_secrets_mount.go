@@ -242,12 +242,12 @@ func databaseSecretsMountCreateOrUpdate(ctx context.Context, d *schema.ResourceD
 	var root string
 	if d.IsNewResource() {
 		root = d.Get("path").(string)
-		if err := createMount(d, client, root, consts.MountTypeDatabase); err != nil {
+		if err := createMount(ctx, d, meta, client, root, consts.MountTypeDatabase); err != nil {
 			return diag.FromErr(err)
 		}
 	} else {
-		if err := mountUpdate(d, meta); err != nil {
-			return diag.FromErr(err)
+		if err := mountUpdate(ctx, d, meta); err != nil {
+			return err
 		}
 		root = d.Id()
 	}
@@ -292,8 +292,8 @@ func databaseSecretsMountRead(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.FromErr(e)
 	}
 
-	if err := readMount(d, meta, true); err != nil {
-		return diag.FromErr(err)
+	if e := readMount(ctx, d, meta, true, false); e != nil {
+		return diag.FromErr(e)
 	}
 
 	root := d.Id()
@@ -331,8 +331,7 @@ func databaseSecretsMountRead(ctx context.Context, d *schema.ResourceData, meta 
 }
 
 func databaseSecretsMountDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	err := mountDelete(d, meta)
-	return diag.FromErr(err)
+	return mountDelete(ctx, d, meta)
 }
 
 func readDBEngineConfig(d *schema.ResourceData, client *api.Client, store *dbConfigStore, name string, meta interface{}) error {
