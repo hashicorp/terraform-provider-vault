@@ -533,6 +533,9 @@ const (
 	FieldDeletionTime                         = "deletion_time"
 	FieldDestroyed                            = "destroyed"
 	FieldDeleteAllVersions                    = "delete_all_versions"
+	FieldKey                                  = "key"
+	FieldPlaintext                            = "plaintext"
+	FieldCiphertext                           = "ciphertext"
 
 	/*
 		ephemeral resource constants and write-only attributes
