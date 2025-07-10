@@ -252,6 +252,42 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 				Destroy:     false,
 				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
 			},
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "jwt" {
+				  description = "JWT backend"
+				  jwks_url = "%s"
+				  bound_issuer = "%s"
+				  path = "%s"
+				  jwks_pairs = %s
+				}`, "https://www.foobar.com/certs", "api://default", path,
+					`[
+					  	{
+							jwks_url = "https://www.foobar.com/certs" 
+							jwks_ca_pem = "cert"
+					  	}
+					]`,
+				),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+			},
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "jwt" {
+				  description = "JWT backend"
+				  jwks_ca_pem = "%s"
+				  bound_issuer = "%s"
+				  path = "%s"
+				  jwks_pairs = %s
+				}`, "cert", "api://default", path,
+					`[
+					  	{
+							jwks_url = "https://www.foobar.com/certs" 
+							jwks_ca_pem = "cert"
+					  	}
+					]`,
+				),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+			},
 		},
 	})
 }
@@ -414,6 +450,7 @@ resource "vault_namespace" "test" {
 
 func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 	t.Parallel()
+
 	path := acctest.RandomWithPrefix("jwt")
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
@@ -424,7 +461,7 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 					path = "%s"
 				}`, path),
 				Destroy:     false,
-				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url, jwks_pairs, or jwt_validation_pubkeys should be provided"),
 			},
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
@@ -432,7 +469,7 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 						oidc_discovery_url = ""
 					}`, path),
 				Destroy:     false,
-				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url, jwks_pairs, or jwt_validation_pubkeys should be provided"),
 			},
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
@@ -440,7 +477,7 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 					jwks_url = ""
 				}`, path),
 				Destroy:     false,
-				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url, jwks_pairs, or jwt_validation_pubkeys should be provided"),
 			},
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
@@ -448,7 +485,15 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 					jwt_validation_pubkeys = []
 				}`, path),
 				Destroy:     false,
-				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url, jwks_pairs, or jwt_validation_pubkeys should be provided"),
+			},
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
+					path = "%s"
+					jwks_pairs= []
+				}`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url, jwks_pairs, or jwt_validation_pubkeys should be provided"),
 			},
 			{
 				Config: fmt.Sprintf(`
