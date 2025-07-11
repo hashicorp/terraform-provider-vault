@@ -62,6 +62,7 @@ The following arguments are supported:
 
 * `restrict_ca_chain_to_issuer` - If true, only return the issuer CA, otherwise the entire CA certificate chain will be returned if available from the PKI mount.
 
+* `log_level` - The level of logging verbosity, affects only SCEP logs on this mount.
 
 <a id="nestedatt--authenticators"></a>
 ### Nested Schema for `authenticators`
