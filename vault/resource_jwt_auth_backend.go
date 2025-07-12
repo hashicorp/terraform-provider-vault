@@ -110,6 +110,14 @@ func jwtAuthBackendResource() *schema.Resource {
 				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.",
 			},
 
+			"jwks_pairs": {
+				Type:          schema.TypeList,
+				Elem:          &schema.Schema{Type: schema.TypeMap},
+				Optional:      true,
+				ConflictsWith: []string{"jwks_url", "jwks_ca_pem"},
+				Description:   "List of JWKS URL and optional CA certificate pairs. Cannot be used with 'jwks_url' or 'jwks_ca_pem'.",
+			},
+
 			"jwt_validation_pubkeys": {
 				Type:          schema.TypeList,
 				Elem:          &schema.Schema{Type: schema.TypeString},
@@ -178,6 +186,7 @@ func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interfac
 		"jwks_url",
 		"jwt_validation_pubkeys",
 		"provider_config",
+		"jwks_pairs",
 	}
 
 	// to check whether mount migration is required
@@ -193,7 +202,7 @@ func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interfac
 		}
 	}
 
-	return errors.New("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided")
+	return errors.New("exactly one of oidc_discovery_url, jwks_url, jwks_pairs, or jwt_validation_pubkeys should be provided")
 }
 
 // TODO: build this from the Resource Schema?
@@ -206,6 +215,7 @@ var matchingJwtMountConfigOptions = []string{
 	"oidc_response_types",
 	"jwks_url",
 	"jwks_ca_pem",
+	"jwks_pairs",
 	"jwt_validation_pubkeys",
 	"bound_issuer",
 	"jwt_supported_algs",
