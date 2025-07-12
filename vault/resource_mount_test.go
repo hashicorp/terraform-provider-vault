@@ -205,6 +205,11 @@ func TestResourceMount_AllowedResponseHeaders(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourcePath,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: fmt.Sprintf(`
 				resource "vault_mount" "lol" {
 					path = "%s"
@@ -212,6 +217,8 @@ func TestResourceMount_AllowedResponseHeaders(t *testing.T) {
 
 					default_lease_ttl_seconds = 157680000
 					max_lease_ttl_seconds     = 157680000
+
+					allowed_response_headers = []
 				}
 				`, path),
 				Check: resource.ComposeTestCheckFunc(

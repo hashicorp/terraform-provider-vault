@@ -40,7 +40,8 @@ func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
 		data.PassthroughRequestHeaders = expandStringSliceWithEmpty(v.([]interface{}), true)
 	}
 	if v, ok := raw["allowed_response_headers"]; ok {
-		data.AllowedResponseHeaders = expandStringSliceWithEmpty(v.([]interface{}), true)
+		s := expandStringSliceWithEmpty(v.([]interface{}), true)
+		data.AllowedResponseHeaders = &s
 	}
 	if v, ok := raw["token_type"]; ok {
 		data.TokenType = v.(string)

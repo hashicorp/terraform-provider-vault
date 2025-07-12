@@ -30,7 +30,7 @@ func TestExpandAuthMethodTune(t *testing.T) {
 		AuditNonHMACResponseKeys:  nil,
 		ListingVisibility:         "unauth",
 		PassthroughRequestHeaders: []string{"X-Custom", "X-Mas"},
-		AllowedResponseHeaders:    []string{"X-Response-Custom", "X-Response-Mas"},
+		AllowedResponseHeaders:    &[]string{"X-Response-Custom", "X-Response-Mas"},
 		TokenType:                 "default-batch",
 	}
 
