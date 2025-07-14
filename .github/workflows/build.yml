@@ -67,7 +67,7 @@ jobs:
         - "vault-enterprise:1.17.17-ent"
         - "vault-enterprise:1.18.10-ent"
         - "vault-enterprise:1.19.5-ent"
-        - "vault-enterprise:1.20.0-ent"
+        - "vault-enterprise:1.20.1-ent"
         - "vault:latest"
     services:
       vault:
