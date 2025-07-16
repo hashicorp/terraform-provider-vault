@@ -172,7 +172,58 @@ func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
 	})
 }
 
-func TestResourceMount_AllowedResponseHeaders(t *testing.T) {
+func TestResourceMount_AllowedResponseHeaders_Removal(t *testing.T) {
+	resourcePath := "vault_mount.lol"
+	path := "example-" + acctest.RandString(10)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_mount" "lol" {
+					path = "%s"
+					type = "pki"
+
+					default_lease_ttl_seconds = 157680000
+					max_lease_ttl_seconds     = 157680000
+
+					allowed_response_headers = [
+						"Content-Transfer-Encoding",
+						"Content-Length",
+						"WWW-Authenticate",
+					]
+				}
+				`, path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourcePath, "path", path),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.#", "3"),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.0", "Content-Transfer-Encoding"),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.1", "Content-Length"),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.2", "WWW-Authenticate"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_mount" "lol" {
+					path = "%s"
+					type = "pki"
+
+					default_lease_ttl_seconds = 157680000
+					max_lease_ttl_seconds     = 157680000
+				}
+				`, path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourcePath, "path", path),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestResourceMount_AllowedResponseHeaders_EmptySlice(t *testing.T) {
 	resourcePath := "vault_mount.lol"
 	path := "example-" + acctest.RandString(10)
 
