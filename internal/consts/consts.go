@@ -471,6 +471,7 @@ const (
 	FieldAssumeRoleSessionName         = "assume_role_session_name"
 	FieldMaxCrlEntries                 = "max_crl_entries"
 	FieldChallenge                     = "challenge"
+	FieldRootPasswordTTL               = "root_password_ttl"
 
 	FieldDisableCriticalExtensionChecks = "disable_critical_extension_checks"
 	FieldDisablePathLengthChecks        = "disable_path_length_checks"
