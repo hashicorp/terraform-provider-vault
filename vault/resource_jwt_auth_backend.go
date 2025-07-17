@@ -115,7 +115,7 @@ func jwtAuthBackendResource() *schema.Resource {
 				Elem:          &schema.Schema{Type: schema.TypeMap},
 				Optional:      true,
 				ConflictsWith: []string{"jwks_url", "jwks_ca_pem"},
-				Description:   "List of JWKS URL and optional CA certificate pairs. Cannot be used with 'jwks_url' or 'jwks_ca_pem'.",
+				Description:   "List of JWKS URL and optional CA certificate pairs. Cannot be used with 'jwks_url' or 'jwks_ca_pem'. Requires Vault 1.16+.",
 			},
 
 			"jwt_validation_pubkeys": {
