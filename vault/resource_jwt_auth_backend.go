@@ -269,6 +269,8 @@ func jwtAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta inte
 }
 
 func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -324,6 +326,11 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		if configOption == "oidc_client_secret" {
 			continue
 		}
+
+		if configOption == "jwks_pairs" && !useAPIVer116 {
+			continue
+		}
+
 		d.Set(configOption, config.Data[configOption])
 	}
 
@@ -365,6 +372,8 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 }
 
 func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -383,15 +392,19 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	configuration := map[string]interface{}{}
 	for _, configOption := range matchingJwtMountConfigOptions {
 		if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
-			configuration[configOption] = d.Get(configOption)
-
-			if configOption == "provider_config" {
+			switch configOption {
+			case "jwks_pairs":
+				if useAPIVer116 {
+					configuration[configOption] = d.Get(configOption)
+				}
+			case "provider_config":
 				newConfig, err := convertProviderConfigValues(d.Get(configOption).(map[string]interface{}))
 				if err != nil {
 					return diag.FromErr(err)
 				}
-
 				configuration[configOption] = newConfig
+			default:
+				configuration[configOption] = d.Get(configOption)
 			}
 		}
 	}
