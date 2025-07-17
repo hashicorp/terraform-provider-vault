@@ -72,6 +72,7 @@ func getAzureBackendChecks(resourceName, path string, isUpdate bool) resource.Te
 		resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "22222222-3333-4444-5555-444444444444"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecret, "098765432109876543214"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldEnvironment, "AzurePublicCloud"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldRootPasswordTTL, "2000000"),
 	}
 
 	if !isUpdate {
@@ -264,6 +265,7 @@ resource "vault_azure_secret_backend" "test" {
   client_secret           = "098765432109876543214"
   environment             = "AzurePublicCloud"
   disable_remount         = true
+  root_password_ttl 	  = 2000000
 }`, path)
 }
 
