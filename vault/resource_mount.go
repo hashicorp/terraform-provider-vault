@@ -202,7 +202,6 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func createMount(d *schema.ResourceData, client *api.Client, path string, mountType string) error {
-	fmt.Println("-- creating a mount")
 	input := &api.MountInput{
 		Type:        mountType,
 		Description: d.Get(consts.FieldDescription).(string),
@@ -266,7 +265,6 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
-	fmt.Println("-- updating a mount")
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return err
@@ -315,8 +313,6 @@ func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) err
 		config.PassthroughRequestHeaders = expandStringSlice(d.Get(consts.FieldPassthroughRequestHeaders).([]interface{}))
 	}
 
-	fmt.Println("-- about to check if allowed response headers field has changed --")
-
 	if d.HasChange(consts.FieldAllowedResponseHeaders) {
 		var headers *[]string
 
@@ -353,8 +349,6 @@ func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) err
 	}
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)
-
-	fmt.Printf("-- here's the final config we're passing to mount tune: %#v\n", config)
 
 	// TODO: remove this work-around once VAULT-5521 is fixed
 	var tries int
@@ -395,7 +389,6 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
-	fmt.Println("-- READ GOT CALLED")
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -407,7 +400,6 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 
 	ctx := context.Background()
 	mount, err := mountutil.GetMount(ctx, client, path)
-	fmt.Printf("-- mount = %#v\n", mount)
 	if err != nil {
 		if mountutil.IsMountNotFoundError(err) {
 			log.Printf("[WARN] Mount %q not found, removing from state.", path)
