@@ -320,42 +320,8 @@ func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) err
 	if d.HasChange(consts.FieldAllowedResponseHeaders) {
 		var headers *[]string
 
-		// This is slightly odd, but the goal here is to be able to tell the difference between
-		// the field not being present at all in the HCL, in which case the field is nil, and
-		// we should not send it in our request to Vault, OR the field is intentionally set
-		// to an empty slice, meaning the user wants to remove the headers completely, in which
-		// case we should send an empty slice to Vault. None of the common schema methods could
-		// tell the difference between the two, instead casting null to an empty slice. So, here
-		// we are.
-
-		// rawConfig := d.GetRawConfig()
-		// rawHeaders := rawConfig.GetAttr(consts.FieldAllowedResponseHeaders)
-		//
-		// // this means the field was not present in the HCL at all, so don't touch it
-		// if rawHeaders.IsNull() {
-		// 	headers = nil
-		// } else {
-		// 	// this means the field was present, so we can check its value
-		// 	numHeaders := rawHeaders.LengthInt()
-		// 	if numHeaders == 0 {
-		// 		headers = &[]string{} // user set it to an empty slice, so we should send an empty slice
-		// 	} else {
-		// 		// set normally to a slice of strings
-		// 		// x := expandStringSlice(raw)
-		// 		// headers = &x
-		// 		err := gocty.FromCtyValue(rawHeaders, &headers)
-		// 		if err != nil {
-		// 			return err
-		// 		}
-		//
-		// 		fmt.Printf("-- headers = %#v\n", headers)
-		// 	}
-		// }
-
-		oldVal, newVal := d.GetChange(consts.FieldAllowedResponseHeaders)
-		fmt.Printf("-- oldVal = %#v, newVal = %#v\n", oldVal, newVal)
+		_, newVal := d.GetChange(consts.FieldAllowedResponseHeaders)
 		if newVal != nil {
-			fmt.Println("-- newVal is not nil")
 			raw, ok := newVal.([]interface{})
 			if ok && len(raw) > 0 {
 				x := expandStringSlice(raw)
@@ -368,19 +334,6 @@ func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) err
 		}
 
 		config.AllowedResponseHeaders = headers
-
-		// fmt.Println("-- yes, allowed response headers field has changed --")
-		// raw := d.Get(consts.FieldAllowedResponseHeaders)
-		// fmt.Printf("-- raw = %#v\n", raw)
-		// x := expandStringSlice(d.Get(consts.FieldAllowedResponseHeaders).([]interface{}))
-		// fmt.Printf("-- x = %#v\n", x)
-		// if len(x) > 0 {
-		// 	fmt.Println("-- x is NOT empty, setting it")
-		// 	config.AllowedResponseHeaders = &x
-		// } else {
-		// 	fmt.Println("-- x is empty, not including it")
-		// }
-		// config.AllowedResponseHeaders = expandStringSlice(d.Get(consts.FieldAllowedResponseHeaders).([]interface{}))
 	}
 
 	if d.HasChange(consts.FieldDelegatedAuthAccessors) {
