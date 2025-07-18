@@ -396,6 +396,8 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 			case "jwks_pairs":
 				if useAPIVer116 {
 					configuration[configOption] = d.Get(configOption)
+				} else {
+					log.Printf("[WARN] Skipping jwt auth %q update for %q, requires Vault 1.16+", configOption, path)
 				}
 			case "provider_config":
 				newConfig, err := convertProviderConfigValues(d.Get(configOption).(map[string]interface{}))
