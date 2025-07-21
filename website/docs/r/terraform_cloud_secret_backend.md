@@ -38,8 +38,13 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
    *Available only for Vault Enterprise*.
 
-* `token` - (Required) The Terraform Cloud management token this backend should 
+* `token` - (Optional) The Terraform Cloud management token this backend should 
   use to issue new tokens.
+
+* `token_wo` - (Optional) The Terraform Cloud management token this backend should 
+  use to issue new tokens. **Note**: This property is write-only and will not be read from the API.
+
+* `token_wo_version` - (Optional) The version of the `token_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ~> **Important** Because Vault does not support reading the configured
 token back from the API, Terraform cannot detect and correct drift
