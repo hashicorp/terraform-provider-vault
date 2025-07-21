@@ -135,7 +135,7 @@ func terraformCloudSecretRoleWrite(d *schema.ResourceData, meta interface{}) err
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion120) {
-		// parse automated root rotation fields if Enterprise 1.19 server
+		// parse credential_type field if 1.20 server or higher
 		if v, ok := d.GetOk("credential_type"); ok {
 			payload["credential_type"] = v
 		}
