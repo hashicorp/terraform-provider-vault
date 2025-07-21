@@ -3,6 +3,8 @@
 FEATURES:
 * Add support for `root_password_ttl` in `vault_azure_secret_backend` resource. Requires Vault 1.15.0+ ([#2529](https://github.com/hashicorp/terraform-provider-vault/pull/2529))
 
+* `vault_terraform_cloud_secret_backend` now supports a write-only token argument.
+
 ## 5.1.0 (Jul 9, 2025)
 
 FEATURES:
