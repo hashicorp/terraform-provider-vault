@@ -134,6 +134,13 @@ func terraformCloudSecretRoleWrite(d *schema.ResourceData, meta interface{}) err
 		payload["description"] = v
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion120) {
+		// parse automated root rotation fields if Enterprise 1.19 server
+		if v, ok := d.GetOk("credential_type"); ok {
+			payload["credential_type"] = v
+		}
+	}
+
 	log.Printf("[DEBUG] Configuring Terraform Cloud secrets backend role at %q", path)
 
 	if _, err := client.Logical().Write(path, payload); err != nil {
