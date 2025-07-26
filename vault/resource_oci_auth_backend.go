@@ -109,7 +109,7 @@ func ociAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		ociAuthPath = "auth/" + newMount
 		path = ociAuthBackendConfigPath(newMount)
 
-		if d.HasChanges(consts.FieldIdentityTokenKey, consts.FieldDescription) {
+		if d.HasChanges(consts.FieldDescription) {
 			desc := d.Get(consts.FieldDescription).(string)
 			config := api.MountConfigInput{
 				Description: &desc,
@@ -121,10 +121,7 @@ func ociAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	data := map[string]interface{}{}
-
-	if d.HasChange(consts.FieldOCIHomeTenancyID) {
-		data[consts.FieldOCIHomeTenancyID] = d.Get(consts.FieldOCIHomeTenancyID)
-	}
+	data[consts.FieldOCIHomeTenancyID] = d.Get(consts.FieldOCIHomeTenancyID)
 
 	if d.HasChange(consts.FieldTune) {
 		log.Printf("[INFO] %s Auth %q tune configuration changed", consts.AuthMethodOCI, ociAuthPath)

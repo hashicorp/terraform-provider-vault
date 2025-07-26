@@ -17,12 +17,13 @@ more information.
 ## Example Usage
 
 ```hcl
-resource "vault_auth_backend" "oci" {
-  type = "oci"
+resource "vault_oci_auth_backend" "oci" {
+  path            = "oci"
+  home_tenancy_id = "ocid1.tenancy.oc1..aaaaaaaah7zkvaffv26pzyauoe2zbnionqvhvsexamplee557wakiofi4ysgqq"
 }
 
 resource "vault_oci_auth_backend_role" "example" {
-  backend        = vault_auth_backend.oci.path
+  backend        = vault_oci_auth_backend.oci.path
   name           = "test-role"
   ocid_list      = ["ocid1.group.oc1..aaaaaaaabmyiinfq32y5aha3r2yo4exampleo4yg3fjk2sbne4567tropaa", "ocid1.dynamicgroup.oc1..aaaaaaaabvfwct33xri5examplegov4zyjp3rd5d7sk9jjdggxijhco56hrq"]
   token_ttl      = 60

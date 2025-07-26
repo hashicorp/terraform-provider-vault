@@ -4,27 +4,28 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccOCIAuthBackendConfig_import(t *testing.T) {
-	backend := acctest.RandomWithPrefix("oci")
+	path := acctest.RandomWithPrefix("oci")
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckOCIAuthBackendConfigDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckOCIAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOCIAuthBackendConfig_basic(backend),
-				Check:  testAccOCIAuthBackendConfigCheck_attrs(backend),
+				Config: testAccOCIAuthBackendConfig_basic(path),
+				Check:  testAccOCIAuthBackendConfigCheck_attrs(path),
 			},
 			{
 				ResourceName:      "vault_oci_auth_backend.config",
@@ -39,19 +40,19 @@ func TestAccOCIAuthBackendConfig_import(t *testing.T) {
 }
 
 func TestAccOCIAuthBackendConfig_basic(t *testing.T) {
-	backend := acctest.RandomWithPrefix("oci")
+	path := acctest.RandomWithPrefix("oci")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckOCIAuthBackendConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckOCIAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOCIAuthBackendConfig_basic(backend),
-				Check:  testAccOCIAuthBackendConfigCheck_attrs(backend),
+				Config: testAccOCIAuthBackendConfig_basic(path),
+				Check:  testAccOCIAuthBackendConfigCheck_attrs(path),
 			},
 			{
-				Config: testAccOCIAuthBackendConfig_updated(backend),
-				Check:  testAccOCIAuthBackendConfigCheck_attrs(backend),
+				Config: testAccOCIAuthBackendConfig_updated(path),
+				Check:  testAccOCIAuthBackendConfigCheck_attrs(path),
 			},
 		},
 	})
@@ -75,13 +76,13 @@ func testAccCheckOCIAuthBackendConfigDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccOCIAuthBackendConfig_basic(backend string) string {
+func testAccOCIAuthBackendConfig_basic(path string) string {
 	return fmt.Sprintf(`
 resource "vault_oci_auth_backend" "config" {
   path = "%s"
   home_tenancy_id = "ocid1.tenancy.oc1..aaaaaaaah7zkvaffv26pzyauoe2zbnionqvhvsexamplee557wakiofi4ysgqq"
 }
-`, backend)
+`, path)
 }
 
 func testAccOCIAuthBackendConfigCheck_attrs(backend string) resource.TestCheckFunc {

@@ -91,8 +91,6 @@ func ociAuthRoleCreate(ctx context.Context, d *schema.ResourceData, meta interfa
 
 	path := ociRoleResourcePath(backend, name)
 
-	log.Printf("[DEBUG] Writing %s auth backend role %q", consts.AuthMethodOCI, path)
-
 	data := map[string]interface{}{}
 	ociRoleUpdateFields(d, data, true)
 
