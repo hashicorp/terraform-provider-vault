@@ -194,6 +194,7 @@ func testGCPAuthBackendRoleCheck_attrs(resourceName, backend, name string) resou
 			"bound_zones":            "bound_zones",
 			"bound_labels":           "bound_labels",
 			"add_group_aliases":      "add_group_aliases",
+			"role_id":                "role_id",
 		}
 
 		for _, v := range commonTokenFields {
