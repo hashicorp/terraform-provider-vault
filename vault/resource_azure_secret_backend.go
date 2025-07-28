@@ -6,17 +6,16 @@ package vault
 import (
 	"context"
 	"fmt"
-	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
@@ -100,6 +99,12 @@ func azureSecretBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The TTL of generated identity tokens in seconds.",
 			},
+			consts.FieldRootPasswordTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The TTL in seconds of the root password in Azure when rotate-root generates a new client secret",
+			},
 		},
 	}, false)
 
@@ -181,7 +186,12 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.Errorf("error reading from Vault: %s", err)
 	}
 
-	for _, k := range []string{consts.FieldClientID, consts.FieldSubscriptionID, consts.FieldTenantID} {
+	for _, k := range []string{
+		consts.FieldClientID,
+		consts.FieldSubscriptionID,
+		consts.FieldTenantID,
+		consts.FieldRootPasswordTTL,
+	} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return diag.FromErr(err)
@@ -305,6 +315,13 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 			data[k] = d.Get(k)
 		} else if d.HasChange(k) {
 			data[k] = d.Get(k)
+		}
+	}
+
+	useAPIVer115 := provider.IsAPISupported(meta, provider.VaultVersion115)
+	if useAPIVer115 {
+		if v, ok := d.GetOk(consts.FieldRootPasswordTTL); ok && v != 0 {
+			data[consts.FieldRootPasswordTTL] = v.(int)
 		}
 	}
 
