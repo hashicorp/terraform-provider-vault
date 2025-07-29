@@ -527,6 +527,10 @@ const (
 	FieldDestroyed                            = "destroyed"
 	FieldDeleteAllVersions                    = "delete_all_versions"
 
+	FieldDefaultAuthType    = "default_auth_type"
+	FieldBackupAuthTypes    = "backup_auth_types"
+	FieldDisableInheritance = "disable_inheritance"
+
 	/*
 		ephemeral resource constants and write-only attributes
 	*/
@@ -623,6 +627,7 @@ const (
 	VaultVersion118  = "1.18.0"
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
+	VaultVersion120  = "1.20.0"
 
 	/*
 		Vault auth methods

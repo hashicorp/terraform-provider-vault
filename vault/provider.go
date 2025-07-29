@@ -819,6 +819,10 @@ var (
 			Resource:      UpdateSchemaResource(configUICustomMessageResource()),
 			PathInventory: []string{"/sys/config/ui/custom-messages"},
 		},
+		"vault_config_ui_default_auth": {
+			Resource:      configUILoginDefaultAuthResource(),
+			PathInventory: []string{"/sys/config/ui/default-auth"},
+		},
 		"vault_plugin": {
 			// Only available in the root namespace, don't add namespace to the schema.
 			Resource:      pluginResource(),
