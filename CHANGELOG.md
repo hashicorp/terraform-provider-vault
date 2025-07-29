@@ -61,6 +61,7 @@ BUGS:
 
 FEATURES:
 
+* Add resource `vault_generic_secret_item` to allow a more granular management of Vault generic secrets ([#2394](https://github.com/hashicorp/terraform-provider-vault/pull/
 * Update `vault_pki_secret_backend_root_cert` and `vault_pki_secret_backend_root_sign_intermediate` to support the new fields for the name constraints extension. Requires Vault 1.19+ ([#2396](https://github.com/hashicorp/terraform-provider-vault/pull/2396)).
 * Update `vault_pki_secret_backend_issuer` resource with the new issuer configuration fields to control certificate verification. Requires Vault Enterprise 1.19+ ([#2400](https://github.com/hashicorp/terraform-provider-vault/pull/2400)).
 * Add support for certificate revocation with `revoke_with_key` in `vault_pki_secret_backend_cert` ([#2242](https://github.com/hashicorp/terraform-provider-vault/pull/2242))
