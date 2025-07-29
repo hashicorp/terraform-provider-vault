@@ -1,7 +1,7 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_oci_auth_backend_config resource"
-sidebar_current: "docs-vault-resource-oci-auth-backend-config"
+page_title: "Vault: vault_oci_auth_backend resource"
+sidebar_current: "docs-vault-resource-oci-auth-backend"
 description: |-
   Configures the OCI (Oracle Cloud Infrastructure) Auth Backend in Vault.
 ---
