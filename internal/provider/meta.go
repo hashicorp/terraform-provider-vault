@@ -365,6 +365,7 @@ func (p *ProviderMeta) setClient() error {
 	}
 
 	if namespace != "" {
+		// TODO: Add a debug log here
 		// set the namespace on the parent client
 		client.SetNamespace(namespace)
 	}
@@ -616,6 +617,7 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 // GetResourceDataStr returns the value for a given ResourceData field
 // If the value is the zero value, then it checks the environment variable. If
 // the environment variable is empty, the default dv is returned
+// TODO: Add test
 func GetResourceDataStr(d *schema.ResourceData, field, env, dv string) string {
 	if s := d.Get(field).(string); s != "" {
 		return s
@@ -655,6 +657,7 @@ func GetResourceDataInt(d *schema.ResourceData, field, env string, dv int) int {
 // GetResourceDataBool returns the value for a given ResourceData field
 // If the value is the zero value, then it checks the environment variable. If
 // the environment variable is empty, the default dv is returned
+// TODO: Add test
 func GetResourceDataBool(d *schema.ResourceData, field, env string, dv bool) bool {
 	// since Get does not tell us if the value is false or unset,
 	// we only return this value if it is non-nil, else we return the default
@@ -692,6 +695,7 @@ func GetResourceDataBool(d *schema.ResourceData, field, env string, dv bool) boo
 	}
 
 	// If the value is set in config, return using d.Get
+	// TODO: Add type assertion check to avoid panics
 	return d.Get(field).(bool)
 }
 
