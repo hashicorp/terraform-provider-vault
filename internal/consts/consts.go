@@ -221,6 +221,7 @@ const (
 	FieldGroupID                       = "group_id"
 	FieldGroupName                     = "group_name"
 	FieldExternal                      = "external"
+	FieldExternalValidation            = "external_validation"
 	FieldInternal                      = "internal"
 	FieldFailureTolerance              = "failure_tolerance"
 	FieldHealthy                       = "healthy"
@@ -267,6 +268,8 @@ const (
 	FieldAllowLocalhost                = "allow_localhost"
 	FieldAllowedDomains                = "allowed_domains"
 	FieldAllowedDomainsTemplate        = "allowed_domains_template"
+	FieldAllowedDigestAlgorithms       = "allowed_digest_algorithms"
+	FieldAllowedEncryptionAlgorithms   = "allowed_encryption_algorithms"
 	FieldAllowBareDomains              = "allow_bare_domains"
 	FieldAllowSubdomains               = "allow_subdomains"
 	FieldAllowGlobDomains              = "allow_glob_domains"
@@ -332,6 +335,7 @@ const (
 	FieldKeyRef                        = "key_ref"
 	FieldPemBundle                     = "pem_bundle"
 	FieldCAChain                       = "ca_chain"
+	FieldRestrictCAChainToIssuer       = "restrict_ca_chain_to_issuer"
 	FieldCSR                           = "csr"
 	FieldUseCSRValues                  = "use_csr_values"
 	FieldCertificateBundle             = "certificate_bundle"
@@ -466,6 +470,8 @@ const (
 	FieldAssumeRoleArn                 = "assume_role_arn"
 	FieldAssumeRoleSessionName         = "assume_role_session_name"
 	FieldMaxCrlEntries                 = "max_crl_entries"
+	FieldChallenge                     = "challenge"
+	FieldRootPasswordTTL               = "root_password_ttl"
 
 	FieldDisableCriticalExtensionChecks = "disable_critical_extension_checks"
 	FieldDisablePathLengthChecks        = "disable_path_length_checks"
@@ -501,6 +507,8 @@ const (
 	FieldHybridKeyTypePQC         = "hybrid_key_type_pqc"
 	FieldSignatureContext         = "signature_context"
 	FieldDisableAutomatedRotation = "disable_automated_rotation"
+	FieldMACLength                = "mac_length"
+	FieldURLMACLength             = "url_mac_length"
 
 	FieldIntervalDuration                     = "interval_duration"
 	FieldMaintainStoredCertificateCounts      = "maintain_stored_certificate_counts"
@@ -543,6 +551,8 @@ const (
 	FieldCredentialsWOVersion = "credentials_wo_version"
 	FieldDataJSONWO           = "data_json_wo"
 	FieldDataJSONWOVersion    = "data_json_wo_version"
+	FieldPrivateKeyWO         = "private_key_wo"
+	FieldPrivateKeyWOVersion  = "private_key_wo_version"
 
 	/*
 		common environment variables
