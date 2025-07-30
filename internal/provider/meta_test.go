@@ -630,3 +630,222 @@ func TestIsEnterpriseSupported(t *testing.T) {
 		})
 	}
 }
+
+func TestGetResourceDataStr(t *testing.T) {
+	tests := map[string]struct {
+		schemaData   map[string]interface{}
+		field        string
+		env          string
+		envValue     string
+		defaultValue string
+		expected     string
+	}{
+		"field: field present": {
+			schemaData: map[string]interface{}{
+				"test_field": "field_value",
+			},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "env_value",
+			defaultValue: "default_value",
+			expected:     "field_value",
+		},
+		"env: field missing, env present": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "env_value",
+			defaultValue: "default_value",
+			expected:     "env_value",
+		},
+		"env: field empty, env present": {
+			schemaData: map[string]interface{}{
+				"test_field": "",
+			},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "env_value",
+			defaultValue: "default_value",
+			expected:     "env_value",
+		},
+		"default: field missing, env empty": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "",
+			defaultValue: "default_value",
+			expected:     "default_value",
+		},
+		"default: field missing, env missing": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "",
+			envValue:     "",
+			defaultValue: "default_value",
+			expected:     "default_value",
+		},
+		"default: field empty, env empty": {
+			schemaData: map[string]interface{}{
+				"test_field": "",
+			},
+			field:        "test_field",
+			envValue:     "",
+			defaultValue: "default_value",
+			expected:     "default_value",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Set up environment variable if specified
+			if tt.env != "" {
+				originalValue := os.Getenv(tt.env)
+				if tt.envValue != "" {
+					err := os.Setenv(tt.env, tt.envValue)
+					if err != nil {
+						t.Fatalf("failed to set environment variable: %v", err)
+					}
+				} else {
+					os.Unsetenv(tt.env)
+				}
+
+				// Clean up environment variable after test
+				defer func() {
+					if originalValue != "" {
+						os.Setenv(tt.env, originalValue)
+					} else {
+						os.Unsetenv(tt.env)
+					}
+				}()
+			}
+
+			testSchema := map[string]*schema.Schema{
+				"test_field": {
+					Type:     schema.TypeString,
+					Optional: true,
+				},
+			}
+
+			d := schema.TestResourceDataRaw(t, testSchema, tt.schemaData)
+
+			result := GetResourceDataStr(d, tt.field, tt.env, tt.defaultValue)
+			if result != tt.expected {
+				t.Errorf("GetResourceDataStr() got = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetResourceDataInt(t *testing.T) {
+	tests := map[string]struct {
+		schemaData   map[string]interface{}
+		field        string
+		env          string
+		envValue     string
+		defaultValue int
+		expected     int
+	}{
+		"field: field present": {
+			schemaData: map[string]interface{}{
+				"test_field": 42,
+			},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "100",
+			defaultValue: 200,
+			expected:     42,
+		},
+		"env: field missing, env present": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "100",
+			defaultValue: 200,
+			expected:     100,
+		},
+		"env: field zero, env present": {
+			schemaData: map[string]interface{}{
+				"test_field": 0,
+			},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "100",
+			defaultValue: 200,
+			expected:     100,
+		},
+		"default: field missing, env empty": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "",
+			defaultValue: 200,
+			expected:     200,
+		},
+		"default: field missing, env missing": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "",
+			envValue:     "",
+			defaultValue: 200,
+			expected:     200,
+		},
+		"default: field zero, env empty": {
+			schemaData: map[string]interface{}{
+				"test_field": 0,
+			},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "",
+			defaultValue: 200,
+			expected:     200,
+		},
+		"default: field missing, env invalid": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "invalid_int",
+			defaultValue: 200,
+			expected:     200,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Set up environment variable if specified
+			if tt.env != "" {
+				originalValue := os.Getenv(tt.env)
+				if tt.envValue != "" {
+					err := os.Setenv(tt.env, tt.envValue)
+					if err != nil {
+						t.Fatalf("failed to set environment variable: %v", err)
+					}
+				} else {
+					os.Unsetenv(tt.env)
+				}
+
+				// Clean up environment variable after test
+				defer func() {
+					if originalValue != "" {
+						os.Setenv(tt.env, originalValue)
+					} else {
+						os.Unsetenv(tt.env)
+					}
+				}()
+			}
+
+			testSchema := map[string]*schema.Schema{
+				"test_field": {
+					Type:     schema.TypeInt,
+					Optional: true,
+				},
+			}
+
+			d := schema.TestResourceDataRaw(t, testSchema, tt.schemaData)
+
+			result := GetResourceDataInt(d, tt.field, tt.env, tt.defaultValue)
+			if result != tt.expected {
+				t.Errorf("GetResourceDataInt() got = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
