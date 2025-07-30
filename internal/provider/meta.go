@@ -262,6 +262,7 @@ func (p *ProviderMeta) setClient() error {
 
 	// Set the namespace to the requested namespace, if provided
 	namespace := d.Get(consts.FieldNamespace).(string)
+	log.Printf("[DEBUG] !!!HELEN!!! setClient() init namespace %q", namespace)
 
 	authLogin, err := GetAuthLogin(d)
 	if err != nil {
@@ -270,6 +271,8 @@ func (p *ProviderMeta) setClient() error {
 
 	var token string
 	if authLogin != nil {
+		log.Printf("[DEBUG] !!!HELEN!!! setClient() using authLogin")
+
 		// the clone is only used to auth to Vault
 		clone, err := client.Clone()
 		if err != nil {
@@ -300,6 +303,8 @@ func (p *ProviderMeta) setClient() error {
 
 		token = secret.Auth.ClientToken
 	} else {
+		log.Printf("[DEBUG] !!!HELEN!!! setClient() using token")
+
 		// try and get the token from the config or token helper
 		token, err = GetToken(d)
 		if err != nil {
@@ -322,11 +327,13 @@ func (p *ProviderMeta) setClient() error {
 	if tokenInfo == nil {
 		return fmt.Errorf("no token information returned from self lookup")
 	}
+	fmt.Printf("[DEBUG] !!!HELEN!!! setClient() token info: %v", tokenInfo)
 
 	warnMinTokenTTL(tokenInfo)
 
 	var tokenNamespace string
 	if v, ok := tokenInfo.Data[consts.FieldNamespacePath]; ok {
+		fmt.Printf("[DEBUG] !!!HELEN!!! setClient() tokenNamespace: %v", v)
 		tokenNamespace = strings.Trim(v.(string), "/")
 	}
 
@@ -361,6 +368,8 @@ func (p *ProviderMeta) setClient() error {
 	}
 
 	if namespace != "" {
+		// TODO: Add a debug log here
+		log.Printf("[DEBUG] !!!HELEN!!! setClient() setting namespace to %q", namespace)
 		// set the namespace on the parent client
 		client.SetNamespace(namespace)
 	}
@@ -461,16 +470,20 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	var ns string
 	switch v := i.(type) {
 	case string:
+		log.Printf("[DEBUG] !!!HELEN!!! GetClient() string ns %q", v)
 		ns = v
 	case *schema.ResourceData:
 		if v, ok := v.GetOk(consts.FieldNamespace); ok {
+			log.Printf("[DEBUG] !!!HELEN!!! GetClient() *schema.ResourceData ns %q", v.(string))
 			ns = v.(string)
 		}
 	case *schema.ResourceDiff:
 		if v, ok := v.GetOk(consts.FieldNamespace); ok {
+			log.Printf("[DEBUG] !!!HELEN!!! GetClient() *schema.ResourceDiff ns %q", v.(string))
 			ns = v.(string)
 		}
 	case *terraform.InstanceState:
+		log.Printf("[DEBUG] !!!HELEN!!! GetClient() *terraform.InstanceState ns %q", v.Attributes[consts.FieldNamespace])
 		ns = v.Attributes[consts.FieldNamespace]
 	default:
 		return nil, fmt.Errorf("GetClient() called with unsupported type %T", v)
@@ -486,6 +499,7 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	}
 
 	if ns != "" {
+		log.Printf("[DEBUG] !!!HELEN!!! GetClient() using namespaced client GetNSClient() for ns %q", ns)
 		return p.GetNSClient(ns)
 	}
 
