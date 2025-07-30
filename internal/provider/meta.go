@@ -380,6 +380,12 @@ func (p *ProviderMeta) setClient() error {
 		// TODO: Add a debug log here
 		log.Printf("[DEBUG] !!!HELEN!!! setClient() setting namespace to %q", namespace)
 
+		// set the namespace on the provider to ensure that all child
+		// namespace paths are properly honoured.
+		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
+			return err
+		}
+
 		// set the namespace on the parent client
 		client.SetNamespace(namespace)
 	}
