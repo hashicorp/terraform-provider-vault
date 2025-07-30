@@ -231,7 +231,8 @@ func createMount(d *schema.ResourceData, client *api.Client, path string, mountT
 	}
 
 	if v, ok := d.GetOk(consts.FieldAllowedResponseHeaders); ok {
-		input.Config.AllowedResponseHeaders = expandStringSlice(v.([]interface{}))
+		s := expandStringSlice(v.([]interface{}))
+		input.Config.AllowedResponseHeaders = &s
 	}
 
 	if v, ok := d.GetOk(consts.FieldDelegatedAuthAccessors); ok {
@@ -313,7 +314,22 @@ func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) err
 	}
 
 	if d.HasChange(consts.FieldAllowedResponseHeaders) {
-		config.AllowedResponseHeaders = expandStringSlice(d.Get(consts.FieldAllowedResponseHeaders).([]interface{}))
+		var headers *[]string
+
+		_, newVal := d.GetChange(consts.FieldAllowedResponseHeaders)
+		if newVal != nil {
+			raw, ok := newVal.([]interface{})
+			if ok && len(raw) > 0 {
+				x := expandStringSlice(raw)
+				headers = &x
+			} else {
+				headers = &[]string{}
+			}
+		} else {
+			headers = nil
+		}
+
+		config.AllowedResponseHeaders = headers
 	}
 
 	if d.HasChange(consts.FieldDelegatedAuthAccessors) {
