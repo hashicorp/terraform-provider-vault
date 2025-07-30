@@ -111,6 +111,13 @@ func transitSignDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	payload := map[string]interface{}{}
 
+	if batchInput, ok := d.GetOk(consts.FieldBatchInput); ok {
+		payload[consts.FieldBatchInput], e = convertBatchInput(batchInput, []string{consts.FieldKeyVersion})
+		if e != nil {
+			return e
+		}
+	}
+
 	signAPIStringFields := []string{
 		consts.FieldKeyVersion,
 		consts.FieldHashAlgorithm,
@@ -118,11 +125,9 @@ func transitSignDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 		consts.FieldReference,
 		consts.FieldContext,
 		consts.FieldSignatureContext,
-		consts.FieldPrehashed,
 		consts.FieldSignatureAlgorithm,
 		consts.FieldMarshalingAlgorithm,
 		consts.FieldSaltLength,
-		consts.FieldBatchInput,
 	}
 
 	for _, f := range signAPIStringFields {

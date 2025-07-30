@@ -13,18 +13,12 @@ import (
 func ToAPIModel(data, model any) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf(
-			"An unexpected error occurred while attempting to marshal the Vault response.\n\n" +
-				"Error: " + err.Error(),
-		)
+		return fmt.Errorf("an unexpected error occurred while attempting to marshal the Vault response.\n\nError: %w", err)
 	}
 
 	err = json.Unmarshal(jsonData, &model)
 	if err != nil {
-		return fmt.Errorf(
-			"An unexpected error occurred while attempting to unmarshal the data.\n\n" +
-				"Error: " + err.Error(),
-		)
+		return fmt.Errorf("an unexpected error occurred while attempting to unmarshal the data.\n\nError: %w", err)
 	}
 	return nil
 }
