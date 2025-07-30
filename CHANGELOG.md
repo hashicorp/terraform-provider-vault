@@ -4,6 +4,7 @@ FEATURES:
 * Add support for `jwks_pairs` in `vault_jwt_auth_backend` resource. Requires Vault 1.16+ ([#2523](https://github.com/hashicorp/terraform-provider-vault/pull/2523))
 * Add support for `root_password_ttl` in `vault_azure_secret_backend` resource. Requires Vault 1.15+ ([#2529](https://github.com/hashicorp/terraform-provider-vault/pull/2529))
 * Add support for managed key parameters in the SSH CA config endpoint ([#2480](https://github.com/hashicorp/terraform-provider-vault/pull/2480))
+* Add new resources `vault_oci_auth_backend` and `vault_oci_auth_backend_role` to manage OCI auth backend and roles. ([#1761](https://github.com/hashicorp/terraform-provider-vault/pull/1761))
 
 ## 5.1.0 (Jul 9, 2025)
 
