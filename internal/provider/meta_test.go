@@ -4,17 +4,21 @@
 package provider
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/hashicorp/vault/api"
-	vault_consts "github.com/hashicorp/vault/sdk/helper/consts"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"sync"
 	"testing"
+
+	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
+	vault_consts "github.com/hashicorp/vault/sdk/helper/consts"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -176,6 +180,41 @@ func TestGetClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// mockVaultServer is needed to mock Vault API calls made in setClient()
+	// when client is not pre-set in ProviderMeta.
+	//
+	// When client is pre-set (e.g. to rootClient) in ProviderMeta,
+	// we return early in setClient() and never make said Vault API calls.
+	mockVaultServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/auth/token/lookup-self":
+			response := map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":        "test-token",
+					"policies":  []string{"default"},
+					"ttl":       3600,
+					"renewable": true,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		case "/v1/auth/token/create":
+			response := map[string]interface{}{
+				"auth": map[string]interface{}{
+					"client_token":   "child-token-123",
+					"policies":       []string{"default"},
+					"lease_duration": 3600,
+					"renewable":      true,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		default:
+			w.WriteHeader(http.StatusNotImplemented)
+		}
+	}))
+	defer mockVaultServer.Close()
+
 	// testing schema.ResourceDiff is not covered here
 	// since its field members are private.
 
@@ -208,15 +247,16 @@ func TestGetClient(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		meta      interface{}
-		ifcNS     string
-		envNS     string
-		want      string
-		wantErr   bool
-		expectErr error
-		setAttr   bool
-		ifaceFunc func(t *testing.T, set bool, ns string) interface{}
+		name        string
+		meta        interface{}
+		ifcNS       string
+		envNSImport string
+		envNS       string
+		want        string
+		wantErr     bool
+		expectErr   error
+		setAttr     bool
+		ifaceFunc   func(t *testing.T, set bool, ns string) interface{}
 	}{
 		{
 			name:  "string",
@@ -259,10 +299,10 @@ func TestGetClient(t *testing.T) {
 				client:       rootClient,
 				resourceData: nil,
 			},
-			ifaceFunc: instanceState,
-			envNS:     "ns1-import-env",
-			want:      "ns1-import-env",
-			setAttr:   false,
+			ifaceFunc:   instanceState,
+			envNSImport: "ns1-import-env",
+			want:        "ns1-import-env",
+			setAttr:     false,
 		},
 		{
 			name: "ignore-env-rsc-data",
@@ -270,11 +310,11 @@ func TestGetClient(t *testing.T) {
 				client:       rootClient,
 				resourceData: nil,
 			},
-			ifaceFunc: rscData,
-			ifcNS:     "ns1",
-			envNS:     "ns1-import-env",
-			want:      "ns1",
-			setAttr:   true,
+			ifaceFunc:   rscData,
+			ifcNS:       "ns1",
+			envNSImport: "ns1-import-env",
+			want:        "ns1",
+			setAttr:     true,
 		},
 		{
 			name: "ignore-env-inst-state",
@@ -282,10 +322,47 @@ func TestGetClient(t *testing.T) {
 				client:       rootClient,
 				resourceData: nil,
 			},
+			ifaceFunc:   instanceState,
+			ifcNS:       "ns1",
+			envNSImport: "ns1-import-env",
+			want:        "ns1",
+			setAttr:     true,
+		},
+		{
+			name: "prepend-env-string",
+			meta: &ProviderMeta{
+				client:       nil, // nil client so setClient() does not return early
+				resourceData: nil,
+			},
+			ifaceFunc: func(t *testing.T, set bool, ns string) interface{} {
+				return "ns1-string"
+			},
+			envNS:   "ns0-from-env",
+			want:    "ns0-from-env/ns1-string",
+			setAttr: true,
+		},
+		{
+			name: "prepend-env-rsc-data",
+			meta: &ProviderMeta{
+				client:       nil, // nil client so setClient() does not return early
+				resourceData: nil,
+			},
+			ifaceFunc: rscData,
+			ifcNS:     "ns1-rsc-data",
+			envNS:     "ns0-from-env",
+			want:      "ns0-from-env/ns1-rsc-data",
+			setAttr:   true,
+		},
+		{
+			name: "prepend-env-inst-state",
+			meta: &ProviderMeta{
+				client:       nil, // nil client so setClient() does not return early
+				resourceData: nil,
+			},
 			ifaceFunc: instanceState,
-			ifcNS:     "ns1",
-			envNS:     "ns1-import-env",
-			want:      "ns1",
+			ifcNS:     "ns1-inst-state",
+			envNS:     "ns0-from-env",
+			want:      "ns0-from-env/ns1-inst-state",
 			setAttr:   true,
 		},
 		{
@@ -311,15 +388,34 @@ func TestGetClient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.meta != nil {
 				m := tt.meta.(*ProviderMeta)
-				m.resourceData = schema.TestResourceDataRaw(t,
-					map[string]*schema.Schema{
-						consts.FieldNamespace: {
-							Type:     schema.TypeString,
-							Required: true,
-						},
+
+				s := map[string]*schema.Schema{
+					consts.FieldNamespace: {
+						Type:     schema.TypeString,
+						Required: true,
 					},
-					map[string]interface{}{},
+				}
+				raw := map[string]interface{}{}
+
+				if m.client == nil {
+					// If client is not pre-set, mock Vault server to handle Vault API calls during setClient().
+					s[consts.FieldAddress] = &schema.Schema{
+						Type:     schema.TypeString,
+						Required: true,
+					}
+					s[consts.FieldToken] = &schema.Schema{
+						Type:     schema.TypeString,
+						Required: true,
+					}
+					raw[consts.FieldAddress] = mockVaultServer.URL
+					raw[consts.FieldToken] = "test-token"
+				}
+
+				m.resourceData = schema.TestResourceDataRaw(t,
+					s,
+					raw,
 				)
+
 				tt.meta = m
 			}
 
@@ -328,12 +424,20 @@ func TestGetClient(t *testing.T) {
 				i = tt.ifaceFunc(t, tt.setAttr, tt.ifcNS)
 			}
 
-			// set ns in env
-			if tt.envNS != "" {
-				if err := os.Setenv(consts.EnvVarVaultNamespaceImport, tt.envNS); err != nil {
+			// set TERRAFORM_VAULT_NAMESPACE_IMPORT ns in env
+			if tt.envNSImport != "" {
+				if err := os.Setenv(consts.EnvVarVaultNamespaceImport, tt.envNSImport); err != nil {
 					t.Fatal(err)
 				}
 				defer os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+			}
+
+			// set VAULT_NAMESPACE ns in env
+			if tt.envNS != "" {
+				if err := os.Setenv("VAULT_NAMESPACE", tt.envNS); err != nil {
+					t.Fatal(err)
+				}
+				defer os.Unsetenv("VAULT_NAMESPACE")
 			}
 
 			got, err := GetClient(i, tt.meta)
