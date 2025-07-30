@@ -246,7 +246,9 @@ func (p *ProviderMeta) setClient() error {
 	client.SetCloneToken(true)
 
 	// Set headers if provided
-	headers := d.Get("headers").([]interface{})
+	// Get the ok value to avoid panics but don't need to check it explicitly
+	// as we handle nil headers gracefully below.
+	headers, _ := d.Get("headers").([]interface{})
 	parsedHeaders := client.Headers().Clone()
 
 	if parsedHeaders == nil {
@@ -377,6 +379,7 @@ func (p *ProviderMeta) setClient() error {
 	if namespace != "" {
 		// TODO: Add a debug log here
 		log.Printf("[DEBUG] !!!HELEN!!! setClient() setting namespace to %q", namespace)
+
 		// set the namespace on the parent client
 		client.SetNamespace(namespace)
 	}
@@ -636,7 +639,7 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 // the environment variable is empty, the default dv is returned
 // TODO: Add test
 func GetResourceDataStr(d *schema.ResourceData, field, env, dv string) string {
-	if s := d.Get(field).(string); s != "" {
+	if s, ok := d.Get(field).(string); s != "" && ok {
 		return s
 	}
 
@@ -654,7 +657,7 @@ func GetResourceDataStr(d *schema.ResourceData, field, env, dv string) string {
 // If the value is the zero value, then it checks the environment variable. If
 // the environment variable is empty, the default dv is returned
 func GetResourceDataInt(d *schema.ResourceData, field, env string, dv int) int {
-	if v := d.Get(field).(int); v != 0 {
+	if v, ok := d.Get(field).(int); v != 0 && ok {
 		return v
 	}
 	if env != "" {
@@ -712,19 +715,22 @@ func GetResourceDataBool(d *schema.ResourceData, field, env string, dv bool) boo
 	}
 
 	// If the value is set in config, return using d.Get
-	// TODO: Add type assertion check to avoid panics
-	return d.Get(field).(bool)
+	if v, ok := d.Get(field).(bool); ok {
+		return v
+	}
+
+	return dv
 }
 
 func GetToken(d *schema.ResourceData) (string, error) {
-	if token := d.Get("token").(string); token != "" {
+	if token, ok := d.Get("token").(string); token != "" && ok {
 		return token, nil
 	} else if token = os.Getenv(api.EnvVaultToken); token != "" {
 		return token, nil
 	}
 
-	if addAddr := d.Get("add_address_to_env").(string); addAddr == "true" {
-		if addr := d.Get("address").(string); addr != "" {
+	if addAddr, ok := d.Get("add_address_to_env").(string); addAddr == "true" && ok {
+		if addr, ok := d.Get("address").(string); addr != "" && ok {
 			addrEnvVar := api.EnvVaultAddress
 			if current, exists := os.LookupEnv(addrEnvVar); exists {
 				defer func() {
