@@ -39,10 +39,37 @@ func TestAccAwsAuthBackendConfigIdentity(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccAwsAuthBackendConfigIdentity_updated(backend),
+				Config: testAccAwsAuthBackendConfigIdentity_updatedFullARN(backend),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMAlias, "full_arn"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".0", "client_user_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Alias, "role_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Metadata+".#", "0"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+		},
+	})
+}
+
+func TestAccAwsAuthBackendConfigIdentity_canonicalARN(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resourceName := "vault_aws_auth_backend_config_identity.config"
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAwsAuthBackendConfigIdentityDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAwsAuthBackendConfigIdentity_canonicalARN(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMAlias, "canonical_arn"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".#", "1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".0", "client_user_id"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Alias, "role_id"),
@@ -91,7 +118,7 @@ resource "vault_aws_auth_backend_config_identity" "config" {
 `, backend)
 }
 
-func testAccAwsAuthBackendConfigIdentity_updated(backend string) string {
+func testAccAwsAuthBackendConfigIdentity_updatedFullARN(backend string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "aws" {
   path = "%s"
@@ -102,6 +129,21 @@ resource "vault_auth_backend" "aws" {
 resource "vault_aws_auth_backend_config_identity" "config" {
   backend = vault_auth_backend.aws.path
   iam_alias = "full_arn"
+  iam_metadata = ["client_user_id"]
+}`, backend)
+}
+
+func testAccAwsAuthBackendConfigIdentity_canonicalARN(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend config"
+}
+
+resource "vault_aws_auth_backend_config_identity" "config" {
+  backend = vault_auth_backend.aws.path
+  iam_alias = "canonical_arn"
   iam_metadata = ["client_user_id"]
 }`, backend)
 }
