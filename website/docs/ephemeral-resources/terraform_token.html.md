@@ -19,13 +19,9 @@ token types that support multiple tokens; credential_type="user" or credential_t
 ## Example Usage
 
 ```hcl
-# revokes the tokens generated during plan but leaves 
-# tokens created during `apply` for their full TTL
-
 ephemeral "vault_terraform_token" "tf_token" {
-  mount           = vault_terraform_cloud_secret_backend.example.backend
-  role_name       = vault_terraform_cloud_secret_role.example.name
-  revoke_on_close = terraform.applying ? true : false
+  mount     = vault_terraform_cloud_secret_backend.example.backend
+  role_name = vault_terraform_cloud_secret_role.example.name
 }
 ```
 
@@ -47,12 +43,25 @@ resource "vault_terraform_cloud_secret_role" "example" {
 }
 
 ephemeral "vault_terraform_token" "tf_token" {
-  mount           = vault_terraform_cloud_secret_backend.example.backend
-  role_name       = vault_terraform_cloud_secret_role.example.name
+  mount     = vault_terraform_cloud_secret_backend.example.backend
+  role_name = vault_terraform_cloud_secret_role.example.name
 
   # mount_id only required on ephemeral resource if the ephemeral is called 
   # in the same run as its dependencies are created
   mount_id        = vault_terraform_cloud_secret_backend.example.mount_id
+}
+```
+
+## Revoke Plan Token Usage
+
+```hcl
+# revokes the tokens generated during plan but leaves 
+# tokens created during `apply` for their full TTL
+
+ephemeral "vault_terraform_token" "tf_token" {
+  mount           = vault_terraform_cloud_secret_backend.example.backend
+  role_name       = vault_terraform_cloud_secret_role.example.name
+  revoke_on_close = terraform.applying ? true : false
 }
 ```
 
