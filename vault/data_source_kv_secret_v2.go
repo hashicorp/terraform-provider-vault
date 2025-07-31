@@ -91,7 +91,7 @@ func kvSecretV2DataSource() *schema.Resource {
 	}
 }
 
-func kvSecretV2DataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func kvSecretV2DataSourceRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -138,14 +138,14 @@ func kvSecretV2DataSourceRead(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.FromErr(err)
 	}
 
-	if v, ok := data.(map[string]interface{}); ok {
+	if v, ok := data.(map[string]any); ok {
 		if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
 	if v, ok := secret.Data["metadata"]; ok {
-		metadata := v.(map[string]interface{})
+		metadata := v.(map[string]any)
 
 		if v, ok := metadata["created_time"]; ok {
 			if err := d.Set("created_time", v); err != nil {
@@ -172,7 +172,7 @@ func kvSecretV2DataSourceRead(ctx context.Context, d *schema.ResourceData, meta 
 		}
 
 		if customMetadata, ok := metadata["custom_metadata"]; ok && customMetadata != nil {
-			if v, ok := customMetadata.(map[string]interface{}); ok {
+			if v, ok := customMetadata.(map[string]any); ok {
 				if err := d.Set("custom_metadata", serializeDataMapToString(v)); err != nil {
 					return diag.FromErr(err)
 				}
