@@ -91,7 +91,7 @@ func kvSecretV2DataSource() *schema.Resource {
 	}
 }
 
-func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func kvSecretV2DataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -113,10 +113,10 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 		data := map[string][]string{
 			"version": {strconv.Itoa(v.(int))},
 		}
-		secret, err = client.Logical().ReadWithData(path, data)
+		secret, err = client.Logical().ReadWithDataWithContext(ctx, path, data)
 		log.Printf("[DEBUG] Reading secret at %q (version %d) from Vault", path, v)
 	} else {
-		secret, err = client.Logical().Read(path)
+		secret, err = client.Logical().ReadWithContext(ctx, path)
 		log.Printf("[DEBUG] Reading secret at %q (latest version) from Vault", path)
 	}
 
