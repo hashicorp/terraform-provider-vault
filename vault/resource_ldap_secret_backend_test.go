@@ -70,6 +70,20 @@ func TestLDAPSecretBackend(t *testing.T) {
 				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldSkipStaticRoleImportRotation, "true"),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					return !testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion118), nil
+				},
+				Config: testLDAPSecretBackendConfig_defaults(path, bindDN, bindPass),
+				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialType, "password"),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					return !testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion118), nil
+				},
+				Config: testLDAPSecretBackendConfig_withCredType(path, bindDN, bindPass),
+				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialType, "phrase"),
+			},
+			{
 				Config: testLDAPSecretBackendConfig(path, updatedDescription, bindDN, bindPass, url, updatedUserDN, "openldap", false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
@@ -246,6 +260,17 @@ resource "vault_ldap_secret_backend" "test" {
   binddn                    = "%s"
   bindpass                  = "%s"
   skip_static_role_import_rotation = true
+}`, path, bindDN, bindPass)
+}
+
+func testLDAPSecretBackendConfig_withCredType(path, bindDN, bindPass string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path            = "%s"
+  description     = "test description"
+  binddn          = "%s"
+  bindpass        = "%s"
+  credential_type = "phrase"
 }`, path, bindDN, bindPass)
 }
 
