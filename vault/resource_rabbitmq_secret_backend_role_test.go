@@ -4,14 +4,13 @@
 package vault
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -28,9 +27,9 @@ func TestAccRabbitMQSecretBackendRole_basic(t *testing.T) {
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:             testAccRabbitMQSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendRoleConfig_basic(name, backend, connectionUri, username, password),
@@ -71,9 +70,9 @@ func TestAccRabbitMQSecretBackendRole_nested(t *testing.T) {
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:             testAccRabbitMQSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendRoleConfig_basic(name, backend, connectionUri, username, password),
@@ -114,9 +113,9 @@ func TestAccRabbitMQSecretBackendRole_topic(t *testing.T) {
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:             testAccRabbitMQSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendRoleConfig_topics(name, backend, connectionUri, username, password),
@@ -245,14 +244,14 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
   backend = vault_rabbitmq_secret_backend.test.path
   name = "%s"
   tags = %q
-    
+
   vhost_topic {
     vhost {
 		topic = "amq.topic"
 		read = ".*"
 		write = ""
 	}
-	
+
 	host = "/"
   }
 }
@@ -281,9 +280,41 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
 		read = ""
 		write = ".*"
 	}
-	
+
 	host = "/"
   }
 }
 `, path, connectionUri, username, password, name, testAccRabbitMQSecretBackendRoleTags_updated)
+}
+
+func TestFlattenRabbitMQSecretBackendRoleVhost_Order(t *testing.T) {
+	input := map[string]interface{}{
+		"b-vhost": map[string]interface{}{
+			"configure": "c1",
+			"read":      "r1",
+			"write":     "w1",
+		},
+		"a-vhost": map[string]interface{}{
+			"configure": "c2",
+			"read":      "r2",
+			"write":     "w2",
+		},
+		"c-vhost": map[string]interface{}{
+			"configure": "c3",
+			"read":      "r3",
+			"write":     "w3",
+		},
+	}
+
+	result := flattenRabbitMQSecretBackendRoleVhost(input)
+
+	expectedOrder := []string{"a-vhost", "b-vhost", "c-vhost"}
+	if len(result) != len(expectedOrder) {
+		t.Fatalf("expected %d vhosts, got %d", len(expectedOrder), len(result))
+	}
+	for i, expectedHost := range expectedOrder {
+		if result[i]["host"] != expectedHost {
+			t.Errorf("expected host at index %d to be %q, got %q", i, expectedHost, result[i]["host"])
+		}
+	}
 }
