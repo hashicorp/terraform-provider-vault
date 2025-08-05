@@ -49,6 +49,14 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if !meta.IsAPISupported(provider.VaultVersion121) {
+						return true, nil
+					}
+
+					return !meta.IsEnterpriseSupported(), nil
+				},
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", tokenAuthMetadataConfig),
 				Check: resource.ComposeTestCheckFunc(
 					testLDAPAuthBackendCheck_attrs(resourceName, path),

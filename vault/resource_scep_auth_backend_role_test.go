@@ -72,6 +72,14 @@ resource "vault_scep_auth_backend_role" "test" {
 				),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if !meta.IsAPISupported(provider.VaultVersion121) {
+						return true, nil
+					}
+
+					return !meta.IsEnterpriseSupported(), nil
+				},
 				Config: fmt.Sprintf(`
 resource "vault_auth_backend" "scep" {
     path = "%s"

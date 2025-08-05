@@ -10,8 +10,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -62,6 +62,14 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 				),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if !meta.IsAPISupported(provider.VaultVersion121) {
+						return true, nil
+					}
+
+					return !meta.IsEnterpriseSupported(), nil
+				},
 				Config: testAccOktaAuthConfig_basic(path, organization, tokenAuthMetadataConfig),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, TokenFieldTTL, "3600"),

@@ -100,6 +100,14 @@ func TestAccAppRoleAuthBackendRole_basic(t *testing.T) {
 				),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if !meta.IsAPISupported(provider.VaultVersion121) {
+						return true, nil
+					}
+
+					return !meta.IsEnterpriseSupported(), nil
+				},
 				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role, tokenAuthMetadataConfig),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",

@@ -70,6 +70,14 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 				),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if !meta.IsAPISupported(provider.VaultVersion121) {
+						return true, nil
+					}
+
+					return !meta.IsEnterpriseSupported(), nil
+				},
 				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg, tokenAuthMetadataConfig),
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,

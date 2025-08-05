@@ -118,6 +118,14 @@ func TestCertAuthBackend(t *testing.T) {
 				),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if !meta.IsAPISupported(provider.VaultVersion121) {
+						return true, nil
+					}
+
+					return !meta.IsEnterpriseSupported(), nil
+				},
 				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, tokenAuthMetadataConfig, allowedNames, allowedOrgUnits),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),

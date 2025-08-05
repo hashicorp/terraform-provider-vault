@@ -106,6 +106,14 @@ func TestAccAWSAuthBackendRole_inferred(t *testing.T) {
 				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if !meta.IsAPISupported(provider.VaultVersion121) {
+						return true, nil
+					}
+
+					return !meta.IsEnterpriseSupported(), nil
+				},
 				Config: testAccAWSAuthBackendRoleConfig_inferred(backend, role, tokenAuthMetadataConfig),
 				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
