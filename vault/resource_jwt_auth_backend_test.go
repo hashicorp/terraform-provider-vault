@@ -68,6 +68,10 @@ func TestAccJWTAuthBackend(t *testing.T) {
 						resource.TestCheckResourceAttr(resourceName, "bound_issuer", "api://default"),
 						resource.TestCheckResourceAttr(resourceName, "jwt_supported_algs.#", "1"),
 						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "default-service"),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", ""),
 					)...,
 				),
 			},
@@ -79,6 +83,10 @@ func TestAccJWTAuthBackend(t *testing.T) {
 						resource.TestCheckResourceAttr(resourceName, "bound_issuer", "api://default"),
 						resource.TestCheckResourceAttr(resourceName, "jwt_supported_algs.#", "2"),
 						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "default-service"),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", ""),
 					)...,
 				),
 			},
@@ -367,6 +375,10 @@ resource "vault_jwt_auth_backend" "jwt" {
   bound_issuer       = "%s"
   jwt_supported_algs = [%s]
   path               = "%s"
+  tune {
+    token_type         = "default-service"
+    listing_visibility = "hidden"
+  }
 `, oidcDiscoveryUrl, boundIssuer, supportedAlgs, path)
 
 	var fragments []string

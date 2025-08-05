@@ -70,6 +70,27 @@ func flattenAuthMethodTune(dt *api.MountConfigOutput) map[string]interface{} {
 	return m
 }
 
+// mergeAuthMethodTune merges the raw tune GET API response with the user input parsed
+// from the tune schema. Any field with the Vault APIs's global default effect will be set to empty
+// when the user did not provide a value even if the Vault API response returns non-empty.
+// This is to ensure the tune block reflects the user provided values.
+// See more details in the https://github.com/hashicorp/terraform-provider-vault/issues/2234
+func mergeAuthMethodTune(rawTune map[string]interface{}, input *api.MountConfigInput) map[string]interface{} {
+	// Merge the fields that have the global default effect
+	// github.com/hashicorp/terraform-provider-vault/vault/auth_mount.go
+	if input != nil {
+		if input.DefaultLeaseTTL == "" {
+			rawTune["default_lease_ttl"] = ""
+		}
+
+		if input.MaxLeaseTTL == "" {
+			rawTune["max_lease_ttl"] = ""
+		}
+	}
+
+	return rawTune
+}
+
 func expandStringSlice(configured []interface{}) []string {
 	vs := make([]string, 0, len(configured))
 	for _, v := range configured {
