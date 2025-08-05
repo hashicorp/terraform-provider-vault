@@ -122,6 +122,9 @@ These arguments are common across several Authentication Token resources since V
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
 
+* `token_auth_metadata` - (Optional) The metadata to be tied to generated tokens.
+  This should be a list or map containing the metadata in key value pairs.
+
 For more details on the usage of each argument consult the [Vault Cert API documentation](https://www.vaultproject.io/api-docs/auth/cert).
 
 ## Attribute Reference
