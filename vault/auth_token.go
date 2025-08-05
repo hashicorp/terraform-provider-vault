@@ -127,7 +127,7 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 
 	fields[TokenFieldAuthMetadata] = &schema.Schema{
 		Type:          schema.TypeMap,
-		Description:   "",
+		Description:   "The metadata to be tied to generated tokens.\n  This should be a list or map containing the metadata in key value pairs.",
 		Optional:      true,
 		ConflictsWith: config.TokenAuthMetadataConflict,
 	}
