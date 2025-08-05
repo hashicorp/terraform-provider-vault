@@ -71,7 +71,7 @@ func TestAccAppRoleAuthBackendRole_basic(t *testing.T) {
 		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role),
+				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"backend", backend),
@@ -99,6 +99,39 @@ func TestAccAppRoleAuthBackendRole_basic(t *testing.T) {
 						"secret_id_bound_cidrs.#", "0"),
 				),
 			},
+			{
+				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role, tokenAuthMetadataConfig),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"role_name", role),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"token_policies.#", "3"),
+					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_role.role",
+						"role_id"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"token_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"token_max_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"token_num_uses", "0"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"secret_id_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"secret_id_num_uses", "0"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"token_period", "0"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"bind_secret_id", "true"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"secret_id_bound_cidrs.#", "0"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"token_auth_metadata.%", "1"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"token_auth_metadata.foo", "bar"),
+				),
+			},
 		},
 	})
 }
@@ -113,7 +146,7 @@ func TestAccAppRoleAuthBackendRole_update(t *testing.T) {
 		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role),
+				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"backend", backend),
@@ -281,7 +314,7 @@ func TestAccAppRoleAuthBackendRole_fullUpdate(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role),
+				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"backend", backend),
@@ -335,7 +368,7 @@ func testAccCheckAppRoleAuthBackendRoleDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccAppRoleAuthBackendRoleConfig_basic(backend, role string) string {
+func testAccAppRoleAuthBackendRoleConfig_basic(backend, role, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "approle" {
   type = "approle"
@@ -346,7 +379,8 @@ resource "vault_approle_auth_backend_role" "role" {
   backend = vault_auth_backend.approle.path
   role_name = "%s"
   token_policies = ["default", "dev", "prod"]
-}`, backend, role)
+  %s
+}`, backend, role, extraConfig)
 }
 
 func testAccAppRoleAuthBackendRoleConfig_update(backend, role string) string {

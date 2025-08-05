@@ -71,6 +71,31 @@ resource "vault_scep_auth_backend_role" "test" {
 					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "challenge", ""),
 				),
 			},
+			{
+				Config: fmt.Sprintf(`
+resource "vault_auth_backend" "scep" {
+    path = "%s"
+    type = "scep"
+}
+resource "vault_scep_auth_backend_role" "test" {
+    backend = vault_auth_backend.scep.id
+    name = "%s"
+    display_name = "Almondiga"
+    auth_type = "static-challenge"
+    %s
+}
+			`, backend, name, tokenAuthMetadataConfig),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "name", name),
+					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "display_name", "Almondiga"),
+					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "auth_type", "static-challenge"),
+					// Note that the challenge is not returned, since the resource was updated and no new challenge was specified
+					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "challenge", ""),
+					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "token_auth_metadata.%", "1"),
+					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "token_auth_metadata.foo", "bar"),
+				),
+			},
 		},
 	})
 }

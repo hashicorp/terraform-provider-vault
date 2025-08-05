@@ -90,7 +90,7 @@ func TestCertAuthBackend(t *testing.T) {
 		CheckDestroy:             testCertAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, allowedNames, allowedOrgUnits),
+				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, "", allowedNames, allowedOrgUnits),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -115,6 +115,23 @@ func TestCertAuthBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_names.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_organizational_units.#", "0"),
 					testCertAuthBackendCheck_attrs(resourceName, backend, name),
+				),
+			},
+			{
+				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, tokenAuthMetadataConfig, allowedNames, allowedOrgUnits),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "token_ttl", "300"),
+					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "600"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_names.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_organizational_units.#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_organizational_units.*", "foo"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_organizational_units.*", "baz"),
+					testCertAuthBackendCheck_attrs(resourceName, backend, name),
+					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.foo", "bar"),
 				),
 			},
 		},
@@ -253,7 +270,7 @@ func testCertAuthBackendCheck_attrs(resourceName, backend, name string) resource
 	}
 }
 
-func testCertAuthBackendConfig_basic(backend, name, certificate string, allowedNames, allowedOrgUnits []string) string {
+func testCertAuthBackendConfig_basic(backend, name, certificate, extraConfig string, allowedNames, allowedOrgUnits []string) string {
 	config := fmt.Sprintf(`
 
 resource "vault_auth_backend" "cert" {
@@ -272,8 +289,9 @@ EOF
     token_max_ttl                = 600
     token_policies               = ["test_policy_1", "test_policy_2"]
     allowed_organizational_units = %s
+	%s
 }
-`, backend, name, certificate, util.ArrayToTerraformList(allowedNames), util.ArrayToTerraformList(allowedOrgUnits))
+`, backend, name, certificate, util.ArrayToTerraformList(allowedNames), util.ArrayToTerraformList(allowedOrgUnits), extraConfig)
 
 	return config
 }

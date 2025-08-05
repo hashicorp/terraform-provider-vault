@@ -29,24 +29,32 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false", "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "true", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "false", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "false", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "false", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", tokenAuthMetadataConfig),
+				Check: resource.ComposeTestCheckFunc(
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.foo", "bar"),
+				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
 		},
@@ -101,14 +109,14 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					testLDAPAuthBackendCheck_attrs(resourceName, path),
 				),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true"),
+				Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true", ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
 					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
@@ -303,7 +311,7 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 	}
 }
 
-func testLDAPAuthBackendConfig_basic(path, use_token_groups string, local string) string {
+func testLDAPAuthBackendConfig_basic(path, use_token_groups, local, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
     path                   = "%s"
@@ -323,8 +331,9 @@ resource "vault_ldap_auth_backend" "test" {
     username_as_alias      = true
     use_token_groups       = %s
     connection_timeout     = 30
+	%s
 }
-`, path, local, use_token_groups)
+`, path, local, use_token_groups, extraConfig)
 }
 
 func testLDAPAuthBackendConfig_tls(path, use_token_groups string, local string) string {

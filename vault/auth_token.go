@@ -47,6 +47,7 @@ type addTokenFieldsConfig struct {
 	TokenPeriodConflict         []string
 	TokenPoliciesConflict       []string
 	TokenTTLConflict            []string
+	TokenAuthMetadataConflict   []string
 
 	TokenTypeDefault string
 }
@@ -125,9 +126,10 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 	}
 
 	fields[TokenFieldAuthMetadata] = &schema.Schema{
-		Type:        schema.TypeMap,
-		Description: "",
-		Optional:    true,
+		Type:          schema.TypeMap,
+		Description:   "",
+		Optional:      true,
+		ConflictsWith: config.TokenAuthMetadataConflict,
 	}
 }
 
@@ -212,8 +214,16 @@ func setTokenFields(d *schema.ResourceData, data map[string]interface{}, config 
 		data[TokenFieldBoundCIDRs] = d.Get(TokenFieldBoundCIDRs).(*schema.Set).List()
 	}
 
-	if metadata, ok := d.GetOk(TokenFieldAuthMetadata); ok {
-		data[TokenFieldAuthMetadata] = metadata
+	conflicted = false
+	for _, k := range config.TokenAuthMetadataConflict {
+		if _, ok := d.GetOk(k); ok {
+			conflicted = true
+			break
+		}
+	}
+
+	if !conflicted {
+		data[TokenFieldAuthMetadata] = d.Get(TokenFieldAuthMetadata)
 	}
 }
 

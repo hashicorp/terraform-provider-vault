@@ -39,7 +39,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg),
+				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg, ""),
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
@@ -67,6 +67,24 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "2400"),
 					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "6000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
+				),
+			},
+			{
+				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg, tokenAuthMetadataConfig),
+				Check: resource.ComposeTestCheckFunc(
+					testutil.TestAccCheckAuthMountExists(resourceName,
+						&resAuth,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
+					resource.TestCheckResourceAttr(resourceName, "id", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
+					// expect computed value for organization_id
+					resource.TestCheckResourceAttr(resourceName, "organization_id", "2999"),
+					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
+					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
+					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
+					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.foo", "bar"),
 				),
 			},
 		},
@@ -284,7 +302,7 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg),
+				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg, ""),
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
@@ -300,7 +318,7 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccGithubAuthBackendConfig_basic(updatedPath, testGHOrg),
+				Config: testAccGithubAuthBackendConfig_basic(updatedPath, testGHOrg, ""),
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
@@ -320,15 +338,16 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 	})
 }
 
-func testAccGithubAuthBackendConfig_basic(path, org string) string {
+func testAccGithubAuthBackendConfig_basic(path, org, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_github_auth_backend" "test" {
 	path = "%s"
 	organization = "%s"
 	token_ttl = 1200
 	token_max_ttl = 3000
+	%s
 }
-`, path, org)
+`, path, org, extraConfig)
 }
 
 func testAccGithubAuthBackendConfig_ns(ns, path, org string) string {
