@@ -6,8 +6,9 @@ package vault
 import (
 	"context"
 	"fmt"
-	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
+
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -116,6 +117,12 @@ func ldapSecretBackendResource() *schema.Resource {
 			Optional:    true,
 			Description: "Skip rotation of static role secrets on import.",
 		},
+		consts.FieldCredentialType: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "The type of credential to manage. Options include: 'password', 'phrase'. Defaults to 'password'.",
+		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(createUpdateLDAPConfigResource, provider.VaultVersion112),
@@ -174,6 +181,10 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 		consts.FieldURL,
 		consts.FieldUserAttr,
 		consts.FieldUserDN,
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+		fields = append(fields, consts.FieldCredentialType)
 	}
 
 	booleanFields := []string{
@@ -256,6 +267,9 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 	}
 	if provider.IsAPISupported(meta, provider.VaultVersion116) {
 		fields = append(fields, consts.FieldSkipStaticRoleImportRotation)
+	}
+	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+		fields = append(fields, consts.FieldCredentialType)
 	}
 
 	for _, field := range fields {
