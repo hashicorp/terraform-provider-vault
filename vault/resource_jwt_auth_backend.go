@@ -420,9 +420,6 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.Errorf("error updating configuration to Vault for path %s: %s", path, err)
 	}
 
-	old, new := d.GetChange("tune")
-	log.Printf("[DEBUG] d('tune') %+v \n old %+v\n new %+v\n", d.Get("tune"), old, new)
-
 	if d.HasChange("tune") {
 		log.Printf("[INFO] JWT/OIDC Auth '%q' tune configuration changed", d.Id())
 		if raw, ok := d.GetOk("tune"); ok {
