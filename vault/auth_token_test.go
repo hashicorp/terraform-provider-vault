@@ -12,6 +12,11 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+const tokenAuthMetadataConfig = `
+	token_auth_metadata    = {
+		"foo" = "bar"
+	}`
+
 func Test_handleCIDRField(t *testing.T) {
 	tests := []struct {
 		name        string

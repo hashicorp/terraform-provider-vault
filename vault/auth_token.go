@@ -23,6 +23,7 @@ const (
 	TokenFieldPolicies        = "token_policies"
 	TokenFieldType            = "token_type"
 	TokenFieldNumUses         = "token_num_uses"
+	TokenFieldAuthMetadata    = "token_auth_metadata" // Vault 1.21+
 )
 
 var commonTokenFields = []string{
@@ -35,6 +36,7 @@ var commonTokenFields = []string{
 	TokenFieldPolicies,
 	TokenFieldType,
 	TokenFieldNumUses,
+	TokenFieldAuthMetadata,
 }
 
 type addTokenFieldsConfig struct {
@@ -45,6 +47,7 @@ type addTokenFieldsConfig struct {
 	TokenPeriodConflict         []string
 	TokenPoliciesConflict       []string
 	TokenTTLConflict            []string
+	TokenAuthMetadataConflict   []string
 
 	TokenTypeDefault string
 }
@@ -120,6 +123,13 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		Description:   "The maximum number of times a token may be used, a value of zero means unlimited",
 		Optional:      true,
 		ConflictsWith: config.TokenNumUsesConflict,
+	}
+
+	fields[TokenFieldAuthMetadata] = &schema.Schema{
+		Type:          schema.TypeMap,
+		Description:   "The metadata to be tied to generated tokens.\n  This should be a list or map containing the metadata in key value pairs.",
+		Optional:      true,
+		ConflictsWith: config.TokenAuthMetadataConflict,
 	}
 }
 
@@ -203,6 +213,18 @@ func setTokenFields(d *schema.ResourceData, data map[string]interface{}, config 
 	if !conflicted {
 		data[TokenFieldBoundCIDRs] = d.Get(TokenFieldBoundCIDRs).(*schema.Set).List()
 	}
+
+	conflicted = false
+	for _, k := range config.TokenAuthMetadataConflict {
+		if _, ok := d.GetOk(k); ok {
+			conflicted = true
+			break
+		}
+	}
+
+	if !conflicted {
+		data[TokenFieldAuthMetadata] = d.Get(TokenFieldAuthMetadata)
+	}
 }
 
 func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, create bool) {
@@ -242,6 +264,10 @@ func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, crea
 		if v, ok := d.GetOk(TokenFieldNumUses); ok {
 			data[TokenFieldNumUses] = v.(int)
 		}
+
+		if v, ok := d.GetOk(TokenFieldAuthMetadata); ok {
+			data[TokenFieldAuthMetadata] = v
+		}
 	} else {
 		if d.HasChange(TokenFieldBoundCIDRs) {
 			data[TokenFieldBoundCIDRs] = d.Get(TokenFieldBoundCIDRs).(*schema.Set).List()
@@ -277,6 +303,10 @@ func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, crea
 
 		if d.HasChange(TokenFieldNumUses) {
 			data[TokenFieldNumUses] = d.Get(TokenFieldNumUses).(int)
+		}
+
+		if d.HasChange(TokenFieldAuthMetadata) {
+			data[TokenFieldAuthMetadata] = d.Get(TokenFieldAuthMetadata)
 		}
 	}
 }
