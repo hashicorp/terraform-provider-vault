@@ -23,6 +23,8 @@ BUILD:
 * Bump Go version to 1.24.6: ([#2550](https://github.com/hashicorp/terraform-provider-vault/pull/2550))
 
 
+* New parameters for `vault_terraform_cloud_secret_role` to support multi-team tokens, by @drewmullen ([#2498](https://github.com/hashicorp/terraform-provider-vault/pull/2498))
+
 ## 5.1.0 (Jul 9, 2025)
 
 FEATURES:
