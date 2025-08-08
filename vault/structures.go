@@ -86,6 +86,10 @@ func mergeAuthMethodTune(rawTune map[string]interface{}, input *api.MountConfigI
 		if input.MaxLeaseTTL == "" {
 			rawTune["max_lease_ttl"] = ""
 		}
+
+		if input.ListingVisibility == "" {
+			rawTune["listing_visibility"] = ""
+		}
 	}
 
 	return rawTune
