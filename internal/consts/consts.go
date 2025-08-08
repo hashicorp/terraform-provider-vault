@@ -67,6 +67,7 @@ const (
 	FieldLastPassword                   = "last_password"
 	FieldLastVaultRotation              = "last_vault_rotation"
 	FieldLocal                          = "local"
+	FieldLogLevel                       = "log_level"
 	FieldSealWrap                       = "seal_wrap"
 	FieldExternalEntropyAccess          = "external_entropy_access"
 	FieldAWS                            = "aws"
