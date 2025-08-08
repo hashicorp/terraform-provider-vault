@@ -6,8 +6,12 @@ FEATURES:
 * Add support for managed key parameters in the SSH CA config endpoint ([#2480](https://github.com/hashicorp/terraform-provider-vault/pull/2480))
 * Add new resources `vault_oci_auth_backend` and `vault_oci_auth_backend_role` to manage OCI auth backend and roles. ([#1761](https://github.com/hashicorp/terraform-provider-vault/pull/1761))
 
+BUGS:
+* Fix the tune block issue where it always updates unless field values match Vault server defaults
+  * `vault_jwt_auth_backend` resource ([#2546](https://github.com/hashicorp/terraform-provider-vault/pull/2546))
+
 BUILD:
-* Bump Go version to 1.24.6: ([#xxx](https://github.com/hashicorp/terraform-provider-vault/pull/xxx))
+* Bump Go version to 1.24.6: ([#2550](https://github.com/hashicorp/terraform-provider-vault/pull/2550))
 
 
 ## 5.1.0 (Jul 9, 2025)
