@@ -4,14 +4,15 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -21,9 +22,9 @@ import (
 func TestAccAWSAuthBackendClient_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -42,9 +43,9 @@ func TestAccAWSAuthBackendClient_import(t *testing.T) {
 func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -61,9 +62,9 @@ func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws") + "/nested"
 	resource.ParallelTest(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -80,9 +81,9 @@ func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basicWithoutSecretKey(backend),
@@ -108,7 +109,7 @@ func TestAccAWSAuthBackend_wif(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resourceName := "vault_aws_auth_backend_client.client"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
@@ -141,9 +142,9 @@ func TestAccAWSAuthBackend_wif(t *testing.T) {
 func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccAWSAuthBackendClientConfigSTSRegionNoEndpoint(backend),
@@ -160,8 +161,8 @@ func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend, false),
@@ -178,6 +179,62 @@ func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep("vault_aws_auth_backend_client.client", false, nil),
+		},
+	})
+}
+
+// TestAccAWSAuthBackendClient_automatedRotation tests that Automated
+// Root Rotation parameters are compatible with the AWS Auth Backend Client
+// resource
+func TestAccAWSAuthBackendClient_automatedRotation(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	resourceType := "vault_aws_auth_backend_client"
+	resourceName := resourceType + ".test"
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "", 10, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			// zero-out rotation_period
+			{
+				Config: testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "*/20 * * * *", 0, 120, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "120"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * *"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				Config:      testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "", 30, 120, true),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+			},
+			// zero-out rotation_schedule and rotation_window
+			{
+				Config: testAccAWSAuthBackendClientConfigAutomatedRootRotation(path, "", 30, 0, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -405,4 +462,21 @@ resource "vault_aws_auth_backend_client" "client" {
   access_key = "AWSACCESSKEY"
   use_sts_region_from_client = %v
 }`, backend, useSTSRegionFromClient)
+}
+
+func testAccAWSAuthBackendClientConfigAutomatedRootRotation(backend, schedule string, period, window int, disable bool) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "test" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "test" {
+  backend = vault_auth_backend.test.path
+  rotation_period = "%d"
+  rotation_schedule = "%s"
+  rotation_window = "%d"
+  disable_automated_rotation = %t
+}`, backend, period, schedule, window, disable)
 }

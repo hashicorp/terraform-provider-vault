@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -344,14 +343,14 @@ func readConfigResource(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	log.Printf("[DEBUG] Reading %q", path)
 
-	mount, err := mountutil.GetMount(context.Background(), client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
+	ctx := context.Background()
+	mount, err := mountutil.GetMount(ctx, client, path)
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 

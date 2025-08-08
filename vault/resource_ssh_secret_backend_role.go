@@ -183,6 +183,11 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			Optional:    true,
 			Computed:    true,
 		},
+		"allow_empty_principals": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+		},
 	}
 
 	return &schema.Resource{
@@ -260,6 +265,9 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		}
 
 		data["allowed_domains_template"] = d.Get("allowed_domains_template")
+	}
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		data["allow_empty_principals"] = d.Get("allow_empty_principals").(bool)
 	}
 
 	if v, ok := d.GetOk("key_id_format"); ok {
@@ -359,9 +367,13 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		fields = append(fields, []string{"default_user_template", "allowed_domains_template"}...)
 	}
+	if provider.IsAPISupported(meta, provider.VaultVersion117) {
+		fields = append(fields, []string{"allow_empty_principals"}...)
+	}
 
-	// cidr_list cannot be read from the API
-	// potential for drift here
+	// cannot be read from the API, potential for drift here:
+	// - cidr_list
+	// - allow_empty_principals
 	for _, k := range fields {
 		if err := d.Set(k, role.Data[k]); err != nil {
 			return err

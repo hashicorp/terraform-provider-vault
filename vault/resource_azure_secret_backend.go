@@ -5,24 +5,20 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 )
 
 func azureSecretBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: azureSecretBackendCreate,
 		ReadContext:   provider.ReadContextWrapper(azureSecretBackendRead),
 		UpdateContext: azureSecretBackendUpdate,
@@ -52,13 +48,6 @@ func azureSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
-			},
-			consts.FieldUseMSGraphAPI: {
-				Deprecated:  "This field is not supported in Vault-1.12+ and is the default behavior. This field will be removed in future version of the provider.",
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Computed:    true,
-				Description: "Use the Microsoft Graph API. Should be set to true on vault-1.10+",
 			},
 			consts.FieldSubscriptionID: {
 				Type:        schema.TypeString,
@@ -107,8 +96,26 @@ func azureSecretBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The TTL of generated identity tokens in seconds.",
 			},
+			consts.FieldRootPasswordTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The TTL in seconds of the root password in Azure when rotate-root generates a new client secret",
+			},
 		},
 	}, false)
+
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldIdentityTokenKey,
+	))
+
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func azureSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -118,27 +125,13 @@ func azureSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta 
 	}
 
 	path := d.Get(consts.FieldPath).(string)
-	description := d.Get(consts.FieldDescription).(string)
 	configPath := azureSecretBackendPath(path)
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Azure backend at %q", path)
 
-	mountConfig := api.MountConfigInput{}
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-	if useAPIVer117Ent {
-		identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
-		if identityTokenKey != "" {
-			mountConfig.IdentityTokenKey = identityTokenKey
-		}
-	}
-	input := &api.MountInput{
-		Type:        "azure",
-		Description: description,
-		Config:      mountConfig,
-	}
-	if err := client.Sys().MountWithContext(ctx, path, input); err != nil {
-		return diag.Errorf("error mounting to %q: %s", path, err)
+	if err := createMount(ctx, d, meta, client, path, consts.MountTypeAzure); err != nil {
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[DEBUG] Mounted Azure backend at %q", path)
@@ -163,39 +156,20 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 
 	path := d.Id()
 
-	log.Printf("[DEBUG] Reading Azure backend mount %q from Vault", path)
-
-	mount, err := mountutil.GetMount(ctx, client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	log.Printf("[DEBUG] Read Azure backend mount %q from Vault", path)
-
 	log.Printf("[DEBUG] Read Azure secret Backend config %s", path)
 	resp, err := client.Logical().ReadWithContext(ctx, azureSecretBackendPath(path))
 	if err != nil {
 		return diag.Errorf("error reading from Vault: %s", err)
 	}
 
-	for _, k := range []string{consts.FieldClientID, consts.FieldSubscriptionID, consts.FieldTenantID} {
+	for _, k := range []string{
+		consts.FieldClientID,
+		consts.FieldSubscriptionID,
+		consts.FieldTenantID,
+		consts.FieldRootPasswordTTL,
+	} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-	}
-
-	skipMSGraphAPI := provider.IsAPISupported(meta, provider.VaultVersion112)
-	if !skipMSGraphAPI {
-		if v, ok := resp.Data[consts.FieldUseMSGraphAPI]; ok {
-			if err := d.Set(consts.FieldUseMSGraphAPI, v); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -215,21 +189,25 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
-		return diag.FromErr(err)
-	}
-
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
-		if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
-			return diag.FromErr(err)
-		}
 		if err := d.Set(consts.FieldIdentityTokenAudience, resp.Data[consts.FieldIdentityTokenAudience]); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := d.Set(consts.FieldIdentityTokenTTL, resp.Data[consts.FieldIdentityTokenTTL]); err != nil {
 			return diag.FromErr(err)
 		}
+	}
+
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, d.Id()); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if err := readMount(ctx, d, meta, true, false); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return nil
@@ -241,26 +219,11 @@ func azureSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.FromErr(e)
 	}
 
-	path := d.Id()
-
-	path, err := util.Remount(d, client, consts.FieldPath, false)
-	if err != nil {
+	if err := updateMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
-	if d.HasChanges(consts.FieldIdentityTokenKey, consts.FieldDescription) {
-		desc := d.Get(consts.FieldDescription).(string)
-		config := api.MountConfigInput{
-			Description: &desc,
-		}
-		useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-		if useAPIVer117Ent {
-			config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
-		}
-		if err := client.Sys().TuneMountWithContext(ctx, path, config); err != nil {
-			return diag.FromErr(err)
-		}
-	}
+	path := d.Id()
 
 	data := azureSecretBackendRequestData(d, meta)
 	if len(data) > 0 {
@@ -304,24 +267,19 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 		consts.FieldSubscriptionID,
 	}
 
-	skipMSGraphAPI := provider.IsAPISupported(meta, provider.VaultVersion112)
-
-	if _, ok := d.GetOk(consts.FieldUseMSGraphAPI); ok {
-		if skipMSGraphAPI {
-			log.Printf("ignoring this field because Vault version is greater than 1.12")
-		}
-	}
-
-	if !skipMSGraphAPI {
-		fields = append(fields, consts.FieldUseMSGraphAPI)
-	}
-
 	data := make(map[string]interface{})
 	for _, k := range fields {
 		if d.IsNewResource() {
 			data[k] = d.Get(k)
 		} else if d.HasChange(k) {
 			data[k] = d.Get(k)
+		}
+	}
+
+	useAPIVer115 := provider.IsAPISupported(meta, provider.VaultVersion115)
+	if useAPIVer115 {
+		if v, ok := d.GetOk(consts.FieldRootPasswordTTL); ok && v != 0 {
+			data[consts.FieldRootPasswordTTL] = v.(int)
 		}
 	}
 
@@ -333,6 +291,11 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 		if v, ok := d.GetOk(consts.FieldIdentityTokenTTL); ok && v != 0 {
 			data[consts.FieldIdentityTokenTTL] = v.(int)
 		}
+	}
+
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
 	return data

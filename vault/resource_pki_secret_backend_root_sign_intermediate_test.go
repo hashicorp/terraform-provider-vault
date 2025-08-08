@@ -4,6 +4,9 @@
 package vault
 
 import (
+	"bytes"
+	"context"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
@@ -11,11 +14,14 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/go-version"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -120,16 +126,22 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 	format := "pem"
 	commonName := "SubOrg Intermediate CA"
 
-	store := &testPKICertStore{}
+	skip := func(minVersion *version.Version) func() (bool, error) {
+		return func() (bool, error) {
+			meta := testProvider.Meta().(*provider.ProviderMeta)
+			return !meta.IsAPISupported(minVersion), nil
+		}
+	}
 	resourceName := "vault_pki_secret_backend_root_sign_intermediate.test"
-	checks := testCheckPKISecretRootSignIntermediate(resourceName, rootPath, commonName, format)
+	checks := testCheckPKISecretRootSignIntermediate(resourceName, rootPath, commonName, format, "", x509.SHA256WithRSA, false)
+	store := &testPKICertStore{}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, "", false, ""),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false),
 				Check: resource.ComposeTestCheckFunc(
 					checks,
 					testCapturePKICert(resourceName, store),
@@ -140,16 +152,75 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion111), nil
 				},
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, "", false, "test"),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `issuer_ref = "test"`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerRef, "test"),
 				),
 			},
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, "", true, ""),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, true),
 				Check: resource.ComposeTestCheckFunc(
 					checks,
 					testPKICertRevocation(rootPath, store),
+				),
+			},
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
+					`not_before_duration = "120s"`),
+				Check: resource.ComposeTestCheckFunc(
+					checks,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNotBeforeDuration, "120s"),
+					testPKICert(resourceName, func(cert *x509.Certificate) error {
+						approximaetNotBeforeDuration := time.Now().Sub(cert.NotBefore).Seconds()
+						if approximaetNotBeforeDuration < 110 || approximaetNotBeforeDuration > 130 {
+							// Note that we use a tolerance of 10 seconds, which should be plenty
+							return fmt.Errorf("notBefore duration expected to be ~ 120s, but was %#v", approximaetNotBeforeDuration)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
+					`skid = "14:2E:B3:17:B7:58:56:CB:AE:50:09:40:E6:1F:AF:9D:8B:14:C2:C6"`),
+				Check: resource.ComposeTestCheckFunc(
+					checks,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSKID, "14:2E:B3:17:B7:58:56:CB:AE:50:09:40:E6:1F:AF:9D:8B:14:C2:C6"),
+					testPKICert(resourceName, func(cert *x509.Certificate) error {
+						expected := []byte{0x14, 0x2E, 0xB3, 0x17, 0xB7, 0x58, 0x56, 0xCB, 0xAE, 0x50, 0x09, 0x40, 0xE6, 0x1F, 0xAF, 0x9D, 0x8B, 0x14, 0xC2, 0xC6}
+						if !bytes.Equal(expected, cert.SubjectKeyId) {
+							return fmt.Errorf("SubjectKeyID expected %#v but got %#v", expected, cert.SubjectKeyId)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				SkipFunc: skip(provider.VaultVersion112),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
+					`use_pss = true`),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckPKISecretRootSignIntermediate(resourceName, rootPath, commonName, format, "", x509.SHA256WithRSAPSS, false),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsePSS, "true"),
+				),
+			},
+			{
+				SkipFunc: skip(provider.VaultVersion118),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
+					`key_usage = ["CertSign", "DigitalSignature"]`),
+				Check: resource.ComposeTestCheckFunc(
+					checks,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "CertSign"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".1", "DigitalSignature"),
+					testPKICert(resourceName, func(cert *x509.Certificate) error {
+						if 0 == cert.KeyUsage&x509.KeyUsageCertSign {
+							return fmt.Errorf("KeyUsage expected %b, got %b",
+								x509.KeyUsageKeyAgreement|x509.KeyUsageCertSign,
+								cert.KeyUsage)
+						}
+						return nil
+					}),
 				),
 			},
 		},
@@ -159,17 +230,16 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
-	format := "pem"
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false, ""),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "pem"`),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, "pem", "", x509.SHA256WithRSA, false),
 			},
 		},
 	})
@@ -178,17 +248,16 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
 func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
-	format := "der"
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false, ""),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "der"`),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, "der", "", x509.SHA256WithRSA, false),
 			},
 		},
 	})
@@ -197,17 +266,92 @@ func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
 func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+	commonName := "SubOrg Intermediate CA"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "pem_bundle"`),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, "pem_bundle", "", x509.SHA256WithRSA, false),
+			},
+		},
+	})
+}
+
+func notAfter(t time.Time) string {
+	return fmt.Sprintf("not_after = %q", t.Format(time.RFC3339))
+}
+
+func TestPkiSecretBackendRootSignIntermediate_not_after(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+	commonName := "SubOrg Intermediate CA"
+	notAfterTime := time.Now().Add(5 * time.Hour)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "der"`, notAfter(notAfterTime)),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, "der", notAfterTime.Format(time.RFC3339), x509.SHA256WithRSA, false),
+			},
+		},
+	})
+}
+
+func TestPkiSecretBackendRootSignIntermediate_name_constraints_pem_bundle(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 	format := "pem_bundle"
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false, ""),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_name_constraints(rootPath, intermediatePath, format, false, ""),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, "", x509.SHA256WithRSA, true),
+			},
+		},
+	})
+}
+
+func TestPkiSecretBackendRootSignIntermediate_signature_bits(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+	format := "pem_bundle"
+	commonName := "SubOrg Intermediate CA"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_signature_bits(rootPath, intermediatePath, format, "384"),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, "", x509.SHA384WithRSA, false),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldSignatureBits, "384"),
+				),
+			},
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_signature_bits(rootPath, intermediatePath, format, "512"),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, "", x509.SHA512WithRSA, false),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldSignatureBits, "512"),
+				),
 			},
 		},
 	})
@@ -224,21 +368,20 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle_multiple_intermed
 	commonName := "SubOrg Intermediate 2 CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_multiple_inter(rootPath, intermediate1Path, intermediate2Path, format),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.two", intermediate1Path, commonName, format),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.two", intermediate1Path, commonName, format, "", x509.SHA256WithRSA, false),
 			},
 		},
 	})
 }
 
-func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string) resource.TestCheckFunc {
-	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr(res, "backend", path),
+func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string, notAfter string, expectedSignatureAlgorithm x509.SignatureAlgorithm, checkNameConstraintsAttrs bool) resource.TestCheckFunc {
+	checks := []resource.TestCheckFunc{resource.TestCheckResourceAttr(res, "backend", path),
 		resource.TestCheckResourceAttr(res, "common_name", commonName),
 		resource.TestCheckResourceAttr(res, "ou", "SubUnit"),
 		resource.TestCheckResourceAttr(res, "organization", "SubOrg"),
@@ -249,7 +392,33 @@ func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string
 		resource.TestCheckResourceAttrSet(res, "serial_number"),
 		assertPKICertificateBundle(res, format),
 		assertPKICAChain(res),
-	)
+		assertCertificateAttributes(res, notAfter, expectedSignatureAlgorithm),
+	}
+	if checkNameConstraintsAttrs {
+		// Note that the name constraints extension field values are the same as in resource_pki_secret_backend_root_cert_test.go
+		// only for dev convinience (i.e. laziness).
+		checks = append(checks,
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedDNSDomains+".0", "example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedDNSDomains+".1", ".example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldExcludedDNSDomains+".0", "bad.example.com"),
+
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedIPRanges+".0", "192.0.2.0/24"),
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedIPRanges+".1", "2001:db8::/32"),
+			resource.TestCheckResourceAttr(res, consts.FieldExcludedEmailAddresses+".0", "root@example.com"),
+
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedEmailAddresses+".0", "admin@example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedEmailAddresses+".1", "info@example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldExcludedEmailAddresses+".0", "root@example.com"),
+
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedURIDomains+".0", "https://example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldPermittedURIDomains+".1", "https://www.example.com"),
+			resource.TestCheckResourceAttr(res, consts.FieldExcludedURIDomains+".0", "ftp://example.com"),
+			func(s *terraform.State) error {
+				return checkCertificateNameConstraints(res, s)
+			},
+		)
+	}
+	return resource.ComposeTestCheckFunc(checks...)
 }
 
 func assertPKICertificateBundle(res, expectedFormat string) resource.TestCheckFunc {
@@ -315,7 +484,66 @@ func assertPKICAChain(res string) resource.TestCheckFunc {
 	}
 }
 
-func testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, path, format string, revoke bool, issuerRef string) string {
+func assertCertificateAttributes(res string, notAfter string, expectedSignatureAlgorithm x509.SignatureAlgorithm) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[res]
+		if !ok {
+			return fmt.Errorf("resource %q not found in the state", res)
+		}
+		format := rs.Primary.Attributes["format"]
+		var rawCert []byte
+		switch format {
+		case "pem", "pem_bundle":
+			pemCert := []byte(rs.Primary.Attributes["certificate"])
+			b, _ := pem.Decode(pemCert)
+			if b == nil {
+				return fmt.Errorf("error decoding PEM certificate")
+			}
+
+			rawCert = b.Bytes
+		case "der":
+			certAttr := rs.Primary.Attributes["certificate"]
+			var err error
+			rawCert, err = base64.StdEncoding.DecodeString(certAttr)
+			if err != nil {
+				return fmt.Errorf("error decoding der certificate: %w", err)
+			}
+		}
+
+		crt, err := x509.ParseCertificate(rawCert)
+		if err != nil {
+			return fmt.Errorf("error parsing certificate: %w", err)
+		}
+
+		expectedMaxPathLen, err := strconv.Atoi(rs.Primary.Attributes["max_path_length"])
+		if err != nil {
+			return fmt.Errorf("error parsing max_path_length value as int: %w", err)
+		}
+
+		if expectedMaxPathLen != crt.MaxPathLen {
+			return fmt.Errorf("expected MaxPathLen %d, actual %d", expectedMaxPathLen, crt.MaxPathLen)
+		}
+
+		if notAfter != "" {
+			notAfterTime, err := time.Parse(time.RFC3339, notAfter)
+			if err != nil {
+				return fmt.Errorf("error parsing not_after value: %w", err)
+			}
+
+			if !notAfterTime.Equal(crt.NotAfter) {
+				return fmt.Errorf("unexpected not_after in certificate: expected %s, got %s", notAfter, crt.NotAfter.Format(time.RFC3339))
+			}
+		}
+
+		if expectedSignatureAlgorithm != crt.SignatureAlgorithm {
+			return fmt.Errorf("expected signature algorithm (form signature_bits) %s, actual %s", expectedSignatureAlgorithm, crt.SignatureAlgorithm)
+		}
+
+		return nil
+	}
+}
+
+func testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, path string, revoke bool, extra ...string) string {
 	config := fmt.Sprintf(`
 resource "vault_mount" "test-root" {
   path                      = "%s"
@@ -368,6 +596,75 @@ resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
   locality             = "San Francisco"
   province             = "CA"
   revoke               = %t
+  max_path_length      = 0
+  %s
+}
+`, rootPath, path, revoke, strings.Join(extra, "\n"))
+
+	return config
+}
+
+func testPkiSecretBackendRootSignIntermediateConfig_name_constraints(rootPath, path, format string, revoke bool, issuerRef string) string {
+	config := fmt.Sprintf(`
+resource "vault_mount" "test-root" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
+  default_lease_ttl_seconds = "8640000"
+  max_lease_ttl_seconds     = "8640000"
+}
+
+resource "vault_mount" "test-intermediate" {
+  path                      = "%s"
+  type                      = vault_mount.test-root.type
+  description               = "test intermediate"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend              = vault_mount.test-root.path
+  type                 = "internal"
+  common_name          = "RootOrg Root CA"
+  ttl                  = "86400"
+  format               = "pem"
+  private_key_format   = "der"
+  key_type             = "rsa"
+  key_bits             = 4096
+  exclude_cn_from_sans = true
+  ou                   = "Organizational Unit"
+  organization         = "RootOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  depends_on  = [vault_pki_secret_backend_root_cert.test]
+  backend     = vault_mount.test-intermediate.path
+  type        = "internal"
+  common_name = "SubOrg Intermediate CA"
+}
+
+resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
+  backend              = vault_mount.test-root.path
+  csr                  = vault_pki_secret_backend_intermediate_cert_request.test.csr
+  common_name          = "SubOrg Intermediate CA"
+  exclude_cn_from_sans = true
+  ou                   = "SubUnit"
+  organization         = "SubOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
+  permitted_dns_domains		= ["example.com",".example.com"]
+  excluded_dns_domains		= ["bad.example.com"]
+  permitted_ip_ranges		= ["192.0.2.0/24", "2001:db8::/32"]
+  excluded_ip_ranges		= ["192.0.3.0/24", "2002:db8::/16"]
+  permitted_email_addresses = ["admin@example.com","info@example.com"]
+  excluded_email_addresses	= ["root@example.com"]
+  permitted_uri_domains		= ["https://example.com", "https://www.example.com"]
+  excluded_uri_domains		= ["ftp://example.com"]
+  revoke               = %t
 `, rootPath, path, revoke)
 
 	if format != "" {
@@ -382,6 +679,69 @@ resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
 `, issuerRef)
 	}
 
+	return config + "}"
+}
+
+func testPkiSecretBackendRootSignIntermediateConfig_signature_bits(rootPath, path, format string, signatureBits string) string {
+	config := fmt.Sprintf(`
+resource "vault_mount" "test-root" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
+  default_lease_ttl_seconds = "8640000"
+  max_lease_ttl_seconds     = "8640000"
+}
+
+resource "vault_mount" "test-intermediate" {
+  path                      = "%s"
+  type                      = vault_mount.test-root.type
+  description               = "test intermediate"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend              = vault_mount.test-root.path
+  type                 = "internal"
+  common_name          = "RootOrg Root CA"
+  ttl                  = "86400"
+  format               = "pem"
+  private_key_format   = "der"
+  key_type             = "rsa"
+  key_bits             = 4096
+  exclude_cn_from_sans = true
+  ou                   = "Organizational Unit"
+  organization         = "RootOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  depends_on  = [vault_pki_secret_backend_root_cert.test]
+  backend     = vault_mount.test-intermediate.path
+  type        = "internal"
+  common_name = "SubOrg Intermediate CA"
+}
+
+resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
+  backend              = vault_mount.test-root.path
+  csr                  = vault_pki_secret_backend_intermediate_cert_request.test.csr
+  common_name          = "SubOrg Intermediate CA"
+  exclude_cn_from_sans = true
+  ou                   = "SubUnit"
+  organization         = "SubOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
+  signature_bits       = "%s"
+`, rootPath, path, signatureBits)
+
+	if format != "" {
+		config += fmt.Sprintf(`
+  format = %q
+`, format)
+	}
 	return config + "}"
 }
 

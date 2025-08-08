@@ -5,18 +5,17 @@ package vault
 
 import (
 	"context"
-	"errors"
-
 	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
-	"github.com/hashicorp/vault/api"
 )
 
 func githubAuthBackendResource() *schema.Resource {
@@ -183,14 +182,13 @@ func githubAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta int
 	configPath := path + "/config"
 
 	log.Printf("[DEBUG] Reading github auth mount from '%q'", path)
-	mount, err := mountutil.GetAuthMount(context.Background(), client, d.Id())
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
+	mount, err := mountutil.GetAuthMount(ctx, client, d.Id())
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

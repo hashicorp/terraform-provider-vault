@@ -40,6 +40,29 @@ func TestAuthLoginJWT_Init(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:      "basic-with-env",
+			authField: consts.FieldAuthLoginJWT,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginJWT: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "ns1",
+						consts.FieldRole:      "alice",
+					},
+				},
+			},
+			envVars: map[string]string{
+				consts.EnvVarVaultAuthJWT: "jwt1",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "ns1",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeJWT,
+				consts.FieldRole:             "alice",
+				consts.FieldJWT:              "jwt1",
+			},
+			wantErr: false,
+		},
+		{
 			name:         "error-missing-resource",
 			authField:    consts.FieldAuthLoginJWT,
 			expectParams: nil,

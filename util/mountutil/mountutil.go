@@ -6,17 +6,18 @@ package mountutil
 import (
 	"context"
 	"errors"
-	"fmt"
+	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 // Error strings that are returned by the Vault API.
 const (
-	ErrVaultSecretMountNotFound = "No secret engine mount at"
-	ErrVaultAuthMountNotFound   = "No auth engine at"
+	VaultSecretMountNotFoundErrMsg = "No secret engine mount at"
+	VaultAuthMountNotFoundErrMsg   = "No auth engine at"
 )
 
 // Error strings that are used internally by TFVP
@@ -28,40 +29,24 @@ var (
 
 // GetMount will fetch the secret mount at the given path.
 func GetMount(ctx context.Context, client *api.Client, path string) (*api.MountOutput, error) {
-	mount, err := client.Sys().GetMountWithContext(ctx, path)
-	// Hardcoding the error string check is not ideal, but Vault does not
-	// return 404 in this case
-	if err != nil && strings.Contains(err.Error(), ErrVaultSecretMountNotFound) {
-		return nil, fmt.Errorf("%w: %s", ErrMountNotFound, err)
+	if resp, err := client.Sys().GetMountWithContext(ctx, path); err != nil {
+		return nil, err
+	} else if resp == nil {
+		return nil, ErrMountNotFound
+	} else {
+		return resp, nil
 	}
-	// some other error occured, like 403, etc.
-	if err != nil {
-		return nil, fmt.Errorf("error reading from Vault: %s", err)
-	}
-	// no error but no mount either, so return not found
-	if mount == nil {
-		return nil, fmt.Errorf("%w: %s", ErrMountNotFound, err)
-	}
-	return mount, nil
 }
 
 // GetAuthMount will fetch the auth mount at the given path.
 func GetAuthMount(ctx context.Context, client *api.Client, path string) (*api.MountOutput, error) {
-	mount, err := client.Sys().GetAuthWithContext(ctx, path)
-	// Hardcoding the error string check is not ideal, but Vault does not
-	// return 404 in this case
-	if err != nil && strings.Contains(err.Error(), ErrVaultAuthMountNotFound) {
-		return nil, fmt.Errorf("%w: %s", ErrMountNotFound, err)
+	if resp, err := client.Sys().GetAuthWithContext(ctx, path); err != nil {
+		return nil, err
+	} else if resp == nil {
+		return nil, ErrMountNotFound
+	} else {
+		return resp, nil
 	}
-	// some other error occured, like 403, etc.
-	if err != nil {
-		return nil, fmt.Errorf("error reading from Vault: %s", err)
-	}
-	// no error but no mount either, so return not found
-	if mount == nil {
-		return nil, fmt.Errorf("%w: %s", ErrMountNotFound, err)
-	}
-	return mount, nil
 }
 
 // NormalizeMountPath to be in a form valid for accessing values from api.MountOutput
@@ -74,21 +59,40 @@ func TrimSlashes(path string) string {
 	return strings.Trim(path, consts.PathDelim)
 }
 
-// CheckMountEnabledWithContext in Vault
-func CheckMountEnabledWithContext(ctx context.Context, client *api.Client, path string) (bool, error) {
-	_, err := GetMount(ctx, client, path)
-	if errors.Is(err, ErrMountNotFound) {
-		return false, err
-	}
-
-	if err != nil {
+// CheckMountEnabled in Vault
+func CheckMountEnabled(ctx context.Context, client *api.Client, path string) (bool, error) {
+	if _, err := GetMount(ctx, client, path); err != nil {
+		if IsMountNotFoundError(err) {
+			return false, nil
+		}
 		return false, err
 	}
 
 	return true, nil
 }
 
-// CheckMountEnabled in Vault
-func CheckMountEnabled(client *api.Client, path string) (bool, error) {
-	return CheckMountEnabledWithContext(context.Background(), client, path)
+// IsMountNotFoundError returns true if error is a mount not found error.
+func IsMountNotFoundError(err error) bool {
+	var respErr *api.ResponseError
+	if errors.As(err, &respErr) && respErr != nil {
+		if respErr.StatusCode == http.StatusNotFound {
+			return true
+		}
+		if respErr.StatusCode == http.StatusBadRequest {
+			for _, e := range respErr.Errors {
+				if strings.Contains(e, VaultSecretMountNotFoundErrMsg) {
+					return true
+				}
+				if strings.Contains(e, VaultAuthMountNotFoundErrMsg) {
+					return true
+				}
+			}
+		}
+	}
+
+	if errors.Is(err, ErrMountNotFound) {
+		return true
+	}
+
+	return false
 }

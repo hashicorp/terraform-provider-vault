@@ -871,3 +871,39 @@ func TestRetryWrite(t *testing.T) {
 		})
 	}
 }
+
+func TestGetStringSliceFromSecret(t *testing.T) {
+	fieldName := "foo"
+	var testArray [2]string
+	testArray[0] = "1"
+	testArray[1] = "2"
+
+	tests := []struct {
+		name       string
+		secretData map[string]interface{}
+		want       []string
+		wantOk     bool
+	}{
+		{"nil-data", nil, nil, false},
+		{"field-missing", map[string]interface{}{}, nil, false},
+		{"nil-element", map[string]interface{}{fieldName: nil}, nil, false},
+		{"not-a-slice", map[string]interface{}{fieldName: "test-value"}, nil, false},
+		{"array-val", map[string]interface{}{fieldName: testArray}, []string{"1", "2"}, true},
+		{"mixed-slice", map[string]interface{}{fieldName: []interface{}{1, "2"}}, []string{"1", "2"}, true},
+		{"int-slice", map[string]interface{}{fieldName: []int{1, 2}}, []string{"1", "2"}, true},
+		{"string-slice", map[string]interface{}{fieldName: []string{"test1", "test2"}}, []string{"test1", "test2"}, true},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			secret := &api.Secret{Data: tt.secretData}
+			got, gotOk := GetStringSliceFromSecret(secret, fieldName)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetStringSliceFromSecret() got = %v, want %v", got, tt.want)
+			}
+			if gotOk != tt.wantOk {
+				t.Errorf("GetStringSliceFromSecret() gotOk = %v, wantOk %v", gotOk, tt.wantOk)
+			}
+		})
+	}
+}

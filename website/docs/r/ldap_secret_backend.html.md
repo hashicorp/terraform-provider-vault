@@ -22,12 +22,14 @@ for more details.
 ```hcl
 
 resource "vault_ldap_secret_backend" "config" {
-  path          = "my-custom-ldap"
-  binddn        = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
-  bindpass      = "SuperSecretPassw0rd"
-  url           = "ldaps://localhost"
-  insecure_tls  = "true"
-  userdn        = "CN=Users,DC=corp,DC=example,DC=net"
+  path              = "my-custom-ldap"
+  binddn            = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
+  bindpass          = "SuperSecretPassw0rd"
+  url               = "ldaps://localhost"
+  insecure_tls      = "true"
+  userdn            = "CN=Users,DC=corp,DC=example,DC=net"
+  rotation_schedule = "0 * * * SAT"
+  rotation_window   = 3600
 }
 ```
 
@@ -57,17 +59,8 @@ The following arguments are supported:
 
 * `client_tls_key` - (Optional) Client certificate key to provide to the LDAP server, must be x509 PEM encoded.
 
-* `default_lease_ttl_seconds` - (Optional) Default lease duration for secrets in seconds.
-
-* `description` - (Optional) Human-friendly description of the mount for the Active Directory backend.
-
 * `insecure_tls` - (Optional) Skip LDAP server SSL Certificate verification. This is not recommended for production.
   Defaults to `false`.
-
-* `local` - (Optional) Mark the secrets engine as local-only. Local engines are not replicated or removed by
-  replication.Tolerance duration to use when checking the last rotation time.
-
-* `max_lease_ttl_seconds` - (Optional) Maximum possible lease duration for secrets in seconds.
 
 * `password_policy` - (Optional) Name of the password policy to use to generate passwords.
 
@@ -89,6 +82,60 @@ The following arguments are supported:
 
 * `skip_static_role_import_rotation` - (Optional) If set to true, static roles will not be rotated during import.
   Defaults to false. Requires Vault 1.16 or above.
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
+  A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+
+* `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+.
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled token rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+.
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
+
+### Common Mount Arguments
+These arguments are common across all resources that mount a secret engine.
+
+* `description` - (Optional) Human-friendly description of the mount
+
+* `default_lease_ttl_seconds` - (Optional) Default lease duration for tokens and secrets in seconds
+
+* `max_lease_ttl_seconds` - (Optional) Maximum possible lease duration for tokens and secrets in seconds
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.
+
+* `local` - (Optional) Boolean flag that can be explicitly set to true to enforce local mount in HA environment
+
+* `options` - (Optional) Specifies mount type specific options that are passed to the backend
+
+* `seal_wrap` - (Optional) Boolean flag that can be explicitly set to true to enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability
+
+* `external_entropy_access` - (Optional) Boolean flag that can be explicitly set to true to enable the secrets engine to access Vault's external entropy source
+
+* `allowed_managed_keys` - (Optional) Set of managed key registry entry names that the mount in question is allowed to access
+
+* `listing_visibility` - (Optional) Specifies whether to show this mount in the UI-specific
+  listing endpoint. Valid values are `unauth` or `hidden`. If not set, behaves like `hidden`.
+
+* `passthrough_request_headers` - (Optional) List of headers to allow and pass from the request to
+  the plugin.
+
+* `allowed_response_headers` - (Optional) List of headers to allow, allowing a plugin to include
+  them in the response.
+
+* `delegated_auth_accessors` - (Optional)  List of allowed authentication mount accessors the
+  backend can request delegated authentication for.
+
+* `plugin_version` - (Optional) Specifies the semantic version of the plugin to use, e.g. "v1.0.0".
+  If unspecified, the server will select any matching unversioned plugin that may have been
+  registered, the latest versioned plugin registered, or a built-in plugin in that order of precedence.
+
+* `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
+  not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
 
 ## Attributes Reference
 

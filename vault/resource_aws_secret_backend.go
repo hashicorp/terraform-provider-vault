@@ -5,10 +5,11 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
+
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
@@ -18,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 var awsSecretFields = []string{
@@ -28,7 +28,7 @@ var awsSecretFields = []string{
 }
 
 func awsSecretBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: awsSecretBackendCreate,
 		ReadContext:   provider.ReadContextWrapper(awsSecretBackendRead),
 		UpdateContext: awsSecretBackendUpdate,
@@ -100,6 +100,23 @@ func awsSecretBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies a custom HTTP STS endpoint to use.",
 			},
+			consts.FieldSTSRegion: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies a custom STS region to use.",
+			},
+			consts.FieldSTSFallbackEndpoints: {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+				Description: "Specifies a list of custom STS fallback endpoints to use (in order).",
+			},
+			consts.FieldSTSFallbackRegions: {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+				Description: "Specifies a list of custom STS fallback regions to use (in order).",
+			},
 			consts.FieldUsernameTemplate: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -136,6 +153,22 @@ func awsSecretBackendResource() *schema.Resource {
 			},
 		},
 	}, false)
+
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldDefaultLeaseTTL,
+		consts.FieldMaxLeaseTTL,
+		consts.FieldIdentityTokenKey,
+		consts.FieldLocal,
+	))
+
+	// Add common automated root rotation schema to the resource
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
@@ -164,42 +197,27 @@ func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
 }
 
 func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
+	isEnterprise := provider.IsEnterpriseSupported(meta)
+	useAPIVer116Enterprise := provider.IsAPISupported(meta, provider.VaultVersion116) && isEnterprise
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
 
 	path := d.Get(consts.FieldPath).(string)
-	description := d.Get(consts.FieldDescription).(string)
-	defaultTTL := d.Get(consts.FieldDefaultLeaseTTL).(int)
-	maxTTL := d.Get(consts.FieldMaxLeaseTTL).(int)
 	accessKey := d.Get(consts.FieldAccessKey).(string)
 	secretKey := d.Get(consts.FieldSecretKey).(string)
 	region := d.Get(consts.FieldRegion).(string)
-	local := d.Get(consts.FieldLocal).(bool)
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting AWS backend at %q", path)
-	mountConfig := api.MountConfigInput{
-		DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
-		MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
+
+	if err := createMount(ctx, d, meta, client, path, consts.MountTypeAWS); err != nil {
+		return diag.FromErr(err)
 	}
-	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
-	if useAPIVer116 {
-		identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
-		if identityTokenKey != "" {
-			mountConfig.IdentityTokenKey = identityTokenKey
-		}
-	}
-	err := client.Sys().MountWithContext(ctx, path, &api.MountInput{
-		Type:        consts.MountTypeAWS,
-		Description: description,
-		Local:       local,
-		Config:      mountConfig,
-	})
-	if err != nil {
-		return diag.Errorf("error mounting to %q: %s", path, err)
-	}
+
 	log.Printf("[DEBUG] Mounted AWS backend at %q", path)
 	d.SetId(path)
 
@@ -208,13 +226,33 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		consts.FieldAccessKey: accessKey,
 		consts.FieldSecretKey: secretKey,
 	}
+
 	for _, k := range awsSecretFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v.(string)
 		}
 	}
 
-	if useAPIVer116 {
+	if useAPIVer119 {
+		if v, ok := d.GetOk(consts.FieldSTSFallbackEndpoints); ok {
+			data[consts.FieldSTSFallbackEndpoints] = util.ToStringArray(v.([]interface{}))
+		}
+
+		if v, ok := d.GetOk(consts.FieldSTSFallbackRegions); ok {
+			data[consts.FieldSTSFallbackRegions] = util.ToStringArray(v.([]interface{}))
+		}
+
+		if v, ok := d.GetOk(consts.FieldSTSRegion); ok {
+			data[consts.FieldSTSRegion] = v.(string)
+		}
+
+		// parse automated root rotation fields if Enterprise 1.19 server
+		if isEnterprise {
+			automatedrotationutil.ParseAutomatedRotationFields(d, data)
+		}
+	}
+
+	if useAPIVer116Enterprise {
 		if v, ok := d.GetOk(consts.FieldIdentityTokenAudience); ok && v != "" {
 			data[consts.FieldIdentityTokenAudience] = v.(string)
 		}
@@ -230,7 +268,7 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		data[consts.FieldRegion] = region
 	}
 
-	_, err = client.Logical().WriteWithContext(ctx, path+"/config/root", data)
+	_, err := client.Logical().WriteWithContext(ctx, path+"/config/root", data)
 	if err != nil {
 		return diag.Errorf("error configuring root credentials for %q: %s", path, err)
 	}
@@ -244,7 +282,9 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 }
 
 func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+	isEnterprise := provider.IsEnterpriseSupported(meta)
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && isEnterprise
+	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -252,21 +292,6 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	path := d.Id()
-
-	log.Printf("[DEBUG] Reading AWS backend mount %q from Vault", path)
-
-	mount, err := mountutil.GetMount(ctx, client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	log.Printf("[DEBUG] Read AWS backend mount %q from Vault", path)
 
 	log.Printf("[DEBUG] Read AWS secret backend config/root %s", path)
 	resp, err := client.Logical().ReadWithContext(ctx, path+"/config/root")
@@ -306,6 +331,32 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 			}
 		}
 
+		if useAPIVer119 {
+			if v, ok := resp.Data[consts.FieldSTSFallbackEndpoints]; ok {
+				if err := d.Set(consts.FieldSTSFallbackEndpoints, v); err != nil {
+					return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldSTSFallbackEndpoints, path, err)
+				}
+			}
+
+			if v, ok := resp.Data[consts.FieldSTSFallbackRegions]; ok {
+				if err := d.Set(consts.FieldSTSFallbackRegions, v); err != nil {
+					return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldSTSFallbackRegions, path, err)
+				}
+			}
+
+			if v, ok := resp.Data[consts.FieldSTSRegion]; ok {
+				if err := d.Set(consts.FieldSTSRegion, v); err != nil {
+					return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldSTSRegion, path, err)
+				}
+			}
+
+			if isEnterprise {
+				if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, path); err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
+
 		if useAPIVer116 {
 			if err := d.Set(consts.FieldIdentityTokenAudience, resp.Data[consts.FieldIdentityTokenAudience]); err != nil {
 				return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldIdentityTokenAudience, path, err)
@@ -322,64 +373,39 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
+
+	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldDefaultLeaseTTL, mount.Config.DefaultLeaseTTL); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldMaxLeaseTTL, mount.Config.MaxLeaseTTL); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldLocal, mount.Local); err != nil {
-		return diag.FromErr(err)
-	}
-	if useAPIVer116 {
-		if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
-			return diag.FromErr(err)
-		}
 	}
 
 	return nil
 }
 
 func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
+	isEnterprise := provider.IsEnterpriseSupported(meta)
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116) && isEnterprise
+	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
 
-	path := d.Id()
 	d.Partial(true)
 
-	path, err := util.Remount(d, client, consts.FieldPath, false)
-	if err != nil {
+	if err := updateMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
-	if d.HasChanges(consts.FieldDefaultLeaseTTL, consts.FieldMaxLeaseTTL, consts.FieldDescription, consts.FieldIdentityTokenKey) {
-		description := d.Get(consts.FieldDescription).(string)
-		config := api.MountConfigInput{
-			Description:     &description,
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
-		}
-
-		if useAPIVer116 {
-			identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
-			if identityTokenKey != "" {
-				config.IdentityTokenKey = identityTokenKey
-			}
-		}
-		log.Printf("[DEBUG] Updating mount config input for %q", path)
-		err := client.Sys().TuneMountWithContext(ctx, path, config)
-		if err != nil {
-			return diag.Errorf("error updating mount config input for %q: %s", path, err)
-		}
-		log.Printf("[DEBUG] Updated mount config input for %q", path)
-	}
-	if d.HasChanges(consts.FieldAccessKey, consts.FieldSecretKey, consts.FieldRegion, consts.FieldIAMEndpoint, consts.FieldSTSEndpoint, consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn) {
+	path := d.Id()
+	if d.HasChanges(consts.FieldAccessKey,
+		consts.FieldSecretKey, consts.FieldRegion, consts.FieldIAMEndpoint,
+		consts.FieldSTSEndpoint, consts.FieldSTSFallbackEndpoints, consts.FieldSTSRegion, consts.FieldSTSFallbackRegions,
+		consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn,
+		consts.FieldRotationSchedule,
+		consts.FieldRotationPeriod,
+		consts.FieldRotationWindow,
+		consts.FieldDisableAutomatedRotation,
+	) {
 		log.Printf("[DEBUG] Updating root credentials at %q", path+"/config/root")
 		data := map[string]interface{}{
 			consts.FieldAccessKey: d.Get(consts.FieldAccessKey).(string),
@@ -389,6 +415,25 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		for _, k := range awsSecretFields {
 			if v, ok := d.GetOk(k); ok {
 				data[k] = v.(string)
+			}
+		}
+
+		if useAPIVer119 {
+			if v, ok := d.GetOk(consts.FieldSTSFallbackEndpoints); ok {
+				data[consts.FieldSTSFallbackEndpoints] = util.ToStringArray(v.([]interface{}))
+			}
+
+			if v, ok := d.GetOk(consts.FieldSTSFallbackRegions); ok {
+				data[consts.FieldSTSFallbackRegions] = util.ToStringArray(v.([]interface{}))
+			}
+
+			if v, ok := d.GetOk(consts.FieldSTSRegion); ok {
+				data[consts.FieldSTSRegion] = v.(string)
+			}
+
+			// parse automated root rotation fields if Enterprise 1.19 server
+			if isEnterprise {
+				automatedrotationutil.ParseAutomatedRotationFields(d, data)
 			}
 		}
 

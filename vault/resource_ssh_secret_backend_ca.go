@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -14,6 +15,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
+const defaultKeyTypeSSH = "ssh-rsa"
+
 func sshSecretBackendCAResource() *schema.Resource {
 	return &schema.Resource{
 		Create: sshSecretBackendCACreate,
@@ -21,6 +24,14 @@ func sshSecretBackendCAResource() *schema.Resource {
 		Delete: sshSecretBackendCADelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
+		},
+		SchemaVersion: 1,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    sshSecretBackendCAResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: sshSecretBackendCAUpgradeV0,
+			},
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -43,7 +54,7 @@ func sshSecretBackendCAResource() *schema.Resource {
 			},
 			"key_type": {
 				Type:        schema.TypeString,
-				Default:     "ssh-rsa",
+				Default:     defaultKeyTypeSSH,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "Specifies the desired key type for the generated SSH CA key when `generate_signing_key` is set to `true`.",
@@ -53,6 +64,18 @@ func sshSecretBackendCAResource() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Description: "Specifies the desired key bits for the generated SSH CA key when `generate_signing_key` is set to `true`.",
+			},
+			"managed_key_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The name of the managed key to use. When using a managed key, this field or managed_key_id is required.",
+			},
+			"managed_key_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The id of the managed key to use. When using a managed key, this field or managed_key_name is required.",
 			},
 			"private_key": {
 				Type:        schema.TypeString,
@@ -96,6 +119,15 @@ func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	if keyBits, ok := d.Get("key_bits").(int); ok {
 		data["key_bits"] = keyBits
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion120) {
+		if managedKeyName, ok := d.Get("managed_key_name").(string); ok {
+			data["managed_key_name"] = managedKeyName
+		}
+		if managedKeyId, ok := d.Get("managed_key_id").(string); ok {
+			data["managed_key_id"] = managedKeyId
+		}
 	}
 
 	log.Printf("[DEBUG] Writing CA information on SSH backend %q", backend)
@@ -161,4 +193,34 @@ func sshSecretBackendCADelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleted CA configuration for SSH backend %q", backend)
 
 	return nil
+}
+
+func sshSecretBackendCAResourceV0() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"key_type": {
+				Type:        schema.TypeString,
+				Default:     defaultKeyTypeSSH,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Specifies the desired key type for the generated SSH CA key when `generate_signing_key` is set to `true`.",
+			},
+		},
+	}
+}
+
+// sshSecretBackendCAUpgradeV0 allows update the state for the vault_ssh_secret_backend_ca
+// resource that was provisioned with older schema configurations.
+//
+// Upgrading the Vault provider from 4.2.0 to 4.3.0 results in
+// vault_ssh_secret_backend_ca being replaced although no other changes have
+// been made. The key_type attribute, introduced in #1454, gets added
+// (implicit, using the default value) and forces the resource to be replaced.
+// See https://github.com/hashicorp/terraform-provider-vault/issues/2281
+func sshSecretBackendCAUpgradeV0(_ context.Context, rawState map[string]interface{}, _ interface{}) (map[string]interface{}, error) {
+	if rawState["key_type"] == nil {
+		rawState["key_type"] = defaultKeyTypeSSH
+	}
+
+	return rawState, nil
 }

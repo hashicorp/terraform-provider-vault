@@ -5,7 +5,7 @@ package vault
 
 import (
 	"context"
-	"errors"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"strings"
 
@@ -194,11 +194,16 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed:  true,
 			Sensitive: true,
 		},
+		consts.FieldConnectionTimeout: {
+			Type:     schema.TypeInt,
+			Optional: true,
+			Computed: true,
+		},
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		SchemaVersion: 2,
 		// Handle custom state upgrade case since schema version was already 1
 		StateUpgraders: []schema.StateUpgrader{
@@ -218,6 +223,11 @@ func ldapAuthBackendResource() *schema.Resource {
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema:        fields,
 	}, true)
+
+	// add automated rotation fields to the resource
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func ldapAuthBackendConfigPath(path string) string {
@@ -286,6 +296,11 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		}
 	}
 
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
+	}
+
 	if v, ok := d.GetOk(consts.FieldBindPass); ok {
 		data[consts.FieldBindPass] = v.(string)
 	}
@@ -296,6 +311,10 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 
 	if v, ok := d.GetOk(consts.FieldClientTLSKey); ok {
 		data[consts.FieldClientTLSKey] = v.(string)
+	}
+
+	if v, ok := d.GetOk(consts.FieldConnectionTimeout); ok {
+		data[consts.FieldConnectionTimeout] = v
 	}
 
 	updateTokenFields(d, data, false)
@@ -319,21 +338,20 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 
 	path := d.Id()
 
-	authMount, err := mountutil.GetAuthMount(ctx, client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
+	mount, err := mountutil.GetAuthMount(ctx, client, path)
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 
 	d.Set(consts.FieldPath, path)
-	d.Set(consts.FieldDescription, authMount.Description)
-	d.Set(consts.FieldAccessor, authMount.Accessor)
-	d.Set(consts.FieldLocal, authMount.Local)
+	d.Set(consts.FieldDescription, mount.Description)
+	d.Set(consts.FieldAccessor, mount.Accessor)
+	d.Set(consts.FieldLocal, mount.Local)
 
 	path = ldapAuthBackendConfigPath(path)
 
@@ -375,6 +393,19 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	if useAPIVer111 {
 		if err := d.Set(consts.FieldMaxPageSize, resp.Data[consts.FieldMaxPageSize]); err != nil {
 			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldMaxPageSize, path, err)
+		}
+	}
+
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, d.Id()); err != nil {
+			return diag.Errorf("error reading rotation fields from LDAP Auth Backend %q: %q", path, err)
+		}
+	}
+
+	if v, ok := resp.Data[consts.FieldConnectionTimeout]; ok {
+		if err := d.Set(consts.FieldConnectionTimeout, v); err != nil {
+			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldConnectionTimeout, path, err)
 		}
 	}
 

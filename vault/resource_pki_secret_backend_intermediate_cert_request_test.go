@@ -4,12 +4,16 @@
 package vault
 
 import (
+	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -29,9 +33,9 @@ func TestPkiSecretBackendIntermediateCertRequest_basic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_basic(path, false),
@@ -55,9 +59,9 @@ func TestPkiSecretBackendIntermediateCertRequest_managedKeys(t *testing.T) {
 
 	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_managedKeys(path, keyName, accessKey, secretKey),
@@ -72,6 +76,164 @@ func TestPkiSecretBackendIntermediateCertRequest_managedKeys(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestPkiSecretBackendIntermediateCertRequest_signature_bits(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+	testCheckFunc := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "2048"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_signature_bits(path, ""),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSignatureBits),
+					assertCsrAttributes(resourceName, x509.SHA256WithRSA),
+				)...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_signature_bits(path, "384"),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSignatureBits, "384"),
+					assertCsrAttributes(resourceName, x509.SHA384WithRSA),
+				)...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_signature_bits(path, "512"),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSignatureBits, "512"),
+					assertCsrAttributes(resourceName, x509.SHA512WithRSA),
+				)...),
+			},
+		},
+	})
+}
+
+// assertCsrAttributes so far only checks signature algorithm...
+func assertCsrAttributes(resourceName string, expectedSignatureAlgorithm x509.SignatureAlgorithm) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		attrs := rs.Primary.Attributes
+
+		if attrs["format"] != "pem" {
+			// assumes that the certificate `format` is `pem`
+			return fmt.Errorf("test only valid for resources configured with the 'pem' format")
+		}
+
+		csrPEM := attrs["csr"]
+		if csrPEM == "" {
+			return fmt.Errorf("CSR from state cannot be empty")
+		}
+
+		c, _ := pem.Decode([]byte(csrPEM))
+		csr, err := x509.ParseCertificateRequest(c.Bytes)
+		if err != nil {
+			return err
+		}
+
+		if expectedSignatureAlgorithm != csr.SignatureAlgorithm {
+			return fmt.Errorf("expected signature algorithm (form signature_bits) %s, actual %s", expectedSignatureAlgorithm, csr.SignatureAlgorithm)
+		}
+
+		return nil
+	}
+}
+
+func testPkiSecretBackendIntermediateCertRequestConfig_signature_bits(path string, optionalSignatureBits string) string {
+	return testPkiSecretBackendIntermediateCertRequestConfig(path, false, optionalSignatureBits, "", "")
+}
+
+func TestPkiSecretBackendIntermediateCertRequest_key_usage(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+	testCheckFunc := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path, ""),
+				Check:  resource.ComposeTestCheckFunc(append(testCheckFunc, resource.TestCheckNoResourceAttr(resourceName, consts.FieldKeyUsage))...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path, `["certsign"]`),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "certsign"))...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path, `["keyagreement", "DecipherOnly"]`),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "keyagreement"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".1", "DecipherOnly"))...),
+			},
+		},
+	})
+}
+
+func testPkiSecretBackendIntermediateCertRequestConfig_key_usage(path string, optionalKeyUsage string) string {
+	return testPkiSecretBackendIntermediateCertRequestConfig(path, false, "", optionalKeyUsage, "")
+}
+
+func TestPkiSecretBackendIntermediateCertRequest_serial_number(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+	testCheckFunc := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_serial_number(path, ""),
+				Check:  resource.ComposeTestCheckFunc(append(testCheckFunc, resource.TestCheckNoResourceAttr(resourceName, consts.FieldSerialNumber))...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_serial_number(path, "WI-3005"),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSerialNumber, "WI-3005"))...),
+			},
+		},
+	})
+}
+
+func testPkiSecretBackendIntermediateCertRequestConfig_serial_number(path string, optionalSerialNumber string) string {
+	return testPkiSecretBackendIntermediateCertRequestConfig(path, false, "", "", optionalSerialNumber)
 }
 
 func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
@@ -103,7 +265,7 @@ func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 	)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
@@ -138,6 +300,19 @@ func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 }
 
 func testPkiSecretBackendIntermediateCertRequestConfig_basic(path string, addConstraints bool) string {
+	return testPkiSecretBackendIntermediateCertRequestConfig(path, addConstraints, "", "", "")
+}
+
+func testPkiSecretBackendIntermediateCertRequestConfig(path string, addConstraints bool, optionalSignatureBits, optionalKeyUsage, optionalSerialNumber string) string {
+	if optionalSignatureBits != "" {
+		optionalSignatureBits = fmt.Sprintf(`signature_bits = "%s"`, optionalSignatureBits)
+	}
+	if optionalKeyUsage != "" {
+		optionalKeyUsage = fmt.Sprintf(`key_usage = %s`, optionalKeyUsage)
+	}
+	if optionalSerialNumber != "" {
+		optionalSerialNumber = fmt.Sprintf(`serial_number = "%s"`, optionalSerialNumber)
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path                      = "%s"
@@ -153,8 +328,11 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
   common_name           = "test.my.domain"
   uri_sans              = ["spiffe://test.my.domain"]
   add_basic_constraints = %t
+  %s
+  %s
+  %s
 }
-`, path, addConstraints)
+`, path, addConstraints, optionalSignatureBits, optionalKeyUsage, optionalSerialNumber)
 }
 
 func testPkiSecretBackendIntermediateCertRequestConfig_multiIssuerInternal(path, keyName string) string {

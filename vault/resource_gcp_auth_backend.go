@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
@@ -32,7 +32,7 @@ const (
 )
 
 func gcpAuthBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: gcpAuthBackendWrite,
 		UpdateContext: gcpAuthBackendUpdate,
 		ReadContext:   provider.ReadContextWrapper(gcpAuthBackendRead),
@@ -124,6 +124,11 @@ func gcpAuthBackendResource() *schema.Resource {
 			consts.FieldTune: authMountTuneSchema(),
 		},
 	}, false)
+
+	// Add common automated root rotation schema to the resource.
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func gcpAuthCustomEndpointSchema() map[string]*schema.Schema {
@@ -235,6 +240,8 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	gcpPath := d.Id()
 	gcpAuthPath := "auth/" + gcpPath
 	path := gcpAuthBackendConfigPath(gcpPath)
+	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 
 	if !d.IsNewResource() {
 		newMount, err := util.Remount(d, client, consts.FieldPath, true)
@@ -250,7 +257,6 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 			config := api.MountConfigInput{
 				Description: &desc,
 			}
-			useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 			if useAPIVer117Ent {
 				config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
 			}
@@ -262,8 +268,8 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 
 	data := map[string]interface{}{}
 
-	if v, ok := d.GetOk(consts.FieldCredentials); ok {
-		data[consts.FieldCredentials] = v
+	if d.HasChange(consts.FieldCredentials) {
+		data[consts.FieldCredentials] = d.Get(consts.FieldCredentials)
 	}
 
 	epField := consts.FieldCustomEndpoint
@@ -299,8 +305,7 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		}
 	}
 
-	useAPIver117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-	if useAPIver117Ent {
+	if useAPIVer117Ent {
 		fields := []string{
 			consts.FieldIdentityTokenAudience,
 			consts.FieldIdentityTokenTTL,
@@ -312,6 +317,11 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 				data[k] = v
 			}
 		}
+	}
+
+	if useAPIVer119Ent {
+		// Parse automated root rotation fields if running Vault Enterprise 1.19 or newer.
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
 	log.Printf("[DEBUG] Writing %s config at path %q", gcpAuthType, path)
@@ -357,13 +367,18 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		consts.FieldLocal,
 	}
 
-	useAPIver117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-	if useAPIver117Ent {
-		params = append(params,
-			consts.FieldIdentityTokenAudience,
-			consts.FieldIdentityTokenTTL,
-			consts.FieldServiceAccountEmail,
-		)
+	if provider.IsEnterpriseSupported(meta) {
+		if provider.IsAPISupported(meta, provider.VaultVersion117) {
+			params = append(params,
+				consts.FieldIdentityTokenAudience,
+				consts.FieldIdentityTokenTTL,
+				consts.FieldServiceAccountEmail,
+			)
+		}
+
+		if provider.IsAPISupported(meta, provider.VaultVersion119) {
+			params = append(params, automatedrotationutil.AutomatedRotationFields...)
+		}
 	}
 
 	for _, param := range params {
@@ -383,13 +398,12 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	mount, err := mountutil.GetAuthMount(ctx, client, gcpPath)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", gcpPath)
-		d.SetId("")
-		return nil
-	}
-
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", gcpPath)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

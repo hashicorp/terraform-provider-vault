@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	terraformplugintesting "github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 	config "github.com/hashicorp/vault/api/cliconfig"
 	"k8s.io/utils/pointer"
@@ -35,14 +37,18 @@ const (
 var (
 	MaxHTTPRetriesCCC int
 
-	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion110))
-	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
-	VaultVersion112 = version.Must(version.NewSemver(consts.VaultVersion112))
-	VaultVersion113 = version.Must(version.NewSemver(consts.VaultVersion113))
-	VaultVersion114 = version.Must(version.NewSemver(consts.VaultVersion114))
-	VaultVersion115 = version.Must(version.NewSemver(consts.VaultVersion115))
-	VaultVersion116 = version.Must(version.NewSemver(consts.VaultVersion116))
-	VaultVersion117 = version.Must(version.NewSemver(consts.VaultVersion117))
+	VaultVersion110  = version.Must(version.NewSemver(consts.VaultVersion110))
+	VaultVersion111  = version.Must(version.NewSemver(consts.VaultVersion111))
+	VaultVersion112  = version.Must(version.NewSemver(consts.VaultVersion112))
+	VaultVersion113  = version.Must(version.NewSemver(consts.VaultVersion113))
+	VaultVersion114  = version.Must(version.NewSemver(consts.VaultVersion114))
+	VaultVersion115  = version.Must(version.NewSemver(consts.VaultVersion115))
+	VaultVersion116  = version.Must(version.NewSemver(consts.VaultVersion116))
+	VaultVersion117  = version.Must(version.NewSemver(consts.VaultVersion117))
+	VaultVersion118  = version.Must(version.NewSemver(consts.VaultVersion118))
+	VaultVersion1185 = version.Must(version.NewSemver(consts.VaultVersion1185))
+	VaultVersion119  = version.Must(version.NewSemver(consts.VaultVersion119))
+	VaultVersion120  = version.Must(version.NewSemver(consts.VaultVersion120))
 
 	TokenTTLMinRecommended = time.Minute * 15
 )
@@ -186,27 +192,26 @@ func (p *ProviderMeta) setClient() error {
 
 	d := p.resourceData
 	clientConfig := api.DefaultConfig()
-	addr := d.Get(consts.FieldAddress).(string)
-	if addr != "" {
-		clientConfig.Address = addr
+
+	addr := GetResourceDataStr(d, consts.FieldAddress, api.EnvVaultAddress, "")
+	if addr == "" {
+		return fmt.Errorf("failed to configure Vault address")
 	}
+	clientConfig.Address = addr
+
 	clientConfig.CloneTLSConfig = true
 
 	tlsConfig := &api.TLSConfig{
-		CACert:        d.Get(consts.FieldCACertFile).(string),
-		CAPath:        d.Get(consts.FieldCACertDir).(string),
-		Insecure:      d.Get(consts.FieldSkipTLSVerify).(bool),
-		TLSServerName: d.Get(consts.FieldTLSServerName).(string),
+		CACert:        GetResourceDataStr(d, consts.FieldCACertFile, api.EnvVaultCACert, ""),
+		CAPath:        GetResourceDataStr(d, consts.FieldCACertDir, api.EnvVaultCAPath, ""),
+		Insecure:      GetResourceDataBool(d, consts.FieldSkipTLSVerify, "VAULT_SKIP_VERIFY", false),
+		TLSServerName: GetResourceDataStr(d, consts.FieldTLSServerName, api.EnvVaultTLSServerName, ""),
 	}
 
 	if _, ok := d.GetOk(consts.FieldClientAuth); ok {
 		prefix := fmt.Sprintf("%s.0.", consts.FieldClientAuth)
-		if v, ok := d.GetOk(prefix + consts.FieldCertFile); ok {
-			tlsConfig.ClientCert = v.(string)
-		}
-		if v, ok := d.GetOk(prefix + consts.FieldKeyFile); ok {
-			tlsConfig.ClientKey = v.(string)
-		}
+		tlsConfig.ClientCert = GetResourceDataStr(d, prefix+consts.FieldCertFile, api.EnvVaultClientCert, "")
+		tlsConfig.ClientKey = GetResourceDataStr(d, prefix+consts.FieldKeyFile, api.EnvVaultClientKey, "")
 	}
 
 	err := clientConfig.ConfigureTLS(tlsConfig)
@@ -253,12 +258,12 @@ func (p *ProviderMeta) setClient() error {
 	}
 	client.SetHeaders(parsedHeaders)
 
-	client.SetMaxRetries(d.Get("max_retries").(int))
+	client.SetMaxRetries(GetResourceDataInt(d, "max_retries", "VAULT_MAX_RETRIES", DefaultMaxHTTPRetries))
 
-	MaxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
+	MaxHTTPRetriesCCC = GetResourceDataInt(d, "max_retries_ccc", "VAULT_MAX_RETRIES_CCC", DefaultMaxHTTPRetriesCCC)
 
 	// Set the namespace to the requested namespace, if provided
-	namespace := d.Get(consts.FieldNamespace).(string)
+	namespace := GetResourceDataStr(d, consts.FieldNamespace, "VAULT_NAMESPACE", "")
 
 	authLogin, err := GetAuthLogin(d)
 	if err != nil {
@@ -327,7 +332,8 @@ func (p *ProviderMeta) setClient() error {
 		tokenNamespace = strings.Trim(v.(string), "/")
 	}
 
-	if !d.Get(consts.FieldSkipChildToken).(bool) {
+	skipChildToken := GetResourceDataBool(d, consts.FieldSkipChildToken, consts.EnvVarSkipChildToken, false)
+	if !skipChildToken {
 		// a child token is always created in the namespace of the parent token.
 		token, err = createChildToken(d, client, tokenNamespace)
 		if err != nil {
@@ -350,7 +356,8 @@ func (p *ProviderMeta) setClient() error {
 		namespace = tokenNamespace
 		// set the namespace on the provider to ensure that all child
 		// namespace paths are properly honoured.
-		if v, ok := d.Get(consts.FieldSetNamespaceFromToken).(bool); ok && v {
+		setTokenFromNamespace := GetResourceDataBool(d, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true)
+		if setTokenFromNamespace {
 			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 				return err
 			}
@@ -372,6 +379,7 @@ func (p *ProviderMeta) setVaultVersion() error {
 	}
 
 	d := p.resourceData
+	skipGetVaultVersion := GetResourceDataBool(d, consts.FieldSkipGetVaultVersion, "", false)
 	var vaultVersion *version.Version
 	if v, ok := d.GetOk(consts.FieldVaultVersionOverride); ok {
 		ver, err := version.NewVersion(v.(string))
@@ -380,7 +388,7 @@ func (p *ProviderMeta) setVaultVersion() error {
 				consts.FieldVaultVersionOverride, err)
 		}
 		vaultVersion = ver
-	} else if !d.Get(consts.FieldSkipGetVaultVersion).(bool) {
+	} else if !skipGetVaultVersion {
 		// Set the Vault version to *ProviderMeta object
 		client, err := p.getClient()
 		if err != nil {
@@ -469,6 +477,12 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 		}
 	case *terraform.InstanceState:
 		ns = v.Attributes[consts.FieldNamespace]
+
+	// Allows tests that use new terraform-plugin-testing
+	// to successfully get a client. Only used in tests
+	// TODO unify the GetClient implementations between providers and directly pass in namespace
+	case *terraformplugintesting.InstanceState:
+		ns = v.Attributes[consts.FieldNamespace]
 	default:
 		return nil, fmt.Errorf("GetClient() called with unsupported type %T", v)
 	}
@@ -556,10 +570,7 @@ func getVaultVersion(client *api.Client) (*version.Version, error) {
 }
 
 func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (string, error) {
-	tokenName := d.Get("token_name").(string)
-	if tokenName == "" {
-		tokenName = "terraform"
-	}
+	tokenName := GetResourceDataStr(d, "token_name", "VAULT_TOKEN_NAME", "terraform")
 
 	// the clone is only used to auth to Vault
 	clone, err := c.Clone()
@@ -583,10 +594,11 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 	// Caution is still required with state files since not all secrets
 	// can explicitly be revoked, and this limited scope won't apply to
 	// any secrets that are *written* by Terraform to Vault.
+	ttl := GetResourceDataInt(d, consts.FieldMaxLeaseTTL, "TERRAFORM_VAULT_MAX_TTL", 1200)
 	childTokenLease, err := clone.Auth().Token().Create(&api.TokenCreateRequest{
 		DisplayName:    tokenName,
-		TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-		ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
+		TTL:            fmt.Sprintf("%ds", ttl),
+		ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
 		Renewable:      pointer.Bool(false),
 	})
 	if err != nil {
@@ -601,8 +613,92 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 	return childToken, nil
 }
 
+// GetResourceDataStr returns the value for a given ResourceData field
+// If the value is the zero value, then it checks the environment variable. If
+// the environment variable is empty, the default dv is returned
+func GetResourceDataStr(d *schema.ResourceData, field, env, dv string) string {
+	if s := d.Get(field).(string); s != "" {
+		return s
+	}
+
+	if env != "" {
+		if s := os.Getenv(env); s != "" {
+			return s
+		}
+	}
+
+	// return default
+	return dv
+}
+
+// GetResourceDataInt returns the value for a given ResourceData field
+// If the value is the zero value, then it checks the environment variable. If
+// the environment variable is empty, the default dv is returned
+func GetResourceDataInt(d *schema.ResourceData, field, env string, dv int) int {
+	if v := d.Get(field).(int); v != 0 {
+		return v
+	}
+	if env != "" {
+		if s := os.Getenv(env); s != "" {
+			ret, err := strconv.Atoi(s)
+			if err == nil {
+				return ret
+			}
+			// swallow the error and return the default because that is the
+			// behavior we had when using SDKv2's schema.EnvDefaultFunc
+		}
+	}
+	// return default
+	return dv
+}
+
+// GetResourceDataBool returns the value for a given ResourceData field
+// If the value is the zero value, then it checks the environment variable. If
+// the environment variable is empty, the default dv is returned
+func GetResourceDataBool(d *schema.ResourceData, field, env string, dv bool) bool {
+	// since Get does not tell us if the value is false or unset,
+	// we only return this value if it is non-nil, else we return the default
+
+	rawConfig := d.GetRawConfig()
+
+	// Note: the following block is only encountered when setting up the testProvider
+	// RawConfig will only be available during a terraform plan/apply execution
+	// this value will be nil during PreChecks and Destroy operations in tests
+	// the testProvider in those cases is set up using default values
+	if rawConfig.IsNull() {
+		return dv
+	}
+
+	// If RawConfig exists, continue reading values from resource data
+	rawVal := rawConfig.GetAttr(field)
+
+	// We don't care about the underlying value, just detecting if the config value is null (unset) or not.
+	if rawVal.IsNull() {
+		// The value is null (unset) in config, do our defaulting logic
+
+		if env != "" {
+			if s := os.Getenv(env); s != "" {
+				ret, err := strconv.ParseBool(s)
+				if err == nil {
+					return ret
+				}
+				// swallow the error and return the default because that is the
+				// behavior we had when using SDKv2's schema.EnvDefaultFunc
+			}
+		}
+
+		// return default if value not in environment
+		return dv
+	}
+
+	// If the value is set in config, return using d.Get
+	return d.Get(field).(bool)
+}
+
 func GetToken(d *schema.ResourceData) (string, error) {
 	if token := d.Get("token").(string); token != "" {
+		return token, nil
+	} else if token = os.Getenv(api.EnvVaultToken); token != "" {
 		return token, nil
 	}
 

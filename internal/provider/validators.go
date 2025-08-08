@@ -22,7 +22,7 @@ import (
 var (
 	regexpPathLeading  = regexp.MustCompile(fmt.Sprintf(`^%s`, consts.PathDelim))
 	regexpPathTrailing = regexp.MustCompile(fmt.Sprintf(`%s$`, consts.PathDelim))
-	regexpPath         = regexp.MustCompile(fmt.Sprintf(`%s|%s`, regexpPathLeading, regexpPathTrailing))
+	RegexpPath         = regexp.MustCompile(fmt.Sprintf(`%s|%s`, regexpPathLeading, regexpPathTrailing))
 	regexpUUID         = regexp.MustCompile("^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$")
 )
 
@@ -63,7 +63,7 @@ func ValidateNoTrailingSlash(i interface{}, k string) ([]string, []error) {
 
 func ValidateNoLeadingTrailingSlashes(i interface{}, k string) ([]string, []error) {
 	var errs []error
-	if err := validatePath(regexpPath, i, k); err != nil {
+	if err := validatePath(RegexpPath, i, k); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -71,7 +71,7 @@ func ValidateNoLeadingTrailingSlashes(i interface{}, k string) ([]string, []erro
 }
 
 func ValidateDiagPath(i interface{}, path cty.Path) diag.Diagnostics {
-	return validateDiagPath(regexpPath, i, path)
+	return validateDiagPath(RegexpPath, i, path)
 }
 
 func validateDiagPath(r *regexp.Regexp, i interface{}, path cty.Path) diag.Diagnostics {

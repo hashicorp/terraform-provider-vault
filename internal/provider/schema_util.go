@@ -154,3 +154,31 @@ func defaultDisableRemountStateUpgraders() []schema.StateUpgrader {
 		},
 	}
 }
+
+// GetAutomatedRootRotationSchema is a helper method
+// that returns the common schema parameters for automated
+// root rotation
+func GetAutomatedRootRotationSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		consts.FieldRotationSchedule: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The cron-style schedule for the root credential to be rotated on. Cannot be used with rotation_period.",
+		},
+		consts.FieldRotationPeriod: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "The period of time in seconds between each rotation of the root credential. Cannot be used with rotation_schedule.",
+		},
+		consts.FieldRotationWindow: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "The maximum amount of time in seconds Vault is allowed to complete a rotation once a scheduled rotation is triggered. Can only be used with rotation_schedule.",
+		},
+		consts.FieldDisableAutomatedRotation: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "Stops rotation of the root credential until set to false.",
+		},
+	}
+}

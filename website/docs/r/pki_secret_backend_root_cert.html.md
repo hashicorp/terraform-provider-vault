@@ -74,11 +74,27 @@ The following arguments are supported:
 
 * `key_bits` - (Optional) The number of bits to use
 
+* `signature_bits` - (Optional) The number of bits to use in the signature algorithm
+
 * `max_path_length` - (Optional) The maximum path length to encode in the generated certificate
 
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
 
 * `permitted_dns_domains` - (Optional) List of domains for which certificates are allowed to be issued
+
+* `excluded_dns_domains` - (Optional) List of domains for which certificates are not allowed to be issued. Requires Vault version 1.19+.
+ 
+* `permitted_ip_ranges` - (Optional)  List of IP ranges for which certificates are allowed to be issued. Requires Vault version 1.19+.
+
+* `excluded_ip_ranges` - (Optional) List of IP ranges for which certificates are not allowed to be issued. Requires Vault version 1.19+.
+
+* `permitted_email_addresses` - (Optional) List of email addresses for which certificates are allowed to be issued. Requires Vault version 1.19+.
+
+* `excluded_email_addresses` - (Optional) List of email addresses for which certificates are not allowed to be issued. Requires Vault version 1.19+.
+
+* `permitted_uri_domains` - (Optional) List of URI domains for which certificates are allowed to be issued. Requires Vault version 1.19+.
+
+* `excluded_uri_domains` - (Optional) List of URI domains for which certificates are not allowed to be issued. Requires Vault version 1.19+.
 
 * `ou` - (Optional) The organization unit
 
@@ -108,6 +124,8 @@ The following arguments are supported:
 
 * `key_ref` - (Optional) Specifies the key (either default, by name, or by identifier) to use
   for generating this request. Only suitable for `type=existing` requests.
+
+* `not_after` - (Optional) Set the Not After field of the certificate with specified date value. The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.
 
 ## Attributes Reference
 

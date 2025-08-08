@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
@@ -65,36 +64,36 @@ func NewProvider(
 	}
 
 	r := &schema.Provider{
+		// This schema must match exactly the fwprovider (Terraform Plugin Framework) schema.
+		// Notably the attributes can have no Default values.
 		Schema: map[string]*schema.Schema{
+			// Not `Required` but must be set via config or env. Otherwise we
+			// return an error.
 			consts.FieldAddress: {
 				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultAddress, nil),
+				Optional:    true,
 				Description: "URL of the root of the target Vault server.",
 			},
 			"add_address_to_env": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     false,
 				Description: "If true, adds the value of the `address` argument to the Terraform process environment.",
 			},
+			// Not `Required` but must be set via config, env, or token helper.
+			// Otherwise we return an error.
 			"token": {
 				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultToken, ""),
+				Optional:    true,
 				Description: "Token to use to authenticate to Vault.",
 			},
 			"token_name": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN_NAME", ""),
 				Description: "Token name to use for creating the Vault child token.",
 			},
 			"skip_child_token": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_SKIP_CHILD_TOKEN", false),
-
+				Type:     schema.TypeBool,
+				Optional: true,
 				// Setting to true will cause max_lease_ttl_seconds and token_name to be ignored (not used).
 				// Note that this is strongly discouraged due to the potential of exposing sensitive secret data.
 				Description: "Set this to true to prevent the creation of ephemeral child token used by this provider.",
@@ -102,102 +101,59 @@ func NewProvider(
 			consts.FieldCACertFile: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCACert, ""),
 				Description: "Path to a CA certificate file to validate the server's certificate.",
 			},
 			consts.FieldCACertDir: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCAPath, ""),
 				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
-			},
-			consts.FieldClientAuth: {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Client authentication credentials.",
-				MaxItems:    1,
-				Deprecated:  fmt.Sprintf("Use %s instead", consts.FieldAuthLoginCert),
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						consts.FieldCertFile: {
-							Type:        schema.TypeString,
-							Required:    true,
-							DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientCert, ""),
-							Description: "Path to a file containing the client certificate.",
-						},
-						consts.FieldKeyFile: {
-							Type:        schema.TypeString,
-							Required:    true,
-							DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientKey, ""),
-							Description: "Path to a file containing the private key that the certificate was issued for.",
-						},
-					},
-				},
 			},
 			consts.FieldSkipTLSVerify: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", false),
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
 			},
 			consts.FieldTLSServerName: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultTLSServerName, ""),
 				Description: "Name to use as the SNI host when connecting via TLS.",
 			},
 			"max_lease_ttl_seconds": {
-				Type:     schema.TypeInt,
-				Optional: true,
-
-				// Default is 20min, which is intended to be enough time for
-				// a reasonable Terraform run can complete but not
-				// significantly longer, so that any leases are revoked shortly
-				// after Terraform has finished running.
-				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_MAX_TTL", 1200),
+				Type:        schema.TypeInt,
+				Optional:    true,
 				Description: "Maximum TTL for secret leases requested by this provider.",
 			},
 			"max_retries": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", DefaultMaxHTTPRetries),
 				Description: "Maximum number of retries when a 5xx error code is encountered.",
 			},
 			"max_retries_ccc": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES_CCC", DefaultMaxHTTPRetriesCCC),
 				Description: "Maximum number of retries for Client Controlled Consistency related operations",
 			},
 			consts.FieldNamespace: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
 				Description: "The namespace to use. Available only for Vault Enterprise.",
-			},
-			consts.FieldSetNamespaceFromToken: {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-				Description: "In the case where the Vault token is for a specific namespace " +
-					"and the provider namespace is not configured, use the token namespace " +
-					"as the root namespace for all resources.",
 			},
 			"headers": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Sensitive:   true,
 				Description: "The headers to send with each Vault request.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
 							Type:        schema.TypeString,
 							Required:    true,
+							Sensitive:   true,
 							Description: "The header name",
 						},
 						"value": {
 							Type:        schema.TypeString,
 							Required:    true,
+							Sensitive:   true,
 							Description: "The header value",
 						},
 					},
@@ -206,7 +162,6 @@ func NewProvider(
 			consts.FieldSkipGetVaultVersion: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     false,
 				Description: "Skip the dynamic fetching of the Vault server version.",
 			},
 			consts.FieldVaultVersionOverride: {
@@ -216,6 +171,33 @@ func NewProvider(
 					"which is normally determined dynamically from the target Vault server",
 				ValidateDiagFunc: ValidateDiagSemVer,
 			},
+			consts.FieldSetNamespaceFromToken: {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Description: "In the case where the Vault token is for a specific namespace " +
+					"and the provider namespace is not configured, use the token namespace " +
+					"as the root namespace for all resources.",
+			},
+			consts.FieldClientAuth: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Client authentication credentials.",
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						consts.FieldCertFile: {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Path to a file containing the client certificate.",
+						},
+						consts.FieldKeyFile: {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Path to a file containing the private key that the certificate was issued for.",
+						},
+					},
+				},
+			},
 		},
 		ConfigureFunc:  NewProviderMeta,
 		DataSourcesMap: dataSourcesMap,
@@ -223,6 +205,11 @@ func NewProvider(
 	}
 
 	MustAddAuthLoginSchema(r.Schema)
+
+	// Set the provider Meta (instance data) here.
+	// It will be overwritten by the result of the call to ConfigureFunc,
+	// but can be used pre-configuration by other (non-primary) provider servers.
+	r.SetMeta(&ProviderMeta{})
 
 	return r
 }

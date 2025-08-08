@@ -4,12 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -19,9 +21,9 @@ func TestAccSSHSecretBackendCA_basic(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSSHSecretBackendCADestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigGenerated(backend),
@@ -35,9 +37,9 @@ func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckSSHSecretBackendCADestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigProvided(backend),
@@ -50,8 +52,8 @@ func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 func TestAccSSHSecretBackend_import(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigGenerated(backend),
@@ -62,6 +64,59 @@ func TestAccSSHSecretBackend_import(t *testing.T) {
 				ImportState:  true,
 				// state cannot be verified since generate_signing_key and private_key are not returned by the API
 				ImportStateVerify: false,
+			},
+		},
+	})
+}
+
+// TestAccSSHSecretBackendCA_Upgrade_key_type uses ExternalProviders (vault) to
+// generate a state file with a previous version of the provider and then
+// verify that there are no planned changes after migrating to an updated
+// schema to validate the sshSecretBackendCAUpgradeV0 state upgrader.
+func TestAccSSHSecretBackendCA_Upgrade_key_type(t *testing.T) {
+	backend := "ssh-" + acctest.RandString(10)
+	resource.Test(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"vault": {
+						// 4.2.0 does not have the key_type field
+						VersionConstraint: "4.2.0",
+						Source:            "hashicorp/vault",
+					},
+				},
+				Config: testAccSSHSecretBackendCAConfigGenerated(backend),
+				Check:  testAccSSHSecretBackendCACheck(backend),
+			},
+			{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+				Config:                   testAccSSHSecretBackendCAConfigGenerated(backend),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
+func TestAccSSHSecretBackendCA_managedKeys(t *testing.T) {
+	backend := "ssh-" + acctest.RandString(10)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	managedKeyName := acctest.RandomWithPrefix("kms-key")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+		},
+		CheckDestroy: testAccCheckSSHSecretBackendCADestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSSHSecretBackendCAConfigManagedKey(backend, accessKey, secretKey, managedKeyName),
+				Check:  testAccSSHSecretBackendCACheck(backend),
 			},
 		},
 	})
@@ -153,4 +208,32 @@ func testAccSSHSecretBackendCACheck(backend string) resource.TestCheckFunc {
 		resource.TestCheckResourceAttrSet("vault_ssh_secret_backend_ca.test", "public_key"),
 		resource.TestCheckResourceAttr("vault_ssh_secret_backend_ca.test", "backend", backend),
 	)
+}
+
+func testAccSSHSecretBackendCAConfigManagedKey(backend, accessKey, secretKey, keyName string) string {
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+	aws {
+		name       = "%s"
+		access_key = "%s"
+		secret_key = "%s"
+		key_bits   = "2048"
+		key_type   = "RSA"
+		kms_key    = "alias/tfvp-ssh-managed-key"
+        allow_generate_key = true
+	}
+}
+
+resource "vault_mount" "test" {
+  type = "ssh"
+  path = "%s"
+  description = "SSH Secret backend"
+  allowed_managed_keys      = [tolist(vault_managed_keys.test.aws)[0].name]
+}
+
+resource "vault_ssh_secret_backend_ca" "test" {
+  backend              = vault_mount.test.path
+  managed_key_id       = tolist(vault_managed_keys.test.aws)[0].uuid
+}`, keyName, accessKey, secretKey, backend)
 }

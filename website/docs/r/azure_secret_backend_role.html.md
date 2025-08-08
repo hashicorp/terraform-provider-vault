@@ -73,9 +73,11 @@ The following arguments are supported:
   Accepts time suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine default TTL time.
 * `max_ttl` – (Optional) Specifies the maximum TTL for service principals generated using this role. Accepts time
   suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine max TTL time.
+* `explicit_max_ttl` - (Optional) Specifies the explicit maximum lifetime of the lease and service principal generated using this role. If not set or set to 0, will use the system default (10 years). Requires Vault 1.18+.
 * `sign_in_audience` - (Optional) Specifies the security principal types that are allowed to sign in to the application.
   Valid values are: AzureADMyOrg, AzureADMultipleOrgs, AzureADandPersonalMicrosoftAccount, PersonalMicrosoftAccount. Requires Vault 1.16+.
 * `tags` - (Optional) - A list of Azure tags to attach to an application. Requires Vault 1.16+.
+* `root_password_ttl` - (Optional) Specifies the TTL of the root password when rotate-root generates a new client secret. Requires Vault 1.15+.
 
 ## Attributes Reference
 

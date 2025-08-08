@@ -4,16 +4,18 @@
 package vault
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -24,11 +26,13 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 
+	notAfter := time.Now().Add(2 * time.Hour).Format(time.RFC3339)
+
 	resourceName := "vault_pki_secret_backend_sign.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, ""),
@@ -46,6 +50,12 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, `issuer_ref = "test"`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerRef, "test"),
+				),
+			},
+			{
+				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, fmt.Sprintf(`not_after = "%s"`, notAfter)),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "not_after", notAfter),
 				),
 			},
 		},
@@ -173,12 +183,12 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 		testValidateCSR(resourceName),
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendSignConfig_renew(path),
+				Config: testPkiSecretBackendSignConfig_renew(path, ""),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testCapturePKICert(resourceName, &store),
@@ -188,7 +198,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 			{
 				// test renewal based on cert expiry
 				PreConfig: testWaitCertExpiry(&store),
-				Config:    testPkiSecretBackendSignConfig_renew(path),
+				Config:    testPkiSecretBackendSignConfig_renew(path, ""),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testPKICertReIssued(resourceName, &store),
@@ -205,7 +215,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 						t.Fatal(err)
 					}
 				},
-				Config: testPkiSecretBackendSignConfig_renew(path),
+				Config: testPkiSecretBackendSignConfig_renew(path, ""),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testPKICertReIssued(resourceName, &store),
@@ -216,7 +226,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 	})
 }
 
-func testPkiSecretBackendSignConfig_renew(rootPath string) string {
+func testPkiSecretBackendSignConfig_renew(rootPath, notAfter string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test-root" {
   path                      = "%s"
@@ -287,8 +297,9 @@ EOT
   ttl                   = "1h"
   auto_renew            = true
   min_seconds_remaining = "3595"
+  not_after             = "%s"
 }
-`, rootPath)
+`, rootPath, notAfter)
 }
 
 func testValidateCSR(resourceName string) resource.TestCheckFunc {

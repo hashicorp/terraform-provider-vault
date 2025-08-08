@@ -84,28 +84,6 @@ func oktaAuthBackendResource() *schema.Resource {
 			Description: "When true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.",
 		},
 
-		consts.FieldTTL: {
-			Type:         schema.TypeString,
-			Required:     false,
-			Optional:     true,
-			Default:      "0",
-			Description:  "Duration after which authentication will be expired",
-			ValidateFunc: validateOktaTTL,
-			StateFunc:    normalizeOktaTTL,
-			Deprecated:   "Deprecated. Please use `token_ttl` instead.",
-		},
-
-		consts.FieldMaxTTL: {
-			Type:         schema.TypeString,
-			Required:     false,
-			Optional:     true,
-			Description:  "Maximum duration after which authentication will be expired",
-			Default:      "0",
-			ValidateFunc: validateOktaTTL,
-			StateFunc:    normalizeOktaTTL,
-			Deprecated:   "Deprecated. Please use `token_max_ttl` instead.",
-		},
-
 		fieldGroup: {
 			Type:       schema.TypeSet,
 			Required:   false,
@@ -315,13 +293,12 @@ func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
 
 	mount, err := mountutil.GetAuthMount(ctx, client, path)
-	if errors.Is(err, mountutil.ErrMountNotFound) {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
-		d.SetId("")
-		return nil
-	}
-
 	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 
