@@ -234,3 +234,20 @@ jobs:
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
+          #
+  # This job is used as a requirement for the repo's branch protection setup.
+  build-done:
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - acceptance
+    steps:
+    - name: cancelled
+      if: ${{ (contains(needs.*.result, 'cancelled')) }}
+      run: exit 2
+    - name: passed
+      if: ${{ !(contains(needs.*.result, 'failure')) }}
+      run: exit 0
+    - name: failed
+      if: ${{ contains(needs.*.result, 'failure') }}
+      run: exit 1

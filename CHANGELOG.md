@@ -6,6 +6,10 @@ FEATURES:
 * Add support for managed key parameters in the SSH CA config endpoint ([#2480](https://github.com/hashicorp/terraform-provider-vault/pull/2480))
 * Add new resources `vault_oci_auth_backend` and `vault_oci_auth_backend_role` to manage OCI auth backend and roles. ([#1761](https://github.com/hashicorp/terraform-provider-vault/pull/1761))
 
+BUILD:
+* Bump Go version to 1.24.6: ([#xxx](https://github.com/hashicorp/terraform-provider-vault/pull/xxx))
+
+
 ## 5.1.0 (Jul 9, 2025)
 
 FEATURES:
