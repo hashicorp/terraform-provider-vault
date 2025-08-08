@@ -7,6 +7,14 @@ FEATURES:
 * Add new resources `vault_oci_auth_backend` and `vault_oci_auth_backend_role` to manage OCI auth backend and roles. ([#1761](https://github.com/hashicorp/terraform-provider-vault/pull/1761))
 * Add support for `log_level` in `vault_pki_secret_backend_config_scep` resource. Requires Vault 1.20.1+ ([#2525](https://github.com/hashicorp/terraform-provider-vault/pull/2525))
 
+IMPROVEMENTS:
+* Updated dependencies ([#2551](https://github.com/hashicorp/terraform-provider-vault/pull/2551)):
+   * `golang.org/x/oauth2` v0.24.0 -> v0.30.0
+   * `github.com/cloudflare/circl` v1.3.7 -> v1.6.1
+   * `github.com/go-jose/go-jose/v3` v3.0.3 -> v3.0.4
+   * `github.com/go-jose/go-jose/v4` v4.0.4 -> v4.1.2
+   * `github.com/golang-jwt/jwt/v5` v5.2.2 -> v5.3.0
+
 BUGS:
 * Fix the tune block issue where it always updates unless field values match Vault server defaults
   * `vault_jwt_auth_backend` resource ([#2546](https://github.com/hashicorp/terraform-provider-vault/pull/2546))
