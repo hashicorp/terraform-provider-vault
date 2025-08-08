@@ -11,6 +11,10 @@ BUGS:
 * Fix the tune block issue where it always updates unless field values match Vault server defaults
   * `vault_jwt_auth_backend` resource ([#2546](https://github.com/hashicorp/terraform-provider-vault/pull/2546))
 
+BUILD:
+* Bump Go version to 1.24.6: ([#2550](https://github.com/hashicorp/terraform-provider-vault/pull/2550))
+
+
 ## 5.1.0 (Jul 9, 2025)
 
 FEATURES:
