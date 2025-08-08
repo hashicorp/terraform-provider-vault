@@ -5,10 +5,12 @@ package vault
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -68,6 +70,52 @@ func flattenAuthMethodTune(dt *api.MountConfigOutput) map[string]interface{} {
 	}
 	m["token_type"] = dt.TokenType
 	return m
+}
+
+// retrieveMountConfigInput retrieves the tune block from the resource data
+// and converts it into a reference to api.MountConfigInput
+func retrieveMountConfigInput(d *schema.ResourceData) (*api.MountConfigInput, error) {
+	// If the tune block is not set, it means the user did not
+	// provide any values or the block is imported
+	tune, ok := d.GetOk("tune")
+	if !ok {
+		return nil, nil
+	}
+
+	tuneSchemaSet, ok := tune.(*schema.Set)
+	if !ok {
+		return nil, fmt.Errorf("error type asserting tune block: expected schema.Set, got %T", d.Get("tune"))
+	}
+
+	input := expandAuthMethodTune(tuneSchemaSet.List())
+	return &input, nil
+}
+
+// mergeAuthMethodTune merges the raw tune GET API response with the non-nil
+// *api.MountConfigInput parsed from the resource data.
+// Any field with the Vault APIs's global default effect will be set to empty
+// when the user did not provide a value even if the Vault API response returns non-empty.
+// This is to ensure the tune block reflects the user provided values.
+// See more details in the https://github.com/hashicorp/terraform-provider-vault/issues/2234
+func mergeAuthMethodTune(rawTune map[string]interface{}, input *api.MountConfigInput) map[string]interface{} {
+	// Merge the fields that have the global default effect
+	// github.com/hashicorp/terraform-provider-vault/vault/auth_mount.go
+	// If the input is nil
+	if input != nil {
+		if input.DefaultLeaseTTL == "" {
+			rawTune["default_lease_ttl"] = ""
+		}
+
+		if input.MaxLeaseTTL == "" {
+			rawTune["max_lease_ttl"] = ""
+		}
+
+		if input.ListingVisibility == "" {
+			rawTune["listing_visibility"] = ""
+		}
+	}
+
+	return rawTune
 }
 
 func expandStringSlice(configured []interface{}) []string {
