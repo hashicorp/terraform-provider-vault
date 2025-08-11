@@ -106,15 +106,17 @@ func mergeAuthMethodTune(rawTune map[string]interface{}, input *api.MountConfigI
 		if input.TokenType == "" {
 			rawTune[consts.FieldTokenType] = ""
 		}
-		if input.DefaultLeaseTTL == "" {
-			rawTune[consts.FieldDefaultLeaseTTL] = ""
-		}
-		if input.MaxLeaseTTL == "" {
-			rawTune[consts.FieldMaxLeaseTTL] = ""
-		}
 		if input.ListingVisibility == "" {
 			rawTune[consts.FieldListingVisibility] = ""
 		}
+
+		// Some tune API GET responses may convert *TTL fields of string
+		// e.g. default_lease_ttl = "200s", which
+		// is the user provided value, will be converted to "3m20s".
+		//
+		// The merged takes the user provided value
+		rawTune[consts.FieldDefaultLeaseTTL] = input.DefaultLeaseTTL
+		rawTune[consts.FieldMaxLeaseTTL] = input.MaxLeaseTTL
 	}
 
 	return rawTune
