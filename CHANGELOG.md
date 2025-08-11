@@ -23,6 +23,9 @@ BUILD:
 * Bump Go version to 1.24.6: ([#2550](https://github.com/hashicorp/terraform-provider-vault/pull/2550))
 
 
+BUGS:
+* Fix panic when reading the `vault_gcp_secret_backend` resource. ([#2549](https://github.com/hashicorp/terraform-provider-vault/pull/2549))
+
 ## 5.1.0 (Jul 9, 2025)
 
 FEATURES:
