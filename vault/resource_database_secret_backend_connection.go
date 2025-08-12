@@ -1891,13 +1891,14 @@ func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, pref
 		path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPrivateKeyWO)
 
 		// ensure Vault version has private key support
-		vaultVersion120Check := provider.IsAPISupported(meta, provider.VaultVersion120)
+		// private key for snowflake is supported all the way back from Vault 1.16+
+		vaultVersion116Check := provider.IsAPISupported(meta, provider.VaultVersion116)
 
 		if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
-			if vaultVersion120Check {
+			if vaultVersion116Check {
 				data[consts.FieldPrivateKey] = pwWo.AsString()
 			} else {
-				log.Printf("[WARN] field %q can only be used with Vault version %s or newer", consts.FieldPrivateKeyWO, provider.VaultVersion120)
+				log.Printf("[WARN] field %q can only be used with Vault version %s or newer", consts.FieldPrivateKeyWO, provider.VaultVersion116)
 			}
 		}
 	}
