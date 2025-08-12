@@ -257,6 +257,7 @@ func TestAuthLoginAzure_Login(t *testing.T) {
 					initialized: true,
 				},
 			},
+			token: "foo",
 			handler: &testLoginHandler{
 				handlerFunc: handlerFunc,
 			},

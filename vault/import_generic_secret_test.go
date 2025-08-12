@@ -4,11 +4,12 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -18,8 +19,8 @@ func TestAccGenericSecret_importBasic(t *testing.T) {
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(mount, name),
@@ -46,8 +47,8 @@ func TestAccGenericSecret_importBasicNS(t *testing.T) {
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resourceName := "vault_generic_secret.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		ProviderFactories: providerFactories,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfigNS(ns, mount, name),

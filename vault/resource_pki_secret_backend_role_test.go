@@ -4,14 +4,15 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -80,9 +81,9 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testPkiSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),
@@ -117,9 +118,9 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testPkiSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, combinedPolicyIdentifiers),
@@ -189,9 +190,9 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckTypeSetElemAttr(resourceName, "cn_validations.*", "hostname"),
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testPkiSecretBackendRoleCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),

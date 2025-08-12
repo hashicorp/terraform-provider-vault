@@ -4,10 +4,12 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -23,6 +25,15 @@ var verifyBatchConfig = `
 		  input = "aGVsbG8gd29ybGQuCg=="
 		  context = "efgh"
 		  signature = data.vault_transit_sign.test.batch_results.1.signature
+		},
+		{
+		  input = "uU0nuZNNPgilLlLX2n2r+sSE7+N6U4DukIj3rOLvzek="
+		  prehashed = true
+		  signature = data.vault_transit_sign.test.batch_results.2.signature
+		},
+		{
+		  input = "aGVsbG8gd29ybGQuCg=="
+		  signature = "bad-input"
 		}
     ]
 `
@@ -32,18 +43,29 @@ signature = data.vault_transit_sign.test.signature
 `
 
 func TestDataSourceTransitVerify(t *testing.T) {
-	resourceName := "data.vault_transit_sign.test"
+	backend := acctest.RandomWithPrefix("transit")
+	signResourceName := "data.vault_transit_sign.test"
+	verifyResourceName := "data.vault_transit_verify.test"
+
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: signVerifyConfig("ecdsa-p256", "", verifyTestConfig(signInputConfig, verifyInputConfig)),
-				Check:  resource.TestCheckResourceAttrSet(resourceName, "signature"),
+				Config: signVerifyConfig(backend, "ecdsa-p256", "", verifyTestConfig(signInputConfig, verifyInputConfig)),
+				Check:  resource.TestCheckResourceAttrSet(signResourceName, "signature"),
 			},
 			{
-				Config: signVerifyConfig("ecdsa-p256", "", verifyTestConfig(signBatchConfig, verifyBatchConfig)),
-				Check:  resource.TestCheckResourceAttrSet(resourceName, "batch_results.#"),
+				Config: signVerifyConfig(backend, "ecdsa-p256", "", verifyTestConfig(signBatchConfig, verifyBatchConfig)),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(signResourceName, "batch_results.#", "4"),
+					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.#", "4"),
+					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.0.valid", "true"),
+					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.1.valid", "true"),
+					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.2.valid", "true"),
+					resource.TestCheckResourceAttr(verifyResourceName, "batch_results.3.valid", "false"),
+					resource.TestCheckResourceAttrSet(verifyResourceName, "batch_results.3.error"),
+				),
 			},
 		},
 		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypeTransit, consts.FieldPath),

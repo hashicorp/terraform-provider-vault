@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -12,8 +13,8 @@ import (
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -29,8 +30,8 @@ func TestAccDataSourceAzureAccessCredentialsAzureRoles_basic(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
 	conf := testutil.GetTestAzureConf(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAzureAccessCredentialsConfigBasicAzureRoles(mountPath, conf, 20),
@@ -62,8 +63,8 @@ func TestAccDataSourceAzureAccessCredentialsAzureGroups_basic(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
 	conf := testutil.GetTestAzureConfForGroups(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAzureAccessCredentialsConfigBasicAzureGroups(mountPath, conf, groupName, 20),
@@ -88,8 +89,8 @@ func TestAccDataSourceAzureAccessCredentials_ExistingSP(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
 	conf := testutil.GetTestAzureConfExistingSP(t)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAzureAccessCredentialsConfig_existingSP(mountPath, conf, 60),

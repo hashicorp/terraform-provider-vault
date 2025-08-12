@@ -4,12 +4,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -38,7 +39,7 @@ func TestLDAPSecretBackend(t *testing.T) {
 		updatedUserDN         = "CN=Users,DC=corp,DC=hashicorp,DC=com"
 	)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
@@ -114,7 +115,7 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 		url = testutil.SkipTestEnvUnset(t, "AD_URL")[0]
 	)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
@@ -194,7 +195,7 @@ func TestLDAPSecretBackend_automatedRotation(t *testing.T) {
 		resourceName        = resourceType + ".test"
 	)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)

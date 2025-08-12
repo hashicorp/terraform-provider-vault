@@ -4,11 +4,12 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -25,8 +26,8 @@ func TestDataSourceKVV2Secret(t *testing.T) {
 
 	resourceName := "data.vault_kv_secret_v2.test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceKVV2SecretConfig(mount, name),
@@ -67,8 +68,8 @@ func TestDataSourceKVV2Secret_deletedSecret(t *testing.T) {
 	name := acctest.RandomWithPrefix("foo")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {
@@ -79,7 +80,7 @@ func TestDataSourceKVV2Secret_deletedSecret(t *testing.T) {
 						Description: "Mount for testing KV datasource",
 					})
 					if err != nil {
-						t.Fatalf(fmt.Sprintf("error mounting kvv2 engine; err=%s", err))
+						t.Fatalf("error mounting kvv2 engine; err=%s", err)
 					}
 
 					m := map[string]interface{}{
@@ -95,7 +96,7 @@ func TestDataSourceKVV2Secret_deletedSecret(t *testing.T) {
 					path := fmt.Sprintf("%s/data/%s", mount, name)
 					resp, err := client.Logical().Write(path, data)
 					if err != nil {
-						t.Fatalf(fmt.Sprintf("error writing to Vault; err=%s", err))
+						t.Fatalf("error writing to Vault; err=%s", err)
 					}
 
 					if resp == nil {

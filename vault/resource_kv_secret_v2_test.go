@@ -4,12 +4,15 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -77,8 +80,8 @@ func TestAccKVSecretV2(t *testing.T) {
 	customMetadata := `{"extra":"cheese","pizza":"please"}`
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKVSecretV2Config_initial(mount, name),
@@ -87,9 +90,6 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "delete_all_versions", "true"),
-					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
-					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
-					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.cas_required", "false"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.%", "0"),
@@ -109,9 +109,6 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "delete_all_versions", "true"),
-					resource.TestCheckResourceAttr(resourceName, "data.zip", "zoop"),
-					resource.TestCheckResourceAttr(resourceName, "data.foo", "baz"),
-					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.cas_required", "false"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.%", "2"),
@@ -142,9 +139,6 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, updatedName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", updatedMount, updatedName)),
 					resource.TestCheckResourceAttr(resourceName, "delete_all_versions", "true"),
-					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
-					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
-					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.cas_required", "false"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.%", "0"),
@@ -172,8 +166,8 @@ func TestAccKVSecretV2_DisableRead(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-secret")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {
@@ -215,56 +209,109 @@ func TestAccKVSecretV2_DisableRead(t *testing.T) {
 	})
 }
 
-// Fadia u have added this
-func TestAccKVSecretV2_UpdateOutsideTerraform(t *testing.T) {
+// TestAccKVSecretV2_data_json_wo ensures write-only attribute
+// `data_json_wo` works as expected
+func TestAccKVSecretV2_data_json_wo(t *testing.T) {
+	t.Parallel()
+
 	resourceName := "vault_kv_secret_v2.test"
 	mount := acctest.RandomWithPrefix("tf-kv")
 	name := acctest.RandomWithPrefix("foo")
-
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
-				Config: testKVSecretV2Config_initial(mount, name),
+				Config: testKVSecretV2Config_data_json_wo(mount, name, 1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
-					resource.TestCheckResourceAttr(resourceName, "delete_all_versions", "true"),
-					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
-					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
-					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.version", "1"),
+					assertKVDataEquals(mount, name, map[string]interface{}{
+						"zip": "zoop",
+						"foo": "baz",
+					}),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDataJSONWOVersion, "1"),
 				),
 			},
 			{
-				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
-
-					// Simulate external change using Vault CLI
-					path := fmt.Sprintf("%s/data/%s", mount, name)
-					_, err := client.Logical().Write(path, map[string]interface{}{"data": map[string]interface{}{"testkey3": "testvalue3"}})
-					if err != nil {
-						t.Fatalf(fmt.Sprintf("error simulating external change; err=%s", err))
-					}
-
+				// Update data
+				Config: testKVSecretV2Config_data_json_wo_updated(mount, name, 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
 				},
-
-				Config: testKVSecretV2Config_initial(mount, name),
-
 				Check: resource.ComposeTestCheckFunc(
+					assertKVDataEquals(mount, name, map[string]interface{}{
+						"zip": "zap",
+						"foo": "bar",
+					}),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDataJSONWOVersion, "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDataJSONWO, consts.FieldDataJSONWOVersion,
+				consts.FieldDisableRead, consts.FieldDeleteAllVersions),
+		},
+	})
+}
+
+// TestAccKVSecretV2_WriteOnlyMigration confirms migrating from legacy
+// non-muxed Provider implementation to new write-only attribute implementation
+// works as expected
+func TestAccKVSecretV2_WriteOnlyMigration(t *testing.T) {
+	t.Parallel()
+
+	resourceName := "vault_kv_secret_v2.test"
+	mount := acctest.RandomWithPrefix("tf-kv")
+	name := acctest.RandomWithPrefix("foo")
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+		},
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"vault": {
+						// 4.8.0 is not multiplexed
+						VersionConstraint: "4.8.0",
+						Source:            "hashicorp/vault",
+					},
+				},
+				Config: testKVSecretV2Config_initial(mount, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					// can still read sensitive data in state
+					resource.TestCheckResourceAttr(resourceName, "data.%", "3"),
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
-					resource.TestCheckResourceAttr(resourceName, "data_json", "{\"flag\":false,\"foo\":\"bar\",\"zip\":\"zap\"}"),
-					//we check that the provider updated vault to match the the terraform config therefor creating a new version the secret.
-					resource.TestCheckResourceAttr(resourceName, "metadata.version", "3"),
+				),
+			},
+			// upgrade to new Muxed TFVP with write-only attributes, ensure plan is seamless
+			{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+				Config:                   testKVSecretV2Config_initial(mount, name),
+				PlanOnly:                 true,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					// sensitive data will no longer be set to state
+					// data_json is still being used, so it will still be in state
+					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
+					resource.TestCheckResourceAttrSet(resourceName, "data_json"),
+				),
+			},
+			// update config to use write-only attributes
+			{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+				Config:                   testKVSecretV2Config_data_json_wo(mount, name, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					// sensitive data will no longer be set to state
+					// data_json is no longer being used, so it will not be in state
+					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "data_json", ""),
 				),
 			},
 		},
-	},
-	)
+	})
 }
 
 func readKVData(t *testing.T, mount, name string) {
@@ -275,7 +322,7 @@ func readKVData(t *testing.T, mount, name string) {
 	path := fmt.Sprintf("%s/data/%s", mount, name)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		t.Fatalf(fmt.Sprintf("error reading from Vault; err=%s", err))
+		t.Fatalf("error reading from Vault; err=%s", err)
 	}
 
 	if resp == nil {
@@ -290,6 +337,30 @@ func readKVData(t *testing.T, mount, name string) {
 
 }
 
+func assertKVDataEquals(mount, name string, expected map[string]interface{}) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+		// Read data at path
+		path := fmt.Sprintf("%s/data/%s", mount, name)
+		resp, err := client.Logical().Read(path)
+		if err != nil {
+			return fmt.Errorf("error reading from Vault; err=%s", err)
+		}
+
+		if resp == nil {
+			return fmt.Errorf("empty response")
+		}
+		if len(resp.Data) == 0 {
+			return fmt.Errorf("kvv2 secret data should not be empty")
+		}
+		if !reflect.DeepEqual(resp.Data["data"], expected) {
+			return fmt.Errorf("kvv2 secret data does not match got: %#+v, want: %#+v", resp.Data["data"], expected)
+		}
+		return nil
+	}
+}
+
 func writeKVData(t *testing.T, mount, name string) {
 	t.Helper()
 	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
@@ -301,7 +372,7 @@ func writeKVData(t *testing.T, mount, name string) {
 	path := fmt.Sprintf("%s/data/%s", mount, name)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		t.Fatalf(fmt.Sprintf("error writing to Vault; err=%s", err))
+		t.Fatalf("error writing to Vault; err=%s", err)
 	}
 
 	if resp == nil {
@@ -318,7 +389,7 @@ func mountKVEngine(t *testing.T, mount, name string) {
 		Description: "Mount for testing KV datasource",
 	})
 	if err != nil {
-		t.Fatalf(fmt.Sprintf("error mounting kvv2 engine; err=%s", err))
+		t.Fatalf("error mounting kvv2 engine; err=%s", err)
 	}
 }
 
@@ -381,6 +452,50 @@ resource "vault_kv_secret_v2" "test" {
     }
   }
 }`, name)
+
+	return ret
+}
+
+func testKVSecretV2Config_data_json_wo(mount, name string, version int) string {
+	ret := fmt.Sprintf(`
+%s
+
+`, kvV2MountConfig(mount))
+
+	ret += fmt.Sprintf(`
+resource "vault_kv_secret_v2" "test" {
+  mount               = vault_mount.kvv2.path
+  name                = "%s"
+  data_json_wo = jsonencode(
+    {
+      zip  = "zoop",
+      foo  = "baz",
+    }
+  )
+  data_json_wo_version = %d
+}`, name, version)
+
+	return ret
+}
+
+func testKVSecretV2Config_data_json_wo_updated(mount, name string, version int) string {
+	ret := fmt.Sprintf(`
+%s
+
+`, kvV2MountConfig(mount))
+
+	ret += fmt.Sprintf(`
+resource "vault_kv_secret_v2" "test" {
+  mount               = vault_mount.kvv2.path
+  name                = "%s"
+  data_json_wo = jsonencode(
+    {
+      zip  = "zap",
+      foo  = "bar",
+    }
+  )
+  data_json_wo_version = %d
+}`, name, version)
 
 	return ret
 }

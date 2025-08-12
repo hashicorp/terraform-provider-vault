@@ -33,7 +33,7 @@ jobs:
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.7.*'
+          terraform_version: '1.11.*'
           terraform_wrapper: false
 
       - name: Cache go build
@@ -63,11 +63,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.15.16-ent"
-        - "vault-enterprise:1.16.15-ent"
-        - "vault-enterprise:1.17.11-ent"
-        - "vault-enterprise:1.18.4-ent"
-        - "vault-enterprise:1.19.0-ent"
+        - "vault-enterprise:1.16.21-ent"
+        - "vault-enterprise:1.17.17-ent"
+        - "vault-enterprise:1.18.10-ent"
+        - "vault-enterprise:1.19.5-ent"
+        - "vault-enterprise:1.20.1-ent"
         - "vault:latest"
     services:
       vault:
@@ -101,7 +101,7 @@ jobs:
         ports:
           - 1433:1433
       mongo:
-        image: docker.mirror.hashicorp.services/mongo:latest
+        image: mongo:latest
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: mongodb
@@ -165,7 +165,7 @@ jobs:
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.7.*'
+          terraform_version: '1.11.*'
           terraform_wrapper: false
       - name: Check Terraform CLI version
         run: terraform --version
@@ -234,3 +234,20 @@ jobs:
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
+          #
+  # This job is used as a requirement for the repo's branch protection setup.
+  build-done:
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - acceptance
+    steps:
+    - name: cancelled
+      if: ${{ (contains(needs.*.result, 'cancelled')) }}
+      run: exit 2
+    - name: passed
+      if: ${{ !(contains(needs.*.result, 'failure')) }}
+      run: exit 0
+    - name: failed
+      if: ${{ contains(needs.*.result, 'failure') }}
+      run: exit 1

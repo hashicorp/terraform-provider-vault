@@ -1,5 +1,66 @@
 ## Unreleased
 
+FEATURES:
+* Add support for `jwks_pairs` in `vault_jwt_auth_backend` resource. Requires Vault 1.16+ ([#2523](https://github.com/hashicorp/terraform-provider-vault/pull/2523))
+* Add support for `root_password_ttl` in `vault_azure_secret_backend` resource. Requires Vault 1.15+ ([#2529](https://github.com/hashicorp/terraform-provider-vault/pull/2529))
+* Add support for managed key parameters in the SSH CA config endpoint ([#2480](https://github.com/hashicorp/terraform-provider-vault/pull/2480))
+* Add new resources `vault_oci_auth_backend` and `vault_oci_auth_backend_role` to manage OCI auth backend and roles. ([#1761](https://github.com/hashicorp/terraform-provider-vault/pull/1761))
+* Add support for `log_level` in `vault_pki_secret_backend_config_scep` resource. Requires Vault 1.20.1+ ([#2525](https://github.com/hashicorp/terraform-provider-vault/pull/2525))
+
+IMPROVEMENTS:
+* Updated dependencies ([#2551](https://github.com/hashicorp/terraform-provider-vault/pull/2551)):
+   * `golang.org/x/oauth2` v0.24.0 -> v0.30.0
+   * `github.com/cloudflare/circl` v1.3.7 -> v1.6.1
+   * `github.com/go-jose/go-jose/v3` v3.0.3 -> v3.0.4
+   * `github.com/go-jose/go-jose/v4` v4.0.4 -> v4.1.2
+   * `github.com/golang-jwt/jwt/v5` v5.2.2 -> v5.3.0
+
+BUILD:
+* Bump Go version to 1.24.6: ([#2550](https://github.com/hashicorp/terraform-provider-vault/pull/2550))
+
+BUGS:
+* Fix panic when reading the `vault_gcp_secret_backend` resource. ([#2549](https://github.com/hashicorp/terraform-provider-vault/pull/2549))
+
+## 5.1.0 (Jul 9, 2025)
+
+FEATURES:
+* Add support for key_usage to `vault_pki_secret_backend_root_sign_intermediate` ([#2421](https://github.com/hashicorp/terraform-provider-vault/pull/2421))
+
+* Add `private_key_wo` and `private_key_wo_version` fields to Snowflake DB secrets engine config ([#2508](https://github.com/hashicorp/terraform-provider-vault/pull/2508))
+
+* Add support for `group_by` and `secondary_rate` on resource `vault_quota_rate_limit`. Requires Vault Enterprise 1.20.0+ ([#2476](https://github.com/hashicorp/terraform-provider-vault/pull/2476))
+* Add support for Transit CMAC endpoint ([#2488](https://github.com/hashicorp/terraform-provider-vault/pull/2488))
+
+* Add new resource `vault_scep_auth_backend_role` to manage roles in a SCEP auth backend. [#2479](https://github.com/hashicorp/terraform-provider-vault/pull/2479).
+* Add new datasource and resource `vault_pki_secret_backend_config_scep` for PKI SCEP configuration. [#2487](https://github.com/hashicorp/terraform-provider-vault/pull/2487).
+
+## 5.0.0 (May 21, 2025)
+
+**Important**: `5.X` multiplexes the Vault provider to use the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework),
+upgrades to Terraform `1.11.x`, and adds support for Ephemeral Resources and Write-Only attributes.
+Please refer to the
+[Terraform Vault Provider 5.0.0 Upgrade Guide](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_5_upgrade) for specific
+details around the changes.
+
+VERSION COMPATIBILITY:
+`5.X` is officially supported and tested against Vault server versions >= `1.15.x`.
+`5.X` supports Terraform versions >= `1.11.x` in order to support ephemeral resources and write-only attributes.
+
+BREAKING CHANGES:
+Please refer to the [upgrade topics](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_5_upgrade.html#upgrade-topics)
+in the guide for details on all breaking changes.
+
+FEATURES:
+* Add new ephemeral resources/attributes ([#2457](https://github.com/hashicorp/terraform-provider-vault/pull/2457)):
+  * Add new ephemeral resource `vault_kv_secret_v2`
+  * Add new ephemeral resource `vault_database_secret`
+  * Add new write-only attribute `data_json_wo` (along with `data_json_wo_version`) to resource `vault_kv_secret_v2`
+  * Add new write-only attribute `credentials_wo`, (along with `credentials_wo_version`) to resource `vault_gcp_secret_backend`
+  * Add new write-only attribute `password_wo`, (along with `password_wo_version` to resource) `vault_database_secret_backend_connection`
+
+BUGS:
+* fix `vault_policy_document` data source regression to allow empty `capabilities` ([#2466](https://github.com/hashicorp/terraform-provider-vault/pull/2466))
+
 ## 4.8.0 (Apr 23, 2025)
 
 FEATURES:

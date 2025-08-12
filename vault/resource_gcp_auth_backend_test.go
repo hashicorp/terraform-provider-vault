@@ -4,13 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -44,9 +45,9 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 	updatedDescription := "GCP Auth Mount updated"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testGCPAuthBackendDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
@@ -165,8 +166,8 @@ func TestGCPAuthBackend_WIF(t *testing.T) {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testGCPAuthBackendDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackend_WIFConfig_basic(path),
@@ -203,9 +204,9 @@ func TestGCPAuthBackend_import(t *testing.T) {
 	description := "GCP Auth Mount"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testGCPAuthBackendDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
@@ -232,8 +233,8 @@ func TestGCPAuthBackend_remount(t *testing.T) {
 	description := "GCP Auth Mount"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
@@ -300,7 +301,7 @@ func TestAccGCPAuthBackendClient_automatedRotation(t *testing.T) {
 	resourceType := "vault_gcp_auth_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)

@@ -5,6 +5,7 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -17,10 +18,10 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -135,9 +136,9 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 	checks := testCheckPKISecretRootSignIntermediate(resourceName, rootPath, commonName, format, "", x509.SHA256WithRSA, false)
 	store := &testPKICertStore{}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false),
@@ -203,6 +204,25 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUsePSS, "true"),
 				),
 			},
+			{
+				SkipFunc: skip(provider.VaultVersion118),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
+					`key_usage = ["CertSign", "DigitalSignature"]`),
+				Check: resource.ComposeTestCheckFunc(
+					checks,
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "CertSign"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".1", "DigitalSignature"),
+					testPKICert(resourceName, func(cert *x509.Certificate) error {
+						if 0 == cert.KeyUsage&x509.KeyUsageCertSign {
+							return fmt.Errorf("KeyUsage expected %b, got %b",
+								x509.KeyUsageKeyAgreement|x509.KeyUsageCertSign,
+								cert.KeyUsage)
+						}
+						return nil
+					}),
+				),
+			},
 		},
 	})
 }
@@ -213,9 +233,9 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "pem"`),
@@ -231,9 +251,9 @@ func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "der"`),
@@ -249,9 +269,9 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle(t *testing.T) {
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "pem_bundle"`),
@@ -272,9 +292,9 @@ func TestPkiSecretBackendRootSignIntermediate_not_after(t *testing.T) {
 	notAfterTime := time.Now().Add(5 * time.Hour)
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "der"`, notAfter(notAfterTime)),
@@ -291,7 +311,7 @@ func TestPkiSecretBackendRootSignIntermediate_name_constraints_pem_bundle(t *tes
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
@@ -313,7 +333,7 @@ func TestPkiSecretBackendRootSignIntermediate_signature_bits(t *testing.T) {
 	commonName := "SubOrg Intermediate CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -348,9 +368,9 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle_multiple_intermed
 	commonName := "SubOrg Intermediate 2 CA"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_multiple_inter(rootPath, intermediate1Path, intermediate2Path, format),

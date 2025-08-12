@@ -4,12 +4,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -25,7 +26,7 @@ func TestAccAWSSecretBackendStaticRole(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
 		},
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAWSStaticResourceConfig(mount, a, s, username),
@@ -51,7 +52,7 @@ func TestAccAWSSecretBackendStaticAssumeRole(t *testing.T) {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAWSStaticAssumeResourceConfig(mount, a, s, username),

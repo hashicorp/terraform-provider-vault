@@ -4,14 +4,15 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -75,7 +76,7 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -124,7 +125,7 @@ func TestAzureSecretBackendRole_AzureGroups(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-azure")
 	role := acctest.RandomWithPrefix("tf-test-azure-role")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
