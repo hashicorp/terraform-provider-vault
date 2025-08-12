@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -23,28 +24,28 @@ func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
 	}
 	raw := rawL[0].(map[string]interface{})
 
-	if v, ok := raw["default_lease_ttl"]; ok {
+	if v, ok := raw[consts.FieldDefaultLeaseTTL]; ok {
 		data.DefaultLeaseTTL = v.(string)
 	}
-	if v, ok := raw["max_lease_ttl"]; ok {
+	if v, ok := raw[consts.FieldMaxLeaseTTL]; ok {
 		data.MaxLeaseTTL = v.(string)
 	}
-	if v, ok := raw["audit_non_hmac_request_keys"]; ok {
+	if v, ok := raw[consts.FieldAuditNonHMACRequestKeys]; ok {
 		data.AuditNonHMACRequestKeys = expandStringSliceWithEmpty(v.([]interface{}), true)
 	}
-	if v, ok := raw["audit_non_hmac_response_keys"]; ok {
+	if v, ok := raw[consts.FieldAuditNonHMACResponseKeys]; ok {
 		data.AuditNonHMACResponseKeys = expandStringSliceWithEmpty(v.([]interface{}), true)
 	}
-	if v, ok := raw["listing_visibility"]; ok {
+	if v, ok := raw[consts.FieldListingVisibility]; ok {
 		data.ListingVisibility = v.(string)
 	}
-	if v, ok := raw["passthrough_request_headers"]; ok {
+	if v, ok := raw[consts.FieldPassthroughRequestHeaders]; ok {
 		data.PassthroughRequestHeaders = expandStringSliceWithEmpty(v.([]interface{}), true)
 	}
-	if v, ok := raw["allowed_response_headers"]; ok {
+	if v, ok := raw[consts.FieldAllowedResponseHeaders]; ok {
 		data.AllowedResponseHeaders = expandStringSliceWithEmpty(v.([]interface{}), true)
 	}
-	if v, ok := raw["token_type"]; ok {
+	if v, ok := raw[consts.FieldTokenType]; ok {
 		data.TokenType = v.(string)
 	}
 	return data
@@ -53,22 +54,22 @@ func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
 func flattenAuthMethodTune(dt *api.MountConfigOutput) map[string]interface{} {
 	m := make(map[string]interface{})
 
-	m["default_lease_ttl"] = flattenVaultDuration(dt.DefaultLeaseTTL)
-	m["max_lease_ttl"] = flattenVaultDuration(dt.MaxLeaseTTL)
+	m[consts.FieldDefaultLeaseTTL] = flattenVaultDuration(dt.DefaultLeaseTTL)
+	m[consts.FieldMaxLeaseTTL] = flattenVaultDuration(dt.MaxLeaseTTL)
 	if len(dt.AuditNonHMACRequestKeys) > 0 && dt.AuditNonHMACRequestKeys[0] != "" {
-		m["audit_non_hmac_request_keys"] = flattenStringSlice(dt.AuditNonHMACRequestKeys)
+		m[consts.FieldAuditNonHMACRequestKeys] = flattenStringSlice(dt.AuditNonHMACRequestKeys)
 	}
 	if len(dt.AuditNonHMACResponseKeys) > 0 && dt.AuditNonHMACResponseKeys[0] != "" {
-		m["audit_non_hmac_response_keys"] = flattenStringSlice(dt.AuditNonHMACResponseKeys)
+		m[consts.FieldAuditNonHMACResponseKeys] = flattenStringSlice(dt.AuditNonHMACResponseKeys)
 	}
-	m["listing_visibility"] = dt.ListingVisibility
+	m[consts.FieldListingVisibility] = dt.ListingVisibility
 	if len(dt.PassthroughRequestHeaders) > 0 && dt.PassthroughRequestHeaders[0] != "" {
-		m["passthrough_request_headers"] = flattenStringSlice(dt.PassthroughRequestHeaders)
+		m[consts.FieldPassthroughRequestHeaders] = flattenStringSlice(dt.PassthroughRequestHeaders)
 	}
 	if len(dt.AllowedResponseHeaders) > 0 && dt.AllowedResponseHeaders[0] != "" {
-		m["allowed_response_headers"] = flattenStringSlice(dt.AllowedResponseHeaders)
+		m[consts.FieldAllowedResponseHeaders] = flattenStringSlice(dt.AllowedResponseHeaders)
 	}
-	m["token_type"] = dt.TokenType
+	m[consts.FieldTokenType] = dt.TokenType
 	return m
 }
 
@@ -103,15 +104,15 @@ func mergeAuthMethodTune(rawTune map[string]interface{}, input *api.MountConfigI
 	// If the input is nil
 	if input != nil {
 		if input.DefaultLeaseTTL == "" {
-			rawTune["default_lease_ttl"] = ""
+			rawTune[consts.FieldDefaultLeaseTTL] = ""
 		}
 
 		if input.MaxLeaseTTL == "" {
-			rawTune["max_lease_ttl"] = ""
+			rawTune[consts.FieldMaxLeaseTTL] = ""
 		}
 
 		if input.ListingVisibility == "" {
-			rawTune["listing_visibility"] = ""
+			rawTune[consts.FieldListingVisibility] = ""
 		}
 	}
 
