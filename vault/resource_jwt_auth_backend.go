@@ -339,11 +339,7 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	if err != nil {
 		return diag.Errorf("error reading tune information from Vault: %s", err)
 	}
-
-	input := expandAuthMethodTune(d.Get("tune").(*schema.Set).List())
-	mergedTune := mergeAuthMethodTune(rawTune, &input)
-
-	if err := d.Set("tune", []map[string]interface{}{mergedTune}); err != nil {
+	if err := d.Set("tune", []map[string]interface{}{rawTune}); err != nil {
 		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
 		return diag.FromErr(err)
 	}
