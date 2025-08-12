@@ -6,9 +6,10 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -40,7 +41,7 @@ func getMountSchema(excludes ...string) schemaMap {
 			Required:    false,
 			Description: "Human-friendly description of the mount",
 		},
-		consts.FieldDefaultLeaseTTL: {
+		consts.FieldDefaultLeaseTTLSeconds: {
 			Type:        schema.TypeInt,
 			Required:    false,
 			Optional:    true,
@@ -49,7 +50,7 @@ func getMountSchema(excludes ...string) schemaMap {
 			Description: "Default lease duration for tokens and secrets in seconds",
 		},
 
-		consts.FieldMaxLeaseTTL: {
+		consts.FieldMaxLeaseTTLSeconds: {
 			Type:        schema.TypeInt,
 			Required:    false,
 			Optional:    true,
@@ -215,8 +216,8 @@ func createMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 		Type:        mountType,
 		Description: d.Get(consts.FieldDescription).(string),
 		Config: api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
+			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTLSeconds)),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTLSeconds)),
 			ForceNoCache:    d.Get(consts.FieldForceNoCache).(bool),
 		},
 		Local:                 d.Get(consts.FieldLocal).(bool),
@@ -288,8 +289,8 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 	}
 
 	config := api.MountConfigInput{
-		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
-		MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
+		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTLSeconds)),
+		MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTLSeconds)),
 		Options:         mountOptions(d),
 	}
 
@@ -450,13 +451,13 @@ func readMount(ctx context.Context, d *schema.ResourceData, meta interface{}, ex
 	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
 		return err
 	}
-	if err := d.Set(consts.FieldDefaultLeaseTTL, mount.Config.DefaultLeaseTTL); err != nil {
+	if err := d.Set(consts.FieldDefaultLeaseTTLSeconds, mount.Config.DefaultLeaseTTL); err != nil {
 		return err
 	}
 	if err := d.Set(consts.FieldForceNoCache, mount.Config.ForceNoCache); err != nil {
 		return err
 	}
-	if err := d.Set(consts.FieldMaxLeaseTTL, mount.Config.MaxLeaseTTL); err != nil {
+	if err := d.Set(consts.FieldMaxLeaseTTLSeconds, mount.Config.MaxLeaseTTL); err != nil {
 		return err
 	}
 	if err := d.Set(consts.FieldAuditNonHMACRequestKeys, mount.Config.AuditNonHMACRequestKeys); err != nil {
