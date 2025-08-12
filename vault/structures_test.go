@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -88,16 +89,16 @@ func TestMergeAuthMethodTune(t *testing.T) {
 			args: args{
 				rawTune: map[string]interface{}{
 					// Vault's tune API returns the global defaults for these fields
-					"default_lease_ttl":  "768h",
-					"max_lease_ttl":      "768h",
-					"listing_visibility": "hidden",
+					consts.FieldDefaultLeaseTTL:   "768h",
+					consts.FieldMaxLeaseTTL:       "768h",
+					consts.FieldListingVisibility: "hidden",
 				},
 				input: nil,
 			},
 			expected: map[string]interface{}{
-				"default_lease_ttl":  "768h",
-				"max_lease_ttl":      "768h",
-				"listing_visibility": "hidden",
+				consts.FieldDefaultLeaseTTL:   "768h",
+				consts.FieldMaxLeaseTTL:       "768h",
+				consts.FieldListingVisibility: "hidden",
 			},
 		},
 		{
@@ -105,26 +106,26 @@ func TestMergeAuthMethodTune(t *testing.T) {
 			args: args{
 				rawTune: map[string]interface{}{
 					// Vault's tune API returns the global defaults for these fields
-					"default_lease_ttl":  "768h",
-					"max_lease_ttl":      "768h",
-					"listing_visibility": "unauth",
+					consts.FieldDefaultLeaseTTL:   "768h",
+					consts.FieldMaxLeaseTTL:       "768h",
+					consts.FieldListingVisibility: "unauth",
 				},
 				input: &api.MountConfigInput{},
 			},
 			expected: map[string]interface{}{
-				"default_lease_ttl":  "",
-				"max_lease_ttl":      "",
-				"listing_visibility": "",
+				consts.FieldDefaultLeaseTTL:   "",
+				consts.FieldMaxLeaseTTL:       "",
+				consts.FieldListingVisibility: "",
 			},
 		},
 		{
 			name: "Mixed: some empty, some non-empty",
 			args: args{
 				rawTune: map[string]interface{}{
-					"default_lease_ttl":  "768h",
-					"max_lease_ttl":      "20h",
-					"listing_visibility": "unauth",
-					"token_type":         "default-service",
+					consts.FieldDefaultLeaseTTL:   "768h",
+					consts.FieldMaxLeaseTTL:       "20h",
+					consts.FieldListingVisibility: "unauth",
+					consts.FieldTokenType:         "default-service",
 				},
 				input: &api.MountConfigInput{
 					DefaultLeaseTTL:   "",
@@ -134,19 +135,19 @@ func TestMergeAuthMethodTune(t *testing.T) {
 				},
 			},
 			expected: map[string]interface{}{
-				"default_lease_ttl":  "",
-				"max_lease_ttl":      "20h",
-				"listing_visibility": "",
-				"token_type":         "default-service",
+				consts.FieldDefaultLeaseTTL:   "",
+				consts.FieldMaxLeaseTTL:       "20h",
+				consts.FieldListingVisibility: "",
+				consts.FieldTokenType:         "default-service",
 			},
 		},
 		{
 			name: "Partial: only DefaultLeaseTTL is specified",
 			args: args{
 				rawTune: map[string]interface{}{
-					"default_lease_ttl":  "10m",
-					"max_lease_ttl":      "768h",
-					"listing_visibility": "unauth",
+					consts.FieldDefaultLeaseTTL:   "10m",
+					consts.FieldMaxLeaseTTL:       "768h",
+					consts.FieldListingVisibility: "unauth",
 				},
 				input: &api.MountConfigInput{
 					DefaultLeaseTTL:   "10m",
@@ -155,18 +156,18 @@ func TestMergeAuthMethodTune(t *testing.T) {
 				},
 			},
 			expected: map[string]interface{}{
-				"default_lease_ttl":  "10m",
-				"max_lease_ttl":      "",
-				"listing_visibility": "unauth",
+				consts.FieldDefaultLeaseTTL:   "10m",
+				consts.FieldMaxLeaseTTL:       "",
+				consts.FieldListingVisibility: "unauth",
 			},
 		},
 		{
 			name: "Partial: only MaxLeaseTTL is specified",
 			args: args{
 				rawTune: map[string]interface{}{
-					"default_lease_ttl":  "",
-					"max_lease_ttl":      "10m",
-					"listing_visibility": "hidden",
+					consts.FieldDefaultLeaseTTL:   "",
+					consts.FieldMaxLeaseTTL:       "10m",
+					consts.FieldListingVisibility: "hidden",
 				},
 				input: &api.MountConfigInput{
 					DefaultLeaseTTL:   "",
@@ -175,18 +176,18 @@ func TestMergeAuthMethodTune(t *testing.T) {
 				},
 			},
 			expected: map[string]interface{}{
-				"default_lease_ttl":  "",
-				"max_lease_ttl":      "10m",
-				"listing_visibility": "",
+				consts.FieldDefaultLeaseTTL:   "",
+				consts.FieldMaxLeaseTTL:       "10m",
+				consts.FieldListingVisibility: "",
 			},
 		},
 		{
 			name: "Partial: only ListingVisibility is specified",
 			args: args{
 				rawTune: map[string]interface{}{
-					"default_lease_ttl":  "768h",
-					"max_lease_ttl":      "768h",
-					"listing_visibility": "unauth",
+					consts.FieldDefaultLeaseTTL:   "768h",
+					consts.FieldMaxLeaseTTL:       "768h",
+					consts.FieldListingVisibility: "unauth",
 				},
 				input: &api.MountConfigInput{
 					DefaultLeaseTTL:   "",
@@ -195,23 +196,23 @@ func TestMergeAuthMethodTune(t *testing.T) {
 				},
 			},
 			expected: map[string]interface{}{
-				"default_lease_ttl":  "",
-				"max_lease_ttl":      "",
-				"listing_visibility": "unauth",
+				consts.FieldDefaultLeaseTTL:   "",
+				consts.FieldMaxLeaseTTL:       "",
+				consts.FieldListingVisibility: "unauth",
 			},
 		},
 		{
 			name: "Full: all fields specified",
 			args: args{
 				rawTune: map[string]interface{}{
-					"default_lease_ttl":            "768h", // global default
-					"max_lease_ttl":                "768h", // global default
-					"audit_non_hmac_request_keys":  []interface{}{"foo", "bar"},
-					"audit_non_hmac_response_keys": []interface{}{"baz"},
-					"listing_visibility":           "unauth",
-					"passthrough_request_headers":  []interface{}{"X-Custom", "X-Mas"},
-					"allowed_response_headers":     []interface{}{"X-Response-Custom", "X-Response-Mas"},
-					"token_type":                   "default-service",
+					consts.FieldDefaultLeaseTTL:           "768h", // global default
+					consts.FieldMaxLeaseTTL:               "768h", // global default
+					consts.FieldAuditNonHMACRequestKeys:   []interface{}{"foo", "bar"},
+					consts.FieldAuditNonHMACResponseKeys:  []interface{}{"baz"},
+					consts.FieldListingVisibility:         "unauth",
+					consts.FieldPassthroughRequestHeaders: []interface{}{"X-Custom", "X-Mas"},
+					consts.FieldAllowedResponseHeaders:    []interface{}{"X-Response-Custom", "X-Response-Mas"},
+					consts.FieldTokenType:                 "default-service",
 				},
 
 				input: &api.MountConfigInput{
@@ -226,14 +227,14 @@ func TestMergeAuthMethodTune(t *testing.T) {
 				},
 			},
 			expected: map[string]interface{}{
-				"default_lease_ttl":            "",
-				"max_lease_ttl":                "",
-				"audit_non_hmac_request_keys":  []interface{}{"foo", "bar"},
-				"audit_non_hmac_response_keys": []interface{}{"baz"},
-				"listing_visibility":           "unauth",
-				"passthrough_request_headers":  []interface{}{"X-Custom", "X-Mas"},
-				"allowed_response_headers":     []interface{}{"X-Response-Custom", "X-Response-Mas"},
-				"token_type":                   "default-service",
+				consts.FieldDefaultLeaseTTL:           "",
+				consts.FieldMaxLeaseTTL:               "",
+				consts.FieldAuditNonHMACRequestKeys:   []interface{}{"foo", "bar"},
+				consts.FieldAuditNonHMACResponseKeys:  []interface{}{"baz"},
+				consts.FieldListingVisibility:         "unauth",
+				consts.FieldPassthroughRequestHeaders: []interface{}{"X-Custom", "X-Mas"},
+				consts.FieldAllowedResponseHeaders:    []interface{}{"X-Response-Custom", "X-Response-Mas"},
+				consts.FieldTokenType:                 "default-service",
 			},
 		},
 	}
