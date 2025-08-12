@@ -85,7 +85,7 @@ func TestMergeAuthMethodTune(t *testing.T) {
 		expected map[string]interface{}
 	}{
 		{
-			name: "Nil input makes merged equal rawTune",
+			name: "Nil input makes merged equal to rawTune. Equivalent to the state import",
 			args: args{
 				rawTune: map[string]interface{}{
 					// Vault's tune API returns the global defaults for these fields
@@ -108,7 +108,7 @@ func TestMergeAuthMethodTune(t *testing.T) {
 					// Vault's tune API returns the global defaults for these fields
 					consts.FieldDefaultLeaseTTL:   "768h",
 					consts.FieldMaxLeaseTTL:       "768h",
-					consts.FieldListingVisibility: "unauth",
+					consts.FieldListingVisibility: "hidden",
 				},
 				input: &api.MountConfigInput{},
 			},
@@ -124,7 +124,7 @@ func TestMergeAuthMethodTune(t *testing.T) {
 				rawTune: map[string]interface{}{
 					consts.FieldDefaultLeaseTTL:   "768h",
 					consts.FieldMaxLeaseTTL:       "20h",
-					consts.FieldListingVisibility: "unauth",
+					consts.FieldListingVisibility: "hidden",
 					consts.FieldTokenType:         "default-service",
 				},
 				input: &api.MountConfigInput{
@@ -147,18 +147,18 @@ func TestMergeAuthMethodTune(t *testing.T) {
 				rawTune: map[string]interface{}{
 					consts.FieldDefaultLeaseTTL:   "10m",
 					consts.FieldMaxLeaseTTL:       "768h",
-					consts.FieldListingVisibility: "unauth",
+					consts.FieldListingVisibility: "hidden",
 				},
 				input: &api.MountConfigInput{
 					DefaultLeaseTTL:   "10m",
 					MaxLeaseTTL:       "",
-					ListingVisibility: "unauth",
+					ListingVisibility: "",
 				},
 			},
 			expected: map[string]interface{}{
 				consts.FieldDefaultLeaseTTL:   "10m",
 				consts.FieldMaxLeaseTTL:       "",
-				consts.FieldListingVisibility: "unauth",
+				consts.FieldListingVisibility: "",
 			},
 		},
 		{
