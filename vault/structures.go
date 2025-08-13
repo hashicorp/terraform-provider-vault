@@ -103,14 +103,15 @@ func mergeAuthMethodTune(rawTune map[string]interface{}, input *api.MountConfigI
 	// github.com/hashicorp/terraform-provider-vault/vault/auth_mount.go
 	// If the input is nil
 	if input != nil {
+		if input.TokenType == "" {
+			rawTune[consts.FieldTokenType] = ""
+		}
 		if input.DefaultLeaseTTL == "" {
 			rawTune[consts.FieldDefaultLeaseTTL] = ""
 		}
-
 		if input.MaxLeaseTTL == "" {
 			rawTune[consts.FieldMaxLeaseTTL] = ""
 		}
-
 		if input.ListingVisibility == "" {
 			rawTune[consts.FieldListingVisibility] = ""
 		}
