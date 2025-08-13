@@ -60,13 +60,13 @@ func awsSecretBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			consts.FieldDefaultLeaseTTL: {
+			consts.FieldDefaultLeaseTTLSeconds: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Computed:    true,
 				Description: "Default lease duration for secrets in seconds",
 			},
-			consts.FieldMaxLeaseTTL: {
+			consts.FieldMaxLeaseTTLSeconds: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Computed:    true,
@@ -159,8 +159,8 @@ func awsSecretBackendResource() *schema.Resource {
 		consts.FieldPath,
 		consts.FieldType,
 		consts.FieldDescription,
-		consts.FieldDefaultLeaseTTL,
-		consts.FieldMaxLeaseTTL,
+		consts.FieldDefaultLeaseTTLSeconds,
+		consts.FieldMaxLeaseTTLSeconds,
 		consts.FieldIdentityTokenKey,
 		consts.FieldLocal,
 	))
