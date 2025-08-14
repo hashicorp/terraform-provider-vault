@@ -231,6 +231,9 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		if err != nil {
 			return diag.FromErr(err)
 		}
+		if resp == nil {
+			return diag.FromErr(fmt.Errorf("GCP backend config %q not found", path))
+		}
 
 		fields := []string{
 			consts.FieldIdentityTokenAudience,

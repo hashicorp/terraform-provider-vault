@@ -56,6 +56,7 @@ func TestAccPKISecretBackendConfigScep_Empty(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".#", "1"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.%", "1"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.intune.%", "0"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldLogLevel, ""),
 					resource.TestCheckResourceAttrSet(resourceBackend, consts.FieldLastUpdated),
 
 					// Validate we read back the data back as we did upon creation
@@ -75,6 +76,7 @@ func TestAccPKISecretBackendConfigScep_Empty(t *testing.T) {
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".#", "1"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.%", "1"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.intune.%", "0"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldLogLevel, ""),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
 				),
 			},
@@ -132,6 +134,7 @@ resource "vault_pki_secret_backend_config_scep" "test" {
   allowed_encryption_algorithms = ["des-cbc", "3des-cbc"]
   allowed_digest_algorithms = ["sha-1"]
   restrict_ca_chain_to_issuer = true
+  log_level = "trace"
   authenticators { 
 	cert = { "accessor" = "test", "cert_role" = "cert-role" }
     scep = { "accessor" = "auth-scep-accessor", "scep_role" = "scep-role"}
@@ -172,6 +175,7 @@ data "vault_pki_secret_backend_config_scep" "test" {
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.intune.%", "2"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.intune.client_id", "the client ID"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.intune.tenant_id", "the tenant ID"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldLogLevel, "trace"),
 
 					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(dataName, consts.FieldEnabled, "true"),
@@ -195,6 +199,7 @@ data "vault_pki_secret_backend_config_scep" "test" {
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.intune.%", "2"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.intune.client_id", "the client ID"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.intune.tenant_id", "the tenant ID"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldLogLevel, "trace"),
 				),
 			},
 			{
