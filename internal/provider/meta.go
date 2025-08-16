@@ -594,7 +594,7 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 	// Caution is still required with state files since not all secrets
 	// can explicitly be revoked, and this limited scope won't apply to
 	// any secrets that are *written* by Terraform to Vault.
-	ttl := GetResourceDataInt(d, consts.FieldMaxLeaseTTL, "TERRAFORM_VAULT_MAX_TTL", 1200)
+	ttl := GetResourceDataInt(d, consts.FieldMaxLeaseTTLSeconds, "TERRAFORM_VAULT_MAX_TTL", 1200)
 	childTokenLease, err := clone.Auth().Token().Create(&api.TokenCreateRequest{
 		DisplayName:    tokenName,
 		TTL:            fmt.Sprintf("%ds", ttl),
