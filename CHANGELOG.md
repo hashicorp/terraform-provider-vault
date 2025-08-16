@@ -25,6 +25,7 @@ BUGS:
 * Fix the tune block issue where it always updates unless field values match Vault server defaults
   * `vault_jwt_auth_backend` resource ([#2560](https://github.com/hashicorp/terraform-provider-vault/pull/2560))
   * `vault_github_auth_backend` and `vault_auth_backend` resources ([#2565](https://github.com/hashicorp/terraform-provider-vault/pull/2565))
+  * `vault_saml_auth_backend` resource ([#2566](https://github.com/hashicorp/terraform-provider-vault/pull/2566))
 
 ## 5.1.0 (Jul 9, 2025)
 
