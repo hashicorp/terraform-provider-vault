@@ -52,6 +52,12 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
 					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "default-service"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "1h"),
+					// ensure the global default effect from Vault tune API is ignored,
+					// these fields should stay empty
+					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
 				),
 			},
 			{
@@ -67,6 +73,12 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "2400"),
 					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "6000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "batch"),
+					// ensure the global default effect from Vault tune API is ignored,
+					// these fields should stay empty
+					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", ""),
 				),
 			},
 		},
@@ -327,6 +339,10 @@ resource "vault_github_auth_backend" "test" {
 	organization = "%s"
 	token_ttl = 1200
 	token_max_ttl = 3000
+	tune {
+		token_type = "default-service"
+		max_lease_ttl = "1h"
+	}
 }
 `, path, org)
 }
@@ -357,6 +373,9 @@ resource "vault_github_auth_backend" "test" {
 	organization_id = %d
 	token_ttl = 2400
 	token_max_ttl = 6000
+	tune {
+		token_type = "batch"
+	}
 }
 `, path, org, orgID)
 }
