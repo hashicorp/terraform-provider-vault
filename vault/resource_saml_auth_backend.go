@@ -117,6 +117,7 @@ func samlAuthBackendResource() *schema.Resource {
 					"during the SAML exchange according to the current logging level. Not " +
 					"recommended for production.",
 			},
+			consts.FieldTune: authMountTuneSchema(),
 		},
 	}, true)
 }
@@ -185,6 +186,19 @@ func samlAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	// set ID to where engine is mounted
 	d.SetId(path)
 
+	if d.HasChange(consts.FieldTune) {
+		log.Printf("[INFO] SAML Auth '%q' tune configuration changed", d.Id())
+		if raw, ok := d.GetOk(consts.FieldTune); ok {
+			log.Printf("[DEBUG] Writing SAML auth tune to '%q'", path)
+			config := expandAuthMethodTune(raw.(*schema.Set).List())
+			err := tuneMount(ctx, client, "auth/"+path, config)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			log.Printf("[INFO] Written SAML auth tune to '%q'", path)
+		}
+	}
+
 	return samlAuthBackendRead(ctx, d, meta)
 }
 
@@ -219,6 +233,24 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 				return diag.Errorf("error setting state key %q: err=%s", k, err)
 			}
 		}
+	}
+
+	log.Printf("[DEBUG] Reading saml auth tune from %q", id+"/tune")
+	rawTune, err := authMountTuneGet(ctx, client, "auth/"+id)
+	if err != nil {
+		return diag.Errorf("error reading tune information from Vault: %s", err)
+	}
+
+	input, err := retrieveMountConfigInput(d)
+	if err != nil {
+		return diag.Errorf("error retrieving tune configuration from state: %s", err)
+	}
+
+	mergedTune := mergeAuthMethodTune(rawTune, input)
+
+	if err := d.Set(consts.FieldTune, []map[string]interface{}{mergedTune}); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", id+"/tune", err)
+		return diag.FromErr(err)
 	}
 
 	return nil
