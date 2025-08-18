@@ -10,6 +10,7 @@ FEATURES:
 * Add support for `log_level` in `vault_pki_secret_backend_config_scep` resource. Requires Vault 1.20.1+ ([#2525](https://github.com/hashicorp/terraform-provider-vault/pull/2525))
 
 IMPROVEMENTS:
+* Bump Go version to 1.24.6: ([#2550](https://github.com/hashicorp/terraform-provider-vault/pull/2550))
 * Ensure all resources that use custom mounts support all mount parameters. ([#2332](https://github.com/hashicorp/terraform-provider-vault/pull/2332))
 * Updated dependencies:
    * `golang.org/x/oauth2` v0.24.0 -> v0.30.0
@@ -26,10 +27,6 @@ IMPROVEMENTS:
    * `github.com/hashicorp/terraform-plugin-framework` v1.14.1 -> 1.15.1
    * `github.com/hashicorp/terraform-plugin-framework-validators` v0.17.0 -> v0.18.0
    * `hashicorp/ghaction-terraform-provider-release` v4.0.1 -> v5.0.0
-
-
-BUILD:
-* Bump Go version to 1.24.6: ([#2550](https://github.com/hashicorp/terraform-provider-vault/pull/2550))
 
 BUGS:
 * Fix panic when reading the `vault_gcp_secret_backend` resource. ([#2549](https://github.com/hashicorp/terraform-provider-vault/pull/2549))
