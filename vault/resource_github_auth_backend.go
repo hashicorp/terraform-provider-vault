@@ -213,13 +213,25 @@ func githubAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta int
 		return diag.Errorf("error reading tune information from Vault: %s", err)
 	}
 
+	var input *api.MountConfigInput
+	if tune, ok := d.GetOk("tune"); ok {
+		tuneSchemaSet, ok := tune.(*schema.Set)
+		if !ok {
+			return diag.Errorf("error type asserting tune block: expected schema.Set, got %T", d.Get("tune"))
+		}
+		tmp := expandAuthMethodTune(tuneSchemaSet.List())
+		input = &tmp
+	}
+
+	mergedTune := mergeAuthMethodTune(rawTune, input)
+
 	data := getCommonTokenFieldMap(resp)
 	data["path"] = d.Id()
 	data["organization"] = resp.Data["organization"]
 	data["base_url"] = resp.Data["base_url"]
 	data["description"] = mount.Description
 	data["accessor"] = mount.Accessor
-	data["tune"] = []map[string]interface{}{rawTune}
+	data["tune"] = []map[string]interface{}{mergedTune}
 
 	if orgID, ok := resp.Data["organization_id"]; ok {
 		data["organization_id"] = orgID
