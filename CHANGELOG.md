@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 5.2.0 (Aug 18, 2025)
+
 FEATURES:
 * Add support for `jwks_pairs` in `vault_jwt_auth_backend` resource. Requires Vault 1.16+ ([#2523](https://github.com/hashicorp/terraform-provider-vault/pull/2523))
 * Add support for `root_password_ttl` in `vault_azure_secret_backend` resource. Requires Vault 1.15+ ([#2529](https://github.com/hashicorp/terraform-provider-vault/pull/2529))
@@ -8,12 +10,23 @@ FEATURES:
 * Add support for `log_level` in `vault_pki_secret_backend_config_scep` resource. Requires Vault 1.20.1+ ([#2525](https://github.com/hashicorp/terraform-provider-vault/pull/2525))
 
 IMPROVEMENTS:
-* Updated dependencies ([#2551](https://github.com/hashicorp/terraform-provider-vault/pull/2551)):
+* Ensure all resources that use custom mounts support all mount parameters. ([#2332](https://github.com/hashicorp/terraform-provider-vault/pull/2332))
+* Updated dependencies:
    * `golang.org/x/oauth2` v0.24.0 -> v0.30.0
    * `github.com/cloudflare/circl` v1.3.7 -> v1.6.1
    * `github.com/go-jose/go-jose/v3` v3.0.3 -> v3.0.4
    * `github.com/go-jose/go-jose/v4` v4.0.4 -> v4.1.2
    * `github.com/golang-jwt/jwt/v5` v5.2.2 -> v5.3.0
+   * `cloud.google.com/go/iam` v1.2.2 -> v1.5.2
+   * `cloud.google.com/go/compute/metadata` v0.6.0 -> v0.8.0
+   * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.11.1 -> v1.18.2
+   * `github.com/aws/aws-sdk-go` v1.55.6 -> v1.55.8
+   * `github.com/go-sql-driver/mysql` v1.8.1 -> v1.9.3
+   * `github.com/hashicorp/consul/api` v1.27.0 -> v1.32.1
+   * `github.com/hashicorp/terraform-plugin-framework` v1.14.1 -> 1.15.1
+   * `github.com/hashicorp/terraform-plugin-framework-validators` v0.17.0 -> v0.18.0
+   * `hashicorp/ghaction-terraform-provider-release` v4.0.1 -> v5.0.0
+
 
 BUILD:
 * Bump Go version to 1.24.6: ([#2550](https://github.com/hashicorp/terraform-provider-vault/pull/2550))
