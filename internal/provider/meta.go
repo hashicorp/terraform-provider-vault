@@ -627,7 +627,7 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 // If the value is the zero value, then it checks the environment variable. If
 // the environment variable is empty, the default dv is returned
 func GetResourceDataStr(d *schema.ResourceData, field, env, dv string) string {
-	if s, ok := d.Get(field).(string); s != "" && ok {
+	if s, ok := d.Get(field).(string); ok && s != "" {
 		return s
 	}
 
@@ -645,7 +645,7 @@ func GetResourceDataStr(d *schema.ResourceData, field, env, dv string) string {
 // If the value is the zero value, then it checks the environment variable. If
 // the environment variable is empty, the default dv is returned
 func GetResourceDataInt(d *schema.ResourceData, field, env string, dv int) int {
-	if v, ok := d.Get(field).(int); v != 0 && ok {
+	if v, ok := d.Get(field).(int); ok && v != 0 {
 		return v
 	}
 	if env != "" {
@@ -710,13 +710,18 @@ func GetResourceDataBool(d *schema.ResourceData, field, env string, dv bool) boo
 }
 
 func GetToken(d *schema.ResourceData) (string, error) {
-	if token, ok := d.Get("token").(string); token != "" && ok {
+	token, ok := d.Get("token").(string)
+	if !ok {
+		return "", fmt.Errorf("type assertion failed for %T", token)
+	}
+
+	if token != "" {
 		return token, nil
 	} else if token = os.Getenv(api.EnvVaultToken); token != "" {
 		return token, nil
 	}
 
-	if addAddr, ok := d.Get("add_address_to_env").(string); addAddr == "true" && ok {
+	if addAddr, ok := d.Get("add_address_to_env").(string); ok && addAddr == "true" {
 		if addr, ok := d.Get("address").(string); addr != "" && ok {
 			addrEnvVar := api.EnvVaultAddress
 			if current, exists := os.LookupEnv(addrEnvVar); exists {
@@ -739,7 +744,7 @@ func GetToken(d *schema.ResourceData) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error getting token helper: %s", err)
 	}
-	token, err := tokenHelper.Get()
+	token, err = tokenHelper.Get()
 	if err != nil {
 		return "", fmt.Errorf("error getting token: %s", err)
 	}
