@@ -632,6 +632,8 @@ func TestIsEnterpriseSupported(t *testing.T) {
 	}
 }
 
+// TestGetResourceDataStr tests the GetResourceDataStr function.
+// Its subtests should not be run in parallel because it mutates the test runner's environment.
 func TestGetResourceDataStr(t *testing.T) {
 	tests := map[string]struct {
 		schemaData   map[string]interface{}
@@ -719,6 +721,8 @@ func TestGetResourceDataStr(t *testing.T) {
 	}
 }
 
+// TestGetResourceDataInt tests the GetResourceDataInt function.
+// Its subtests should not be run in parallel because it mutates the test runner's environment.
 func TestGetResourceDataInt(t *testing.T) {
 	tests := map[string]struct {
 		schemaData   map[string]interface{}
