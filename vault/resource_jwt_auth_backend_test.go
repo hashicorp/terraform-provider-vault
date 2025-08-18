@@ -729,7 +729,7 @@ EOT`
 	})
 }
 
-func TestAccJWTAuthBackend_importTuning(t *testing.T) {
+func TestAccJWTAuthBackend_importTune(t *testing.T) {
 	testutil.SkipTestAcc(t)
 
 	path := acctest.RandomWithPrefix("jwt")

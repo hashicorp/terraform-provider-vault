@@ -132,7 +132,7 @@ func TestMergeAuthMethodTune(t *testing.T) {
 					consts.FieldTokenType:         "default-service",
 				},
 				input: &api.MountConfigInput{
-					MaxLeaseTTL: "20m",
+					MaxLeaseTTL: "20h",
 					TokenType:   "default-service",
 				},
 			},
