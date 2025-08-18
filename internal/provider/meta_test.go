@@ -698,26 +698,8 @@ func TestGetResourceDataStr(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			// Set up environment variable if specified
 			if tt.env != "" {
-				originalValue := os.Getenv(tt.env)
-				if tt.envValue != "" {
-					err := os.Setenv(tt.env, tt.envValue)
-					if err != nil {
-						t.Fatalf("failed to set environment variable: %v", err)
-					}
-				} else {
-					os.Unsetenv(tt.env)
-				}
-
-				// Clean up environment variable after test
-				defer func() {
-					if originalValue != "" {
-						os.Setenv(tt.env, originalValue)
-					} else {
-						os.Unsetenv(tt.env)
-					}
-				}()
+				t.Setenv(tt.env, tt.envValue)
 			}
 
 			testSchema := map[string]*schema.Schema{
@@ -812,26 +794,8 @@ func TestGetResourceDataInt(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			// Set up environment variable if specified
 			if tt.env != "" {
-				originalValue := os.Getenv(tt.env)
-				if tt.envValue != "" {
-					err := os.Setenv(tt.env, tt.envValue)
-					if err != nil {
-						t.Fatalf("failed to set environment variable: %v", err)
-					}
-				} else {
-					os.Unsetenv(tt.env)
-				}
-
-				// Clean up environment variable after test
-				defer func() {
-					if originalValue != "" {
-						os.Setenv(tt.env, originalValue)
-					} else {
-						os.Unsetenv(tt.env)
-					}
-				}()
+				t.Setenv(tt.env, tt.envValue)
 			}
 
 			testSchema := map[string]*schema.Schema{
