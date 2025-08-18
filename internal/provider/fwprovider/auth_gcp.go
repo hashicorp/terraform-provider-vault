@@ -27,7 +27,7 @@ func AuthLoginGCPSchema() schema.Block {
 					Description: "A signed JSON Web Token.",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldCredentials),
+							path.MatchRelative().AtParent().AtName(consts.FieldCredentials),
 						),
 					},
 				},
