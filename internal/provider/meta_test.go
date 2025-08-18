@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"reflect"
 	"sync"
@@ -180,12 +179,12 @@ func TestGetClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// mockVaultServer is needed to mock Vault API calls made in setClient()
+	// mockVaultHandler handles Vault API calls made in setClient()
 	// when client is not pre-set in ProviderMeta.
 	//
 	// When client is pre-set (e.g. to rootClient) in ProviderMeta,
 	// we return early in setClient() and never make said Vault API calls.
-	mockVaultServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mockVaultHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1/auth/token/lookup-self":
 			response := map[string]interface{}{
@@ -212,8 +211,10 @@ func TestGetClient(t *testing.T) {
 		default:
 			w.WriteHeader(http.StatusNotImplemented)
 		}
-	}))
-	defer mockVaultServer.Close()
+	})
+
+	config, ln := testutil.TestHTTPServer(t, mockVaultHandler)
+	defer ln.Close()
 
 	// testing schema.ResourceDiff is not covered here
 	// since its field members are private.
@@ -407,7 +408,7 @@ func TestGetClient(t *testing.T) {
 						Type:     schema.TypeString,
 						Required: true,
 					}
-					raw[consts.FieldAddress] = mockVaultServer.URL
+					raw[consts.FieldAddress] = config.Address
 					raw[consts.FieldToken] = "test-token"
 				}
 
