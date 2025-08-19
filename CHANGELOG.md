@@ -1,5 +1,12 @@
 ## Unreleased
 
+BUGS:
+* Fix `auth_login_gcp` field constraint on field `credentials` `service_account`
+* Fix `auth_login_azure` field constraint on field `vmss_name` `tenant_id` `client_id` `scope`
+* Fix `auth_login_kerberos` field constraint on fields `username` `service` `realm` `krb5conf_path` `keytab_path` `disable_fast_negotiation` `remove_instance_name`
+* Fix `auth_login_userpass` field constraint on field `password_file`
+* Fix `auth_login` field constraint on field `use_root_namespace`
+
 ## 5.2.0 (Aug 18, 2025)
 
 FEATURES:
