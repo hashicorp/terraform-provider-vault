@@ -33,7 +33,7 @@ jobs:
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.11.*'
+          terraform_version: '1.12.*'
           terraform_wrapper: false
 
       - name: Cache go build
