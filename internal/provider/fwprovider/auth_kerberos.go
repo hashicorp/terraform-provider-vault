@@ -24,6 +24,15 @@ func AuthLoginKerberosSchema() schema.Block {
 					Description: "Simple and Protected GSSAPI Negotiation Mechanism (SPNEGO) token",
 					Validators: []validator.String{
 						validators.KRBNegTokenValidator(),
+						stringvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName(consts.FieldUsername),
+							path.MatchRelative().AtParent().AtName(consts.FieldService),
+							path.MatchRelative().AtParent().AtName(consts.FieldRealm),
+							path.MatchRelative().AtParent().AtName(consts.FieldKRB5ConfPath),
+							path.MatchRelative().AtParent().AtName(consts.FieldKeytabPath),
+							path.MatchRelative().AtParent().AtName(consts.FieldDisableFastNegotiation),
+							path.MatchRelative().AtParent().AtName(consts.FieldRemoveInstanceName),
+						),
 					},
 				},
 				consts.FieldUsername: schema.StringAttribute{
@@ -31,7 +40,7 @@ func AuthLoginKerberosSchema() schema.Block {
 					Description: "The username to login into Kerberos with.",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldToken),
+							path.MatchRelative().AtParent().AtName(consts.FieldToken),
 						),
 					},
 				},
@@ -40,7 +49,7 @@ func AuthLoginKerberosSchema() schema.Block {
 					Description: "The service principle name.",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldToken),
+							path.MatchRelative().AtParent().AtName(consts.FieldToken),
 						),
 					},
 				},
@@ -49,7 +58,7 @@ func AuthLoginKerberosSchema() schema.Block {
 					Description: "The Kerberos server's authoritative authentication domain",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldToken),
+							path.MatchRelative().AtParent().AtName(consts.FieldToken),
 						),
 					},
 				},
@@ -59,7 +68,7 @@ func AuthLoginKerberosSchema() schema.Block {
 					Validators: []validator.String{
 						validators.FileExistsValidator(),
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldToken),
+							path.MatchRelative().AtParent().AtName(consts.FieldToken),
 						),
 					},
 				},
@@ -69,7 +78,7 @@ func AuthLoginKerberosSchema() schema.Block {
 					Validators: []validator.String{
 						validators.FileExistsValidator(),
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldToken),
+							path.MatchRelative().AtParent().AtName(consts.FieldToken),
 						),
 					},
 				},
@@ -77,7 +86,7 @@ func AuthLoginKerberosSchema() schema.Block {
 					Optional: true,
 					Validators: []validator.Bool{
 						boolvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldToken),
+							path.MatchRelative().AtParent().AtName(consts.FieldToken),
 						),
 					},
 					Description: "Disable the Kerberos FAST negotiation.",
@@ -86,7 +95,7 @@ func AuthLoginKerberosSchema() schema.Block {
 					Optional: true,
 					Validators: []validator.Bool{
 						boolvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldToken),
+							path.MatchRelative().AtParent().AtName(consts.FieldToken),
 						),
 					},
 					Description: "Strip the host from the username found in the keytab.",

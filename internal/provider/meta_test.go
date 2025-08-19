@@ -4,17 +4,20 @@
 package provider
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/hashicorp/vault/api"
-	vault_consts "github.com/hashicorp/vault/sdk/helper/consts"
+	"net/http"
 	"os"
 	"reflect"
 	"sync"
 	"testing"
+
+	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
+	vault_consts "github.com/hashicorp/vault/sdk/helper/consts"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -176,6 +179,43 @@ func TestGetClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// mockVaultHandler handles Vault API calls made in setClient()
+	// when client is not pre-set in ProviderMeta.
+	//
+	// When client is pre-set (e.g. to rootClient) in ProviderMeta,
+	// we return early in setClient() and never make said Vault API calls.
+	mockVaultHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/auth/token/lookup-self":
+			response := map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":        "test-token",
+					"policies":  []string{"default"},
+					"ttl":       3600,
+					"renewable": true,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		case "/v1/auth/token/create":
+			response := map[string]interface{}{
+				"auth": map[string]interface{}{
+					"client_token":   "child-token-123",
+					"policies":       []string{"default"},
+					"lease_duration": 3600,
+					"renewable":      true,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		default:
+			w.WriteHeader(http.StatusNotImplemented)
+		}
+	})
+
+	config, ln := testutil.TestHTTPServer(t, mockVaultHandler)
+	defer ln.Close()
+
 	// testing schema.ResourceDiff is not covered here
 	// since its field members are private.
 
@@ -208,15 +248,16 @@ func TestGetClient(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		meta      interface{}
-		ifcNS     string
-		envNS     string
-		want      string
-		wantErr   bool
-		expectErr error
-		setAttr   bool
-		ifaceFunc func(t *testing.T, set bool, ns string) interface{}
+		name        string
+		meta        interface{}
+		ifcNS       string
+		envNSImport string
+		envNS       string
+		want        string
+		wantErr     bool
+		expectErr   error
+		setAttr     bool
+		ifaceFunc   func(t *testing.T, set bool, ns string) interface{}
 	}{
 		{
 			name:  "string",
@@ -259,10 +300,10 @@ func TestGetClient(t *testing.T) {
 				client:       rootClient,
 				resourceData: nil,
 			},
-			ifaceFunc: instanceState,
-			envNS:     "ns1-import-env",
-			want:      "ns1-import-env",
-			setAttr:   false,
+			ifaceFunc:   instanceState,
+			envNSImport: "ns1-import-env",
+			want:        "ns1-import-env",
+			setAttr:     false,
 		},
 		{
 			name: "ignore-env-rsc-data",
@@ -270,11 +311,11 @@ func TestGetClient(t *testing.T) {
 				client:       rootClient,
 				resourceData: nil,
 			},
-			ifaceFunc: rscData,
-			ifcNS:     "ns1",
-			envNS:     "ns1-import-env",
-			want:      "ns1",
-			setAttr:   true,
+			ifaceFunc:   rscData,
+			ifcNS:       "ns1",
+			envNSImport: "ns1-import-env",
+			want:        "ns1",
+			setAttr:     true,
 		},
 		{
 			name: "ignore-env-inst-state",
@@ -282,10 +323,47 @@ func TestGetClient(t *testing.T) {
 				client:       rootClient,
 				resourceData: nil,
 			},
+			ifaceFunc:   instanceState,
+			ifcNS:       "ns1",
+			envNSImport: "ns1-import-env",
+			want:        "ns1",
+			setAttr:     true,
+		},
+		{
+			name: "prepend-env-string",
+			meta: &ProviderMeta{
+				client:       nil, // nil client so setClient() does not return early
+				resourceData: nil,
+			},
+			ifaceFunc: func(t *testing.T, set bool, ns string) interface{} {
+				return "ns1-string"
+			},
+			envNS:   "ns0-from-env",
+			want:    "ns0-from-env/ns1-string",
+			setAttr: true,
+		},
+		{
+			name: "prepend-env-rsc-data",
+			meta: &ProviderMeta{
+				client:       nil, // nil client so setClient() does not return early
+				resourceData: nil,
+			},
+			ifaceFunc: rscData,
+			ifcNS:     "ns1-rsc-data",
+			envNS:     "ns0-from-env",
+			want:      "ns0-from-env/ns1-rsc-data",
+			setAttr:   true,
+		},
+		{
+			name: "prepend-env-inst-state",
+			meta: &ProviderMeta{
+				client:       nil, // nil client so setClient() does not return early
+				resourceData: nil,
+			},
 			ifaceFunc: instanceState,
-			ifcNS:     "ns1",
-			envNS:     "ns1-import-env",
-			want:      "ns1",
+			ifcNS:     "ns1-inst-state",
+			envNS:     "ns0-from-env",
+			want:      "ns0-from-env/ns1-inst-state",
 			setAttr:   true,
 		},
 		{
@@ -311,15 +389,34 @@ func TestGetClient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.meta != nil {
 				m := tt.meta.(*ProviderMeta)
-				m.resourceData = schema.TestResourceDataRaw(t,
-					map[string]*schema.Schema{
-						consts.FieldNamespace: {
-							Type:     schema.TypeString,
-							Required: true,
-						},
+
+				s := map[string]*schema.Schema{
+					consts.FieldNamespace: {
+						Type:     schema.TypeString,
+						Required: true,
 					},
-					map[string]interface{}{},
+				}
+				raw := map[string]interface{}{}
+
+				if m.client == nil {
+					// If client is not pre-set, mock Vault server to handle Vault API calls during setClient().
+					s[consts.FieldAddress] = &schema.Schema{
+						Type:     schema.TypeString,
+						Required: true,
+					}
+					s[consts.FieldToken] = &schema.Schema{
+						Type:     schema.TypeString,
+						Required: true,
+					}
+					raw[consts.FieldAddress] = config.Address
+					raw[consts.FieldToken] = "test-token"
+				}
+
+				m.resourceData = schema.TestResourceDataRaw(t,
+					s,
+					raw,
 				)
+
 				tt.meta = m
 			}
 
@@ -328,12 +425,20 @@ func TestGetClient(t *testing.T) {
 				i = tt.ifaceFunc(t, tt.setAttr, tt.ifcNS)
 			}
 
-			// set ns in env
-			if tt.envNS != "" {
-				if err := os.Setenv(consts.EnvVarVaultNamespaceImport, tt.envNS); err != nil {
+			// set TERRAFORM_VAULT_NAMESPACE_IMPORT ns in env
+			if tt.envNSImport != "" {
+				if err := os.Setenv(consts.EnvVarVaultNamespaceImport, tt.envNSImport); err != nil {
 					t.Fatal(err)
 				}
 				defer os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+			}
+
+			// set VAULT_NAMESPACE ns in env
+			if tt.envNS != "" {
+				if err := os.Setenv("VAULT_NAMESPACE", tt.envNS); err != nil {
+					t.Fatal(err)
+				}
+				defer os.Unsetenv("VAULT_NAMESPACE")
 			}
 
 			got, err := GetClient(i, tt.meta)
@@ -522,6 +627,193 @@ func TestIsEnterpriseSupported(t *testing.T) {
 
 			if isEnterprise != tt.expected {
 				t.Errorf("IsEnterpriseSupported() got = %v, want %v", isEnterprise, tt.expected)
+			}
+		})
+	}
+}
+
+// TestGetResourceDataStr tests the GetResourceDataStr function.
+// Its subtests should not be run in parallel because it mutates the test runner's environment.
+func TestGetResourceDataStr(t *testing.T) {
+	tests := map[string]struct {
+		schemaData   map[string]interface{}
+		field        string
+		env          string
+		envValue     string
+		defaultValue string
+		expected     string
+	}{
+		"field: field present": {
+			schemaData: map[string]interface{}{
+				"test_field": "field_value",
+			},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "env_value",
+			defaultValue: "default_value",
+			expected:     "field_value",
+		},
+		"env: field missing, env present": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "env_value",
+			defaultValue: "default_value",
+			expected:     "env_value",
+		},
+		"env: field empty, env present": {
+			schemaData: map[string]interface{}{
+				"test_field": "",
+			},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "env_value",
+			defaultValue: "default_value",
+			expected:     "env_value",
+		},
+		"default: field missing, env empty": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "",
+			defaultValue: "default_value",
+			expected:     "default_value",
+		},
+		"default: field missing, env missing": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "",
+			envValue:     "",
+			defaultValue: "default_value",
+			expected:     "default_value",
+		},
+		"default: field empty, env empty": {
+			schemaData: map[string]interface{}{
+				"test_field": "",
+			},
+			field:        "test_field",
+			envValue:     "",
+			defaultValue: "default_value",
+			expected:     "default_value",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tt.env != "" {
+				t.Setenv(tt.env, tt.envValue)
+			}
+
+			testSchema := map[string]*schema.Schema{
+				"test_field": {
+					Type:     schema.TypeString,
+					Optional: true,
+				},
+			}
+
+			d := schema.TestResourceDataRaw(t, testSchema, tt.schemaData)
+
+			result := GetResourceDataStr(d, tt.field, tt.env, tt.defaultValue)
+			if result != tt.expected {
+				t.Errorf("GetResourceDataStr() got = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestGetResourceDataInt tests the GetResourceDataInt function.
+// Its subtests should not be run in parallel because it mutates the test runner's environment.
+func TestGetResourceDataInt(t *testing.T) {
+	tests := map[string]struct {
+		schemaData   map[string]interface{}
+		field        string
+		env          string
+		envValue     string
+		defaultValue int
+		expected     int
+	}{
+		"field: field present": {
+			schemaData: map[string]interface{}{
+				"test_field": 42,
+			},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "100",
+			defaultValue: 200,
+			expected:     42,
+		},
+		"env: field missing, env present": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "100",
+			defaultValue: 200,
+			expected:     100,
+		},
+		"env: field zero, env present": {
+			schemaData: map[string]interface{}{
+				"test_field": 0,
+			},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "100",
+			defaultValue: 200,
+			expected:     100,
+		},
+		"default: field missing, env empty": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "",
+			defaultValue: 200,
+			expected:     200,
+		},
+		"default: field missing, env missing": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "",
+			envValue:     "",
+			defaultValue: 200,
+			expected:     200,
+		},
+		"default: field zero, env empty": {
+			schemaData: map[string]interface{}{
+				"test_field": 0,
+			},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "",
+			defaultValue: 200,
+			expected:     200,
+		},
+		"default: field missing, env invalid": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "invalid_int",
+			defaultValue: 200,
+			expected:     200,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tt.env != "" {
+				t.Setenv(tt.env, tt.envValue)
+			}
+
+			testSchema := map[string]*schema.Schema{
+				"test_field": {
+					Type:     schema.TypeInt,
+					Optional: true,
+				},
+			}
+
+			d := schema.TestResourceDataRaw(t, testSchema, tt.schemaData)
+
+			result := GetResourceDataInt(d, tt.field, tt.env, tt.defaultValue)
+			if result != tt.expected {
+				t.Errorf("GetResourceDataInt() got = %v, want %v", result, tt.expected)
 			}
 		})
 	}

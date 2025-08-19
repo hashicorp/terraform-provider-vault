@@ -33,7 +33,7 @@ jobs:
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.11.*'
+          terraform_version: '1.12.*'
           terraform_wrapper: false
 
       - name: Cache go build
@@ -57,18 +57,23 @@ jobs:
         run: |
           make test
   acceptance:
+    name: vault_image:${{ matrix.image }} tf_version:${{ matrix.terraform_version }}
     needs: [go-version, build]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.16.21-ent"
-        - "vault-enterprise:1.17.17-ent"
-        - "vault-enterprise:1.18.10-ent"
-        - "vault-enterprise:1.19.5-ent"
-        - "vault-enterprise:1.20.1-ent"
+        - "vault-enterprise:1.16.24-ent"
+        - "vault-enterprise:1.17.18-ent"
+        - "vault-enterprise:1.18.13-ent"
+        - "vault-enterprise:1.19.8-ent"
+        - "vault-enterprise:1.20.2-ent"
         - "vault:latest"
+        terraform_version:
+        - "1.12.2"
+        - "1.11.4"
+        #- "1.10.5" # tests do not seem to pass with this version set, skipping for now.
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -165,7 +170,7 @@ jobs:
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.11.*'
+          terraform_version: ${{ matrix.terraform_version }}
           terraform_wrapper: false
       - name: Check Terraform CLI version
         run: terraform --version
