@@ -57,6 +57,7 @@ jobs:
         run: |
           make test
   acceptance:
+    name: vault_image:${{ matrix.image }} tf_version:${{ matrix.terraform_version }}
     needs: [go-version, build]
     runs-on: ubuntu-latest
     strategy:
