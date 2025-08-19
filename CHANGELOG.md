@@ -10,7 +10,7 @@ BUGS:
 * Fix `auth_login_kerberos` field constraint on fields `username` `service` `realm` `krb5conf_path` `keytab_path` `disable_fast_negotiation` `remove_instance_name`
 * Fix `auth_login_userpass` field constraint on field `password_file`
 * Fix `auth_login` field constraint on field `use_root_namespace`
-* Fix an issue where snowflake keypair auth was not supported on Vault versions earlier than 1.20 ([#2575](https://github.com/hashicorp/terraform-provider-vault/pull/2575))
+* Fix to allow Snowflake keypair auth with Vault 1.16+ ([#2575](https://github.com/hashicorp/terraform-provider-vault/pull/2575))
 
 ## 5.2.0 (Aug 18, 2025)
 
