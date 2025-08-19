@@ -4,7 +4,7 @@
 
 BUGS:
 
-* Fix a failure to initialize the provider due to incompatible dependencies ([#TODO](https://github.com/hashicorp/terraform-provider-vault/pull/TODO))
+* Fix a failure to initialize the provider due to incompatible dependencies ([#2575](https://github.com/hashicorp/terraform-provider-vault/pull/2575))
 * Fix `auth_login_gcp` field constraint on field `credentials` `service_account`
 * Fix `auth_login_azure` field constraint on field `vmss_name` `tenant_id` `client_id` `scope`
 * Fix `auth_login_kerberos` field constraint on fields `username` `service` `realm` `krb5conf_path` `keytab_path` `disable_fast_negotiation` `remove_instance_name`
