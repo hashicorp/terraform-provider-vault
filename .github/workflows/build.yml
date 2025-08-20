@@ -307,7 +307,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
-      - acceptance
+      - build
     steps:
     - name: cancelled
       if: ${{ (contains(needs.*.result, 'cancelled')) }}
