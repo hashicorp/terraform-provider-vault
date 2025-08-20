@@ -74,6 +74,7 @@ jobs:
       - build-pre
       - go-version
       - set-product-version
+      - acceptance
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -119,7 +120,7 @@ jobs:
 
   acceptance:
     name: vault_image:${{ matrix.image }} tf_version:${{ matrix.terraform_version }}
-    needs: [go-version, build]
+    needs: [go-version, build-pre]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
