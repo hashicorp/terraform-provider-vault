@@ -21,6 +21,7 @@ import (
 )
 
 var azureSecretFields = []string{
+	consts.FieldExplicitMaxTTL,
 	consts.FieldMaxTTL,
 	consts.FieldTTL,
 	consts.FieldApplicationObjectID,
