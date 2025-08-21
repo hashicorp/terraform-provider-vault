@@ -74,7 +74,6 @@ jobs:
       - build-pre
       - go-version
       - set-product-version
-      - acceptance
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -308,6 +307,7 @@ jobs:
     if: always()
     needs:
       - build
+      - acceptance
     steps:
     - name: cancelled
       if: ${{ (contains(needs.*.result, 'cancelled')) }}
