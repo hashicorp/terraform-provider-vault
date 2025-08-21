@@ -21,6 +21,11 @@ jobs:
       - id: go-version
         run: echo "version=$(cat .go-version)" >> "$GITHUB_OUTPUT"
 
+  # Parses the version/VERSION file. Reference: https://github.com/hashicorp/actions-set-product-version/blob/main/README.md
+  #
+  # > This action should be implemented in product repo `build.yml` files. The action is intended to grab the version
+  # > from the version file at the beginning of the build, then passes those versions (along with metadata, where
+  # > necessary) to any workflow jobs that need version information.
   set-product-version:
     name: "Parse version file"
     runs-on: ubuntu-latest
@@ -114,7 +119,7 @@ jobs:
               -o "$BIN_PATH" \
               -trimpath \
               -buildvcs=false \
-              -ldflags "-s -w -X 'main.version=${{ needs.set-product-version.outputs.product-version }}'"
+              -ldflags "-s -w"
             cp LICENSE "$TARGET_DIR/LICENSE.txt"
 
   acceptance:
@@ -132,6 +137,7 @@ jobs:
         - "vault-enterprise:1.20.2-ent"
         - "vault:latest"
         terraform_version:
+        - "latest" # always test against the latest stable, which might be a duplicate matrix member.
         - "1.12.2"
         - "1.11.4"
         #- "1.10.5" # tests do not seem to pass with this version set, skipping for now.
