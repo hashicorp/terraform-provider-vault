@@ -46,7 +46,7 @@ event "prepare" {
     organization = "hashicorp"
     repository   = "crt-workflows-common"
     workflow     = "prepare"
-    depends      = ["build"]
+    depends      = ["build-done"]
   }
 
   notification {
