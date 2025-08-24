@@ -120,11 +120,13 @@ func azureSecretBackendRoleResource() *schema.Resource {
 			consts.FieldMaxTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Default:     "0",
 				Description: "Specifies the maximum TTL for service principals generated using this role.",
 			},
 			consts.FieldExplicitMaxTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Default:     "0",
 				Description: "Specifies the explicit maximum lifetime of the lease and service principal.",
 			},
 			consts.FieldSignInAudience: {
