@@ -6,9 +6,10 @@ package vault
 import (
 	"context"
 	"encoding/json"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
@@ -20,6 +21,7 @@ import (
 )
 
 var azureSecretFields = []string{
+	consts.FieldExplicitMaxTTL,
 	consts.FieldMaxTTL,
 	consts.FieldTTL,
 	consts.FieldApplicationObjectID,
@@ -113,16 +115,18 @@ func azureSecretBackendRoleResource() *schema.Resource {
 			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Human-friendly description of the mount for the backend.",
+				Description: "Specifies the default TTL for service principals generated using this role.",
 			},
 			consts.FieldMaxTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Human-friendly description of the mount for the backend.",
+				Default:     "0",
+				Description: "Specifies the maximum TTL for service principals generated using this role.",
 			},
 			consts.FieldExplicitMaxTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Default:     "0",
 				Description: "Specifies the explicit maximum lifetime of the lease and service principal.",
 			},
 			consts.FieldSignInAudience: {
