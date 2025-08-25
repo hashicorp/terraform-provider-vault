@@ -29,6 +29,7 @@ const (
 	fieldOCSPQueryAllServers        = "ocsp_query_all_servers"
 	fieldOCSPServersOverride        = "ocsp_servers_override"
 	fieldRequiredExtensions         = "required_extensions"
+	fieldAllowedMetadataExtensions  = "allowed_metadata_extensions"
 )
 
 var (
@@ -46,6 +47,7 @@ var (
 		fieldAllowedURISans,
 		fieldOCSPServersOverride,
 		fieldRequiredExtensions,
+		fieldAllowedMetadataExtensions,
 	}
 	certAuthBoolFields = []string{
 		fieldOCSPEnabled,
@@ -181,6 +183,14 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Description: "If set to true, rather than accepting the first " +
 				"successful OCSP response, query all servers and consider the " +
 				"certificate valid only if all servers agree.",
+		},
+		fieldAllowedMetadataExtensions: {
+			Type:        schema.TypeSet,
+			Optional:    true,
+			Description: "A array of oid extensions.",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
 		},
 	}
 
@@ -381,6 +391,17 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 				schema.HashString, resp.Data["required_extensions"].([]interface{})))
 	} else {
 		d.Set("required_extensions",
+			schema.NewSet(
+				schema.HashString, []interface{}{}))
+	}
+
+	// Vault sometimes returns these as null instead of an empty list.
+	if resp.Data["allowed_metadata_extensions"] != nil {
+		d.Set("allowed_metadata_extensions",
+			schema.NewSet(
+				schema.HashString, resp.Data["allowed_metadata_extensions"].([]interface{})))
+	} else {
+		d.Set("allowed_metadata_extensions",
 			schema.NewSet(
 				schema.HashString, []interface{}{}))
 	}
