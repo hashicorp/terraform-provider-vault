@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestResourceAuth(t *testing.T) {
+func TestAccAuthBackend(t *testing.T) {
 	path := "github-" + acctest.RandString(10)
 
 	resourceName := "vault_auth_backend.test"
@@ -57,7 +57,7 @@ func TestResourceAuth(t *testing.T) {
 	})
 }
 
-func TestAuthBackend_remount(t *testing.T) {
+func TestAccAuthBackend_remount(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-auth")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-updated")
 
@@ -204,15 +204,18 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 	}
 }
 
-func TestResourceAuthTune(t *testing.T) {
+func TestAccAuthBackend_tuning(t *testing.T) {
 	testutil.SkipTestAcc(t)
 
+	resType := "vault_auth_backend"
 	backend := acctest.RandomWithPrefix("github")
-	resName := "vault_auth_backend.test"
+	resName := resType + ".test"
 	var resAuthFirst api.AuthMount
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuthTune_initialConfig(backend),
@@ -223,13 +226,22 @@ func TestResourceAuthTune(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "type", "github"),
-					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "60s"),
-					resource.TestCheckResourceAttr(resName, "tune.0.max_lease_ttl", "3600s"),
-					resource.TestCheckResourceAttr(resName, "tune.0.listing_visibility", "unauth"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+					// ensure the global default effect from Vault tune API is ignored,
+					// these fields should stay empty
+					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", ""),
+					resource.TestCheckResourceAttr(resName, "tune.0.max_lease_ttl", ""),
+					resource.TestCheckResourceAttr(resName, "tune.0.listing_visibility", ""),
+					resource.TestCheckResourceAttr(resName, "tune.0.token_type", ""),
 					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuthFirst.Accessor),
-					checkAuthMount(backend, listingVisibility("unauth")),
-					checkAuthMount(backend, defaultLeaseTtl(60)),
-					checkAuthMount(backend, maxLeaseTtl(3600)),
+					checkAuthMount(backend, "github",
+						listingVisibility(""),
+						defaultLeaseTTL(2764800), // 768h
+						maxLeaseTTL(2764800),     // 768h
+						tokenType("default-service"),
+					),
 				),
 			},
 			{
@@ -239,14 +251,64 @@ func TestResourceAuthTune(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "type", "github"),
-					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "60s"),
-					resource.TestCheckResourceAttr(resName, "tune.0.max_lease_ttl", "7200s"),
-					resource.TestCheckResourceAttr(resName, "tune.0.listing_visibility", ""),
-					checkAuthMount(backend, listingVisibility("unauth")),
-					checkAuthMount(backend, defaultLeaseTtl(60)),
-					checkAuthMount(backend, maxLeaseTtl(7200)),
+					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "200s"),
+					resource.TestCheckResourceAttr(resName, "tune.0.max_lease_ttl", "500s"),
+					resource.TestCheckResourceAttr(resName, "tune.0.listing_visibility", "unauth"),
+					resource.TestCheckResourceAttr(resName, "tune.0.token_type", "default-batch"),
+					checkAuthMount(backend, "github",
+						listingVisibility("unauth"),
+						defaultLeaseTTL(200),
+						maxLeaseTTL(500),
+						tokenType("default-batch"),
+					),
 				),
 			},
+		},
+	})
+}
+
+func TestAccAuthBackend_importTune(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
+	resType := "vault_auth_backend"
+	backend := acctest.RandomWithPrefix("github-import")
+	resName := resType + ".test"
+	var resAuthFirst api.AuthMount
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resType, consts.MountTypeGitHub, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceAuthTune_import(backend),
+				Check: resource.ComposeTestCheckFunc(
+					testutil.TestAccCheckAuthMountExists(resName,
+						&resAuthFirst,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
+					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuthFirst.Accessor),
+					resource.TestCheckResourceAttr(resName, "path", backend),
+					resource.TestCheckResourceAttr(resName, "id", backend),
+					resource.TestCheckResourceAttr(resName, "type", "github"),
+					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "10m"),
+					resource.TestCheckResourceAttr(resName, "tune.0.max_lease_ttl", "20m"),
+					resource.TestCheckResourceAttr(resName, "tune.0.listing_visibility", "hidden"),
+					resource.TestCheckResourceAttr(resName, "tune.0.token_type", "batch"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_request_keys.#", "2"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_request_keys.1", "key2"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_response_keys.#", "2"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_response_keys.0", "key3"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_response_keys.1", "key4"),
+					resource.TestCheckResourceAttr(resName, "tune.0.passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resName, "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+				),
+			},
+			testutil.GetImportTestStep(resName, false, nil, "disable_remount"),
 		},
 	})
 }
@@ -257,9 +319,7 @@ resource "vault_auth_backend" "test" {
 	type = "github"
 	path = "%s"
 	tune {
-		listing_visibility = "unauth"
-		max_lease_ttl      = "3600s"
-		default_lease_ttl  = "60s"
+		allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To"]
 	}
 }`, backend)
 }
@@ -270,46 +330,66 @@ resource "vault_auth_backend" "test" {
 	type = "github"
 	path = "%s"
 	tune {
-		max_lease_ttl      = "7200s"
-		default_lease_ttl  = "60s"
+		listing_visibility = "unauth"
+		max_lease_ttl      = "500s"
+		default_lease_ttl  = "200s"
+		token_type         = "default-batch"
 	}
 }`, backend)
 }
 
-func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource.TestCheckFunc {
+func testResourceAuthTune_import(path string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "test" {
+  	type = "github"
+	path = "%s"
+
+  	tune {
+		default_lease_ttl = "10m"
+		max_lease_ttl = "20m"
+		listing_visibility = "hidden"
+		token_type = "batch"
+		audit_non_hmac_request_keys = ["key1", "key2"]
+		audit_non_hmac_response_keys = ["key3", "key4"]
+		passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To"]
+		allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To"]
+	}
+}
+`, path)
+}
+
+// checkAuthMount verifies the auth type and configuration of an auth mount.
+func checkAuthMount(backend string, authType string, checkers ...func(*api.MountConfigOutput) error) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
-		auths, err := client.Sys().ListAuth()
+		authMount, err := client.Sys().GetAuth(backend)
 		if err != nil {
-			return fmt.Errorf("error reading back auth: %s", err)
+			return fmt.Errorf("error getting auth backend: %s", err)
 		}
 
-		found := false
-		for serverPath, serverAuth := range auths {
-			if serverPath == backend+"/" {
-				found = true
-				if serverAuth.Type != "github" && serverAuth.Type != "gcp" {
-					return fmt.Errorf("unexpected auth type")
-				}
+		if authMount.Type != authType {
+			return fmt.Errorf("unexpected auth type: expected %q but got %q", authType, authMount.Type)
+		}
 
-				if err := checker(serverAuth); err != nil {
-					return err
-				}
-				break
+		// Read and check auth tune
+		mountConfigOutput, err := client.Sys().MountConfig("auth/" + backend)
+		if err != nil {
+			return fmt.Errorf("error reading auth tune: %s", err)
+		}
+
+		for _, checker := range checkers {
+			if err := checker(mountConfigOutput); err != nil {
+				return err
 			}
-		}
-
-		if !found {
-			return fmt.Errorf("could not find auth backend %q in %+v", "github", auths)
 		}
 
 		return nil
 	}
 }
 
-func listingVisibility(expected string) func(*api.AuthMount) error {
-	return func(auth *api.AuthMount) error {
-		actual := auth.Config.ListingVisibility
+func listingVisibility(expected string) func(*api.MountConfigOutput) error {
+	return func(output *api.MountConfigOutput) error {
+		actual := output.ListingVisibility
 		if actual != expected {
 			return fmt.Errorf("unexpected auth listing_visibility: expected %q but got %q", expected, actual)
 		}
@@ -317,9 +397,9 @@ func listingVisibility(expected string) func(*api.AuthMount) error {
 	}
 }
 
-func defaultLeaseTtl(expected int) func(*api.AuthMount) error {
-	return func(auth *api.AuthMount) error {
-		actual := auth.Config.DefaultLeaseTTL
+func defaultLeaseTTL(expected int) func(*api.MountConfigOutput) error {
+	return func(output *api.MountConfigOutput) error {
+		actual := output.DefaultLeaseTTL
 		if actual != expected {
 			return fmt.Errorf("unexpected auth default_lease_ttl: expected %d but got %d", expected, actual)
 		}
@@ -327,11 +407,21 @@ func defaultLeaseTtl(expected int) func(*api.AuthMount) error {
 	}
 }
 
-func maxLeaseTtl(expected int) func(*api.AuthMount) error {
-	return func(auth *api.AuthMount) error {
-		actual := auth.Config.MaxLeaseTTL
+func maxLeaseTTL(expected int) func(*api.MountConfigOutput) error {
+	return func(output *api.MountConfigOutput) error {
+		actual := output.MaxLeaseTTL
 		if actual != expected {
 			return fmt.Errorf("unexpected auth max_lease_ttl: expected %d but got %d", expected, actual)
+		}
+		return nil
+	}
+}
+
+func tokenType(expected string) func(*api.MountConfigOutput) error {
+	return func(output *api.MountConfigOutput) error {
+		actual := output.TokenType
+		if actual != expected {
+			return fmt.Errorf("unexpected auth token_type: expected %q but got %q", expected, actual)
 		}
 		return nil
 	}
