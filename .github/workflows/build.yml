@@ -10,6 +10,8 @@ on:
 permissions:
   # Permission for checking out code
   contents: read
+env:
+  PKG_NAME: "terraform-provider-vault"
 
 jobs:
   go-version:
@@ -340,7 +342,6 @@ jobs:
           name: terraform-registry-manifest.json
           path: ${{ steps.terraform-registry-manifest.outputs.filename }}
           if-no-files-found: error
-
 
   # This job is used as a requirement for the repo's branch protection setup.
   build-done:
