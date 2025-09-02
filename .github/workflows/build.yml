@@ -20,7 +20,27 @@ jobs:
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - id: go-version
         run: echo "version=$(cat .go-version)" >> "$GITHUB_OUTPUT"
-  build:
+
+  # Parses the version/VERSION file. Reference: https://github.com/hashicorp/actions-set-product-version/blob/main/README.md
+  #
+  # > This action should be implemented in product repo `build.yml` files. The action is intended to grab the version
+  # > from the version file at the beginning of the build, then passes those versions (along with metadata, where
+  # > necessary) to any workflow jobs that need version information.
+  set-product-version:
+    name: "Parse version file"
+    runs-on: ubuntu-latest
+    outputs:
+      product-version: ${{ steps.set-product-version.outputs.product-version }}
+      product-base-version: ${{ steps.set-product-version.outputs.base-product-version }}
+      product-prerelease-version: ${{ steps.set-product-version.outputs.prerelease-product-version }}
+      product-minor-version: ${{ steps.set-product-version.outputs.minor-product-version }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Set variables
+        id: set-product-version
+        uses: hashicorp/actions-set-product-version@v2
+
+  build-pre:
     needs: [go-version]
     runs-on: ubuntu-latest
     steps:
@@ -33,7 +53,7 @@ jobs:
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.11.*'
+          terraform_version: '1.12.*'
           terraform_wrapper: false
 
       - name: Cache go build
@@ -47,28 +67,80 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-golang-
 
-      - name: Build
-        run: |
-          make build
       - name: Run unit tests
         # here to short-circuit the acceptance tests, in the case of a failure.
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
           make test
+
+  build:
+    needs:
+      - build-pre
+      - go-version
+      - set-product-version
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        goos: [ freebsd, windows, linux, darwin ]
+        goarch: [ "386", "amd64", "arm", "arm64" ]
+        exclude:
+          - goos: freebsd
+            goarch: arm64
+          - goos: windows
+            goarch: arm64
+          - goos: windows
+            goarch: arm
+          - goos: darwin
+            goarch: 386
+          - goos: darwin
+            goarch: arm
+
+    name: Go ${{ needs.go-version.outputs.version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: hashicorp/actions-go-build@v1
+        env:
+          CGO_ENABLED: 0
+          BASE_VERSION: ${{ needs.set-product-version.outputs.product-base-version }}
+          PRERELEASE_VERSION: ${{ needs.set-product-version.outputs.product-prerelease-version}}
+          METADATA_VERSION: ${{ env.METADATA }}
+        with:
+          bin_name: "${{ env.PKG_NAME }}_v${{ needs.set-product-version.outputs.product-version }}_x5"
+          product_name: ${{ env.PKG_NAME }}
+          product_version: ${{ needs.set-product-version.outputs.product-version }}
+          go_version: ${{ needs.go-version.outputs.version }}
+          os: ${{ matrix.goos }}
+          arch: ${{ matrix.goarch }}
+          reproducible: report
+          instructions: |
+            go build \
+              -o "$BIN_PATH" \
+              -trimpath \
+              -buildvcs=false \
+              -ldflags "-s -w"
+            cp LICENSE "$TARGET_DIR/LICENSE.txt"
+
   acceptance:
-    needs: [go-version, build]
+    name: vault_image:${{ matrix.image }} tf_version:${{ matrix.terraform_version }}
+    needs: [go-version, build-pre]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.16.21-ent"
-        - "vault-enterprise:1.17.17-ent"
-        - "vault-enterprise:1.18.10-ent"
-        - "vault-enterprise:1.19.5-ent"
-        - "vault-enterprise:1.20.0-ent"
+        - "vault-enterprise:1.16.24-ent"
+        - "vault-enterprise:1.17.18-ent"
+        - "vault-enterprise:1.18.13-ent"
+        - "vault-enterprise:1.19.8-ent"
+        - "vault-enterprise:1.20.2-ent"
         - "vault:latest"
+        terraform_version:
+        - "latest" # always test against the latest stable, which might be a duplicate matrix member.
+        - "1.12.2"
+        - "1.11.4"
+        #- "1.10.5" # tests do not seem to pass with this version set, skipping for now.
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -165,7 +237,7 @@ jobs:
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.11.*'
+          terraform_version: ${{ matrix.terraform_version }}
           terraform_wrapper: false
       - name: Check Terraform CLI version
         run: terraform --version
@@ -234,3 +306,21 @@ jobs:
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
+          #
+  # This job is used as a requirement for the repo's branch protection setup.
+  build-done:
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - build
+      - acceptance
+    steps:
+    - name: cancelled
+      if: ${{ (contains(needs.*.result, 'cancelled')) }}
+      run: exit 2
+    - name: passed
+      if: ${{ !(contains(needs.*.result, 'failure')) }}
+      run: exit 0
+    - name: failed
+      if: ${{ contains(needs.*.result, 'failure') }}
+      run: exit 1

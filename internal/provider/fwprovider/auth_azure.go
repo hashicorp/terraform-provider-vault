@@ -21,6 +21,13 @@ func AuthLoginAzureSchema() schema.Block {
 					Optional: true,
 					Description: "A signed JSON Web Token. If not specified on will be " +
 						"created automatically",
+					Validators: []validator.String{
+						stringvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName(consts.FieldTenantID),
+							path.MatchRelative().AtParent().AtName(consts.FieldClientID),
+							path.MatchRelative().AtParent().AtName(consts.FieldScope),
+						),
+					},
 				},
 				consts.FieldRole: schema.StringAttribute{
 					Required:    true,
@@ -40,6 +47,11 @@ func AuthLoginAzureSchema() schema.Block {
 					Optional: true,
 					Description: "The virtual machine name for the machine that generated the MSI token. " +
 						"This information can be obtained through instance metadata.",
+					Validators: []validator.String{
+						stringvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName(consts.FieldVMSSName),
+						),
+					},
 				},
 				consts.FieldVMSSName: schema.StringAttribute{
 					Optional: true,
@@ -47,7 +59,7 @@ func AuthLoginAzureSchema() schema.Block {
 						"the MSI token. This information can be obtained through instance metadata.",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldVMName),
+							path.MatchRelative().AtParent().AtName(consts.FieldVMName),
 						),
 					},
 				},
@@ -57,7 +69,7 @@ func AuthLoginAzureSchema() schema.Block {
 						"authentication scenario.",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldJWT),
+							path.MatchRelative().AtParent().AtName(consts.FieldJWT),
 						),
 					},
 				},
@@ -66,7 +78,7 @@ func AuthLoginAzureSchema() schema.Block {
 					Description: "The identity's client ID.",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldJWT),
+							path.MatchRelative().AtParent().AtName(consts.FieldJWT),
 						),
 					},
 				},
@@ -75,7 +87,7 @@ func AuthLoginAzureSchema() schema.Block {
 					Description: "The scopes to include in the token request.",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldJWT),
+							path.MatchRelative().AtParent().AtName(consts.FieldJWT),
 						),
 					},
 				},

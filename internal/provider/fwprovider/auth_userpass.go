@@ -25,13 +25,18 @@ func AuthLoginUserpassSchema() schema.Block {
 				consts.FieldPassword: schema.StringAttribute{
 					Optional:    true,
 					Description: "Login with password",
+					Validators: []validator.String{
+						stringvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName(consts.FieldPasswordFile),
+						),
+					},
 				},
 				consts.FieldPasswordFile: schema.StringAttribute{
 					Optional:    true,
 					Description: "Login with password from a file",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldPassword),
+							path.MatchRelative().AtParent().AtName(consts.FieldPassword),
 						),
 					},
 				},

@@ -101,6 +101,27 @@ func TestAccSSHSecretBackendCA_Upgrade_key_type(t *testing.T) {
 	})
 }
 
+func TestAccSSHSecretBackendCA_managedKeys(t *testing.T) {
+	backend := "ssh-" + acctest.RandString(10)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	managedKeyName := acctest.RandomWithPrefix("kms-key")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+		},
+		CheckDestroy: testAccCheckSSHSecretBackendCADestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSSHSecretBackendCAConfigManagedKey(backend, accessKey, secretKey, managedKeyName),
+				Check:  testAccSSHSecretBackendCACheck(backend),
+			},
+		},
+	})
+}
+
 func testAccCheckSSHSecretBackendCADestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ssh_secret_backend_ca" {
@@ -187,4 +208,32 @@ func testAccSSHSecretBackendCACheck(backend string) resource.TestCheckFunc {
 		resource.TestCheckResourceAttrSet("vault_ssh_secret_backend_ca.test", "public_key"),
 		resource.TestCheckResourceAttr("vault_ssh_secret_backend_ca.test", "backend", backend),
 	)
+}
+
+func testAccSSHSecretBackendCAConfigManagedKey(backend, accessKey, secretKey, keyName string) string {
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+	aws {
+		name       = "%s"
+		access_key = "%s"
+		secret_key = "%s"
+		key_bits   = "2048"
+		key_type   = "RSA"
+		kms_key    = "alias/tfvp-ssh-managed-key"
+        allow_generate_key = true
+	}
+}
+
+resource "vault_mount" "test" {
+  type = "ssh"
+  path = "%s"
+  description = "SSH Secret backend"
+  allowed_managed_keys      = [tolist(vault_managed_keys.test.aws)[0].name]
+}
+
+resource "vault_ssh_secret_backend_ca" "test" {
+  backend              = vault_mount.test.path
+  managed_key_id       = tolist(vault_managed_keys.test.aws)[0].uuid
+}`, keyName, accessKey, secretKey, backend)
 }

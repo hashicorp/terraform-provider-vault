@@ -1,11 +1,55 @@
 ## Unreleased
 
+## 5.2.1 (Aug 19, 2025)
+
+BUGS:
+
+* Fix a failure to initialize the provider due to incompatible dependencies ([#2575](https://github.com/hashicorp/terraform-provider-vault/pull/2575))
+* Fix `auth_login_gcp` field constraint on field `credentials` `service_account`
+* Fix `auth_login_azure` field constraint on field `vmss_name` `tenant_id` `client_id` `scope`
+* Fix `auth_login_kerberos` field constraint on fields `username` `service` `realm` `krb5conf_path` `keytab_path` `disable_fast_negotiation` `remove_instance_name`
+* Fix `auth_login_userpass` field constraint on field `password_file`
+* Fix `auth_login` field constraint on field `use_root_namespace`
+* Fix to allow Snowflake keypair auth with Vault 1.16+ ([#2575](https://github.com/hashicorp/terraform-provider-vault/pull/2575))
+
+## 5.2.0 (Aug 18, 2025)
+
+FEATURES:
+* Add support for `jwks_pairs` in `vault_jwt_auth_backend` resource. Requires Vault 1.16+ ([#2523](https://github.com/hashicorp/terraform-provider-vault/pull/2523))
+* Add support for `root_password_ttl` in `vault_azure_secret_backend` resource. Requires Vault 1.15+ ([#2529](https://github.com/hashicorp/terraform-provider-vault/pull/2529))
+* Add support for managed key parameters in the SSH CA config endpoint ([#2480](https://github.com/hashicorp/terraform-provider-vault/pull/2480))
+* Add new resources `vault_oci_auth_backend` and `vault_oci_auth_backend_role` to manage OCI auth backend and roles. ([#1761](https://github.com/hashicorp/terraform-provider-vault/pull/1761))
+* Add support for `log_level` in `vault_pki_secret_backend_config_scep` resource. Requires Vault 1.20.1+ ([#2525](https://github.com/hashicorp/terraform-provider-vault/pull/2525))
+
+IMPROVEMENTS:
+* Bump Go version to 1.24.6: ([#2550](https://github.com/hashicorp/terraform-provider-vault/pull/2550))
+* Ensure all resources that use custom mounts support all mount parameters. ([#2332](https://github.com/hashicorp/terraform-provider-vault/pull/2332))
+* Updated dependencies:
+   * `golang.org/x/oauth2` v0.24.0 -> v0.30.0
+   * `github.com/cloudflare/circl` v1.3.7 -> v1.6.1
+   * `github.com/go-jose/go-jose/v3` v3.0.3 -> v3.0.4
+   * `github.com/go-jose/go-jose/v4` v4.0.4 -> v4.1.2
+   * `github.com/golang-jwt/jwt/v5` v5.2.2 -> v5.3.0
+   * `cloud.google.com/go/iam` v1.2.2 -> v1.5.2
+   * `cloud.google.com/go/compute/metadata` v0.6.0 -> v0.8.0
+   * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.11.1 -> v1.18.2
+   * `github.com/aws/aws-sdk-go` v1.55.6 -> v1.55.8
+   * `github.com/go-sql-driver/mysql` v1.8.1 -> v1.9.3
+   * `github.com/hashicorp/consul/api` v1.27.0 -> v1.32.1
+   * `github.com/hashicorp/terraform-plugin-framework` v1.14.1 -> 1.15.1
+   * `github.com/hashicorp/terraform-plugin-framework-validators` v0.17.0 -> v0.18.0
+   * `hashicorp/ghaction-terraform-provider-release` v4.0.1 -> v5.0.0
+
+BUGS:
+* Fix panic when reading the `vault_gcp_secret_backend` resource. ([#2549](https://github.com/hashicorp/terraform-provider-vault/pull/2549))
+* Fix regression where `VAULT_NAMESPACE` was not being honored, causing child namespaces to be created in the root namespace instead ([#2540](https://github.com/hashicorp/terraform-provider-vault/pull/2540))
+
 ## 5.1.0 (Jul 9, 2025)
 
 FEATURES:
-* Add support for key_usage to `vault_pki_secret_backend_root_sign_intermediate` ([#2421])(https://github.com/hashicorp/terraform-provider-vault/pull/2421)
+* Add support for key_usage to `vault_pki_secret_backend_root_sign_intermediate` ([#2421](https://github.com/hashicorp/terraform-provider-vault/pull/2421))
 
-* Add `private_key_wo` and `private_key_wo_version` fields to Snowflake DB secrets engine config ([#2508])(https://github.com/hashicorp/terraform-provider-vault/pull/2508)
+* Add `private_key_wo` and `private_key_wo_version` fields to Snowflake DB secrets engine config ([#2508](https://github.com/hashicorp/terraform-provider-vault/pull/2508))
 
 * Add support for `group_by` and `secondary_rate` on resource `vault_quota_rate_limit`. Requires Vault Enterprise 1.20.0+ ([#2476](https://github.com/hashicorp/terraform-provider-vault/pull/2476))
 * Add support for Transit CMAC endpoint ([#2488](https://github.com/hashicorp/terraform-provider-vault/pull/2488))
