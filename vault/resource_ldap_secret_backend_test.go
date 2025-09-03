@@ -71,14 +71,16 @@ func TestLDAPSecretBackend(t *testing.T) {
 			},
 			{
 				SkipFunc: func() (bool, error) {
-					return !testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion118), nil
+					supported := !testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion118) && provider.IsEnterpriseSupported(testProvider.Meta())
+					return supported, nil
 				},
 				Config: testLDAPSecretBackendConfig_defaults(path, bindDN, bindPass),
 				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialType, "password"),
 			},
 			{
 				SkipFunc: func() (bool, error) {
-					return !testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion118), nil
+					supported := !testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion118) && provider.IsEnterpriseSupported(testProvider.Meta())
+					return supported, nil
 				},
 				Config: testLDAPSecretBackendConfig_withCredType(path, bindDN, bindPass),
 				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialType, "phrase"),
