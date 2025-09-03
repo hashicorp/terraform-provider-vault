@@ -42,6 +42,30 @@ jobs:
         id: set-product-version
         uses: hashicorp/actions-set-product-version@v2
 
+  # Creates metadata.json file containing build metadata for consumption by CRT workflows.
+  #
+  # Reference: https://github.com/hashicorp/actions-generate-metadata/blob/main/README.md
+  generate-metadata-file:
+    needs: set-product-version
+    runs-on: ubuntu-latest
+    outputs:
+      filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
+    steps:
+      - name: "Checkout directory"
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Generate metadata file
+        id: generate-metadata-file
+        uses: hashicorp/actions-generate-metadata@v1
+        with:
+          version: ${{ needs.set-product-version.outputs.product-version }}
+          product: ${{ env.PKG_NAME }}
+          repositoryOwner: "hashicorp"
+          repository: "terraform-provider-vault"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: metadata.json
+          path: ${{ steps.generate-metadata-file.outputs.filepath }}
+
   build-pre:
     needs: [go-version]
     runs-on: ubuntu-latest
@@ -351,6 +375,7 @@ jobs:
       - build
       - acceptance
       - upload-terraform-registry-manifest-artifact
+      - generate-metadata-file
     steps:
     - name: cancelled
       if: ${{ (contains(needs.*.result, 'cancelled')) }}
