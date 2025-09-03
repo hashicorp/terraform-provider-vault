@@ -40,13 +40,21 @@ event "prepare" {
   # It prepares artifacts for potential promotion to staging and production.
   # For example, it scans and signs artifacts.
 
+  # depends on the build workflow in "this" project;
+  # not the build job or any final blocking job that
+  # is connected
+  # to branch protection rules.
   depends = ["build"]
 
   action "prepare" {
     organization = "hashicorp"
     repository   = "crt-workflows-common"
     workflow     = "prepare"
-    depends      = ["build-done"]
+    # depends on the build workflow in "this" project;
+    # not the build job or any final blocking job that
+    # is connected
+    # to branch protection rules.
+    depends      = ["build"]
   }
 
   notification {
