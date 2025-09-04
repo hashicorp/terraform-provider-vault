@@ -42,7 +42,6 @@ func TestLDAPSecretBackend(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		}, PreventPostDestroyRefresh: true,
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -71,16 +70,16 @@ func TestLDAPSecretBackend(t *testing.T) {
 			},
 			{
 				SkipFunc: func() (bool, error) {
-					supported := !testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion118) && provider.IsEnterpriseSupported(testProvider.Meta())
-					return supported, nil
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion118) && meta.IsEnterpriseSupported()), nil
 				},
 				Config: testLDAPSecretBackendConfig_defaults(path, bindDN, bindPass),
 				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialType, "password"),
 			},
 			{
 				SkipFunc: func() (bool, error) {
-					supported := !testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion118) && provider.IsEnterpriseSupported(testProvider.Meta())
-					return supported, nil
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion118) && meta.IsEnterpriseSupported()), nil
 				},
 				Config: testLDAPSecretBackendConfig_withCredType(path, bindDN, bindPass),
 				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialType, "phrase"),
