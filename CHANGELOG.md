@@ -17,6 +17,9 @@ BUGS:
 
 ## 5.2.1 (Aug 19, 2025)
 
+FEATURES:
+* `vault_terraform_cloud_secret_backend` now supports a write-only token argument. by @drewmullen ([#2483](https://github.com/hashicorp/terraform-provider-vault/pull/2483))
+
 BUGS:
 
 * Fix a failure to initialize the provider due to incompatible dependencies ([#2575](https://github.com/hashicorp/terraform-provider-vault/pull/2575))
