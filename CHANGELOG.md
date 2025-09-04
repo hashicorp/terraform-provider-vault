@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 5.3.0 (Sep 4, 2025)
+
 FEATURES:
 
 * Add support for password phrases via the `credential_type` field in the `vault_ldap_secret_backend` resource ([#2548](https://github.com/hashicorp/terraform-provider-vault/pull/2548))
