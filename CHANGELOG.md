@@ -1,5 +1,9 @@
 ## Unreleased
 
+BUGS:
+
+* Fix panic when creating `vault_kv_secret_v2` resource without specifying either `data_json` or `data_json_wo`. The provider now returns a proper validation error instead of crashing.
+
 ## 5.2.1 (Aug 19, 2025)
 
 BUGS:
