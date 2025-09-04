@@ -1,8 +1,15 @@
 ## Unreleased
 
+## 5.3.0 (Sep 4, 2025)
+
 FEATURES:
 
 * Add support for password phrases via the `credential_type` field in the `vault_ldap_secret_backend` resource ([#2548](https://github.com/hashicorp/terraform-provider-vault/pull/2548))
+
+IMPROVEMENTS:
+
+* build(deps): bump the gomod-backward-compatible group with 5 updates: [GH-2583](https://github.com/hashicorp/terraform-provider-vault/pull/2583)
+* Move to the standard CRT release workflow and tooling: [GH-2582](https://github.com/hashicorp/terraform-provider-vault/pull/2582)
 
 BUGS:
 

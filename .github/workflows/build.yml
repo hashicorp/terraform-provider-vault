@@ -2,9 +2,6 @@ name: build
 
 on:
   push:
-    paths-ignore:
-      - 'website/**'
-      - 'CHANGELOG.md'
   workflow_dispatch:
 
 permissions:
