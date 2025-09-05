@@ -5,7 +5,9 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -35,6 +37,56 @@ func TestAccPKISecretBackendConfigEst_Empty(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPKISecretBackendConfigEstDisabled(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldEnabled, "false"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDefaultMount, "false"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDefaultPathPolicy, ""),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldLabelToPathPolicy+".%", "0"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".#", "1"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.%", "2"),
+					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert"),
+					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass"),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
+
+					// Validate we read back the data back as we did upon creation
+					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(dataName, consts.FieldEnabled, "false"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultMount, "false"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultPathPolicy, ""),
+					resource.TestCheckResourceAttr(dataName, consts.FieldLabelToPathPolicy+".%", "0"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".#", "1"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.%", "2"),
+					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.cert"),
+					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass"),
+					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
+				),
+			},
+			testutil.GetImportTestStep(resourceBackend, false, nil),
+		},
+	})
+
+}
+
+func TestAccPKISecretBackendConfigEst_Blank(t *testing.T) {
+	t.Parallel()
+
+	backend := acctest.RandomWithPrefix("tf-test-pki")
+	resourceType := "vault_pki_secret_backend_config_est"
+	resourceBackend := resourceType + ".test"
+	dataName := "data.vault_pki_secret_backend_config_est.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPKISecretBackendConfigAllKeysBlank(backend),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldEnabled, "false"),
@@ -228,6 +280,15 @@ func TestAccPKISecretBackendConfigEst_ChangeFields(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceBackend, false, nil),
+			//{
+			//	Config:   testAccPKISecretBackendConfigAllKeysBlank(backend),
+			//	PlanOnly: true,
+			//	ConfigPlanChecks: resource.ConfigPlanChecks{
+			//		PostApplyPreRefresh: []plancheck.PlanCheck{
+			//			DebugPlan(),
+			//		},
+			//	},
+			//},
 			{ // Step 5: Configure with an Complete but Empty Configuration
 				Config: testAccPKISecretBackendConfigAllKeysBlank(backend),
 				Check: resource.ComposeTestCheckFunc(
@@ -238,48 +299,67 @@ func TestAccPKISecretBackendConfigEst_ChangeFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldLabelToPathPolicy+".%", "0"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".#", "1"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.%", "2"),
-					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert"),
-					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass"),
-					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
+					// Previous Empty Map Checks (that will fail):
+					// resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert"),
+					// resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass"),
+					// These two checks do differ from the empty-map check, but is equivalent on the Vault-Side
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.%", "0"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.scep.%", "0"),
+					resource.TestCheckResourceAttrSet(resourceBackend, consts.FieldLastUpdated),
 
 					// Validate we read back the data back as we did upon creation
 					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(dataName, consts.FieldEnabled, "false"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultMount, "false"),
+					// See VAULT-38845 for work to fix this:
 					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultPathPolicy, ""),
 					resource.TestCheckResourceAttr(dataName, consts.FieldLabelToPathPolicy+".%", "0"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".#", "1"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.%", "2"),
-					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.cert"),
-					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass"),
+					// Previous Empty Map Checks (that will fail):
+					// resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.cert"),
+					// resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass"),
+					// These two checks do differ from the empty-map check, but is equivalent on the Vault-Side
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.%", "0"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.scep.%", "0"),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
 				),
 			},
 			testutil.GetImportTestStep(resourceBackend, true, nil),
-			{ // Step 4: Configure with a Blank Configuration Again
+			{ // Step 7: Configure with a Blank Configuration Again
 				Config: testAccPKISecretBackendConfigEstDisabled(backend),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldEnabled, "false"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDefaultMount, "false"),
+					// See VAULT-38845 for work to fix this:
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDefaultPathPolicy, ""),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldLabelToPathPolicy+".%", "0"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".#", "1"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.%", "2"),
-					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert"),
-					resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass"),
-					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
+					// Previous Empty Map Checks (that will fail):
+					// resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert"),
+					// resource.TestCheckNoResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.userpass"),
+					// These two checks do differ from the empty-map check, but is equivalent on the Vault-Side
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.%", "0"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.scep.%", "0"),
+					resource.TestCheckResourceAttrSet(resourceBackend, consts.FieldLastUpdated),
 
 					// Validate we read back the data back as we did upon creation
 					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(dataName, consts.FieldEnabled, "false"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultMount, "false"),
+					// See VAULT-38845 for work to fix this:
 					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultPathPolicy, ""),
 					resource.TestCheckResourceAttr(dataName, consts.FieldLabelToPathPolicy+".%", "0"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".#", "1"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.%", "2"),
-					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.cert"),
-					resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass"),
+					// Previous Empty Map Checks (that will fail):
+					// resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.cert"),
+					// resource.TestCheckNoResourceAttr(dataName, consts.FieldAuthenticators+".0.userpass"),
+					// These two checks do differ from the empty-map check, but is equivalent on the Vault-Side
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.%", "0"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.scep.%", "0"),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
 				),
 			},
@@ -372,7 +452,7 @@ resource "vault_pki_secret_backend_config_est" "test" {
   authenticators {
   }
   enable_sentinel_parsing = false
-  audit_fields = []
+  audit_fields = ["common_name", "alt_names", "ip_sans", "uri_sans"]
 }
 
 data "vault_pki_secret_backend_config_est" "test" {
@@ -398,4 +478,22 @@ data "vault_pki_secret_backend_config_est" "test" {
   backend = vault_pki_secret_backend_config_est.test.backend	
 }
 `, path)
+}
+
+// Taken from https://discuss.hashicorp.com/t/framework-migration-test-produces-non-empty-plan/54523/12
+// to cover oddities about null vs. empty errors
+var _ plancheck.PlanCheck = debugPlan{}
+
+type debugPlan struct{}
+
+func (e debugPlan) CheckPlan(ctx context.Context, req plancheck.CheckPlanRequest, resp *plancheck.CheckPlanResponse) {
+	rd, err := json.Marshal(req.Plan)
+	if err != nil {
+		fmt.Println("error marshalling machine-readable plan output:", err)
+	}
+	fmt.Printf("req.Plan - %s\n", string(rd))
+}
+
+func DebugPlan() plancheck.PlanCheck {
+	return debugPlan{}
 }
