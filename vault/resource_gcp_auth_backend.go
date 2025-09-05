@@ -412,9 +412,13 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	if err != nil {
 		return diag.Errorf("error reading tune information from Vault: %s", err)
 	}
-	data := map[string]interface{}{}
-	data[consts.FieldTune] = []map[string]interface{}{rawTune}
-	if err := util.SetResourceData(d, data); err != nil {
+	input, err := retrieveMountConfigInput(d)
+	if err != nil {
+		return diag.Errorf("error retrieving tune configuration from state: %s", err)
+	}
+	mergedTune := mergeAuthMethodTune(rawTune, input)
+	if err := d.Set(consts.FieldTune, []map[string]interface{}{mergedTune}); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path '%s/tune' to state: %s", gcpAuthPath, err)
 		return diag.FromErr(err)
 	}
 
