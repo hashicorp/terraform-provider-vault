@@ -109,7 +109,7 @@ func pkiSecretBackendConfigEstWrite(ctx context.Context, d *schema.ResourceData,
 	path := pkiSecretBackendConfigEstPath(backend)
 
 	data := map[string]interface{}{}
-	for field, fieldSchema := range pkiSecretBackendConfigEstResource().Schema {
+	for field := range pkiSecretBackendConfigEstResource().Schema {
 		switch field {
 		case consts.FieldBackend, consts.FieldLastUpdated, consts.FieldNamespace:
 			continue
@@ -119,12 +119,8 @@ func pkiSecretBackendConfigEstWrite(ctx context.Context, d *schema.ResourceData,
 			}
 		default: // consts.FieldEnabled, consts.FieldDefaultMount, consts.FieldDefaultPathPolicy,
 			// consts.FieldLabelToPathPolicy, consts.FieldEnableSentinelParsing, consts.FieldAuditFields,
-			if fieldSchema.Type == schema.TypeBool {
-				data[field] = d.Get(field)
-			} else {
-				if value, ok := d.GetOk(field); ok {
-					data[field] = value
-				}
+			if value, ok := d.GetOkExists(field); ok {
+				data[field] = value
 			}
 		}
 	}
