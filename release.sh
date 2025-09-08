@@ -37,9 +37,6 @@
 
 set -e
 
-# fail if this is not set
-[${BOB_GITHUB_TOKEN:?}]
-
 # SLACK_CHANNEL code is duplicated in ./release/ci.hcl
 SLACK_CHANNEL="C03RXFX5M4L"
 # BRANCH allow override of default branch with an optional argument
@@ -64,6 +61,12 @@ log_error() {
 prompt() {
   printf "[?] %s" "$@ "
 }
+
+# fail if this is not set
+if [[ -z "$BOB_GITHUB_TOKEN" ]]; then
+  log_error "BOB_GITHUB_TOKEN is not set"
+  exit 1
+fi
 
 # show the latest commit of BRANCH to user for manual validation
 log_info "Fetching default release branch '${BRANCH}'..."
