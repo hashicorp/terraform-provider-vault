@@ -1,15 +1,14 @@
-name: Build
+name: build
 
 on:
   push:
-    paths-ignore:
-      - 'website/**'
-      - 'CHANGELOG.md'
   workflow_dispatch:
 
 permissions:
   # Permission for checking out code
   contents: read
+env:
+  PKG_NAME: "terraform-provider-vault"
 
 jobs:
   go-version:
@@ -39,6 +38,30 @@ jobs:
       - name: Set variables
         id: set-product-version
         uses: hashicorp/actions-set-product-version@v2
+
+  # Creates metadata.json file containing build metadata for consumption by CRT workflows.
+  #
+  # Reference: https://github.com/hashicorp/actions-generate-metadata/blob/main/README.md
+  generate-metadata-file:
+    needs: set-product-version
+    runs-on: ubuntu-latest
+    outputs:
+      filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
+    steps:
+      - name: "Checkout directory"
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Generate metadata file
+        id: generate-metadata-file
+        uses: hashicorp/actions-generate-metadata@v1
+        with:
+          version: ${{ needs.set-product-version.outputs.product-version }}
+          product: ${{ env.PKG_NAME }}
+          repositoryOwner: "hashicorp"
+          repository: "terraform-provider-vault"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: metadata.json
+          path: ${{ steps.generate-metadata-file.outputs.filepath }}
 
   build-pre:
     needs: [go-version]
@@ -130,11 +153,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.16.24-ent"
+        - "vault-enterprise:1.16.25-ent"
         - "vault-enterprise:1.17.18-ent"
-        - "vault-enterprise:1.18.13-ent"
-        - "vault-enterprise:1.19.8-ent"
-        - "vault-enterprise:1.20.2-ent"
+        - "vault-enterprise:1.18.14-ent"
+        - "vault-enterprise:1.19.9-ent"
+        - "vault-enterprise:1.20.3-ent"
         - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
@@ -307,6 +330,40 @@ jobs:
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
           #
+
+  # Uploads an Actions artifact named terraform-registry-manifest.json.zip.
+  #
+  # The artifact contains a single file with a filename that Terraform Registry expects
+  # (example: terraform-provider-crt-example_2.3.6-alpha1_manifest.json). The file contents
+  # are identical to the terraform-registry-manifest.json file in the source repository.
+  upload-terraform-registry-manifest-artifact:
+    needs:
+    - set-product-version
+    - build
+    - acceptance
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout directory"
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          path: ${{ env.PKG_NAME }}
+      - name: "Copy manifest from checkout directory to a file with the desired name"
+        id: terraform-registry-manifest
+        run: |
+          name="${{ env.PKG_NAME }}"
+          version="${{ needs.set-product-version.outputs.product-version }}"
+
+          source="${name}/terraform-registry-manifest.json"
+          destination="${name}_${version}_manifest.json"
+
+          cp "$source" "$destination"
+          echo "filename=$destination" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: terraform-registry-manifest.json
+          path: ${{ steps.terraform-registry-manifest.outputs.filename }}
+          if-no-files-found: error
+
   # This job is used as a requirement for the repo's branch protection setup.
   build-done:
     runs-on: ubuntu-latest
@@ -314,6 +371,8 @@ jobs:
     needs:
       - build
       - acceptance
+      - upload-terraform-registry-manifest-artifact
+      - generate-metadata-file
     steps:
     - name: cancelled
       if: ${{ (contains(needs.*.result, 'cancelled')) }}
