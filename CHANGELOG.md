@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+* `vault_terraform_cloud_secret_backend` now supports a write-only token argument. by @drewmullen ([#2483](https://github.com/hashicorp/terraform-provider-vault/pull/2483))
+
+
 ## 5.3.0 (Sep 4, 2025)
 
 FEATURES:
@@ -16,9 +20,6 @@ BUGS:
 * Fix `azure_secret_backend_role` to prevent persistent diff for null value on `max_ttl` and  `explicit_max_ttl` argument ([#2581](https://github.com/hashicorp/terraform-provider-vault/pull/2581))
 
 ## 5.2.1 (Aug 19, 2025)
-
-FEATURES:
-* `vault_terraform_cloud_secret_backend` now supports a write-only token argument. by @drewmullen ([#2483](https://github.com/hashicorp/terraform-provider-vault/pull/2483))
 
 BUGS:
 
