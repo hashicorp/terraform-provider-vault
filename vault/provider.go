@@ -179,6 +179,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstDataSource()),
 			PathInventory: []string{"/pki/config/est"},
 		},
+		"vault_pki_secret_backend_config_scep": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigScepDataSource()),
+			PathInventory: []string{"/pki/config/scep"},
+		},
 		"vault_pki_secret_backend_issuer": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
 			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
@@ -214,6 +218,10 @@ var (
 		"vault_transit_verify": {
 			Resource:      UpdateSchemaResource(transitVerifyDataSource()),
 			PathInventory: []string{"/transit/verify/{name}"},
+		},
+		"vault_transit_cmac": {
+			Resource:      UpdateSchemaResource(transitCMACDataSource()),
+			PathInventory: []string{"/transit/cmac/{name}/{url_mac_length}"},
 		},
 	}
 
@@ -393,6 +401,10 @@ var (
 			Resource:      UpdateSchemaResource(certAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/cert/certs/{name}"},
 		},
+		"vault_scep_auth_backend_role": {
+			Resource:      UpdateSchemaResource(scepAuthBackendRoleResource()),
+			PathInventory: []string{"/auth/scep/role/{name}"},
+		},
 		"vault_generic_endpoint": {
 			Resource:      UpdateSchemaResource(genericEndpointResource("vault_generic_endpoint")),
 			PathInventory: []string{GenericPath},
@@ -468,6 +480,14 @@ var (
 		"vault_nomad_secret_role": {
 			Resource:      UpdateSchemaResource(nomadSecretBackendRoleResource()),
 			PathInventory: []string{"/nomad/role/{role}"},
+		},
+		"vault_oci_auth_backend": {
+			Resource:      UpdateSchemaResource(ociAuthBackendResource()),
+			PathInventory: []string{"/auth/oci/config"},
+		},
+		"vault_oci_auth_backend_role": {
+			Resource:      UpdateSchemaResource(ociAuthBackendRoleResource()),
+			PathInventory: []string{"/auth/oci/role/{role}"},
 		},
 		"vault_policy": {
 			Resource:      UpdateSchemaResource(policyResource()),
@@ -587,10 +607,6 @@ var (
 			Resource:      UpdateSchemaResource(rabbitMQSecretBackendRoleResource()),
 			PathInventory: []string{"/rabbitmq/roles/{name}"},
 		},
-		"vault_password_policy": {
-			Resource:      UpdateSchemaResource(passwordPolicyResource()),
-			PathInventory: []string{"/sys/policy/password/{name}"},
-		},
 		"vault_pki_secret_backend_cert": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendCertResource()),
 			PathInventory: []string{"/pki/issue/{role}"},
@@ -618,6 +634,10 @@ var (
 		"vault_pki_secret_backend_config_est": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstResource()),
 			PathInventory: []string{"/pki/config/est"},
+		},
+		"vault_pki_secret_backend_config_scep": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigScepResource()),
+			PathInventory: []string{"/pki/config/scep"},
 		},
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),

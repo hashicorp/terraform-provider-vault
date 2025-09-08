@@ -71,11 +71,11 @@ func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.Resource
 	var path string
 	if d.IsNewResource() {
 		path = d.Get(consts.FieldPath).(string)
-		if err := createMount(d, client, path, consts.MountTypeKubernetes); err != nil {
+		if err := createMount(ctx, d, meta, client, path, consts.MountTypeKubernetes); err != nil {
 			return diag.FromErr(err)
 		}
 	} else {
-		if err := updateMount(d, meta, true); err != nil {
+		if err := updateMount(ctx, d, meta, true, false); err != nil {
 			return diag.FromErr(err)
 		}
 		path = d.Id()
@@ -108,7 +108,7 @@ func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.Resource
 	return kubernetesSecretBackendRead(ctx, d, meta)
 }
 
-func kubernetesSecretBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func kubernetesSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -140,7 +140,7 @@ func kubernetesSecretBackendRead(_ context.Context, d *schema.ResourceData, meta
 		}
 	}
 
-	if err := readMount(d, meta, true); err != nil {
+	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 

@@ -204,6 +204,9 @@ func TestAuthLoginGCP_Login(t *testing.T) {
 			token:     "foo",
 			wantErr:   true,
 			expectErr: errors.New("vault login client has a token set"),
+			skipFunc: func(t *testing.T) {
+				testutil.SkipTestEnvUnset(t, consts.EnvVarGoogleApplicationCreds, envVarGCPServiceAccount)
+			},
 		},
 		{
 			name: "no-jwt",

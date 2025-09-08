@@ -40,6 +40,29 @@ func TestAuthLoginRadius_Init(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:      "basic-with-env",
+			authField: consts.FieldAuthLoginRadius,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginRadius: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "ns1",
+					},
+				},
+			},
+			envVars: map[string]string{
+				consts.EnvVarRadiusUsername: "alice",
+				consts.EnvVarRadiusPassword: "password1",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "ns1",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeRadius,
+				consts.FieldUsername:         "alice",
+				consts.FieldPassword:         "password1",
+			},
+			wantErr: false,
+		},
+		{
 			name:         "error-missing-resource",
 			authField:    consts.FieldAuthLoginRadius,
 			expectParams: nil,

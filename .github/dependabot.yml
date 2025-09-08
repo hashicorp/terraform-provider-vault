@@ -9,12 +9,19 @@ updates:
       interval: "weekly"
     allow:
       - dependency-name: "hashicorp/*"
-  # Defines a group by package name, for security updates for golang dependencies
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
     groups:
+      gomod-breaking:
+        update-types:
+          - major
+      gomod-backward-compatible:
+        update-types:
+          - minor
+          - patch
+      # Defines a group by package name, for security updates for golang dependencies
       golang:
         applies-to: security-updates
         patterns:

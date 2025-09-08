@@ -4,14 +4,15 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -24,9 +25,9 @@ func TestAccIdentityGroupMemberEntityIdsExclusiveEmpty(t *testing.T) {
 
 	resourceName := "vault_identity_group_member_entity_ids.member_entity_ids"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigExclusiveEmpty(),
@@ -55,9 +56,9 @@ func TestAccIdentityGroupMemberEntityIdsExclusive(t *testing.T) {
 	testEntity := acctest.RandomWithPrefix("test-entity")
 	resourceName := "vault_identity_group_member_entity_ids.member_entity_ids"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigExclusive(devEntity),
@@ -84,9 +85,9 @@ func TestAccIdentityGroupMemberEntityIdsNonExclusiveEmpty(t *testing.T) {
 	resourceNameDev := "vault_identity_group_member_entity_ids.dev"
 	resourceNameTest := "vault_identity_group_member_entity_ids.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusiveEmpty(devEntity),
@@ -141,9 +142,9 @@ func TestAccIdentityGroupMemberEntityIdsNonExclusive(t *testing.T) {
 	resourceNameDev := "vault_identity_group_member_entity_ids.dev"
 	resourceNameTest := "vault_identity_group_member_entity_ids.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusive(entity1, entity2),
@@ -210,9 +211,9 @@ func TestAccIdentityGroupMemberEntityIdsDynamic(t *testing.T) {
 	groupName := acctest.RandomWithPrefix("group")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityGroupMemberEntityIdsDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGMEIDynamic(groupName, true, tests...),

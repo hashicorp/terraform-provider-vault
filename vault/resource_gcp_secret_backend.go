@@ -6,18 +6,16 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
-	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func gcpSecretBackendResource(name string) *schema.Resource {
@@ -49,16 +47,27 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 				},
 			},
 			consts.FieldCredentials: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "JSON-encoded credentials to use to connect to GCP",
-				Sensitive:   true,
-				// We rebuild the attached JSON string to a simple singleline
-				// string. This makes terraform not want to change when an extra
-				// space is included in the JSON string. It is also necesarry
-				// when disable_read is false for comparing values.
-				StateFunc:    NormalizeDataJSONFunc(name),
-				ValidateFunc: ValidateDataJSONFunc(name),
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "JSON-encoded credentials to use to connect to GCP",
+				Sensitive:     true,
+				StateFunc:     NormalizeDataJSONFunc(name),
+				ValidateFunc:  ValidateDataJSONFunc(name),
+				ConflictsWith: []string{consts.FieldCredentialsWO},
+			},
+			consts.FieldCredentialsWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Write-only JSON-encoded credentials to use to connect to GCP",
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldCredentials},
+			},
+			consts.FieldCredentialsWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only JSON-encoded credentials",
+				RequiredWith: []string{consts.FieldCredentialsWO},
 			},
 			consts.FieldDescription: {
 				Type:        schema.TypeString,
@@ -113,6 +122,18 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 		},
 	}, false)
 
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldDefaultLeaseTTL,
+		consts.FieldMaxLeaseTTL,
+		consts.FieldIdentityTokenKey,
+		consts.FieldAccessor,
+		consts.FieldLocal,
+	))
+
 	// Add common automated root rotation schema to the resource.
 	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
 
@@ -126,47 +147,26 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 	}
 
 	path := d.Get(consts.FieldPath).(string)
-	description := d.Get(consts.FieldDescription).(string)
-	defaultTTL := d.Get(consts.FieldDefaultLeaseTTL).(int)
-	maxTTL := d.Get(consts.FieldMaxLeaseTTL).(int)
-	local := d.Get(consts.FieldLocal).(bool)
-	identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
 
 	configPath := gcpSecretBackendConfigPath(path)
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting GCP backend at %q", path)
+
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 
-	mountConfig := api.MountConfigInput{
-		DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
-		MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
+	if err := createMount(ctx, d, meta, client, path, consts.MountTypeGCP); err != nil {
+		return diag.FromErr(err)
 	}
 
-	// ID Token Key is only used in GCP mounts for 1.17+
-	if useAPIVer117Ent {
-		mountConfig.IdentityTokenKey = identityTokenKey
-	}
-
-	err := client.Sys().Mount(path, &api.MountInput{
-		Type:        consts.MountTypeGCP,
-		Description: description,
-		Config:      mountConfig,
-		Local:       local,
-	})
-	if err != nil {
-		return diag.Errorf("error mounting to %q: %s", path, err)
-	}
 	log.Printf("[DEBUG] Mounted GCP backend at %q", path)
 	d.SetId(path)
 
 	log.Printf("[DEBUG] Writing GCP configuration to %q", configPath)
 
 	data := map[string]interface{}{}
-	fields := []string{
-		consts.FieldCredentials,
-	}
+	fields := []string{}
 
 	if useAPIVer117Ent {
 		fields = append(fields,
@@ -187,6 +187,17 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
+	var credentials string
+	if v, ok := d.GetOk(consts.FieldCredentials); ok {
+		credentials = v.(string)
+	} else if credWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldCredentialsWO)); !credWo.IsNull() {
+		credentials = credWo.AsString()
+	}
+
+	if credentials != "" {
+		data[consts.FieldCredentials] = credentials
+	}
+
 	if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
 		return diag.Errorf("error writing GCP configuration for %q: %s", path, err)
 	}
@@ -205,37 +216,11 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 
 	path := d.Id()
 
-	log.Printf("[DEBUG] Reading GCP backend mount %q from Vault", path)
-
-	mount, err := mountutil.GetMount(ctx, client, path)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", path)
-			d.SetId("")
-			return nil
-		}
-		return diag.FromErr(err)
-	}
-
-	log.Printf("[DEBUG] Read GCP backend mount %q from Vault", path)
-
 	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldDefaultLeaseTTL, mount.Config.DefaultLeaseTTL); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldMaxLeaseTTL, mount.Config.MaxLeaseTTL); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set(consts.FieldLocal, mount.Local); err != nil {
-		return diag.FromErr(err)
-	}
 
-	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
+	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -245,6 +230,9 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		resp, err := client.Logical().ReadWithContext(ctx, gcpSecretBackendConfigPath(path))
 		if err != nil {
 			return diag.FromErr(err)
+		}
+		if resp == nil {
+			return diag.FromErr(fmt.Errorf("GCP backend config %q not found", path))
 		}
 
 		fields := []string{
@@ -275,13 +263,12 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(e)
 	}
 
-	_ = d.Id()
 	d.Partial(true)
 
-	path, err := util.Remount(d, client, consts.FieldPath, false)
-	if err != nil {
+	if err := updateMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
+	path := d.Id()
 
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
@@ -306,8 +293,18 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 	data := make(map[string]interface{})
 
-	if d.HasChange(consts.FieldCredentials) {
-		data[consts.FieldCredentials] = d.Get(consts.FieldCredentials)
+	var credentials string
+	if v, ok := d.GetOk(consts.FieldCredentials); ok {
+		credentials = v.(string)
+	} else if d.HasChange(consts.FieldCredentialsWOVersion) {
+		credWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldCredentialsWO))
+		if !credWo.IsNull() {
+			credentials = credWo.AsString()
+		}
+	}
+
+	if credentials != "" {
+		data[consts.FieldCredentials] = credentials
 	}
 
 	if useAPIVer117Ent {

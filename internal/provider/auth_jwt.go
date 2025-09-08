@@ -42,10 +42,10 @@ func GetJWTLoginSchemaResource(authField string) *schema.Resource {
 				Description: "Name of the login role.",
 			},
 			consts.FieldJWT: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: "A signed JSON Web Token.",
-				DefaultFunc: schema.EnvDefaultFunc(consts.EnvVarVaultAuthJWT, nil),
 			},
 		},
 	}, authField, consts.MountTypeJWT)
@@ -71,9 +71,20 @@ func (l *AuthLoginJWT) LoginPath() string {
 }
 
 func (l *AuthLoginJWT) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	defaults := authDefaults{
+		{
+			field:      consts.FieldJWT,
+			envVars:    []string{consts.EnvVarVaultAuthJWT},
+			defaultVal: "",
+		},
+	}
+
 	if err := l.AuthLoginCommon.Init(d, authField,
-		func(data *schema.ResourceData) error {
-			return l.checkRequiredFields(d, consts.FieldRole, consts.FieldJWT)
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.setDefaultFields(d, defaults, params)
+		},
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.checkRequiredFields(d, params, consts.FieldRole, consts.FieldJWT)
 		},
 	); err != nil {
 		return nil, err

@@ -4,13 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -22,9 +23,9 @@ func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 	resourceName := "vault_identity_group_policies.policies"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityGroupPoliciesDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupPoliciesConfigExclusive(group),
@@ -49,9 +50,9 @@ func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
 	resourceNameTest := "vault_identity_group_policies.test"
 	resourceNameGroup := "vault_identity_group.group"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckidentityGroupPoliciesDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupPoliciesConfigNonExclusive(group),

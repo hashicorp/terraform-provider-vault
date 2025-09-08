@@ -4,12 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -23,9 +25,9 @@ func TestGCPSecretBackend(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPSecretBackend_initialConfig(path),
@@ -78,9 +80,9 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPSecretBackend_initialConfig(path),
@@ -117,7 +119,7 @@ func TestAccGCPSecretBackend_automatedRotation(t *testing.T) {
 	resourceType := "vault_gcp_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
@@ -161,6 +163,52 @@ func TestAccGCPSecretBackend_automatedRotation(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
+		},
+	})
+}
+
+// TestAccKVSecretV2_data_json_wo ensures write-only attribute
+// `credentials_wo` works as expected
+//
+// Since we cannot read the credentials value back from Vault
+// there is no way of actually confirming that it is updated.
+// Hence, we ensure that the `credentials_wo_version` parameter
+// gets updated appropriately.
+func TestGCPSecretBackend_credentials_wo(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-gcp")
+
+	resourceType := "vault_gcp_secret_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPSecretBackend_credentialsWO(path, "test", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "credentials_wo_version", "1"),
+				),
+			},
+			{
+				Config: testGCPSecretBackend_credentialsWO(path, "test-updated", 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "credentials_wo_version", "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldDisableRemount,
+				consts.FieldCredentialsWO,
+				consts.FieldCredentialsWOVersion,
+			),
 		},
 	})
 }
@@ -214,4 +262,17 @@ resource "vault_gcp_secret_backend" "test" {
   rotation_window = "%d"
   disable_automated_rotation = %t
 }`, path, period, schedule, window, disable)
+}
+
+func testGCPSecretBackend_credentialsWO(path, value string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_gcp_secret_backend" "test" {
+  path = "%s"
+  credentials_wo = <<EOF
+{
+  "hello": "%s"
+}
+EOF
+  credentials_wo_version = %d
+}`, path, value, version)
 }

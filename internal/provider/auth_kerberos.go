@@ -45,7 +45,6 @@ func GetKerberosLoginSchemaResource(authField string) *schema.Resource {
 			consts.FieldToken: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				DefaultFunc:  schema.EnvDefaultFunc(consts.EnvVarKrbSPNEGOToken, nil),
 				Description:  "Simple and Protected GSSAPI Negotiation Mechanism (SPNEGO) token",
 				ValidateFunc: validateKRBNegToken,
 			},
@@ -71,7 +70,6 @@ func GetKerberosLoginSchemaResource(authField string) *schema.Resource {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Description:   "A valid Kerberos configuration file e.g. /etc/krb5.conf.",
-				DefaultFunc:   schema.EnvDefaultFunc(consts.EnvVarKRB5Conf, nil),
 				ValidateFunc:  validateFileExists,
 				ConflictsWith: conflicts,
 			},
@@ -79,21 +77,18 @@ func GetKerberosLoginSchemaResource(authField string) *schema.Resource {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Description:   "The Kerberos keytab file containing the entry of the login entity.",
-				DefaultFunc:   schema.EnvDefaultFunc(consts.EnvVarKRBKeytab, nil),
 				ValidateFunc:  validateFileExists,
 				ConflictsWith: conflicts,
 			},
 			consts.FieldDisableFastNegotiation: {
 				Type:          schema.TypeBool,
 				Optional:      true,
-				Default:       false,
 				ConflictsWith: conflicts,
 				Description:   "Disable the Kerberos FAST negotiation.",
 			},
 			consts.FieldRemoveInstanceName: {
 				Type:          schema.TypeBool,
 				Optional:      true,
-				Default:       false,
 				ConflictsWith: conflicts,
 				Description:   "Strip the host from the username found in the keytab.",
 			},
@@ -125,16 +120,31 @@ func (l *AuthLoginKerberos) LoginPath() string {
 }
 
 func (l *AuthLoginKerberos) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	defaults := authDefaults{
+		{
+			field:      consts.FieldToken,
+			envVars:    []string{consts.EnvVarKrbSPNEGOToken},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldKRB5ConfPath,
+			envVars:    []string{consts.EnvVarKRB5Conf},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldKeytabPath,
+			envVars:    []string{consts.EnvVarKRBKeytab},
+			defaultVal: "",
+		},
+	}
+
 	if err := l.AuthLoginCommon.Init(d, authField,
-		func(data *schema.ResourceData) error {
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.setDefaultFields(d, defaults, params)
+		},
+		func(data *schema.ResourceData, params map[string]interface{}) error {
 			if _, ok := l.getOk(d, consts.FieldToken); !ok {
-				return l.checkRequiredFields(d,
-					consts.FieldUsername,
-					consts.FieldService,
-					consts.FieldRealm,
-					consts.FieldKeytabPath,
-					consts.FieldKRB5ConfPath,
-				)
+				return l.checkRequiredFields(d, params, consts.FieldUsername, consts.FieldService, consts.FieldRealm, consts.FieldKeytabPath, consts.FieldKRB5ConfPath)
 			}
 			return nil
 		},

@@ -40,7 +40,7 @@ The following arguments are supported:
 
 * `name` - (Required) The name to identify this key within the backend. Must be unique within the backend.
 
-* `type` - (Optional) Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `hmac`, `rsa-2048`, `rsa-3072` and `rsa-4096`.
+* `type` - (Optional) Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `hmac`, `rsa-2048`, `rsa-3072`, `rsa-4096`, `managed_key`, `aes128-cmac`, `aes192-cmac`, `aes256-cmac`, `ml-dsa`, `hybrid`, and `slh-dsa`.
     * Refer to the Vault documentation on transit key types for more information: [Key Types](https://www.vaultproject.io/docs/secrets/transit#key-types)
 
 * `deletion_allowed` - (Optional) Specifies if the keyring is allowed to be deleted. Must be set to 'true' before terraform will be able to destroy keys.
@@ -63,8 +63,12 @@ The following arguments are supported:
 
 * `key_size` - (Optional) The key size in bytes for algorithms that allow variable key sizes. Currently only applicable to HMAC, where it must be between 32 and 512 bytes.
 
-* `parameter_set` - (Optional) The parameter set to use for ML-DSA. Required for
-  ML-DSA and hybrid keys. Valid values are `44`, `65`, and `87`.
+* `parameter_set` - (Optional) The parameter set to use for ML-DSA or SLH-DSA. Required for
+  ML-DSA, hybrid, and SLH-DSA keys.
+  Valid values for ML-DSA are `44`, `65`, and `87`.
+Valid values for SLH-DSA are `slh-dsa-sha2-128s`, `slh-dsa-shake-128s`, `slh-dsa-sha2-128f`, `slh-dsa-shake-128`, `slh-dsa-sha2-192s`,
+`slh-dsa-shake-192s`, `slh-dsa-sha2-192f`, `slh-dsa-shake-192f`, `slh-dsa-sha2-256s`, `slh-dsa-shake-256s`,
+`slh-dsa-sha2-256f`, and `slh-dsa-shake-256f`.
 
 * `hybrid_key_type_pqc` - (Optional) The post-quantum algorithm to use for hybrid signatures.
   Currently, ML-DSA is the only supported key type.

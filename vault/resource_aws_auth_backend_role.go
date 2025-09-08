@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -297,7 +298,9 @@ func awsAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta 
 		}
 	}
 	d.SetId(path)
-	if _, err := client.Logical().Write(path, data); err != nil {
+
+	// Retry to account for eventual consistency errors for IAM
+	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
 		d.SetId("")
 		return diag.Errorf("error writing AWS auth backend role %q: %s", path, err)
 	}
@@ -506,8 +509,8 @@ func awsAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta 
 		}
 	}
 
-	_, err := client.Logical().Write(path, data)
-	if err != nil {
+	// Retry to account for eventual consistency errors for IAM
+	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
 		return diag.Errorf("error updating AWS auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated AWS auth backend role %q", path)

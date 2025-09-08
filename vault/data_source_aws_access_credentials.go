@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -216,15 +216,15 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	sequentialSuccesses := 0
 
 	// validateCreds is a retry function, which will be retried until it succeeds.
-	validateCreds := func() *resource.RetryError {
+	validateCreds := func() *retry.RetryError {
 		log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
 		if _, err := iamconn.GetUser(nil); err != nil && isAWSAuthError(err) {
 			sequentialSuccesses = 0
 			log.Printf("[DEBUG] AWS auth error checking if creds %q are valid, is retryable", secret.LeaseID)
-			return resource.RetryableError(err)
+			return retry.RetryableError(err)
 		} else if err != nil {
 			log.Printf("[DEBUG] Error checking if creds %q are valid: %s", secret.LeaseID, err)
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 		sequentialSuccesses++
 		log.Printf("[DEBUG] Checked if AWS creds %q are valid", secret.LeaseID)
@@ -236,7 +236,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 		if time.Since(start) > sequentialSuccessTimeLimit {
 			return fmt.Errorf("unable to get %d sequential successes within %.f seconds", sequentialSuccessesRequired, sequentialSuccessTimeLimit.Seconds())
 		}
-		if err := resource.Retry(retryTimeOut, validateCreds); err != nil {
+		if err := retry.Retry(retryTimeOut, validateCreds); err != nil {
 			return fmt.Errorf("error checking if credentials are valid: %s", err)
 		}
 	}

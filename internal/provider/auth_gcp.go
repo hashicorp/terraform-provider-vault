@@ -58,7 +58,6 @@ func GetGCPLoginSchemaResource(authField string) *schema.Resource {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Description:   "A signed JSON Web Token.",
-				DefaultFunc:   schema.EnvDefaultFunc(consts.EnvVarGCPAuthJWT, nil),
 				ConflictsWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldCredentials)},
 			},
 			consts.FieldCredentials: {
@@ -66,7 +65,6 @@ func GetGCPLoginSchemaResource(authField string) *schema.Resource {
 				Optional:      true,
 				ValidateFunc:  validateCredentials,
 				Description:   "Path to the Google Cloud credentials file.",
-				DefaultFunc:   schema.EnvDefaultFunc(consts.EnvVarGoogleApplicationCreds, nil),
 				ConflictsWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldJWT)},
 			},
 			consts.FieldServiceAccount: {
@@ -89,7 +87,26 @@ type AuthLoginGCP struct {
 }
 
 func (l *AuthLoginGCP) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
+	defaults := authDefaults{
+		{
+			field:      consts.FieldJWT,
+			envVars:    []string{consts.EnvVarGCPAuthJWT},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldCredentials,
+			envVars:    []string{consts.EnvVarGoogleApplicationCreds},
+			defaultVal: "",
+		},
+	}
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.setDefaultFields(d, defaults, params)
+		},
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.checkRequiredFields(d, params, consts.FieldRole)
+		},
+	); err != nil {
 		return nil, err
 	}
 	return l, nil

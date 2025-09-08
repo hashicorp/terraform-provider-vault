@@ -86,8 +86,8 @@ func (l *AuthLoginOIDC) LoginPath() string {
 
 func (l *AuthLoginOIDC) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
 	if err := l.AuthLoginCommon.Init(d, authField,
-		func(data *schema.ResourceData) error {
-			return l.checkRequiredFields(d, consts.FieldRole)
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.checkRequiredFields(d, params, consts.FieldRole)
 		},
 	); err != nil {
 		return nil, err
