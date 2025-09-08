@@ -210,11 +210,10 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
-	if d.HasChange(consts.FieldAddress) || d.HasChange(consts.FieldToken) || d.HasChange(consts.FieldBasePath) {
+	if d.HasChange(consts.FieldAddress) || d.HasChange(consts.FieldBasePath) {
 		log.Printf("[DEBUG] Updating Terraform Cloud configuration at %q", configPath)
 		data := map[string]interface{}{
 			consts.FieldAddress:  d.Get(consts.FieldAddress).(string),
-			consts.FieldToken:    d.Get(consts.FieldToken).(string),
 			consts.FieldBasePath: d.Get(consts.FieldBasePath).(string),
 		}
 		if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
@@ -224,16 +223,32 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 		if err := d.Set("address", data["address"]); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("token", data["token"]); err != nil {
-			return diag.FromErr(err)
-		}
 		if err := d.Set("base_path", data["base_path"]); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
+	if d.HasChange(consts.FieldToken) {
+		log.Printf("[DEBUG] Updating Terraform Cloud configuration token at %q", configPath)
+		data := map[string]interface{}{
+			consts.FieldToken: d.Get(consts.FieldToken).(string),
+		}
+		if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
+			return diag.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
+		}
+		if err := d.Set("token", data["token"]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	if d.HasChange(consts.FieldTokenWOVersion) {
-		tokenWO := d.Get(consts.FieldTokenWO).(string)
+		var tokenWO string
+		if tokenWO, ok := d.GetOk(consts.FieldTokenWO); ok && tokenWO != "" {
+			tokenWO = tokenWO.(string)
+		} else {
+			return diag.Errorf("Error updating write-only Terraform Cloud token for %q: token_wo must be set when token_wo_version is changed", backend)
+		}
+
 		log.Printf("[DEBUG] Updating write-only Terraform Cloud token for %q", backend)
 		data := map[string]interface{}{
 			consts.FieldTokenWO:  tokenWO,
