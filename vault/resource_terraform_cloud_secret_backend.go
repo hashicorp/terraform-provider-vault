@@ -242,21 +242,23 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	if d.HasChange(consts.FieldTokenWOVersion) {
-		var tokenWO string
-		if tokenWO, ok := d.GetOk(consts.FieldTokenWO); ok && tokenWO != "" {
-			tokenWO = tokenWO.(string)
-		} else {
-			return diag.Errorf("Error updating write-only Terraform Cloud token for %q: token_wo must be set when token_wo_version is changed", backend)
+		log.Printf("[DEBUG] Updating write-only Terraform Cloud token for %q", backend)
+
+		var token string
+		p := cty.GetAttrPath(consts.FieldTokenWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			token = woVal.AsString()
 		}
 
-		log.Printf("[DEBUG] Updating write-only Terraform Cloud token for %q", backend)
 		data := map[string]interface{}{
-			consts.FieldTokenWO:  tokenWO,
-			consts.FieldAddress:  d.Get(consts.FieldAddress).(string),
-			consts.FieldBasePath: d.Get(consts.FieldBasePath).(string),
+			consts.FieldToken: token,
 		}
 		if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
 			return diag.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
+		}
+		if err := d.Set(consts.FieldTokenWOVersion, d.Get(consts.FieldTokenWOVersion).(int)); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 
