@@ -42,10 +42,10 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.41.0
 	golang.org/x/net v0.43.0
-	golang.org/x/oauth2 v0.30.0
+	golang.org/x/oauth2 v0.31.0
 	google.golang.org/api v0.248.0
 	google.golang.org/genproto v0.0.0-20250603155806-513f23925822
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
