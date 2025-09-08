@@ -37,6 +37,8 @@
 
 set -e
 
+BOB_PRODUCT="terraform-provider-vault"
+BOB_ENVIRONMENT="tf-provider-vault"
 # SLACK_CHANNEL code is duplicated in ./release/ci.hcl
 SLACK_CHANNEL="C03RXFX5M4L"
 # BRANCH allow override of default branch with an optional argument
@@ -143,13 +145,15 @@ while true; do
 done
 log_info "Targeting deployment to ${YLW}${TARGET_ENV}${RST}..."
 
+set -x
 bob trigger-promotion \
-  --product-name terraform-provider-vault \
+  --product-name ${BOB_PRODUCT?} \
   --org hashicorp \
-  --repo terraform-provider-vault \
+  --repo ${BOB_PRODUCT?} \
   --branch ${LOCAL_BRANCH?} \
   --product-version ${VERSION?} \
   --sha "${RELEASE_SHA?}" \
-  --environment terraform-provider-vault \
+  --environment ${BOB_ENVIRONMENT?} \
   --slack-channel ${SLACK_CHANNEL?} \
   ${TARGET_ENV?}
+set +x
