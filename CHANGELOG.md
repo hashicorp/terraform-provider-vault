@@ -4,6 +4,21 @@ BUGS:
 
 * Fix panic when creating `vault_kv_secret_v2` resource without specifying either `data_json` or `data_json_wo`. The provider now returns a proper validation error instead of crashing.
 
+## 5.3.0 (Sep 4, 2025)
+
+FEATURES:
+
+* Add support for password phrases via the `credential_type` field in the `vault_ldap_secret_backend` resource ([#2548](https://github.com/hashicorp/terraform-provider-vault/pull/2548))
+
+IMPROVEMENTS:
+
+* build(deps): bump the gomod-backward-compatible group with 5 updates: [GH-2583](https://github.com/hashicorp/terraform-provider-vault/pull/2583)
+* Move to the standard CRT release workflow and tooling: [GH-2582](https://github.com/hashicorp/terraform-provider-vault/pull/2582)
+
+BUGS:
+
+* Fix `azure_secret_backend_role` to prevent persistent diff for null value on `max_ttl` and  `explicit_max_ttl` argument ([#2581](https://github.com/hashicorp/terraform-provider-vault/pull/2581))
+
 ## 5.2.1 (Aug 19, 2025)
 
 BUGS:
