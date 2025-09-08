@@ -244,11 +244,11 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 	if d.HasChange(consts.FieldTokenWOVersion) {
 		log.Printf("[DEBUG] Updating write-only Terraform Cloud token for %q", backend)
 
-		var token string
 		p := cty.GetAttrPath(consts.FieldTokenWO)
 		woVal, _ := d.GetRawConfigAt(p)
-		if !woVal.IsNull() {
-			token = woVal.AsString()
+		token := woVal.AsString()
+		if token == "" {
+			return diag.Errorf("token_wo must be provided whenever token_wo_version changes")
 		}
 
 		data := map[string]interface{}{
