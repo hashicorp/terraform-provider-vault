@@ -114,24 +114,14 @@ func TestTerraformCloudSecretBackend_token_wo(t *testing.T) {
 				Config: testTerraformCloudSecretBackend_token_wo_initialConfig(backend, token),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
-					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
-					resource.TestCheckResourceAttr(resourceName, "address", "https://app.terraform.io"),
 					resource.TestCheckResourceAttr(resourceName, "token_wo_version", "1"),
-					resource.TestCheckResourceAttr(resourceName, "base_path", "/api/v2/"),
 				),
 			},
 			{
-				Config: testTerraformCloudSecretBackend_updateConfig(backend, token),
+				Config: testTerraformCloudSecretBackend_token_wo_updateConfig(backend, token),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
-					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "0"),
-					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "0"),
-					resource.TestCheckResourceAttr(resourceName, "address", "https://app.terraform.io/not"),
-					resource.TestCheckResourceAttr(resourceName, "token", token),
-					resource.TestCheckResourceAttr(resourceName, "base_path", "/not/api/v2/"),
+					resource.TestCheckResourceAttr(resourceName, "token_wo_version", "2"),
 				),
 			},
 		},
@@ -164,10 +154,16 @@ func testTerraformCloudSecretBackend_token_wo_initialConfig(path, token string) 
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
   backend = "%s"
-  description = "test description"
-  default_lease_ttl_seconds = 3600
-  max_lease_ttl_seconds = 86400
   token_wo = "%s"
   token_wo_version = 1
+}`, path, token)
+}
+
+func testTerraformCloudSecretBackend_token_wo_updateConfig(path, token string) string {
+	return fmt.Sprintf(`
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend = "%s"
+  token_wo = "%s"
+  token_wo_version = 2
 }`, path, token)
 }
