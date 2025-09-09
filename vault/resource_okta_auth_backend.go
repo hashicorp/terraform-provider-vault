@@ -33,6 +33,8 @@ const (
 )
 
 func oktaAuthBackendResource() *schema.Resource {
+	tokenFieldsConfig := &addTokenFieldsConfig{}
+
 	fields := map[string]*schema.Schema{
 		consts.FieldPath: {
 			Type:        schema.TypeString,
@@ -195,9 +197,11 @@ func oktaAuthBackendResource() *schema.Resource {
 			Computed:    true,
 			Description: "The mount accessor related to the auth mount.",
 		},
+
+		consts.FieldTune: authMountTuneSchema(),
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{})
+	addTokenFields(fields, tokenFieldsConfig)
 
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: oktaAuthBackendWrite,
@@ -335,6 +339,22 @@ func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
+	// Tune block support
+	log.Printf("[DEBUG] Reading okta auth tune from %q", path+"/tune")
+	rawTune, err := authMountTuneGet(ctx, client, "auth/"+path)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	input, err := retrieveMountConfigInput(d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	mergedTune := mergeAuthMethodTune(rawTune, input)
+	if err := d.Set(consts.FieldTune, []map[string]interface{}{mergedTune}); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
+		return diag.FromErr(err)
+	}
+
 	return nil
 }
 
@@ -409,6 +429,20 @@ func oktaAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		err = oktaAuthUpdateUsers(client, path, oldValue, newValue)
 		if err != nil {
 			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange(consts.FieldTune) {
+		log.Printf("[INFO] Okta Auth '%q' tune configuration changed", path)
+		if raw, ok := d.GetOk(consts.FieldTune); ok {
+			log.Printf("[DEBUG] Writing Okta auth tune to '%q'", path)
+
+			err := authMountTune(ctx, client, "auth/"+path, raw)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+
+			log.Printf("[INFO] Written Okta auth tune to '%q'", path)
 		}
 	}
 

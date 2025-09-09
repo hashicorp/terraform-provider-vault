@@ -6,12 +6,16 @@ package vault
 import (
 	"context"
 	"fmt"
+
+	// "regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -219,6 +223,90 @@ func TestAccOktaAuthBackend_TokenFields(t *testing.T) {
 	})
 }
 
+func TestAccOktaAuthBackend_tuning(t *testing.T) {
+	t.Parallel()
+	testutil.SkipTestAcc(t)
+
+	organization := "example"
+	path := acctest.RandomWithPrefix("okta-tune-")
+	resourceType := "vault_okta_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOktaAuthConfig_tune_partial(path, organization),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.0", "key3"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+				),
+			},
+			{
+				Config: testAccOktaAuthConfig_tune_full(path, organization),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "10m"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "20m"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "batch"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.1", "key2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.0", "key3"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.1", "key4"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccOktaAuthBackend_importTune(t *testing.T) {
+	t.Parallel()
+	testutil.SkipTestAcc(t)
+
+	organization := "example"
+	path := acctest.RandomWithPrefix("okta-import-tune-")
+	resourceType := "vault_okta_auth_backend"
+	resourceName := resourceType + ".test"
+
+	var resAuth api.AuthMount
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOktaAuthConfig_tune_full(path, organization),
+				Check: testutil.TestAccCheckAuthMountExists(resourceName,
+					&resAuth,
+					testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldToken, consts.FieldDisableRemount),
+		},
+	})
+}
+
 func testAccOktaAuthConfig_basic(path string, organization string) string {
 	return fmt.Sprintf(`
 resource "vault_okta_auth_backend" "test" {
@@ -281,6 +369,44 @@ resource "vault_okta_auth_backend" "test" {
     token_ttl      = 300
     token_max_ttl  = 600
     token_policies = ["policy_a", "policy_b"]
+}
+`, path, organization)
+}
+
+func testAccOktaAuthConfig_tune_partial(path string, organization string) string {
+	return fmt.Sprintf(`
+resource "vault_okta_auth_backend" "test" {
+	description = "Testing the Terraform okta auth backend"
+	path = "%s"
+	organization = "%s"
+	token = "this must be kept secret"
+	tune {
+		audit_non_hmac_request_keys = ["key1"]
+		audit_non_hmac_response_keys = ["key3"]
+		passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To"]
+		allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To"]
+	}
+}
+`, path, organization)
+}
+
+func testAccOktaAuthConfig_tune_full(path string, organization string) string {
+	return fmt.Sprintf(`
+resource "vault_okta_auth_backend" "test" {
+	description = "Testing the Terraform okta auth backend"
+	path = "%s"
+	organization = "%s"
+	token = "this must be kept secret"
+	tune {
+		default_lease_ttl = "10m"
+		max_lease_ttl = "20m"
+		listing_visibility = "hidden"
+		token_type = "batch"
+		audit_non_hmac_request_keys = ["key1", "key2"]
+		audit_non_hmac_response_keys = ["key3", "key4"]
+		passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To"]
+		allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To"]
+	}
 }
 `, path, organization)
 }
