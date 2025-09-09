@@ -17,38 +17,43 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
+func expandAuthMethodTune(raw interface{}) (api.MountConfigInput, error) {
 	data := api.MountConfigInput{}
-	if len(rawL) == 0 {
-		return data
+	rawL, ok := raw.([]interface{})
+	if !ok {
+		return data, fmt.Errorf("error type asserting tune block: expected []interface{}, got %T", raw)
 	}
-	raw := rawL[0].(map[string]interface{})
 
-	if v, ok := raw[consts.FieldDefaultLeaseTTL]; ok {
+	if len(rawL) == 0 {
+		return data, nil
+	}
+	config := rawL[0].(map[string]interface{})
+
+	if v, ok := config[consts.FieldDefaultLeaseTTL]; ok {
 		data.DefaultLeaseTTL = v.(string)
 	}
-	if v, ok := raw[consts.FieldMaxLeaseTTL]; ok {
+	if v, ok := config[consts.FieldMaxLeaseTTL]; ok {
 		data.MaxLeaseTTL = v.(string)
 	}
-	if v, ok := raw[consts.FieldAuditNonHMACRequestKeys]; ok {
+	if v, ok := config[consts.FieldAuditNonHMACRequestKeys]; ok {
 		data.AuditNonHMACRequestKeys = expandStringSliceWithEmpty(v.([]interface{}), true)
 	}
-	if v, ok := raw[consts.FieldAuditNonHMACResponseKeys]; ok {
+	if v, ok := config[consts.FieldAuditNonHMACResponseKeys]; ok {
 		data.AuditNonHMACResponseKeys = expandStringSliceWithEmpty(v.([]interface{}), true)
 	}
-	if v, ok := raw[consts.FieldListingVisibility]; ok {
+	if v, ok := config[consts.FieldListingVisibility]; ok {
 		data.ListingVisibility = v.(string)
 	}
-	if v, ok := raw[consts.FieldPassthroughRequestHeaders]; ok {
+	if v, ok := config[consts.FieldPassthroughRequestHeaders]; ok {
 		data.PassthroughRequestHeaders = expandStringSliceWithEmpty(v.([]interface{}), true)
 	}
-	if v, ok := raw[consts.FieldAllowedResponseHeaders]; ok {
+	if v, ok := config[consts.FieldAllowedResponseHeaders]; ok {
 		data.AllowedResponseHeaders = expandStringSliceWithEmpty(v.([]interface{}), true)
 	}
-	if v, ok := raw[consts.FieldTokenType]; ok {
+	if v, ok := config[consts.FieldTokenType]; ok {
 		data.TokenType = v.(string)
 	}
-	return data
+	return data, nil
 }
 
 func flattenAuthMethodTune(dt *api.MountConfigOutput) map[string]interface{} {
@@ -83,12 +88,16 @@ func retrieveMountConfigInput(d *schema.ResourceData) (*api.MountConfigInput, er
 		return nil, nil
 	}
 
-	tuneSchemaSet, ok := tune.(*schema.Set)
+	tuneL, ok := tune.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("error type asserting tune block: expected schema.Set, got %T", d.Get("tune"))
+		return nil, fmt.Errorf("error type asserting tune block: expected []interface{}, got %T", tune)
 	}
 
-	input := expandAuthMethodTune(tuneSchemaSet.List())
+	input, err := expandAuthMethodTune(tuneL)
+	if err != nil {
+		return nil, err
+	}
+
 	return &input, nil
 }
 

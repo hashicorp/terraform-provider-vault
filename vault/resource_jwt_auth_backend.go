@@ -432,7 +432,7 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 
 			err := authMountTune(ctx, client, "auth/"+path, raw)
 			if err != nil {
-				return nil
+				return diag.FromErr(err)
 			}
 
 			log.Printf("[INFO] Written %s auth tune to %q", backendType, path)

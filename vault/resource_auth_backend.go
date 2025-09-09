@@ -214,13 +214,16 @@ func authBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	backendType := d.Get(consts.FieldType).(string)
 	var config api.MountConfigInput
 	var callTune bool
+	var err error
 
 	if d.HasChange(consts.FieldTune) {
 		log.Printf("[INFO] Auth '%q' tune configuration changed", path)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
-			config = expandAuthMethodTune(raw.(*schema.Set).List())
+			if config, err = expandAuthMethodTune(raw); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 		callTune = true
 	}

@@ -23,7 +23,10 @@ func TestExpandAuthMethodTune(t *testing.T) {
 			"token_type":                  "default-batch",
 		},
 	}
-	actual := expandAuthMethodTune(flattened)
+	actual, err := expandAuthMethodTune(flattened)
+	if err != nil {
+		t.Fatalf("error expanding auth method tune: %s", err)
+	}
 	expected := api.MountConfigInput{
 		DefaultLeaseTTL:           "10m",
 		MaxLeaseTTL:               "20m",
