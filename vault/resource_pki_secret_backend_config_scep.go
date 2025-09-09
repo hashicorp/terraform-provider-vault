@@ -145,7 +145,7 @@ func pkiSecretBackendConfigScepWrite(ctx context.Context, d *schema.ResourceData
 			if fieldSchema.Type == schema.TypeBool {
 				data[field] = d.Get(field)
 			} else {
-				if value, ok := d.GetOk(field); ok {
+				if value, ok := d.GetOkExists(field); ok {
 					data[field] = value
 				}
 			}
