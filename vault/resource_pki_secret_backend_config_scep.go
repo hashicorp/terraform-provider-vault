@@ -133,7 +133,7 @@ func pkiSecretBackendConfigScepWrite(ctx context.Context, d *schema.ResourceData
 	path := pkiSecretBackendConfigScepPath(backend)
 
 	data := map[string]interface{}{}
-	for field, _ := range pkiSecretBackendConfigScepResourceSchema {
+	for field := range pkiSecretBackendConfigScepResourceSchema {
 		switch field {
 		case consts.FieldBackend, consts.FieldLastUpdated, consts.FieldNamespace:
 			continue
