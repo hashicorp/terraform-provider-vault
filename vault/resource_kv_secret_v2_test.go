@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -309,6 +310,32 @@ func TestAccKVSecretV2_WriteOnlyMigration(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "data_json", ""),
 				),
+			},
+		},
+	})
+}
+
+// Test for missing data_json and data_json_wo
+func TestAccKVSecretV2_MissingDataJson(t *testing.T) {
+	t.Parallel()
+	mount := acctest.RandomWithPrefix("tf-kv")
+	name := acctest.RandomWithPrefix("foo")
+
+	config := fmt.Sprintf(`
+%s
+resource "vault_kv_secret_v2" "test" {
+  mount = vault_mount.kvv2.path
+  name  = "%s"
+}
+`, kvV2MountConfig(mount), name)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(`(?i)(exactly one of|must be specified)`),
 			},
 		},
 	})
