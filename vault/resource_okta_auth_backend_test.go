@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	// "regexp"
 	"testing"
@@ -303,6 +304,61 @@ func TestAccOktaAuthBackend_importTune(t *testing.T) {
 					testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldToken, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func TestAccOktaAuthBackend_tune_conflicts(t *testing.T) {
+	t.Parallel()
+
+	path := acctest.RandomWithPrefix("okta")
+	organization := "example"
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_okta_auth_backend" "test" {
+					path = "%s"
+					organization = "%s"
+					token_ttl = 3600
+					tune {
+						default_lease_ttl = "10m"
+					}
+				}
+				`, path, organization),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+			},
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_okta_auth_backend" "test" {
+					path = "%s"
+					organization = "%s"
+					token_max_ttl = 3600
+					tune {
+						max_lease_ttl = "20m"
+					}
+				}
+				`, path, organization),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+			},
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_okta_auth_backend" "test" {
+					path = "%s"
+					organization = "%s"
+					token_type = "batch"
+					tune {
+						token_type = "service"
+					}
+				}
+				`, path, organization),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+			},
 		},
 	})
 }
