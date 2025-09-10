@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -98,7 +99,7 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 	})
 }
 
-func TestTerraformCloudSecretBackend_token_wo(t *testing.T) {
+func TestTerraformCloudSecretBackend_tokenWO(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	token := os.Getenv("TEST_TF_TOKEN")
 
@@ -111,23 +112,37 @@ func TestTerraformCloudSecretBackend_token_wo(t *testing.T) {
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
-				Config: testTerraformCloudSecretBackend_token_wo_initialConfig(backend, token),
+				Config: testTerraformCloudSecretBackend_tokenWoInitialConfig(backend, token),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "address", "https://app.terraform.io"),
 					resource.TestCheckResourceAttr(resourceName, "token_wo_version", "1"),
+					resource.TestCheckResourceAttr(resourceName, "base_path", "/api/v2/"),
 				),
 			},
 			{
-				Config: testTerraformCloudSecretBackend_token_wo_updateConfig(backend, token),
+				Config: testTerraformCloudSecretBackend_tokenWoUpdatedConfig(backend, token, 2),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "token_wo_version", "2"),
 				),
 			},
+			// This test case is to test the validation logic of token_wo and token_wo_version
+			// We expect an error because token_wo is missing, it requires specific error because of the
+			// RequiredWith setting in the schema
+			{
+				Config:      testTerraformCloudSecretBackend_tokenWoNoVersion(backend, 3),
+				ExpectError: regexp.MustCompile(`all of.*token_wo,token_wo_version.*must be specified`),
+			},
+			// This test case is to test the validation logic of token_wo and token_wo_version when token_wo is ""
+			// where we expect an error
+			{
+				Config:      testTerraformCloudSecretBackend_tokenWoEmptyString(backend, 4),
+				ExpectError: regexp.MustCompile(`token_wo must be provided`),
+			},
 		},
 	})
 }
-
 func testTerraformCloudSecretBackend_initialConfig(path, token string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
@@ -150,7 +165,7 @@ resource "vault_terraform_cloud_secret_backend" "test" {
 }`, path, token)
 }
 
-func testTerraformCloudSecretBackend_token_wo_initialConfig(path, token string) string {
+func testTerraformCloudSecretBackend_tokenWoInitialConfig(path, token string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
   backend = "%s"
@@ -159,11 +174,28 @@ resource "vault_terraform_cloud_secret_backend" "test" {
 }`, path, token)
 }
 
-func testTerraformCloudSecretBackend_token_wo_updateConfig(path, token string) string {
+func testTerraformCloudSecretBackend_tokenWoUpdatedConfig(path, token string, version int) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
-  backend = "%s"
-  token_wo = "%s"
-  token_wo_version = 2
-}`, path, token)
+  backend           = "%s"
+  token_wo          = "%s"
+  token_wo_version  = %d
+}`, path, token, version)
+}
+
+func testTerraformCloudSecretBackend_tokenWoNoVersion(path string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend           = "%s"
+  token_wo_version  = %d
+}`, path, version)
+}
+
+func testTerraformCloudSecretBackend_tokenWoEmptyString(path string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend           = "%s"
+  token_wo          = ""
+  token_wo_version  = %d
+}`, path, version)
 }
