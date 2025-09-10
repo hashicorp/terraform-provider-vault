@@ -112,23 +112,20 @@ func terraformCloudSecretRoleWrite(d *schema.ResourceData, meta interface{}) err
 
 	payload := map[string]interface{}{}
 
-	if v, ok := d.GetOk("max_ttl"); ok {
+	if v, ok := d.GetOkExists("max_ttl"); ok {
 		payload["max_ttl"] = v
 	}
-	if v, ok := d.GetOk("ttl"); ok {
+	if v, ok := d.GetOkExists("ttl"); ok {
 		payload["ttl"] = v
 	}
-	if v, ok := d.GetOk("organization"); ok {
+	if v, ok := d.GetOkExists("organization"); ok {
 		payload["organization"] = v
 	}
-	if v, ok := d.GetOk("team_id"); ok {
+	if v, ok := d.GetOkExists("team_id"); ok {
 		payload["team_id"] = v
 	}
-	if v, ok := d.GetOk("user_id"); ok {
+	if v, ok := d.GetOkExists("user_id"); ok {
 		payload["user_id"] = v
-	}
-	if v, ok := d.GetOk("credential_type"); ok {
-		payload["credential_type"] = v
 	}
 	if v, ok := d.GetOk("description"); ok {
 		payload["description"] = v
