@@ -133,7 +133,7 @@ func pkiSecretBackendConfigScepWrite(ctx context.Context, d *schema.ResourceData
 	path := pkiSecretBackendConfigScepPath(backend)
 
 	data := map[string]interface{}{}
-	for field, fieldSchema := range pkiSecretBackendConfigScepResourceSchema {
+	for field, _ := range pkiSecretBackendConfigScepResourceSchema {
 		switch field {
 		case consts.FieldBackend, consts.FieldLastUpdated, consts.FieldNamespace:
 			continue
@@ -142,12 +142,8 @@ func pkiSecretBackendConfigScepWrite(ctx context.Context, d *schema.ResourceData
 				data[field] = value
 			}
 		default:
-			if fieldSchema.Type == schema.TypeBool {
-				data[field] = d.Get(field)
-			} else {
-				if value, ok := d.GetOkExists(field); ok {
-					data[field] = value
-				}
+			if value, ok := d.GetOkExists(field); ok {
+				data[field] = value
 			}
 		}
 	}
