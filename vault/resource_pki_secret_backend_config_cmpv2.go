@@ -104,7 +104,7 @@ func pkiSecretBackendConfigCMPV2Write(ctx context.Context, d *schema.ResourceDat
 	path := pkiSecretBackendConfigCMPV2Path(backend)
 
 	data := map[string]interface{}{}
-	for field, fieldSchema := range pkiSecretBackendConfigCMPV2Resource().Schema {
+	for field, _ := range pkiSecretBackendConfigCMPV2Resource().Schema {
 		switch field {
 		case consts.FieldBackend, consts.FieldLastUpdated, consts.FieldNamespace:
 			continue
@@ -112,14 +112,9 @@ func pkiSecretBackendConfigCMPV2Write(ctx context.Context, d *schema.ResourceDat
 			if value, ok := getListOfNotEmptyMaps(d, field); ok {
 				data[field] = value
 			}
-		default: //	consts.FieldEnabled, consts.FieldDefaultPathPolicy, consts.FieldEnableSentinelParsing,
-			// consts.FieldAuditFields, consts.FieldDisabledValidations,
-			if fieldSchema.Type == schema.TypeBool {
-				data[field] = d.Get(field)
-			} else {
-				if value, ok := d.GetOkExists(field); ok {
-					data[field] = value
-				}
+		default:
+			if value, ok := d.GetOkExists(field); ok {
+				data[field] = value
 			}
 		}
 	}
