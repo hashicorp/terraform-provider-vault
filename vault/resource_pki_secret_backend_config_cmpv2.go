@@ -104,7 +104,7 @@ func pkiSecretBackendConfigCMPV2Write(ctx context.Context, d *schema.ResourceDat
 	path := pkiSecretBackendConfigCMPV2Path(backend)
 
 	data := map[string]interface{}{}
-	for field, _ := range pkiSecretBackendConfigCMPV2Resource().Schema {
+	for field := range pkiSecretBackendConfigCMPV2Resource().Schema {
 		switch field {
 		case consts.FieldBackend, consts.FieldLastUpdated, consts.FieldNamespace:
 			continue
