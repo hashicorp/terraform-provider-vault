@@ -217,7 +217,7 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
  role             = "%[6]s-azure-roles"
  ttl              = 300
  max_ttl          = 600
- explicit_max_ttl = 0
+ explicit_max_ttl = null
  description	  = "Test for Vault Provider"
  sign_in_audience = "AzureADMyOrg"
  tags             = ["team:engineering"]
