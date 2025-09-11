@@ -24,7 +24,6 @@ IMPROVEMENTS:
 BUGS:
 
 * Fix `azure_secret_backend_role` to prevent persistent diff for null value on `max_ttl` and  `explicit_max_ttl` argument ([#2581](https://github.com/hashicorp/terraform-provider-vault/pull/2581))
-* Fix pki config resources to allow unsetting of fields (to empty fields) ([#2558](https://github.com/hashicorp/terraform-provider-vault/pull/2558))
 
 ## 5.2.1 (Aug 19, 2025)
 
