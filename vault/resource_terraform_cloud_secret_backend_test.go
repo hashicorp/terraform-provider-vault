@@ -132,10 +132,6 @@ func TestTerraformCloudSecretBackend_tokenWO(t *testing.T) {
 			{
 				Config:      testTerraformCloudSecretBackend_tokenWoNoVersion(backend, 3),
 				ExpectError: regexp.MustCompile(`all of.*token_wo,token_wo_version.*must be specified`),
-			},
-			// This test case is to test the validation logic of token_wo and token_wo_version when token_wo is ""
-			// where we expect an error
-			{
 				Config:      testTerraformCloudSecretBackend_tokenWoEmptyString(backend, 4),
 				ExpectError: regexp.MustCompile(`token_wo must be provided`),
 			},
