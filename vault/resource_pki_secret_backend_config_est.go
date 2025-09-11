@@ -108,30 +108,21 @@ func pkiSecretBackendConfigEstWrite(ctx context.Context, d *schema.ResourceData,
 	backend := d.Get(consts.FieldBackend).(string)
 	path := pkiSecretBackendConfigEstPath(backend)
 
-	fieldsToSet := []string{
-		consts.FieldEnabled,
-		consts.FieldDefaultMount,
-		consts.FieldDefaultPathPolicy,
-		consts.FieldLabelToPathPolicy,
-		consts.FieldEnableSentinelParsing,
-		consts.FieldAuditFields,
-	}
-
 	data := map[string]interface{}{}
-	for _, field := range fieldsToSet {
-		if val, ok := d.GetOk(field); ok {
-			data[field] = val
+	for field := range pkiSecretBackendConfigEstResource().Schema {
+		switch field {
+		case consts.FieldBackend, consts.FieldLastUpdated, consts.FieldNamespace:
+			continue
+		case consts.FieldAuthenticators:
+			if value, ok := getListOfNotEmptyMaps(d, field); ok {
+				data[field] = value
+			}
+		default: // consts.FieldEnabled, consts.FieldDefaultMount, consts.FieldDefaultPathPolicy,
+			// consts.FieldLabelToPathPolicy, consts.FieldEnableSentinelParsing, consts.FieldAuditFields,
+			if value, ok := d.GetOkExists(field); ok {
+				data[field] = value
+			}
 		}
-	}
-
-	if authenticatorsRaw, ok := d.GetOk(consts.FieldAuthenticators); ok {
-		authenticators := authenticatorsRaw.([]interface{})
-		var authenticator interface{}
-		if len(authenticators) > 0 {
-			authenticator = authenticators[0]
-		}
-
-		data[consts.FieldAuthenticators] = authenticator
 	}
 
 	log.Printf("[DEBUG] Updating EST config on PKI secret backend %q:\n%v", backend, data)
