@@ -126,12 +126,11 @@ func TestTerraformCloudSecretBackend_tokenWO(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "token_wo_version", "2"),
 				),
 			},
-			// This test case is to test the validation logic of token_wo and token_wo_version
-			// We expect an error because token_wo is missing, it requires specific error because of the
-			// RequiredWith setting in the schema
 			{
 				Config:      testTerraformCloudSecretBackend_tokenWoNoVersion(backend, 3),
 				ExpectError: regexp.MustCompile(`all of.*token_wo,token_wo_version.*must be specified`),
+			},
+			{
 				Config:      testTerraformCloudSecretBackend_tokenWoEmptyString(backend, 4),
 				ExpectError: regexp.MustCompile(`token_wo must be provided`),
 			},
