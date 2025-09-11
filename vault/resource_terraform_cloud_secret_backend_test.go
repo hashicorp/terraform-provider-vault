@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"testing"
 
@@ -19,10 +18,10 @@ import (
 
 func TestTerraformCloudSecretBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
-	token := os.Getenv("TEST_TF_TOKEN")
 
 	resourceType := "vault_terraform_cloud_secret_backend"
 	resourceName := resourceType + ".test"
+	token := "randomized-token-12392183123"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -101,10 +100,10 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 
 func TestTerraformCloudSecretBackend_tokenWO(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
-	token := os.Getenv("TEST_TF_TOKEN")
 
 	resourceType := "vault_terraform_cloud_secret_backend"
 	resourceName := resourceType + ".test"
+	token := "randomized-token-12392183123"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),

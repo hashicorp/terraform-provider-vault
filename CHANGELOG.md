@@ -1,9 +1,10 @@
 ## Unreleased
 
-* New parameters for `vault_terraform_cloud_secret_role` to support multi-team tokens, by @drewmullen ([#2498](https://github.com/hashicorp/terraform-provider-vault/pull/2498))
 FEATURES:
+
 * Add support for write-only token argument in vault_terraform_cloud_secret_backend resource ([#2603](https://github.com/hashicorp/terraform-provider-vault/pull/2603))
 
+* New parameters for `vault_terraform_cloud_secret_role` to support multi-team tokens, by @drewmullen ([#2498](https://github.com/hashicorp/terraform-provider-vault/pull/2498))
 
 ## 5.3.0 (Sep 4, 2025)
 
