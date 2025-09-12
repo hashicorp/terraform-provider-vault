@@ -187,15 +187,15 @@ func samlAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	d.SetId(path)
 
 	if d.HasChange(consts.FieldTune) {
-		log.Printf("[INFO] SAML Auth '%q' tune configuration changed", d.Id())
+		log.Printf("[DEBUG] SAML Auth '%q' tune configuration changed", path)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing SAML auth tune to '%q'", path)
-			config := expandAuthMethodTune(raw.(*schema.Set).List())
-			err := tuneMount(ctx, client, "auth/"+path, config)
-			if err != nil {
+
+			if err := authMountTune(ctx, client, "auth/"+path, raw); err != nil {
 				return diag.FromErr(err)
 			}
-			log.Printf("[INFO] Written SAML auth tune to '%q'", path)
+
+			log.Printf("[DEBUG] Written SAML auth tune to '%q'", path)
 		}
 	}
 
@@ -248,7 +248,7 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 
 	mergedTune := mergeAuthMethodTune(rawTune, input)
 
-	if err := d.Set(consts.FieldTune, []map[string]interface{}{mergedTune}); err != nil {
+	if err := d.Set(consts.FieldTune, mergedTune); err != nil {
 		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", id+"/tune", err)
 		return diag.FromErr(err)
 	}

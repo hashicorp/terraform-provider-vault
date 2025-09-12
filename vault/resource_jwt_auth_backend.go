@@ -347,7 +347,7 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 
 	mergedTune := mergeAuthMethodTune(rawTune, input)
 
-	if err := d.Set("tune", []map[string]interface{}{mergedTune}); err != nil {
+	if err := d.Set("tune", mergedTune); err != nil {
 		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
 		return diag.FromErr(err)
 	}
@@ -425,17 +425,17 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	if d.HasChange("tune") {
-		log.Printf("[INFO] JWT/OIDC Auth '%q' tune configuration changed", d.Id())
+		log.Printf("[DEBUG] JWT/OIDC Auth '%q' tune configuration changed", d.Id())
 		if raw, ok := d.GetOk("tune"); ok {
 			backendType := d.Get("type")
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
 			err := authMountTune(ctx, client, "auth/"+path, raw)
 			if err != nil {
-				return nil
+				return diag.FromErr(err)
 			}
 
-			log.Printf("[INFO] Written %s auth tune to %q", backendType, path)
+			log.Printf("[DEBUG] Written %s auth tune to %q", backendType, path)
 		}
 	}
 

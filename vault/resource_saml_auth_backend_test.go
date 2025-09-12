@@ -112,6 +112,7 @@ func TestAccSAMLAuthBackend_tune(t *testing.T) {
 			{
 				Config: testAccSAMLAuthBackendConfig_tuning(path),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "2m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "5m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "unauth"),
@@ -133,6 +134,7 @@ func TestAccSAMLAuthBackend_tune(t *testing.T) {
 			{
 				Config: testAccSAMLAuthBackendConfig_tuneUpdated(path),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "3m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "6m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),

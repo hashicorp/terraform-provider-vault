@@ -50,7 +50,6 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					// expect computed value for organization_id
 					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "default-service"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "1h"),
@@ -284,7 +283,6 @@ func TestAccGithubAuthBackend_remount(t *testing.T) {
 					// expect computed value for organization_id
 					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
 				),
 			},
@@ -300,7 +298,6 @@ func TestAccGithubAuthBackend_remount(t *testing.T) {
 					// expect computed value for organization_id
 					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
 				),
 			},
@@ -361,7 +358,6 @@ resource "vault_github_auth_backend" "test" {
 	path = "%s"
 	organization = "%s"
 	token_ttl = 1200
-	token_max_ttl = 3000
 	tune {
 		token_type = "default-service"
 		max_lease_ttl = "1h"

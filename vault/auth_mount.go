@@ -5,20 +5,21 @@ package vault
 
 import (
 	"context"
-
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/hashicorp/vault/api"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/vault/api"
 )
 
 func authMountTuneSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:       schema.TypeSet,
+		Type:       schema.TypeList,
 		Optional:   true,
 		Computed:   true,
 		MaxItems:   1,
@@ -79,7 +80,15 @@ func authMountTuneSchema() *schema.Schema {
 }
 
 func authMountTune(ctx context.Context, client *api.Client, path string, configured interface{}) error {
-	input := expandAuthMethodTune(configured.(*schema.Set).List())
+	configuredList, ok := configured.([]interface{})
+	if !ok {
+		return fmt.Errorf("error type asserting tune block: expected []interface{}, got %T", configured)
+	}
+
+	input, err := expandAuthMethodTune(configuredList)
+	if err != nil {
+		return fmt.Errorf("error expanding tune block %q: %s", path, err)
+	}
 
 	return tuneMount(ctx, client, path, input)
 }

@@ -74,6 +74,7 @@ func TestAccOCIAuthBackendConfig_tuning(t *testing.T) {
 			{
 				Config: testAccOCIAuthBackendConfig_tune_partial(path),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", ""),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", ""),
@@ -93,6 +94,7 @@ func TestAccOCIAuthBackendConfig_tuning(t *testing.T) {
 			{
 				Config: testAccOCIAuthBackendConfig_tune_full(path),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "10m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "20m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),
