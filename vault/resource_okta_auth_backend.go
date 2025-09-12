@@ -433,16 +433,15 @@ func oktaAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	}
 
 	if d.HasChange(consts.FieldTune) {
-		log.Printf("[INFO] Okta Auth '%q' tune configuration changed", path)
+		log.Printf("[DEBUG] Okta Auth '%q' tune configuration changed", path)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing Okta auth tune to '%q'", path)
 
-			err := authMountTune(ctx, client, "auth/"+path, raw)
-			if err != nil {
+			if err := authMountTune(ctx, client, "auth/"+path, raw); err != nil {
 				return diag.FromErr(err)
 			}
 
-			log.Printf("[INFO] Written Okta auth tune to '%q'", path)
+			log.Printf("[DEBUG] Written Okta auth tune to '%q'", path)
 		}
 	}
 

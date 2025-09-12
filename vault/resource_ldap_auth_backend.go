@@ -332,16 +332,15 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	log.Printf("[DEBUG] Wrote LDAP config %q", path)
 
 	if d.HasChange(consts.FieldTune) {
-		log.Printf("[INFO] LDAP Auth '%q' tune configuration changed", d.Id())
+		log.Printf("[DEBUG] LDAP Auth '%q' tune configuration changed", d.Id())
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing LDAP auth tune to '%q'", d.Id())
 
-			err := authMountTune(ctx, client, "auth/"+d.Id(), raw)
-			if err != nil {
+			if err := authMountTune(ctx, client, "auth/"+d.Id(), raw); err != nil {
 				return diag.FromErr(err)
 			}
 
-			log.Printf("[INFO] Written LDAP auth tune to '%q'", d.Id())
+			log.Printf("[DEBUG] Written LDAP auth tune to '%q'", d.Id())
 		}
 	}
 	return ldapAuthBackendRead(ctx, d, meta)

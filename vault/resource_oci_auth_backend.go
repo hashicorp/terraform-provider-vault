@@ -124,13 +124,15 @@ func ociAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	data[consts.FieldOCIHomeTenancyID] = d.Get(consts.FieldOCIHomeTenancyID)
 
 	if d.HasChange(consts.FieldTune) {
-		log.Printf("[INFO] %s Auth %q tune configuration changed", consts.AuthMethodOCI, ociAuthPath)
+		log.Printf("[DEBUG] %s Auth %q tune configuration changed", consts.AuthMethodOCI, ociAuthPath)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing %s auth tune to %q", consts.AuthMethodOCI, ociAuthPath)
-			err := authMountTune(ctx, client, ociAuthPath, raw)
-			if err != nil {
+
+			if err := authMountTune(ctx, client, ociAuthPath, raw); err != nil {
 				return nil
 			}
+
+			log.Printf("[DEBUG] Written %s auth tune to '%q'", consts.AuthMethodOCI, ociAuthPath)
 		}
 	}
 

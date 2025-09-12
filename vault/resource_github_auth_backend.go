@@ -145,16 +145,15 @@ func githubAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta i
 	log.Printf("[INFO] Github auth config successfully written to '%q'", configPath)
 
 	if d.HasChange("tune") {
-		log.Printf("[INFO] Github Auth '%q' tune configuration changed", d.Id())
+		log.Printf("[DEBUG] Github Auth '%q' tune configuration changed", d.Id())
 		if raw, ok := d.GetOk("tune"); ok {
 			log.Printf("[DEBUG] Writing github auth tune to '%q'", path)
 
-			err := authMountTune(ctx, client, path, raw)
-			if err != nil {
+			if err := authMountTune(ctx, client, path, raw); err != nil {
 				return nil
 			}
 
-			log.Printf("[INFO] Written github auth tune to '%q'", path)
+			log.Printf("[DEBUG] Written github auth tune to '%q'", path)
 		}
 	}
 

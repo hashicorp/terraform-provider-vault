@@ -217,7 +217,7 @@ func authBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	var err error
 
 	if d.HasChange(consts.FieldTune) {
-		log.Printf("[INFO] Auth '%q' tune configuration changed", path)
+		log.Printf("[DEBUG] Auth '%q' tune configuration changed", path)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
@@ -245,7 +245,7 @@ func authBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 			return diag.FromErr(e)
 		}
 
-		log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
+		log.Printf("[DEBUG] Written %s auth tune to '%q'", backendType, path)
 	}
 
 	return authBackendRead(ctx, d, meta)

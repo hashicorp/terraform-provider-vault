@@ -425,7 +425,7 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	if d.HasChange("tune") {
-		log.Printf("[INFO] JWT/OIDC Auth '%q' tune configuration changed", d.Id())
+		log.Printf("[DEBUG] JWT/OIDC Auth '%q' tune configuration changed", d.Id())
 		if raw, ok := d.GetOk("tune"); ok {
 			backendType := d.Get("type")
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
@@ -435,7 +435,7 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 				return diag.FromErr(err)
 			}
 
-			log.Printf("[INFO] Written %s auth tune to %q", backendType, path)
+			log.Printf("[DEBUG] Written %s auth tune to %q", backendType, path)
 		}
 	}
 

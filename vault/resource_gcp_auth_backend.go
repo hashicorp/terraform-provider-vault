@@ -285,13 +285,15 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	if d.HasChange(consts.FieldTune) {
-		log.Printf("[INFO] %s Auth %q tune configuration changed", gcpAuthType, gcpAuthPath)
+		log.Printf("[DEBUG] %s Auth %q tune configuration changed", gcpAuthType, gcpAuthPath)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing %s auth tune to %q", gcpAuthType, gcpAuthPath)
-			err := authMountTune(ctx, client, gcpAuthPath, raw)
-			if err != nil {
+
+			if err := authMountTune(ctx, client, gcpAuthPath, raw); err != nil {
 				return nil
 			}
+
+			log.Printf("[DEBUG] Written %s auth tune to '%q'", gcpAuthType, gcpAuthPath)
 		}
 	}
 

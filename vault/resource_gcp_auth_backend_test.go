@@ -73,6 +73,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.compute", "compute.googleapis.com"),
 					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "10m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "20m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),
@@ -110,6 +111,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "example.com:9200"),
 					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.compute", "compute.example.com"),
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "50m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "1h10m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "unauth"),
@@ -291,6 +293,7 @@ func TestAccGCPAuthBackend_tuning(t *testing.T) {
 				Config: testGCPAuthBackendConfig_tune_full(path, gcpJSONCredentials, description),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testGCPAuthBackendCheck_attrs(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "10m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "20m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),

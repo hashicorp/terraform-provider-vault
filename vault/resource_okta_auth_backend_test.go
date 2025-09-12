@@ -241,6 +241,7 @@ func TestAccOktaAuthBackend_tuning(t *testing.T) {
 			{
 				Config: testAccOktaAuthConfig_tune_partial(path, organization),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", ""),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", ""),
@@ -260,6 +261,7 @@ func TestAccOktaAuthBackend_tuning(t *testing.T) {
 			{
 				Config: testAccOktaAuthConfig_tune_full(path, organization),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "10m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "20m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),

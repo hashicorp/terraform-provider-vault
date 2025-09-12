@@ -187,16 +187,15 @@ func samlAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	d.SetId(path)
 
 	if d.HasChange(consts.FieldTune) {
-		log.Printf("[INFO] SAML Auth '%q' tune configuration changed", path)
+		log.Printf("[DEBUG] SAML Auth '%q' tune configuration changed", path)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing SAML auth tune to '%q'", path)
 
-			err := authMountTune(ctx, client, "auth/"+path, raw)
-			if err != nil {
+			if err := authMountTune(ctx, client, "auth/"+path, raw); err != nil {
 				return diag.FromErr(err)
 			}
 
-			log.Printf("[INFO] Written SAML auth tune to '%q'", path)
+			log.Printf("[DEBUG] Written SAML auth tune to '%q'", path)
 		}
 	}
 

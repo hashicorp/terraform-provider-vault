@@ -57,7 +57,7 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		config.TokenTypeDefault = "default"
 	}
 
-	if fields[consts.FieldTune] != nil {
+	if _, ok := fields[consts.FieldTune]; ok {
 		config.TokenMaxTTLConflict = append(
 			config.TokenMaxTTLConflict,
 			fmt.Sprintf("%s.0.%s", consts.FieldTune, consts.FieldMaxLeaseTTL),
