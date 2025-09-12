@@ -350,7 +350,7 @@ func oktaAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 	mergedTune := mergeAuthMethodTune(rawTune, input)
-	if err := d.Set(consts.FieldTune, []map[string]interface{}{mergedTune}); err != nil {
+	if err := d.Set(consts.FieldTune, mergedTune); err != nil {
 		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
 		return diag.FromErr(err)
 	}

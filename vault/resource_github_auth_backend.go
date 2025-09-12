@@ -225,7 +225,7 @@ func githubAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta int
 	data["base_url"] = resp.Data["base_url"]
 	data["description"] = mount.Description
 	data["accessor"] = mount.Accessor
-	data["tune"] = []map[string]interface{}{mergedTune}
+	data["tune"] = mergedTune
 
 	if orgID, ok := resp.Data["organization_id"]; ok {
 		data["organization_id"] = orgID

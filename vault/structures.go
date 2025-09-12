@@ -107,16 +107,21 @@ func retrieveMountConfigInput(d *schema.ResourceData) (*api.MountConfigInput, er
 // when the user did not provide a value even if the Vault API response returns non-empty.
 // This is to ensure the tune block reflects the user provided values.
 // See more details in the https://github.com/hashicorp/terraform-provider-vault/issues/2234
-func mergeAuthMethodTune(rawTune map[string]interface{}, input *api.MountConfigInput) map[string]interface{} {
+func mergeAuthMethodTune(rawTune map[string]interface{}, input *api.MountConfigInput) []map[string]interface{} {
+	mergedRawTune := make(map[string]interface{})
+	for k, v := range rawTune {
+		mergedRawTune[k] = v
+	}
+
 	// Merge the fields that have the global default effect
 	// github.com/hashicorp/terraform-provider-vault/vault/auth_mount.go
 	// If the input is nil
 	if input != nil {
 		if input.TokenType == "" {
-			rawTune[consts.FieldTokenType] = ""
+			mergedRawTune[consts.FieldTokenType] = ""
 		}
 		if input.ListingVisibility == "" {
-			rawTune[consts.FieldListingVisibility] = ""
+			mergedRawTune[consts.FieldListingVisibility] = ""
 		}
 
 		// Some tune API GET responses may convert *TTL fields of string
@@ -124,11 +129,11 @@ func mergeAuthMethodTune(rawTune map[string]interface{}, input *api.MountConfigI
 		// is the user provided value, will be converted to "3m20s".
 		//
 		// The merged takes the user provided value
-		rawTune[consts.FieldDefaultLeaseTTL] = input.DefaultLeaseTTL
-		rawTune[consts.FieldMaxLeaseTTL] = input.MaxLeaseTTL
+		mergedRawTune[consts.FieldDefaultLeaseTTL] = input.DefaultLeaseTTL
+		mergedRawTune[consts.FieldMaxLeaseTTL] = input.MaxLeaseTTL
 	}
 
-	return rawTune
+	return []map[string]interface{}{mergedRawTune}
 }
 
 func expandStringSlice(configured []interface{}) []string {

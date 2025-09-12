@@ -85,7 +85,7 @@ func TestMergeAuthMethodTune(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     args
-		expected map[string]interface{}
+		expected []map[string]interface{}
 	}{
 		{
 			name: "Nil input makes merged equal to rawTune. Equivalent to the state import",
@@ -99,11 +99,13 @@ func TestMergeAuthMethodTune(t *testing.T) {
 				},
 				input: nil,
 			},
-			expected: map[string]interface{}{
-				consts.FieldDefaultLeaseTTL:   "768h",
-				consts.FieldMaxLeaseTTL:       "768h",
-				consts.FieldListingVisibility: "hidden",
-				consts.FieldTokenType:         "default-service",
+			expected: []map[string]interface{}{
+				{
+					consts.FieldDefaultLeaseTTL:   "768h",
+					consts.FieldMaxLeaseTTL:       "768h",
+					consts.FieldListingVisibility: "hidden",
+					consts.FieldTokenType:         "default-service",
+				},
 			},
 		},
 		{
@@ -118,11 +120,13 @@ func TestMergeAuthMethodTune(t *testing.T) {
 				},
 				input: &api.MountConfigInput{},
 			},
-			expected: map[string]interface{}{
-				consts.FieldDefaultLeaseTTL:   "",
-				consts.FieldMaxLeaseTTL:       "",
-				consts.FieldListingVisibility: "",
-				consts.FieldTokenType:         "",
+			expected: []map[string]interface{}{
+				{
+					consts.FieldDefaultLeaseTTL:   "",
+					consts.FieldMaxLeaseTTL:       "",
+					consts.FieldListingVisibility: "",
+					consts.FieldTokenType:         "",
+				},
 			},
 		},
 		{
@@ -139,11 +143,13 @@ func TestMergeAuthMethodTune(t *testing.T) {
 					TokenType:   "default-service",
 				},
 			},
-			expected: map[string]interface{}{
-				consts.FieldDefaultLeaseTTL:   "",
-				consts.FieldMaxLeaseTTL:       "20h",
-				consts.FieldListingVisibility: "",
-				consts.FieldTokenType:         "default-service",
+			expected: []map[string]interface{}{
+				{
+					consts.FieldDefaultLeaseTTL:   "",
+					consts.FieldMaxLeaseTTL:       "20h",
+					consts.FieldListingVisibility: "",
+					consts.FieldTokenType:         "default-service",
+				},
 			},
 		},
 		{
@@ -159,11 +165,13 @@ func TestMergeAuthMethodTune(t *testing.T) {
 					DefaultLeaseTTL: "10m",
 				},
 			},
-			expected: map[string]interface{}{
-				consts.FieldDefaultLeaseTTL:   "10m",
-				consts.FieldMaxLeaseTTL:       "",
-				consts.FieldListingVisibility: "",
-				consts.FieldTokenType:         "",
+			expected: []map[string]interface{}{
+				{
+					consts.FieldDefaultLeaseTTL:   "10m",
+					consts.FieldMaxLeaseTTL:       "",
+					consts.FieldListingVisibility: "",
+					consts.FieldTokenType:         "",
+				},
 			},
 		},
 		{
@@ -179,11 +187,13 @@ func TestMergeAuthMethodTune(t *testing.T) {
 					MaxLeaseTTL: "10m",
 				},
 			},
-			expected: map[string]interface{}{
-				consts.FieldDefaultLeaseTTL:   "",
-				consts.FieldMaxLeaseTTL:       "10m",
-				consts.FieldListingVisibility: "",
-				consts.FieldTokenType:         "",
+			expected: []map[string]interface{}{
+				{
+					consts.FieldDefaultLeaseTTL:   "",
+					consts.FieldMaxLeaseTTL:       "10m",
+					consts.FieldListingVisibility: "",
+					consts.FieldTokenType:         "",
+				},
 			},
 		},
 		{
@@ -199,11 +209,13 @@ func TestMergeAuthMethodTune(t *testing.T) {
 					ListingVisibility: "unauth",
 				},
 			},
-			expected: map[string]interface{}{
-				consts.FieldDefaultLeaseTTL:   "",
-				consts.FieldMaxLeaseTTL:       "",
-				consts.FieldListingVisibility: "unauth",
-				consts.FieldTokenType:         "",
+			expected: []map[string]interface{}{
+				{
+					consts.FieldDefaultLeaseTTL:   "",
+					consts.FieldMaxLeaseTTL:       "",
+					consts.FieldListingVisibility: "unauth",
+					consts.FieldTokenType:         "",
+				},
 			},
 		},
 		{
@@ -220,11 +232,13 @@ func TestMergeAuthMethodTune(t *testing.T) {
 					TokenType: "default-batch",
 				},
 			},
-			expected: map[string]interface{}{
-				consts.FieldDefaultLeaseTTL:   "",
-				consts.FieldMaxLeaseTTL:       "",
-				consts.FieldListingVisibility: "",
-				consts.FieldTokenType:         "default-batch",
+			expected: []map[string]interface{}{
+				{
+					consts.FieldDefaultLeaseTTL:   "",
+					consts.FieldMaxLeaseTTL:       "",
+					consts.FieldListingVisibility: "",
+					consts.FieldTokenType:         "default-batch",
+				},
 			},
 		},
 		{
@@ -252,15 +266,17 @@ func TestMergeAuthMethodTune(t *testing.T) {
 					TokenType:                 "default-batch",
 				},
 			},
-			expected: map[string]interface{}{
-				consts.FieldDefaultLeaseTTL:           "",
-				consts.FieldMaxLeaseTTL:               "",
-				consts.FieldAuditNonHMACRequestKeys:   []interface{}{"foo", "bar"},
-				consts.FieldAuditNonHMACResponseKeys:  []interface{}{"baz"},
-				consts.FieldListingVisibility:         "unauth",
-				consts.FieldPassthroughRequestHeaders: []interface{}{"X-Custom", "X-Mas"},
-				consts.FieldAllowedResponseHeaders:    []interface{}{"X-Response-Custom", "X-Response-Mas"},
-				consts.FieldTokenType:                 "default-batch",
+			expected: []map[string]interface{}{
+				{
+					consts.FieldDefaultLeaseTTL:           "",
+					consts.FieldMaxLeaseTTL:               "",
+					consts.FieldAuditNonHMACRequestKeys:   []interface{}{"foo", "bar"},
+					consts.FieldAuditNonHMACResponseKeys:  []interface{}{"baz"},
+					consts.FieldListingVisibility:         "unauth",
+					consts.FieldPassthroughRequestHeaders: []interface{}{"X-Custom", "X-Mas"},
+					consts.FieldAllowedResponseHeaders:    []interface{}{"X-Response-Custom", "X-Response-Mas"},
+					consts.FieldTokenType:                 "default-batch",
+				},
 			},
 		},
 	}

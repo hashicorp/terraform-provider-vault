@@ -211,7 +211,7 @@ func ociAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return diag.Errorf("error retrieving tune configuration from state: %s", err)
 	}
 	mergedTune := mergeAuthMethodTune(rawTune, input)
-	if err := d.Set(consts.FieldTune, []map[string]interface{}{mergedTune}); err != nil {
+	if err := d.Set(consts.FieldTune, mergedTune); err != nil {
 		log.Printf("[ERROR] Error when setting tune config from path '%s/tune' to state: %s", ociAuthPath, err)
 		return diag.FromErr(err)
 	}
