@@ -78,7 +78,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 
 					return !meta.IsEnterpriseSupported(), nil
 				},
-				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg, tokenAuthMetadataConfig),
+				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg, aliasMetadataConfig),
 				Check: resource.ComposeTestCheckFunc(
 					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuth,
@@ -91,8 +91,8 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
 					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
-					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.foo", "bar"),
 				),
 			},
 		},

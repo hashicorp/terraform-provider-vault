@@ -114,7 +114,7 @@ func TestAccAWSAuthBackendRole_inferred(t *testing.T) {
 
 					return !meta.IsEnterpriseSupported(), nil
 				},
-				Config: testAccAWSAuthBackendRoleConfig_inferred(backend, role, tokenAuthMetadataConfig),
+				Config: testAccAWSAuthBackendRoleConfig_inferred(backend, role, aliasMetadataConfig),
 				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 		},

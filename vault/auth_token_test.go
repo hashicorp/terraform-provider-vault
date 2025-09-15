@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-const tokenAuthMetadataConfig = `
-	token_auth_metadata    = {
+const aliasMetadataConfig = `
+	alias_metadata = {
 		"foo" = "bar"
 	}`
 

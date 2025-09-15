@@ -92,7 +92,7 @@ resource "vault_scep_auth_backend_role" "test" {
     auth_type = "static-challenge"
     %s
 }
-			`, backend, name, tokenAuthMetadataConfig),
+			`, backend, name, aliasMetadataConfig),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "name", name),
@@ -100,8 +100,8 @@ resource "vault_scep_auth_backend_role" "test" {
 					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "auth_type", "static-challenge"),
 					// Note that the challenge is not returned, since the resource was updated and no new challenge was specified
 					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "challenge", ""),
-					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "token_auth_metadata.%", "1"),
-					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "token_auth_metadata.foo", "bar"),
+					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "alias_metadata.%", "1"),
+					resource.TestCheckResourceAttr("vault_scep_auth_backend_role.test", "alias_metadata.foo", "bar"),
 				),
 			},
 		},

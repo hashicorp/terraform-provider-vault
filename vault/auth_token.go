@@ -23,7 +23,7 @@ const (
 	TokenFieldPolicies        = "token_policies"
 	TokenFieldType            = "token_type"
 	TokenFieldNumUses         = "token_num_uses"
-	TokenFieldAuthMetadata    = "token_auth_metadata" // Vault 1.21+
+	FieldAliasMetadata        = "alias_metadata" // Vault 1.21+
 )
 
 var commonTokenFields = []string{
@@ -36,7 +36,7 @@ var commonTokenFields = []string{
 	TokenFieldPolicies,
 	TokenFieldType,
 	TokenFieldNumUses,
-	TokenFieldAuthMetadata,
+	FieldAliasMetadata,
 }
 
 type addTokenFieldsConfig struct {
@@ -47,7 +47,7 @@ type addTokenFieldsConfig struct {
 	TokenPeriodConflict         []string
 	TokenPoliciesConflict       []string
 	TokenTTLConflict            []string
-	TokenAuthMetadataConflict   []string
+	AliasMetadataConflict       []string
 
 	TokenTypeDefault string
 }
@@ -125,11 +125,11 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		ConflictsWith: config.TokenNumUsesConflict,
 	}
 
-	fields[TokenFieldAuthMetadata] = &schema.Schema{
+	fields[FieldAliasMetadata] = &schema.Schema{
 		Type:          schema.TypeMap,
-		Description:   "The metadata to be tied to generated tokens.\n  This should be a list or map containing the metadata in key value pairs.",
+		Description:   "The metadata to be tied to generated entity alias.\n  This should be a list or map containing the metadata in key value pairs.",
 		Optional:      true,
-		ConflictsWith: config.TokenAuthMetadataConflict,
+		ConflictsWith: config.AliasMetadataConflict,
 	}
 }
 
@@ -215,7 +215,7 @@ func setTokenFields(d *schema.ResourceData, data map[string]interface{}, config 
 	}
 
 	conflicted = false
-	for _, k := range config.TokenAuthMetadataConflict {
+	for _, k := range config.AliasMetadataConflict {
 		if _, ok := d.GetOk(k); ok {
 			conflicted = true
 			break
@@ -223,7 +223,7 @@ func setTokenFields(d *schema.ResourceData, data map[string]interface{}, config 
 	}
 
 	if !conflicted {
-		data[TokenFieldAuthMetadata] = d.Get(TokenFieldAuthMetadata)
+		data[FieldAliasMetadata] = d.Get(FieldAliasMetadata)
 	}
 }
 
@@ -265,8 +265,8 @@ func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, crea
 			data[TokenFieldNumUses] = v.(int)
 		}
 
-		if v, ok := d.GetOk(TokenFieldAuthMetadata); ok {
-			data[TokenFieldAuthMetadata] = v
+		if v, ok := d.GetOk(FieldAliasMetadata); ok {
+			data[FieldAliasMetadata] = v
 		}
 	} else {
 		if d.HasChange(TokenFieldBoundCIDRs) {
@@ -305,8 +305,8 @@ func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, crea
 			data[TokenFieldNumUses] = d.Get(TokenFieldNumUses).(int)
 		}
 
-		if d.HasChange(TokenFieldAuthMetadata) {
-			data[TokenFieldAuthMetadata] = d.Get(TokenFieldAuthMetadata)
+		if d.HasChange(FieldAliasMetadata) {
+			data[FieldAliasMetadata] = d.Get(FieldAliasMetadata)
 		}
 	}
 }

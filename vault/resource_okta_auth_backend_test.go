@@ -70,7 +70,7 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 
 					return !meta.IsEnterpriseSupported(), nil
 				},
-				Config: testAccOktaAuthConfig_basic(path, organization, tokenAuthMetadataConfig),
+				Config: testAccOktaAuthConfig_basic(path, organization, aliasMetadataConfig),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, TokenFieldTTL, "3600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldOrganization, "example"),
@@ -86,8 +86,8 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "user.0.username", "foo"),
 					resource.TestCheckResourceAttr(resourceName, "user.0.groups.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "user.0.groups.0", "dummy"),
-					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.foo", "bar"),
 				),
 			},
 		},

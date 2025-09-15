@@ -57,11 +57,11 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 
 					return !meta.IsEnterpriseSupported(), nil
 				},
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", tokenAuthMetadataConfig),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", aliasMetadataConfig),
 				Check: resource.ComposeTestCheckFunc(
 					testLDAPAuthBackendCheck_attrs(resourceName, path),
-					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.foo", "bar"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),

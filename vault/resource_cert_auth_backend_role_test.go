@@ -126,7 +126,7 @@ func TestCertAuthBackend(t *testing.T) {
 
 					return !meta.IsEnterpriseSupported(), nil
 				},
-				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, tokenAuthMetadataConfig, allowedNames, allowedOrgUnits),
+				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, aliasMetadataConfig, allowedNames, allowedOrgUnits),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -138,8 +138,8 @@ func TestCertAuthBackend(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_organizational_units.*", "foo"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_organizational_units.*", "baz"),
 					testCertAuthBackendCheck_attrs(resourceName, backend, name),
-					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "token_auth_metadata.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.foo", "bar"),
 				),
 			},
 		},

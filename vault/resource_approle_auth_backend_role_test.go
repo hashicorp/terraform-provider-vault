@@ -108,7 +108,7 @@ func TestAccAppRoleAuthBackendRole_basic(t *testing.T) {
 
 					return !meta.IsEnterpriseSupported(), nil
 				},
-				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role, tokenAuthMetadataConfig),
+				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role, aliasMetadataConfig),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"backend", backend),
@@ -135,9 +135,9 @@ func TestAccAppRoleAuthBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"secret_id_bound_cidrs.#", "0"),
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
-						"token_auth_metadata.%", "1"),
+						"alias_metadata.%", "1"),
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
-						"token_auth_metadata.foo", "bar"),
+						"alias_metadata.foo", "bar"),
 				),
 			},
 		},
