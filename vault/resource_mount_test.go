@@ -172,6 +172,115 @@ func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
 	})
 }
 
+func TestResourceMount_AllowedResponseHeaders_Removal(t *testing.T) {
+	resourcePath := "vault_mount.lol"
+	path := "example-" + acctest.RandString(10)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_mount" "lol" {
+					path = "%s"
+					type = "pki"
+
+					default_lease_ttl_seconds = 157680000
+					max_lease_ttl_seconds     = 157680000
+
+					allowed_response_headers = [
+						"Content-Transfer-Encoding",
+						"Content-Length",
+						"WWW-Authenticate",
+					]
+				}
+				`, path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourcePath, "path", path),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.#", "3"),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.0", "Content-Transfer-Encoding"),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.1", "Content-Length"),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.2", "WWW-Authenticate"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_mount" "lol" {
+					path = "%s"
+					type = "pki"
+
+					default_lease_ttl_seconds = 157680000
+					max_lease_ttl_seconds     = 157680000
+				}
+				`, path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourcePath, "path", path),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestResourceMount_AllowedResponseHeaders_EmptySlice(t *testing.T) {
+	resourcePath := "vault_mount.lol"
+	path := "example-" + acctest.RandString(10)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_mount" "lol" {
+					path = "%s"
+					type = "pki"
+
+					default_lease_ttl_seconds = 157680000
+					max_lease_ttl_seconds     = 157680000
+
+					allowed_response_headers = [
+						"Content-Transfer-Encoding",
+						"Content-Length",
+						"WWW-Authenticate",
+					]
+				}
+				`, path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourcePath, "path", path),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.#", "3"),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.0", "Content-Transfer-Encoding"),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.1", "Content-Length"),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.2", "WWW-Authenticate"),
+				),
+			},
+			{
+				ResourceName:      resourcePath,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_mount" "lol" {
+					path = "%s"
+					type = "pki"
+
+					default_lease_ttl_seconds = 157680000
+					max_lease_ttl_seconds     = 157680000
+
+					allowed_response_headers = []
+				}
+				`, path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourcePath, "path", path),
+					resource.TestCheckResourceAttr(resourcePath, "allowed_response_headers.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func TestResourceMount_KVV2(t *testing.T) {
 	path := acctest.RandomWithPrefix("example")
 	kvv2Cfg := fmt.Sprintf(`
@@ -245,7 +354,7 @@ func TestResourceMount_IDTokenKey(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -262,9 +371,10 @@ func TestResourceMount_IDTokenKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
 					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "hidden"),
-					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
-					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
+					// @TODO add these back in when Vault 1.16.3 is released
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "2"),
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
 				),
 			},
 			{
@@ -282,13 +392,17 @@ func TestResourceMount_IDTokenKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.2", "header3"),
 					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
 					resource.TestCheckResourceAttr(resourceName, "identity_token_key", "my-key"),
-					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "3"),
-					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
-					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
-					resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.2", "header3"),
+					// @TODO add these back in when Vault 1.16.3 is released
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.#", "3"),
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.0", "header1"),
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.1", "header2"),
+					// resource.TestCheckResourceAttr(resourceName, "delegated_auth_accessors.2", "header3"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			// @TODO remove ignore_fields once Vault 1.16.3 is released
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"delegated_auth_accessors",
+			),
 		},
 	})
 }
