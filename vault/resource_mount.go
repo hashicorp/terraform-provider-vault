@@ -366,7 +366,7 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 		// Prior to 1.21.0, 1.20.4, 1.19.10, 1.18.15 and 1.16.26 fields can not be set to their empty values in the
 		// Vault Client.  Using the new function that fixes this in the client would create a backwards compatibility
 		// issue, so instead we make a raw HTTP request here, using the Vault API directly.
-		if err := tuneMountWithMap(client, ctx, path, mapConfig); err != nil {
+		if err := tuneMountWithMap(ctx, client, path, mapConfig); err != nil {
 			if tries > 10 {
 				return fmt.Errorf("error updating Vault: %s", err)
 			}
@@ -518,7 +518,7 @@ func mountOptions(d *schema.ResourceData) map[string]string {
 	return options
 }
 
-func tuneMountWithMap(c *api.Client, ctx context.Context, path string, config map[string]interface{}) error {
+func tuneMountWithMap(ctx context.Context, c *api.Client, path string, config map[string]interface{}) error {
 	r := c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 	if err := r.SetJSONBody(config); err != nil {
 		return err
