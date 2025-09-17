@@ -223,6 +223,8 @@ func TestResourceMount_AllowedResponseHeaders_Removal(t *testing.T) {
 	})
 }
 
+// TestResourceMount_AllowedResponseHeaders_EmptySlice checks that after the allowed response headers were set on an
+// vault auth mount, that the headers could be set back to being an empty slice.  This is a regression test. VAULT-34426
 func TestResourceMount_AllowedResponseHeaders_EmptySlice(t *testing.T) {
 	resourcePath := "vault_mount.lol"
 	path := "example-" + acctest.RandString(10)
