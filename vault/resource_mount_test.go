@@ -172,6 +172,9 @@ func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
 	})
 }
 
+// TestResourceMount_AllowedResponseHeaders_Removal checks that after the allowed response headers were set on an
+// vault auth mount, that if the headers were removed from the configuration, then the vault field would be updated
+// accordingly.  This is a regression test. VAULT-34426
 func TestResourceMount_AllowedResponseHeaders_Removal(t *testing.T) {
 	resourcePath := "vault_mount.lol"
 	path := "example-" + acctest.RandString(10)
