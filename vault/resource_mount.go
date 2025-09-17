@@ -288,6 +288,9 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 		return err
 	}
 
+	// This call uses a map rather than the api.MountConfigInput in order to keep track of which fields have been
+	// updated by the updateMount call.  When using api.MountConfigInput the 'omitempty' in JSON marshalling means that
+	// fields updated to an empty value are not passed all the way through.
 	mapConfig := map[string]interface{}{
 		"default_lease_ttl": fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
 		"max_lease_ttl":     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
@@ -360,6 +363,9 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 	// TODO: remove this work-around once VAULT-5521 is fixed
 	var tries int
 	for {
+		// Prior to 1.21.0, 1.20.4, 1.19.10, 1.18.15 and 1.16.26 fields can not be set to their empty values in the
+		// Vault Client.  Using the new function that fixes this in the client would create a backwards compatibility
+		// issue, so instead we make a raw HTTP request here, using the Vault API directly.
 		if err := tuneMountWithMap(client, ctx, path, mapConfig); err != nil {
 			if tries > 10 {
 				return fmt.Errorf("error updating Vault: %s", err)
