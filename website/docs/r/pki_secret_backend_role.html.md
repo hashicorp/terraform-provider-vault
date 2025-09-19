@@ -171,8 +171,8 @@ resource "vault_pki_secret_backend_role" "role" {
     notice= "I am a user Notice"
   }
   policy_identifier {
-    oid = "1.3.6.1.4.1.44947.1.2.4"
-    cps ="https://example.com"
+    oid = "1.3.6.1.4.1.32473.1.2.4"
+    cps = "https://example.com"
   }
 }
 ```
