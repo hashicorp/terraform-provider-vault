@@ -8,6 +8,7 @@ FEATURES:
 
 BUGS:
 
+* Fix pki crl config resource ignoring updates of fields to their default values ([#2607](https://github.com/hashicorp/terraform-provider-vault/pull/2607))
 * Fix pki config resources to allow unsetting of fields (to empty fields) ([#2558](https://github.com/hashicorp/terraform-provider-vault/pull/2558))
 * Fix tune auth mounts to allow unsetting of fields (setting fields to empty values) ([#2605](https://github.com/hashicorp/terraform-provider-vault/pull/2605))
 
