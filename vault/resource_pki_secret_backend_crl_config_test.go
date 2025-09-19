@@ -151,6 +151,7 @@ func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...str
 	if os.Getenv(testutil.EnvVarTfAccEnt) != "" {
 		unifiedCrl = true
 	}
+	meta := testProvider.Meta().(*provider.ProviderMeta)
 	steps := []resource.TestStep{
 		{
 			Config: testPkiSecretBackendCrlConfigConfig_defaults(rootPath),
@@ -160,8 +161,16 @@ func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...str
 			Config: testPkiSecretBackendCrlConfigConfig_explicit(rootPath, unifiedCrl, 100),
 			Check:  getCRLConfigChecks(resourceName, true, unifiedCrl, 100),
 		},
-		testutil.GetImportTestStep(resourceName, false, nil, ignoreImportFields...),
 	}
+	if meta.IsAPISupported(provider.VaultVersion112) {
+		steps = append(steps, resource.TestStep{
+			Config: testPkiSecretBackendCrlConfigConfig_autoRebuildDisabled(rootPath, unifiedCrl, 50),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(resourceName, "auto_rebuild", "false"),
+			),
+		})
+	}
+	steps = append(steps, testutil.GetImportTestStep(resourceName, false, nil, ignoreImportFields...))
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 preCheck,
@@ -229,6 +238,27 @@ resource "vault_pki_secret_backend_crl_config" "test" {
   unified_crl					= %[2]s
   unified_crl_on_existing_paths = %[2]s
   max_crl_entries				= %[3]d
+}
+`, testPkiSecretBackendCrlConfigConfig_base(rootPath), strconv.FormatBool(unifiedCrl), maxCrlEntries)
+}
+
+func testPkiSecretBackendCrlConfigConfig_autoRebuildDisabled(rootPath string, unifiedCrl bool, maxCrlEntries int) string {
+	return fmt.Sprintf(`
+%[1]s
+
+resource "vault_pki_secret_backend_crl_config" "test" {
+  backend                       = vault_pki_secret_backend_root_cert.test-ca.backend
+  expiry                        = "72h"
+  disable                       = true
+  ocsp_disable                  = false
+  ocsp_expiry                   = "23h"
+  auto_rebuild                  = false
+  enable_delta                  = true
+  delta_rebuild_interval        = "18m"
+  cross_cluster_revocation      = %[2]s
+  unified_crl                   = %[2]s
+  unified_crl_on_existing_paths = %[2]s
+  max_crl_entries               = %[3]d
 }
 `, testPkiSecretBackendCrlConfigConfig_base(rootPath), strconv.FormatBool(unifiedCrl), maxCrlEntries)
 }

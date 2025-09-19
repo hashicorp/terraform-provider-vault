@@ -188,7 +188,7 @@ func pkiSecretBackendCrlConfigUpdate(ctx context.Context, d *schema.ResourceData
 	path := d.Id()
 	fields := buildConfigCRLFields(meta)
 
-	data := util.GetAPIRequestDataWithSliceOk(d, fields)
+	data := util.GetAPIRequestDataWithSliceOkExists(d, fields)
 	log.Printf("[DEBUG] Updating CRL config on PKI secret path %q", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
