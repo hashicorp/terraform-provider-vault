@@ -8,6 +8,8 @@ FEATURES:
 * Add support for managed key parameters in the SSH CA config endpoint ([#2480](https://github.com/hashicorp/terraform-provider-vault/pull/2480))
 * Add new resources `vault_oci_auth_backend` and `vault_oci_auth_backend_role` to manage OCI auth backend and roles. ([#1761](https://github.com/hashicorp/terraform-provider-vault/pull/1761))
 * Add support for `log_level` in `vault_pki_secret_backend_config_scep` resource. Requires Vault 1.20.1+ ([#2525](https://github.com/hashicorp/terraform-provider-vault/pull/2525))
+* Add support for `tune` in `vault_saml_auth_backend` resource ([#2566](https://github.com/hashicorp/terraform-provider-vault/pull/2566))
+* Add support for `tune` in `vault_ldap_auth_backend` and `vault_okta_auth_backend` resources ([#2602](https://github.com/hashicorp/terraform-provider-vault/pull/2602))
 
 IMPROVEMENTS:
 * Updated dependencies ([#2551](https://github.com/hashicorp/terraform-provider-vault/pull/2551)):
@@ -25,7 +27,6 @@ BUGS:
 * Fix the tune block issue where it always updates unless field values match Vault server defaults
   * `vault_jwt_auth_backend` resource ([#2560](https://github.com/hashicorp/terraform-provider-vault/pull/2560))
   * `vault_github_auth_backend` and `vault_auth_backend` resources ([#2565](https://github.com/hashicorp/terraform-provider-vault/pull/2565))
-  * `vault_saml_auth_backend` resource ([#2566](https://github.com/hashicorp/terraform-provider-vault/pull/2566))
   * `vault_gcp_auth_backend` and `vault_oci_auth_backend` resources ([#2596](https://github.com/hashicorp/terraform-provider-vault/pull/2596))
 
 ## 5.1.0 (Jul 9, 2025)
