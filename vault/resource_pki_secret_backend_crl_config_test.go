@@ -167,6 +167,7 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			PreCheck: func() {
 				testutil.TestAccPreCheck(t)
+				testutil.TestEntPreCheck(t)
 				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
 			},
 			CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
