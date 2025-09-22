@@ -142,6 +142,37 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 		},
 		)
 	})
+
+	t.Run("testCrlZeroValues", func(t *testing.T) {
+		rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+		resourceName := "vault_pki_secret_backend_crl_config.test"
+
+		// Force the values within the crl_config to be set to non-zero values,
+		// then switch to the zero value and then back to non-zero values.
+		steps := []resource.TestStep{
+			{
+				Config: testPkiSecretBackendCrlConfigConfig_ZeroValues(rootPath, true),
+				Check:  getCRLConfigZeroChecks(resourceName, true),
+			},
+			{
+				Config: testPkiSecretBackendCrlConfigConfig_ZeroValues(rootPath, false),
+				Check:  getCRLConfigZeroChecks(resourceName, false),
+			},
+			{
+				Config: testPkiSecretBackendCrlConfigConfig_ZeroValues(rootPath, true),
+				Check:  getCRLConfigZeroChecks(resourceName, true),
+			},
+		}
+		resource.Test(t, resource.TestCase{
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			PreCheck: func() {
+				testutil.TestAccPreCheck(t)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+			},
+			CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+			Steps:        steps,
+		})
+	})
 }
 
 func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...string) {
@@ -231,4 +262,58 @@ resource "vault_pki_secret_backend_crl_config" "test" {
   max_crl_entries				= %[3]d
 }
 `, testPkiSecretBackendCrlConfigConfig_base(rootPath), strconv.FormatBool(unifiedCrl), maxCrlEntries)
+}
+
+func testPkiSecretBackendCrlConfigConfig_ZeroValues(rootPath string, isZeroVal bool) string {
+	zeroDur := "0"
+	if !isZeroVal {
+		zeroDur = "23h"
+	}
+	zeroBool := strconv.FormatBool(!isZeroVal)
+	return fmt.Sprintf(`
+%[1]s
+
+resource "vault_pki_secret_backend_crl_config" "test" {
+  backend                   	= vault_pki_secret_backend_root_cert.test-ca.backend
+  expiry                    	= "25h" // expiry needs to be larger than auto_rebuild_grace_period
+  disable                   	= %[2]s
+  ocsp_disable              	= %[2]s
+  ocsp_expiry               	= "%[3]s"
+  auto_rebuild              	= %[2]s
+  auto_rebuild_grace_period 	= "%[3]s"
+  enable_delta              	= %[2]s 
+  delta_rebuild_interval   		= "%[3]s"
+  cross_cluster_revocation  	= %[2]s
+  unified_crl					= %[2]s
+  unified_crl_on_existing_paths = %[2]s
+  max_crl_entries				= "100" // max_crl_entries does not accept 0 as a value
+}
+`, testPkiSecretBackendCrlConfigConfig_base(rootPath), zeroBool, zeroDur)
+}
+
+func getCRLConfigZeroChecks(resourceName string, isZeroVal bool) resource.TestCheckFunc {
+	zeroDur := "0"
+	if !isZeroVal {
+		zeroDur = "23h"
+	}
+	zeroBool := strconv.FormatBool(!isZeroVal)
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "expiry", "25h"), // expiry needs to be larger than auto_rebuild_grace_period
+		resource.TestCheckResourceAttr(resourceName, "disable", zeroBool),
+		resource.TestCheckResourceAttr(resourceName, "ocsp_disable", zeroBool),
+		resource.TestCheckResourceAttr(resourceName, "ocsp_expiry", zeroDur),
+		resource.TestCheckResourceAttr(resourceName, "auto_rebuild", zeroBool),
+		resource.TestCheckResourceAttr(resourceName, "auto_rebuild_grace_period", zeroDur),
+		resource.TestCheckResourceAttr(resourceName, "enable_delta", zeroBool),
+		resource.TestCheckResourceAttr(resourceName, "delta_rebuild_interval", zeroDur),
+		resource.TestCheckResourceAttr(resourceName, "cross_cluster_revocation", zeroBool),
+		resource.TestCheckResourceAttr(resourceName, "unified_crl", zeroBool),
+		resource.TestCheckResourceAttr(resourceName, "unified_crl_on_existing_paths", zeroBool),
+		resource.TestCheckResourceAttr(resourceName, "max_crl_entries", "100"), // max_crl_entries does not accept 0 as a value
+	}
+
+	return func(state *terraform.State) error {
+		return resource.ComposeAggregateTestCheckFunc(checks...)(state)
+	}
 }
