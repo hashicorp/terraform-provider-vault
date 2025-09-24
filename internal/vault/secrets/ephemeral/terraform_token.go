@@ -39,10 +39,9 @@ type TerraformTokenEphemeralSecretModel struct {
 	base.BaseModelEphemeral
 
 	// fields specific to this resource
-	Mount         types.String `tfsdk:"mount"`
-	RoleName      types.String `tfsdk:"role_name"`
-	Token         types.String `tfsdk:"token"`
-	RevokeOnClose types.Bool   `tfsdk:"revoke_on_close"`
+	Mount    types.String `tfsdk:"mount"`
+	RoleName types.String `tfsdk:"role_name"`
+	Token    types.String `tfsdk:"token"`
 }
 
 // TerraformTokenEphemeralSecretAPIModel describes the Vault API data model.
@@ -51,9 +50,8 @@ type TerraformTokenEphemeralSecretAPIModel struct {
 }
 
 type PrivateData struct {
-	LeaseID       string `json:"lease_id"`
-	RevokeOnClose bool   `json:"revoke_on_close"`
-	Namespace     string `json:"namespace,omitempty"` // Optional, used for namespaced resources
+	LeaseID   string `json:"lease_id"`
+	Namespace string `json:"namespace,omitempty"` // Optional, used for namespaced resources
 }
 
 // Schema defines this resource's schema which is the data that is available in
@@ -66,10 +64,6 @@ func (r *TerraformTokenEphemeralSecretResource) Schema(_ context.Context, _ ephe
 			consts.FieldRoleName: schema.StringAttribute{
 				MarkdownDescription: "Specifies the name of the role to create credentials against. Must be `credential_type=\"team\"`",
 				Required:            true,
-			},
-			"revoke_on_close": schema.BoolAttribute{
-				MarkdownDescription: "If set to `true`, the token will be revoked when the provider is closed. This behavior may be different for plan/apply using `terraform.applying`. If `false` the token will live past the terraform run relevant to the MaxTTL. Defaults to `true`.",
-				Optional:            true,
 			},
 			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Mount path for the Terraform engine in Vault. Default is `terraform`.",
@@ -105,9 +99,6 @@ func (r *TerraformTokenEphemeralSecretResource) Open(ctx context.Context, req ep
 	if data.Mount.IsNull() || data.Mount.ValueString() == "" {
 		data.Mount = types.StringValue("terraform")
 	}
-	if data.RevokeOnClose.IsNull() {
-		data.RevokeOnClose = types.BoolValue(true)
-	}
 
 	c, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -142,9 +133,8 @@ func (r *TerraformTokenEphemeralSecretResource) Open(ctx context.Context, req ep
 
 	data.Token = types.StringValue(readResp.Token)
 	privateData, _ := json.Marshal(PrivateData{
-		LeaseID:       secretResp.LeaseID,
-		RevokeOnClose: data.RevokeOnClose.ValueBool(),
-		Namespace:     data.Namespace.ValueString()})
+		LeaseID:   secretResp.LeaseID,
+		Namespace: data.Namespace.ValueString()})
 	resp.Private.SetKey(ctx, "private_data", privateData)
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
@@ -161,32 +151,27 @@ func (e *TerraformTokenEphemeralSecretResource) Close(ctx context.Context, req e
 		return
 	}
 
-	// Unmarshal private data (error handling omitted for brevity).
 	var privateData PrivateData
 	json.Unmarshal(privateBytes, &privateData)
-	if privateData.RevokeOnClose {
-		c, err := client.GetClient(ctx, e.Meta(), privateData.Namespace)
+	c, err := client.GetClient(ctx, e.Meta(), privateData.Namespace)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+	if privateData.LeaseID != "" {
+		// Revoke the token using the LeaseID
+		err = c.Sys().RevokeWithContext(ctx, privateData.LeaseID)
 		if err != nil {
-			resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+			resp.Diagnostics.AddError(
+				"Error revoking token",
+				err.Error(),
+			)
 			return
 		}
-		if privateData.LeaseID != "" {
-			// Revoke the token using the LeaseID
-			err = c.Sys().RevokeWithContext(ctx, privateData.LeaseID)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"Error revoking token",
-					err.Error(),
-				)
-				return
-			}
-		} else {
-			resp.Diagnostics.AddWarning(
-				"RevokeOnClose is set but no LeaseID found",
-				"Token will not be revoked as no LeaseID was provided.",
-			)
-		}
+	} else {
+		resp.Diagnostics.AddError(
+			"Token will not be revoked as no LeaseID was provided. This is a problem with the provider.",
+			"Token will not be revoked as no LeaseID was provided. This is a problem with the provider.",
+		)
 	}
-
-	// Perform external call to close/clean up "thing" data
 }

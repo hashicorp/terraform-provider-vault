@@ -23,6 +23,10 @@ ephemeral "vault_terraform_token" "tf_token" {
   mount     = vault_terraform_cloud_secret_backend.example.backend
   role_name = vault_terraform_cloud_secret_role.example.name
 }
+
+provider "tfe" {
+  token = ephemeral.vault_terraform_token.tf_token.token
+}
 ```
 
 ## Full Usage
@@ -52,29 +56,14 @@ ephemeral "vault_terraform_token" "tf_token" {
 }
 ```
 
-## Revoke Plan Token Usage
-
-```hcl
-# revokes the tokens generated during plan but leaves 
-# tokens created during `apply` for their full TTL
-
-ephemeral "vault_terraform_token" "tf_token" {
-  mount           = vault_terraform_cloud_secret_backend.example.backend
-  role_name       = vault_terraform_cloud_secret_role.example.name
-  revoke_on_close = terraform.applying ? true : false
-}
-```
-
 ## Argument Reference
 
 The following arguments are supported:
 
 * `role_name` - (Required) Name of the terraform role without trailing or leading slashes.
 * `mount` - (Optional) Mount path for the TF engine in Vault without trailing or leading slashes. Defaults to `terraform`
-* `mount_id` - (Optional) ID of the mount path. This argument is only helpful if you're calling the ephemeral resource
-in the same terraform run as the dependencies are created. It should be omitted if your role is created in other runs.
-* `revoke_on_close` - (Optional) If true, revokes the token once the provider closes. Ephemeral
-tokens are generated on both plan and apply; see the example for setting revoke on 1 stage only. Defaults to true.
+* `mount_id` - (Optional) ID of the mount path. This argument is only helpful if you're calling the ephemeral resource in the same terraform run as the dependencies are created. It should be omitted if your role is created in other runs.
+
 
 
 ## Attributes Reference
