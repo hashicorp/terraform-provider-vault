@@ -27,6 +27,7 @@ func TestAccSpiffeConfig(t *testing.T) {
 			testutil.TestEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+
 		Steps: []resource.TestStep{
 			// Test the simplest form of config
 			{
@@ -65,6 +66,16 @@ func TestAccSpiffeConfig(t *testing.T) {
 					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("profile"), knownvalue.StringExact("static")),
 					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("bundle"), knownvalue.StringExact(ca+"\n")),
 					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("audience"), knownvalue.ListSizeExact(0)),
+				},
+			},
+			{
+				Config: remoteWebSpiffeConfig(mount, ca),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// We can't verify defer_bundle_fetch as it is marked write-only it will never appear in the plan/state
+					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("trust_domain"), knownvalue.StringExact("example.org")),
+					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("profile"), knownvalue.StringExact("https_web_pem")),
+					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("endpoint_url"), knownvalue.StringExact("https://dadgarcorp.com/spiffe-ca")),
+					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("endpoint_root_ca_truststore_pem"), knownvalue.StringExact(ca+"\n")),
 				},
 			},
 		},
@@ -118,4 +129,28 @@ EOC
   audience    = [%s]
 }
 `, mount, ca, formattedAudiences)
+}
+
+func remoteWebSpiffeConfig(mount string, trustCa string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "spiffe_mount" {
+  type = "spiffe"
+  path = "%s"
+
+  tune {
+    passthrough_request_headers = ["Authorization"]
+  }
+}
+
+resource "vault_spiffe_auth_config" "spiffe_config" {
+  mount        = vault_auth_backend.spiffe_mount.path
+  trust_domain = "example.org"
+  profile      = "https_web_pem"
+  endpoint_url = "https://dadgarcorp.com/spiffe-ca"
+  defer_bundle_fetch = true
+  endpoint_root_ca_truststore_pem  = <<EOC
+%s
+EOC
+}
+`, mount, trustCa)
 }
