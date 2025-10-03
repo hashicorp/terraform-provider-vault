@@ -7,20 +7,32 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccSpiffeConfig(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
-
 	mount := acctest.RandomWithPrefix("spiffe-mount")
 	caBytes, _, _ := testutil.GenerateCA()
 	ca := strings.Trim(string(caBytes), "\n")
+	resourceAddress := "vault_spiffe_auth_config.spiffe_config"
+
+	spiffeBundle := `
+{
+    "keys": [
+        {
+            "use": "jwt-svid",
+            "kty": "EC",
+            "kid": "ZxKvdYWv1ZcSAUOQ0zxNmyvgm8eKKgIb",
+            "crv": "P-256",
+            "x": "UU_Z5vjB272LtPsRxemPskh8fVhEvfy7xzg3tsIyas0",
+            "y": "0B8DIXslvTqYTVSxzuGyGzVVKTUOHcJMzjOfmmR3kaE"
+        }
+    ],
+    "spiffe_sequence": 1
+}
+`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -32,52 +44,70 @@ func TestAccSpiffeConfig(t *testing.T) {
 			// Test the simplest form of config
 			{
 				Config: staticBundleSpiffeConfig(mount, ca),
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("trust_domain"), knownvalue.StringExact("example.org")),
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("profile"), knownvalue.StringExact("static")),
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("bundle"), knownvalue.StringExact(ca+"\n")),
-				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceAddress, "id"),
+					resource.TestCheckResourceAttr(resourceAddress, "trust_domain", "example.org"),
+					resource.TestCheckResourceAttr(resourceAddress, "profile", "static"),
+					resource.TestCheckResourceAttr(resourceAddress, "bundle", ca+"\n"),
+				),
 			},
 			// Test we can set the audience list
 			{
 				Config: staticBundleSpiffeConfigWithAudience(mount, ca, []string{"vault", "vault-core"}),
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("trust_domain"), knownvalue.StringExact("example.org")),
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("profile"), knownvalue.StringExact("static")),
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("bundle"), knownvalue.StringExact(ca+"\n")),
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("audience"),
-						knownvalue.SetExact([]knownvalue.Check{
-							knownvalue.StringExact("vault"),
-							knownvalue.StringExact("vault-core"),
-						})),
-				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceAddress, "id"),
+					resource.TestCheckResourceAttr(resourceAddress, "trust_domain", "example.org"),
+					resource.TestCheckResourceAttr(resourceAddress, "profile", "static"),
+					resource.TestCheckResourceAttr(resourceAddress, "bundle", ca+"\n"),
+					resource.TestCheckResourceAttr(resourceAddress, "audience"+".#", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, "audience"+".0", "vault"),
+					resource.TestCheckResourceAttr(resourceAddress, "audience"+".1", "vault-core"),
+				),
 			},
 			// Test we can clear the audience list
 			{
 				Config: staticBundleSpiffeConfigWithAudience(mount, ca, []string{}),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction("vault_spiffe_auth_config.spiffe_config", plancheck.ResourceActionUpdate),
-						plancheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("audience"), knownvalue.ListSizeExact(0)),
-					},
-				},
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("trust_domain"), knownvalue.StringExact("example.org")),
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("profile"), knownvalue.StringExact("static")),
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("bundle"), knownvalue.StringExact(ca+"\n")),
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("audience"), knownvalue.ListSizeExact(0)),
-				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceAddress, "id"),
+					resource.TestCheckResourceAttr(resourceAddress, "trust_domain", "example.org"),
+					resource.TestCheckResourceAttr(resourceAddress, "profile", "static"),
+					resource.TestCheckResourceAttr(resourceAddress, "bundle", ca+"\n"),
+					resource.TestCheckResourceAttr(resourceAddress, "audience"+".#", "0"),
+				),
 			},
 			{
-				Config: remoteWebSpiffeConfig(mount, ca),
-				ConfigStateChecks: []statecheck.StateCheck{
-					// We can't verify defer_bundle_fetch as it is marked write-only it will never appear in the plan/state
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("trust_domain"), knownvalue.StringExact("example.org")),
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("profile"), knownvalue.StringExact("https_web_pem")),
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("endpoint_url"), knownvalue.StringExact("https://dadgarcorp.com/spiffe-ca")),
-					statecheck.ExpectKnownValue("vault_spiffe_auth_config.spiffe_config", tfjsonpath.New("endpoint_root_ca_truststore_pem"), knownvalue.StringExact(ca+"\n")),
-				},
+				Config: httpsWebPemSpiffeConfig(mount, ca),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceAddress, "id"),
+					resource.TestCheckResourceAttr(resourceAddress, "trust_domain", "example.org"),
+					resource.TestCheckResourceAttr(resourceAddress, "profile", "https_web_pem"),
+					resource.TestCheckResourceAttr(resourceAddress, "endpoint_url", "https://dadgarcorp.com/spiffe-ca"),
+					resource.TestCheckResourceAttr(resourceAddress, "endpoint_root_ca_truststore_pem", ca+"\n"),
+					resource.TestCheckNoResourceAttr(resourceAddress, "bundle"),
+				),
 			},
+			{
+				Config: webBundleSpiffeConfig(mount),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceAddress, "id"),
+					resource.TestCheckResourceAttr(resourceAddress, "trust_domain", "example.org"),
+					resource.TestCheckResourceAttr(resourceAddress, "profile", "https_web_bundle"),
+					resource.TestCheckResourceAttr(resourceAddress, "endpoint_url", "https://dadgarcorp.com/spiffe-ca"),
+					resource.TestCheckNoResourceAttr(resourceAddress, "bundle"),
+				),
+			},
+			{
+				Config: spiffeBundleSpiffeConfig(mount, spiffeBundle),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceAddress, "id"),
+					resource.TestCheckResourceAttr(resourceAddress, "trust_domain", "example.org"),
+					resource.TestCheckResourceAttr(resourceAddress, "profile", "https_spiffe_bundle"),
+					resource.TestCheckResourceAttr(resourceAddress, "endpoint_url", "https://dadgarcorp.com/spiffe-ca"),
+					resource.TestCheckResourceAttr(resourceAddress, "endpoint_spiffe_id", "spiffe://dadgarcorp.com/spire"),
+					resource.TestCheckResourceAttr(resourceAddress, "bundle", spiffeBundle+"\n"),
+				),
+			},
+			testutil.GetImportTestStep(resourceAddress, false, nil),
 		},
 	})
 }
@@ -131,7 +161,7 @@ EOC
 `, mount, ca, formattedAudiences)
 }
 
-func remoteWebSpiffeConfig(mount string, trustCa string) string {
+func httpsWebPemSpiffeConfig(mount string, trustCa string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "spiffe_mount" {
   type = "spiffe"
@@ -153,4 +183,50 @@ resource "vault_spiffe_auth_config" "spiffe_config" {
 EOC
 }
 `, mount, trustCa)
+}
+
+func webBundleSpiffeConfig(mount string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "spiffe_mount" {
+  type = "spiffe"
+  path = "%s"
+
+  tune {
+    passthrough_request_headers = ["Authorization"]
+  }
+}
+
+resource "vault_spiffe_auth_config" "spiffe_config" {
+  mount        = vault_auth_backend.spiffe_mount.path
+  trust_domain = "example.org"
+  profile      = "https_web_bundle"
+  endpoint_url = "https://dadgarcorp.com/spiffe-ca"
+  defer_bundle_fetch = true
+}
+`, mount)
+}
+
+func spiffeBundleSpiffeConfig(mount string, bundle string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "spiffe_mount" {
+  type = "spiffe"
+  path = "%s"
+
+  tune {
+    passthrough_request_headers = ["Authorization"]
+  }
+}
+
+resource "vault_spiffe_auth_config" "spiffe_config" {
+  mount        = vault_auth_backend.spiffe_mount.path
+  trust_domain = "example.org"
+  profile      = "https_spiffe_bundle"
+  endpoint_url = "https://dadgarcorp.com/spiffe-ca"
+  endpoint_spiffe_id = "spiffe://dadgarcorp.com/spire"
+  defer_bundle_fetch = true
+  bundle = <<EOB
+%s
+EOB
+}
+`, mount, bundle)
 }
