@@ -225,7 +225,7 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 // the Metadata method. All resources must have unique names.
 func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		spiffe.NewSpiffeConfigResource,
+		spiffe.NewSpiffeAuthConfigResource,
 		sys.NewPasswordPolicyResource,
 	}
 }

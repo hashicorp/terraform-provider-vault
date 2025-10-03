@@ -23,21 +23,21 @@ const (
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
-var _ resource.ResourceWithConfigure = &SpiffeConfigResource{}
+var _ resource.ResourceWithConfigure = &SpiffeAuthConfigResource{}
 
-// NewSpiffeConfigResource returns the implementation for this resource to be
+// NewSpiffeAuthConfigResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider
-func NewSpiffeConfigResource() resource.Resource {
-	return &SpiffeConfigResource{}
+func NewSpiffeAuthConfigResource() resource.Resource {
+	return &SpiffeAuthConfigResource{}
 }
 
-// SpiffeConfigResource implements the methods that define this resource
-type SpiffeConfigResource struct {
+// SpiffeAuthConfigResource implements the methods that define this resource
+type SpiffeAuthConfigResource struct {
 	base.ResourceWithConfigure
 	base.WithImportByID
 }
 
-type SpiffeConfigModel struct {
+type SpiffeAuthConfigModel struct {
 	base.BaseModelLegacy
 
 	Mount                       types.String `tfsdk:"mount"`
@@ -51,11 +51,11 @@ type SpiffeConfigModel struct {
 	Audience                    types.List   `tfsdk:"audience"`
 }
 
-func (s *SpiffeConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (s *SpiffeAuthConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_spiffe_auth_config"
 }
 
-func (s *SpiffeConfigResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (s *SpiffeAuthConfigResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
@@ -102,8 +102,8 @@ func (s *SpiffeConfigResource) Schema(ctx context.Context, req resource.SchemaRe
 	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
-func (s *SpiffeConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data SpiffeConfigModel
+func (s *SpiffeAuthConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data SpiffeAuthConfigModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -144,8 +144,8 @@ func (s *SpiffeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (s *SpiffeConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data SpiffeConfigModel
+func (s *SpiffeAuthConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data SpiffeAuthConfigModel
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
@@ -185,8 +185,8 @@ func (s *SpiffeConfigResource) Read(ctx context.Context, req resource.ReadReques
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (s *SpiffeConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data SpiffeConfigModel
+func (s *SpiffeAuthConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data SpiffeAuthConfigModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -237,15 +237,15 @@ func readDeferBundleFetchConfig(ctx context.Context, config tfsdk.Config) (bool,
 	return *deferBundleFetch, diag.Diagnostics{}
 }
 
-func (s *SpiffeConfigResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
+func (s *SpiffeAuthConfigResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
 	// API does not support delete, so just remove from state
 }
 
-func (s *SpiffeConfigResource) path(mount string) string {
+func (s *SpiffeAuthConfigResource) path(mount string) string {
 	return fmt.Sprintf("auth/%s/%s", mount, spiffeConfigPath)
 }
 
-func getApiModel(ctx context.Context, data *SpiffeConfigModel, deferBundleFetch bool) (map[string]any, diag.Diagnostics) {
+func getApiModel(ctx context.Context, data *SpiffeAuthConfigModel, deferBundleFetch bool) (map[string]any, diag.Diagnostics) {
 	// Note: defer bundle fetch is marked as write-only so it is never
 	// part of the plan which the data model is built from
 	vaultRequest := map[string]any{
@@ -276,7 +276,7 @@ func getApiModel(ctx context.Context, data *SpiffeConfigModel, deferBundleFetch 
 	return vaultRequest, nil
 }
 
-func populateDataModelFromApi(ctx context.Context, data *SpiffeConfigModel, resp *api.Secret) diag.Diagnostics {
+func populateDataModelFromApi(ctx context.Context, data *SpiffeAuthConfigModel, resp *api.Secret) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if resp == nil || resp.Data == nil {
