@@ -260,6 +260,7 @@ func Test_extractSpiffeConfigMountFromID(t *testing.T) {
 		{name: "bad-id-missing-config", id: "ns1/ns2/auth/spiffe/", wantErr: true},
 		{name: "bad-id-missing-auth", id: "spiffe/config", wantErr: true},
 		{name: "bad-id-missing-mount", id: "auth//config", wantErr: true},
+		{name: "bad-id-missing-everything", id: "/config", wantErr: true},
 		{name: "bad-id-double-slash-no-namespace", id: "//auth/spiffe/config", wantErr: true},
 	}
 	for _, tt := range tests {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -50,6 +52,17 @@ type SpiffeAuthConfigModel struct {
 	Bundle                      types.String `tfsdk:"bundle"`
 	DeferBundleFetch            types.Bool   `tfsdk:"defer_bundle_fetch"`
 	Audience                    types.List   `tfsdk:"audience"`
+}
+
+type SpiffeConfigAPIModel struct {
+	TrustDomain                 string   `json:"trust_domain" mapstructure:"trust_domain"`
+	Profile                     string   `json:"profile" mapstructure:"profile"`
+	EndPointUrl                 string   `json:"endpoint_url" mapstructure:"endpoint_url"`
+	EndpointSpiffeId            string   `json:"endpoint_spiffe_id" mapstructure:"endpoint_spiffe_id"`
+	EndpointRootCaTrustStorePem string   `json:"endpoint_root_ca_truststore_pem" mapstructure:"endpoint_root_ca_truststore_pem"`
+	Bundle                      string   `json:"bundle" mapstructure:"bundle"`
+	DeferBundleFetch            bool     `json:"defer_bundle_fetch" mapstructure:"defer_bundle_fetch"`
+	Audience                    []string `json:"audience" mapstructure:"audience"`
 }
 
 func (s *SpiffeAuthConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -267,68 +280,83 @@ func (s *SpiffeAuthConfigResource) path(mount string) string {
 func getApiModel(ctx context.Context, data *SpiffeAuthConfigModel, deferBundleFetch bool) (map[string]any, diag.Diagnostics) {
 	// Note: defer bundle fetch is marked as write-only so it is never
 	// part of the plan which the data model is built from
-	vaultRequest := map[string]any{
-		"trust_domain":       data.TrustDomain.ValueString(),
-		"profile":            data.Profile.ValueString(),
-		"defer_bundle_fetch": deferBundleFetch,
+	apiModel := SpiffeConfigAPIModel{
+		TrustDomain:                 data.TrustDomain.ValueString(),
+		Profile:                     data.Profile.ValueString(),
+		EndPointUrl:                 data.EndPointUrl.ValueString(),
+		EndpointSpiffeId:            data.EndpointSpiffeId.ValueString(),
+		EndpointRootCaTrustStorePem: data.EndpointRootCaTrustStorePem.ValueString(),
+		Bundle:                      data.Bundle.ValueString(),
+		DeferBundleFetch:            deferBundleFetch,
 	}
-	if !data.EndPointUrl.IsUnknown() {
-		vaultRequest["endpoint_url"] = data.EndPointUrl.ValueString()
+
+	var audienceVals []string
+	if err := data.Audience.ElementsAs(ctx, &audienceVals, false); err != nil {
+		return nil, err
 	}
-	if !data.EndpointSpiffeId.IsUnknown() {
-		vaultRequest["endpoint_spiffe_id"] = data.EndpointSpiffeId.ValueString()
-	}
-	if !data.EndpointRootCaTrustStorePem.IsUnknown() {
-		vaultRequest["endpoint_root_ca_trust_store_pem"] = data.EndpointRootCaTrustStorePem.ValueString()
-	}
-	if !data.Bundle.IsUnknown() {
-		vaultRequest["bundle"] = data.Bundle.ValueString()
-	}
-	if !data.Audience.IsUnknown() {
-		var audienceVals []string
-		if err := data.Audience.ElementsAs(ctx, &audienceVals, false); err != nil {
-			return nil, err
+	apiModel.Audience = audienceVals
+
+	var vaultRequest map[string]any
+	if err := mapstructure.Decode(apiModel, &vaultRequest); err != nil {
+		return nil, diag.Diagnostics{
+			diag.NewErrorDiagnostic("Failed to decode SPIFFE API model to map", err.Error()),
 		}
-		vaultRequest["audience"] = audienceVals
 	}
 
 	return vaultRequest, nil
 }
 
 func populateDataModelFromApi(ctx context.Context, data *SpiffeAuthConfigModel, resp *api.Secret) diag.Diagnostics {
-	var diags diag.Diagnostics
-
 	if resp == nil || resp.Data == nil {
-		diags.AddError("Missing data in API response", "The API response or response data was nil.")
-		return diags
-	}
-	respData := resp.Data
-	data.Profile = types.StringValue(respData["profile"].(string))
-	data.TrustDomain = types.StringValue(respData["trust_domain"].(string))
-
-	if v, ok := respData["endpoint_spiffe_id"]; ok {
-		data.EndpointSpiffeId = types.StringValue(v.(string))
-	}
-	if v, ok := respData["endpoint_url"]; ok {
-		data.EndPointUrl = types.StringValue(v.(string))
-	}
-	if v, ok := respData["endpoint_root_ca_truststore_pem"]; ok {
-		data.EndpointRootCaTrustStorePem = types.StringValue(v.(string))
-	}
-	if v, ok := respData["bundle"]; ok {
-		data.Bundle = types.StringValue(v.(string))
-	}
-	if v, ok := respData["audience"]; ok {
-		var listErr diag.Diagnostics
-		data.Audience, listErr = types.ListValueFrom(ctx, types.StringType, v)
-		if listErr != nil {
-			diags.Append(listErr...)
+		return diag.Diagnostics{
+			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
 		}
 	}
 
-	return diags
+	var readResp SpiffeConfigAPIModel
+	if err := model.ToAPIModel(resp.Data, &readResp); err != nil {
+		return diag.Diagnostics{
+			diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error()),
+		}
+	}
+	data.Profile = types.StringValue(readResp.Profile)
+	data.TrustDomain = types.StringValue(readResp.TrustDomain)
+
+	data.EndpointSpiffeId = types.StringNull()
+	if readResp.EndpointSpiffeId != "" {
+		data.EndpointSpiffeId = types.StringValue(readResp.EndpointSpiffeId)
+	}
+
+	data.EndPointUrl = types.StringNull()
+	if readResp.EndPointUrl != "" {
+		data.EndPointUrl = types.StringValue(readResp.EndPointUrl)
+	}
+
+	data.EndpointRootCaTrustStorePem = types.StringNull()
+	if readResp.EndpointRootCaTrustStorePem != "" {
+		data.EndpointRootCaTrustStorePem = types.StringValue(readResp.EndpointRootCaTrustStorePem)
+	}
+
+	data.Bundle = types.StringNull()
+	if readResp.Bundle != "" {
+		data.Bundle = types.StringValue(readResp.Bundle)
+	}
+
+	// Note that DeferBundleFetch influences how the API is run, and is not returned from the API endpoint
+
+	if len(readResp.Audience) > 0 {
+		aud, listErr := types.ListValueFrom(ctx, types.StringType, readResp.Audience)
+		if listErr != nil {
+			return listErr
+		}
+		data.Audience = aud
+	}
+
+	return diag.Diagnostics{}
 }
 
+// ExtractSpiffeConfigMountFromID extracts the mount path and namespace from the given import ID provided
+// by the terraform import CLI command.
 func ExtractSpiffeConfigMountFromID(id string) (string, string, error) {
 	if id == "" {
 		return "", "", fmt.Errorf("import identifier cannot be empty")
@@ -340,15 +368,19 @@ func ExtractSpiffeConfigMountFromID(id string) (string, string, error) {
 	if len(parts) < 3 {
 		return "", "", fmt.Errorf("import identifier must be of the form '<namespace>/auth/<mount>/config' or 'auth/<mount>/config'")
 	}
-	if parts[len(parts)-1] != "config" || parts[len(parts)-3] != "auth" {
+	// Validate the last two parts of the ID to ensure they are "auth" and "config"
+	if parts[len(parts)-3] != "auth" || parts[len(parts)-1] != "config" {
 		return "", "", fmt.Errorf("import identifier must be of the form '<namespace>/auth/<mount>/config' or 'auth/<mount>/config'")
 	}
+
 	var namespace, mount string
-	if len(parts) == 3 {
-		// No namespace
-		mount = strings.TrimSpace(parts[1])
-	} else {
-		mount = strings.TrimSpace(parts[len(parts)-2])
+	mount = strings.TrimSpace(parts[len(parts)-2])
+	if mount == "" {
+		return "", "", fmt.Errorf("mount cannot be empty")
+	}
+
+	if len(parts) > 3 {
+		// If we have more than 3 parts, the namespace is everything before "auth"
 		namespace = strings.TrimSpace(strings.Join(parts[:len(parts)-3], "/"))
 		if namespace == "/" {
 			namespace = ""
@@ -357,8 +389,6 @@ func ExtractSpiffeConfigMountFromID(id string) (string, string, error) {
 			return "", "", fmt.Errorf("namespace cannot be empty if specified in import identifier")
 		}
 	}
-	if mount == "" {
-		return "", "", fmt.Errorf("mount cannot be empty")
-	}
+
 	return namespace, mount, nil
 }
