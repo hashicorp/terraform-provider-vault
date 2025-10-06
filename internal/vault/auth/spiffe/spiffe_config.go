@@ -3,6 +3,7 @@ package spiffe
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
@@ -34,11 +36,10 @@ func NewSpiffeAuthConfigResource() resource.Resource {
 // SpiffeAuthConfigResource implements the methods that define this resource
 type SpiffeAuthConfigResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 type SpiffeAuthConfigModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Mount                       types.String `tfsdk:"mount"`
 	TrustDomain                 types.String `tfsdk:"trust_domain"`
@@ -99,7 +100,7 @@ func (s *SpiffeAuthConfigResource) Schema(ctx context.Context, req resource.Sche
 		},
 	}
 
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 func (s *SpiffeAuthConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -138,8 +139,6 @@ func (s *SpiffeAuthConfigResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	data.ID = types.StringValue(mountPath)
-
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -160,7 +159,7 @@ func (s *SpiffeAuthConfigResource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	// read the name from the id field to support the import command
-	policyResp, err := vaultClient.Logical().ReadWithContext(ctx, data.ID.ValueString())
+	policyResp, err := vaultClient.Logical().ReadWithContext(ctx, s.path(data.Mount.ValueString()))
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
@@ -173,13 +172,6 @@ func (s *SpiffeAuthConfigResource) Read(ctx context.Context, req resource.ReadRe
 	if diagErr := populateDataModelFromApi(ctx, &data, policyResp); diagErr.HasError() {
 		resp.Diagnostics.Append(diagErr...)
 		return
-	}
-
-	if data.Mount.IsNull() && !data.ID.IsNull() {
-		// Import scenario, extract mount from ID
-		mount := strings.TrimPrefix(data.ID.ValueString(), "auth/")
-		mount = strings.TrimSuffix(mount, "/config")
-		data.Mount = types.StringValue(mount)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -220,8 +212,6 @@ func (s *SpiffeAuthConfigResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	data.ID = types.StringValue(mountPath)
-
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -239,6 +229,35 @@ func readDeferBundleFetchConfig(ctx context.Context, config tfsdk.Config) (bool,
 
 func (s *SpiffeAuthConfigResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
 	// API does not support delete, so just remove from state
+}
+
+func (s *SpiffeAuthConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldMount), req, resp)
+
+	ns, mount, err := ExtractSpiffeConfigMountFromID(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			fmt.Sprintf("The import identifier '%s' is not valid: %s", req.ID, err.Error()),
+		)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
+	if ns != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
+
+	ns = os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		resp.Diagnostics.Append(
+			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
+		)
+	}
 }
 
 func (s *SpiffeAuthConfigResource) path(mount string) string {
@@ -308,4 +327,38 @@ func populateDataModelFromApi(ctx context.Context, data *SpiffeAuthConfigModel, 
 	}
 
 	return diags
+}
+
+func ExtractSpiffeConfigMountFromID(id string) (string, string, error) {
+	if id == "" {
+		return "", "", fmt.Errorf("import identifier cannot be empty")
+	}
+	// Trim leading slash if present
+	id = strings.TrimPrefix(id, "/")
+
+	parts := strings.Split(id, "/")
+	if len(parts) < 3 {
+		return "", "", fmt.Errorf("import identifier must be of the form '<namespace>/auth/<mount>/config' or 'auth/<mount>/config'")
+	}
+	if parts[len(parts)-1] != "config" || parts[len(parts)-3] != "auth" {
+		return "", "", fmt.Errorf("import identifier must be of the form '<namespace>/auth/<mount>/config' or 'auth/<mount>/config'")
+	}
+	var namespace, mount string
+	if len(parts) == 3 {
+		// No namespace
+		mount = strings.TrimSpace(parts[1])
+	} else {
+		mount = strings.TrimSpace(parts[len(parts)-2])
+		namespace = strings.TrimSpace(strings.Join(parts[:len(parts)-3], "/"))
+		if namespace == "/" {
+			namespace = ""
+		}
+		if namespace == "" {
+			return "", "", fmt.Errorf("namespace cannot be empty if specified in import identifier")
+		}
+	}
+	if mount == "" {
+		return "", "", fmt.Errorf("mount cannot be empty")
+	}
+	return namespace, mount, nil
 }
