@@ -26,7 +26,7 @@ const (
 	spiffeConfigPath = "config"
 )
 
-// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
+// Ensure the implementation satisfies the resource.ResourceWithImportState interface
 var _ resource.ResourceWithImportState = &SpiffeAuthConfigResource{}
 
 // NewSpiffeAuthConfigResource returns the implementation for this resource to be
