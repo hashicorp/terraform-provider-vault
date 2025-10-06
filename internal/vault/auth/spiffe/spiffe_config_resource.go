@@ -27,7 +27,7 @@ const (
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
-var _ resource.ResourceWithConfigure = &SpiffeAuthConfigResource{}
+var _ resource.ResourceWithImportState = &SpiffeAuthConfigResource{}
 
 // NewSpiffeAuthConfigResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider
@@ -229,17 +229,6 @@ func (s *SpiffeAuthConfigResource) Update(ctx context.Context, req resource.Upda
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func readDeferBundleFetchConfig(ctx context.Context, config tfsdk.Config) (bool, diag.Diagnostics) {
-	var deferBundleFetch *bool
-	if diagErr := config.GetAttribute(ctx, path.Root("defer_bundle_fetch"), &deferBundleFetch); diagErr.HasError() {
-		return false, diagErr
-	}
-	if deferBundleFetch == nil {
-		return false, diag.Diagnostics{}
-	}
-	return *deferBundleFetch, diag.Diagnostics{}
-}
-
 func (s *SpiffeAuthConfigResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
 	// API does not support delete, so just remove from state
 }
@@ -275,6 +264,17 @@ func (s *SpiffeAuthConfigResource) ImportState(ctx context.Context, req resource
 
 func (s *SpiffeAuthConfigResource) path(mount string) string {
 	return fmt.Sprintf("auth/%s/%s", mount, spiffeConfigPath)
+}
+
+func readDeferBundleFetchConfig(ctx context.Context, config tfsdk.Config) (bool, diag.Diagnostics) {
+	var deferBundleFetch *bool
+	if diagErr := config.GetAttribute(ctx, path.Root("defer_bundle_fetch"), &deferBundleFetch); diagErr.HasError() {
+		return false, diagErr
+	}
+	if deferBundleFetch == nil {
+		return false, diag.Diagnostics{}
+	}
+	return *deferBundleFetch, diag.Diagnostics{}
 }
 
 func getApiModel(ctx context.Context, data *SpiffeAuthConfigModel, deferBundleFetch bool) (map[string]any, diag.Diagnostics) {
