@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
 
@@ -24,7 +25,7 @@ func TestAccDataSourcePKISecretIssuer(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -49,7 +50,7 @@ func TestAccDataSourcePKISecretIssuer_verify_disable_fields(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		Steps: []resource.TestStep{
 			{

@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -458,7 +459,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
@@ -858,7 +859,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_tls(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
@@ -886,7 +887,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_rootlessConfig(t *testing
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
@@ -912,7 +913,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
@@ -955,7 +956,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation(t *
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
@@ -1191,7 +1192,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/stretchr/testify/require"
 	"regexp"
@@ -324,7 +325,7 @@ func TestAccPKISecretBackendConfigAutoTidy_ent(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{

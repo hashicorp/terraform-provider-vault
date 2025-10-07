@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"regexp"
 	"testing"
 
@@ -164,7 +165,7 @@ func TestGCPAuthBackend_WIF(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testGCPAuthBackendDestroy,
@@ -304,7 +305,7 @@ func TestAccGCPAuthBackendClient_automatedRotation(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
 		Steps: []resource.TestStep{

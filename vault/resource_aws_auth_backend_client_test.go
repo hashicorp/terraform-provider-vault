@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"regexp"
 	"testing"
 
@@ -112,7 +113,7 @@ func TestAccAWSAuthBackend_wif(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
@@ -159,7 +160,7 @@ func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
@@ -194,7 +195,7 @@ func TestAccAWSAuthBackendClient_automatedRotation(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldBackend),
 		Steps: []resource.TestStep{

@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"net/url"
 	"os"
 	"testing"
@@ -195,7 +196,7 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -251,7 +252,7 @@ func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -307,7 +308,7 @@ func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{

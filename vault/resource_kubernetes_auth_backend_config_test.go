@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"strconv"
 	"testing"
 
@@ -362,7 +363,7 @@ func TestAccKubernetesAuthBackendConfig_localCA(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionGTE(t, testProvider.Meta(), vaultVersion193)
+			helpers.SkipIfAPIVersionGTE(t, testProvider.Meta(), vaultVersion193)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
@@ -506,7 +507,7 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.SkipTestEnvSet(t, envVarTFAccK8sSkipInCluster)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), vaultVersion193)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), vaultVersion193)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,

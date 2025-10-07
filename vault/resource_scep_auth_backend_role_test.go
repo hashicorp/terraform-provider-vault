@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"testing"
@@ -22,7 +23,7 @@ func TestScepAuthBackendRolesResource_static_challenge(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testScepAuthBackendDestroy,
@@ -83,7 +84,7 @@ func TestScepAuthBackendRolesResource_intune(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testScepAuthBackendDestroy,

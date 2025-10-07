@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"regexp"
 	"testing"
@@ -131,7 +132,7 @@ func TestAccAWSSecretBackend_wif(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -168,7 +169,7 @@ func TestAccAWSSecretBackend_automatedRotation(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -278,7 +279,7 @@ func TestAccAWSSecretBackendRole_MountConfig(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{

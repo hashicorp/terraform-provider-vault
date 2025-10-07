@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"os"
 	"strconv"
 	"testing"
@@ -94,7 +95,7 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 	t.Run("vault-1.11-and-below", func(t *testing.T) {
 		setupCRLConfigTest(t, func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion112)
+			helpers.SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 			"ocsp_disable",
 			"ocsp_expiry",
@@ -113,8 +114,8 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 	t.Run("vault-1.12", func(t *testing.T) {
 		setupCRLConfigTest(t, func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion113)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+			helpers.SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion113)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 			"cross_cluster_revocation",
 			"unified_crl",
@@ -127,8 +128,8 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 	t.Run("vault-1.13-to-1.18", func(t *testing.T) {
 		setupCRLConfigTest(t, func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
-			testutil.SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion119)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
+			helpers.SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 			"max_crl_entries",
 		)
@@ -138,7 +139,7 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 	t.Run("vault-1.19-and-above", func(t *testing.T) {
 		setupCRLConfigTest(t, func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		)
 	})
@@ -168,7 +169,7 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 			PreCheck: func() {
 				testutil.TestAccPreCheck(t)
 				testutil.TestEntPreCheck(t)
-				testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+				helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
 			},
 			CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 			Steps:        steps,

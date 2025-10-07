@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"strings"
 	"testing"
 
@@ -129,7 +130,7 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCertAuthBackendDestroy,

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"reflect"
 	"strconv"
 	"testing"
@@ -123,7 +124,7 @@ func TestPkiSecretBackendRootCertificate_name_constraints(t *testing.T) {
 	}
 
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, func(t *testing.T) {
-		testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 	})
 }
 
@@ -298,7 +299,7 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
 		},
 		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -341,7 +342,7 @@ func TestAccPKISecretBackendRootCert_multipleRootCerts(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{

@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -25,7 +26,7 @@ func TestPkiSecretBackendConfigACME_basic(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
@@ -77,7 +78,7 @@ func TestPkiSecretBackendConfigACME_basic(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{

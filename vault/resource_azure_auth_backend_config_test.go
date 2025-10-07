@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"regexp"
 	"testing"
 
@@ -67,7 +68,7 @@ func TestAccAzureAuthBackend_wif(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldBackend),
 		Steps: []resource.TestStep{
@@ -107,7 +108,7 @@ func TestAccAzureAuthBackendConfig_automatedRotation(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldBackend),
 		Steps: []resource.TestStep{

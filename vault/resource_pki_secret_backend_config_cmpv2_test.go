@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
 
@@ -29,7 +30,7 @@ func TestAccPKISecretBackendConfigCMPV2_Empty(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
@@ -72,7 +73,7 @@ func TestAccPKISecretBackendConfigCMPV2_AllFields_Pre1185(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
@@ -123,7 +124,7 @@ func TestAccPKISecretBackendConfigCMPV2_AllFields(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion1185)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion1185)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
@@ -189,7 +190,7 @@ func TestAccPKISecretBackendConfigCMPV2_ChangeFields(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{

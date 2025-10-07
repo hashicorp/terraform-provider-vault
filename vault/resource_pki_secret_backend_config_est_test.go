@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -31,7 +32,7 @@ func TestAccPKISecretBackendConfigEst_Empty(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
@@ -81,7 +82,7 @@ func TestAccPKISecretBackendConfigEst_Blank(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
@@ -131,7 +132,7 @@ func TestAccPKISecretBackendConfigEst_AllFields(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
@@ -206,7 +207,7 @@ func TestAccPKISecretBackendConfigEst_ChangeFields(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{

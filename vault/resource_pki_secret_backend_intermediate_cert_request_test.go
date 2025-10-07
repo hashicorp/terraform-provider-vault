@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"strconv"
 	"testing"
 
@@ -268,7 +269,7 @@ func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
 		},
 		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
