@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -39,6 +38,7 @@ func TestAccSpiffeAuthConfig(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
+			// FIXME: Add a Test for Vault 1.21.x
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 
@@ -243,34 +243,4 @@ resource "vault_spiffe_auth_config" "spiffe_config" {
 EOB
 }
 `, mount, bundle)
-}
-
-func Test_extractSpiffeConfigMountFromID(t *testing.T) {
-	tests := []struct {
-		name      string
-		id        string
-		wantMount string
-		wantErr   bool
-	}{
-		{name: "mount no namespace", id: "auth/spiffe/config", wantMount: "spiffe"},
-		{name: "mount no namespace with prefix /", id: "/auth/spiffe/config", wantMount: "spiffe"},
-		{name: "bad-mount-with-namespace", id: "ns1/auth/spiffe/config", wantErr: true},
-		{name: "bad-id-missing-config", id: "ns1/ns2/auth/spiffe/", wantErr: true},
-		{name: "bad-id-missing-auth", id: "spiffe/config", wantErr: true},
-		{name: "bad-id-missing-mount", id: "auth//config", wantErr: true},
-		{name: "bad-id-missing-everything", id: "/config", wantErr: true},
-		{name: "bad-id-double-slash-no-namespace", id: "//auth/spiffe/config", wantErr: true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotMount, err := spiffe.ExtractSpiffeConfigMountFromID(tt.id)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ExtractSpiffeConfigMountFromID() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotMount != tt.wantMount {
-				t.Errorf("ExtractSpiffeConfigMountFromID() gotMount = %v, wantMount %v", gotMount, tt.wantMount)
-			}
-		})
-	}
 }

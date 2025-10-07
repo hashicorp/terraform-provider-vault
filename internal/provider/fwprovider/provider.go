@@ -226,6 +226,7 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		spiffe.NewSpiffeAuthConfigResource,
+		spiffe.NewSpiffeAuthRoleResource,
 		sys.NewPasswordPolicyResource,
 	}
 }

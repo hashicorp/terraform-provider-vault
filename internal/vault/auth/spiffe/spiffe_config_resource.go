@@ -132,13 +132,13 @@ func (s *SpiffeAuthConfigResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	deferBundleFetch, diagErr := readDeferBundleFetchConfig(ctx, req.Config)
+	deferBundleFetch, diagErr := s.readDeferBundleFetchConfig(ctx, req.Config)
 	if diagErr.HasError() {
 		resp.Diagnostics.Append(diagErr...)
 		return
 	}
 
-	vaultRequest, diagErr := getApiModel(ctx, &data, deferBundleFetch)
+	vaultRequest, diagErr := s.getApiModel(ctx, &data, deferBundleFetch)
 	if diagErr != nil {
 		resp.Diagnostics.Append(diagErr...)
 		return
@@ -182,7 +182,7 @@ func (s *SpiffeAuthConfigResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	if diagErr := populateDataModelFromApi(ctx, &data, policyResp); diagErr.HasError() {
+	if diagErr := s.populateDataModelFromApi(ctx, &data, policyResp); diagErr.HasError() {
 		resp.Diagnostics.Append(diagErr...)
 		return
 	}
@@ -205,19 +205,18 @@ func (s *SpiffeAuthConfigResource) Update(ctx context.Context, req resource.Upda
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
-	deferBundleFetch, diagErr := readDeferBundleFetchConfig(ctx, req.Config)
+	deferBundleFetch, diagErr := s.readDeferBundleFetchConfig(ctx, req.Config)
 	if diagErr.HasError() {
 		resp.Diagnostics.Append(diagErr...)
 		return
 	}
 
-	vaultRequest, diagErr := getApiModel(ctx, &data, deferBundleFetch)
+	vaultRequest, diagErr := s.getApiModel(ctx, &data, deferBundleFetch)
 	if diagErr.HasError() {
 		resp.Diagnostics.Append(diagErr...)
 		return
 	}
 
-	// vault returns a nil response on success
 	mountPath := s.path(data.Mount.ValueString())
 	_, err = vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest)
 	if err != nil {
@@ -236,7 +235,7 @@ func (s *SpiffeAuthConfigResource) Delete(_ context.Context, _ resource.DeleteRe
 func (s *SpiffeAuthConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldMount), req, resp)
 
-	mount, err := ExtractSpiffeConfigMountFromID(req.ID)
+	mount, err := extractSpiffeConfigMountFromID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing import identifier",
@@ -263,7 +262,7 @@ func (s *SpiffeAuthConfigResource) path(mount string) string {
 	return fmt.Sprintf("auth/%s/%s", mount, spiffeConfigPath)
 }
 
-func readDeferBundleFetchConfig(ctx context.Context, config tfsdk.Config) (bool, diag.Diagnostics) {
+func (s *SpiffeAuthConfigResource) readDeferBundleFetchConfig(ctx context.Context, config tfsdk.Config) (bool, diag.Diagnostics) {
 	var deferBundleFetch *bool
 	if diagErr := config.GetAttribute(ctx, path.Root("defer_bundle_fetch"), &deferBundleFetch); diagErr.HasError() {
 		return false, diagErr
@@ -274,7 +273,7 @@ func readDeferBundleFetchConfig(ctx context.Context, config tfsdk.Config) (bool,
 	return *deferBundleFetch, diag.Diagnostics{}
 }
 
-func getApiModel(ctx context.Context, data *SpiffeAuthConfigModel, deferBundleFetch bool) (map[string]any, diag.Diagnostics) {
+func (s *SpiffeAuthConfigResource) getApiModel(ctx context.Context, data *SpiffeAuthConfigModel, deferBundleFetch bool) (map[string]any, diag.Diagnostics) {
 	// Note: defer bundle fetch is marked as write-only so it is never
 	// part of the plan which the data model is built from
 	apiModel := SpiffeConfigAPIModel{
@@ -296,14 +295,14 @@ func getApiModel(ctx context.Context, data *SpiffeAuthConfigModel, deferBundleFe
 	var vaultRequest map[string]any
 	if err := mapstructure.Decode(apiModel, &vaultRequest); err != nil {
 		return nil, diag.Diagnostics{
-			diag.NewErrorDiagnostic("Failed to decode SPIFFE API model to map", err.Error()),
+			diag.NewErrorDiagnostic("Failed to decode SPIFFE config API model to map", err.Error()),
 		}
 	}
 
 	return vaultRequest, nil
 }
 
-func populateDataModelFromApi(ctx context.Context, data *SpiffeAuthConfigModel, resp *api.Secret) diag.Diagnostics {
+func (s *SpiffeAuthConfigResource) populateDataModelFromApi(ctx context.Context, data *SpiffeAuthConfigModel, resp *api.Secret) diag.Diagnostics {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{
 			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
@@ -352,14 +351,14 @@ func populateDataModelFromApi(ctx context.Context, data *SpiffeAuthConfigModel, 
 	return diag.Diagnostics{}
 }
 
-// ExtractSpiffeConfigMountFromID extracts the mount path from the given import ID provided
+// extractSpiffeConfigMountFromID extracts the mount path from the given import ID provided
 // by the terraform import CLI command.
-func ExtractSpiffeConfigMountFromID(id string) (string, error) {
+func extractSpiffeConfigMountFromID(id string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("import identifier cannot be empty")
 	}
 	// Trim leading slash if present
-	id = strings.TrimPrefix(id, "/")
+	id = strings.Trim(id, "/")
 
 	parts := strings.Split(id, "/")
 	if len(parts) != 3 {
