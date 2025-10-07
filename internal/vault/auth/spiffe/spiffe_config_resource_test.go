@@ -249,14 +249,12 @@ func Test_extractSpiffeConfigMountFromID(t *testing.T) {
 	tests := []struct {
 		name      string
 		id        string
-		wantNs    string
 		wantMount string
 		wantErr   bool
 	}{
 		{name: "mount no namespace", id: "auth/spiffe/config", wantMount: "spiffe"},
 		{name: "mount no namespace with prefix /", id: "/auth/spiffe/config", wantMount: "spiffe"},
-		{name: "mount with namespace", id: "ns1/auth/spiffe/config", wantMount: "spiffe", wantNs: "ns1"},
-		{name: "mount with double namespace", id: "ns1/ns2/auth/spiffe/config", wantMount: "spiffe", wantNs: "ns1/ns2"},
+		{name: "bad-mount-with-namespace", id: "ns1/auth/spiffe/config", wantErr: true},
 		{name: "bad-id-missing-config", id: "ns1/ns2/auth/spiffe/", wantErr: true},
 		{name: "bad-id-missing-auth", id: "spiffe/config", wantErr: true},
 		{name: "bad-id-missing-mount", id: "auth//config", wantErr: true},
@@ -265,16 +263,13 @@ func Test_extractSpiffeConfigMountFromID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := spiffe.ExtractSpiffeConfigMountFromID(tt.id)
+			gotMount, err := spiffe.ExtractSpiffeConfigMountFromID(tt.id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExtractSpiffeConfigMountFromID() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.wantNs {
-				t.Errorf("ExtractSpiffeConfigMountFromID() got = %v, wantNs %v", got, tt.wantNs)
-			}
-			if got1 != tt.wantMount {
-				t.Errorf("ExtractSpiffeConfigMountFromID() got1 = %v, wantNs %v", got1, tt.wantMount)
+			if gotMount != tt.wantMount {
+				t.Errorf("ExtractSpiffeConfigMountFromID() gotMount = %v, wantMount %v", gotMount, tt.wantMount)
 			}
 		})
 	}

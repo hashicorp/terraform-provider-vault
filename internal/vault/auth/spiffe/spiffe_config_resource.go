@@ -236,7 +236,7 @@ func (s *SpiffeAuthConfigResource) Delete(_ context.Context, _ resource.DeleteRe
 func (s *SpiffeAuthConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldMount), req, resp)
 
-	ns, mount, err := ExtractSpiffeConfigMountFromID(req.ID)
+	mount, err := ExtractSpiffeConfigMountFromID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing import identifier",
@@ -245,11 +245,8 @@ func (s *SpiffeAuthConfigResource) ImportState(ctx context.Context, req resource
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
-	if ns != "" {
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
-	}
 
-	ns = os.Getenv(consts.EnvVarVaultNamespaceImport)
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
 	if ns != "" {
 		tflog.Info(
 			ctx,
@@ -355,40 +352,25 @@ func populateDataModelFromApi(ctx context.Context, data *SpiffeAuthConfigModel, 
 	return diag.Diagnostics{}
 }
 
-// ExtractSpiffeConfigMountFromID extracts the mount path and namespace from the given import ID provided
+// ExtractSpiffeConfigMountFromID extracts the mount path from the given import ID provided
 // by the terraform import CLI command.
-func ExtractSpiffeConfigMountFromID(id string) (string, string, error) {
+func ExtractSpiffeConfigMountFromID(id string) (string, error) {
 	if id == "" {
-		return "", "", fmt.Errorf("import identifier cannot be empty")
+		return "", fmt.Errorf("import identifier cannot be empty")
 	}
 	// Trim leading slash if present
 	id = strings.TrimPrefix(id, "/")
 
 	parts := strings.Split(id, "/")
-	if len(parts) < 3 {
-		return "", "", fmt.Errorf("import identifier must be of the form '<namespace>/auth/<mount>/config' or 'auth/<mount>/config'")
-	}
-	// Validate the last two parts of the ID to ensure they are "auth" and "config"
-	if parts[len(parts)-3] != "auth" || parts[len(parts)-1] != "config" {
-		return "", "", fmt.Errorf("import identifier must be of the form '<namespace>/auth/<mount>/config' or 'auth/<mount>/config'")
+	if len(parts) != 3 {
+		return "", fmt.Errorf("import identifier must be of the form 'auth/<mount>/config', "+
+			"namespace can be specified using the env var %s", consts.EnvVarVaultNamespaceImport)
 	}
 
-	var namespace, mount string
-	mount = strings.TrimSpace(parts[len(parts)-2])
+	mount := strings.TrimSpace(parts[1])
 	if mount == "" {
-		return "", "", fmt.Errorf("mount cannot be empty")
+		return "", fmt.Errorf("mount cannot be empty")
 	}
 
-	if len(parts) > 3 {
-		// If we have more than 3 parts, the namespace is everything before "auth"
-		namespace = strings.TrimSpace(strings.Join(parts[:len(parts)-3], "/"))
-		if namespace == "/" {
-			namespace = ""
-		}
-		if namespace == "" {
-			return "", "", fmt.Errorf("namespace cannot be empty if specified in import identifier")
-		}
-	}
-
-	return namespace, mount, nil
+	return mount, nil
 }
