@@ -22,7 +22,7 @@ func TestScepAuthBackendRolesResource_static_challenge(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testScepAuthBackendDestroy,

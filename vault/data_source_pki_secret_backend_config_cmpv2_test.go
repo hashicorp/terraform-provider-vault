@@ -23,7 +23,7 @@ func TestAccDataSourcePKISecretConfigCMPV2(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		Steps: []resource.TestStep{
 			{

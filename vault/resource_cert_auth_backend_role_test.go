@@ -129,7 +129,7 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCertAuthBackendDestroy,

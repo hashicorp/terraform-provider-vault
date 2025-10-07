@@ -110,7 +110,7 @@ func TestAccSSHSecretBackendCA_managedKeys(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
 		},
 		CheckDestroy: testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{

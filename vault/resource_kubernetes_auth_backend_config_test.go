@@ -362,7 +362,7 @@ func TestAccKubernetesAuthBackendConfig_localCA(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionGTE(t, testProvider.Meta(), vaultVersion193)
+			testutil.SkipIfAPIVersionGTE(t, testProvider.Meta(), vaultVersion193)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
@@ -506,7 +506,7 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.SkipTestEnvSet(t, envVarTFAccK8sSkipInCluster)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), vaultVersion193)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), vaultVersion193)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,

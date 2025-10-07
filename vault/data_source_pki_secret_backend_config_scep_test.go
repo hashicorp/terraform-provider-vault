@@ -23,7 +23,7 @@ func TestAccDataSourcePKISecretConfigScep(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
 		},
 		Steps: []resource.TestStep{
 			{

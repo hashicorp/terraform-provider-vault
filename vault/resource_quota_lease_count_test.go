@@ -67,7 +67,7 @@ func TestQuotaLeaseCountRoot(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion116)
+			testutil.SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		CheckDestroy: testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
 		Steps: []resource.TestStep{
@@ -96,7 +96,7 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 		CheckDestroy: resource.ComposeTestCheckFunc(
 			testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
@@ -138,7 +138,7 @@ func TestQuotaLeaseCountInheritable(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		CheckDestroy: testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
 		Steps: []resource.TestStep{
@@ -196,7 +196,7 @@ func TestQuotaLeaseCountWithRoleInheritable(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		CheckDestroy: resource.ComposeTestCheckFunc(
 			testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),

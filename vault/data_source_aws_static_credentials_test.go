@@ -24,7 +24,7 @@ func TestAccDataSourceAWSStaticCredentials(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
 
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),

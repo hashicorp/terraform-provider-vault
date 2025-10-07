@@ -47,7 +47,7 @@ func TestPlugin(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.SkipTestEnvUnset(t, envPluginCommand)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 		Steps: []resource.TestStep{
 			{

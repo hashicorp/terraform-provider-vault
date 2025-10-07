@@ -155,7 +155,7 @@ func TestTransitSecretBackendKey_hmac(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
