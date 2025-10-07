@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/helpers"
 	"os"
 	"strconv"
 	"strings"
@@ -47,7 +48,7 @@ func TestPlugin(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.SkipTestEnvUnset(t, envPluginCommand)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+			helpers.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 		Steps: []resource.TestStep{
 			{
