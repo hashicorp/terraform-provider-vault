@@ -146,9 +146,18 @@ func (s *SpiffeAuthConfigResource) Create(ctx context.Context, req resource.Crea
 
 	// vault returns a nil response on success
 	mountPath := s.path(data.Mount.ValueString())
-	_, err = vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest)
+	confResp, err := vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
+		return
+	}
+	if confResp == nil {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+		return
+	}
+
+	if diagErr := s.populateDataModelFromApi(ctx, &data, confResp); diagErr.HasError() {
+		resp.Diagnostics.Append(diagErr...)
 		return
 	}
 
@@ -218,9 +227,18 @@ func (s *SpiffeAuthConfigResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	mountPath := s.path(data.Mount.ValueString())
-	_, err = vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest)
+	confResp, err := vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
+		return
+	}
+	if confResp == nil {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+		return
+	}
+
+	if diagErr := s.populateDataModelFromApi(ctx, &data, confResp); diagErr.HasError() {
+		resp.Diagnostics.Append(diagErr...)
 		return
 	}
 
@@ -287,8 +305,8 @@ func (s *SpiffeAuthConfigResource) getApiModel(ctx context.Context, data *Spiffe
 	}
 
 	var audienceVals []string
-	if err := data.Audience.ElementsAs(ctx, &audienceVals, false); err != nil {
-		return nil, err
+	if diagErr := data.Audience.ElementsAs(ctx, &audienceVals, false); diagErr.HasError() {
+		return nil, diagErr
 	}
 	apiModel.Audience = audienceVals
 

@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/token"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -36,7 +37,7 @@ type SpiffeAuthRoleResource struct {
 }
 
 type SpiffeAuthRoleModel struct {
-	base.BaseModel
+	token.TokenModel
 
 	Mount              types.String `tfsdk:"mount"`
 	Name               types.String `tfsdk:"name"`
@@ -44,6 +45,8 @@ type SpiffeAuthRoleModel struct {
 }
 
 type SpiffeRoleAPIModel struct {
+	token.TokenAPIModel `mapstructure:",squash"`
+
 	WorkloadIDPatterns []string `json:"workload_id_patterns" mapstructure:"workload_id_patterns"`
 }
 
@@ -72,7 +75,7 @@ func (s *SpiffeAuthRoleResource) Schema(ctx context.Context, request resource.Sc
 		},
 	}
 
-	base.MustAddBaseSchema(&response.Schema)
+	token.MustAddBaseAndTokenSchemas(&response.Schema)
 }
 
 func (s *SpiffeAuthRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -103,9 +106,19 @@ func (s *SpiffeAuthRoleResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	_, err = vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest)
+	roleResp, err := vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
+		return
+	}
+
+	if roleResp == nil {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+		return
+	}
+
+	if diagErr := s.populateDataModelFromApi(ctx, &data, roleResp); diagErr.HasError() {
+		resp.Diagnostics.Append(diagErr...)
 		return
 	}
 
@@ -180,9 +193,19 @@ func (s *SpiffeAuthRoleResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	_, err = vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest)
+	roleResp, err := vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
+		return
+	}
+
+	if roleResp == nil {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+		return
+	}
+
+	if diagErr := s.populateDataModelFromApi(ctx, &data, roleResp); diagErr.HasError() {
+		resp.Diagnostics.Append(diagErr...)
 		return
 	}
 
@@ -259,6 +282,10 @@ func (s *SpiffeAuthRoleResource) getApiModel(ctx context.Context, data *SpiffeAu
 	}
 	apiModel.WorkloadIDPatterns = workloadIdPatterns
 
+	if diagErr := token.PopulateTokenAPIFromModel(ctx, &data.TokenModel, &apiModel.TokenAPIModel); diagErr.HasError() {
+		return nil, diagErr
+	}
+
 	var vaultRequest map[string]any
 	if err := mapstructure.Decode(apiModel, &vaultRequest); err != nil {
 		return nil, diag.Diagnostics{
@@ -291,8 +318,7 @@ func (s *SpiffeAuthRoleResource) populateDataModelFromApi(ctx context.Context, r
 		role.WorkloadIDPatterns = wkldIdPatterns
 	}
 
-	return diag.Diagnostics{}
-
+	return token.PopulateTokenModelFromAPI(ctx, &role.TokenModel, &readResp.TokenAPIModel)
 }
 
 func (s *SpiffeAuthRoleResource) extractSpiffeRoleIdentifiers(id string) (string, string, error) {
