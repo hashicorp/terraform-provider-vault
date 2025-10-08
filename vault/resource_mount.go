@@ -427,18 +427,16 @@ func readMount(ctx context.Context, d *schema.ResourceData, meta interface{}, ex
 	}
 
 	if !excludeType {
-		if cfgType, ok := d.GetOk(consts.FieldType); ok {
-			// kv-v2 is an alias for kv, version 2. Vault will report it back as "kv"
-			// and requires special handling to avoid perpetual drift.
-			if cfgType == "kv-v2" && mount.Type == "kv" && mount.Options["version"] == "2" {
-				mount.Type = "kv-v2"
+		// kv-v2 is an alias for kv, version 2. Vault will report it back as "kv"
+		// and requires special handling to avoid perpetual drift.
+		if mount.Type == "kv" && mount.Options["version"] == "2" {
+			mount.Type = "kv-v2"
 
-				// The options block may be omitted when specifying kv-v2, but will always
-				// be present in Vault's response if version 2. Omit the version setting
-				// if it wasn't explicitly set in config.
-				if mountOptions(d)["version"] == "" {
-					delete(mount.Options, "version")
-				}
+			// The options block may be omitted when specifying kv-v2, but will always
+			// be present in Vault's response if version 2. Omit the version setting
+			// if it wasn't explicitly set in config.
+			if mountOptions(d)["version"] == "" {
+				delete(mount.Options, "version")
 			}
 		}
 
