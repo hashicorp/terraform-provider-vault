@@ -85,6 +85,11 @@ func TestResourceMount(t *testing.T) {
 				Config: testResourceMount_updateConfig,
 				Check:  testResourceMount_updateCheck,
 			},
+			{
+				ResourceName:      "vault_mount.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -316,6 +321,11 @@ func TestResourceMount_KVV2(t *testing.T) {
 			{
 				PlanOnly: true,
 				Config:   kvv2Cfg,
+			},
+			{
+				ResourceName:      "vault_mount.test",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
