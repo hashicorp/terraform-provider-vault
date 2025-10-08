@@ -6,11 +6,12 @@ FEATURES:
 
 * New parameters for `vault_terraform_cloud_secret_role` to support multi-team tokens, by @drewmullen ([#2498](https://github.com/hashicorp/terraform-provider-vault/pull/2498))
 
+* Add support for `max_retries` parameter in `vault_aws_secret_backend` resource. ([#2623](https://github.com/hashicorp/terraform-provider-vault/pull/2623))
+
 BUGS:
 
 * Fix pki config resources to allow unsetting of fields (to empty fields) ([#2558](https://github.com/hashicorp/terraform-provider-vault/pull/2558))
 * Fix tune auth mounts to allow unsetting of fields (setting fields to empty values) ([#2605](https://github.com/hashicorp/terraform-provider-vault/pull/2605))
-* Fix `vault_pki_secret_backend_crl_config` resource to allow disabling flags previously set to true ([#2615](https://github.com/hashicorp/terraform-provider-vault/pull/2615))
 
 ## 5.3.0 (Sep 4, 2025)
 
