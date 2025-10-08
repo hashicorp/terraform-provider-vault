@@ -126,7 +126,6 @@ func ldapAuthBackendResource() *schema.Resource {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
-			Default:  true,
 		},
 		consts.FieldUPNDomain: {
 			Type:     schema.TypeString,
@@ -287,7 +286,16 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 
 	// handle boolean fields
 	for _, k := range ldapAuthBackendBooleanFields {
-		data[k] = d.Get(k)
+		if k == consts.FieldDenyNullBind {
+			// For security, default deny_null_bind to true if not explicitly set
+			if v, ok := d.GetOk(k); ok {
+				data[k] = v
+			} else {
+				data[k] = true
+			}
+		} else {
+			data[k] = d.Get(k)
+		}
 	}
 
 	useAPIVer111 := provider.IsAPISupported(meta, provider.VaultVersion111)
