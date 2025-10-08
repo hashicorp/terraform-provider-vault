@@ -299,21 +299,7 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 
 	// handle boolean fields
 	for _, k := range ldapAuthBackendBooleanFields {
-		if k == consts.FieldDenyNullBind {
-			// For security, default deny_null_bind to true if not explicitly set
-			// Check if the field is configured in the resource configuration
-			rawConfig := d.GetRawConfig()
-			configValue := rawConfig.GetAttr(k)
-			if !configValue.IsNull() {
-				// Field is explicitly set in config (true or false), use that value
-				data[k] = d.Get(k)
-			} else {
-				// Field not set in config, use secure default
-				data[k] = true
-			}
-		} else {
-			data[k] = d.Get(k)
-		}
+		data[k] = d.Get(k)
 	}
 
 	useAPIVer111 := provider.IsAPISupported(meta, provider.VaultVersion111)
