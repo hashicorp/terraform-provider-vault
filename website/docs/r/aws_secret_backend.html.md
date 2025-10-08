@@ -89,6 +89,8 @@ not begin or end with a `/`. Defaults to `aws`.
 
 * `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault 1.16+.
 
+* `max_retries` - (Optional) Number of max retries the client should use for recoverable errors. Requires Vault 1.16+.
+
 * `role_arn` - (Optional) Role ARN to assume for plugin identity token federation. Requires Vault 1.16+.
 
 * `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential. 

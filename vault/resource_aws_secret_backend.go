@@ -151,6 +151,12 @@ func awsSecretBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The TTL of generated identity tokens in seconds.",
 			},
+			consts.FieldMaxRetries: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "Number of max retries the client should use for recoverable errors.",
+			},
 		},
 	}, false)
 
@@ -262,6 +268,9 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		if v, ok := d.GetOk(consts.FieldIdentityTokenTTL); ok && v != 0 {
 			data[consts.FieldIdentityTokenTTL] = v.(int)
 		}
+		if v, ok := d.GetOk(consts.FieldMaxRetries); ok && v != 0 {
+			data[consts.FieldMaxRetries] = v.(int)
+		}
 	}
 
 	if region != "" {
@@ -367,6 +376,9 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 			if err := d.Set(consts.FieldIdentityTokenTTL, resp.Data[consts.FieldIdentityTokenTTL]); err != nil {
 				return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldIdentityTokenTTL, path, err)
 			}
+			if err := d.Set(consts.FieldMaxRetries, resp.Data[consts.FieldMaxRetries]); err != nil {
+				return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldMaxRetries, path, err)
+			}
 		}
 	}
 
@@ -400,7 +412,7 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	if d.HasChanges(consts.FieldAccessKey,
 		consts.FieldSecretKey, consts.FieldRegion, consts.FieldIAMEndpoint,
 		consts.FieldSTSEndpoint, consts.FieldSTSFallbackEndpoints, consts.FieldSTSRegion, consts.FieldSTSFallbackRegions,
-		consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn,
+		consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn, consts.FieldMaxRetries,
 		consts.FieldRotationSchedule,
 		consts.FieldRotationPeriod,
 		consts.FieldRotationWindow,
@@ -449,6 +461,10 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 			identityTokenTTL := d.Get(consts.FieldIdentityTokenTTL).(int)
 			if identityTokenTTL != 0 {
 				data[consts.FieldIdentityTokenTTL] = identityTokenTTL
+			}
+			maxRetries := d.Get(consts.FieldMaxRetries).(int)
+			if maxRetries != 0 {
+				data[consts.FieldMaxRetries] = maxRetries
 			}
 		}
 

@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"regexp"
 	"testing"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -142,6 +142,7 @@ func TestAccAWSSecretBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
 				),
 			},
 			{
@@ -151,6 +152,7 @@ func TestAccAWSSecretBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience-updated"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
 				),
 			},
 		},
@@ -436,6 +438,7 @@ resource "vault_aws_secret_backend" "test" {
   identity_token_audience = "wif-audience"
   identity_token_ttl = 600
   role_arn = "test-role-arn"
+  max_retries = 3
 }`, path)
 }
 
@@ -446,6 +449,7 @@ resource "vault_aws_secret_backend" "test" {
   identity_token_audience = "wif-audience-updated"
   identity_token_ttl = 1800
   role_arn = "test-role-arn-updated"
+  max_retries = 5
 }`, path)
 }
 
