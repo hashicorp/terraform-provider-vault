@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 	"strings"
 
@@ -16,6 +15,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
@@ -126,6 +126,7 @@ func ldapAuthBackendResource() *schema.Resource {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
+			Default:  true,
 		},
 		consts.FieldUPNDomain: {
 			Type:     schema.TypeString,

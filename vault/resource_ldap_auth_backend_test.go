@@ -6,9 +6,10 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -148,6 +149,48 @@ func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldBindPass, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func TestLDAPAuthBackend_denyNullBindDefault(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-ldap-deny-null-bind")
+
+	resourceName := "vault_ldap_auth_backend.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_denyNullBindNotSet(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify deny_null_bind defaults to true when not explicitly set
+					resource.TestCheckResourceAttr(resourceName, "deny_null_bind", "true"),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_denyNullBindExplicitFalse(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify deny_null_bind can be explicitly set to false
+					resource.TestCheckResourceAttr(resourceName, "deny_null_bind", "false"),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_denyNullBindNotSet(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify deny_null_bind returns to default true when removed from config
+					resource.TestCheckResourceAttr(resourceName, "deny_null_bind", "true"),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
 		},
 	})
 }
@@ -439,4 +482,30 @@ resource "vault_ldap_auth_backend" "test" {
     disable_automated_rotation = %t
 }
 `, path, local, useTokenGroups, schedule, window, period, disable)
+}
+
+func testLDAPAuthBackendConfig_denyNullBindNotSet(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path        = "%s"
+    url         = "ldaps://example.org"
+    binddn      = "cn=example.com"
+    bindpass    = "supersecurepassword"
+    description = "Test LDAP auth backend without explicit deny_null_bind"
+    # deny_null_bind is intentionally not set to test default behavior
+}
+`, path)
+}
+
+func testLDAPAuthBackendConfig_denyNullBindExplicitFalse(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path            = "%s"
+    url             = "ldaps://example.org"
+    binddn          = "cn=example.com"
+    bindpass        = "supersecurepassword"
+    description     = "Test LDAP auth backend with explicit deny_null_bind false"
+    deny_null_bind  = false
+}
+`, path)
 }
