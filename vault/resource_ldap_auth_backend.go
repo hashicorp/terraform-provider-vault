@@ -220,8 +220,21 @@ func ldapAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
-		Schema:        fields,
+		CustomizeDiff: schema.CustomizeDiffFunc(func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+			// Handle deny_null_bind default behavior
+			rawConfig := diff.GetRawConfig()
+			configValue := rawConfig.GetAttr(consts.FieldDenyNullBind)
+			if configValue.IsNull() {
+				// Field not set in config, ensure it defaults to true
+				if err := diff.SetNew(consts.FieldDenyNullBind, true); err != nil {
+					return err
+				}
+			}
+
+			// Apply mount customization
+			return getMountCustomizeDiffFunc(consts.FieldPath)(ctx, diff, meta)
+		}),
+		Schema: fields,
 	}, true)
 
 	// add automated rotation fields to the resource
@@ -288,9 +301,14 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	for _, k := range ldapAuthBackendBooleanFields {
 		if k == consts.FieldDenyNullBind {
 			// For security, default deny_null_bind to true if not explicitly set
-			if v, ok := d.GetOk(k); ok {
-				data[k] = v
+			// Check if the field is configured in the resource configuration
+			rawConfig := d.GetRawConfig()
+			configValue := rawConfig.GetAttr(k)
+			if !configValue.IsNull() {
+				// Field is explicitly set in config (true or false), use that value
+				data[k] = d.Get(k)
 			} else {
+				// Field not set in config, use secure default
 				data[k] = true
 			}
 		} else {

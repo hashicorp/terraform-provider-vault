@@ -491,7 +491,7 @@ resource "vault_ldap_auth_backend" "test" {
     url         = "ldaps://example.org"
     binddn      = "cn=example.com"
     bindpass    = "supersecurepassword"
-    description = "Test LDAP auth backend without explicit deny_null_bind"
+    description = "Test LDAP auth backend for deny_null_bind behavior"
     # deny_null_bind is intentionally not set to test default behavior
 }
 `, path)
@@ -504,7 +504,7 @@ resource "vault_ldap_auth_backend" "test" {
     url             = "ldaps://example.org"
     binddn          = "cn=example.com"
     bindpass        = "supersecurepassword"
-    description     = "Test LDAP auth backend with explicit deny_null_bind false"
+    description     = "Test LDAP auth backend for deny_null_bind behavior"
     deny_null_bind  = false
 }
 `, path)
