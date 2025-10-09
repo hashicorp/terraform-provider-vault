@@ -7,8 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 func TestExpandAuthMethodTune(t *testing.T) {
