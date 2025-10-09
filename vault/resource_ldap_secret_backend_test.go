@@ -42,7 +42,6 @@ func TestLDAPSecretBackend(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		}, PreventPostDestroyRefresh: true,
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -68,6 +67,22 @@ func TestLDAPSecretBackend(t *testing.T) {
 				},
 				Config: testLDAPSecretBackendConfig_withSkip(path, bindDN, bindPass),
 				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldSkipStaticRoleImportRotation, "true"),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion118) && meta.IsEnterpriseSupported()), nil
+				},
+				Config: testLDAPSecretBackendConfig_defaults(path, bindDN, bindPass),
+				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialType, "password"),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion118) && meta.IsEnterpriseSupported()), nil
+				},
+				Config: testLDAPSecretBackendConfig_withCredType(path, bindDN, bindPass),
+				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialType, "phrase"),
 			},
 			{
 				Config: testLDAPSecretBackendConfig(path, updatedDescription, bindDN, bindPass, url, updatedUserDN, "openldap", false),
@@ -246,6 +261,17 @@ resource "vault_ldap_secret_backend" "test" {
   binddn                    = "%s"
   bindpass                  = "%s"
   skip_static_role_import_rotation = true
+}`, path, bindDN, bindPass)
+}
+
+func testLDAPSecretBackendConfig_withCredType(path, bindDN, bindPass string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path            = "%s"
+  description     = "test description"
+  binddn          = "%s"
+  bindpass        = "%s"
+  credential_type = "phrase"
 }`, path, bindDN, bindPass)
 }
 

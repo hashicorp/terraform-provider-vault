@@ -71,6 +71,8 @@ The following arguments are supported:
 
 * `schema` - (Optional)  The LDAP schema to use when storing entry passwords. Valid schemas include `openldap`, `ad`, and `racf`. Default is `openldap`.
 
+* `credential_type` - (Optional) The type of credential to generate. Valid values include `password` and `phrase`. Default is `password`.
+
 * `upndomain` - (Optional) Enables userPrincipalDomain login with [username]@UPNDomain.
 
 * `url` - (Required) LDAP URL to connect to. Multiple URLs can be specified by concatenating
