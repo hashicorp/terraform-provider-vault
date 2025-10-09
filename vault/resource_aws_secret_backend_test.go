@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"regexp"
 	"testing"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -40,6 +40,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMEndpoint, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSEndpoint, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldUsernameTemplate),
 				),
 			},
@@ -57,6 +58,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMEndpoint, "https://iam.amazonaws.com"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSEndpoint, "https://sts.us-west-1.amazonaws.com"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
 				),
 			},
 			{
@@ -371,6 +373,7 @@ resource "vault_aws_secret_backend" "test" {
   max_lease_ttl_seconds = 86400
   access_key = "%s"
   secret_key = "%s"
+  max_retries = 3
 }`, path, accessKey, secretKey)
 }
 
@@ -387,6 +390,7 @@ resource "vault_aws_secret_backend" "test" {
 
   iam_endpoint = "https://iam.amazonaws.com"
   sts_endpoint = "https://sts.us-west-1.amazonaws.com"
+  max_retries = 5
 }`, path, accessKey, secretKey)
 }
 
