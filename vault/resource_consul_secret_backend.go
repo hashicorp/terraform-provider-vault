@@ -116,8 +116,8 @@ func consulSecretBackendResource() *schema.Resource {
 		consts.FieldPath,
 		consts.FieldType,
 		consts.FieldDescription,
-		consts.FieldDefaultLeaseTTL,
-		consts.FieldMaxLeaseTTL,
+		consts.FieldDefaultLeaseTTLSeconds,
+		consts.FieldMaxLeaseTTLSeconds,
 		consts.FieldLocal,
 	))
 

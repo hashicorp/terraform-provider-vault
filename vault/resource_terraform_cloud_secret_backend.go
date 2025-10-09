@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-cty/cty"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -100,8 +99,8 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 		consts.FieldPath,
 		consts.FieldType,
 		consts.FieldDescription,
-		consts.FieldDefaultLeaseTTL,
-		consts.FieldMaxLeaseTTL,
+		consts.FieldDefaultLeaseTTLSeconds,
+		consts.FieldMaxLeaseTTLSeconds,
 	))
 
 	return r
