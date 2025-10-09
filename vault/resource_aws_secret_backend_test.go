@@ -40,6 +40,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMEndpoint, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSEndpoint, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldUsernameTemplate),
 				),
 			},
@@ -57,6 +58,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMEndpoint, "https://iam.amazonaws.com"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSEndpoint, "https://sts.us-west-1.amazonaws.com"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
 				),
 			},
 			{
@@ -142,7 +144,6 @@ func TestAccAWSSecretBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
 				),
 			},
 			{
@@ -152,7 +153,6 @@ func TestAccAWSSecretBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience-updated"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "test-role-arn-updated"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
 				),
 			},
 		},
@@ -373,6 +373,7 @@ resource "vault_aws_secret_backend" "test" {
   max_lease_ttl_seconds = 86400
   access_key = "%s"
   secret_key = "%s"
+  max_retries = 3
 }`, path, accessKey, secretKey)
 }
 
@@ -389,6 +390,7 @@ resource "vault_aws_secret_backend" "test" {
 
   iam_endpoint = "https://iam.amazonaws.com"
   sts_endpoint = "https://sts.us-west-1.amazonaws.com"
+  max_retries = 5
 }`, path, accessKey, secretKey)
 }
 
@@ -438,7 +440,6 @@ resource "vault_aws_secret_backend" "test" {
   identity_token_audience = "wif-audience"
   identity_token_ttl = 600
   role_arn = "test-role-arn"
-  max_retries = 3
 }`, path)
 }
 
@@ -449,7 +450,6 @@ resource "vault_aws_secret_backend" "test" {
   identity_token_audience = "wif-audience-updated"
   identity_token_ttl = 1800
   role_arn = "test-role-arn-updated"
-  max_retries = 5
 }`, path)
 }
 
