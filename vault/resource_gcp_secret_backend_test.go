@@ -6,9 +6,10 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"regexp"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -38,6 +39,7 @@ func TestGCPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "0"),
 					resource.TestCheckResourceAttr(resourceName, "credentials", "{\"hello\":\"world\"}"),
 					resource.TestCheckResourceAttr(resourceName, "local", "false"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "7200"),
 				),
 			},
 			{
@@ -49,6 +51,8 @@ func TestGCPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "43200"),
 					resource.TestCheckResourceAttr(resourceName, "credentials", "{\"how\":\"goes\"}"),
 					resource.TestCheckResourceAttr(resourceName, "local", "true"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_ttl", "86400"),
 				),
 			},
 			{
@@ -93,6 +97,7 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "0"),
 					resource.TestCheckResourceAttr(resourceName, "credentials", "{\"hello\":\"world\"}"),
 					resource.TestCheckResourceAttr(resourceName, "local", "false"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "7200"),
 				),
 			},
 			{
@@ -104,6 +109,7 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "0"),
 					resource.TestCheckResourceAttr(resourceName, "credentials", "{\"hello\":\"world\"}"),
 					resource.TestCheckResourceAttr(resourceName, "local", "false"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "7200"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "credentials", "disable_remount"),
@@ -224,6 +230,7 @@ resource "vault_gcp_secret_backend" "test" {
 EOF
   description = "test description"
   default_lease_ttl_seconds = 3600
+  ttl = 7200
 }`, path)
 }
 
@@ -249,6 +256,8 @@ EOF
   description = "test description"
   default_lease_ttl_seconds = 1800
   max_lease_ttl_seconds = 43200
+  ttl = 3600
+  max_ttl = 86400
   local = true
 }`, path)
 }

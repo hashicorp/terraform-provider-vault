@@ -6,10 +6,11 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-cty/cty"
-	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -119,6 +120,16 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 				Computed:    true,
 				Description: "Accessor of the created GCP mount.",
 			},
+			consts.FieldTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The default TTL for long-lived credentials (i.e. service account keys).",
+			},
+			consts.FieldMaxTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The maximum TTL for long-lived credentials (i.e. service account keys).",
+			},
 		},
 	}, false)
 
@@ -166,7 +177,10 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 	log.Printf("[DEBUG] Writing GCP configuration to %q", configPath)
 
 	data := map[string]interface{}{}
-	fields := []string{}
+	fields := []string{
+		consts.FieldTTL,
+		consts.FieldMaxTTL,
+	}
 
 	if useAPIVer117Ent {
 		fields = append(fields,
@@ -239,6 +253,8 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 			consts.FieldIdentityTokenAudience,
 			consts.FieldIdentityTokenTTL,
 			consts.FieldServiceAccountEmail,
+			consts.FieldTTL,
+			consts.FieldMaxTTL,
 		}
 
 		if provider.IsAPISupported(meta, provider.VaultVersion119) {
@@ -305,6 +321,14 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 	if credentials != "" {
 		data[consts.FieldCredentials] = credentials
+	}
+
+	if d.HasChange(consts.FieldTTL) {
+		data[consts.FieldTTL] = d.Get(consts.FieldTTL)
+	}
+
+	if d.HasChange(consts.FieldMaxTTL) {
+		data[consts.FieldMaxTTL] = d.Get(consts.FieldMaxTTL)
 	}
 
 	if useAPIVer117Ent {

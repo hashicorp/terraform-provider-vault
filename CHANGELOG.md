@@ -6,6 +6,8 @@ FEATURES:
 
 * New parameters for `vault_terraform_cloud_secret_role` to support multi-team tokens, by @drewmullen ([#2498](https://github.com/hashicorp/terraform-provider-vault/pull/2498))
 
+* New parameters for `vault_gcp_secret_backend` to support ttl and max_ttl, by @vijayavelsekar ([#2627](https://github.com/hashicorp/terraform-provider-vault/pull/2627))
+
 BUGS:
 
 * Fix pki config resources to allow unsetting of fields (to empty fields) ([#2558](https://github.com/hashicorp/terraform-provider-vault/pull/2558))
