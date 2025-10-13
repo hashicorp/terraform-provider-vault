@@ -270,7 +270,7 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
-	if v, ok := d.GetOk(consts.FieldMaxRetries); ok && v != 0 {
+	if v, ok := d.GetOk(consts.FieldMaxRetries); ok {
 		data[consts.FieldMaxRetries] = v.(int)
 	}
 
@@ -378,10 +378,12 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 				return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldIdentityTokenTTL, path, err)
 			}
 		}
-	}
 
-	if err := d.Set(consts.FieldMaxRetries, resp.Data[consts.FieldMaxRetries]); err != nil {
-		return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldMaxRetries, path, err)
+		if v, ok := resp.Data[consts.FieldMaxRetries]; ok {
+			if err := d.Set(consts.FieldMaxRetries, v); err != nil {
+				return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldMaxRetries, path, err)
+			}
+		}
 	}
 
 	if err := d.Set(consts.FieldPath, path); err != nil {
@@ -466,9 +468,8 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 			}
 		}
 
-		maxRetries := d.Get(consts.FieldMaxRetries).(int)
-		if maxRetries != 0 {
-			data[consts.FieldMaxRetries] = maxRetries
+		if v, ok := d.GetOk(consts.FieldMaxRetries); ok {
+			data[consts.FieldMaxRetries] = v.(int)
 		}
 
 		region := d.Get(consts.FieldRegion).(string)
