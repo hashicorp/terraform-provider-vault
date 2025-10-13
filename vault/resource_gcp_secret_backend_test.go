@@ -71,6 +71,8 @@ func TestGCPSecretBackend(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldDisableRemount,
 				consts.FieldCredentials,
+				consts.FieldTTL,
+				consts.FieldMaxTTL,
 			),
 		},
 	})
@@ -112,7 +114,7 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "ttl", "7200"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "credentials", "disable_remount"),
+			testutil.GetImportTestStep(resourceName, false, nil, "credentials", "disable_remount", consts.FieldTTL),
 		},
 	})
 }
