@@ -18,7 +18,7 @@ func TestAccSpiffeAuthConfig(t *testing.T) {
 	mount := acctest.RandomWithPrefix("spiffe-mount")
 	caBytes, _, _ := testutil.GenerateCA()
 	ca := strings.Trim(string(caBytes), "\n")
-	resourceAddress := "vault_spiffe_auth_config.spiffe_config"
+	resourceAddress := "vault_spiffe_auth_backend_config.spiffe_config"
 
 	spiffeBundle := `
 	{
@@ -138,7 +138,7 @@ resource "vault_auth_backend" "spiffe_mount" {
   }
 }
 
-resource "vault_spiffe_auth_config" "spiffe_config" {
+resource "vault_spiffe_auth_backend_config" "spiffe_config" {
   mount        = vault_auth_backend.spiffe_mount.path
   trust_domain = "example.org"
   profile      = "static"
@@ -164,7 +164,7 @@ resource "vault_auth_backend" "spiffe_mount" {
   }
 }
 
-resource "vault_spiffe_auth_config" "spiffe_config" {
+resource "vault_spiffe_auth_backend_config" "spiffe_config" {
   mount        = vault_auth_backend.spiffe_mount.path
   trust_domain = "example.org"
   profile      = "static"
@@ -187,7 +187,7 @@ resource "vault_auth_backend" "spiffe_mount" {
   }
 }
 
-resource "vault_spiffe_auth_config" "spiffe_config" {
+resource "vault_spiffe_auth_backend_config" "spiffe_config" {
   mount        = vault_auth_backend.spiffe_mount.path
   trust_domain = "example.org"
   profile      = "https_web_pem"
@@ -211,7 +211,7 @@ resource "vault_auth_backend" "spiffe_mount" {
   }
 }
 
-resource "vault_spiffe_auth_config" "spiffe_config" {
+resource "vault_spiffe_auth_backend_config" "spiffe_config" {
   mount        = vault_auth_backend.spiffe_mount.path
   trust_domain = "example.org"
   profile      = "https_web_bundle"
@@ -232,7 +232,7 @@ resource "vault_auth_backend" "spiffe_mount" {
   }
 }
 
-resource "vault_spiffe_auth_config" "spiffe_config" {
+resource "vault_spiffe_auth_backend_config" "spiffe_config" {
   mount        = vault_auth_backend.spiffe_mount.path
   trust_domain = "example.org"
   profile      = "https_spiffe_bundle"

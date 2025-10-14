@@ -53,7 +53,7 @@ type SpiffeRoleAPIModel struct {
 }
 
 func (s *SpiffeAuthRoleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_spiffe_auth_role"
+	resp.TypeName = req.ProviderTypeName + "_spiffe_auth_backend_role"
 }
 
 func (s *SpiffeAuthRoleResource) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {

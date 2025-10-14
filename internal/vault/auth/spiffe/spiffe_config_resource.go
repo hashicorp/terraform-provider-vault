@@ -66,7 +66,7 @@ type SpiffeConfigAPIModel struct {
 }
 
 func (s *SpiffeAuthConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_spiffe_auth_config"
+	resp.TypeName = req.ProviderTypeName + "_spiffe_auth_backend_config"
 }
 
 func (s *SpiffeAuthConfigResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {

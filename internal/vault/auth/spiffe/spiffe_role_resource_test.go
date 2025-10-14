@@ -17,7 +17,7 @@ import (
 func TestAccSpiffeAuthRole(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 	mount := acctest.RandomWithPrefix("spiffe-mount")
-	resourceAddress := "vault_spiffe_auth_role.spiffe_role"
+	resourceAddress := "vault_spiffe_auth_backend_role.spiffe_role"
 
 	workloadIds := []string{"/+/test/*", "/example/*"}
 
@@ -162,7 +162,7 @@ func spiffeRoleConfig(mount string, workloadIds []string) string {
 	return fmt.Sprintf(`
 %s
 
-resource "vault_spiffe_auth_role" "spiffe_role" {
+resource "vault_spiffe_auth_backend_role" "spiffe_role" {
   mount        = vault_auth_backend.spiffe_mount.path
   name         = "example-role"
   workload_id_patterns = [%s]
@@ -181,7 +181,7 @@ func spiffeRoleWithTokenConfig(mount string, workloadIds []string) string {
 	return fmt.Sprintf(`
 %s
 
-resource "vault_spiffe_auth_role" "spiffe_role" {
+resource "vault_spiffe_auth_backend_role" "spiffe_role" {
   mount        = vault_auth_backend.spiffe_mount.path
   name         = "example-role"
   workload_id_patterns = [%s]
