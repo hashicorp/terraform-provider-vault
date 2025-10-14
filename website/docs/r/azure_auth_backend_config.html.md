@@ -88,6 +88,17 @@ The following arguments are supported:
 	AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud,
 	AzureGermanCloud.  Defaults to `AzurePublicCloud`.
 
+* `max_retries` - (Optional) Maximum number of retries for Azure API requests. 
+	Defaults to `3`.
+
+* `retry_delay` - (Optional) The initial delay between retries for Azure API requests.
+	Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
+	Defaults to `4s`.
+
+* `max_retry_delay` - (Optional) The maximum delay between retries for Azure API requests.
+	Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
+	Defaults to `60s`.
+
 * `identity_token_audience` - (Optional) The audience claim value for plugin identity tokens. Requires Vault 1.17+.
     *Available only for Vault Enterprise*
 
