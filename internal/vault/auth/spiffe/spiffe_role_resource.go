@@ -41,12 +41,14 @@ type SpiffeAuthRoleModel struct {
 
 	Mount              types.String `tfsdk:"mount"`
 	Name               types.String `tfsdk:"name"`
+	DisplayName        types.String `tfsdk:"display_name"`
 	WorkloadIDPatterns types.List   `tfsdk:"workload_id_patterns"`
 }
 
 type SpiffeRoleAPIModel struct {
 	token.TokenAPIModel `mapstructure:",squash"`
 
+	DisplayName        string   `json:"display_name" mapstructure:"display_name"`
 	WorkloadIDPatterns []string `json:"workload_id_patterns" mapstructure:"workload_id_patterns"`
 }
 
@@ -64,6 +66,12 @@ func (s *SpiffeAuthRoleResource) Schema(ctx context.Context, request resource.Sc
 			consts.FieldName: schema.StringAttribute{
 				Description: "Name of the SPIFFE auth role.",
 				Required:    true,
+			},
+			consts.FieldDisplayName: schema.StringAttribute{
+				Description: "A display name for the role. This is only used for display " +
+					"purposes in Vault, if not provided it will default to the role name.",
+				Optional: true,
+				Computed: true,
 			},
 			"workload_id_patterns": schema.ListAttribute{
 				ElementType: types.StringType,
@@ -282,6 +290,8 @@ func (s *SpiffeAuthRoleResource) getApiModel(ctx context.Context, data *SpiffeAu
 	}
 	apiModel.WorkloadIDPatterns = workloadIdPatterns
 
+	apiModel.DisplayName = data.DisplayName.ValueString()
+
 	if diagErr := token.PopulateTokenAPIFromModel(ctx, &data.TokenModel, &apiModel.TokenAPIModel); diagErr.HasError() {
 		return nil, diagErr
 	}
@@ -317,6 +327,8 @@ func (s *SpiffeAuthRoleResource) populateDataModelFromApi(ctx context.Context, r
 		}
 		role.WorkloadIDPatterns = wkldIdPatterns
 	}
+
+	role.DisplayName = types.StringValue(readResp.DisplayName)
 
 	return token.PopulateTokenModelFromAPI(ctx, &role.TokenModel, &readResp.TokenAPIModel)
 }

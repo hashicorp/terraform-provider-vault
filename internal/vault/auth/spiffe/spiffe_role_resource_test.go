@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+// TestAccSpiffeAuthRole tests the spiffe auth role resource
 func TestAccSpiffeAuthRole(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 	mount := acctest.RandomWithPrefix("spiffe-mount")
@@ -23,7 +24,7 @@ func TestAccSpiffeAuthRole(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			// FIXME: Add a Test for Vault 1.21.x
+			// FIXME: Limit tests to Vault 1.21.x or higher
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 

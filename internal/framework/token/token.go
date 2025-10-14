@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 )
 
+// TokenModel provides a base struct for auth backend roles that contain the common token
+// fields. Note that this model does not include any of the deprecated token fields.
 type TokenModel struct {
 	base.BaseModel
 
@@ -26,6 +28,8 @@ type TokenModel struct {
 	AliasMetadata        types.Map    `tfsdk:"alias_metadata"`
 }
 
+// TokenAPIModel represents all the common auth token fields from an API perspective. Note none
+// of the deprecated token fields are included.
 type TokenAPIModel struct {
 	TokenTTL             int64             `json:"token_ttl" mapstructure:"token_ttl"`
 	TokenMaxTTL          int64             `json:"token_max_ttl" mapstructure:"token_max_ttl"`
@@ -39,6 +43,11 @@ type TokenAPIModel struct {
 	AliasMetadata        map[string]string `json:"alias_metadata" mapstructure:"alias_metadata"`
 }
 
+// MustAddBaseAndTokenSchemas adds the schema fields that are required for all net new
+// resources and data sources built with the TF Plugin Framework extending the
+// TokenModel base model.
+//
+// This should be called from a resources or data source's Schema() method.
 func MustAddBaseAndTokenSchemas(s *schema.Schema) {
 	base.MustAddBaseSchema(s)
 
@@ -51,6 +60,8 @@ func MustAddBaseAndTokenSchemas(s *schema.Schema) {
 	}
 }
 
+// PopulateTokenAPIFromModel copies the data from a TokenModel into a TokenAPIModel, useful for
+// translating TF data into the Vault API data model.
 func PopulateTokenAPIFromModel(ctx context.Context, model *TokenModel, apiModel *TokenAPIModel) diag.Diagnostics {
 	if apiModel == nil {
 		return diag.Diagnostics{
@@ -93,6 +104,8 @@ func PopulateTokenAPIFromModel(ctx context.Context, model *TokenModel, apiModel 
 	return diag.Diagnostics{}
 }
 
+// PopulateTokenModelFromAPI copies the data from a TokenAPIModel into a TokenModel, useful for
+// translating Vault API data into the TF data model.
 func PopulateTokenModelFromAPI(ctx context.Context, model *TokenModel, apiModel *TokenAPIModel) diag.Diagnostics {
 	if apiModel == nil {
 		return diag.Diagnostics{
