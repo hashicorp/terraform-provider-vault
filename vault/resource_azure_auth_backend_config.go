@@ -9,7 +9,9 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -18,6 +20,22 @@ import (
 )
 
 var azureAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$")
+
+// durationDiffSuppressFunc compares duration strings semantically to suppress
+// diffs when durations are equivalent (e.g., "120s" vs "2m0s")
+func durationDiffSuppressFunc(k, oldValue, newValue string, d *schema.ResourceData) bool {
+	// Parse both values as durations
+	oldDuration, err1 := time.ParseDuration(oldValue)
+	newDuration, err2 := time.ParseDuration(newValue)
+
+	// If both parse successfully, compare the actual durations
+	if err1 == nil && err2 == nil {
+		return oldDuration == newDuration
+	}
+
+	// If either fails to parse, fall back to string comparison
+	return oldValue == newValue
+}
 
 func azureAuthBackendConfigResource() *schema.Resource {
 	r := &schema.Resource{
@@ -80,6 +98,30 @@ func azureAuthBackendConfigResource() *schema.Resource {
 				Computed:    true,
 				Description: "The TTL of generated identity tokens in seconds.",
 			},
+			consts.FieldMaxRetries: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "Maximum number of retries for Azure API requests. Defaults to 3.",
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					// Suppress diff if user set 0 (which means "use default") but state shows the actual default (3)
+					return (old == "3" && new == "0")
+				},
+			},
+			consts.FieldRetryDelay: {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Computed:         true,
+				Description:      "The initial delay between retries for Azure API requests. Defaults to '4s'.",
+				DiffSuppressFunc: durationDiffSuppressFunc,
+			},
+			consts.FieldMaxRetryDelay: {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Computed:         true,
+				Description:      "The maximum delay between retries for Azure API requests. Defaults to '60s'.",
+				DiffSuppressFunc: durationDiffSuppressFunc,
+			},
 		},
 	}
 
@@ -113,6 +155,17 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 		consts.FieldClientSecret: clientSecret,
 		consts.FieldResource:     resource,
 		consts.FieldEnvironment:  environment,
+	}
+
+	// Add retry fields if they are explicitly set
+	if v, ok := d.GetOk(consts.FieldMaxRetries); ok {
+		data["max_retries"] = v
+	}
+	if v, ok := d.GetOk(consts.FieldRetryDelay); ok {
+		data["retry_delay"] = v
+	}
+	if v, ok := d.GetOk(consts.FieldMaxRetryDelay); ok {
+		data["max_retry_delay"] = v
 	}
 
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
@@ -187,6 +240,35 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 			if err := d.Set(k, v); err != nil {
 				return diag.FromErr(err)
 			}
+		}
+	}
+
+	// Handle the new retry fields
+	if v, ok := secret.Data["max_retries"]; ok {
+		if err := d.Set(consts.FieldMaxRetries, v); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if v, ok := secret.Data["retry_delay"]; ok {
+		// Convert nanoseconds from API to duration string
+		ns, err := parseutil.ParseInt(v)
+		if err != nil {
+			return diag.Errorf("failed to parse retry_delay from API response: %v (value: %v)", err, v)
+		}
+		duration := time.Duration(ns)
+		if err := d.Set(consts.FieldRetryDelay, duration.String()); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if v, ok := secret.Data["max_retry_delay"]; ok {
+		// Convert nanoseconds from API to duration string
+		ns, err := parseutil.ParseInt(v)
+		if err != nil {
+			return diag.Errorf("failed to parse max_retry_delay from API response: %v (value: %v)", err, v)
+		}
+		duration := time.Duration(ns)
+		if err := d.Set(consts.FieldMaxRetryDelay, duration.String()); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 
