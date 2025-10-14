@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"log"
+	"net/textproto"
 	"regexp"
 	"strings"
 
@@ -82,6 +83,20 @@ func awsAuthBackendClientResource() *schema.Resource {
 				Computed:    true,
 				Description: "If set, will override sts_region and use the region from the client request's header",
 			},
+			consts.FieldAllowedSTSHeaderValues: {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "List of additional headers that are allowed to be in STS request headers.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+					StateFunc: func(v interface{}) string {
+						original := strings.TrimSpace(v.(string))
+						// Canonicalize header names for consistent state storage
+						canonical := textproto.CanonicalMIMEHeaderKey(original)
+						return canonical
+					},
+				},
+			},
 			consts.FieldIAMServerIDHeaderValue: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -132,6 +147,25 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 	stsEndpoint := d.Get(consts.FieldSTSEndpoint).(string)
 	stsRegion := d.Get(consts.FieldSTSRegion).(string)
 	stsRegionFromClient := d.Get(useSTSRegionFromClient).(bool)
+	allowedSTSHeaderValuesSet := d.Get(consts.FieldAllowedSTSHeaderValues).(*schema.Set)
+	var allowedSTSHeaderValuesList []string
+	if allowedSTSHeaderValuesSet.Len() > 0 {
+		// Convert TypeSet to slice for Vault API
+		// Need explicit deduplication because TypeSet may not handle StateFunc canonicalization properly
+		allowedSTSHeaderValuesList = make([]string, 0, allowedSTSHeaderValuesSet.Len())
+		seenHeaders := make(map[string]bool) // Track duplicates after canonicalization
+
+		for _, v := range allowedSTSHeaderValuesSet.List() {
+			header := strings.TrimSpace(v.(string))
+			canonical := textproto.CanonicalMIMEHeaderKey(header)
+
+			// Only add if we haven't seen this canonical form before
+			if !seenHeaders[canonical] {
+				allowedSTSHeaderValuesList = append(allowedSTSHeaderValuesList, canonical)
+				seenHeaders[canonical] = true
+			}
+		}
+	}
 	identityTokenAud := d.Get(consts.FieldIdentityTokenAudience).(string)
 	roleArn := d.Get(consts.FieldRoleArn).(string)
 	identityTokenTTL := d.Get(consts.FieldIdentityTokenTTL).(int)
@@ -145,6 +179,7 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		consts.FieldIAMEndpoint:            iamEndpoint,
 		consts.FieldSTSEndpoint:            stsEndpoint,
 		consts.FieldSTSRegion:              stsRegion,
+		consts.FieldAllowedSTSHeaderValues: allowedSTSHeaderValuesList,
 		consts.FieldIAMServerIDHeaderValue: iamServerIDHeaderValue,
 		consts.FieldMaxRetries:             maxRetries,
 	}
@@ -229,6 +264,32 @@ func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			if err := d.Set(k, v); err != nil {
 				return diag.FromErr(err)
 			}
+		}
+	}
+	// Handle allowed_sts_header_values conversion from Vault's slice to set
+	if headersInterface, ok := secret.Data[consts.FieldAllowedSTSHeaderValues]; ok {
+		if headersList, ok := headersInterface.([]interface{}); ok && len(headersList) > 0 {
+			// Convert interface{} slice to string slice
+			headers := make([]string, len(headersList))
+			for i, header := range headersList {
+				if headerStr, ok := header.(string); ok {
+					// Vault already canonicalizes these, no need to do it again
+					headers[i] = strings.TrimSpace(headerStr)
+				}
+			}
+			if err := d.Set(consts.FieldAllowedSTSHeaderValues, headers); err != nil {
+				return diag.FromErr(err)
+			}
+		} else {
+			// Empty or nil headers
+			if err := d.Set(consts.FieldAllowedSTSHeaderValues, []string{}); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	} else {
+		// Field not present in response
+		if err := d.Set(consts.FieldAllowedSTSHeaderValues, []string{}); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
