@@ -266,31 +266,22 @@ func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			}
 		}
 	}
+
 	// Handle allowed_sts_header_values conversion from Vault's slice to set
+	var headers []string
 	if headersInterface, ok := secret.Data[consts.FieldAllowedSTSHeaderValues]; ok {
-		if headersList, ok := headersInterface.([]interface{}); ok && len(headersList) > 0 {
-			// Convert interface{} slice to string slice
-			headers := make([]string, len(headersList))
-			for i, header := range headersList {
+		// Convert interface{} slice to string slice
+		if headersList, ok := headersInterface.([]interface{}); ok {
+			headers = make([]string, 0, len(headersList))
+			for _, header := range headersList {
 				if headerStr, ok := header.(string); ok {
-					// Vault already canonicalizes these, no need to do it again
-					headers[i] = strings.TrimSpace(headerStr)
+					headers = append(headers, strings.TrimSpace(headerStr))
 				}
 			}
-			if err := d.Set(consts.FieldAllowedSTSHeaderValues, headers); err != nil {
-				return diag.FromErr(err)
-			}
-		} else {
-			// Empty or nil headers
-			if err := d.Set(consts.FieldAllowedSTSHeaderValues, []string{}); err != nil {
-				return diag.FromErr(err)
-			}
 		}
-	} else {
-		// Field not present in response
-		if err := d.Set(consts.FieldAllowedSTSHeaderValues, []string{}); err != nil {
-			return diag.FromErr(err)
-		}
+	}
+	if err := d.Set(consts.FieldAllowedSTSHeaderValues, headers); err != nil {
+		return diag.FromErr(err)
 	}
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
 		if err := d.Set(useSTSRegionFromClient, secret.Data[useSTSRegionFromClient]); err != nil {
