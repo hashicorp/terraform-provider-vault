@@ -5,6 +5,7 @@ FEATURES:
 * Add support for write-only token argument in vault_terraform_cloud_secret_backend resource ([#2603](https://github.com/hashicorp/terraform-provider-vault/pull/2603))
 
 * New parameters for `vault_terraform_cloud_secret_role` to support multi-team tokens, by @drewmullen ([#2498](https://github.com/hashicorp/terraform-provider-vault/pull/2498))
+* Add support for `canonical_arn` for `iam_alias` parameter on `vault_aws_auth_backend_config_identity` ([#2536](https://github.com/hashicorp/terraform-provider-vault/pull/2536))
 
 BUGS:
 

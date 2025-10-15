@@ -39,7 +39,7 @@ The following arguments are supported:
 	mounted at.  Defaults to `aws`.
 
 * `iam_alias` - (Optional) How to generate the identity alias when using the iam auth method. Valid choices are
-  `role_id`, `unique_id`, and `full_arn`. Defaults to `role_id`
+  `role_id`, `unique_id`, `full_arn`, and `canonical_arn`. Defaults to `role_id`
 
 * `iam_metadata` - (Optional) The metadata to include on the token returned by the `login` endpoint. This metadata will be
   added to both audit logs, and on the `iam_alias`
