@@ -159,13 +159,13 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 
 	// Add retry fields if they are explicitly set
 	if v, ok := d.GetOk(consts.FieldMaxRetries); ok {
-		data["max_retries"] = v
+		data[consts.FieldMaxRetries] = v
 	}
 	if v, ok := d.GetOk(consts.FieldRetryDelay); ok {
-		data["retry_delay"] = v
+		data[consts.FieldRetryDelay] = v
 	}
 	if v, ok := d.GetOk(consts.FieldMaxRetryDelay); ok {
-		data["max_retry_delay"] = v
+		data[consts.FieldMaxRetryDelay] = v
 	}
 
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
@@ -244,12 +244,12 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	// Handle the new retry fields
-	if v, ok := secret.Data["max_retries"]; ok {
+	if v, ok := secret.Data[consts.FieldMaxRetries]; ok {
 		if err := d.Set(consts.FieldMaxRetries, v); err != nil {
 			return diag.FromErr(err)
 		}
 	}
-	if v, ok := secret.Data["retry_delay"]; ok {
+	if v, ok := secret.Data[consts.FieldRetryDelay]; ok {
 		// Convert nanoseconds from API to duration string
 		ns, err := parseutil.ParseInt(v)
 		if err != nil {
@@ -260,7 +260,7 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 			return diag.FromErr(err)
 		}
 	}
-	if v, ok := secret.Data["max_retry_delay"]; ok {
+	if v, ok := secret.Data[consts.FieldMaxRetryDelay]; ok {
 		// Convert nanoseconds from API to duration string
 		ns, err := parseutil.ParseInt(v)
 		if err != nil {
