@@ -39,7 +39,8 @@ func TestGCPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "0"),
 					resource.TestCheckResourceAttr(resourceName, "credentials", "{\"hello\":\"world\"}"),
 					resource.TestCheckResourceAttr(resourceName, "local", "false"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "0"),
+					resource.TestCheckResourceAttr(resourceName, "max_ttl", "0"),
 				),
 			},
 			{
@@ -71,8 +72,6 @@ func TestGCPSecretBackend(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldDisableRemount,
 				consts.FieldCredentials,
-				consts.FieldTTL,
-				consts.FieldMaxTTL,
 			),
 		},
 	})
@@ -99,7 +98,8 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "0"),
 					resource.TestCheckResourceAttr(resourceName, "credentials", "{\"hello\":\"world\"}"),
 					resource.TestCheckResourceAttr(resourceName, "local", "false"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "0"),
+					resource.TestCheckResourceAttr(resourceName, "max_ttl", "0"),
 				),
 			},
 			{
@@ -111,10 +111,11 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "0"),
 					resource.TestCheckResourceAttr(resourceName, "credentials", "{\"hello\":\"world\"}"),
 					resource.TestCheckResourceAttr(resourceName, "local", "false"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "0"),
+					resource.TestCheckResourceAttr(resourceName, "max_ttl", "0"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "credentials", "disable_remount", consts.FieldTTL),
+			testutil.GetImportTestStep(resourceName, false, nil, "credentials", "disable_remount"),
 		},
 	})
 }
@@ -232,7 +233,6 @@ resource "vault_gcp_secret_backend" "test" {
 EOF
   description = "test description"
   default_lease_ttl_seconds = 3600
-  ttl = 7200
 }`, path)
 }
 

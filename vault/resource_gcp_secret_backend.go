@@ -239,26 +239,35 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	// read and set config if needed
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-	if useAPIVer117Ent {
+	fields := []string{}
+	if provider.IsAPISupported(meta, provider.VaultVersion116) {
+		fields = append(
+			fields,
+			consts.FieldTTL,
+			consts.FieldMaxTTL,
+		)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta) {
+		fields = append(
+			fields,
+			consts.FieldIdentityTokenAudience,
+			consts.FieldIdentityTokenTTL,
+			consts.FieldServiceAccountEmail,
+		)
+
+		if provider.IsAPISupported(meta, provider.VaultVersion119) {
+			fields = append(fields, automatedrotationutil.AutomatedRotationFields...)
+		}
+	}
+
+	if len(fields) > 0 {
 		resp, err := client.Logical().ReadWithContext(ctx, gcpSecretBackendConfigPath(path))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 		if resp == nil {
 			return diag.FromErr(fmt.Errorf("GCP backend config %q not found", path))
-		}
-
-		fields := []string{
-			consts.FieldIdentityTokenAudience,
-			consts.FieldIdentityTokenTTL,
-			consts.FieldServiceAccountEmail,
-			consts.FieldTTL,
-			consts.FieldMaxTTL,
-		}
-
-		if provider.IsAPISupported(meta, provider.VaultVersion119) {
-			fields = append(fields, automatedrotationutil.AutomatedRotationFields...)
 		}
 
 		for _, k := range fields {
