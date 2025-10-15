@@ -152,12 +152,11 @@ This resource will still store metadata and other parameters on the secret, but 
   leaking the secret data to the TF state.
 
 ## Resource: all `auth_backend`
-`vault_jwt_auth_backend`, `vault_github_auth_backend`, `vault_auth_backend`, `vault_saml_auth_backend`
+`vault_jwt_auth_backend`, `vault_github_auth_backend`, `vault_auth_backend`,`vault_saml_auth_backend`, `vault_gcp_auth_backend`, `vault_ldap_auth_backend`,
+`vault_oci_auth_backend`, `vault_okta_auth_backend`
 
 *BEHAVIOR CHANGE*
-With the fix for [the auth resources' tune block failure where it always updates unless its fields match Vault server defaults](https://github.com/hashicorp/terraform-provider-vault/issues/2234), Terraform Vault Provider versions `5.2.X` and greater will also read the tune metadata of the auth engines as part of tune updates.
-
-Please see the [Vault Policies and the Terraform Vault Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/policies) for more info about permitting Terraform Vault Provider to read the tune metadata.
+With the fix for [the auth resources' tune block failure where it always updates unless its fields match Vault server defaults](https://github.com/hashicorp/terraform-provider-vault/issues/2234), Terraform Vault Provider versions `5.4.X` and greater will also read the tune metadata of the auth engines as part of tune updates. Please see the [Vault Policies and the Terraform Vault Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/policies) for more info about permitting Terraform Vault Provider to read the tune metadata.
 
 ## Deprecated Field Removals
 
