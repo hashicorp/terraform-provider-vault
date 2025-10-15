@@ -101,24 +101,20 @@ func azureAuthBackendConfigResource() *schema.Resource {
 			consts.FieldMaxRetries: {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Computed:    true,
+				Default:     3,
 				Description: "Maximum number of retries for Azure API requests. Defaults to 3.",
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					// Suppress diff if user set 0 (which means "use default") but state shows the actual default (3)
-					return (old == "3" && new == "0")
-				},
 			},
 			consts.FieldRetryDelay: {
 				Type:             schema.TypeString,
 				Optional:         true,
-				Computed:         true,
+				Default:          "4s",
 				Description:      "The initial delay between retries for Azure API requests. Defaults to '4s'.",
 				DiffSuppressFunc: durationDiffSuppressFunc,
 			},
 			consts.FieldMaxRetryDelay: {
 				Type:             schema.TypeString,
 				Optional:         true,
-				Computed:         true,
+				Default:          "60s",
 				Description:      "The maximum delay between retries for Azure API requests. Defaults to '60s'.",
 				DiffSuppressFunc: durationDiffSuppressFunc,
 			},
@@ -157,16 +153,10 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 		consts.FieldEnvironment:  environment,
 	}
 
-	// Add retry fields if they are explicitly set
-	if v, ok := d.GetOk(consts.FieldMaxRetries); ok {
-		data[consts.FieldMaxRetries] = v
-	}
-	if v, ok := d.GetOk(consts.FieldRetryDelay); ok {
-		data[consts.FieldRetryDelay] = v
-	}
-	if v, ok := d.GetOk(consts.FieldMaxRetryDelay); ok {
-		data[consts.FieldMaxRetryDelay] = v
-	}
+	// Always send retry fields (using schema defaults when not specified)
+	data[consts.FieldMaxRetries] = d.Get(consts.FieldMaxRetries)
+	data[consts.FieldRetryDelay] = d.Get(consts.FieldRetryDelay)
+	data[consts.FieldMaxRetryDelay] = d.Get(consts.FieldMaxRetryDelay)
 
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
@@ -234,6 +224,7 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		consts.FieldClientSecret,
 		consts.FieldResource,
 		consts.FieldEnvironment,
+		consts.FieldMaxRetries,
 	}
 	for _, k := range fields {
 		if v, ok := secret.Data[k]; ok {
@@ -243,12 +234,6 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		}
 	}
 
-	// Handle the new retry fields
-	if v, ok := secret.Data[consts.FieldMaxRetries]; ok {
-		if err := d.Set(consts.FieldMaxRetries, v); err != nil {
-			return diag.FromErr(err)
-		}
-	}
 	if v, ok := secret.Data[consts.FieldRetryDelay]; ok {
 		// Convert nanoseconds from API to duration string
 		ns, err := parseutil.ParseInt(v)
