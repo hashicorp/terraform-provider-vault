@@ -134,11 +134,11 @@ func TestAccAzureAuthBackendConfig_retryFields(t *testing.T) {
 				),
 			},
 			{
-				// Test with zero max_retries (should be allowed)
-				Config: testAccAzureAuthBackendConfig_retryFields(backend, 5, "1s", "30s"),
+				// Test with zero max_retries
+				Config: testAccAzureAuthBackendConfig_retryFields(backend, 0, "1s", "30s"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "1s"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "30s"),
 				),
