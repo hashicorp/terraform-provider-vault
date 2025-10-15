@@ -42,8 +42,6 @@ The following arguments are supported:
 * `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
   See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
-* `description` - (Optional) A human-friendly description for this backend.
-
 * `listen_addrs` - (Optional) Addresses the KMIP server should listen on (`host:port`).
 
 * `server_hostnames` - (Optional) Hostnames to include in the server's TLS certificate as SAN DNS names. The first will be used as the common name (CN).
@@ -62,7 +60,47 @@ The following arguments are supported:
 
 * `default_tls_client_key_type` - (Optional) Client certificate key type, `rsa` or `ec`.
 
+### Common Mount Arguments
+These arguments are common across all resources that mount a secret engine.
 
+* `description` - (Optional) Human-friendly description of the mount
+
+* `default_lease_ttl_seconds` - (Optional) Default lease duration for tokens and secrets in seconds
+
+* `max_lease_ttl_seconds` - (Optional) Maximum possible lease duration for tokens and secrets in seconds
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.
+
+* `local` - (Optional) Boolean flag that can be explicitly set to true to enforce local mount in HA environment
+
+* `options` - (Optional) Specifies mount type specific options that are passed to the backend
+
+* `seal_wrap` - (Optional) Boolean flag that can be explicitly set to true to enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability
+
+* `external_entropy_access` - (Optional) Boolean flag that can be explicitly set to true to enable the secrets engine to access Vault's external entropy source
+
+* `allowed_managed_keys` - (Optional) Set of managed key registry entry names that the mount in question is allowed to access
+
+* `listing_visibility` - (Optional) Specifies whether to show this mount in the UI-specific
+  listing endpoint. Valid values are `unauth` or `hidden`. If not set, behaves like `hidden`.
+
+* `passthrough_request_headers` - (Optional) List of headers to allow and pass from the request to
+  the plugin.
+
+* `allowed_response_headers` - (Optional) List of headers to allow, allowing a plugin to include
+  them in the response.
+
+* `delegated_auth_accessors` - (Optional)  List of allowed authentication mount accessors the
+  backend can request delegated authentication for.
+
+* `plugin_version` - (Optional) Specifies the semantic version of the plugin to use, e.g. "v1.0.0".
+  If unspecified, the server will select any matching unversioned plugin that may have been
+  registered, the latest versioned plugin registered, or a built-in plugin in that order of precedence.
+
+* `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
+  not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
 
 ## Attributes Reference
 

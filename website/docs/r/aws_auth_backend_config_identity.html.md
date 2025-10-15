@@ -35,6 +35,9 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
+* `backend` - (Optional) The path the AWS auth backend being configured was
+	mounted at.  Defaults to `aws`.
+
 * `iam_alias` - (Optional) How to generate the identity alias when using the iam auth method. Valid choices are
   `role_id`, `unique_id`, `full_arn`, and `canonical_arn`. Defaults to `role_id`
 

@@ -106,6 +106,12 @@ var pkiSecretBackendConfigScepResourceSchema = map[string]*schema.Schema{
 			},
 		},
 	},
+	consts.FieldLogLevel: {
+		Type:        schema.TypeString,
+		Optional:    true,
+		Computed:    true,
+		Description: "The level of logging verbosity, affects only SCEP logs on this mount",
+	},
 	consts.FieldLastUpdated: {
 		Type:        schema.TypeString,
 		Computed:    true, // read-only property
@@ -127,7 +133,7 @@ func pkiSecretBackendConfigScepWrite(ctx context.Context, d *schema.ResourceData
 	path := pkiSecretBackendConfigScepPath(backend)
 
 	data := map[string]interface{}{}
-	for field, fieldSchema := range pkiSecretBackendConfigScepResourceSchema {
+	for field := range pkiSecretBackendConfigScepResourceSchema {
 		switch field {
 		case consts.FieldBackend, consts.FieldLastUpdated, consts.FieldNamespace:
 			continue
@@ -136,12 +142,8 @@ func pkiSecretBackendConfigScepWrite(ctx context.Context, d *schema.ResourceData
 				data[field] = value
 			}
 		default:
-			if fieldSchema.Type == schema.TypeBool {
-				data[field] = d.Get(field)
-			} else {
-				if value, ok := d.GetOk(field); ok {
-					data[field] = value
-				}
+			if value, ok := d.GetOkExists(field); ok {
+				data[field] = value
 			}
 		}
 	}

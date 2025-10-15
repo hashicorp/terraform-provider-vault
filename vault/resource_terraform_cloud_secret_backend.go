@@ -5,33 +5,32 @@ package vault
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func terraformCloudSecretBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
-		Create:        terraformCloudSecretBackendCreate,
-		Read:          provider.ReadWrapper(terraformCloudSecretBackendRead),
-		Update:        terraformCloudSecretBackendUpdate,
-		Delete:        terraformCloudSecretBackendDelete,
-		Exists:        terraformCloudSecretBackendExists,
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
+		CreateContext: terraformCloudSecretBackendCreate,
+		ReadContext:   provider.ReadContextWrapper(terraformCloudSecretBackendRead),
+		UpdateContext: terraformCloudSecretBackendUpdate,
+		DeleteContext: terraformCloudSecretBackendDelete,
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     consts.MountTypeTerraform,
@@ -43,36 +42,51 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 					return old+"/" == new || new+"/" == old
 				},
 			},
-			"token": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Specifies the Terraform Cloud access token to use.",
-				Sensitive:   true,
+			consts.FieldToken: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Specifies the Terraform Cloud access token to use.",
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldTokenWO},
 			},
-			"address": {
+			consts.FieldTokenWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Write-only Terraform Cloud access token to use.",
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldToken},
+			},
+			consts.FieldTokenWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only secret data.",
+				RequiredWith: []string{consts.FieldTokenWO},
+			},
+			consts.FieldAddress: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "https://app.terraform.io",
 				Description: "Specifies the address of the Terraform Cloud instance, provided as \"host:port\" like \"127.0.0.1:8500\".",
 			},
-			"base_path": {
+			consts.FieldBasePath: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "/api/v2/",
 				Description: "Specifies the base path for the Terraform Cloud or Enterprise API.",
 			},
-			"description": {
+			consts.FieldDescription: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			"default_lease_ttl_seconds": {
+			consts.FieldDefaultLeaseTTL: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     "0",
 				Description: "Default lease duration for secrets in seconds",
 			},
-			"max_lease_ttl_seconds": {
+			consts.FieldMaxLeaseTTL: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     "0",
@@ -80,191 +94,187 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 			},
 		},
 	}, false)
+
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldDefaultLeaseTTL,
+		consts.FieldMaxLeaseTTL,
+	))
+
+	return r
 }
 
-func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
+func terraformCloudSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
-	address := d.Get("address").(string)
-	token := d.Get("token").(string)
-	basePath := d.Get("base_path").(string)
-	description := d.Get("description").(string)
-	defaultLeaseTTL := d.Get("default_lease_ttl_seconds")
-	maxLeaseTTL := d.Get("max_lease_ttl_seconds")
+	backend := d.Get(consts.FieldBackend).(string)
+	address := d.Get(consts.FieldAddress).(string)
+	basePath := d.Get(consts.FieldBasePath).(string)
 
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
-	info := &api.MountInput{
-		Type:        consts.MountTypeTerraform,
-		Description: description,
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultLeaseTTL),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", maxLeaseTTL),
-		},
-	}
-
 	log.Printf("[DEBUG] Mounting Terraform Cloud backend at %q", backend)
 
-	if err := client.Sys().Mount(backend, info); err != nil {
-		return fmt.Errorf("Error mounting to %q: %s", backend, err)
+	if err := createMount(ctx, d, meta, client, backend, consts.MountTypeTerraform); err != nil {
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[DEBUG] Mounted Terraform Cloud backend at %q", backend)
 	d.SetId(backend)
 
-	d.Set("backend", backend)
-	d.Set("description", description)
-	d.Set("default_lease_ttl_seconds", defaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", maxLeaseTTL)
-
 	log.Printf("[DEBUG] Writing Terraform Cloud configuration to %q", configPath)
 	data := map[string]interface{}{
-		"address":   address,
-		"token":     token,
-		"base_path": basePath,
+		consts.FieldAddress:  address,
+		consts.FieldBasePath: basePath,
 	}
-	if _, err := client.Logical().Write(configPath, data); err != nil {
-		return fmt.Errorf("Error writing Terraform Cloud configuration for %q: %s", backend, err)
+	var token string
+	if v, ok := d.GetOk(consts.FieldToken); ok {
+		token = v.(string)
+		d.Set(consts.FieldToken, token)
+	} else if d.IsNewResource() || d.HasChange(consts.FieldTokenWOVersion) {
+		p := cty.GetAttrPath(consts.FieldTokenWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			token = woVal.AsString()
+		}
+	}
+
+	if token != "" {
+		data[consts.FieldToken] = token
+	}
+
+	if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
+		return diag.Errorf("Error writing Terraform Cloud configuration for %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Wrote Terraform Cloud configuration to %q", configPath)
-	d.Set("address", address)
-	d.Set("token", token)
-	d.Set("base_path", basePath)
+	d.Set(consts.FieldAddress, address)
+	d.Set(consts.FieldBasePath, basePath)
 
-	return nil
+	return terraformCloudSecretBackendRead(ctx, d, meta)
 }
 
-func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
+func terraformCloudSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Id()
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
-	log.Printf("[DEBUG] Reading Terraform Cloud backend mount %q from Vault", backend)
-
-	ctx := context.Background()
-	mount, err := mountutil.GetMount(ctx, client, backend)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", backend)
-			d.SetId("")
-			return nil
-		}
-		return err
+	if err := d.Set("backend", backend); err != nil {
+		return diag.FromErr(err)
 	}
-
-	d.Set("backend", backend)
-	d.Set("description", mount.Description)
-	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
+	if err := readMount(ctx, d, meta, true, true); err != nil {
+		return diag.FromErr(err)
+	}
 
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)
-	secret, err := client.Logical().Read(configPath)
+	secret, err := client.Logical().ReadWithContext(ctx, configPath)
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return diag.Errorf("error reading from Vault: %s", err)
 	}
 
-	// token, sadly, we can't read out
-	// the API doesn't support it
-	// So... if it drifts, it drift.
-	d.Set("address", secret.Data["address"].(string))
-	d.Set("base_path", secret.Data["base_path"].(string))
+	if err := d.Set("address", secret.Data["address"].(string)); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("base_path", secret.Data["base_path"].(string)); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
 
-func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Id()
+	if err := updateMount(ctx, d, meta, true, true); err != nil {
+		return diag.FromErr(err)
+	}
+
+	// Remount backend after updating in case needed.
+	// we remount in a separate step due to the resource using the legacy "backend" field
+	backend, err := util.Remount(d, client, consts.FieldBackend, false)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
-	backend, e = util.Remount(d, client, consts.FieldBackend, false)
-	if e != nil {
-		return e
-	}
-
-	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
-		defaultLeaseTTL := d.Get("default_lease_ttl_seconds")
-		maxLeaseTTL := d.Get("max_lease_ttl_seconds")
-		config := api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultLeaseTTL),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", maxLeaseTTL),
-		}
-
-		log.Printf("[DEBUG] Updating lease TTLs for %q", backend)
-		if err := client.Sys().TuneMount(backend, config); err != nil {
-			return fmt.Errorf("Error updating mount TTLs for %q: %s", backend, err)
-		}
-
-		d.Set("default_lease_ttl_seconds", defaultLeaseTTL)
-		d.Set("max_lease_ttl_seconds", maxLeaseTTL)
-	}
-	if d.HasChange("address") || d.HasChange("token") || d.HasChange("base_path") {
+	if d.HasChange(consts.FieldAddress) || d.HasChange(consts.FieldBasePath) {
 		log.Printf("[DEBUG] Updating Terraform Cloud configuration at %q", configPath)
 		data := map[string]interface{}{
-			"address":   d.Get("address").(string),
-			"token":     d.Get("token").(string),
-			"base_path": d.Get("base_path").(string),
+			consts.FieldAddress:  d.Get(consts.FieldAddress).(string),
+			consts.FieldBasePath: d.Get(consts.FieldBasePath).(string),
 		}
-		if _, err := client.Logical().Write(configPath, data); err != nil {
-			return fmt.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
+		if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
+			return diag.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
 		}
 		log.Printf("[DEBUG] Updated Terraform Cloud configuration at %q", configPath)
-		d.Set("address", data["address"])
-		d.Set("token", data["token"])
-		d.Set("base_path", data["base_path"])
+		if err := d.Set("address", data["address"]); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("base_path", data["base_path"]); err != nil {
+			return diag.FromErr(err)
+		}
 	}
-	return terraformCloudSecretBackendRead(d, meta)
+
+	if d.HasChange(consts.FieldToken) {
+		log.Printf("[DEBUG] Updating Terraform Cloud configuration token at %q", configPath)
+		data := map[string]interface{}{
+			consts.FieldToken: d.Get(consts.FieldToken).(string),
+		}
+		if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
+			return diag.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
+		}
+		if err := d.Set("token", data["token"]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange(consts.FieldTokenWOVersion) {
+		versionVal := d.GetRawConfig().GetAttr(consts.FieldTokenWOVersion)
+		if versionVal.IsKnown() && !versionVal.IsNull() {
+			woVal := d.GetRawConfig().GetAttr(consts.FieldTokenWO)
+			if !woVal.IsKnown() || woVal.IsNull() || strings.TrimSpace(woVal.AsString()) == "" {
+				return diag.Errorf("token_wo must be provided whenever token_wo_version changes")
+			}
+			token := woVal.AsString()
+			if _, err := client.Logical().WriteWithContext(ctx, configPath, map[string]interface{}{
+				consts.FieldToken: token,
+			}); err != nil {
+				return diag.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
+			}
+		}
+	}
+
+	return terraformCloudSecretBackendRead(ctx, d, meta)
 }
 
-func terraformCloudSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func terraformCloudSecretBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Id()
 
 	log.Printf("[DEBUG] Unmounting Terraform Cloud backend %q", backend)
-	err := client.Sys().Unmount(backend)
+	err := client.Sys().UnmountWithContext(ctx, backend)
 	if err != nil {
-		return fmt.Errorf("Error unmounting Terraform Cloud backend from %q: %s", backend, err)
+		return diag.Errorf("Error unmounting Terraform Cloud backend from %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Unmounted Terraform Cloud backend %q", backend)
 	return nil
-}
-
-func terraformCloudSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	backend := d.Id()
-
-	log.Printf("[DEBUG] Checking if Terraform Cloud backend exists at %q", backend)
-
-	_, err := mountutil.GetMount(context.Background(), client, backend)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			return false, nil
-		}
-
-		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
-	}
-
-	return true, nil
 }
 
 func terraformCloudSecretBackendConfigPath(backend string) string {

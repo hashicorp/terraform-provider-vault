@@ -67,6 +67,7 @@ const (
 	FieldLastPassword                   = "last_password"
 	FieldLastVaultRotation              = "last_vault_rotation"
 	FieldLocal                          = "local"
+	FieldLogLevel                       = "log_level"
 	FieldSealWrap                       = "seal_wrap"
 	FieldExternalEntropyAccess          = "external_entropy_access"
 	FieldAWS                            = "aws"
@@ -151,6 +152,8 @@ const (
 	FieldServiceAccount                 = "service_account"
 	FieldAuthorization                  = "authorization"
 	FieldToken                          = "token"
+	FieldTokenWO                        = "token_wo"
+	FieldTokenWOVersion                 = "token_wo_version"
 	FieldService                        = "service"
 	FieldRealm                          = "realm"
 	FieldKeytabPath                     = "keytab_path"
@@ -181,6 +184,7 @@ const (
 	FieldMaxValidationAttempts          = "max_validation_attempts"
 	FieldOrgName                        = "org_name"
 	FieldAPIToken                       = "api_token"
+	FieldBasePath                       = "base_path"
 	FieldBaseURL                        = "base_url"
 	FieldPrimaryEmail                   = "primary_email"
 	FieldSettingsFileBase64             = "settings_file_base64"
@@ -534,6 +538,7 @@ const (
 	FieldDeletionTime                         = "deletion_time"
 	FieldDestroyed                            = "destroyed"
 	FieldDeleteAllVersions                    = "delete_all_versions"
+	FieldForceNoCache                         = "force_no_cache"
 
 	/*
 		ephemeral resource constants and write-only attributes

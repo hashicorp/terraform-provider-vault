@@ -1890,14 +1890,12 @@ func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, pref
 		// construct path to use GetRawConfig
 		path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPrivateKeyWO)
 
-		// ensure Vault version has private key support
-		vaultVersion120Check := provider.IsAPISupported(meta, provider.VaultVersion120)
-
 		if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
-			if vaultVersion120Check {
+			// ensure Vault version has private key support
+			if provider.IsAPISupported(meta, provider.VaultVersion116) {
 				data[consts.FieldPrivateKey] = pwWo.AsString()
 			} else {
-				log.Printf("[WARN] field %q can only be used with Vault version %s or newer", consts.FieldPrivateKeyWO, provider.VaultVersion120)
+				log.Printf("[WARN] field %q can only be used with Vault version %s or newer", consts.FieldPrivateKeyWO, provider.VaultVersion116)
 			}
 		}
 	}

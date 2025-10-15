@@ -27,7 +27,8 @@ func AuthLoginGCPSchema() schema.Block {
 					Description: "A signed JSON Web Token.",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldCredentials),
+							path.MatchRelative().AtParent().AtName(consts.FieldCredentials),
+							path.MatchRelative().AtParent().AtName(consts.FieldServiceAccount),
 						),
 					},
 				},
@@ -36,7 +37,7 @@ func AuthLoginGCPSchema() schema.Block {
 					Description: "Path to the Google Cloud credentials file.",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldJWT),
+							path.MatchRelative().AtParent().AtName(consts.FieldJWT),
 						),
 						stringvalidator.LengthAtLeast(1),
 						validators.GCPCredentialsValidator(),
@@ -47,7 +48,7 @@ func AuthLoginGCPSchema() schema.Block {
 					Description: "IAM service account.",
 					Validators: []validator.String{
 						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtName(consts.FieldJWT),
+							path.MatchRelative().AtParent().AtName(consts.FieldJWT),
 						),
 					},
 				},
