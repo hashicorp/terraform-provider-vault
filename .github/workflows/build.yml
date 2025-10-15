@@ -241,16 +241,18 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       openldap:
-        image: docker.io/bitnami/openldap:2.6
+        image: osixia/openldap:1.5.0
         ports:
-          - 1389:1389
-          - 1636:1636
-        env:
-          LDAP_ADMIN_USERNAME: "admin"
-          LDAP_ADMIN_PASSWORD: "adminpassword"
-          LDAP_USERS: "alice,bob,foo"
-          LDAP_PASSWORDS: "password1,password2,password3"
+          - 10389:389
+        options: >-
+          --health-cmd "sleep 10"
+          --health-interval 1s
+          --health-timeout 30s
+          --health-retries 30
     steps:
+      - name: install ldap utils
+        run:
+          sudo apt-get install -y ldap-utils
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
@@ -316,14 +318,20 @@ jobs:
           CONSUL_HTTP_ADDR: "consul:8500"
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           LDAP_BINDDN: "cn=admin,dc=example,dc=org"
-          LDAP_BINDPASS: "adminpassword"
-          LDAP_URL: "ldap://openldap:1389"
+          LDAP_BINDPASS: "admin"
+          # host and port of the openldap container, from the pov of the github runner
+          LDAP_HOST_URL: "ldap://0.0.0.0:10389"
+          # service URL of accessible from the Vault container
+          LDAP_URL: "ldap://openldap:389"
           VAULT_PLUGIN_COMMAND: ${{ steps.plugin.outputs.command }}
         run: |
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
             target="testacc-ent"
           else
             target="testacc"
+          fi
+          if [ -n "${{ env.LDAP_HOST_URL }}" ]; then
+            cat testdata/openldap/ldif/*.ldif | ldapadd -x -H ${{ env.LDAP_HOST_URL }} -D "${{ env.LDAP_BINDDN }}" -w "${{ env.LDAP_BINDPASS }}"
           fi
           make $target TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
       - name: "Generate Vault API Path Coverage Report"
