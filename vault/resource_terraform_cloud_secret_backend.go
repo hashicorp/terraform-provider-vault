@@ -79,13 +79,13 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			consts.FieldDefaultLeaseTTL: {
+			consts.FieldDefaultLeaseTTLSeconds: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     "0",
 				Description: "Default lease duration for secrets in seconds",
 			},
-			consts.FieldMaxLeaseTTL: {
+			consts.FieldMaxLeaseTTLSeconds: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     "0",
