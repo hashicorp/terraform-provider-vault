@@ -11,6 +11,8 @@ FEATURES:
 
 * Add support for `allowed_sts_header_values` parameter in `vault_aws_auth_backend_client` resource to specify additional headers allowed in STS requests
 
+* Add new ephemeral resource `vault_terraform_token`, by @drewmullen ([#2616])(https://github.com/hashicorp/terraform-provider-vault/pull/2616)
+
 BUGS:
 
 * Fix pki config resources to allow unsetting of fields (to empty fields) ([#2558](https://github.com/hashicorp/terraform-provider-vault/pull/2558))
@@ -80,6 +82,7 @@ IMPROVEMENTS:
 BUGS:
 * Fix panic when reading the `vault_gcp_secret_backend` resource. ([#2549](https://github.com/hashicorp/terraform-provider-vault/pull/2549))
 * Fix regression where `VAULT_NAMESPACE` was not being honored, causing child namespaces to be created in the root namespace instead ([#2540](https://github.com/hashicorp/terraform-provider-vault/pull/2540))
+
 
 ## 5.1.0 (Jul 9, 2025)
 
