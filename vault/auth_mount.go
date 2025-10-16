@@ -5,68 +5,70 @@ package vault
 
 import (
 	"context"
-
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func authMountTuneSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:       schema.TypeSet,
+		Type:       schema.TypeList,
 		Optional:   true,
 		Computed:   true,
 		MaxItems:   1,
 		ConfigMode: schema.SchemaConfigModeAttr,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
-				"default_lease_ttl": {
+				consts.FieldDefaultLeaseTTL: {
 					Type:         schema.TypeString,
 					Optional:     true,
 					Description:  "Specifies the default time-to-live duration. This overrides the global default. A value of 0 is equivalent to the system default TTL",
 					ValidateFunc: provider.ValidateDuration,
 				},
-				"max_lease_ttl": {
+				consts.FieldMaxLeaseTTL: {
 					Type:         schema.TypeString,
 					Optional:     true,
 					Description:  "Specifies the maximum time-to-live duration. This overrides the global default. A value of 0 are equivalent and set to the system max TTL.",
 					ValidateFunc: provider.ValidateDuration,
 				},
-				"audit_non_hmac_request_keys": {
+				consts.FieldAuditNonHMACRequestKeys: {
 					Type:        schema.TypeList,
 					Optional:    true,
 					Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.",
 					Elem:        &schema.Schema{Type: schema.TypeString},
 				},
-				"audit_non_hmac_response_keys": {
+				consts.FieldAuditNonHMACResponseKeys: {
 					Type:        schema.TypeList,
 					Optional:    true,
 					Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.",
 					Elem:        &schema.Schema{Type: schema.TypeString},
 				},
-				"listing_visibility": {
+				consts.FieldListingVisibility: {
 					Type:         schema.TypeString,
 					Optional:     true,
 					Description:  "Specifies whether to show this mount in the UI-specific listing endpoint. Valid values are \"unauth\" or \"hidden\". If not set, behaves like \"hidden\".",
 					ValidateFunc: validation.StringInSlice([]string{"unauth", "hidden"}, false),
 				},
-				"passthrough_request_headers": {
+				consts.FieldPassthroughRequestHeaders: {
 					Type:        schema.TypeList,
 					Optional:    true,
 					Description: "List of headers to whitelist and pass from the request to the backend.",
 					Elem:        &schema.Schema{Type: schema.TypeString},
 				},
-				"allowed_response_headers": {
+				consts.FieldAllowedResponseHeaders: {
 					Type:        schema.TypeList,
 					Optional:    true,
 					Description: "List of headers to whitelist and allowing a plugin to include them in the response.",
 					Elem:        &schema.Schema{Type: schema.TypeString},
 				},
-				"token_type": {
+				consts.FieldTokenType: {
 					Type:         schema.TypeString,
 					Optional:     true,
 					Description:  "Specifies the type of tokens that should be returned by the mount.",
@@ -78,7 +80,15 @@ func authMountTuneSchema() *schema.Schema {
 }
 
 func authMountTune(ctx context.Context, client *api.Client, path string, configured interface{}) error {
-	input := expandAuthMethodTune(configured.(*schema.Set).List())
+	configuredList, ok := configured.([]interface{})
+	if !ok {
+		return fmt.Errorf("error type asserting tune block: expected []interface{}, got %T", configured)
+	}
+
+	input, err := expandAuthMethodTune(configuredList)
+	if err != nil {
+		return fmt.Errorf("error expanding tune block %q: %s", path, err)
+	}
 
 	return tuneMount(ctx, client, path, input)
 }

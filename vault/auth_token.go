@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -45,6 +46,7 @@ type addTokenFieldsConfig struct {
 	TokenPeriodConflict         []string
 	TokenPoliciesConflict       []string
 	TokenTTLConflict            []string
+	TokenTypeConflict           []string
 
 	TokenTypeDefault string
 }
@@ -53,6 +55,23 @@ type addTokenFieldsConfig struct {
 func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConfig) {
 	if config.TokenTypeDefault == "" {
 		config.TokenTypeDefault = "default"
+	}
+
+	if _, ok := fields[consts.FieldTune]; ok {
+		config.TokenMaxTTLConflict = append(
+			config.TokenMaxTTLConflict,
+			fmt.Sprintf("%s.0.%s", consts.FieldTune, consts.FieldMaxLeaseTTL),
+		)
+
+		config.TokenTTLConflict = append(
+			config.TokenTTLConflict,
+			fmt.Sprintf("%s.0.%s", consts.FieldTune, consts.FieldDefaultLeaseTTL),
+		)
+
+		config.TokenTypeConflict = append(
+			config.TokenTypeConflict,
+			fmt.Sprintf("%s.0.%s", consts.FieldTune, consts.FieldTokenType),
+		)
 	}
 
 	fields[TokenFieldBoundCIDRs] = &schema.Schema{
@@ -102,10 +121,11 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 	}
 
 	fields[TokenFieldType] = &schema.Schema{
-		Type:        schema.TypeString,
-		Description: "The type of token to generate, service or batch",
-		Optional:    true,
-		Default:     config.TokenTypeDefault,
+		Type:          schema.TypeString,
+		Description:   "The type of token to generate, service or batch",
+		Optional:      true,
+		Default:       config.TokenTypeDefault,
+		ConflictsWith: config.TokenTypeConflict,
 	}
 
 	fields[TokenFieldTTL] = &schema.Schema{
