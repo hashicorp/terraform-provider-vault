@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -407,4 +408,86 @@ resource "vault_auth_backend" "azure" {
   type = "azure"
 }
 `, backend)
+}
+
+func TestDurationDiffSuppressFunc(t *testing.T) {
+	testCases := []struct {
+		name     string
+		oldValue string
+		newValue string
+		expected bool // true = suppress diff, false = show diff
+	}{
+		// Test equivalent durations (should suppress diff)
+		{
+			name:     "seconds to minutes conversion",
+			oldValue: "120s",
+			newValue: "2m0s",
+			expected: true,
+		},
+		{
+			name:     "minutes to seconds conversion",
+			oldValue: "2m",
+			newValue: "120s",
+			expected: true,
+		},
+		{
+			name:     "same values",
+			oldValue: "4s",
+			newValue: "4s",
+			expected: true,
+		},
+		{
+			name:     "case insensitive equivalence",
+			oldValue: "4S",
+			newValue: "4s",
+			expected: true,
+		},
+
+		// Test different durations (should show diff)
+		{
+			name:     "different seconds",
+			oldValue: "4s",
+			newValue: "5s",
+			expected: false,
+		},
+		{
+			name:     "seconds vs minutes different values",
+			oldValue: "60s",
+			newValue: "2m", // 120s
+			expected: false,
+		},
+
+		// Test invalid durations (should fall back to string comparison)
+		{
+			name:     "invalid old value",
+			oldValue: "invalid",
+			newValue: "4s",
+			expected: false,
+		},
+		{
+			name:     "both invalid but identical",
+			oldValue: "invalid",
+			newValue: "invalid",
+			expected: true,
+		},
+		{
+			name:     "invalid with case difference",
+			oldValue: "Invalid",
+			newValue: "invalid",
+			expected: true, // case-insensitive string comparison
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := &schema.ResourceData{}
+
+			result := durationDiffSuppressFunc("test_field", tc.oldValue, tc.newValue, d)
+
+			if result != tc.expected {
+				t.Errorf("durationDiffSuppressFunc(%q, %q) = %v; want %v",
+					tc.oldValue, tc.newValue, result, tc.expected)
+			}
+		})
+	}
 }

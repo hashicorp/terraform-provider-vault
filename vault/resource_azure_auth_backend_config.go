@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -25,16 +26,22 @@ var azureAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$
 // diffs when durations are equivalent (e.g., "120s" vs "2m0s")
 func durationDiffSuppressFunc(k, oldValue, newValue string, d *schema.ResourceData) bool {
 	// Parse both values as durations
-	oldDuration, err1 := time.ParseDuration(oldValue)
-	newDuration, err2 := time.ParseDuration(newValue)
+	oldDuration, oldErr := time.ParseDuration(oldValue)
+	newDuration, newErr := time.ParseDuration(newValue)
+
+	// Combine any parse errors
+	err := errors.Join(oldErr, newErr)
 
 	// If both parse successfully, compare the actual durations
-	if err1 == nil && err2 == nil {
+	if err == nil {
 		return oldDuration == newDuration
 	}
 
-	// If either fails to parse, fall back to string comparison
-	return oldValue == newValue
+	// Log parse errors for debugging
+	log.Printf("[DEBUG] Failed to parse duration for field %q (old: %q, new: %q): %v", k, oldValue, newValue, err)
+
+	// If either fails to parse, fall back to case-insensitive string comparison
+	return strings.EqualFold(oldValue, newValue)
 }
 
 func azureAuthBackendConfigResource() *schema.Resource {
