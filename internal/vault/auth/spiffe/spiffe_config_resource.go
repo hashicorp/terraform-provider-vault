@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
@@ -25,6 +26,8 @@ import (
 const (
 	spiffeConfigPath = "config"
 )
+
+var backendNameRegexp = regexp.MustCompile("^auth/(.+)/config$")
 
 // Ensure the implementation satisfies the resource.ResourceWithImportState interface
 var _ resource.ResourceWithImportState = &SpiffeAuthConfigResource{}
@@ -378,13 +381,18 @@ func extractSpiffeConfigMountFromID(id string) (string, error) {
 	// Trim leading slash if present
 	id = strings.Trim(id, "/")
 
-	parts := strings.Split(id, "/")
-	if len(parts) != 3 {
+	if !backendNameRegexp.MatchString(id) {
 		return "", fmt.Errorf("import identifier must be of the form 'auth/<mount>/config', "+
 			"namespace can be specified using the env var %s", consts.EnvVarVaultNamespaceImport)
 	}
 
-	mount := strings.TrimSpace(parts[1])
+	matches := backendNameRegexp.FindStringSubmatch(id)
+	if len(matches) != 2 {
+		return "", fmt.Errorf("import identifier must be of the form 'auth/<mount>/config', "+
+			"namespace can be specified using the env var %s", consts.EnvVarVaultNamespaceImport)
+	}
+
+	mount := strings.TrimSpace(matches[1])
 	if mount == "" {
 		return "", fmt.Errorf("mount cannot be empty")
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
@@ -21,6 +22,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/token"
 	"github.com/hashicorp/vault/api"
 )
+
+var roleNameRegexp = regexp.MustCompile("^auth/(.+)/role/(.+)$")
 
 // Ensure the implementation satisfies the resource.ResourceWithImportState interface
 var _ resource.ResourceWithImportState = &SpiffeAuthRoleResource{}
@@ -340,18 +343,23 @@ func (s *SpiffeAuthRoleResource) extractSpiffeRoleIdentifiers(id string) (string
 	// Trim leading slash if present
 	id = strings.Trim(id, "/")
 
-	parts := strings.Split(id, "/")
-	if len(parts) != 4 {
+	if !roleNameRegexp.MatchString(id) {
 		return "", "", fmt.Errorf("import identifier must be of the form 'auth/<mount>/role/<rolename>', "+
 			"namespace can be specified using the env var %s", consts.EnvVarVaultNamespaceImport)
 	}
 
-	mount := strings.TrimSpace(parts[1])
+	matches := roleNameRegexp.FindStringSubmatch(id)
+	if len(matches) != 3 {
+		return "", "", fmt.Errorf("import identifier must be of the form 'auth/<mount>/role/<rolename>', "+
+			"namespace can be specified using the env var %s", consts.EnvVarVaultNamespaceImport)
+	}
+
+	mount := strings.TrimSpace(matches[1])
 	if mount == "" {
 		return "", "", fmt.Errorf("mount cannot be empty")
 	}
 
-	roleName := strings.TrimSpace(parts[3])
+	roleName := strings.TrimSpace(matches[2])
 	if roleName == "" {
 		return "", "", fmt.Errorf("role name cannot be empty")
 	}
