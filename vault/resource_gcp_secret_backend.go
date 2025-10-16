@@ -240,13 +240,11 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 
 	// read and set config if needed
 	fields := []string{}
-	if provider.IsAPISupported(meta, provider.VaultVersion116) {
-		fields = append(
-			fields,
-			consts.FieldTTL,
-			consts.FieldMaxTTL,
-		)
-	}
+	fields = append(
+		fields,
+		consts.FieldTTL,
+		consts.FieldMaxTTL,
+	)
 
 	if provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta) {
 		fields = append(
@@ -261,20 +259,18 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		}
 	}
 
-	if len(fields) > 0 {
-		resp, err := client.Logical().ReadWithContext(ctx, gcpSecretBackendConfigPath(path))
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if resp == nil {
-			return diag.FromErr(fmt.Errorf("GCP backend config %q not found", path))
-		}
+	resp, err := client.Logical().ReadWithContext(ctx, gcpSecretBackendConfigPath(path))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if resp == nil {
+		return diag.FromErr(fmt.Errorf("GCP backend config %q not found", path))
+	}
 
-		for _, k := range fields {
-			if v, ok := resp.Data[k]; ok {
-				if err := d.Set(k, v); err != nil {
-					return diag.FromErr(err)
-				}
+	for _, k := range fields {
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.FromErr(err)
 			}
 		}
 	}
