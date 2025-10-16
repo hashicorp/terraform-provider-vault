@@ -9,6 +9,8 @@ FEATURES:
 * Add support for `tune` in `vault_saml_auth_backend` resource ([#2566](https://github.com/hashicorp/terraform-provider-vault/pull/2566))
 * Add support for `tune` in `vault_ldap_auth_backend` and `vault_okta_auth_backend` resources ([#2602](https://github.com/hashicorp/terraform-provider-vault/pull/2602))
 
+* Add support for `allowed_sts_header_values` parameter in `vault_aws_auth_backend_client` resource to specify additional headers allowed in STS requests
+
 BUGS:
 
 * Fix pki config resources to allow unsetting of fields (to empty fields) ([#2558](https://github.com/hashicorp/terraform-provider-vault/pull/2558))

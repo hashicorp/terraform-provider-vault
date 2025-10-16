@@ -441,6 +441,7 @@ const (
 	FieldEC2Endpoint                    = "ec2_endpoint"
 	FieldSTSRegion                      = "sts_region"
 	FieldSTSFallbackRegions             = "sts_fallback_regions"
+	FieldAllowedSTSHeaderValues         = "allowed_sts_header_values"
 	FieldIAMServerIDHeaderValue         = "iam_server_id_header_value"
 	FieldListingVisibility              = "listing_visibility"
 	FieldPassthroughRequestHeaders      = "passthrough_request_headers"
