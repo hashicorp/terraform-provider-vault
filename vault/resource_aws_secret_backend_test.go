@@ -338,6 +338,34 @@ func TestAccAWSSecretBackend_max_retries(t *testing.T) {
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
+				Config: testAccAWSSecretBackendConfig_max_retry_basic(path, accessKey, secretKey, 3),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
+				),
+			},
+			{
+				Config: testAccAWSSecretBackendConfig_max_retry_updated(path, accessKey, secretKey, 5),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "2100"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "21070"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
+				),
+			},
+			{
 				Config: testAccAWSSecretBackendConfig_no_max_retry(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
@@ -354,9 +382,8 @@ func TestAccAWSSecretBackend_max_retries(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldUsernameTemplate),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
 			{
-				Config: testAccAWSSecretBackendConfig_max_retry_basic(path, accessKey, secretKey),
+				Config: testAccAWSSecretBackendConfig_max_retry_basic(path, accessKey, secretKey, -1),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
@@ -366,23 +393,24 @@ func TestAccAWSSecretBackend_max_retries(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "-1"),
 				),
 			},
 			{
-				Config: testAccAWSSecretBackendConfig_max_retry_updated(path, accessKey, secretKey),
+				Config: testAccAWSSecretBackendConfig_max_retry_basic(path, accessKey, secretKey, 0),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description updated"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "2100"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "21070"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "0"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -556,7 +584,7 @@ resource "vault_aws_secret_backend" "test" {
 }`, path, accessKey, secretKey)
 }
 
-func testAccAWSSecretBackendConfig_max_retry_basic(path, accessKey, secretKey string) string {
+func testAccAWSSecretBackendConfig_max_retry_basic(path, accessKey, secretKey string, maxRetry int) string {
 	return fmt.Sprintf(`
 resource "vault_aws_secret_backend" "test" {
   path = "%s"
@@ -565,11 +593,11 @@ resource "vault_aws_secret_backend" "test" {
   max_lease_ttl_seconds = 86400
   access_key = "%s"
   secret_key = "%s"
-  max_retries = 3
-}`, path, accessKey, secretKey)
+  max_retries = "%d"
+}`, path, accessKey, secretKey, maxRetry)
 }
 
-func testAccAWSSecretBackendConfig_max_retry_updated(path, accessKey, secretKey string) string {
+func testAccAWSSecretBackendConfig_max_retry_updated(path, accessKey, secretKey string, maxRetry int) string {
 	return fmt.Sprintf(`
 resource "vault_aws_secret_backend" "test" {
   path = "%s"
@@ -578,6 +606,6 @@ resource "vault_aws_secret_backend" "test" {
   max_lease_ttl_seconds = 21070
   access_key = "%s"
   secret_key = "%s"
-  max_retries = 5
-}`, path, accessKey, secretKey)
+  max_retries = "%d"
+}`, path, accessKey, secretKey, maxRetry)
 }

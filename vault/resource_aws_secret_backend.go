@@ -154,7 +154,7 @@ func awsSecretBackendResource() *schema.Resource {
 			consts.FieldMaxRetries: {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Computed:    true,
+				Default:     -1,
 				Description: "Number of max retries the client should use for recoverable errors.",
 			},
 		},
@@ -468,9 +468,7 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 			}
 		}
 
-		if v, ok := d.GetOk(consts.FieldMaxRetries); ok {
-			data[consts.FieldMaxRetries] = v.(int)
-		}
+		data[consts.FieldMaxRetries] = d.Get(consts.FieldMaxRetries)
 
 		region := d.Get(consts.FieldRegion).(string)
 		if region != "" {
