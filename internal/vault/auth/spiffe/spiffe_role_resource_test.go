@@ -9,13 +9,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 // TestAccSpiffeAuthRole tests the spiffe auth role resource
 func TestAccSpiffeAuthRole(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
+	acctestutil.SkipTestAccEnt(t)
 	mount := acctest.RandomWithPrefix("spiffe-mount")
 	resourceAddress := "vault_spiffe_auth_backend_role.spiffe_role"
 
@@ -23,11 +24,10 @@ func TestAccSpiffeAuthRole(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
-			// FIXME: Limit tests to Vault 1.21.x or higher
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfVaultVersionLT(t, provider.VaultVersion121)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-
 		Steps: []resource.TestStep{
 			// Test the simplest form of a role
 			{
