@@ -32,12 +32,16 @@ import (
 
 	"github.com/coreos/pkg/multierror"
 	"github.com/hashicorp/go-retryablehttp"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/vault"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	vaultSchema "github.com/hashicorp/terraform-provider-vault/schema"
 )
 
 const (
@@ -45,15 +49,54 @@ const (
 	EnvVarTfAccEnt      = "TF_ACC_ENTERPRISE"
 )
 
+var (
+	TestProvider *schema.Provider
+)
+
+// testAccProviderConfigure ensures Provider is only configured once
+//
+// The PreCheck(t) function is invoked for every test and this prevents
+// extraneous reconfiguration to the same values each time. However, this does
+// not prevent reconfiguration that may happen should the address of
+// Provider be errantly reused in ProviderFactories.
+var testAccProviderConfigure sync.Once
+
 func TestAccPreCheck(t *testing.T) {
 	t.Helper()
+	PreCheck(t)
 	FatalTestEnvUnset(t, api.EnvVaultAddress, api.EnvVaultToken)
 }
 
 func TestEntPreCheck(t *testing.T) {
 	t.Helper()
+	PreCheck(t)
 	SkipTestAccEnt(t)
 	TestAccPreCheck(t)
+}
+
+func PreCheck(t *testing.T) {
+	t.Helper()
+
+	// only required when running acceptance tests
+	if os.Getenv(resource.EnvTfAcc) == "" && os.Getenv(EnvVarTfAccEnt) == "" {
+		return
+	}
+
+	testAccProviderConfigure.Do(func() {
+		p := vaultSchema.NewProvider(vault.Provider())
+		TestProvider = p.SchemaProvider()
+
+		rootProviderResource := &schema.Resource{
+			Schema: p.SchemaProvider().Schema,
+		}
+		rootProviderData := rootProviderResource.TestResourceData()
+		m, err := provider.NewProviderMeta(rootProviderData)
+		if err != nil {
+			panic(err)
+		}
+
+		TestProvider.SetMeta(m)
+	})
 }
 
 func SkipTestAcc(t *testing.T) {
