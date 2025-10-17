@@ -402,26 +402,30 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 		}
 
 		attrs := map[string]string{
-			"url":                  "url",
-			"starttls":             "starttls",
-			"case_sensitive_names": "case_sensitive_names",
-			"tls_min_version":      "tls_min_version",
-			"tls_max_version":      "tls_max_version",
-			"insecure_tls":         "insecure_tls",
-			"certificate":          "certificate",
-			"binddn":               "binddn",
-			"userdn":               "userdn",
-			"userattr":             "userattr",
-			"userfilter":           "userfilter",
-			"discoverdn":           "discoverdn",
-			"deny_null_bind":       "deny_null_bind",
-			"upndomain":            "upndomain",
-			"groupfilter":          "groupfilter",
-			"username_as_alias":    "username_as_alias",
-			"groupdn":              "groupdn",
-			"groupattr":            "groupattr",
-			"use_token_groups":     "use_token_groups",
-			"connection_timeout":   "connection_timeout",
+			"url":                         "url",
+			"starttls":                    "starttls",
+			"case_sensitive_names":        "case_sensitive_names",
+			"tls_min_version":             "tls_min_version",
+			"tls_max_version":             "tls_max_version",
+			"insecure_tls":                "insecure_tls",
+			"certificate":                 "certificate",
+			"binddn":                      "binddn",
+			"userdn":                      "userdn",
+			"userattr":                    "userattr",
+			"userfilter":                  "userfilter",
+			"discoverdn":                  "discoverdn",
+			"deny_null_bind":              "deny_null_bind",
+			"upndomain":                   "upndomain",
+			"groupfilter":                 "groupfilter",
+			"username_as_alias":           "username_as_alias",
+			"groupdn":                     "groupdn",
+			"groupattr":                   "groupattr",
+			"use_token_groups":            "use_token_groups",
+			"connection_timeout":          "connection_timeout",
+			"request_timeout":             "request_timeout",
+			"dereference_aliases":         "dereference_aliases",
+			"enable_samaccountname_login": "enable_samaccountname_login",
+			"anonymous_group_search":      "anonymous_group_search",
 		}
 
 		isVaultVersion111 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion111)
@@ -479,6 +483,10 @@ resource "vault_ldap_auth_backend" "test" {
     username_as_alias      = true
     use_token_groups       = %s
     connection_timeout     = 30
+	request_timeout        = 60
+    dereference_aliases    = "always"
+    enable_samaccountname_login = true
+    anonymous_group_search = false
 }
 `, path, local, use_token_groups)
 }
@@ -576,6 +584,10 @@ MvQzNd87hRypUZ9Hyx2C9RljNDHHjgwYwWv9JOT0xEOS4ZAaPfvTf20=
 -----END RSA PRIVATE KEY-----
 EOT
     use_token_groups = %s
+	request_timeout        = 60
+    dereference_aliases    = "always"
+    enable_samaccountname_login = true
+    anonymous_group_search = false
 }
 `, path, local, use_token_groups)
 }
@@ -633,4 +645,28 @@ resource "vault_ldap_auth_backend" "test" {
 	}
 }
 `, path)
+}
+func TestFieldRequestTimeoutValidation(t *testing.T) {
+	tests := []struct {
+		value    int
+		expected bool
+	}{
+		{10, true},
+		{0, true},
+		{-5, false},
+	}
+	validateFunc := func(val interface{}, key string) (warns []string, errs []error) {
+		v := val.(int)
+		if v < 0 {
+			t.Errorf("%q must be a non-negative integer, got: %d", key, v)
+		}
+		return
+	}
+	for _, test := range tests {
+		_, errs := validateFunc(test.value, "request_timeout")
+
+		if (len(errs) == 0) != test.expected {
+			t.Errorf("Validation for value %d failed. Expected valid: %v, got errors: %v", test.value, test.expected, errs)
+		}
+	}
 }

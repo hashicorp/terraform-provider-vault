@@ -34,6 +34,7 @@ var ldapAuthBackendFields = []string{
 	consts.FieldGroupFilter,
 	consts.FieldGroupDN,
 	consts.FieldGroupAttr,
+	consts.FieldDereferenceAliases,
 }
 
 var ldapAuthBackendBooleanFields = []string{
@@ -44,6 +45,8 @@ var ldapAuthBackendBooleanFields = []string{
 	consts.FieldDenyNullBind,
 	consts.FieldUsernameAsAlias,
 	consts.FieldUseTokenGroups,
+	consts.FieldEnableSamaccountnameLogin,
+	consts.FieldAnonymousGroupSearch,
 }
 
 func ldapAuthBackendResource() *schema.Resource {
@@ -199,6 +202,38 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed: true,
 		},
 		consts.FieldTune: authMountTuneSchema(),
+		consts.FieldRequestTimeout: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Computed:    true,
+			Description: "The timeout(in sec) for requests to the LDAP server.",
+			ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+				v := val.(int)
+				if v < 0 {
+					diag.Errorf("%q must be a non negative integer, got: %d", key, v)
+				}
+				return
+			},
+		},
+
+		consts.FieldDereferenceAliases: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "Specifies how aliases are dereferenced during LDAP searches. Valid values are 'never','searching','finding', and 'always'.",
+		},
+		consts.FieldEnableSamaccountnameLogin: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "Enables login using the sAMAccountName attribute.",
+		},
+		consts.FieldAnonymousGroupSearch: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "Allows anonymous group searches.",
+		},
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
@@ -320,6 +355,9 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	if v, ok := d.GetOk(consts.FieldConnectionTimeout); ok {
 		data[consts.FieldConnectionTimeout] = v
 	}
+	if v, ok := d.GetOk(consts.FieldRequestTimeout); ok {
+		data[consts.FieldRequestTimeout] = v
+	}
 
 	updateTokenFields(d, data, false)
 
@@ -423,6 +461,11 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	if v, ok := resp.Data[consts.FieldConnectionTimeout]; ok {
 		if err := d.Set(consts.FieldConnectionTimeout, v); err != nil {
 			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldConnectionTimeout, path, err)
+		}
+	}
+	if v, ok := resp.Data[consts.FieldRequestTimeout]; ok {
+		if err := d.Set(consts.FieldRequestTimeout, v); err != nil {
+			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldRequestTimeout, path, err)
 		}
 	}
 
