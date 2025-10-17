@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -21,28 +20,6 @@ import (
 )
 
 var azureAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$")
-
-// durationDiffSuppressFunc compares duration strings semantically to suppress
-// diffs when durations are equivalent (e.g., "120s" vs "2m0s")
-func durationDiffSuppressFunc(k, oldValue, newValue string, d *schema.ResourceData) bool {
-	// Parse both values as durations
-	oldDuration, oldErr := time.ParseDuration(oldValue)
-	newDuration, newErr := time.ParseDuration(newValue)
-
-	// Combine any parse errors
-	err := errors.Join(oldErr, newErr)
-
-	// If both parse successfully, compare the actual durations
-	if err == nil {
-		return oldDuration == newDuration
-	}
-
-	// Log parse errors for debugging
-	log.Printf("[DEBUG] Failed to parse duration for field %q (old: %q, new: %q): %v", k, oldValue, newValue, err)
-
-	// If either fails to parse, fall back to case-insensitive string comparison
-	return strings.EqualFold(oldValue, newValue)
-}
 
 func azureAuthBackendConfigResource() *schema.Resource {
 	r := &schema.Resource{
@@ -112,18 +89,16 @@ func azureAuthBackendConfigResource() *schema.Resource {
 				Description: "Maximum number of retries for Azure API requests. Defaults to 3.",
 			},
 			consts.FieldRetryDelay: {
-				Type:             schema.TypeString,
-				Optional:         true,
-				Default:          "4s",
-				Description:      "The initial delay between retries for Azure API requests. Defaults to '4s'.",
-				DiffSuppressFunc: durationDiffSuppressFunc,
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     4,
+				Description: "The initial delay in seconds between retries for Azure API requests. Defaults to 4.",
 			},
 			consts.FieldMaxRetryDelay: {
-				Type:             schema.TypeString,
-				Optional:         true,
-				Default:          "60s",
-				Description:      "The maximum delay between retries for Azure API requests. Defaults to '60s'.",
-				DiffSuppressFunc: durationDiffSuppressFunc,
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     60,
+				Description: "The maximum delay in seconds between retries for Azure API requests. Defaults to 60.",
 			},
 		},
 	}
@@ -241,25 +216,22 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		}
 	}
 
+	// Handle retry delay fields - convert nanoseconds from API to seconds
 	if v, ok := secret.Data[consts.FieldRetryDelay]; ok {
-		// Convert nanoseconds from API to duration string
 		ns, err := parseutil.ParseInt(v)
 		if err != nil {
 			return diag.Errorf("failed to parse retry_delay from API response: %v (value: %v)", err, v)
 		}
-		duration := time.Duration(ns)
-		if err := d.Set(consts.FieldRetryDelay, duration.String()); err != nil {
+		if err := d.Set(consts.FieldRetryDelay, int(time.Duration(ns).Seconds())); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	if v, ok := secret.Data[consts.FieldMaxRetryDelay]; ok {
-		// Convert nanoseconds from API to duration string
 		ns, err := parseutil.ParseInt(v)
 		if err != nil {
 			return diag.Errorf("failed to parse max_retry_delay from API response: %v (value: %v)", err, v)
 		}
-		duration := time.Duration(ns)
-		if err := d.Set(consts.FieldMaxRetryDelay, duration.String()); err != nil {
+		if err := d.Set(consts.FieldMaxRetryDelay, int(time.Duration(ns).Seconds())); err != nil {
 			return diag.FromErr(err)
 		}
 	}

@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -26,12 +25,12 @@ func TestAccAzureAuthBackendConfig_import(t *testing.T) {
 		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAzureAuthBackendConfig_retryFields(backend, 7, "8s", "90s"),
+				Config: testAccAzureAuthBackendConfig_retryFields(backend, 7, 8, 90),
 				Check: resource.ComposeTestCheckFunc(
 					testAccAzureAuthBackendConfigCheck_attrs(backend),
 					resource.TestCheckResourceAttr("vault_azure_auth_backend_config.config", consts.FieldMaxRetries, "7"),
-					resource.TestCheckResourceAttr("vault_azure_auth_backend_config.config", consts.FieldRetryDelay, "8s"),
-					resource.TestCheckResourceAttr("vault_azure_auth_backend_config.config", consts.FieldMaxRetryDelay, "1m30s"),
+					resource.TestCheckResourceAttr("vault_azure_auth_backend_config.config", consts.FieldRetryDelay, "8"),
+					resource.TestCheckResourceAttr("vault_azure_auth_backend_config.config", consts.FieldMaxRetryDelay, "90"),
 				),
 			},
 			{
@@ -116,32 +115,32 @@ func TestAccAzureAuthBackendConfig_retryFields(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// Test with all retry fields set
-				Config: testAccAzureAuthBackendConfig_retryFields(backend, 5, "10s", "120s"),
+				Config: testAccAzureAuthBackendConfig_retryFields(backend, 5, 10, 120),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "10s"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "2m0s"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "120"),
 				),
 			},
 			{
 				// Test updating retry fields
-				Config: testAccAzureAuthBackendConfig_retryFields(backend, 10, "5s", "180s"),
+				Config: testAccAzureAuthBackendConfig_retryFields(backend, 10, 5, 180),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "10"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "5s"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "3m0s"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "5"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "180"),
 				),
 			},
 			{
 				// Test with zero max_retries
-				Config: testAccAzureAuthBackendConfig_retryFields(backend, 0, "1s", "30s"),
+				Config: testAccAzureAuthBackendConfig_retryFields(backend, 0, 1, 30),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "0"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "1s"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "30s"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "30"),
 				),
 			},
 			{
@@ -155,8 +154,8 @@ func TestAccAzureAuthBackendConfig_retryFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					// Check API defaults according to Vault documentation
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "4s"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "1m0s"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "4"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "60"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret),
@@ -362,7 +361,7 @@ resource "vault_azure_auth_backend_config" "config" {
 }`, backend)
 }
 
-func testAccAzureAuthBackendConfig_retryFields(backend string, maxRetries int, retryDelay string, maxRetryDelay string) string {
+func testAccAzureAuthBackendConfig_retryFields(backend string, maxRetries int, retryDelay int, maxRetryDelay int) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "azure" {
   path = "%s"
@@ -376,8 +375,8 @@ resource "vault_azure_auth_backend_config" "config" {
   client_secret = "12345678901234567890"
   resource = "http://vault.hashicorp.com"
   max_retries = %d
-  retry_delay = "%s"
-  max_retry_delay = "%s"
+  retry_delay = %d
+  max_retry_delay = %d
 }`, backend, maxRetries, retryDelay, maxRetryDelay)
 }
 
@@ -408,86 +407,4 @@ resource "vault_auth_backend" "azure" {
   type = "azure"
 }
 `, backend)
-}
-
-func TestDurationDiffSuppressFunc(t *testing.T) {
-	testCases := []struct {
-		name     string
-		oldValue string
-		newValue string
-		expected bool // true = suppress diff, false = show diff
-	}{
-		// Test equivalent durations (should suppress diff)
-		{
-			name:     "seconds to minutes conversion",
-			oldValue: "120s",
-			newValue: "2m0s",
-			expected: true,
-		},
-		{
-			name:     "minutes to seconds conversion",
-			oldValue: "2m",
-			newValue: "120s",
-			expected: true,
-		},
-		{
-			name:     "same values",
-			oldValue: "4s",
-			newValue: "4s",
-			expected: true,
-		},
-		{
-			name:     "case insensitive equivalence",
-			oldValue: "4S",
-			newValue: "4s",
-			expected: true,
-		},
-
-		// Test different durations (should show diff)
-		{
-			name:     "different seconds",
-			oldValue: "4s",
-			newValue: "5s",
-			expected: false,
-		},
-		{
-			name:     "seconds vs minutes different values",
-			oldValue: "60s",
-			newValue: "2m", // 120s
-			expected: false,
-		},
-
-		// Test invalid durations (should fall back to string comparison)
-		{
-			name:     "invalid old value",
-			oldValue: "invalid",
-			newValue: "4s",
-			expected: false,
-		},
-		{
-			name:     "both invalid but identical",
-			oldValue: "invalid",
-			newValue: "invalid",
-			expected: true,
-		},
-		{
-			name:     "invalid with case difference",
-			oldValue: "Invalid",
-			newValue: "invalid",
-			expected: true, // case-insensitive string comparison
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			d := &schema.ResourceData{}
-
-			result := durationDiffSuppressFunc("test_field", tc.oldValue, tc.newValue, d)
-
-			if result != tc.expected {
-				t.Errorf("durationDiffSuppressFunc(%q, %q) = %v; want %v",
-					tc.oldValue, tc.newValue, result, tc.expected)
-			}
-		})
-	}
 }
