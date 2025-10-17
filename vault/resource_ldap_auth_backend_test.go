@@ -658,7 +658,7 @@ func TestFieldRequestTimeoutValidation(t *testing.T) {
 	validateFunc := func(val interface{}, key string) (warns []string, errs []error) {
 		v := val.(int)
 		if v < 0 {
-			t.Errorf("%q must be a non-negative integer, got: %d", key, v)
+			errs = append(errs, fmt.Errorf("%q must be a non-negative integer, got: %d", key, v))
 		}
 		return
 	}
