@@ -10,49 +10,73 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"github.com/hashicorp/vault/api"
+	"github.com/stretchr/testify/require"
 )
+
+// Get vault version from the test server
+func isSamAccountNameLoginSupported(client *api.Client) (bool, error) {
+	sys := client.Sys()
+	health, err := sys.Health()
+	if err != nil {
+		return false, err
+	}
+	v, err := version.NewVersion(health.Version)
+	if err != nil {
+		return false, err
+	}
+	minVersion, _ := version.NewVersion("1.19.0")
+	return v.GreaterThanOrEqual(minVersion), nil
+}
 
 func TestLDAPAuthBackend_basic(t *testing.T) {
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
 
 	resourceName := "vault_ldap_auth_backend.test"
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		CheckDestroy:             testLDAPAuthBackendDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
-				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+	supported, err := isSamAccountNameLoginSupported(client)
+	require.NoError(t, err)
+	if supported {
+		resource.Test(t, resource.TestCase{
+			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			CheckDestroy:             testLDAPAuthBackendDestroy,
+			Steps: []resource.TestStep{
+				{
+					Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
+					Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+				},
+				{
+					Config: testLDAPAuthBackendConfig_basic(path, "false", "true"),
+					Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+				},
+				{
+					Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
+					Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+				},
+				{
+					Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
+					Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+				},
+				{
+					Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
+					Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+				},
+				testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
 			},
-			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false", "true"),
-				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
-			},
-			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
-			},
-			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
-			},
-			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
-			},
-			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
-		},
-	})
+		})
+	} else {
+		t.Logf("Skipping enable_samaccountname_login check for Vault version < 1.19.0")
+	}
 }
 
 func TestLDAPAuthBackend_tls(t *testing.T) {
@@ -60,35 +84,43 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-ldap-tls-path")
 
 	resourceName := "vault_ldap_auth_backend.test"
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		CheckDestroy:             testLDAPAuthBackendDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
-				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+	supported, err := isSamAccountNameLoginSupported(client)
+	require.NoError(t, err)
+	if supported {
+		resource.Test(t, resource.TestCase{
+			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			CheckDestroy:             testLDAPAuthBackendDestroy,
+			Steps: []resource.TestStep{
+				{
+					Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
+					Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+				},
+				{
+					Config: testLDAPAuthBackendConfig_tls(path, "false", "true"),
+					Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+				},
+				{
+					Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
+					Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+				},
+				{
+					Config: testLDAPAuthBackendConfig_tls(path, "false", "false"),
+					Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+				},
+				{
+					Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
+					Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+				},
+				testutil.GetImportTestStep(resourceName, false, nil, "bindpass",
+					"client_tls_cert", "client_tls_key", "disable_remount"),
 			},
-			{
-				Config: testLDAPAuthBackendConfig_tls(path, "false", "true"),
-				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
-			},
-			{
-				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
-			},
-			{
-				Config: testLDAPAuthBackendConfig_tls(path, "false", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
-			},
-			{
-				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
-				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
-			},
-			testutil.GetImportTestStep(resourceName, false, nil, "bindpass",
-				"client_tls_cert", "client_tls_key", "disable_remount"),
-		},
-	})
+		})
+	} else {
+		t.Logf("Skipping enable_samaccountname_login check for Vault version < 1.19.0")
+	}
 }
 
 func TestLDAPAuthBackend_remount(t *testing.T) {
@@ -97,28 +129,34 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-ldap-updated")
 
 	resourceName := "vault_ldap_auth_backend.test"
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
-					testLDAPAuthBackendCheck_attrs(resourceName, path),
-				),
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+	supported, err := isSamAccountNameLoginSupported(client)
+	require.NoError(t, err)
+	if supported {
+		resource.Test(t, resource.TestCase{
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			Steps: []resource.TestStep{
+				{
+					Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(resourceName, "path", path),
+						testLDAPAuthBackendCheck_attrs(resourceName, path),
+					),
+				},
+				{
+					Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true"),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+						testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
+					),
+				},
+				testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
 			},
-			{
-				Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
-					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
-				),
-			},
-			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
-		},
-	})
+		})
+	} else {
+		t.Logf("Skipping enable_samaccountname_login check for Vault version < 1.19.0")
+	}
 }
 
 func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
