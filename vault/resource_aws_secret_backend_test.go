@@ -9,8 +9,6 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
@@ -344,8 +342,8 @@ func TestAccAWSSecretBackend_max_retries(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "86400"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
@@ -358,8 +356,8 @@ func TestAccAWSSecretBackend_max_retries(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description updated"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "2100"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "21070"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "2100"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "21070"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
@@ -372,8 +370,8 @@ func TestAccAWSSecretBackend_max_retries(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test no max_retry description"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "86400"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
@@ -389,8 +387,8 @@ func TestAccAWSSecretBackend_max_retries(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "86400"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
@@ -403,8 +401,8 @@ func TestAccAWSSecretBackend_max_retries(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "86400"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
