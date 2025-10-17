@@ -18,6 +18,7 @@ FEATURES:
 
 
 * Add support for `mfa_serial_number` parameter in `vault_aws_secret_backend_role` resource. ([#2637](https://github.com/hashicorp/terraform-provider-vault/pull/2637))
+* Add support for `request_timeout`, `dereference_aliases`,`enable_samaccountname_login` and `anonymous_group_search` parameters in `vault_ldap_auth_backend` resource.
 
 BUGS:
 
