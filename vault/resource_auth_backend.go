@@ -168,6 +168,25 @@ func authBackendRead(ctx context.Context, d *schema.ResourceData, meta interface
 	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
 		return diag.FromErr(err)
 	}
+
+	log.Printf("[DEBUG] Reading auth tune from %q", path+"/tune")
+	rawTune, err := authMountTuneGet(ctx, client, "auth/"+path)
+	if err != nil {
+		return diag.Errorf("error reading tune information from Vault: %s", err)
+	}
+
+	input, err := retrieveMountConfigInput(d)
+	if err != nil {
+		return diag.Errorf("error retrieving tune configuration from state: %s", err)
+	}
+
+	mergedTune := mergeAuthMethodTune(rawTune, input)
+
+	if err := d.Set(consts.FieldTune, mergedTune); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
+		return diag.FromErr(err)
+	}
+
 	// TODO: uncomment when identity token key is being returned on the read mount endpoint
 	// if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
 	//	return diag.FromErr(err)
@@ -195,14 +214,16 @@ func authBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	backendType := d.Get(consts.FieldType).(string)
 	var config api.MountConfigInput
 	var callTune bool
+	var err error
 
 	if d.HasChange(consts.FieldTune) {
-		log.Printf("[INFO] Auth '%q' tune configuration changed", path)
-
+		log.Printf("[DEBUG] Auth '%q' tune configuration changed", path)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
-			config = expandAuthMethodTune(raw.(*schema.Set).List())
+			if config, err = expandAuthMethodTune(raw); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 		callTune = true
 	}
@@ -224,7 +245,7 @@ func authBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 			return diag.FromErr(e)
 		}
 
-		log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
+		log.Printf("[DEBUG] Written %s auth tune to '%q'", backendType, path)
 	}
 
 	return authBackendRead(ctx, d, meta)

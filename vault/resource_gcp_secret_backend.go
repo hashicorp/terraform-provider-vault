@@ -6,10 +6,11 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-cty/cty"
-	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -74,13 +75,13 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			consts.FieldDefaultLeaseTTL: {
+			consts.FieldDefaultLeaseTTLSeconds: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     "",
 				Description: "Default lease duration for secrets in seconds",
 			},
-			consts.FieldMaxLeaseTTL: {
+			consts.FieldMaxLeaseTTLSeconds: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     "",
@@ -127,8 +128,8 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 		consts.FieldPath,
 		consts.FieldType,
 		consts.FieldDescription,
-		consts.FieldDefaultLeaseTTL,
-		consts.FieldMaxLeaseTTL,
+		consts.FieldDefaultLeaseTTLSeconds,
+		consts.FieldMaxLeaseTTLSeconds,
 		consts.FieldIdentityTokenKey,
 		consts.FieldAccessor,
 		consts.FieldLocal,
@@ -273,10 +274,10 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 
-	if d.HasChanges(consts.FieldDefaultLeaseTTL, consts.FieldMaxLeaseTTL, consts.FieldIdentityTokenKey) {
+	if d.HasChanges(consts.FieldDefaultLeaseTTLSeconds, consts.FieldMaxLeaseTTLSeconds, consts.FieldIdentityTokenKey) {
 		config := api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
+			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTLSeconds)),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTLSeconds)),
 		}
 
 		if useAPIVer117Ent {

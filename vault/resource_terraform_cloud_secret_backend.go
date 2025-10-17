@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-cty/cty"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -80,13 +79,13 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			consts.FieldDefaultLeaseTTL: {
+			consts.FieldDefaultLeaseTTLSeconds: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     "0",
 				Description: "Default lease duration for secrets in seconds",
 			},
-			consts.FieldMaxLeaseTTL: {
+			consts.FieldMaxLeaseTTLSeconds: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     "0",
@@ -100,8 +99,8 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 		consts.FieldPath,
 		consts.FieldType,
 		consts.FieldDescription,
-		consts.FieldDefaultLeaseTTL,
-		consts.FieldMaxLeaseTTL,
+		consts.FieldDefaultLeaseTTLSeconds,
+		consts.FieldMaxLeaseTTLSeconds,
 	))
 
 	return r
