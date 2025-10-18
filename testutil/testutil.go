@@ -45,22 +45,30 @@ const (
 	EnvVarTfAccEnt      = "TF_ACC_ENTERPRISE"
 )
 
+// Deprecated: use acctestutil.TestAccPreCheck instead, this is here for
+// backwards compatibility.
 func TestAccPreCheck(t *testing.T) {
 	t.Helper()
 	FatalTestEnvUnset(t, api.EnvVaultAddress, api.EnvVaultToken)
 }
 
+// Deprecated: use acctestutil.TestEntPreCheck instead, this is here for
+// backwards compatibility.
 func TestEntPreCheck(t *testing.T) {
 	t.Helper()
 	SkipTestAccEnt(t)
 	TestAccPreCheck(t)
 }
 
+// Deprecated: use acctestutil.SkipTestAcc instead, this is here for
+// backwards compatibility.
 func SkipTestAcc(t *testing.T) {
 	t.Helper()
 	SkipTestEnvUnset(t, resource.EnvTfAcc)
 }
 
+// Deprecated: use acctestutil.SkipTestAccEnt instead, this is here for
+// backwards compatibility.
 func SkipTestAccEnt(t *testing.T) {
 	t.Helper()
 	SkipTestEnvUnset(t, EnvVarTfAccEnt)
