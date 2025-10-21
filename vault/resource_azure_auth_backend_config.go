@@ -217,22 +217,19 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	// Handle retry delay fields - convert nanoseconds from API to seconds
-	if v, ok := secret.Data[consts.FieldRetryDelay]; ok {
-		ns, err := parseutil.ParseInt(v)
-		if err != nil {
-			return diag.Errorf("failed to parse retry_delay from API response: %v (value: %v)", err, v)
-		}
-		if err := d.Set(consts.FieldRetryDelay, int(time.Duration(ns).Seconds())); err != nil {
-			return diag.FromErr(err)
-		}
+	retryDelayFields := []string{
+		consts.FieldRetryDelay,
+		consts.FieldMaxRetryDelay,
 	}
-	if v, ok := secret.Data[consts.FieldMaxRetryDelay]; ok {
-		ns, err := parseutil.ParseInt(v)
-		if err != nil {
-			return diag.Errorf("failed to parse max_retry_delay from API response: %v (value: %v)", err, v)
-		}
-		if err := d.Set(consts.FieldMaxRetryDelay, int(time.Duration(ns).Seconds())); err != nil {
-			return diag.FromErr(err)
+	for _, field := range retryDelayFields {
+		if v, ok := secret.Data[field]; ok {
+			ns, err := parseutil.ParseInt(v)
+			if err != nil {
+				return diag.Errorf("failed to parse %s from API response: %v (value: %v)", field, err, v)
+			}
+			if err := d.Set(field, int(time.Duration(ns).Seconds())); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 
