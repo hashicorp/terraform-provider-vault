@@ -60,7 +60,7 @@ func azureStaticAccessCredentialsDataSource() *schema.Resource {
 			consts.FieldExpiration: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "",
+				Description: "Expiration time of the credential",
 			},
 		},
 	}
