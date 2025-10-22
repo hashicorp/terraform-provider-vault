@@ -6,7 +6,7 @@ FEATURES:
 
 * New parameters for `vault_terraform_cloud_secret_role` to support multi-team tokens, by @drewmullen ([#2498](https://github.com/hashicorp/terraform-provider-vault/pull/2498))
 
-* Add retry configuration fields (`max_retries`, `retry_delay`, `max_retry_delay`) to `vault_azure_auth_backend_config` resource for Azure API request resilience
+* Add retry configuration fields (`max_retries`, `retry_delay`, `max_retry_delay`) to `vault_azure_auth_backend_config` resource for Azure API request resilience ([#2629](https://github.com/hashicorp/terraform-provider-vault/pull/2629))
 
 BUGS:
 
