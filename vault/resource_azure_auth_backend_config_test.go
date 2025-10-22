@@ -19,22 +19,74 @@ import (
 
 func TestAccAzureAuthBackendConfig_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("azure/foo/bar")
+
+	resourceName := "vault_azure_auth_backend_config.config"
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAzureAuthBackendConfig_retryFields(backend, 7, 8, 90),
+				// Start with basic config
+				Config: testAccAzureAuthBackendConfig_basic(backend),
 				Check: resource.ComposeTestCheckFunc(
 					testAccAzureAuthBackendConfigCheck_attrs(backend),
-					resource.TestCheckResourceAttr("vault_azure_auth_backend_config.config", consts.FieldMaxRetries, "7"),
-					resource.TestCheckResourceAttr("vault_azure_auth_backend_config.config", consts.FieldRetryDelay, "8"),
-					resource.TestCheckResourceAttr("vault_azure_auth_backend_config.config", consts.FieldMaxRetryDelay, "90"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "4"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "60"),
 				),
 			},
 			{
-				ResourceName:            "vault_azure_auth_backend_config.config",
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldClientSecret},
+			},
+			{
+				// Add max_retries
+				Config: testAccAzureAuthBackendConfig_maxRetries(backend, 7),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAzureAuthBackendConfigCheck_attrs(backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "7"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "4"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "60"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldClientSecret},
+			},
+			{
+				// Add retry_delay
+				Config: testAccAzureAuthBackendConfig_maxRetriesAndDelay(backend, 7, 8),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAzureAuthBackendConfigCheck_attrs(backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "7"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "8"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "60"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldClientSecret},
+			},
+			{
+				// Add max_retry_delay
+				Config: testAccAzureAuthBackendConfig_retryFields(backend, 7, 8, 90),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAzureAuthBackendConfigCheck_attrs(backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "7"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "8"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "90"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{consts.FieldClientSecret},
