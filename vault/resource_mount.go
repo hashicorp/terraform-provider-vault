@@ -6,10 +6,11 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+	"net/http"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -40,7 +41,7 @@ func getMountSchema(excludes ...string) schemaMap {
 			Required:    false,
 			Description: "Human-friendly description of the mount",
 		},
-		consts.FieldDefaultLeaseTTL: {
+		consts.FieldDefaultLeaseTTLSeconds: {
 			Type:        schema.TypeInt,
 			Required:    false,
 			Optional:    true,
@@ -49,7 +50,7 @@ func getMountSchema(excludes ...string) schemaMap {
 			Description: "Default lease duration for tokens and secrets in seconds",
 		},
 
-		consts.FieldMaxLeaseTTL: {
+		consts.FieldMaxLeaseTTLSeconds: {
 			Type:        schema.TypeInt,
 			Required:    false,
 			Optional:    true,
@@ -215,8 +216,8 @@ func createMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 		Type:        mountType,
 		Description: d.Get(consts.FieldDescription).(string),
 		Config: api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
+			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTLSeconds)),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTLSeconds)),
 			ForceNoCache:    d.Get(consts.FieldForceNoCache).(bool),
 		},
 		Local:                 d.Get(consts.FieldLocal).(bool),
@@ -287,23 +288,25 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 		return err
 	}
 
-	config := api.MountConfigInput{
-		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTL)),
-		MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTL)),
-		Options:         mountOptions(d),
+	// This call uses a map rather than the api.MountConfigInput in order to keep track of which fields have been
+	// updated by the updateMount call.  When using api.MountConfigInput the 'omitempty' in JSON marshalling means that
+	// fields updated to an empty value are not passed all the way through.
+	mapConfig := map[string]interface{}{
+		"default_lease_ttl": fmt.Sprintf("%ds", d.Get(consts.FieldDefaultLeaseTTLSeconds)),
+		"max_lease_ttl":     fmt.Sprintf("%ds", d.Get(consts.FieldMaxLeaseTTLSeconds)),
+		"options":           mountOptions(d),
 	}
 
 	if d.HasChange(consts.FieldAuditNonHMACRequestKeys) {
-		config.AuditNonHMACRequestKeys = expandStringSlice(d.Get(consts.FieldAuditNonHMACRequestKeys).([]interface{}))
+		mapConfig[consts.FieldAuditNonHMACRequestKeys] = expandStringSlice(d.Get(consts.FieldAuditNonHMACRequestKeys).([]interface{}))
 	}
 
 	if d.HasChange(consts.FieldAuditNonHMACResponseKeys) {
-		config.AuditNonHMACResponseKeys = expandStringSlice(d.Get(consts.FieldAuditNonHMACResponseKeys).([]interface{}))
+		mapConfig[consts.FieldAuditNonHMACResponseKeys] = expandStringSlice(d.Get(consts.FieldAuditNonHMACResponseKeys).([]interface{}))
 	}
 
 	if d.HasChange(consts.FieldDescription) {
-		description := fmt.Sprintf("%s", d.Get(consts.FieldDescription))
-		config.Description = &description
+		mapConfig[consts.FieldDescription] = d.Get(consts.FieldDescription).(string)
 	}
 
 	path := d.Id()
@@ -325,33 +328,33 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 	}
 
 	if d.HasChange(consts.FieldAllowedManagedKeys) {
-		config.AllowedManagedKeys = expandStringSlice(d.Get(consts.FieldAllowedManagedKeys).(*schema.Set).List())
+		mapConfig[consts.FieldAllowedManagedKeys] = expandStringSlice(d.Get(consts.FieldAllowedManagedKeys).(*schema.Set).List())
 	}
 
 	if d.HasChange(consts.FieldPassthroughRequestHeaders) {
-		config.PassthroughRequestHeaders = expandStringSlice(d.Get(consts.FieldPassthroughRequestHeaders).([]interface{}))
+		mapConfig[consts.FieldPassthroughRequestHeaders] = expandStringSlice(d.Get(consts.FieldPassthroughRequestHeaders).([]interface{}))
 	}
 
 	if d.HasChange(consts.FieldAllowedResponseHeaders) {
-		config.AllowedResponseHeaders = expandStringSlice(d.Get(consts.FieldAllowedResponseHeaders).([]interface{}))
+		mapConfig[consts.FieldAllowedResponseHeaders] = d.Get(consts.FieldAllowedResponseHeaders).([]interface{})
 	}
 
 	if d.HasChange(consts.FieldDelegatedAuthAccessors) {
-		config.DelegatedAuthAccessors = expandStringSlice(d.Get(consts.FieldDelegatedAuthAccessors).([]interface{}))
+		mapConfig[consts.FieldDelegatedAuthAccessors] = expandStringSlice(d.Get(consts.FieldDelegatedAuthAccessors).([]interface{}))
 	}
 
 	if d.HasChange(consts.FieldListingVisibility) {
-		config.ListingVisibility = d.Get(consts.FieldListingVisibility).(string)
+		mapConfig[consts.FieldListingVisibility] = d.Get(consts.FieldListingVisibility).(string)
 	}
 
 	if d.HasChange(consts.FieldPluginVersion) {
-		config.PluginVersion = d.Get(consts.FieldPluginVersion).(string)
+		mapConfig[consts.FieldPluginVersion] = d.Get(consts.FieldPluginVersion).(string)
 	}
 
 	useAPIVer116Ent := provider.IsAPISupported(meta, provider.VaultVersion116) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer116Ent {
 		if d.HasChange(consts.FieldIdentityTokenKey) {
-			config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
+			mapConfig[consts.FieldIdentityTokenKey] = d.Get(consts.FieldIdentityTokenKey)
 		}
 	}
 
@@ -360,7 +363,10 @@ func updateMount(ctx context.Context, d *schema.ResourceData, meta interface{}, 
 	// TODO: remove this work-around once VAULT-5521 is fixed
 	var tries int
 	for {
-		if err := client.Sys().TuneMountWithContext(ctx, path, config); err != nil {
+		// Prior to 1.21.0, 1.20.4, 1.19.10, 1.18.15 and 1.16.26 fields can not be set to their empty values in the
+		// Vault Client.  Using the new function that fixes this in the client would create a backwards compatibility
+		// issue, so instead we make a raw HTTP request here, using the Vault API directly.
+		if err := tuneMountWithMap(ctx, client, path, mapConfig); err != nil {
 			if tries > 10 {
 				return fmt.Errorf("error updating Vault: %s", err)
 			}
@@ -450,13 +456,13 @@ func readMount(ctx context.Context, d *schema.ResourceData, meta interface{}, ex
 	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
 		return err
 	}
-	if err := d.Set(consts.FieldDefaultLeaseTTL, mount.Config.DefaultLeaseTTL); err != nil {
+	if err := d.Set(consts.FieldDefaultLeaseTTLSeconds, mount.Config.DefaultLeaseTTL); err != nil {
 		return err
 	}
 	if err := d.Set(consts.FieldForceNoCache, mount.Config.ForceNoCache); err != nil {
 		return err
 	}
-	if err := d.Set(consts.FieldMaxLeaseTTL, mount.Config.MaxLeaseTTL); err != nil {
+	if err := d.Set(consts.FieldMaxLeaseTTLSeconds, mount.Config.MaxLeaseTTL); err != nil {
 		return err
 	}
 	if err := d.Set(consts.FieldAuditNonHMACRequestKeys, mount.Config.AuditNonHMACRequestKeys); err != nil {
@@ -510,4 +516,17 @@ func mountOptions(d *schema.ResourceData) map[string]string {
 		}
 	}
 	return options
+}
+
+func tuneMountWithMap(ctx context.Context, c *api.Client, path string, config map[string]interface{}) error {
+	r := c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
+	if err := r.SetJSONBody(config); err != nil {
+		return err
+	}
+
+	resp, err := c.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return err
+	}
+	return resp.Body.Close()
 }

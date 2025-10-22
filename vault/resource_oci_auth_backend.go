@@ -124,13 +124,15 @@ func ociAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	data[consts.FieldOCIHomeTenancyID] = d.Get(consts.FieldOCIHomeTenancyID)
 
 	if d.HasChange(consts.FieldTune) {
-		log.Printf("[INFO] %s Auth %q tune configuration changed", consts.AuthMethodOCI, ociAuthPath)
+		log.Printf("[DEBUG] %s Auth %q tune configuration changed", consts.AuthMethodOCI, ociAuthPath)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing %s auth tune to %q", consts.AuthMethodOCI, ociAuthPath)
-			err := authMountTune(ctx, client, ociAuthPath, raw)
-			if err != nil {
+
+			if err := authMountTune(ctx, client, ociAuthPath, raw); err != nil {
 				return nil
 			}
+
+			log.Printf("[DEBUG] Written %s auth tune to '%q'", consts.AuthMethodOCI, ociAuthPath)
 		}
 	}
 
@@ -204,9 +206,13 @@ func ociAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	if err != nil {
 		return diag.Errorf("error reading tune information from Vault: %s", err)
 	}
-	data := map[string]interface{}{}
-	data[consts.FieldTune] = []map[string]interface{}{rawTune}
-	if err := util.SetResourceData(d, data); err != nil {
+	input, err := retrieveMountConfigInput(d)
+	if err != nil {
+		return diag.Errorf("error retrieving tune configuration from state: %s", err)
+	}
+	mergedTune := mergeAuthMethodTune(rawTune, input)
+	if err := d.Set(consts.FieldTune, mergedTune); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path '%s/tune' to state: %s", ociAuthPath, err)
 		return diag.FromErr(err)
 	}
 
