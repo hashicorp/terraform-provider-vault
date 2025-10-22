@@ -13,6 +13,9 @@ FEATURES:
 
 * Add support for `max_retries` parameter in `vault_aws_secret_backend` resource. ([#2623](https://github.com/hashicorp/terraform-provider-vault/pull/2623))
 
+* Add support for `iam_alias`, `iam_metadata`, `gce_alias` and `gce_metadata` fields in `vault_gcp_auth_backend` resource ()
+* Add support for `role_id` field in `vault_gcp_auth_backend_role` resource ()
+
 BUGS:
 
 * Fix pki config resources to allow unsetting of fields (to empty fields) ([#2558](https://github.com/hashicorp/terraform-provider-vault/pull/2558))
