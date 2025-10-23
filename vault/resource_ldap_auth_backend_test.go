@@ -19,21 +19,6 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-// Get vault version from the test server
-// func isSamAccountNameLoginSupported(client *api.Client) (bool, error) {
-// 	sys := client.Sys()
-// 	health, err := sys.Health()
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	v, err := version.NewVersion(health.Version)
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	minVersion, _ := version.NewVersion("1.19.0")
-// 	return v.GreaterThanOrEqual(minVersion), nil
-// }
-
 func TestLDAPAuthBackend_basic(t *testing.T) {
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
