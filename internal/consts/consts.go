@@ -198,6 +198,7 @@ const (
 	FieldType                           = "type"
 	FieldMethodID                       = "method_id"
 	FieldMFAMethodIDs                   = "mfa_method_ids"
+	FieldMFASerialNumber                = "mfa_serial_number"
 	FieldAccessors                      = "accessors"
 	FieldAuthMethodAccessors            = "auth_method_accessors"
 	FieldAuthMethodTypes                = "auth_method_types"
