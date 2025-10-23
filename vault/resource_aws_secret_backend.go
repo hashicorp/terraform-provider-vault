@@ -151,6 +151,12 @@ func awsSecretBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The TTL of generated identity tokens in seconds.",
 			},
+			consts.FieldMaxRetries: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     -1,
+				Description: "Number of max retries the client should use for recoverable errors.",
+			},
 		},
 	}, false)
 
@@ -264,6 +270,10 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
+	if v, ok := d.GetOk(consts.FieldMaxRetries); ok {
+		data[consts.FieldMaxRetries] = v.(int)
+	}
+
 	if region != "" {
 		data[consts.FieldRegion] = region
 	}
@@ -368,6 +378,12 @@ func awsSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 				return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldIdentityTokenTTL, path, err)
 			}
 		}
+
+		if v, ok := resp.Data[consts.FieldMaxRetries]; ok {
+			if err := d.Set(consts.FieldMaxRetries, v); err != nil {
+				return diag.Errorf("error reading %s for AWS Secret Backend %q: %q", consts.FieldMaxRetries, path, err)
+			}
+		}
 	}
 
 	if err := d.Set(consts.FieldPath, path); err != nil {
@@ -400,7 +416,7 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	if d.HasChanges(consts.FieldAccessKey,
 		consts.FieldSecretKey, consts.FieldRegion, consts.FieldIAMEndpoint,
 		consts.FieldSTSEndpoint, consts.FieldSTSFallbackEndpoints, consts.FieldSTSRegion, consts.FieldSTSFallbackRegions,
-		consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn,
+		consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn, consts.FieldMaxRetries,
 		consts.FieldRotationSchedule,
 		consts.FieldRotationPeriod,
 		consts.FieldRotationWindow,
@@ -451,6 +467,8 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 				data[consts.FieldIdentityTokenTTL] = identityTokenTTL
 			}
 		}
+
+		data[consts.FieldMaxRetries] = d.Get(consts.FieldMaxRetries)
 
 		region := d.Get(consts.FieldRegion).(string)
 		if region != "" {
