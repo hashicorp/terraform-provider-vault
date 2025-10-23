@@ -13,6 +13,8 @@ FEATURES:
 
 * Add support for `max_retries` parameter in `vault_aws_secret_backend` resource. ([#2623](https://github.com/hashicorp/terraform-provider-vault/pull/2623))
 
+* Add support for `mfa_serial_number` parameter in `vault_aws_secret_backend_role` resource. ([#2637](https://github.com/hashicorp/terraform-provider-vault/pull/2637))
+
 BUGS:
 
 * Fix pki config resources to allow unsetting of fields (to empty fields) ([#2558](https://github.com/hashicorp/terraform-provider-vault/pull/2558))
