@@ -252,7 +252,7 @@ func TestGCPAuthBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "credentials", "disable_remount", "iam_metadata", "gce_metadata"),
+			testutil.GetImportTestStep(resourceName, false, nil, "credentials", "disable_remount"),
 		},
 	})
 }
