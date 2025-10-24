@@ -125,13 +125,14 @@ func gcpAuthBackendResource() *schema.Resource {
 			consts.FieldIAMAlias: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Default:      "role_id",
+				Computed:     true,
 				Description:  "Defines what alias needs to be used during login and refelects the same in token metadata and audit logs.",
 				ValidateFunc: validation.StringInSlice([]string{"role_id", "unique_id"}, false),
 			},
 			consts.FieldIAMMetadata: {
 				Type:        schema.TypeSet,
 				Optional:    true,
+				Computed:    true,
 				Description: "Controls the metadata to include on the token returned by the login endpoint.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -140,13 +141,14 @@ func gcpAuthBackendResource() *schema.Resource {
 			consts.FieldGceAlias: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Default:      "role_id",
+				Computed:     true,
 				Description:  "Defines what alias needs to be used during login and refelects the same in token metadata and audit logs.",
 				ValidateFunc: validation.StringInSlice([]string{"role_id", "instance_id"}, false),
 			},
 			consts.FieldGceMetadata: {
 				Type:        schema.TypeSet,
 				Optional:    true,
+				Computed:    true,
 				Description: "Controls which instance metadata fields from the GCE login are captured into Vault's token metadata or audit logs.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,

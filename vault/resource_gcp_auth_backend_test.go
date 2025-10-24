@@ -50,9 +50,8 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 		CheckDestroy:             testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:             testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
-				Check:              testGCPAuthBackendCheck_attrs(resourceName),
-				ExpectNonEmptyPlan: true,
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
+				Check:  testGCPAuthBackendCheck_attrs(resourceName),
 			},
 			{
 				Config: testGCPAuthBackendConfig_update(path, gcpJSONCredentials, updatedDescription),
@@ -92,7 +91,6 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "batch"),
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			{
 				Config: testGCPAuthBackendConfig_update_partial(path, gcpJSONCredentials),
@@ -130,7 +128,6 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.2", "X-Mas-Response"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "default-batch"),
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			{
 				ResourceName:      resourceName,
@@ -139,8 +136,6 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{
 					"credentials",
 					"disable_remount",
-					consts.FieldIAMMetadata,
-					consts.FieldGceMetadata,
 				},
 			},
 			{
@@ -150,7 +145,6 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_endpoint.#", "0"),
 					resource.TestCheckResourceAttr(resourceName, "description", description),
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			{
 				ResourceName:      resourceName,
@@ -159,8 +153,6 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{
 					"credentials",
 					"disable_remount",
-					consts.FieldIAMMetadata,
-					consts.FieldGceMetadata,
 				},
 			},
 		},
@@ -187,7 +179,6 @@ func TestGCPAuthBackend_WIF(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, "test"),
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			{
 				Config: testGCPAuthBackend_WIFConfig_updated(path),
@@ -198,14 +189,11 @@ func TestGCPAuthBackend_WIF(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenKey, "test"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, "test-updated"),
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldCredentials,
 				consts.FieldDisableRemount,
 				consts.FieldIdentityTokenKey,
-				consts.FieldIAMMetadata,
-				consts.FieldGceMetadata,
 			),
 		},
 	})
@@ -223,9 +211,8 @@ func TestGCPAuthBackend_import(t *testing.T) {
 		CheckDestroy:             testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:             testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
-				Check:              testGCPAuthBackendCheck_attrs(resourceName),
-				ExpectNonEmptyPlan: true,
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, description),
+				Check:  testGCPAuthBackendCheck_attrs(resourceName),
 			},
 			{
 				ResourceName:      resourceName,
@@ -257,7 +244,6 @@ func TestGCPAuthBackend_remount(t *testing.T) {
 					testGCPAuthBackendCheck_attrs(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			{
 				Config: testGCPAuthBackendConfig_basic(updatedPath, gcpJSONCredentials, description),
@@ -265,7 +251,6 @@ func TestGCPAuthBackend_remount(t *testing.T) {
 					testGCPAuthBackendCheck_attrs(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "credentials", "disable_remount", "iam_metadata", "gce_metadata"),
 		},
@@ -420,7 +405,6 @@ func TestAccGCPAuthBackendClient_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			// zero-out rotation_period
 			{
@@ -432,7 +416,6 @@ func TestAccGCPAuthBackendClient_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * *"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			{
 				Config:      testAccGCPAuthBackendConfigAutomatedRootRotation(path, "", 30, 120, true),
@@ -448,9 +431,8 @@ func TestAccGCPAuthBackendClient_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
 				),
-				ExpectNonEmptyPlan: true,
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount, consts.FieldIAMMetadata, consts.FieldGceMetadata),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -632,13 +614,12 @@ func TestGCPAuthBackend_AliasAndMetadata(t *testing.T) {
 				// Test with default values (not explicitly setting the fields)
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, "GCP Auth Backend"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMAlias, "role_id"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldGceAlias, "role_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMAlias, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGceAlias, ""),
 					// Check that default metadata fields are present
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".#", "4"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGceMetadata+".#", "9"),
 				),
-				ExpectNonEmptyPlan: true, // We expect a non-empty plan because Vault sets default metadata values
 			},
 			{
 				// Test with custom values
