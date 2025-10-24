@@ -99,6 +99,10 @@ var (
 			Resource:      UpdateSchemaResource(azureAccessCredentialsDataSource()),
 			PathInventory: []string{"/azure/creds/{role}"},
 		},
+		"vault_azure_static_access_credentials": {
+			Resource:      UpdateSchemaResource(azureStaticAccessCredentialsDataSource()),
+			PathInventory: []string{"/azure/static-creds/{name}"},
+		},
 		"vault_kubernetes_service_account_token": {
 			Resource:      UpdateSchemaResource(kubernetesServiceAccountTokenDataSource()),
 			PathInventory: []string{"/kubernetes/creds/{role}"},
@@ -328,6 +332,10 @@ var (
 		"vault_azure_secret_backend_role": {
 			Resource:      UpdateSchemaResource(azureSecretBackendRoleResource()),
 			PathInventory: []string{"/azure/roles/{name}"},
+		},
+		"vault_azure_secret_backend_static_role": {
+			Resource:      UpdateSchemaResource(azureSecretBackendStaticRoleResource()),
+			PathInventory: []string{"/azure/static-roles/{name}"},
 		},
 		"vault_azure_auth_backend_config": {
 			Resource:      UpdateSchemaResource(azureAuthBackendConfigResource()),
