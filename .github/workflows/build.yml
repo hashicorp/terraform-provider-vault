@@ -154,10 +154,9 @@ jobs:
       matrix:
         image:
         - "vault-enterprise:1.16.25-ent"
-        - "vault-enterprise:1.17.18-ent"
-        - "vault-enterprise:1.18.14-ent"
         - "vault-enterprise:1.19.9-ent"
         - "vault-enterprise:1.20.3-ent"
+        - "vault-enterprise:1.21.0-ent"
         - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
