@@ -24,7 +24,7 @@ func TestAccSpiffeAuthRole(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfVaultVersionLT(t, provider.VaultVersion121)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{

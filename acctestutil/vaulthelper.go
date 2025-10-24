@@ -9,50 +9,50 @@ import (
 
 type CompareVaultVersionFunc func(*version.Version) bool
 
-// SkipIfVaultVersionLT skips of the running vault version is less-than ver.
-func SkipIfVaultVersionLT(t *testing.T, ver *version.Version) {
+// SkipIfAPIVersionLT skips of the running vault version is less-than ver.
+func SkipIfAPIVersionLT(t *testing.T, ver *version.Version) {
 	t.Helper()
-	SkipIfVaultVersion(t, func(curVer *version.Version) bool {
+	SkipIfAPIVersion(t, func(curVer *version.Version) bool {
 		return curVer.LessThan(ver)
 	}, "Vault version < %q", ver)
 }
 
-// SkipIfVaultVersionLTE skips if the running vault version is less-than-or-equal to ver.
-func SkipIfVaultVersionLTE(t *testing.T, ver *version.Version) {
+// SkipIfAPIVersionLTE skips if the running vault version is less-than-or-equal to ver.
+func SkipIfAPIVersionLTE(t *testing.T, ver *version.Version) {
 	t.Helper()
-	SkipIfVaultVersion(t, func(curVer *version.Version) bool {
+	SkipIfAPIVersion(t, func(curVer *version.Version) bool {
 		return curVer.LessThanOrEqual(ver)
 	}, "Vault version <= %q", ver)
 }
 
-// SkipIfVaultVersionEQ skips if the running vault version is equal to ver.
-func SkipIfVaultVersionEQ(t *testing.T, ver *version.Version) {
+// SkipIfAPIVersionEQ skips if the running vault version is equal to ver.
+func SkipIfAPIVersionEQ(t *testing.T, ver *version.Version) {
 	t.Helper()
 	f := func(curVer *version.Version) bool {
 		return curVer.Equal(ver)
 	}
-	SkipIfVaultVersion(t, f, "Vault version == %q", ver)
+	SkipIfAPIVersion(t, f, "Vault version == %q", ver)
 }
 
-// SkipIfVaultVersionGT skips if the running vault version is greater-than ver.
-func SkipIfVaultVersionGT(t *testing.T, ver *version.Version) {
+// SkipIfAPIVersionGT skips if the running vault version is greater-than ver.
+func SkipIfAPIVersionGT(t *testing.T, ver *version.Version) {
 	t.Helper()
 	f := func(curVer *version.Version) bool {
 		return curVer.GreaterThan(ver)
 	}
-	SkipIfVaultVersion(t, f, "Vault version > %q", ver)
+	SkipIfAPIVersion(t, f, "Vault version > %q", ver)
 }
 
-// SkipIfVaultVersionGTE skips if the running vault version is greater-than-or-equal to ver.
-func SkipIfVaultVersionGTE(t *testing.T, ver *version.Version) {
+// SkipIfAPIVersionGTE skips if the running vault version is greater-than-or-equal to ver.
+func SkipIfAPIVersionGTE(t *testing.T, ver *version.Version) {
 	t.Helper()
 	f := func(curVer *version.Version) bool {
 		return curVer.GreaterThanOrEqual(ver)
 	}
-	SkipIfVaultVersion(t, f, "Vault version >= %q", ver)
+	SkipIfAPIVersion(t, f, "Vault version >= %q", ver)
 }
 
-func SkipIfVaultVersion(t *testing.T, cmp CompareVaultVersionFunc, format string, args ...interface{}) {
+func SkipIfAPIVersion(t *testing.T, cmp CompareVaultVersionFunc, format string, args ...interface{}) {
 	t.Helper()
 
 	if TestProvider == nil {
