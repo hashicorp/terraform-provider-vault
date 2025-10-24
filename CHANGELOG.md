@@ -1,10 +1,17 @@
 ## Unreleased
+BEHAVIOR CHANGES: Please refer to the [upgrade topics](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_5_upgrade.html#upgrade-topics)
+in the guide for details on all behavior changes.
 
 FEATURES:
 
 * Add support for write-only token argument in vault_terraform_cloud_secret_backend resource ([#2603](https://github.com/hashicorp/terraform-provider-vault/pull/2603))
-
 * New parameters for `vault_terraform_cloud_secret_role` to support multi-team tokens, by @drewmullen ([#2498](https://github.com/hashicorp/terraform-provider-vault/pull/2498))
+* Add support for `tune` in `vault_saml_auth_backend` resource ([#2566](https://github.com/hashicorp/terraform-provider-vault/pull/2566))
+* Add support for `tune` in `vault_ldap_auth_backend` and `vault_okta_auth_backend` resources ([#2602](https://github.com/hashicorp/terraform-provider-vault/pull/2602))
+
+* Add support for `allowed_sts_header_values` parameter in `vault_aws_auth_backend_client` resource to specify additional headers allowed in STS requests
+
+* Add support for `max_retries` parameter in `vault_aws_secret_backend` resource. ([#2623](https://github.com/hashicorp/terraform-provider-vault/pull/2623))
 
 * Add retry configuration fields (`max_retries`, `retry_delay`, `max_retry_delay`) to `vault_azure_auth_backend_config` resource for Azure API request resilience ([#2629](https://github.com/hashicorp/terraform-provider-vault/pull/2629))
 
@@ -13,6 +20,11 @@ BUGS:
 * Fix pki config resources to allow unsetting of fields (to empty fields) ([#2558](https://github.com/hashicorp/terraform-provider-vault/pull/2558))
 * Fix tune auth mounts to allow unsetting of fields (setting fields to empty values) ([#2605](https://github.com/hashicorp/terraform-provider-vault/pull/2605))
 * Fix `vault_pki_secret_backend_crl_config` resource to allow disabling flags previously set to true ([#2615](https://github.com/hashicorp/terraform-provider-vault/pull/2615))
+* Fix the tune block issue where it always updates unless field values match Vault server defaults
+  * `vault_jwt_auth_backend` resource ([#2560](https://github.com/hashicorp/terraform-provider-vault/pull/2560))
+  * `vault_github_auth_backend` and `vault_auth_backend` resources ([#2565](https://github.com/hashicorp/terraform-provider-vault/pull/2565))
+  * `vault_saml_auth_backend` resource ([#2566](https://github.com/hashicorp/terraform-provider-vault/pull/2566))
+  * `vault_gcp_auth_backend` and `vault_oci_auth_backend` resources ([#2596](https://github.com/hashicorp/terraform-provider-vault/pull/2596))
 
 ## 5.3.0 (Sep 4, 2025)
 
