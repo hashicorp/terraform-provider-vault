@@ -183,7 +183,6 @@ func (s *SpiffeAuthConfigResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	// read the name from the id field to support the import command
 	policyResp, err := vaultClient.Logical().ReadWithContext(ctx, s.path(data.Mount.ValueString()))
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultReadErr(err))

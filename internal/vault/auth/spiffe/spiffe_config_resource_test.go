@@ -16,7 +16,6 @@ import (
 
 // TestAccSpiffeAuthConfig tests the spiffe auth config resource
 func TestAccSpiffeAuthConfig(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
 	mount := acctest.RandomWithPrefix("spiffe-mount")
 	caBytes, _, _ := testutil.GenerateCA()
 	ca := strings.Trim(string(caBytes), "\n")

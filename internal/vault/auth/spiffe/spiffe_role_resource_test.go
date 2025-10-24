@@ -16,7 +16,6 @@ import (
 
 // TestAccSpiffeAuthRole tests the spiffe auth role resource
 func TestAccSpiffeAuthRole(t *testing.T) {
-	acctestutil.SkipTestAccEnt(t)
 	mount := acctest.RandomWithPrefix("spiffe-mount")
 	resourceAddress := "vault_spiffe_auth_backend_role.spiffe_role"
 
