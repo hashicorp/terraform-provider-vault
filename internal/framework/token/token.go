@@ -65,12 +65,12 @@ func MustAddBaseAndTokenSchemas(s *schema.Schema) {
 func PopulateTokenAPIFromModel(ctx context.Context, model *TokenModel, apiModel *TokenAPIModel) diag.Diagnostics {
 	if apiModel == nil {
 		return diag.Diagnostics{
-			diag.NewErrorDiagnostic("cannot populate token model from nil api model", ""),
+			diag.NewErrorDiagnostic("cannot populate nil api model", ""),
 		}
 	}
 	if model == nil {
 		return diag.Diagnostics{
-			diag.NewErrorDiagnostic("cannot populate nil model", ""),
+			diag.NewErrorDiagnostic("cannot populate api model from nil token model", ""),
 		}
 	}
 
