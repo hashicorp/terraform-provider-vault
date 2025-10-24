@@ -31,46 +31,26 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_basic(path, "false", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount", "enable_samaccountname_login"),
 		},
 	})
 }
@@ -87,47 +67,27 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 
 		Steps: []resource.TestStep{
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_tls(path, "false", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_tls(path, "false", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass",
-				"client_tls_cert", "client_tls_key", "disable_remount"),
+				"client_tls_cert", "client_tls_key", "disable_remount", "enable_samaccountname_login"),
 		},
 	})
 }
@@ -144,10 +104,6 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
@@ -155,17 +111,13 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 				),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion119)), nil
-				},
 				Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
 					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount", "enable_samaccountname_login"),
 		},
 	})
 }
@@ -451,35 +403,39 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 		}
 
 		attrs := map[string]string{
-			"url":                         "url",
-			"starttls":                    "starttls",
-			"case_sensitive_names":        "case_sensitive_names",
-			"tls_min_version":             "tls_min_version",
-			"tls_max_version":             "tls_max_version",
-			"insecure_tls":                "insecure_tls",
-			"certificate":                 "certificate",
-			"binddn":                      "binddn",
-			"userdn":                      "userdn",
-			"userattr":                    "userattr",
-			"userfilter":                  "userfilter",
-			"discoverdn":                  "discoverdn",
-			"deny_null_bind":              "deny_null_bind",
-			"upndomain":                   "upndomain",
-			"groupfilter":                 "groupfilter",
-			"username_as_alias":           "username_as_alias",
-			"groupdn":                     "groupdn",
-			"groupattr":                   "groupattr",
-			"use_token_groups":            "use_token_groups",
-			"connection_timeout":          "connection_timeout",
-			"request_timeout":             "request_timeout",
-			"dereference_aliases":         "dereference_aliases",
-			"enable_samaccountname_login": "enable_samaccountname_login",
-			"anonymous_group_search":      "anonymous_group_search",
+			"url":                    "url",
+			"starttls":               "starttls",
+			"case_sensitive_names":   "case_sensitive_names",
+			"tls_min_version":        "tls_min_version",
+			"tls_max_version":        "tls_max_version",
+			"insecure_tls":           "insecure_tls",
+			"certificate":            "certificate",
+			"binddn":                 "binddn",
+			"userdn":                 "userdn",
+			"userattr":               "userattr",
+			"userfilter":             "userfilter",
+			"discoverdn":             "discoverdn",
+			"deny_null_bind":         "deny_null_bind",
+			"upndomain":              "upndomain",
+			"groupfilter":            "groupfilter",
+			"username_as_alias":      "username_as_alias",
+			"groupdn":                "groupdn",
+			"groupattr":              "groupattr",
+			"use_token_groups":       "use_token_groups",
+			"connection_timeout":     "connection_timeout",
+			"request_timeout":        "request_timeout",
+			"dereference_aliases":    "dereference_aliases",
+			"anonymous_group_search": "anonymous_group_search",
 		}
 
 		isVaultVersion111 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion111)
 		if isVaultVersion111 {
 			attrs["max_page_size"] = "max_page_size"
+		}
+
+		isVaultVersion119 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119)
+		if isVaultVersion119 {
+			attrs["enable_samaccountname_login"] = "enable_samaccountname_login"
 		}
 
 		if provider.IsEnterpriseSupported(testProvider.Meta()) && provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119) {
@@ -534,8 +490,8 @@ resource "vault_ldap_auth_backend" "test" {
     connection_timeout     = 30
 	request_timeout        = 60
     dereference_aliases    = "always"
-    enable_samaccountname_login   = false
-    anonymous_group_search        = false
+	enable_samaccountname_login = false
+    anonymous_group_search      = false
 }
 `, path, local, use_token_groups)
 }
