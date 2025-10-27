@@ -28,6 +28,9 @@ BUGS:
   * `vault_saml_auth_backend` resource ([#2566](https://github.com/hashicorp/terraform-provider-vault/pull/2566))
   * `vault_gcp_auth_backend` and `vault_oci_auth_backend` resources ([#2596](https://github.com/hashicorp/terraform-provider-vault/pull/2596))
 
+* Add support for `persist_app`parameters in `vault_azure_secret_backend_role` resource.
+  ([#2642](https://github.com/hashicorp/terraform-provider-vault/pull/2642))
+
 ## 5.3.0 (Sep 4, 2025)
 
 FEATURES:
