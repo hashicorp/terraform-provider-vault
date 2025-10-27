@@ -85,6 +85,23 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 		},
 
 		Schema: fields,
+
+		CustomizeDiff: func(ctx context.Context, d *schema.ResourceDiff, m interface{}) error {
+			// At least one of bound_service_account_namespaces or bound_service_account_namespace_selector must be provided
+			namespaces, hasNamespaces := d.GetOk("bound_service_account_namespaces")
+			selector, hasSelector := d.GetOk("bound_service_account_namespace_selector")
+
+			// Check if namespaces is empty set
+			namespacesEmpty := !hasNamespaces || namespaces.(*schema.Set).Len() == 0
+			// Check if selector is empty string
+			selectorEmpty := !hasSelector || strings.TrimSpace(selector.(string)) == ""
+
+			if namespacesEmpty && selectorEmpty {
+				return fmt.Errorf("at least one of 'bound_service_account_namespaces' or 'bound_service_account_namespace_selector' must be provided")
+			}
+
+			return nil
+		},
 	}
 }
 
@@ -99,12 +116,26 @@ func kubernetesAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[stri
 		data["bound_service_account_names"] = boundServiceAccountNames.(*schema.Set).List()
 	}
 
-	if boundServiceAccountNamespaces, ok := d.GetOk("bound_service_account_namespaces"); ok {
-		data["bound_service_account_namespaces"] = boundServiceAccountNamespaces.(*schema.Set).List()
+	// Always set bound_service_account_namespaces to ensure proper clearing on updates
+	if create {
+		if boundServiceAccountNamespaces, ok := d.GetOk("bound_service_account_namespaces"); ok {
+			data["bound_service_account_namespaces"] = boundServiceAccountNamespaces.(*schema.Set).List()
+		}
+	} else {
+		if d.HasChange("bound_service_account_namespaces") {
+			data["bound_service_account_namespaces"] = d.Get("bound_service_account_namespaces").(*schema.Set).List()
+		}
 	}
 
-	if boundServiceAccountNamespaceSelector, ok := d.GetOk("bound_service_account_namespace_selector"); ok {
-		data["bound_service_account_namespace_selector"] = boundServiceAccountNamespaceSelector.(string)
+	// Always set bound_service_account_namespace_selector to ensure proper clearing on updates
+	if create {
+		if boundServiceAccountNamespaceSelector, ok := d.GetOk("bound_service_account_namespace_selector"); ok {
+			data["bound_service_account_namespace_selector"] = boundServiceAccountNamespaceSelector.(string)
+		}
+	} else {
+		if d.HasChange("bound_service_account_namespace_selector") {
+			data["bound_service_account_namespace_selector"] = d.Get("bound_service_account_namespace_selector").(string)
+		}
 	}
 
 	params := []string{"audience", "alias_name_source"}
