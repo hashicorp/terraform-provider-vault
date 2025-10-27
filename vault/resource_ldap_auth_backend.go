@@ -207,13 +207,6 @@ func ldapAuthBackendResource() *schema.Resource {
 			Optional:    true,
 			Computed:    true,
 			Description: "The timeout(in sec) for requests to the LDAP server.",
-			ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
-				v := val.(int)
-				if v < 0 {
-					diag.Errorf("%q must be a non negative integer, got: %d", key, v)
-				}
-				return
-			},
 		},
 
 		consts.FieldDereferenceAliases: {

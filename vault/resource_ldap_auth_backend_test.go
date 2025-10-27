@@ -50,6 +50,22 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
+			{
+				Config:      testLDAPAuthBackendConfig_params(path, -20, "never", true, true),
+				ExpectError: regexp.MustCompile("cannot provide negative value"),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_params(path, 20, "always", false, false),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_params(path, 45, "finding", false, true),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_params(path, 45, "always", true, false),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount", "enable_samaccountname_login"),
 		},
 	})
@@ -488,12 +504,31 @@ resource "vault_ldap_auth_backend" "test" {
     username_as_alias      = true
     use_token_groups       = %s
     connection_timeout     = 30
-	request_timeout        = 60
-    dereference_aliases    = "always"
-	enable_samaccountname_login = false
-    anonymous_group_search      = false
 }
 `, path, local, use_token_groups)
+}
+
+func testLDAPAuthBackendConfig_params(path string, request_timeout int, dereference_aliases string, enable_samaccountname_login bool, anonymous_group_search bool) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+	path                 = "%s"
+   	url                  = "ldaps://ldap.example.com"
+   	userdn               = "ou=Users,dc=example,dc=com"
+   	groupdn              = "ou=Groups,dc=example,dc=com"
+   	binddn               = "cn=admin,dc=example,dc=com"
+	bindpass             = "your-ldap-password"
+  	userattr             = "uid"
+	groupattr            = "cn"
+	insecure_tls          = false
+	starttls              = false
+	discoverdn            = true
+	case_sensitive_names  = false
+	request_timeout               = %d
+	dereference_aliases           = "%s"
+	enable_samaccountname_login   = %t
+	anonymous_group_search        = %t
+}
+`, path, request_timeout, dereference_aliases, enable_samaccountname_login, anonymous_group_search)
 }
 
 func testLDAPAuthBackendConfig_tls(path, use_token_groups string, local string) string {
@@ -650,28 +685,4 @@ resource "vault_ldap_auth_backend" "test" {
 	}
 }
 `, path)
-}
-func TestFieldRequestTimeoutValidation(t *testing.T) {
-	tests := []struct {
-		value    int
-		expected bool
-	}{
-		{10, true},
-		{0, true},
-		{-5, false},
-	}
-	validateFunc := func(val interface{}, key string) (warns []string, errs []error) {
-		v := val.(int)
-		if v < 0 {
-			errs = append(errs, fmt.Errorf("%q must be a non-negative integer, got: %d", key, v))
-		}
-		return
-	}
-	for _, test := range tests {
-		_, errs := validateFunc(test.value, "request_timeout")
-
-		if (len(errs) == 0) != test.expected {
-			t.Errorf("Validation for value %d failed. Expected valid: %v, got errors: %v", test.value, test.expected, errs)
-		}
-	}
 }
