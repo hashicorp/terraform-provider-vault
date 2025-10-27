@@ -461,6 +461,8 @@ const (
 	FieldPrivateKeyID                   = "private_key_id"
 	FieldTune                           = "tune"
 	FieldMaxRetries                     = "max_retries"
+	FieldRetryDelay                     = "retry_delay"
+	FieldMaxRetryDelay                  = "max_retry_delay"
 	FieldSessionTags                    = "session_tags"
 	FieldSelfManagedPassword            = "self_managed_password"
 	FieldAllowedIssuers                 = "allowed_issuers"
