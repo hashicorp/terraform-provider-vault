@@ -45,7 +45,6 @@ var ldapAuthBackendBooleanFields = []string{
 	consts.FieldDenyNullBind,
 	consts.FieldUsernameAsAlias,
 	consts.FieldUseTokenGroups,
-	consts.FieldEnableSamaccountnameLogin,
 	consts.FieldAnonymousGroupSearch,
 }
 
