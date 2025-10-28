@@ -51,6 +51,25 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
+				Config: testLDAPAuthBackendConfig_defaults(path),
+				Check: func(s *terraform.State) error {
+					checks := []resource.TestCheckFunc{
+						testLDAPAuthBackendCheck_attrs(resourceName, path),
+						// Verify computed defaults - these fields should be set by Vault if not specified
+						resource.TestCheckResourceAttr(resourceName, "request_timeout", "90"),
+						resource.TestCheckResourceAttr(resourceName, "dereference_aliases", "never"),
+						resource.TestCheckResourceAttr(resourceName, "anonymous_group_search", "false"),
+					}
+
+					// Only check enable_samaccountname_login if Vault >= 1.19
+					if provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119) {
+						checks = append(checks, resource.TestCheckResourceAttr(resourceName, "enable_samaccountname_login", "false"))
+					}
+
+					return resource.ComposeTestCheckFunc(checks...)(s)
+				},
+			},
+			{
 				Config:      testLDAPAuthBackendConfig_params(path, -20, "never", true, true),
 				ExpectError: regexp.MustCompile("cannot provide negative value"),
 			},
@@ -529,6 +548,27 @@ resource "vault_ldap_auth_backend" "test" {
 	anonymous_group_search        = %t
 }
 `, path, request_timeout, dereference_aliases, enable_samaccountname_login, anonymous_group_search)
+}
+
+func testLDAPAuthBackendConfig_defaults(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+	path                 = "%s"
+   	url                  = "ldaps://ldap.example.com"
+   	userdn               = "ou=Users,dc=example,dc=com"
+   	groupdn              = "ou=Groups,dc=example,dc=com"
+   	binddn               = "cn=admin,dc=example,dc=com"
+	bindpass             = "your-ldap-password"
+  	userattr             = "uid"
+	groupattr            = "cn"
+	insecure_tls         = false
+	starttls             = false
+	discoverdn           = true
+	case_sensitive_names = false
+	# request_timeout, dereference_aliases, enable_samaccountname_login, and anonymous_group_search
+	# are intentionally omitted to test that Vault returns default/computed values
+}
+`, path)
 }
 
 func testLDAPAuthBackendConfig_tls(path, use_token_groups string, local string) string {
