@@ -146,7 +146,7 @@ These arguments are common across several Authentication Token resources since V
 
 * `dereference_aliases` - (Optional) When aliases should be dereferenced on search operations. Accepted values are 'never', 'finding', 'searching', 'always'. Defaults to 'never'.
 
-* `enable_samaccountname_login` - (Optional) Lets Active Directory LDAP users log in using sAMAccountName or userPrincipalName when the upndomain parameter is set.
+* `enable_samaccountname_login` - (Optional) Lets Active Directory LDAP users log in using sAMAccountName or userPrincipalName when the upndomain parameter is set. Requires Vault 1.19.0+.
 
 * `anonymous_group_search` - (Optional) Use anonymous binds when performing LDAP group searches (note: even when true, the initial credentials will still be used for the initial connection test).
 
