@@ -328,6 +328,13 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		}
 	}
 
+	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
+	if useAPIVer119 {
+		if v, ok := d.GetOk(consts.FieldEnableSamaccountnameLogin); ok {
+			data[consts.FieldEnableSamaccountnameLogin] = v
+		}
+	}
+
 	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer119Ent {
 		automatedrotationutil.ParseAutomatedRotationFields(d, data)
@@ -444,6 +451,12 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		}
 	}
 
+	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
+	if useAPIVer119 {
+		if err := d.Set(consts.FieldEnableSamaccountnameLogin, resp.Data[consts.FieldEnableSamaccountnameLogin]); err != nil {
+			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldEnableSamaccountnameLogin, path, err)
+		}
+	}
 	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer119Ent {
 		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, d.Id()); err != nil {
