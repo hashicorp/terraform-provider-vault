@@ -462,6 +462,8 @@ const (
 	FieldPrivateKeyID                   = "private_key_id"
 	FieldTune                           = "tune"
 	FieldMaxRetries                     = "max_retries"
+	FieldRetryDelay                     = "retry_delay"
+	FieldMaxRetryDelay                  = "max_retry_delay"
 	FieldSessionTags                    = "session_tags"
 	FieldSelfManagedPassword            = "self_managed_password"
 	FieldAllowedIssuers                 = "allowed_issuers"
@@ -644,6 +646,7 @@ const (
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
 	VaultVersion120  = "1.20.0"
+	VaultVersion121  = "1.21.0"
 
 	/*
 		Vault auth methods
