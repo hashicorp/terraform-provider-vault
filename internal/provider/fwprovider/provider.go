@@ -6,6 +6,7 @@ package fwprovider
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -228,6 +229,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffe.NewSpiffeAuthConfigResource,
 		spiffe.NewSpiffeAuthRoleResource,
 		sys.NewPasswordPolicyResource,
+		azure.NewAzureStaticRoleResource,
 	}
 }
 
@@ -235,6 +237,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 	return []func() ephemeral.EphemeralResource{
 		ephemeralsecrets.NewKVV2EphemeralSecretResource,
 		ephemeralsecrets.NewDBEphemeralSecretResource,
+		ephemeralsecrets.NewAzureStaticCredsEphemeralSecretResource,
 	}
 
 }

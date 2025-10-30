@@ -1,23 +1,27 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package vault
+package azure_test
 
 import (
-	"context"
 	"fmt"
-	"os"
-	"testing"
-
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"os"
+	"testing"
 )
 
-func TestAzureStaticRole_basic(t *testing.T) {
+func TestAccAzureStaticRole_basic(t *testing.T) {
 	conf := testutil.GetTestAzureConfExistingSP(t)
+
+	if conf.AppObjectID == "" {
+		t.Skip("AZURE_APP_OBJECT_ID must be set to run Azure static role tests")
+	}
 
 	backend := acctest.RandomWithPrefix("tf-test-azure")
 	roleName := acctest.RandomWithPrefix("tf-role")
@@ -25,20 +29,19 @@ func TestAzureStaticRole_basic(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion121)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
 		},
-		CheckDestroy: testAccAzureSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureStaticRole_initialConfig(conf, backend, roleName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "role", roleName),
-					resource.TestCheckResourceAttr(resourceName, "application_object_id", conf.AppObjectID),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "31536000"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, roleName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldApplicationObjectID, conf.AppObjectID),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "31536000"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.hello", "world"),
 				),
@@ -47,10 +50,10 @@ func TestAzureStaticRole_basic(t *testing.T) {
 			{
 				Config: testAzureStaticRole_updateConfig(conf, backend, roleName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "role", roleName),
-					resource.TestCheckResourceAttr(resourceName, "application_object_id", conf.AppObjectID),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "63072000"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, roleName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldApplicationObjectID, conf.AppObjectID),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "63072000"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.hello", "world"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.team", "eco"),
@@ -63,7 +66,7 @@ func TestAzureStaticRole_basic(t *testing.T) {
 func testAzureStaticRole_initialConfig(conf *testutil.AzureTestConf, backend, roleName string) string {
 	return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "azure" {
-  path          = "%[1]s"
+  path            = "%[1]s"
   subscription_id = "%[2]s"
   tenant_id       = "%[3]s"
   client_id       = "%[4]s"
@@ -74,7 +77,9 @@ resource "vault_azure_secret_backend_static_role" "test" {
   backend               = vault_azure_secret_backend.azure.path
   role                  = "%[6]s"
   application_object_id = "%[7]s"
-  ttl                   = "31536000"
+
+  ttl = 31536000
+
   metadata = {
     hello = "world"
   }
@@ -96,24 +101,26 @@ resource "vault_azure_secret_backend_static_role" "test" {
   backend               = vault_azure_secret_backend.azure.path
   role                  = "%[6]s"
   application_object_id = "%[7]s"
-  ttl                   = "63072000"
+
+  ttl = 63072000
+
   metadata = {
-	hello = "world"
+    hello = "world"
     team  = "eco"
   }
 }
 `, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, roleName, conf.AppObjectID)
 }
 
-func TestAzureStaticRole_import(t *testing.T) {
+func TestAccAzureStaticRole_import(t *testing.T) {
 	conf := testutil.GetTestAzureConfExistingSP(t)
 
 	secretID := os.Getenv("AZURE_IMPORT_SECRET_ID")
 	clientSecret := os.Getenv("AZURE_IMPORT_CLIENT_SECRET")
-	expiration := os.Getenv("AZURE_IMPORT_EXPIRATION") // optional
+	expiration := os.Getenv("AZURE_IMPORT_EXPIRATION")
 
-	if secretID == "" || clientSecret == "" {
-		t.Skip("AZURE_IMPORT_SECRET_ID and AZURE_IMPORT_CLIENT_SECRET must be set to run import workflow test")
+	if secretID == "" {
+		t.Skip("AZURE_IMPORT_SECRET_ID must be set to run import workflow test")
 	}
 
 	backend := acctest.RandomWithPrefix("tf-test-azure")
@@ -121,13 +128,13 @@ func TestAzureStaticRole_import(t *testing.T) {
 
 	resType := "vault_azure_secret_backend_static_role"
 	resName := resType + ".imported"
-	dsName := "data.vault_azure_static_access_credentials.read"
+	dsName := "data.vault_azure_static_credentials.read"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion121)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -151,10 +158,9 @@ func testAzureStaticRole_importConfig(
 	conf *testutil.AzureTestConf,
 	secretID, clientSecret, expiration string,
 ) string {
-	// expiration is optional so we include it only when present
 	exp := ""
 	if expiration != "" {
-		exp = fmt.Sprintf(`expiration = "%s"`, expiration)
+		exp = fmt.Sprintf(`  expiration = "%s"`, expiration)
 	}
 
 	return fmt.Sprintf(`
@@ -171,16 +177,15 @@ resource "vault_azure_secret_backend_static_role" "imported" {
   role                  = "%[6]s"
   application_object_id = "%[7]s"
 
-  ttl  		     = "63072000"
-  secret_id      = "%[8]s"
-  client_secret  = "%[9]s"
+  ttl          = 63072000
+  secret_id    = "%[8]s"
+  client_secret = "%[9]s"
 %[10]s
 }
 
-data "vault_azure_static_access_credentials" "read" {
+ephemeral "vault_azure_static_credentials" "read" {
   backend = vault_azure_secret_backend.azure.path
   role    = vault_azure_secret_backend_static_role.imported.role
 }
-`, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, roleName, conf.AppObjectID, secretID,
-		clientSecret, exp)
+`, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, roleName, conf.AppObjectID, secretID, clientSecret, exp)
 }

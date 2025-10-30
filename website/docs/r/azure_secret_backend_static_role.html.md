@@ -51,7 +51,7 @@ The following arguments are supported:
 * `backend` - (Required) Path where the Azure Secrets Engine is mounted.
 * `application_object_id` - (Required) The Azure AD Application Object ID associated with the existing application whose credentials Vault will manage.
 * `ttl` – (Optional) Duration that defines the validity period of the managed credential. Defaults to 2 years. Must be at least 1 year.
-  Accepts time suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine default TTL time.
+  Accepts an integer number of seconds (31536000). Defaults to the system/engine default TTL time.
 * `metadata` – (Optional) A map of string key-value pairs that are stored alongside the role and returned with generated credentials.
 * `secret_id` - (Optional) When importing an existing credential, specifies the Azure secret’s key ID.
 * `client_secret` - (Optional, Sensitive) When importing an existing credential, provides the existing client secret value.

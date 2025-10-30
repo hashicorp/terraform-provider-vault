@@ -1,11 +1,12 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package vault
+package ephemeralsecrets_test
 
 import (
-	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -18,15 +19,19 @@ import (
 func TestAccDataSourceAzureAccessStaticCredentialsAzureRoles_basic(t *testing.T) {
 	conf := testutil.GetTestAzureConfExistingSP(t)
 
+	if conf.AppObjectID == "" {
+		t.Skip("AZURE_APP_OBJECT_ID must be set to run Azure static role tests")
+	}
+
 	backend := acctest.RandomWithPrefix("tf-test-azure")
 	role := acctest.RandomWithPrefix("tf-role")
-	resourceName := "data.vault_azure_static_access_credentials.test"
+	resourceName := "data.vault_azure_static_credentials.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion121)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -58,7 +63,7 @@ resource "vault_azure_secret_backend_static_role" "role" {
   backend               = vault_azure_secret_backend.azure.path
   role                  = "%[6]s"
   application_object_id = "%[7]s"
-  ttl                   = "31536000"
+  ttl                   = 31536000
 
   metadata = {
     hello = "world"
@@ -66,9 +71,9 @@ resource "vault_azure_secret_backend_static_role" "role" {
   }
 }
 
-data "vault_azure_static_access_credentials" "test" {
+ephemeral "vault_azure_static_credentials" "read" {
   backend = vault_azure_secret_backend.azure.path
-  role    = vault_azure_secret_backend_static_role.role.role
+  role    = vault_azure_secret_backend_static_role.imported.role
 }
 `, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, role, conf.AppObjectID)
 }
