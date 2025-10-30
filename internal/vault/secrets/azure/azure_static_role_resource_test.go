@@ -5,15 +5,22 @@ package azure_test
 
 import (
 	"fmt"
+	"os"
+	"regexp"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"os"
-	"testing"
 )
 
 func TestAccAzureStaticRole_basic(t *testing.T) {
@@ -125,42 +132,40 @@ func TestAccAzureStaticRole_import(t *testing.T) {
 
 	backend := acctest.RandomWithPrefix("tf-test-azure")
 	roleName := acctest.RandomWithPrefix("tf-role")
-
-	resType := "vault_azure_secret_backend_static_role"
-	resName := resType + ".imported"
-	dsName := "data.vault_azure_static_credentials.read"
+	resName := "vault_azure_secret_backend_static_role.imported"
+	echoName := "echo.azure_creds_import"
+	nonEmpty := regexp.MustCompile(`^.+$`)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
 		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureStaticRole_importConfig(backend, roleName, conf, secretID, clientSecret, expiration),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resName, consts.FieldBackend, backend),
-					resource.TestCheckResourceAttr(resName, consts.FieldRole, roleName),
-					resource.TestCheckResourceAttr(resName, consts.FieldApplicationObjectID, conf.AppObjectID),
-
-					resource.TestCheckResourceAttr(dsName, consts.FieldSecretID, secretID),
-					resource.TestCheckResourceAttrSet(dsName, consts.FieldClientID),
-					resource.TestCheckResourceAttrSet(dsName, consts.FieldClientSecret),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(resName, tfjsonpath.New(consts.FieldBackend), knownvalue.StringExact(backend)),
+					statecheck.ExpectKnownValue(resName, tfjsonpath.New(consts.FieldRole), knownvalue.StringExact(roleName)),
+					statecheck.ExpectKnownValue(resName, tfjsonpath.New(consts.FieldApplicationObjectID), knownvalue.StringExact(conf.AppObjectID)),
+					statecheck.ExpectKnownValue(echoName, tfjsonpath.New("data").AtMapKey(consts.FieldSecretID), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue(echoName, tfjsonpath.New("data").AtMapKey(consts.FieldClientID), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue(echoName, tfjsonpath.New("data").AtMapKey(consts.FieldClientSecret), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue(echoName, tfjsonpath.New("data").AtMapKey(consts.FieldExpiration), knownvalue.StringRegexp(nonEmpty)),
+				},
 			},
 		},
 	})
 }
 
-func testAzureStaticRole_importConfig(
-	backend, roleName string,
-	conf *testutil.AzureTestConf,
-	secretID, clientSecret, expiration string,
-) string {
+func testAzureStaticRole_importConfig(backend, roleName string, conf *testutil.AzureTestConf, secretID, clientSecret, expiration string) string {
 	exp := ""
 	if expiration != "" {
-		exp = fmt.Sprintf(`  expiration = "%s"`, expiration)
+		exp = fmt.Sprintf(`expiration = "%s"`, expiration)
 	}
 
 	return fmt.Sprintf(`
@@ -177,15 +182,22 @@ resource "vault_azure_secret_backend_static_role" "imported" {
   role                  = "%[6]s"
   application_object_id = "%[7]s"
 
-  ttl          = 63072000
-  secret_id    = "%[8]s"
+  ttl           = 63072000
+  secret_id     = "%[8]s"
   client_secret = "%[9]s"
 %[10]s
 }
 
-ephemeral "vault_azure_static_credentials" "read" {
-  backend = vault_azure_secret_backend.azure.path
-  role    = vault_azure_secret_backend_static_role.imported.role
+ephemeral "vault_azure_static_credentials" "imported" {
+  mount_id = vault_azure_secret_backend_static_role.imported.id
+  backend  = vault_azure_secret_backend.azure.path
+  role     = vault_azure_secret_backend_static_role.imported.role
 }
+
+provider "echo" {
+  data = ephemeral.vault_azure_static_credentials.imported
+}
+
+resource "echo" "azure_creds_import" {}
 `, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, roleName, conf.AppObjectID, secretID, clientSecret, exp)
 }
