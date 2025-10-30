@@ -6,12 +6,12 @@ package fwprovider
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
