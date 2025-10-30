@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-cty/cty"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -29,6 +35,7 @@ type connectionStringConfig struct {
 	includeUserPass         bool
 	includeDisableEscaping  bool
 	isCloud                 bool
+	includePrivateKey       bool
 }
 
 const (
@@ -38,6 +45,9 @@ const (
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
+
+	// regex to extract engine name and index from prefixes such as "postgresql.5"
+	databaseEngineNameAndIndexFromPrefixRegex = regexp.MustCompile("^(.+)\\.([0-9]+)\\.$")
 
 	dbEngineCassandra = &dbEngine{
 		name:              "cassandra",
@@ -196,6 +206,7 @@ func (i *dbEngine) PluginPrefixes() ([]string, error) {
 	return append([]string{defaultPrefix}, i.pluginAliases...), nil
 }
 
+// getDatabaseSchema returns the database-specific schema
 func getDatabaseSchema(typ schema.ValueType) schemaMap {
 	var dbEngineTypes []string
 	for _, e := range dbEngines {
@@ -681,12 +692,10 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.Name(), dbEngineTypes),
 		},
 		dbEngineSnowflake.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the snowflake-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the snowflake-database-plugin plugin.",
+			Elem:          snowflakeConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineSnowflake.Name(), dbEngineTypes),
 		},
@@ -709,13 +718,12 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 	}
 
 	return &schema.Resource{
-		Create: databaseSecretBackendConnectionCreateOrUpdate,
-		Read:   provider.ReadWrapper(databaseSecretBackendConnectionRead),
-		Update: databaseSecretBackendConnectionCreateOrUpdate,
-		Delete: databaseSecretBackendConnectionDelete,
-		Exists: databaseSecretBackendConnectionExists,
+		CreateContext: databaseSecretBackendConnectionCreateOrUpdate,
+		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendConnectionRead),
+		UpdateContext: databaseSecretBackendConnectionCreateOrUpdate,
+		DeleteContext: databaseSecretBackendConnectionDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: s,
 	}
@@ -747,6 +755,7 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 			},
 		},
 	}
+
 	if config.includeUserPass {
 		res.Schema["username"] = &schema.Schema{
 			Type:        schema.TypeString,
@@ -758,6 +767,32 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 			Optional:    true,
 			Description: "The root credential password used in the connection URL",
 			Sensitive:   true,
+		}
+		res.Schema[consts.FieldPasswordWO] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Write-only field for the root credential password used in the connection URL",
+			WriteOnly:   true,
+		}
+		res.Schema[consts.FieldPasswordWOVersion] = &schema.Schema{
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Version counter for root credential password write-only field",
+		}
+	}
+
+	if config.includePrivateKey {
+		res.Schema[consts.FieldPrivateKeyWO] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The private key configured for the admin user in Snowflake.",
+			Sensitive:   true,
+			WriteOnly:   true,
+		}
+		res.Schema[consts.FieldPrivateKeyWOVersion] = &schema.Schema{
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Version counter for the private key key-pair credentials write-only field",
 		}
 	}
 
@@ -899,6 +934,18 @@ func oracleConnectionStringResource() *schema.Resource {
 	return r
 }
 
+func snowflakeConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass:   true,
+		includePrivateKey: true,
+	})
+
+	r.Schema[consts.FieldPassword].Deprecated = "Snowflake is ending support for single-factor password authentication " +
+		"by November 2025. Refer to the documentation for more information on migrating to key-pair authentication."
+
+	return r
+}
+
 func getDBEngine(d *schema.ResourceData) (*dbEngine, error) {
 	for _, e := range dbEngines {
 		if i, ok := d.GetOk(e.name); ok && len(i.([]interface{})) > 0 {
@@ -994,7 +1041,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineRedisElastiCache:
 		setRedisElastiCacheDatabaseConnectionData(d, prefix, data)
 	case dbEngineSnowflake:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setDatabaseConnectionDataWithUserAndPrivateKey(d, prefix, data, meta)
 	case dbEngineRedshift:
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	default:
@@ -1467,6 +1514,11 @@ func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix st
 		}
 	}
 
+	// ensure private_key_wo_version is updated in state
+	if v, ok := d.GetOk(prefix + consts.FieldPrivateKeyWOVersion); ok {
+		result[consts.FieldPrivateKeyWOVersion] = v.(int)
+	}
+
 	if v, ok := d.GetOk(prefix + "username_template"); ok {
 		result["username_template"] = v.(string)
 	} else {
@@ -1491,6 +1543,11 @@ func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix
 
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		result["password"] = v.(string)
+	}
+
+	// ensure password_wo_version is updated in state
+	if v, ok := d.GetOk(prefix + consts.FieldPasswordWOVersion); ok {
+		result[consts.FieldPasswordWOVersion] = v.(int)
 	}
 
 	return result
@@ -1776,15 +1833,70 @@ func setOracleDatabaseConnectionData(d *schema.ResourceData, prefix string, data
 func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
 
-	data["username"] = d.Get(prefix + "username")
+	data[consts.FieldUsername] = d.Get(prefix + consts.FieldUsername)
 
 	// Vault does not return the password in the API. If the root credentials have been rotated, sending
 	// the old password in the update request would break the connection config. Thus we only send it,
 	// if it actually changed to still support updating it for non-rotated cases.
 	passwordKey := prefix + consts.FieldPassword
-	if v, ok := d.GetOk(passwordKey); ok {
-		if d.IsNewResource() || d.HasChange(passwordKey) {
+	passwordWriteOnlyVersionKey := prefix + consts.FieldPasswordWOVersion
+	if d.IsNewResource() || d.HasChange(passwordKey) || d.HasChange(passwordWriteOnlyVersionKey) {
+		if v, ok := d.GetOk(passwordKey); ok && v != nil {
+			log.Printf("[DEBUG] using persisted password; please use new write-only attributes `password_wo` " +
+				"and `password_wo_version` for security")
 			data[consts.FieldPassword] = v.(string)
+		} else if d.HasChange(passwordWriteOnlyVersionKey) {
+			engineName, engineIdx, err := databaseEngineNameAndIndexFromPrefix(prefix)
+			if err != nil {
+				// this should not happen, since we control how the prefix is created
+				panic(fmt.Sprintf("[ERROR] invalid prefix %q for database connection: %s", prefix, err))
+			}
+
+			idx, err := strconv.Atoi(engineIdx)
+			if err != nil {
+				// this should not happen, since we control how the index has been set
+				panic(fmt.Sprintf("[ERROR] unable to convert string index to integer: %s", err))
+			}
+
+			// construct path to use GetRawConfig
+			path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPasswordWO)
+			if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
+				data[consts.FieldPassword] = pwWo.AsString()
+			}
+		}
+	}
+}
+
+func setDatabaseConnectionDataWithUserAndPrivateKey(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
+	// Once password auth for snowflake is removed, this can be changed to setDatabaseConnectionData.
+	// The username field is set below in anticipation of that change.
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+	data[consts.FieldUsername] = d.Get(prefix + consts.FieldUsername)
+
+	privateKeyWriteOnlyVersionKey := prefix + consts.FieldPrivateKeyWOVersion
+	if d.IsNewResource() || d.HasChange(privateKeyWriteOnlyVersionKey) {
+		engineName, engineIdx, err := databaseEngineNameAndIndexFromPrefix(prefix)
+		if err != nil {
+			// this should not happen, since we control how the prefix is created
+			panic(fmt.Sprintf("[ERROR] invalid prefix %q for database connection: %s", prefix, err))
+		}
+
+		idx, err := strconv.Atoi(engineIdx)
+		if err != nil {
+			// this should not happen, since we control how the index has been set
+			panic(fmt.Sprintf("[ERROR] unable to convert string index to integer: %s", err))
+		}
+
+		// construct path to use GetRawConfig
+		path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPrivateKeyWO)
+
+		if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
+			// ensure Vault version has private key support
+			if provider.IsAPISupported(meta, provider.VaultVersion116) {
+				data[consts.FieldPrivateKey] = pwWo.AsString()
+			} else {
+				log.Printf("[WARN] field %q can only be used with Vault version %s or newer", consts.FieldPrivateKeyWO, provider.VaultVersion116)
+			}
 		}
 	}
 }
@@ -1796,34 +1908,31 @@ func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix
 }
 
 func databaseSecretBackendConnectionCreateOrUpdate(
-	d *schema.ResourceData, meta interface{},
-) error {
+	ctx context.Context, d *schema.ResourceData, meta interface{},
+) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	engine, err := getDBEngine(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	path := databaseSecretBackendConnectionPath(
 		d.Get("backend").(string), d.Get("name").(string))
-	if err := writeDatabaseSecretConfig(
-		d, client, engine, 0, false, path, meta); err != nil {
-		return err
+	if err := writeDatabaseSecretConfig(ctx, d, client, engine, 0, false, path, meta); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.SetId(path)
 	log.Printf("[DEBUG] Wrote database connection config %q", path)
 
-	return databaseSecretBackendConnectionRead(d, meta)
+	return databaseSecretBackendConnectionRead(ctx, d, meta)
 }
 
-func writeDatabaseSecretConfig(d *schema.ResourceData, client *api.Client,
-	engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{},
-) error {
+func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, client *api.Client, engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{}) error {
 	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta)
 	if err != nil {
 		return err
@@ -1863,8 +1972,13 @@ func writeDatabaseSecretConfig(d *schema.ResourceData, client *api.Client,
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		// parse automated root rotation fields if Enterprise 1.19 server
+		automatedrotationutil.ParseAutomatedRotationFieldsWithFieldPrefix(d, data, prefix)
+	}
+
 	log.Printf("[DEBUG] Writing connection config to %q", path)
-	_, err = client.Logical().Write(path, data)
+	_, err = client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return fmt.Errorf("error configuring database connection %q: %s", path, err)
 	}
@@ -1907,28 +2021,28 @@ func getSortedPluginPrefixes() ([]string, error) {
 	return pluginPrefixes, nil
 }
 
-func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendConnectionRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
 	backend, err := databaseSecretBackendConnectionBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for database connection: %s", path, err)
+		return diag.Errorf("invalid path %q for database connection: %s", path, err)
 	}
 
 	name, err := databaseSecretBackendConnectionNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for database connection: %s", path, err)
+		return diag.Errorf("invalid path %q for database connection: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading database connection config %q", path)
-	resp, err := client.Logical().Read(path)
+	resp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error reading database connection config %q: %s", path, err)
+		return diag.Errorf("error reading database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read database connection config %q", path)
 	if resp == nil {
@@ -1944,34 +2058,32 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		engine, err = getDBEngineFromResp(dbEngines, resp)
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	result, err := getDBConnectionConfig(d, engine, 0, resp, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err := d.Set(engine.Name(), []map[string]interface{}{result}); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err := d.Set("backend", backend); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	for k, v := range getDBCommonConfig(d, resp, engine, 0, false, name) {
+	for k, v := range getDBCommonConfig(d, resp, engine, 0, false, name, meta) {
 		if err := d.Set(k, v); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	return nil
 }
 
-func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret,
-	engine *dbEngine, idx int, unifiedSchema bool, name string,
-) map[string]interface{} {
+func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngine, idx int, unifiedSchema bool, name string, meta interface{}) map[string]interface{} {
 	var roles []string
 	for _, role := range resp.Data["allowed_roles"].([]interface{}) {
 		roles = append(roles, role.(string))
@@ -1998,6 +2110,10 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret,
 		}
 	}
 	result["root_rotation_statements"] = rootRotationStmts
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		automatedrotationutil.GetAutomatedRotationFieldsFromResponse(resp, result)
+	}
 
 	return result
 }
@@ -2139,18 +2255,18 @@ func getConnectionDetailsMongoDBAtlas(d *schema.ResourceData, prefix string, res
 	return result
 }
 
-func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendConnectionDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing database connection config %q", path)
-	_, err := client.Logical().Delete(path)
+	_, err := client.Logical().DeleteWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error removing database connection config %q: %s", path, err)
+		return diag.Errorf("error removing database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Removed database connection config %q", path)
 
@@ -2198,4 +2314,15 @@ func databaseSecretBackendConnectionBackendFromPath(path string) (string, error)
 		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
 	}
 	return res[1], nil
+}
+
+func databaseEngineNameAndIndexFromPrefix(prefix string) (string, string, error) {
+	if !databaseEngineNameAndIndexFromPrefixRegex.MatchString(prefix) {
+		return "", "", fmt.Errorf("no matches found")
+	}
+	res := databaseEngineNameAndIndexFromPrefixRegex.FindStringSubmatch(prefix)
+	if len(res) != 3 {
+		return "", "", fmt.Errorf("unexpected number of matches (%d) for name", len(res))
+	}
+	return res[1], res[2], nil
 }

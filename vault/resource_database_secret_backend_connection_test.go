@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"database/sql"
 	"encoding/base64"
 	"errors"
@@ -18,11 +19,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+
 	_ "github.com/denisenkom/go-mssqldb"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 
@@ -49,9 +53,9 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 
 	userTempl := "{{.DisplayName}}"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_import(name, backend, connURL, userTempl),
@@ -92,9 +96,9 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 	pluginName := dbEngineCassandra.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra(name, backend, host, username, password, "5"),
@@ -136,9 +140,9 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 	pluginName := dbEngineCassandra.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_cassandraProtocol(name, backend, host, username, password),
@@ -218,9 +222,9 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_couchbase(
@@ -279,9 +283,9 @@ func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 	resourceName := testDefaultDatabaseSecretBackendResource
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_influxdb(name, backend, host, port, username, password),
@@ -322,9 +326,9 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 	pluginName := dbEngineMongoDBAtlas.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, backend, publicKey, privateKey, projectID),
@@ -355,9 +359,9 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 	pluginName := dbEngineMongoDB.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mongodb(name, backend, connURL),
@@ -392,9 +396,9 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 
 	username := parsedURL.User.Username()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, false),
@@ -451,7 +455,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
@@ -495,9 +499,9 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql(name, backend, connURL, username, password),
@@ -590,9 +594,9 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 	pluginName := dbEngineMySQL.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, username, password, 0),
@@ -661,9 +665,9 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, username, password, 0),
@@ -731,9 +735,9 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 	password := acctest.RandomWithPrefix("password")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_tls(name, backend, connURL, password, tlsCA, tlsCertificateKey),
@@ -798,9 +802,9 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 	userTempl := "{{.DisplayName}}"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, username, password, maxOpenConnections, maxIdleConnections, maxConnLifetime, parsedURL),
@@ -851,7 +855,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_tls(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
@@ -879,7 +883,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_rootlessConfig(t *testing
 	name := acctest.RandomWithPrefix("db")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
@@ -905,7 +909,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
@@ -936,6 +940,123 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 	})
 }
 
+// TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation tests that Automated
+// Root Rotation parameters are compatible with the DB Secrets Backend Connection resource
+func TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation(t *testing.T) {
+	MaybeSkipDBTests(t, dbEnginePostgres)
+
+	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
+	connURL := values[0]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	resourceName := "vault_database_secret_backend_connection.test"
+	name := acctest.RandomWithPrefix("db")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgres_automatedRootRotation(name, backend, connURL, "", 10, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			// zero-out rotation_period
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgres_automatedRootRotation(name, backend, connURL, "*/20 * * * *", 0, 120, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "120"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * *"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+				),
+			},
+			{
+				Config:      testAccDatabaseSecretBackendConnectionConfig_postgres_automatedRootRotation(name, backend, connURL, "", 30, 120, true),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+			},
+			// zero-out rotation_schedule and rotation_window
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgres_automatedRootRotation(name, backend, connURL, "", 30, 0, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "verify_connection", "postgresql.0.connection_url"),
+		},
+	})
+}
+
+// TestAccDatabaseSecretBackendConnection_postgresql_writeOnly ensures
+// write-only attribute `password_wo` works as expected
+//
+// The test creates users in a Postgres DB
+// To run locally you will need to set the following env vars:
+//   - POSTGRES_URL_TEST
+//   - POSTGRES_URL_ROOTLESS
+//
+// See .github/workflows/build.yml for details.
+func TestAccDatabaseSecretBackendConnection_postgresql_password_wo(t *testing.T) {
+	MaybeSkipDBTests(t, dbEnginePostgres)
+
+	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
+	connURLTemplated := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_ROOTLESS")[0]
+	username1 := acctest.RandomWithPrefix("user1")
+	username2 := acctest.RandomWithPrefix("user2")
+	dbName := acctest.RandomWithPrefix("db")
+	// create database users
+	testutil.CreateTestPGUser(t, connURLTestRoot, username1, "testpassword", testRoleStaticCreate)
+	testutil.CreateTestPGUser(t, connURLTestRoot, username2, "testpassword1", testRoleStaticCreate)
+	mount := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEnginePostgres.DefaultPluginName()
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql_writeOnly(dbName, mount, connURLTemplated, username1, "testpassword", 1),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(dbName, mount, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.connection_url", connURLTemplated),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username1),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password_wo_version", "1"),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql_writeOnly(dbName, mount, connURLTemplated, username2, "testpassword1", 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(testDefaultDatabaseSecretBackendResource, plancheck.ResourceActionUpdate),
+					},
+				},
+				// successful connection to new username guarantees that password_wo was also updated
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(dbName, mount, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.connection_url", connURLTemplated),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username2),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password_wo_version", "2"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineElasticSearch)
 
@@ -950,9 +1071,9 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, backend, connURL, username, password),
@@ -1015,7 +1136,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	})
 }
 
-func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
+func TestAccDatabaseSecretBackendConnection_snowflake_userpass(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineSnowflake)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
@@ -1029,11 +1150,11 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 	userTempl := "{{.DisplayName}}"
 
-	config := testAccDatabaseSecretBackendConnectionConfig_snowflake(name, backend, connURL, username, password, userTempl)
+	config := testAccDatabaseSecretBackendConnectionConfig_snowflake_userpass(name, backend, connURL, username, password, userTempl)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -1045,6 +1166,63 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.password", password),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username_template", userTempl),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineSnowflake)
+
+	// TODO: make these fatal once we auto provision the required test infrastructure.
+	values := testutil.SkipTestEnvUnset(t, "SNOWFLAKE_URL")
+	connURL := values[0]
+
+	username := os.Getenv("SNOWFLAKE_USERNAME")
+	privateKey := os.Getenv("SNOWFLAKE_PRIVATE_KEY")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineSnowflake.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+	userTempl := "{{.DisplayName}}"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username, userTempl, privateKey, "1"),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.private_key_wo_version", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username_template", userTempl),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username+"new", userTempl, privateKey, "2"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(testDefaultDatabaseSecretBackendResource, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username", username+"new"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.private_key_wo_version", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username_template", userTempl),
 				),
 			},
@@ -1066,9 +1244,9 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "*"),
@@ -1125,9 +1303,9 @@ func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 	pluginName := dbEngineRedisElastiCache.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_redis_elasticache(name, backend, url),
@@ -1159,9 +1337,9 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 	pluginName := dbEngineRedshift.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, false),
@@ -1201,6 +1379,59 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 	})
 }
 
+func TestDatabaseEngineNameAndIndexFromPrefix(t *testing.T) {
+	testcases := []struct {
+		name         string
+		prefix       string
+		expectedName string
+		expectedIdx  string
+		wantErr      bool
+		expectedErr  string
+	}{
+		{
+			name:         "simple",
+			prefix:       "postgresql.0.",
+			wantErr:      false,
+			expectedName: "postgresql",
+			expectedIdx:  "0",
+		},
+		{
+			name:         "complex",
+			prefix:       "custom_mssql_db_us-west-2_v2.1.5.",
+			wantErr:      false,
+			expectedName: "custom_mssql_db_us-west-2_v2.1",
+			expectedIdx:  "5",
+		},
+		{
+			name:        "invalid",
+			prefix:      "invalid-prefix",
+			wantErr:     true,
+			expectedErr: "no matches found",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			name, idx, err := databaseEngineNameAndIndexFromPrefix(tc.prefix)
+			if tc.wantErr && (err == nil) {
+				t.Fatalf("wanted error %v, got nil", tc.wantErr)
+			}
+
+			if tc.wantErr && (err.Error() != tc.expectedErr) {
+				t.Fatalf("got error %v, wantErr %v", err, tc.wantErr)
+			}
+
+			if name != tc.expectedName {
+				t.Fatalf("got %s, want %s", name, tc.expectedName)
+			}
+
+			if idx != tc.expectedIdx {
+				t.Fatalf("got %s, want %s", idx, tc.expectedIdx)
+			}
+		})
+	}
+}
+
 func TestAccDatabaseSecretBackendConnection_invalid_plugin(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := name + "-plugin"
@@ -1219,8 +1450,8 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }`, name, name, pluginName)
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -1864,7 +2095,53 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL, authType, serviceAccountJSON)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, url, username, password, userTempl string) string {
+func testAccDatabaseSecretBackendConnectionConfig_postgres_automatedRootRotation(name, path, connURL, schedule string, period, window int, disable bool) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+  rotation_period = "%d"
+  rotation_schedule = "%s"
+  rotation_window = "%d"
+  disable_automated_rotation = %t
+
+  postgresql {
+      connection_url       = "%s"
+  }
+}
+`, path, name, period, schedule, window, disable, connURL)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_postgresql_writeOnly(name, path, connUrl, username, password string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+
+  postgresql {
+      connection_url          = "%s"
+      username                = "%s"
+      password_wo             = "%s"
+      password_wo_version     = %d
+  }
+}
+`, path, name, connUrl, username, password, version)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_snowflake_userpass(name, path, url, username, password, userTempl string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1885,6 +2162,32 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, url, username, password, userTempl)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, path, url, username, userTempl, privateKey, privateKeyVersion string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  snowflake {
+    connection_url = "%s"
+    username = "%s"
+	 username_template = "%s"
+    private_key_wo = <<-EOT
+%s
+EOT
+    private_key_wo_version = "%s"
+  }
+}
+`, path, name, url, username, userTempl, privateKey, privateKeyVersion)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_redis(name, path, host, port, username, password, allowedRoles string) string {

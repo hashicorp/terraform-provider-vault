@@ -49,7 +49,11 @@ The following arguments are supported:
 
 * `max_ttl` - (Optional) Maximum TTL for leases associated with this role, in seconds.
 
-* `ttl` - (Optional) Specifies the TTL for this role.
+* `ttl` - (Optional) Specifies the TTL for this role, in seconds.
+
+* `credential_type` - (Optional) The type of credential to generate. Valid values are 'team', 'team_legacy', 'user', or 'organization'. Can only create multiple-team tokens with `team`. 
+
+* `description` - (Optional) Description of the role. This is used as a prefix to help identify the token in the HCP Terraform UI. Only valid with `team` or `user` credential types.
 
 ## Attributes Reference
 

@@ -39,14 +39,14 @@ func GetRadiusLoginSchemaResource(authField string) *schema.Resource {
 			consts.FieldUsername: {
 				Type:        schema.TypeString,
 				Description: "The Radius username.",
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc(consts.EnvVarRadiusUsername, nil),
+				// can be set via an env var
+				Optional: true,
 			},
 			consts.FieldPassword: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: "The Radius password for username.",
-				DefaultFunc: schema.EnvDefaultFunc(consts.EnvVarRadiusPassword, nil),
 			},
 		},
 	}, authField, consts.MountTypeRadius)
@@ -72,9 +72,24 @@ func (l *AuthLoginRadius) LoginPath() string {
 }
 
 func (l *AuthLoginRadius) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	defaults := authDefaults{
+		{
+			field:      consts.FieldUsername,
+			envVars:    []string{consts.EnvVarRadiusUsername},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldPassword,
+			envVars:    []string{consts.EnvVarRadiusPassword},
+			defaultVal: "",
+		},
+	}
 	if err := l.AuthLoginCommon.Init(d, authField,
-		func(data *schema.ResourceData) error {
-			return l.checkRequiredFields(d, consts.FieldUsername, consts.FieldPassword)
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.setDefaultFields(d, defaults, params)
+		},
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.checkRequiredFields(d, params, consts.FieldUsername, consts.FieldPassword)
 		},
 	); err != nil {
 		return nil, err

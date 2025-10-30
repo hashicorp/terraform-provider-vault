@@ -55,6 +55,18 @@ The following arguments are supported:
 
 * `inheritable` - (Optional) If set to `true` on a quota where path is set to a namespace, the same quota will be cumulatively applied to all child namespace. The inheritable parameter cannot be set to `true` if the path does not specify a namespace. Only the quotas associated with the root namespace are inheritable by default. Requires Vault 1.15+.
 
+* `group_by` - (Optional) Attribute used to group requests for rate limiting. Limits are enforced independently for each
+  group. Valid `group_by` modes are: 1) `ip` that groups requests by their source IP address (**`group_by` defaults to
+ `ip` if unset, which is the only supported mode in community edition**); 2) `none` that groups together all requests
+  that match the rate limit quota rule; 3) `entity_then_ip` that groups requests by their entity ID for authenticated
+  requests that carry one, or by their IP for unauthenticated requests (or requests whose authentication is not 
+  connected to an entity); and 4) `entity_then_none` which also groups requests by their entity ID when available, but
+  the rest is all grouped together (i.e. unauthenticated or with authentication not connected to an entity).
+
+* `secondary_rate` - (Optional) Can only be set for the `group_by` modes `entity_then_ip` or `entity_then_none`. This is
+  the rate limit applied to the requests that fall under the "ip" or "none" groupings, while the authenticated requests
+  that contain an entity ID are subject to the `rate` field instead. Defaults to the same value as `rate`.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

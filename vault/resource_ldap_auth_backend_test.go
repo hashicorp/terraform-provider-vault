@@ -4,14 +4,18 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -22,9 +26,9 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testLDAPAuthBackendDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
@@ -57,9 +61,9 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testLDAPAuthBackendDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
@@ -95,8 +99,8 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
@@ -113,6 +117,193 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
+		},
+	})
+}
+
+func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-auth-ldap")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-ldap-updated")
+
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_automatedRotation(path, true, true, "* * * * *", 10, 0, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_automatedRotation(updatedPath, true, true, "", 0, 10, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldBindPass, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func TestLDAPAuthBackend_tuning(t *testing.T) {
+	t.Parallel()
+	testutil.SkipTestAcc(t)
+
+	path := acctest.RandomWithPrefix("tf-test-ldap-tune-")
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackend_tune_partial(path),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.0", "key3"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+				),
+			},
+			{
+				Config: testLDAPAuthBackend_tune_full(path),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "10m"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "20m"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "batch"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.1", "key2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.0", "key3"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.1", "key4"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+				),
+			},
+		},
+	})
+}
+
+func TestLDAPAuthBackend_importTune(t *testing.T) {
+	t.Parallel()
+	testutil.SkipTestAcc(t)
+
+	path := acctest.RandomWithPrefix("tf-test-ldap-import-tune-")
+	resourceName := "vault_ldap_auth_backend.test"
+	var resAuth api.AuthMount
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackend_tune_full(path),
+				Check: testutil.TestAccCheckAuthMountExists(resourceName,
+					&resAuth,
+					testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldBindPass, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func TestLDAPAuthBackend_tune_conflicts(t *testing.T) {
+	t.Parallel()
+
+	path := acctest.RandomWithPrefix("ldap")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_ldap_auth_backend" "test" {
+					path = "%s"
+					url = "ldap://127.0.0.1"
+					userdn = "ou=Users,dc=example,dc=com"
+					userattr = "uid"
+					groupdn = "ou=Groups,dc=example,dc=com"
+					groupfilter = "(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))"
+					groupattr = "cn"
+					insecure_tls = true
+					token_ttl = 3600
+					tune {
+						default_lease_ttl = "10m"
+					}
+				}
+				`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+			},
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_ldap_auth_backend" "test" {
+					path = "%s"
+					url = "ldap://127.0.0.1"
+					userdn = "ou=Users,dc=example,dc=com"
+					userattr = "uid"
+					groupdn = "ou=Groups,dc=example,dc=com"
+					groupfilter = "(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))"
+					groupattr = "cn"
+					insecure_tls = true
+					token_max_ttl = 3600
+					tune {
+						max_lease_ttl = "20m"
+					}
+				}
+				`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+			},
+			{
+				Config: fmt.Sprintf(`
+				resource "vault_ldap_auth_backend" "test" {
+					path = "%s"
+					url = "ldap://127.0.0.1"
+					userdn = "ou=Users,dc=example,dc=com"
+					userattr = "uid"
+					groupdn = "ou=Groups,dc=example,dc=com"
+					groupfilter = "(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))"
+					groupattr = "cn"
+					insecure_tls = true
+					token_type = "batch"
+					tune {
+						token_type = "service"
+					}
+				}
+				`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+			},
 		},
 	})
 }
@@ -236,6 +427,13 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 		isVaultVersion111 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion111)
 		if isVaultVersion111 {
 			attrs["max_page_size"] = "max_page_size"
+		}
+
+		if provider.IsEnterpriseSupported(testProvider.Meta()) && provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119) {
+			attrs["rotation_schedule"] = "rotation_schedule"
+			attrs["rotation_window"] = "rotation_window"
+			attrs["rotation_period"] = "rotation_period"
+			attrs["disable_automated_rotation"] = "disable_automated_rotation"
 		}
 
 		for _, v := range commonTokenFields {
@@ -380,4 +578,59 @@ EOT
     use_token_groups = %s
 }
 `, path, local, use_token_groups)
+}
+
+func testLDAPAuthBackendConfig_automatedRotation(path string, useTokenGroups, local bool, schedule string, window, period int, disable bool) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path                   = "%s"
+    local                  = %t
+    url                    = "ldaps://example.org"
+    binddn                 = "cn=example.com"
+    bindpass               = "supersecurepassword"
+    use_token_groups = %t
+	 rotation_schedule = "%s"
+    rotation_window   = "%d"
+    rotation_period   = "%d"
+    disable_automated_rotation = %t
+}
+`, path, local, useTokenGroups, schedule, window, period, disable)
+}
+
+func testLDAPAuthBackend_tune_partial(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+	path = "%s"
+	url = "ldaps://example.org"
+	binddn = "cn=example.com"
+	bindpass = "supersecurepassword"
+	tune {
+		audit_non_hmac_request_keys = ["key1"]
+		audit_non_hmac_response_keys = ["key3"]
+		passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To"]
+		allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To"]
+	}
+}
+`, path)
+}
+
+func testLDAPAuthBackend_tune_full(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+	path = "%s"
+	url = "ldaps://example.org"
+	binddn = "cn=example.com"
+	bindpass = "supersecurepassword"
+	tune {
+		default_lease_ttl = "10m"
+		max_lease_ttl = "20m"
+		listing_visibility = "hidden"
+		token_type = "batch"
+		audit_non_hmac_request_keys = ["key1", "key2"]
+		audit_non_hmac_response_keys = ["key3", "key4"]
+		passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To"]
+		allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To"]
+	}
+}
+`, path)
 }

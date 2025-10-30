@@ -14,14 +14,16 @@ Provides a resource for managing an [LDAP auth backend within Vault](https://www
 
 ```hcl
 resource "vault_ldap_auth_backend" "ldap" {
-    path        = "ldap"
-    url         = "ldaps://dc-01.example.org"
-    userdn      = "OU=Users,OU=Accounts,DC=example,DC=org"
-    userattr    = "sAMAccountName"
-    upndomain   = "EXAMPLE.ORG"
-    discoverdn  = false
-    groupdn     = "OU=Groups,DC=example,DC=org"
-    groupfilter = "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
+    path              = "ldap"
+    url               = "ldaps://dc-01.example.org"
+    userdn            = "OU=Users,OU=Accounts,DC=example,DC=org"
+    userattr          = "sAMAccountName"
+    upndomain         = "EXAMPLE.ORG"
+    discoverdn        = false
+    groupdn           = "OU=Groups,DC=example,DC=org"
+    groupfilter       = "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
+    rotation_schedule = "0 * * * SAT"
+    rotation_window   = 3600
 }
 ```
 
@@ -89,6 +91,48 @@ The following arguments are supported:
 * `local` - (Optional) Specifies if the auth method is local only.
 
 * `connection_timeout` - (Optional) Timeout in seconds when connecting to LDAP before attempting to connect to the next server in the URL provided in `url` (integer: 30)
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
+  A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+
+* `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+.
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled token rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+.
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
+
+* `tune` - (Optional) Extra configuration block. Structure is documented below.
+
+The `tune` block is used to tune the auth backend:
+
+* `default_lease_ttl` - (Optional) Specifies the default time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `max_lease_ttl` - (Optional) Specifies the maximum time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the request data object.
+
+* `listing_visibility` - (Optional) Specifies whether to show this mount in
+  the UI-specific listing endpoint. Valid values are "unauth" or "hidden".
+
+* `passthrough_request_headers` - (Optional) List of headers to whitelist and
+  pass from the request to the backend.
+
+* `allowed_response_headers` - (Optional) List of headers to whitelist and allowing
+  a plugin to include them in the response.
+
+* `token_type` - (Optional) Specifies the type of tokens that should be returned by
+  the mount. Valid values are "default-service", "default-batch", "service", "batch".
 
 ### Common Token Arguments
 

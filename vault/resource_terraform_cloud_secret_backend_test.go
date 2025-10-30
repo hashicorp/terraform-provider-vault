@@ -4,12 +4,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
-	"os"
+	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -17,15 +18,15 @@ import (
 
 func TestTerraformCloudSecretBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
-	token := os.Getenv("TEST_TF_TOKEN")
 
 	resourceType := "vault_terraform_cloud_secret_backend"
 	resourceName := resourceType + ".test"
+	token := "randomized-token-12392183123"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testTerraformCloudSecretBackend_initialConfig(backend, token),
@@ -64,9 +65,9 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 	token := "randomized-token-12392183123"
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testTerraformCloudSecretBackend_initialConfig(backend, token),
@@ -97,6 +98,45 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 	})
 }
 
+func TestTerraformCloudSecretBackend_tokenWO(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
+
+	resourceType := "vault_terraform_cloud_secret_backend"
+	resourceName := resourceType + ".test"
+	token := "randomized-token-12392183123"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				Config: testTerraformCloudSecretBackend_tokenWoInitialConfig(backend, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "address", "https://app.terraform.io"),
+					resource.TestCheckResourceAttr(resourceName, "token_wo_version", "1"),
+					resource.TestCheckResourceAttr(resourceName, "base_path", "/api/v2/"),
+				),
+			},
+			{
+				Config: testTerraformCloudSecretBackend_tokenWoUpdatedConfig(backend, token, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "token_wo_version", "2"),
+				),
+			},
+			{
+				Config:      testTerraformCloudSecretBackend_tokenWoNoVersion(backend, 3),
+				ExpectError: regexp.MustCompile(`all of.*token_wo,token_wo_version.*must be specified`),
+			},
+			{
+				Config:      testTerraformCloudSecretBackend_tokenWoEmptyString(backend, 4),
+				ExpectError: regexp.MustCompile(`token_wo must be provided`),
+			},
+		},
+	})
+}
 func testTerraformCloudSecretBackend_initialConfig(path, token string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
@@ -117,4 +157,39 @@ resource "vault_terraform_cloud_secret_backend" "test" {
   token = "%s"
   base_path = "/not/api/v2/"
 }`, path, token)
+}
+
+func testTerraformCloudSecretBackend_tokenWoInitialConfig(path, token string) string {
+	return fmt.Sprintf(`
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend = "%s"
+  token_wo = "%s"
+  token_wo_version = 1
+}`, path, token)
+}
+
+func testTerraformCloudSecretBackend_tokenWoUpdatedConfig(path, token string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend           = "%s"
+  token_wo          = "%s"
+  token_wo_version  = %d
+}`, path, token, version)
+}
+
+func testTerraformCloudSecretBackend_tokenWoNoVersion(path string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend           = "%s"
+  token_wo_version  = %d
+}`, path, version)
+}
+
+func testTerraformCloudSecretBackend_tokenWoEmptyString(path string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend           = "%s"
+  token_wo          = ""
+  token_wo_version  = %d
+}`, path, version)
 }

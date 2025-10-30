@@ -4,12 +4,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -20,9 +21,9 @@ func TestAccKubernetesAuthBackendRoleDataSource_basic(t *testing.T) {
 	ttl := 3600
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendRoleDataSourceConfig_basic(backend, role, "", ttl),
@@ -95,9 +96,9 @@ func TestAccKubernetesAuthBackendRoleDataSource_full(t *testing.T) {
 	audience := "vault"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendRoleDataSourceConfig_full(

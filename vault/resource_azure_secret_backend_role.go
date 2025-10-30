@@ -6,9 +6,10 @@ package vault
 import (
 	"context"
 	"encoding/json"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
@@ -20,6 +21,7 @@ import (
 )
 
 var azureSecretFields = []string{
+	consts.FieldExplicitMaxTTL,
 	consts.FieldMaxTTL,
 	consts.FieldTTL,
 	consts.FieldApplicationObjectID,
@@ -113,12 +115,19 @@ func azureSecretBackendRoleResource() *schema.Resource {
 			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Human-friendly description of the mount for the backend.",
+				Description: "Specifies the default TTL for service principals generated using this role.",
 			},
 			consts.FieldMaxTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Human-friendly description of the mount for the backend.",
+				Default:     "0",
+				Description: "Specifies the maximum TTL for service principals generated using this role.",
+			},
+			consts.FieldExplicitMaxTTL: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "0",
+				Description: "Specifies the explicit maximum lifetime of the lease and service principal.",
 			},
 			consts.FieldSignInAudience: {
 				Type:        schema.TypeString,
@@ -180,6 +189,13 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 	for _, k := range azureSecretFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v.(string)
+		}
+	}
+
+	useAPIVer118 := provider.IsAPISupported(meta, provider.VaultVersion118)
+	if useAPIVer118 {
+		if v, ok := d.GetOk(consts.FieldExplicitMaxTTL); ok && v != "" {
+			data[consts.FieldExplicitMaxTTL] = v
 		}
 	}
 
@@ -264,6 +280,13 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 	if v, ok := resp.Data[consts.FieldPermanentlyDelete]; ok {
 		if err := d.Set(consts.FieldPermanentlyDelete, v); err != nil {
 			return diag.Errorf("error setting permanently delete field: %s", err)
+		}
+	}
+
+	useAPIVer118 := provider.IsAPISupported(meta, provider.VaultVersion118)
+	if useAPIVer118 {
+		if err := d.Set(consts.FieldExplicitMaxTTL, resp.Data[consts.FieldExplicitMaxTTL]); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 

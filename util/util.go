@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
@@ -449,4 +450,41 @@ func RetryWrite(client *api.Client, path string, data map[string]interface{}, re
 		func(err error, duration time.Duration) {
 			log.Printf("[WARN] Writing to path %q failed, retrying in %s", path, duration)
 		})
+}
+
+// GetStringSliceFromSecret will return a string slice from the secret data within the provided field name if it exists.
+// The bool return value will be false if the field does not exist or is not a string slice. It will be true if the field
+// exists and was an empty slice.
+func GetStringSliceFromSecret(secret *api.Secret, fieldName string) ([]string, bool) {
+	if secret == nil || secret.Data == nil {
+		return nil, false
+	}
+
+	rawVal, exists := secret.Data[fieldName]
+	if !exists {
+		return nil, false
+	}
+
+	rv := reflect.ValueOf(rawVal)
+	switch rv.Kind() {
+	case reflect.Slice:
+		if rv.IsNil() {
+			return nil, false
+		}
+	case reflect.Array:
+	default:
+		return nil, false
+	}
+
+	output := make([]string, rv.Len())
+
+	for i := 0; i < rv.Len(); i++ {
+		myStr, err := parseutil.ParseString(rv.Index(i).Interface())
+		if err != nil {
+			return nil, false
+		}
+		output[i] = myStr
+	}
+
+	return output, true
 }

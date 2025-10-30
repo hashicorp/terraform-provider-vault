@@ -5,7 +5,6 @@ package provider
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -231,25 +230,6 @@ func TestAuthLoginOIDC_Login(t *testing.T) {
 	}
 
 	tests := []authLoginTest{
-		{
-			name: "error-vault-token-set",
-			authLogin: &AuthLoginOIDC{
-				AuthLoginCommon{
-					authField: "baz",
-					mount:     "foo",
-					params: map[string]interface{}{
-						consts.FieldRole: "bob",
-					},
-					initialized: true,
-				},
-			},
-			handler: &testLoginHandler{
-				handlerFunc: handlerFunc,
-			},
-			token:     "foo",
-			wantErr:   true,
-			expectErr: errors.New("vault login client has a token set"),
-		},
 		{
 			name: "error-uninitialized",
 			authLogin: &AuthLoginOIDC{

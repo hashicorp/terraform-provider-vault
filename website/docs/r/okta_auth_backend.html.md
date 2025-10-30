@@ -56,12 +56,6 @@ If this is not supplied only locally configured groups will be enabled.
 
 * `bypass_okta_mfa` - (Optional) When true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.
 
-* `ttl` - (Optional) Duration after which authentication will be expired.
-[See the documentation for info on valid duration formats](https://golang.org/pkg/time/#ParseDuration).
-
-* `max_ttl` - (Optional) Maximum duration after which authentication will be expired
-[See the documentation for info on valid duration formats](https://golang.org/pkg/time/#ParseDuration).
-
 * `group` - (Optional) Associate Okta groups with policies within Vault.
 [See below for more details](#okta-group). 
 
@@ -81,6 +75,36 @@ If this is not supplied only locally configured groups will be enabled.
 * `groups` - (Optional) List of Okta groups to associate with this user
 
 * `policies` - (Optional) List of Vault policies to associate with this user
+
+* `tune` - (Optional) Extra configuration block. Structure is documented below.
+
+The `tune` block is used to tune the auth backend:
+
+* `default_lease_ttl` - (Optional) Specifies the default time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `max_lease_ttl` - (Optional) Specifies the maximum time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the request data object.
+
+* `listing_visibility` - (Optional) Specifies whether to show this mount in
+  the UI-specific listing endpoint. Valid values are "unauth" or "hidden".
+
+* `passthrough_request_headers` - (Optional) List of headers to whitelist and
+  pass from the request to the backend.
+
+* `allowed_response_headers` - (Optional) List of headers to whitelist and allowing
+  a plugin to include them in the response.
+
+* `token_type` - (Optional) Specifies the type of tokens that should be returned by
+  the mount. Valid values are "default-service", "default-batch", "service", "batch".
 
 ### Common Token Arguments
 

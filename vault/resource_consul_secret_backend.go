@@ -11,18 +11,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func consulSecretBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: consulSecretBackendCreate,
 		ReadContext:   provider.ReadContextWrapper(consulSecretBackendRead),
 		UpdateContext: consulSecretBackendUpdate,
@@ -115,6 +110,18 @@ func consulSecretBackendResource() *schema.Resource {
 			},
 		},
 	}, false)
+
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldDefaultLeaseTTLSeconds,
+		consts.FieldMaxLeaseTTLSeconds,
+		consts.FieldLocal,
+	))
+
+	return r
 }
 
 func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -130,22 +137,16 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 	caCert := d.Get("ca_cert").(string)
 	clientCert := d.Get("client_cert").(string)
 	clientKey := d.Get("client_key").(string)
-	local := d.Get("local").(bool)
 
 	configPath := consulSecretBackendConfigPath(path)
 
-	info := &api.MountInput{
-		Type:        consts.MountTypeConsul,
-		Description: d.Get("description").(string),
-		Local:       local,
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
-		},
-	}
-
 	log.Printf("[DEBUG] Mounting Consul backend at %q", path)
 
+	if err := createMount(ctx, d, meta, client, path, consts.MountTypeConsul); err != nil {
+		return diag.FromErr(err)
+	}
+
+	log.Printf("[DEBUG] Mounted Consul backend at %q", path)
 	// If a token isn't provided and the Vault version is less than 1.11, fail before
 	// mounting the path in Vault.
 	useAPIVer1 := provider.IsAPISupported(meta, provider.VaultVersion111)
@@ -154,11 +155,6 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 		return diag.Errorf(`error writing Consul configuration: no token provided and the 
 Vault client version does not meet the minimum requirement for this feature (Vault 1.11+)`)
 	}
-
-	if err := client.Sys().Mount(path, info); err != nil {
-		return diag.Errorf("error mounting to %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Mounted Consul backend at %q", path)
 
 	log.Printf("[DEBUG] Writing Consul configuration to %q", configPath)
 	data := map[string]interface{}{
@@ -197,37 +193,25 @@ func consulSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta i
 	path := d.Id()
 	configPath := consulSecretBackendConfigPath(path)
 
-	log.Printf("[DEBUG] Reading Consul backend mount %q from Vault", path)
-
-	mount, err := mountutil.GetMount(ctx, client, path)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", path)
-			d.SetId("")
-			return nil
-		}
-		return diag.FromErr(err)
-	}
-
-	log.Printf("[DEBUG] Read Consul backend mount %q from Vault", path)
-
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)
 	secret, err := client.Logical().Read(configPath)
 	if err != nil {
 		return diag.Errorf("error reading from Vault: %s", err)
 	}
 
-	d.Set("path", path)
-	d.Set("description", mount.Description)
-	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
-	d.Set("local", mount.Local)
+	if err := d.Set("path", path); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := readMount(ctx, d, meta, true, false); err != nil {
+		return diag.FromErr(err)
+	}
 
-	// token, sadly, we can't read out
-	// the API doesn't support it
-	// So... if it drifts, it drift.
-	d.Set("address", secret.Data["address"].(string))
-	d.Set("scheme", secret.Data["scheme"].(string))
+	if err := d.Set("address", secret.Data["address"].(string)); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("scheme", secret.Data["scheme"].(string)); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
@@ -238,26 +222,13 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 		return diag.FromErr(e)
 	}
 
-	path := d.Id()
-	configPath := consulSecretBackendConfigPath(path)
-
-	path, err := util.Remount(d, client, consts.FieldPath, false)
-	if err != nil {
+	if err := updateMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
-	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
-		config := api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
-		}
+	path := d.Id()
+	configPath := consulSecretBackendConfigPath(path)
 
-		log.Printf("[DEBUG] Updating lease TTLs for %q", path)
-		if err := client.Sys().TuneMount(path, config); err != nil {
-			return diag.Errorf("error updating mount TTLs for %q: %s", path, err)
-		}
-
-	}
 	if d.HasChange("address") || d.HasChange("token") || d.HasChange("scheme") ||
 		d.HasChange("ca_cert") || d.HasChange("client_cert") || d.HasChange("client_key") {
 		log.Printf("[DEBUG] Updating Consul configuration at %q", configPath)

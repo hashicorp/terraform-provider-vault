@@ -53,11 +53,27 @@ The following arguments are supported:
 
 * `max_path_length` - (Optional) The maximum path length to encode in the generated certificate
 
+* `key_usage` - (Optional) Specify the key usages to be added to the existing set of key usages ("CRL", "CertSign") on the generated certificate.
+
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
 
 * `use_csr_values` - (Optional) Preserve CSR values
 
 * `permitted_dns_domains` - (Optional) List of domains for which certificates are allowed to be issued
+
+* `excluded_dns_domains` - (Optional) List of domains for which certificates are not allowed to be issued. Requires Vault version 1.19+.
+
+* `permitted_ip_ranges` - (Optional)  List of IP ranges for which certificates are allowed to be issued. Requires Vault version 1.19+.
+
+* `excluded_ip_ranges` - (Optional) List of IP ranges for which certificates are not allowed to be issued. Requires Vault version 1.19+.
+
+* `permitted_email_addresses` - (Optional) List of email addresses for which certificates are allowed to be issued. Requires Vault version 1.19+.
+
+* `excluded_email_addresses` - (Optional) List of email addresses for which certificates are not allowed to be issued. Requires Vault version 1.19+.
+
+* `permitted_uri_domains` - (Optional) List of URI domains for which certificates are allowed to be issued. Requires Vault version 1.19+.
+
+* `excluded_uri_domains` - (Optional) List of URI domains for which certificates are not allowed to be issued. Requires Vault version 1.19+.
 
 * `ou` - (Optional) The organization unit
 
@@ -73,12 +89,24 @@ The following arguments are supported:
 
 * `postal_code` - (Optional) The postal code
 
+* `signature_bits` - (Optional) The number of bits to use in the signature algorithm
+
+* `skid` - (Optional) Value for the Subject Key Identifier field (see https://tools.ietf.org/html/rfc5280#section-4.2.1.2). Specified as a string in hex format.
+
+* `use_pss` - (Optional) Specifies whether or not to use PSS signatures over PKCS#1v1.5 signatures when a RSA-type issuer is used. Ignored for ECDSA/Ed25519 issuers.
+
 * `revoke` - If set to `true`, the certificate will be revoked on resource destruction.
 
 * `issuer_ref` - (Optional) Specifies the default issuer of this request. May
   be the value `default`, a name, or an issuer ID. Use ACLs to prevent access to
   the `/pki/issuer/:issuer_ref/{issue,sign}/:name` paths to prevent users
   overriding the role's `issuer_ref` value.
+
+* `not_after` - (Optional) Set the Not After field of the certificate with specified date value. 
+The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the Y10K end date 
+for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.
+
+* `not_before_duration` - (Optional) Specifies the [duration](https://developer.hashicorp.com/vault/docs/concepts/duration-format) by which to backdate the NotBefore property.
 
 ## Attributes Reference
 

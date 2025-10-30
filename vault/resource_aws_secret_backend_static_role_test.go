@@ -4,12 +4,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -25,14 +26,43 @@ func TestAccAWSSecretBackendStaticRole(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
 		},
-		ProviderFactories: providerFactories,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAWSStaticReourceConfig(mount, a, s, username),
+				Config: testAWSStaticResourceConfig(mount, a, s, username),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, "test"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "vault-static-roles-test"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "3600"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+		},
+	})
+}
+
+func TestAccAWSSecretBackendStaticAssumeRole(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-aws-static")
+	a, s := testutil.GetTestAWSCreds(t)
+	resourceName := "vault_aws_secret_backend_static_role.role"
+	username := testutil.SkipTestEnvUnset(t, "AWS_STATIC_USER")[0]
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAWSStaticAssumeResourceConfig(mount, a, s, username),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, "test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "VaultEcoTestUserTwo"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAssumeRoleArn, "arn:aws:iam::501359222269:role/VaultEcoTestUserTwo"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAssumeRoleSessionName, "test-session"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, "test-external-id"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),
@@ -124,6 +154,30 @@ resource "vault_aws_secret_backend_static_role" "role" {
   rotation_period = "3600"
 }`
 
-func testAWSStaticReourceConfig(mount, access, secret, username string) string {
+const testAWSStaticAssumeResource = `
+resource "vault_aws_secret_backend" "aws" {
+  path = "%s"
+  description = "Obtain AWS credentials." 
+  iam_endpoint="https://iam.amazonaws.com" 
+  sts_endpoint="https://sts.amazonaws.com" 
+  access_key = "%s"
+  secret_key = "%s"
+}
+
+resource "vault_aws_secret_backend_static_role" "role" {
+  backend = vault_aws_secret_backend.aws.path
+  name = "test"
+  username = "%s"
+  assume_role_arn = "arn:aws:iam::501359222269:role/VaultEcoTestUserTwo"
+  assume_role_session_name = "test-session"
+  external_id = "test-external-id"
+  rotation_period = "3600"
+}`
+
+func testAWSStaticResourceConfig(mount, access, secret, username string) string {
 	return fmt.Sprintf(testAWSStaticResource, mount, access, secret, username)
+}
+
+func testAWSStaticAssumeResourceConfig(mount, access, secret, username string) string {
+	return fmt.Sprintf(testAWSStaticAssumeResource, mount, access, secret, username)
 }

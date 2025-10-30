@@ -10,11 +10,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
@@ -198,11 +198,12 @@ func ldapAuthBackendResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
+		consts.FieldTune: authMountTuneSchema(),
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		SchemaVersion: 2,
 		// Handle custom state upgrade case since schema version was already 1
 		StateUpgraders: []schema.StateUpgrader{
@@ -222,10 +223,19 @@ func ldapAuthBackendResource() *schema.Resource {
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema:        fields,
 	}, true)
+
+	// add automated rotation fields to the resource
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
+	return r
 }
 
 func ldapAuthBackendConfigPath(path string) string {
 	return "auth/" + strings.Trim(path, "/") + "/config"
+}
+
+func ldapAuthBackendTunePath(path string) string {
+	return "auth/" + strings.Trim(path, "/") + "/tune"
 }
 
 func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -290,6 +300,11 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		}
 	}
 
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
+	}
+
 	if v, ok := d.GetOk(consts.FieldBindPass); ok {
 		data[consts.FieldBindPass] = v.(string)
 	}
@@ -316,6 +331,18 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	}
 	log.Printf("[DEBUG] Wrote LDAP config %q", path)
 
+	if d.HasChange(consts.FieldTune) {
+		log.Printf("[DEBUG] LDAP Auth '%q' tune configuration changed", d.Id())
+		if raw, ok := d.GetOk(consts.FieldTune); ok {
+			log.Printf("[DEBUG] Writing LDAP auth tune to '%q'", d.Id())
+
+			if err := authMountTune(ctx, client, "auth/"+d.Id(), raw); err != nil {
+				return diag.FromErr(err)
+			}
+
+			log.Printf("[DEBUG] Written LDAP auth tune to '%q'", d.Id())
+		}
+	}
 	return ldapAuthBackendRead(ctx, d, meta)
 }
 
@@ -342,6 +369,7 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	d.Set(consts.FieldAccessor, mount.Accessor)
 	d.Set(consts.FieldLocal, mount.Local)
 
+	tunePath := ldapAuthBackendTunePath(path)
 	path = ldapAuthBackendConfigPath(path)
 
 	log.Printf("[DEBUG] Reading LDAP auth backend config %q", path)
@@ -385,10 +413,33 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		}
 	}
 
+	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer119Ent {
+		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, d.Id()); err != nil {
+			return diag.Errorf("error reading rotation fields from LDAP Auth Backend %q: %q", path, err)
+		}
+	}
+
 	if v, ok := resp.Data[consts.FieldConnectionTimeout]; ok {
 		if err := d.Set(consts.FieldConnectionTimeout, v); err != nil {
 			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldConnectionTimeout, path, err)
 		}
+	}
+
+	// Tune block support
+	log.Printf("[DEBUG] Reading ldap auth tune from %q", tunePath)
+	rawTune, err := authMountTuneGet(ctx, client, tunePath)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	input, err := retrieveMountConfigInput(d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	mergedTune := mergeAuthMethodTune(rawTune, input)
+	if err := d.Set(consts.FieldTune, mergedTune); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", tunePath, err)
+		return diag.FromErr(err)
 	}
 
 	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API

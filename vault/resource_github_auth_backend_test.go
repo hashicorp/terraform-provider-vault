@@ -4,13 +4,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -33,9 +34,9 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg),
@@ -49,8 +50,13 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					// expect computed value for organization_id
 					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "default-service"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "1h"),
+					// ensure the global default effect from Vault tune API is ignored,
+					// these fields should stay empty
+					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
 				),
 			},
 			{
@@ -66,6 +72,12 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "2400"),
 					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "6000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "batch"),
+					// ensure the global default effect from Vault tune API is ignored,
+					// these fields should stay empty
+					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", ""),
 				),
 			},
 		},
@@ -84,9 +96,9 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubAuthBackendConfig_ns(ns, path, testGHOrg),
@@ -137,9 +149,9 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubAuthBackendConfig_tuning(backend),
@@ -210,9 +222,9 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 	resourceName := resourceType + ".test"
 	var resAuth api.AuthMount
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubAuthBackendConfig_description(path, testGHOrg, "Github Auth Mount"),
@@ -242,30 +254,7 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 	})
 }
 
-func TestAccGithubAuthBackend_importTuning(t *testing.T) {
-	testutil.SkipTestAcc(t)
-
-	path := acctest.RandomWithPrefix("github")
-	resourceType := "vault_github_auth_backend"
-	resourceName := resourceType + ".test"
-	var resAuth api.AuthMount
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccGithubAuthBackendConfig_tuning(path),
-				Check: testutil.TestAccCheckAuthMountExists(resourceName,
-					&resAuth,
-					testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
-			},
-			testutil.GetImportTestStep(resourceName, false, nil, "disable_remount"),
-		},
-	})
-}
-
-func TestGithubAuthBackend_remount(t *testing.T) {
+func TestAccGithubAuthBackend_remount(t *testing.T) {
 	testutil.SkipTestAcc(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gh")
@@ -278,9 +267,9 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg),
@@ -294,7 +283,6 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 					// expect computed value for organization_id
 					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
 				),
 			},
@@ -310,11 +298,56 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 					// expect computed value for organization_id
 					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "disable_remount"),
+		},
+	})
+}
+
+func TestAccGithubAuthBackend_importTune(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
+	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
+	backend := acctest.RandomWithPrefix("github-import-tune")
+	resourceType := "vault_github_auth_backend"
+	resourceName := resourceType + ".test"
+	var resAuth api.AuthMount
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccGithubAuthBackendConfig_tuning(backend),
+				Check: resource.ComposeTestCheckFunc(
+					testutil.TestAccCheckAuthMountExists(resourceName,
+						&resAuth,
+						testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
+					resource.TestCheckResourceAttr(resourceName, "id", backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
+					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "10m"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "20m"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "batch"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.1", "key2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.0", "key3"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.1", "key4"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -325,7 +358,10 @@ resource "vault_github_auth_backend" "test" {
 	path = "%s"
 	organization = "%s"
 	token_ttl = 1200
-	token_max_ttl = 3000
+	tune {
+		token_type = "default-service"
+		max_lease_ttl = "1h"
+	}
 }
 `, path, org)
 }
@@ -356,6 +392,9 @@ resource "vault_github_auth_backend" "test" {
 	organization_id = %d
 	token_ttl = 2400
 	token_max_ttl = 6000
+	tune {
+		token_type = "batch"
+	}
 }
 `, path, org, orgID)
 }

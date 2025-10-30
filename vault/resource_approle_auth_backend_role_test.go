@@ -4,12 +4,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -21,9 +22,9 @@ func TestAccAppRoleAuthBackendRole_import(t *testing.T) {
 	roleID := acctest.RandomWithPrefix("test-role-id")
 	resourcePath := "vault_approle_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_full(backend, role, roleID),
@@ -65,9 +66,9 @@ func TestAccAppRoleAuthBackendRole_basic(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role),
@@ -107,9 +108,9 @@ func TestAccAppRoleAuthBackendRole_update(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role),
@@ -180,9 +181,9 @@ func TestAccAppRoleAuthBackendRole_full(t *testing.T) {
 	resourcePath := "vault_approle_auth_backend_role.role"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_full(backend, role, roleID),
@@ -217,9 +218,9 @@ func TestAccAppRoleAuthBackendRole_fullUpdate(t *testing.T) {
 	newRoleID := acctest.RandomWithPrefix("test-role-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleDestroy,
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleConfig_full(backend, role, roleID),

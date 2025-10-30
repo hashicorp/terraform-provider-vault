@@ -4,11 +4,12 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -21,17 +22,17 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 	resourceType := "vault_kubernetes_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeKubernetes, ""),
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKubernetes, ""),
 		Steps: []resource.TestStep{
 			{
 				Config: testKubernetesSecretBackend_initialConfig(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, ""),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "0"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAuditNonHMACRequestKeys+".#", "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAuditNonHMACResponseKeys+".#", "0"),
@@ -47,8 +48,8 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "kubernetes secrets engine"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "7200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "7200"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAuditNonHMACRequestKeys+".0", "test_req"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAuditNonHMACResponseKeys+".0", "test_res"),
@@ -64,8 +65,8 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "kubernetes secrets description updated"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "0"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAuditNonHMACRequestKeys+".#", "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAuditNonHMACResponseKeys+".#", "0"),

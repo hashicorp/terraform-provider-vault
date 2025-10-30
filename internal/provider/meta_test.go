@@ -4,17 +4,16 @@
 package provider
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"reflect"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
@@ -180,6 +179,43 @@ func TestGetClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// mockVaultHandler handles Vault API calls made in setClient()
+	// when client is not pre-set in ProviderMeta.
+	//
+	// When client is pre-set (e.g. to rootClient) in ProviderMeta,
+	// we return early in setClient() and never make said Vault API calls.
+	mockVaultHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/auth/token/lookup-self":
+			response := map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":        "test-token",
+					"policies":  []string{"default"},
+					"ttl":       3600,
+					"renewable": true,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		case "/v1/auth/token/create":
+			response := map[string]interface{}{
+				"auth": map[string]interface{}{
+					"client_token":   "child-token-123",
+					"policies":       []string{"default"},
+					"lease_duration": 3600,
+					"renewable":      true,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		default:
+			w.WriteHeader(http.StatusNotImplemented)
+		}
+	})
+
+	config, ln := testutil.TestHTTPServer(t, mockVaultHandler)
+	defer ln.Close()
+
 	// testing schema.ResourceDiff is not covered here
 	// since its field members are private.
 
@@ -212,15 +248,16 @@ func TestGetClient(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		meta      interface{}
-		ifcNS     string
-		envNS     string
-		want      string
-		wantErr   bool
-		expectErr error
-		setAttr   bool
-		ifaceFunc func(t *testing.T, set bool, ns string) interface{}
+		name        string
+		meta        interface{}
+		ifcNS       string
+		envNSImport string
+		envNS       string
+		want        string
+		wantErr     bool
+		expectErr   error
+		setAttr     bool
+		ifaceFunc   func(t *testing.T, set bool, ns string) interface{}
 	}{
 		{
 			name:  "string",
@@ -263,10 +300,10 @@ func TestGetClient(t *testing.T) {
 				client:       rootClient,
 				resourceData: nil,
 			},
-			ifaceFunc: instanceState,
-			envNS:     "ns1-import-env",
-			want:      "ns1-import-env",
-			setAttr:   false,
+			ifaceFunc:   instanceState,
+			envNSImport: "ns1-import-env",
+			want:        "ns1-import-env",
+			setAttr:     false,
 		},
 		{
 			name: "ignore-env-rsc-data",
@@ -274,11 +311,11 @@ func TestGetClient(t *testing.T) {
 				client:       rootClient,
 				resourceData: nil,
 			},
-			ifaceFunc: rscData,
-			ifcNS:     "ns1",
-			envNS:     "ns1-import-env",
-			want:      "ns1",
-			setAttr:   true,
+			ifaceFunc:   rscData,
+			ifcNS:       "ns1",
+			envNSImport: "ns1-import-env",
+			want:        "ns1",
+			setAttr:     true,
 		},
 		{
 			name: "ignore-env-inst-state",
@@ -286,10 +323,47 @@ func TestGetClient(t *testing.T) {
 				client:       rootClient,
 				resourceData: nil,
 			},
+			ifaceFunc:   instanceState,
+			ifcNS:       "ns1",
+			envNSImport: "ns1-import-env",
+			want:        "ns1",
+			setAttr:     true,
+		},
+		{
+			name: "prepend-env-string",
+			meta: &ProviderMeta{
+				client:       nil, // nil client so setClient() does not return early
+				resourceData: nil,
+			},
+			ifaceFunc: func(t *testing.T, set bool, ns string) interface{} {
+				return "ns1-string"
+			},
+			envNS:   "ns0-from-env",
+			want:    "ns0-from-env/ns1-string",
+			setAttr: true,
+		},
+		{
+			name: "prepend-env-rsc-data",
+			meta: &ProviderMeta{
+				client:       nil, // nil client so setClient() does not return early
+				resourceData: nil,
+			},
+			ifaceFunc: rscData,
+			ifcNS:     "ns1-rsc-data",
+			envNS:     "ns0-from-env",
+			want:      "ns0-from-env/ns1-rsc-data",
+			setAttr:   true,
+		},
+		{
+			name: "prepend-env-inst-state",
+			meta: &ProviderMeta{
+				client:       nil, // nil client so setClient() does not return early
+				resourceData: nil,
+			},
 			ifaceFunc: instanceState,
-			ifcNS:     "ns1",
-			envNS:     "ns1-import-env",
-			want:      "ns1",
+			ifcNS:     "ns1-inst-state",
+			envNS:     "ns0-from-env",
+			want:      "ns0-from-env/ns1-inst-state",
 			setAttr:   true,
 		},
 		{
@@ -315,15 +389,34 @@ func TestGetClient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.meta != nil {
 				m := tt.meta.(*ProviderMeta)
-				m.resourceData = schema.TestResourceDataRaw(t,
-					map[string]*schema.Schema{
-						consts.FieldNamespace: {
-							Type:     schema.TypeString,
-							Required: true,
-						},
+
+				s := map[string]*schema.Schema{
+					consts.FieldNamespace: {
+						Type:     schema.TypeString,
+						Required: true,
 					},
-					map[string]interface{}{},
+				}
+				raw := map[string]interface{}{}
+
+				if m.client == nil {
+					// If client is not pre-set, mock Vault server to handle Vault API calls during setClient().
+					s[consts.FieldAddress] = &schema.Schema{
+						Type:     schema.TypeString,
+						Required: true,
+					}
+					s[consts.FieldToken] = &schema.Schema{
+						Type:     schema.TypeString,
+						Required: true,
+					}
+					raw[consts.FieldAddress] = config.Address
+					raw[consts.FieldToken] = "test-token"
+				}
+
+				m.resourceData = schema.TestResourceDataRaw(t,
+					s,
+					raw,
 				)
+
 				tt.meta = m
 			}
 
@@ -332,12 +425,20 @@ func TestGetClient(t *testing.T) {
 				i = tt.ifaceFunc(t, tt.setAttr, tt.ifcNS)
 			}
 
-			// set ns in env
-			if tt.envNS != "" {
-				if err := os.Setenv(consts.EnvVarVaultNamespaceImport, tt.envNS); err != nil {
+			// set TERRAFORM_VAULT_NAMESPACE_IMPORT ns in env
+			if tt.envNSImport != "" {
+				if err := os.Setenv(consts.EnvVarVaultNamespaceImport, tt.envNSImport); err != nil {
 					t.Fatal(err)
 				}
 				defer os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+			}
+
+			// set VAULT_NAMESPACE ns in env
+			if tt.envNS != "" {
+				if err := os.Setenv("VAULT_NAMESPACE", tt.envNS); err != nil {
+					t.Fatal(err)
+				}
+				defer os.Unsetenv("VAULT_NAMESPACE")
 			}
 
 			got, err := GetClient(i, tt.meta)
@@ -531,495 +632,188 @@ func TestIsEnterpriseSupported(t *testing.T) {
 	}
 }
 
-func TestNewProviderMeta(t *testing.T) {
-	testutil.SkipTestAcc(t)
-	testutil.SkipTestAccEnt(t)
-	testutil.TestAccPreCheck(t)
-
-	nsPrefix := acctest.RandomWithPrefix("ns")
-
-	defaultUser := "alice"
-	defaultPassword := "f00bazB1ff"
-
-	rootProvider := NewProvider(nil, nil)
-	pr := &schema.Resource{
-		Schema: rootProvider.Schema,
-	}
-
-	tests := []struct {
-		name                      string
-		d                         *schema.ResourceData
-		data                      map[string]interface{}
-		wantNamespace             string
-		tokenNamespace            string
-		authLoginNamespace        string
-		wantErr                   bool
-		checkSetSetTokenNamespace bool
-		wantNamespaceFromToken    string
+// TestGetResourceDataStr tests the GetResourceDataStr function.
+// Its subtests should not be run in parallel because it mutates the test runner's environment.
+func TestGetResourceDataStr(t *testing.T) {
+	tests := map[string]struct {
+		schemaData   map[string]interface{}
+		field        string
+		env          string
+		envValue     string
+		defaultValue string
+		expected     string
 	}{
-		{
-			name:    "invalid-nil-ResourceData",
-			d:       nil,
-			wantErr: true,
-		},
-		{
-			// expect provider namespace set.
-			name: "with-provider-ns-only",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldNamespace:           nsPrefix + "prov",
-				consts.FieldSkipGetVaultVersion: true,
+		"field: field present": {
+			schemaData: map[string]interface{}{
+				"test_field": "field_value",
 			},
-			wantNamespace: nsPrefix + "prov",
-			wantErr:       false,
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "env_value",
+			defaultValue: "default_value",
+			expected:     "field_value",
 		},
-		{
-			// expect token namespace set
-			name: "with-token-ns-only",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldSkipGetVaultVersion: true,
-				consts.FieldSkipChildToken:      true,
-			},
-			tokenNamespace: nsPrefix + "token-ns-only",
-			wantNamespace:  nsPrefix + "token-ns-only",
-			wantErr:        false,
+		"env: field missing, env present": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "env_value",
+			defaultValue: "default_value",
+			expected:     "env_value",
 		},
-		{
-			// expect provider namespace set.
-			name: "with-provider-ns-and-token-ns",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldNamespace:           nsPrefix + "prov-and-token",
-				consts.FieldSkipGetVaultVersion: true,
-				consts.FieldSkipChildToken:      true,
+		"env: field empty, env present": {
+			schemaData: map[string]interface{}{
+				"test_field": "",
 			},
-			tokenNamespace: nsPrefix + "token-ns",
-			wantNamespace:  nsPrefix + "prov-and-token",
-			wantErr:        false,
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "env_value",
+			defaultValue: "default_value",
+			expected:     "env_value",
 		},
-		{
-			// expect auth_login namespace set.
-			name: "with-auth-login-and-ns",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldSkipGetVaultVersion: true,
-				consts.FieldSkipChildToken:      true,
-				consts.FieldAuthLoginUserpass: []map[string]interface{}{
-					{
-						consts.FieldNamespace: nsPrefix + "auth-ns",
-						consts.FieldMount:     consts.MountTypeUserpass,
-						consts.FieldUsername:  defaultUser,
-						consts.FieldPassword:  defaultPassword,
-					},
-				},
-			},
-			authLoginNamespace: nsPrefix + "auth-ns",
-			wantNamespace:      nsPrefix + "auth-ns",
-			wantErr:            false,
+		"default: field missing, env empty": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "",
+			defaultValue: "default_value",
+			expected:     "default_value",
 		},
-		{
-			// expect provider namespace set.
-			name: "with-provider-ns-and-auth-login-with-ns",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldNamespace:           nsPrefix + "prov-ns-prov-ns",
-				consts.FieldSkipGetVaultVersion: true,
-				consts.FieldSkipChildToken:      true,
-				consts.FieldAuthLoginUserpass: []map[string]interface{}{
-					{
-						consts.FieldNamespace: nsPrefix + "auth-ns-auth-ns",
-						consts.FieldMount:     consts.MountTypeUserpass,
-						consts.FieldUsername:  defaultUser,
-						consts.FieldPassword:  defaultPassword,
-					},
-				},
-			},
-			authLoginNamespace: nsPrefix + "auth-ns-auth-ns",
-			wantNamespace:      nsPrefix + "prov-ns-prov-ns",
-			wantErr:            false,
+		"default: field missing, env missing": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "",
+			envValue:     "",
+			defaultValue: "default_value",
+			expected:     "default_value",
 		},
-		{
-			// expect token based namespace to be ignored.
-			name: "set-namespace-from-token-false",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldSkipGetVaultVersion:   true,
-				consts.FieldSetNamespaceFromToken: false,
-				consts.FieldSkipChildToken:        true,
+		"default: field empty, env empty": {
+			schemaData: map[string]interface{}{
+				"test_field": "",
 			},
-			tokenNamespace:            nsPrefix + "set-ns-from-token-auth-false-ignored",
-			wantNamespace:             nsPrefix + "set-ns-from-token-auth-false-ignored",
-			checkSetSetTokenNamespace: true,
-			wantNamespaceFromToken:    "",
-			wantErr:                   false,
-		},
-		{
-			// expect token based namespace to be ignored.
-			name: "set-namespace-from-token-true",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldSkipGetVaultVersion:   true,
-				consts.FieldSetNamespaceFromToken: true,
-				consts.FieldSkipChildToken:        true,
-				consts.FieldAuthLoginUserpass: []map[string]interface{}{
-					{
-						consts.FieldNamespace: nsPrefix + "set-ns-from-token-auth-true",
-						consts.FieldMount:     consts.MountTypeUserpass,
-						consts.FieldUsername:  defaultUser,
-						consts.FieldPassword:  defaultPassword,
-					},
-				},
-			},
-			authLoginNamespace:        nsPrefix + "set-ns-from-token-auth-true",
-			wantNamespace:             nsPrefix + "set-ns-from-token-auth-true",
-			checkSetSetTokenNamespace: true,
-			wantNamespaceFromToken:    nsPrefix + "set-ns-from-token-auth-true",
-			wantErr:                   false,
+			field:        "test_field",
+			envValue:     "",
+			defaultValue: "default_value",
+			expected:     "default_value",
 		},
 	}
 
-	createNamespace := func(t *testing.T, client *api.Client, ns string) {
-		t.Helper()
-		t.Cleanup(func() {
-			err := backoff.Retry(func() error {
-				_, err := client.Logical().Delete(consts.SysNamespaceRoot + ns)
-				return err
-			}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Microsecond*500), 10))
-			if err != nil {
-				t.Fatalf("failed to delete namespace %q, err=%s", ns, err)
-			}
-		})
-		if _, err := client.Logical().Write(
-			consts.SysNamespaceRoot+ns, nil); err != nil {
-			t.Fatalf("failed to create namespace, err=%s", err)
-		}
-	}
-
-	config := api.DefaultConfig()
-	config.CloneToken = true
-	client, err := api.NewClient(config)
-	if err != nil {
-		t.Fatalf("failed to create Vault client, err=%s", err)
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			if tt.authLoginNamespace != "" {
-				createNamespace(t, client, tt.authLoginNamespace)
-				options := &api.EnableAuthOptions{
-					Type:        consts.MountTypeUserpass,
-					Description: "test auth_userpass",
-					Local:       true,
-				}
-
-				clone, err := client.Clone()
-				if err != nil {
-					t.Fatalf("failed to clone Vault client, err=%s", err)
-				}
-
-				clone.SetNamespace(tt.authLoginNamespace)
-				if err := clone.Sys().EnableAuthWithOptions(consts.MountTypeUserpass, options); err != nil {
-					t.Fatalf("failed to enable auth, err=%s", err)
-				}
-
-				if _, err := clone.Logical().Write("auth/userpass/users/alice",
-					map[string]interface{}{
-						consts.FieldPassword:      defaultPassword,
-						consts.FieldTokenPolicies: []string{"admin", "default"},
-					}); err != nil {
-					t.Fatalf("failed to create user, err=%s", err)
-				}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tt.env != "" {
+				t.Setenv(tt.env, tt.envValue)
 			}
 
-			if tt.tokenNamespace != "" {
-				if tt.data == nil {
-					t.Fatal("test data cannot be nil when tokenNamespace set")
-				}
-
-				createNamespace(t, client, tt.tokenNamespace)
-				clone, err := client.Clone()
-				if err != nil {
-					t.Fatalf("failed to clone Vault client, err=%s", err)
-				}
-
-				// in order not to trigger the min TTL warning we can add some time to the min.
-				tokenTTL := TokenTTLMinRecommended + time.Second*10
-				clone.SetNamespace(tt.tokenNamespace)
-				resp, err := clone.Auth().Token().Create(&api.TokenCreateRequest{
-					TTL: tokenTTL.String(),
-				})
-				if err != nil {
-					t.Fatalf("failed to create Vault token, err=%s", err)
-				}
-				tt.data[consts.FieldToken] = resp.Auth.ClientToken
+			testSchema := map[string]*schema.Schema{
+				"test_field": {
+					Type:     schema.TypeString,
+					Optional: true,
+				},
 			}
 
-			for k, v := range tt.data {
-				if err := tt.d.Set(k, v); err != nil {
-					t.Fatalf("failed to set resource data, key=%s, value=%#v", k, v)
-				}
-			}
+			d := schema.TestResourceDataRaw(t, testSchema, tt.schemaData)
 
-			got, err := NewProviderMeta(tt.d)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewProviderMeta() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if err != nil {
-				if got != nil {
-					t.Errorf("NewProviderMeta() got = %v, want nil", got)
-				}
-				return
-			}
-
-			p, ok := got.(*ProviderMeta)
-			if !ok {
-				t.Fatalf("invalid type got %T, expected %T", got, &ProviderMeta{})
-			}
-
-			client, err := p.GetClient()
-			if err != nil {
-				t.Fatalf("got unexpected error %s", err)
-			}
-
-			if !reflect.DeepEqual(client.Namespace(), tt.wantNamespace) {
-				t.Errorf("NewProviderMeta() got ns = %v, want ns %v", p.client.Namespace(), tt.wantNamespace)
-			}
-
-			if tt.checkSetSetTokenNamespace && tt.wantNamespaceFromToken != tt.d.Get(consts.FieldNamespace).(string) {
-				t.Errorf("NewProviderMeta() got ns = %q, want ns %q", tt.d.Get(consts.FieldNamespace).(string), tt.wantNamespaceFromToken)
-			}
-
-			if client.Token() == "" {
-				t.Errorf("NewProviderMeta() got empty Client token")
+			result := GetResourceDataStr(d, tt.field, tt.env, tt.defaultValue)
+			if result != tt.expected {
+				t.Errorf("GetResourceDataStr() got = %v, want %v", result, tt.expected)
 			}
 		})
 	}
 }
 
-func TestNewProviderMeta_Cert(t *testing.T) {
-	testutil.SkipTestAcc(t)
-	testutil.SkipTestAccEnt(t)
-	testutil.TestAccPreCheck(t)
-
-	nsPrefix := acctest.RandomWithPrefix("ns")
-
-	defaultUser := "alice"
-	defaultPassword := "f00bazB1ff"
-
-	rootProvider := NewProvider(nil, nil)
-	pr := &schema.Resource{
-		Schema: rootProvider.Schema,
-	}
-
-	tests := []struct {
-		name               string
-		d                  *schema.ResourceData
-		data               map[string]interface{}
-		wantNamespace      string
-		tokenNamespace     string
-		authLoginNamespace string
-		wantErr            bool
+// TestGetResourceDataInt tests the GetResourceDataInt function.
+// Its subtests should not be run in parallel because it mutates the test runner's environment.
+func TestGetResourceDataInt(t *testing.T) {
+	tests := map[string]struct {
+		schemaData   map[string]interface{}
+		field        string
+		env          string
+		envValue     string
+		defaultValue int
+		expected     int
 	}{
-		{
-			name:    "invalid-nil-ResourceData",
-			d:       nil,
-			wantErr: true,
-		},
-		{
-			// expect provider namespace set.
-			name: "with-provider-ns-only",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldNamespace:           nsPrefix + "prov",
-				consts.FieldSkipGetVaultVersion: true,
+		"field: field present": {
+			schemaData: map[string]interface{}{
+				"test_field": 42,
 			},
-			wantNamespace: nsPrefix + "prov",
-			wantErr:       false,
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "100",
+			defaultValue: 200,
+			expected:     42,
 		},
-		{
-			// expect token namespace set
-			name: "with-token-ns-only",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldSkipGetVaultVersion: true,
-				consts.FieldSkipChildToken:      true,
-			},
-			tokenNamespace: nsPrefix + "token-ns-only",
-			wantNamespace:  nsPrefix + "token-ns-only",
-			wantErr:        false,
+		"env: field missing, env present": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "100",
+			defaultValue: 200,
+			expected:     100,
 		},
-		{
-			// expect provider namespace set.
-			name: "with-provider-ns-and-token-ns",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldNamespace:           nsPrefix + "prov-and-token",
-				consts.FieldSkipGetVaultVersion: true,
-				consts.FieldSkipChildToken:      true,
+		"env: field zero, env present": {
+			schemaData: map[string]interface{}{
+				"test_field": 0,
 			},
-			tokenNamespace: nsPrefix + "token-ns",
-			wantNamespace:  nsPrefix + "prov-and-token",
-			wantErr:        false,
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "100",
+			defaultValue: 200,
+			expected:     100,
 		},
-		{
-			// expect auth_login namespace set.
-			name: "with-auth-login-and-ns",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldSkipGetVaultVersion: true,
-				consts.FieldSkipChildToken:      true,
-				consts.FieldAuthLoginUserpass: []map[string]interface{}{
-					{
-						consts.FieldNamespace: nsPrefix + "auth-ns",
-						consts.FieldMount:     consts.MountTypeUserpass,
-						consts.FieldUsername:  defaultUser,
-						consts.FieldPassword:  defaultPassword,
-					},
-				},
-			},
-			authLoginNamespace: nsPrefix + "auth-ns",
-			wantNamespace:      nsPrefix + "auth-ns",
-			wantErr:            false,
+		"default: field missing, env empty": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "",
+			defaultValue: 200,
+			expected:     200,
 		},
-		{
-			// expect provider namespace set.
-			name: "with-provider-ns-and-auth-login-with-ns",
-			d:    pr.TestResourceData(),
-			data: map[string]interface{}{
-				consts.FieldNamespace:           nsPrefix + "prov-ns-auth-ns",
-				consts.FieldSkipGetVaultVersion: true,
-				consts.FieldSkipChildToken:      true,
-				consts.FieldAuthLoginUserpass: []map[string]interface{}{
-					{
-						consts.FieldNamespace: nsPrefix + "auth-ns-prov-ns",
-						consts.FieldMount:     consts.MountTypeUserpass,
-						consts.FieldUsername:  defaultUser,
-						consts.FieldPassword:  defaultPassword,
-					},
-				},
+		"default: field missing, env missing": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "",
+			envValue:     "",
+			defaultValue: 200,
+			expected:     200,
+		},
+		"default: field zero, env empty": {
+			schemaData: map[string]interface{}{
+				"test_field": 0,
 			},
-			authLoginNamespace: nsPrefix + "auth-ns-prov-ns",
-			wantNamespace:      nsPrefix + "prov-ns-auth-ns",
-			wantErr:            false,
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "",
+			defaultValue: 200,
+			expected:     200,
+		},
+		"default: field missing, env invalid": {
+			schemaData:   map[string]interface{}{},
+			field:        "test_field",
+			env:          "TEST_ENV",
+			envValue:     "invalid_int",
+			defaultValue: 200,
+			expected:     200,
 		},
 	}
 
-	createNamespace := func(t *testing.T, client *api.Client, ns string) {
-		t.Helper()
-		t.Cleanup(func() {
-			err := backoff.Retry(func() error {
-				_, err := client.Logical().Delete(consts.SysNamespaceRoot + ns)
-				return err
-			}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Microsecond*500), 10))
-			if err != nil {
-				t.Fatalf("failed to delete namespace %q, err=%s", ns, err)
-			}
-		})
-		if _, err := client.Logical().Write(
-			consts.SysNamespaceRoot+ns, nil); err != nil {
-			t.Fatalf("failed to create namespace, err=%s", err)
-		}
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			config := api.DefaultConfig()
-			config.CloneToken = true
-			client, err := api.NewClient(config)
-			if err != nil {
-				t.Fatalf("failed to create Vault client, err=%s", err)
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tt.env != "" {
+				t.Setenv(tt.env, tt.envValue)
 			}
 
-			if tt.authLoginNamespace != "" {
-				createNamespace(t, client, tt.authLoginNamespace)
-				options := &api.EnableAuthOptions{
-					Type:        consts.MountTypeUserpass,
-					Description: "test auth_userpass",
-					Local:       true,
-				}
-
-				clone, err := client.Clone()
-				if err != nil {
-					t.Fatalf("failed to clone Vault client, err=%s", err)
-				}
-
-				clone.SetNamespace(tt.authLoginNamespace)
-				if err := clone.Sys().EnableAuthWithOptions(consts.MountTypeUserpass, options); err != nil {
-					t.Fatalf("failed to enable auth, err=%s", err)
-				}
-
-				if _, err := clone.Logical().Write("auth/userpass/users/alice",
-					map[string]interface{}{
-						consts.FieldPassword:      defaultPassword,
-						consts.FieldTokenPolicies: []string{"admin", "default"},
-					}); err != nil {
-					t.Fatalf("failed to create user, err=%s", err)
-				}
+			testSchema := map[string]*schema.Schema{
+				"test_field": {
+					Type:     schema.TypeInt,
+					Optional: true,
+				},
 			}
 
-			if tt.tokenNamespace != "" {
-				if tt.data == nil {
-					t.Fatal("test data cannot be nil when tokenNamespace set")
-				}
+			d := schema.TestResourceDataRaw(t, testSchema, tt.schemaData)
 
-				createNamespace(t, client, tt.tokenNamespace)
-				clone, err := client.Clone()
-				if err != nil {
-					t.Fatalf("failed to clone Vault client, err=%s", err)
-				}
-
-				// in order not to trigger the min TTL warning we can add some time to the min.
-				tokenTTL := TokenTTLMinRecommended + time.Second*10
-				clone.SetNamespace(tt.tokenNamespace)
-				resp, err := clone.Auth().Token().Create(&api.TokenCreateRequest{
-					TTL: tokenTTL.String(),
-				})
-				if err != nil {
-					t.Fatalf("failed to create Vault token, err=%s", err)
-				}
-				tt.data[consts.FieldToken] = resp.Auth.ClientToken
-			}
-
-			for k, v := range tt.data {
-				if err := tt.d.Set(k, v); err != nil {
-					t.Fatalf("failed to set resource data, key=%s, value=%#v", k, v)
-				}
-			}
-
-			got, err := NewProviderMeta(tt.d)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewProviderMeta() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if err != nil {
-				if got != nil {
-					t.Errorf("NewProviderMeta() got = %v, want nil", got)
-				}
-				return
-			}
-
-			p, ok := got.(*ProviderMeta)
-			if !ok {
-				t.Fatalf("invalid type got %T, expected %T", got, &ProviderMeta{})
-			}
-
-			pClient, err := p.GetClient()
-			if err != nil {
-				t.Fatalf("got unexpected error %s", err)
-			}
-
-			if !reflect.DeepEqual(pClient.Namespace(), tt.wantNamespace) {
-				t.Errorf("NewProviderMeta() got ns = %v, want ns %v", p.client.Namespace(), tt.wantNamespace)
-			}
-
-			if client.Token() == "" {
-				t.Errorf("NewProviderMeta() got empty Client token")
+			result := GetResourceDataInt(d, tt.field, tt.env, tt.defaultValue)
+			if result != tt.expected {
+				t.Errorf("GetResourceDataInt() got = %v, want %v", result, tt.expected)
 			}
 		})
 	}

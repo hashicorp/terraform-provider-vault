@@ -167,9 +167,21 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_cert_metadata": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendCertMetadataDataSource()),
+			PathInventory: []string{"/pki/cert-metadata/{serial}"},
+		},
+		"vault_pki_secret_backend_config_cmpv2": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCMPV2DataSource()),
+			PathInventory: []string{"/pki/config/cmp"},
+		},
 		"vault_pki_secret_backend_config_est": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstDataSource()),
 			PathInventory: []string{"/pki/config/est"},
+		},
+		"vault_pki_secret_backend_config_scep": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigScepDataSource()),
+			PathInventory: []string{"/pki/config/scep"},
 		},
 		"vault_pki_secret_backend_issuer": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
@@ -187,6 +199,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
 			PathInventory: []string{"/pki/keys"},
 		},
+		"vault_ssh_secret_backend_sign": {
+			Resource:      UpdateSchemaResource(sshSecretBackendSignDataSource()),
+			PathInventory: []string{"/ssh/sign"},
+		},
 		"vault_transform_encode": {
 			Resource:      UpdateSchemaResource(transformEncodeDataSource()),
 			PathInventory: []string{"/transform/encode/{role_name}"},
@@ -194,6 +210,18 @@ var (
 		"vault_transform_decode": {
 			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
 			PathInventory: []string{"/transform/decode/{role_name}"},
+		},
+		"vault_transit_sign": {
+			Resource:      UpdateSchemaResource(transitSignDataSource()),
+			PathInventory: []string{"/transit/sign/{name}"},
+		},
+		"vault_transit_verify": {
+			Resource:      UpdateSchemaResource(transitVerifyDataSource()),
+			PathInventory: []string{"/transit/verify/{name}"},
+		},
+		"vault_transit_cmac": {
+			Resource:      UpdateSchemaResource(transitCMACDataSource()),
+			PathInventory: []string{"/transit/cmac/{name}/{url_mac_length}"},
 		},
 	}
 
@@ -373,6 +401,10 @@ var (
 			Resource:      UpdateSchemaResource(certAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/cert/certs/{name}"},
 		},
+		"vault_scep_auth_backend_role": {
+			Resource:      UpdateSchemaResource(scepAuthBackendRoleResource()),
+			PathInventory: []string{"/auth/scep/role/{name}"},
+		},
 		"vault_generic_endpoint": {
 			Resource:      UpdateSchemaResource(genericEndpointResource("vault_generic_endpoint")),
 			PathInventory: []string{GenericPath},
@@ -448,6 +480,14 @@ var (
 		"vault_nomad_secret_role": {
 			Resource:      UpdateSchemaResource(nomadSecretBackendRoleResource()),
 			PathInventory: []string{"/nomad/role/{role}"},
+		},
+		"vault_oci_auth_backend": {
+			Resource:      UpdateSchemaResource(ociAuthBackendResource()),
+			PathInventory: []string{"/auth/oci/config"},
+		},
+		"vault_oci_auth_backend_role": {
+			Resource:      UpdateSchemaResource(ociAuthBackendRoleResource()),
+			PathInventory: []string{"/auth/oci/role/{role}"},
 		},
 		"vault_policy": {
 			Resource:      UpdateSchemaResource(policyResource()),
@@ -567,10 +607,6 @@ var (
 			Resource:      UpdateSchemaResource(rabbitMQSecretBackendRoleResource()),
 			PathInventory: []string{"/rabbitmq/roles/{name}"},
 		},
-		"vault_password_policy": {
-			Resource:      UpdateSchemaResource(passwordPolicyResource()),
-			PathInventory: []string{"/sys/policy/password/{name}"},
-		},
 		"vault_pki_secret_backend_cert": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendCertResource()),
 			PathInventory: []string{"/pki/issue/{role}"},
@@ -591,13 +627,25 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigClusterResource()),
 			PathInventory: []string{"/pki/config/cluster"},
 		},
+		"vault_pki_secret_backend_config_cmpv2": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigCMPV2Resource()),
+			PathInventory: []string{"/pki/config/cmp"},
+		},
 		"vault_pki_secret_backend_config_est": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigEstResource()),
 			PathInventory: []string{"/pki/config/est"},
 		},
+		"vault_pki_secret_backend_config_scep": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigScepResource()),
+			PathInventory: []string{"/pki/config/scep"},
+		},
 		"vault_pki_secret_backend_config_urls": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendConfigUrlsResource()),
 			PathInventory: []string{"/pki/config/urls"},
+		},
+		"vault_pki_secret_backend_config_auto_tidy": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigAutoTidyResource()),
+			PathInventory: []string{"/pki/config/auto-tidy"},
 		},
 		"vault_pki_secret_backend_intermediate_cert_request": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendIntermediateCertRequestResource()),

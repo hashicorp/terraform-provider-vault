@@ -110,6 +110,14 @@ func jwtAuthBackendResource() *schema.Resource {
 				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.",
 			},
 
+			"jwks_pairs": {
+				Type:          schema.TypeList,
+				Elem:          &schema.Schema{Type: schema.TypeMap},
+				Optional:      true,
+				ConflictsWith: []string{"jwks_url", "jwks_ca_pem"},
+				Description:   "List of JWKS URL and optional CA certificate pairs. Cannot be used with 'jwks_url' or 'jwks_ca_pem'. Requires Vault 1.16+.",
+			},
+
 			"jwt_validation_pubkeys": {
 				Type:          schema.TypeList,
 				Elem:          &schema.Schema{Type: schema.TypeString},
@@ -178,6 +186,7 @@ func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interfac
 		"jwks_url",
 		"jwt_validation_pubkeys",
 		"provider_config",
+		"jwks_pairs",
 	}
 
 	// to check whether mount migration is required
@@ -193,7 +202,7 @@ func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interfac
 		}
 	}
 
-	return errors.New("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided")
+	return errors.New("exactly one of oidc_discovery_url, jwks_url, jwks_pairs, or jwt_validation_pubkeys should be provided")
 }
 
 // TODO: build this from the Resource Schema?
@@ -206,6 +215,7 @@ var matchingJwtMountConfigOptions = []string{
 	"oidc_response_types",
 	"jwks_url",
 	"jwks_ca_pem",
+	"jwks_pairs",
 	"jwt_validation_pubkeys",
 	"bound_issuer",
 	"jwt_supported_algs",
@@ -259,6 +269,8 @@ func jwtAuthBackendDelete(ctx context.Context, d *schema.ResourceData, meta inte
 }
 
 func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -314,6 +326,11 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		if configOption == "oidc_client_secret" {
 			continue
 		}
+
+		if configOption == "jwks_pairs" && !useAPIVer116 {
+			continue
+		}
+
 		d.Set(configOption, config.Data[configOption])
 	}
 
@@ -322,7 +339,15 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	if err != nil {
 		return diag.Errorf("error reading tune information from Vault: %s", err)
 	}
-	if err := d.Set("tune", []map[string]interface{}{rawTune}); err != nil {
+
+	input, err := retrieveMountConfigInput(d)
+	if err != nil {
+		return diag.Errorf("error retrieving tune configuration from state: %s", err)
+	}
+
+	mergedTune := mergeAuthMethodTune(rawTune, input)
+
+	if err := d.Set("tune", mergedTune); err != nil {
 		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
 		return diag.FromErr(err)
 	}
@@ -355,6 +380,8 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 }
 
 func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -373,15 +400,21 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	configuration := map[string]interface{}{}
 	for _, configOption := range matchingJwtMountConfigOptions {
 		if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
-			configuration[configOption] = d.Get(configOption)
-
-			if configOption == "provider_config" {
+			switch configOption {
+			case "jwks_pairs":
+				if useAPIVer116 {
+					configuration[configOption] = d.Get(configOption)
+				} else {
+					log.Printf("[WARN] Skipping jwt auth %q update for %q, requires Vault 1.16+", configOption, path)
+				}
+			case "provider_config":
 				newConfig, err := convertProviderConfigValues(d.Get(configOption).(map[string]interface{}))
 				if err != nil {
 					return diag.FromErr(err)
 				}
-
 				configuration[configOption] = newConfig
+			default:
+				configuration[configOption] = d.Get(configOption)
 			}
 		}
 	}
@@ -392,17 +425,17 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	if d.HasChange("tune") {
-		log.Printf("[INFO] JWT/OIDC Auth '%q' tune configuration changed", d.Id())
+		log.Printf("[DEBUG] JWT/OIDC Auth '%q' tune configuration changed", d.Id())
 		if raw, ok := d.GetOk("tune"); ok {
 			backendType := d.Get("type")
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
 			err := authMountTune(ctx, client, "auth/"+path, raw)
 			if err != nil {
-				return nil
+				return diag.FromErr(err)
 			}
 
-			log.Printf("[INFO] Written %s auth tune to %q", backendType, path)
+			log.Printf("[DEBUG] Written %s auth tune to %q", backendType, path)
 		}
 	}
 

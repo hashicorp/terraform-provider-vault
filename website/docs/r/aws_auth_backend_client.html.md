@@ -36,6 +36,8 @@ resource "vault_aws_auth_backend_client" "example" {
   identity_token_audience = "<TOKEN_AUDIENCE>"
   identity_token_ttl      = "<TOKEN_TTL>"
   role_arn                = "<AWS_ROLE_ARN>"
+  rotation_schedule       = "0 * * * SAT"
+  rotation_window         = 3600
 }
 ```
 
@@ -45,9 +47,15 @@ resource "vault_auth_backend" "example" {
 }
 
 resource "vault_aws_auth_backend_client" "example" {
-  backend    = vault_auth_backend.example.path
-  access_key = "INSERT_AWS_ACCESS_KEY"
-  secret_key = "INSERT_AWS_SECRET_KEY"
+  backend           = vault_auth_backend.example.path
+  access_key        = "INSERT_AWS_ACCESS_KEY"
+  secret_key        = "INSERT_AWS_SECRET_KEY"
+  rotation_schedule = "0 * * * SAT"
+  rotation_window   = 3600
+  allowed_sts_header_values = [
+    "X-Custom-Header",
+    "X-Another-Header"
+  ]
 }
 ```
 
@@ -102,6 +110,22 @@ The following arguments are supported:
 
 * `max_retries` - (Optional) Number of max retries the client should use for recoverable errors. 
     The default `-1` falls back to the AWS SDK's default behavior.
+
+* `allowed_sts_header_values` - (Optional) List of additional headers that are allowed to be in STS request headers.
+    The headers are automatically canonicalized (e.g., `content-type` becomes `Content-Type`). Duplicate values are automatically
+    removed. This can be useful when you need to allow specific headers in STS requests for IAM-based authentication.
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
+    A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
+
+* `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+    defining the schedule on which Vault should rotate the root token. Requires Vault Enterprise 1.19+.
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+    a rotation when a scheduled token rotation occurs. The default rotation window is
+    unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+.
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
 
 ## Attributes Reference
 

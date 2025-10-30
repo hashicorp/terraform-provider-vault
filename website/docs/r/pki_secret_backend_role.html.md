@@ -97,6 +97,8 @@ The following arguments are supported:
 
 * `key_bits` - (Optional) The number of bits of generated keys
 
+* `signature_bits` - (Optional) The number of bits to use in the signature algorithm
+
 * `key_usage` - (Optional) Specify the allowed key usage constraint on issued
   certificates. Defaults to `["DigitalSignature", "KeyAgreement", "KeyEncipherment"])`.
   To specify no default key usage constraints, set this to an empty list `[]`.
@@ -139,6 +141,12 @@ The following arguments are supported:
 
    - `cps` - (Optional) The URL of the CPS for the policy identifier
 
+* `use_pss` - (Optional) Specifies whether or not to use PSS signatures over PKCS#1v1.5 signatures when a RSA-type issuer is used. Ignored for ECDSA/Ed25519 issuers.
+
+* `no_store_metadata` - (Optional) Allows metadata to be stored keyed on the certificate's serial number. The field is independent of no_store, allowing metadata storage regardless of whether certificates are stored. If true, metadata is not stored and an error is returned if the metadata field is specified on issuance APIs
+
+* `serial_number_source` - (Optional) Specifies the source of the subject serial number. Valid values are json-csr (default) or json. When set to json-csr, the subject serial number is taken from the serial_number parameter and falls back to the serial number in the CSR. When set to json, the subject serial number is taken from the serial_number parameter but will ignore any value in the CSR. For backwards compatibility an empty value for this field will default to the json-csr behavior.
+
    Example usage:
 ```hcl
 resource "vault_mount" "pki" {
@@ -163,8 +171,8 @@ resource "vault_pki_secret_backend_role" "role" {
     notice= "I am a user Notice"
   }
   policy_identifier {
-    oid = "1.3.6.1.4.1.44947.1.2.4"
-    cps ="https://example.com"
+    oid = "1.3.6.1.4.1.32473.1.2.4"
+    cps = "https://example.com"
   }
 }
 ```
@@ -176,6 +184,8 @@ resource "vault_pki_secret_backend_role" "role" {
 * `not_before_duration` - (Optional) Specifies the [duration](https://developer.hashicorp.com/vault/docs/concepts/duration-format) by which to backdate the NotBefore property.
 
 * `allowed_serial_numbers` - (Optional) An array of allowed serial numbers to put in Subject
+
+* `not_after` - (Optional) Set the Not After field of the certificate with specified date value. The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.
 
 ## Attributes Reference
 
