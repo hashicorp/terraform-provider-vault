@@ -198,6 +198,7 @@ const (
 	FieldType                           = "type"
 	FieldMethodID                       = "method_id"
 	FieldMFAMethodIDs                   = "mfa_method_ids"
+	FieldMFASerialNumber                = "mfa_serial_number"
 	FieldAccessors                      = "accessors"
 	FieldAuthMethodAccessors            = "auth_method_accessors"
 	FieldAuthMethodTypes                = "auth_method_types"
@@ -210,6 +211,7 @@ const (
 	FieldNoDefaultPolicy                = "no_default_policy"
 	FieldRenewable                      = "renewable"
 	FieldExplicitMaxTTL                 = "explicit_max_ttl"
+	FieldPersistApp                     = "persist_app"
 	FieldWrappingTTL                    = "wrapping_ttl"
 	FieldDisplayName                    = "display_name"
 	FieldNumUses                        = "num_uses"
@@ -463,6 +465,8 @@ const (
 	FieldPrivateKeyID                   = "private_key_id"
 	FieldTune                           = "tune"
 	FieldMaxRetries                     = "max_retries"
+	FieldRetryDelay                     = "retry_delay"
+	FieldMaxRetryDelay                  = "max_retry_delay"
 	FieldSessionTags                    = "session_tags"
 	FieldSelfManagedPassword            = "self_managed_password"
 	FieldAllowedIssuers                 = "allowed_issuers"
@@ -545,6 +549,9 @@ const (
 	FieldDestroyed                            = "destroyed"
 	FieldDeleteAllVersions                    = "delete_all_versions"
 	FieldForceNoCache                         = "force_no_cache"
+	FieldDereferenceAliases                   = "dereference_aliases"
+	FieldEnableSamaccountnameLogin            = "enable_samaccountname_login"
+	FieldAnonymousGroupSearch                 = "anonymous_group_search"
 
 	/*
 		ephemeral resource constants and write-only attributes
@@ -645,6 +652,7 @@ const (
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
 	VaultVersion120  = "1.20.0"
+	VaultVersion121  = "1.21.0"
 
 	/*
 		Vault auth methods
