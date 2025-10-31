@@ -247,8 +247,21 @@ func ldapAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
-		Schema:        fields,
+		CustomizeDiff: schema.CustomizeDiffFunc(func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+			// Handle deny_null_bind default behavior
+			rawConfig := diff.GetRawConfig()
+			configValue := rawConfig.GetAttr(consts.FieldDenyNullBind)
+			if configValue.IsNull() {
+				// Field not set in config, ensure it defaults to true
+				if err := diff.SetNew(consts.FieldDenyNullBind, true); err != nil {
+					return err
+				}
+			}
+
+			// Apply mount customization
+			return getMountCustomizeDiffFunc(consts.FieldPath)(ctx, diff, meta)
+		}),
+		Schema: fields,
 	}, true)
 
 	// add automated rotation fields to the resource
