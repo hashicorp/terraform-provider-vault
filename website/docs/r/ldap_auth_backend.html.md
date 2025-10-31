@@ -24,6 +24,10 @@ resource "vault_ldap_auth_backend" "ldap" {
     groupfilter       = "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
     rotation_schedule = "0 * * * SAT"
     rotation_window   = 3600
+    request_timeout               = 30
+    dereference_aliases           = "always"
+    enable_samaccountname_login   = false
+    anonymous_group_search        = false
 }
 ```
 
@@ -137,6 +141,14 @@ The `tune` block is used to tune the auth backend:
 ### Common Token Arguments
 
 These arguments are common across several Authentication Token resources since Vault 1.2.
+
+* `request_timeout` - (Optional) Timeout, in seconds, for the connection when making requests against the server before returning back an error.
+
+* `dereference_aliases` - (Optional) When aliases should be dereferenced on search operations. Accepted values are 'never', 'finding', 'searching', 'always'. Defaults to 'never'.
+
+* `enable_samaccountname_login` - (Optional) Lets Active Directory LDAP users log in using sAMAccountName or userPrincipalName when the upndomain parameter is set. Requires Vault 1.19.0+.
+
+* `anonymous_group_search` - (Optional) Use anonymous binds when performing LDAP group searches (note: even when true, the initial credentials will still be used for the initial connection test).
 
 * `token_ttl` - (Optional) The incremental lifetime for generated tokens in number of seconds.
   Its current value will be referenced at renewal time.
