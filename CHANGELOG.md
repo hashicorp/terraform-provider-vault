@@ -11,6 +11,16 @@ FEATURES:
 
 * Add support for `allowed_sts_header_values` parameter in `vault_aws_auth_backend_client` resource to specify additional headers allowed in STS requests
 
+* Add support for `request_timeout`, `dereference_aliases`,`enable_samaccountname_login` and `anonymous_group_search` parameters in `vault_ldap_auth_backend` resource.([#2634](https://github.com/hashicorp/terraform-provider-vault/pull/2634))
+
+* Add support for `max_retries` parameter in `vault_aws_secret_backend` resource. ([#2623](https://github.com/hashicorp/terraform-provider-vault/pull/2623))
+
+* Add retry configuration fields (`max_retries`, `retry_delay`, `max_retry_delay`) to `vault_azure_auth_backend_config` resource for Azure API request resilience ([#2629](https://github.com/hashicorp/terraform-provider-vault/pull/2629))
+* Add new resources `vault_spiffe_auth_backend_config` and `vault_spiffe_auth_backend_role` ([#2620](https://github.com/hashicorp/terraform-provider-vault/pull/2620))
+
+
+* Add support for `mfa_serial_number` parameter in `vault_aws_secret_backend_role` resource. ([#2637](https://github.com/hashicorp/terraform-provider-vault/pull/2637))
+
 BUGS:
 
 * Fix pki config resources to allow unsetting of fields (to empty fields) ([#2558](https://github.com/hashicorp/terraform-provider-vault/pull/2558))
@@ -21,6 +31,9 @@ BUGS:
   * `vault_github_auth_backend` and `vault_auth_backend` resources ([#2565](https://github.com/hashicorp/terraform-provider-vault/pull/2565))
   * `vault_saml_auth_backend` resource ([#2566](https://github.com/hashicorp/terraform-provider-vault/pull/2566))
   * `vault_gcp_auth_backend` and `vault_oci_auth_backend` resources ([#2596](https://github.com/hashicorp/terraform-provider-vault/pull/2596))
+
+* Add support for `persist_app`parameters in `vault_azure_secret_backend_role` resource.
+  ([#2642](https://github.com/hashicorp/terraform-provider-vault/pull/2642))
 
 ## 5.3.0 (Sep 4, 2025)
 
