@@ -211,6 +211,7 @@ const (
 	FieldNoDefaultPolicy                = "no_default_policy"
 	FieldRenewable                      = "renewable"
 	FieldExplicitMaxTTL                 = "explicit_max_ttl"
+	FieldPersistApp                     = "persist_app"
 	FieldWrappingTTL                    = "wrapping_ttl"
 	FieldDisplayName                    = "display_name"
 	FieldNumUses                        = "num_uses"
@@ -546,6 +547,9 @@ const (
 	FieldDestroyed                            = "destroyed"
 	FieldDeleteAllVersions                    = "delete_all_versions"
 	FieldForceNoCache                         = "force_no_cache"
+	FieldDereferenceAliases                   = "dereference_aliases"
+	FieldEnableSamaccountnameLogin            = "enable_samaccountname_login"
+	FieldAnonymousGroupSearch                 = "anonymous_group_search"
 
 	/*
 		ephemeral resource constants and write-only attributes
