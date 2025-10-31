@@ -142,6 +142,11 @@ func azureSecretBackendRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "Comma-separated strings of Azure tags to attach to an application.",
 			},
+			consts.FieldPersistApp: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "If true, persists the created service principal and application for the lifetime of the role.",
+			},
 		},
 	}
 }
@@ -216,6 +221,8 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		data[consts.FieldPermanentlyDelete] = d.Get(consts.FieldPermanentlyDelete).(bool)
 	}
+
+	data[consts.FieldPersistApp] = d.Get(consts.FieldPersistApp).(bool)
 
 	return nil
 }
@@ -315,6 +322,13 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 		err := d.Set(consts.FieldAzureGroups, resp.Data[consts.FieldAzureGroups])
 		if err != nil {
 			return diag.Errorf("error setting Azure groups: %s", err)
+		}
+	}
+
+	if v, ok := resp.Data[consts.FieldPersistApp]; ok {
+		log.Printf("[DEBUG] Persist App from Azure: %s", v)
+		if err := d.Set(consts.FieldPersistApp, v); err != nil {
+			return diag.Errorf("error setting persist_app field: %s", err)
 		}
 	}
 

@@ -211,6 +211,7 @@ const (
 	FieldNoDefaultPolicy                = "no_default_policy"
 	FieldRenewable                      = "renewable"
 	FieldExplicitMaxTTL                 = "explicit_max_ttl"
+	FieldPersistApp                     = "persist_app"
 	FieldWrappingTTL                    = "wrapping_ttl"
 	FieldDisplayName                    = "display_name"
 	FieldNumUses                        = "num_uses"
