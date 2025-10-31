@@ -11,6 +11,8 @@ FEATURES:
 
 * Add support for `allowed_sts_header_values` parameter in `vault_aws_auth_backend_client` resource to specify additional headers allowed in STS requests
 
+* Add support for `request_timeout`, `dereference_aliases`,`enable_samaccountname_login` and `anonymous_group_search` parameters in `vault_ldap_auth_backend` resource.([#2634](https://github.com/hashicorp/terraform-provider-vault/pull/2634))
+
 * Add support for `max_retries` parameter in `vault_aws_secret_backend` resource. ([#2623](https://github.com/hashicorp/terraform-provider-vault/pull/2623))
 
 * Add retry configuration fields (`max_retries`, `retry_delay`, `max_retry_delay`) to `vault_azure_auth_backend_config` resource for Azure API request resilience ([#2629](https://github.com/hashicorp/terraform-provider-vault/pull/2629))

@@ -547,6 +547,9 @@ const (
 	FieldDestroyed                            = "destroyed"
 	FieldDeleteAllVersions                    = "delete_all_versions"
 	FieldForceNoCache                         = "force_no_cache"
+	FieldDereferenceAliases                   = "dereference_aliases"
+	FieldEnableSamaccountnameLogin            = "enable_samaccountname_login"
+	FieldAnonymousGroupSearch                 = "anonymous_group_search"
 
 	/*
 		ephemeral resource constants and write-only attributes
