@@ -247,6 +247,8 @@ const (
 	FieldDeleteVersionAfter             = "delete_version_after"
 	FieldCustomMetadata                 = "custom_metadata"
 	FieldCustomMetadataJSON             = "custom_metadata_json"
+	FieldGceAlias                       = "gce_alias"
+	FieldGceMetadata                    = "gce_metadata"
 	FieldIAMAlias                       = "iam_alias"
 	FieldIAMMetadata                    = "iam_metadata"
 	FieldEC2Alias                       = "ec2_alias"

@@ -15,6 +15,9 @@ FEATURES:
 
 * Add support for `max_retries` parameter in `vault_aws_secret_backend` resource. ([#2623](https://github.com/hashicorp/terraform-provider-vault/pull/2623))
 
+* Add support for `iam_alias`, `iam_metadata`, `gce_alias` and `gce_metadata` fields in `vault_gcp_auth_backend` resource ([#2636](https://github.com/hashicorp/terraform-provider-vault/pull/2636))
+
+* Add support for `role_id` field in `vault_gcp_auth_backend_role` resource ([#2636](https://github.com/hashicorp/terraform-provider-vault/pull/2636))
 * Add retry configuration fields (`max_retries`, `retry_delay`, `max_retry_delay`) to `vault_azure_auth_backend_config` resource for Azure API request resilience ([#2629](https://github.com/hashicorp/terraform-provider-vault/pull/2629))
 * Add new resources `vault_spiffe_auth_backend_config` and `vault_spiffe_auth_backend_role` ([#2620](https://github.com/hashicorp/terraform-provider-vault/pull/2620))
 
