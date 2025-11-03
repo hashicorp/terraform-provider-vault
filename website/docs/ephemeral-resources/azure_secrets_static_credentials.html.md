@@ -40,6 +40,15 @@ ephemeral "vault_azure_static_credentials" "creds" {
 
 The following arguments are supported:
 
+* `mount_id` - (Optional) If value is set, will defer provisioning the ephemeral resource until
+  `terraform apply`. For more details, please refer to the official documentation around
+  [using ephemeral resources in the Vault Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_ephemeral_resources).
+
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
+  *Available only for Vault Enterprise*.
+
 * `backend` - (Required) Path to the mounted Azure Secrets Engine where the static role resides.
 
 * `role` - (Required) The name of the static role to generate or read credentials for.
