@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-const fieldCombinedRoleMetadata = "combined_role_metadata"
+const fieldCombinedRoleMetadata = "merged_metadata"
 
 var _ ephemeral.EphemeralResource = &AzureStaticCredsEphemeralSecretResource{}
 
@@ -37,11 +37,11 @@ type AzureStaticCredsEphemeralSecretModel struct {
 	Role     types.String `tfsdk:"role"`
 	Metadata types.Map    `tfsdk:"metadata"`
 
-	ClientID             types.String `tfsdk:"client_id"`
-	ClientSecret         types.String `tfsdk:"client_secret"`
-	SecretID             types.String `tfsdk:"secret_id"`
-	Expiration           types.String `tfsdk:"expiration"`
-	CombinedRoleMetadata types.Map    `tfsdk:"combined_role_metadata"`
+	ClientID       types.String `tfsdk:"client_id"`
+	ClientSecret   types.String `tfsdk:"client_secret"`
+	SecretID       types.String `tfsdk:"secret_id"`
+	Expiration     types.String `tfsdk:"expiration"`
+	MergedMetadata types.Map    `tfsdk:"merged_metadata"`
 }
 
 type AzureStaticCredsAPIModel struct {
@@ -93,7 +93,7 @@ func (r *AzureStaticCredsEphemeralSecretResource) Schema(_ context.Context, _ ep
 			},
 		},
 		MarkdownDescription: "Ephemeral: reads Azure static credentials from `/<backend>/static-creds/<role>`. " +
-			"`metadata` is input-only and sent with the request; `combined_role_metadata` is the merged map returned by Vault.",
+			"`metadata` is input-only and sent with the request; `merged_metadata` is the merged map returned by Vault.",
 	}
 	base.MustAddBaseEphemeralSchema(&resp.Schema)
 }
@@ -160,7 +160,7 @@ func (r *AzureStaticCredsEphemeralSecretResource) Open(ctx context.Context, req 
 	data.Expiration = types.StringValue(apiResp.Expiration.(string))
 	metaVal, md := types.MapValueFrom(ctx, types.StringType, apiResp.Metadata)
 	resp.Diagnostics.Append(md...)
-	data.CombinedRoleMetadata = metaVal
+	data.MergedMetadata = metaVal
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }

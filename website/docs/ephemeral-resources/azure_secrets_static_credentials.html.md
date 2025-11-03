@@ -53,7 +53,7 @@ The following arguments are supported:
 
 * `role` - (Required) The name of the static role to generate or read credentials for.
 
-* `metadata` - (Optional) A map of key-value pairs to associate with the static role and include in the credential response.
+* `metadata` - (Optional) Input-only map of key-value pairs to associate with the static role and include in the credential response.
 
 ## Attributes Reference
 
@@ -66,3 +66,6 @@ In addition to the arguments above, the following attributes are exported:
 * `secret_id` - The Azure Key ID corresponding to the current client secret.
 
 * `expiration` - The expiration timestamp (in RFC3339 format) of the credential, as reported by Azure.
+
+* `merged_metadata` - Computed map of key-value pairs that combines the role's metadata with the metadata
+  sent in the request. If a key exists in both, the value from the role's metadata takes precedence.
