@@ -135,7 +135,7 @@ func (r *AzureStaticCredsEphemeralSecretResource) Open(ctx context.Context, req 
 
 	var sec *api.Secret
 	if readData != nil {
-		sec, err = c.Logical().ReadWithData(path, readData)
+		sec, err = c.Logical().ReadWithDataWithContext(ctx, path, readData)
 	} else {
 		sec, err = c.Logical().Read(path)
 	}

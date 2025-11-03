@@ -47,6 +47,10 @@ resource "vault_azure_secret_backend_static_role" "static-role" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
+  *Available only for Vault Enterprise*.
 * `role` - (Required) Name of the static role to create or manage.
 * `backend` - (Required) Path where the Azure Secrets Engine is mounted.
 * `application_object_id` - (Required) The Azure AD Application Object ID associated with the existing application whose credentials Vault will manage.
