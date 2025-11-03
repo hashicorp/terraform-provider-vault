@@ -198,6 +198,7 @@ const (
 	FieldType                           = "type"
 	FieldMethodID                       = "method_id"
 	FieldMFAMethodIDs                   = "mfa_method_ids"
+	FieldMFASerialNumber                = "mfa_serial_number"
 	FieldAccessors                      = "accessors"
 	FieldAuthMethodAccessors            = "auth_method_accessors"
 	FieldAuthMethodTypes                = "auth_method_types"
@@ -210,6 +211,7 @@ const (
 	FieldNoDefaultPolicy                = "no_default_policy"
 	FieldRenewable                      = "renewable"
 	FieldExplicitMaxTTL                 = "explicit_max_ttl"
+	FieldPersistApp                     = "persist_app"
 	FieldWrappingTTL                    = "wrapping_ttl"
 	FieldDisplayName                    = "display_name"
 	FieldNumUses                        = "num_uses"
@@ -245,6 +247,8 @@ const (
 	FieldDeleteVersionAfter             = "delete_version_after"
 	FieldCustomMetadata                 = "custom_metadata"
 	FieldCustomMetadataJSON             = "custom_metadata_json"
+	FieldGceAlias                       = "gce_alias"
+	FieldGceMetadata                    = "gce_metadata"
 	FieldIAMAlias                       = "iam_alias"
 	FieldIAMMetadata                    = "iam_metadata"
 	FieldEC2Alias                       = "ec2_alias"
@@ -545,6 +549,9 @@ const (
 	FieldDestroyed                            = "destroyed"
 	FieldDeleteAllVersions                    = "delete_all_versions"
 	FieldForceNoCache                         = "force_no_cache"
+	FieldDereferenceAliases                   = "dereference_aliases"
+	FieldEnableSamaccountnameLogin            = "enable_samaccountname_login"
+	FieldAnonymousGroupSearch                 = "anonymous_group_search"
 
 	/*
 		ephemeral resource constants and write-only attributes
