@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -120,6 +121,38 @@ func gcpAuthBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Service Account to impersonate for plugin workload identity federation.",
+			},
+			consts.FieldIAMAlias: {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				Description:  "Defines what alias needs to be used during login and refelects the same in token metadata and audit logs.",
+				ValidateFunc: validation.StringInSlice([]string{"role_id", "unique_id"}, false),
+			},
+			consts.FieldIAMMetadata: {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Computed:    true,
+				Description: "Controls the metadata to include on the token returned by the login endpoint.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldGceAlias: {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				Description:  "Defines what alias needs to be used during login and refelects the same in token metadata and audit logs.",
+				ValidateFunc: validation.StringInSlice([]string{"role_id", "instance_id"}, false),
+			},
+			consts.FieldGceMetadata: {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Computed:    true,
+				Description: "Controls which instance metadata fields from the GCE login are captured into Vault's token metadata or audit logs.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			consts.FieldTune: authMountTuneSchema(),
 		},
@@ -321,6 +354,26 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		}
 	}
 
+	// Add IAM alias, IAM Metadata, GCE alias and GCE Metadata if provided
+	if iamMetadataConfig, ok := d.GetOk(consts.FieldIAMMetadata); ok {
+		data[consts.FieldIAMMetadata] = util.TerraformSetToStringArray(iamMetadataConfig)
+	}
+
+	if gceMetadataConfig, ok := d.GetOk(consts.FieldGceMetadata); ok {
+		data[consts.FieldGceMetadata] = util.TerraformSetToStringArray(gceMetadataConfig)
+	}
+
+	fields := []string{
+		consts.FieldIAMAlias,
+		consts.FieldGceAlias,
+	}
+
+	for _, k := range fields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
+	}
+
 	if useAPIVer119Ent {
 		// Parse automated root rotation fields if running Vault Enterprise 1.19 or newer.
 		automatedrotationutil.ParseAutomatedRotationFields(d, data)
@@ -367,6 +420,10 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		consts.FieldProjectID,
 		consts.FieldClientEmail,
 		consts.FieldLocal,
+		consts.FieldIAMAlias,
+		consts.FieldIAMMetadata,
+		consts.FieldGceAlias,
+		consts.FieldGceMetadata,
 	}
 
 	if provider.IsEnterpriseSupported(meta) {
