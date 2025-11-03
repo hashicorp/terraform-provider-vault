@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_azure_secret_backend_static_role resource"
 sidebar_current: "docs-vault-resource-azure-secret-backend-static-role"
 description: |-
-  Creates an azure secret backend static role for Vault.
+  Creates a static role for Vault Azure Secrets engine
 ---
 
 # vault\_azure\_secret\_backend\_static\_role

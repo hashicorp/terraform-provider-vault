@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: ephemeral vault_azure_static_credentials data resource"
 sidebar_current: "docs-vault-ephemeral-azure-static-credentials"
 description: |-
-  Read an ephemeral static secret from the Vault Azure Secrets engine 
+  Read an ephemeral static secret from the Vault Azure Secrets engine
 
 ---
 

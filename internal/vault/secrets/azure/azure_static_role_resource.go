@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -74,9 +73,7 @@ func (r *AzureSecretsStaticRoleResource) Schema(_ context.Context, _ resource.Sc
 		Attributes: map[string]schema.Attribute{
 			consts.FieldBackend: schema.StringAttribute{
 				MarkdownDescription: "The path where the Azure secrets backend is mounted.",
-				Optional:            true,
-				Default:             stringdefault.StaticString(consts.MountTypeAzure),
-				Computed:            true,
+				Required:            true,
 			},
 			consts.FieldRole: schema.StringAttribute{
 				MarkdownDescription: "Name of the static role to create.",
@@ -345,6 +342,10 @@ func normalizeTTL(ttl any) (int64, error) {
 	}
 
 	switch v := ttl.(type) {
+	case int:
+		return int64(v), nil
+	case int64:
+		return v, nil
 	case float64:
 		return int64(v), nil
 	case string:
