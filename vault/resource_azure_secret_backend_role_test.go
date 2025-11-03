@@ -175,6 +175,61 @@ func TestAzureSecretBackendRole_AzureGroups(t *testing.T) {
 	})
 }
 
+func TestAccAzureSecretBackendRole_PersistApp(t *testing.T) {
+	subscriptionID := os.Getenv("ARM_SUBSCRIPTION_ID")
+	if subscriptionID == "" {
+		t.Skip("ARM_SUBSCRIPTION_ID not set")
+	}
+	tenantID := os.Getenv("ARM_TENANT_ID")
+	clientID := os.Getenv("ARM_CLIENT_ID")
+	clientSecret := os.Getenv("ARM_CLIENT_SECRET")
+	resourceGroup := os.Getenv("ARM_RESOURCE_GROUP")
+
+	resourceName := "vault_azure_secret_backend_role.test_persist_app"
+	path := acctest.RandomWithPrefix("tf-test-azure")
+	role := acctest.RandomWithPrefix("tf-test-azure-role")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+		},
+		CheckDestroy: testAccAzureSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Test with persist_app = true
+				Config: testAzureSecretBackendRolePersistAppConfig(
+					subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup, "300", true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "role", role+"-persist-app"),
+					resource.TestCheckResourceAttr(resourceName, "persist_app", "true"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "300"),
+				),
+			},
+			{
+				// Test with persist_app absent (defaults to false)
+				Config: testAzureSecretBackendRolePersistAppConfig(
+					subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup, "300"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "role", role+"-persist-app"),
+					resource.TestCheckResourceAttr(resourceName, "persist_app", "false"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "300"),
+				),
+			},
+			{
+				// Test with explicit persist_app = false
+				Config: testAzureSecretBackendRolePersistAppConfig(
+					subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup, "300", false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "role", role+"-persist-app"),
+					resource.TestCheckResourceAttr(resourceName, "persist_app", "false"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "300"),
+				),
+			},
+		},
+	})
+}
+
 func testAccAzureSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_azure_secret_backend" {
@@ -357,4 +412,35 @@ resource "vault_azure_secret_backend_role" "test_azure_groups" {
   }
 }
 `, subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup)
+}
+
+func testAzureSecretBackendRolePersistAppConfig(
+	subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup, ttl string,
+	persistApp ...bool,
+) string {
+	persistAppLine := ""
+	if len(persistApp) > 0 {
+		persistAppLine = fmt.Sprintf("  persist_app = %v\n", persistApp[0])
+	}
+
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "test" {
+  subscription_id = "%s"
+  tenant_id = "%s"
+  client_id = "%s"
+  client_secret = "%s"
+  path = "%s"
+}
+
+resource "vault_azure_secret_backend_role" "test_persist_app" {
+  backend = vault_azure_secret_backend.test.path
+  role    = "%s-persist-app"
+  ttl     = "%s"
+%s
+  azure_roles {
+    role_name = "Reader"
+    scope     = "/subscriptions/%s/resourceGroups/%s"
+  }
+}
+`, subscriptionID, tenantID, clientID, clientSecret, path, role, ttl, persistAppLine, subscriptionID, resourceGroup)
 }

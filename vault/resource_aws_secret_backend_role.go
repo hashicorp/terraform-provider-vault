@@ -121,6 +121,11 @@ func awsSecretBackendRoleResource(name string) *schema.Resource {
 				Optional:    true,
 				Description: "The path for the user name. Valid only when credential_type is iam_user. Default is /",
 			},
+			consts.FieldMFASerialNumber: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The ARN or hardware device number of the device configured to the IAM user for multi-factor authentication. Only required if the IAM user has an MFA device set up in AWS.",
+			},
 		},
 	}
 }
@@ -151,6 +156,8 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	sessionTags := d.Get(consts.FieldSessionTags)
 
 	externalID := d.Get(consts.FieldExternalID)
+
+	mfaSerialNumber := d.Get(consts.FieldMFASerialNumber)
 
 	if policyDocument == "" && len(policyARNs) == 0 && len(roleARNs) == 0 && len(iamGroups) == 0 {
 		return fmt.Errorf("at least one of: `policy_document`, `policy_arns`, `role_arns` or `iam_groups` must be set")
@@ -199,6 +206,9 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		} else {
 			return fmt.Errorf("user_path is only valid when credential_type is iam_user")
 		}
+	}
+	if d.HasChange(consts.FieldMFASerialNumber) {
+		data[consts.FieldMFASerialNumber] = mfaSerialNumber
 	}
 
 	defaultStsTTL, defaultStsTTLOk := d.GetOk("default_sts_ttl")
@@ -291,6 +301,9 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	if v, ok := secret.Data["user_path"]; ok {
 		d.Set("user_path", v)
+	}
+	if v, ok := secret.Data[consts.FieldMFASerialNumber]; ok {
+		d.Set(consts.FieldMFASerialNumber, v)
 	}
 
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
