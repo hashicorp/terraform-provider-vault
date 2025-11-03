@@ -12,7 +12,8 @@ description: |-
 Reads ephemeral static Azure credentials for a static role managed by the Azure Secrets Engine.  
 These credentials are not stored in Terraform state.
 
-For more information, refer to the [Vault Azure Secrets Engine documentation](https://developer.hashicorp.com/vault/docs/secrets/azure).
+For more information, refer to
+the [Vault Azure Secrets Engine documentation](https://developer.hashicorp.com/vault/docs/secrets/azure).
 
 ## Example Usage
 
@@ -24,15 +25,16 @@ resource "vault_azure_secret_backend" "azure" {
   client_id       = var.client_id
 }
 
-resource "vault_azure_secret_backend_static_role" "example" {
-  backend              = vault_azure_secret_backend.azure.path
-  role                 = "example-role"
+resource "vault_azure_secret_backend_static_role" "azurerole" {
+  backend               = vault_azure_secret_backend.azure.path
+  role                  = "azurerole"
   application_object_id = "00000000-0000-0000-0000-000000000000"
 }
 
-ephemeral "vault_azure_static_credentials" "creds" {
-  backend = vault_azure_secret_backend.azure.path
-  role    = vault_azure_secret_backend_static_role.example.role
+ephemeral "vault_azure_static_credentials" "azurerole" {
+  mount_id = vault_azure_secret_backend_static_role.azurerole.id
+  backend  = vault_azure_secret_backend.azure.path
+  role     = vault_azure_secret_backend_static_role.azurerole.role
 }
 ```
 
@@ -46,14 +48,16 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace of the target resource.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
+  The `namespace` is always relative to the provider's
+  configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
 * `backend` - (Required) Path to the mounted Azure Secrets Engine where the static role resides.
 
 * `role` - (Required) The name of the static role to generate or read credentials for.
 
-* `metadata` - (Optional) Input-only map of key-value pairs to associate with the static role and include in the credential response.
+* `metadata` - (Optional) Input-only map of key-value pairs to associate with the static role and include in the
+  credential response.
 
 ## Attributes Reference
 
