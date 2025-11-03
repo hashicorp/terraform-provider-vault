@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -45,10 +46,13 @@ func TestAccAzureStaticCredentials_basic(t *testing.T) {
 			{
 				Config: testAccAzureStaticCredentialsConfig(backend, role, conf),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.azure_creds", tfjsonpath.New("data").AtMapKey("client_id"), knownvalue.StringRegexp(nonEmpty)),
-					statecheck.ExpectKnownValue("echo.azure_creds", tfjsonpath.New("data").AtMapKey("client_secret"), knownvalue.StringRegexp(nonEmpty)),
-					statecheck.ExpectKnownValue("echo.azure_creds", tfjsonpath.New("data").AtMapKey("secret_id"), knownvalue.StringRegexp(nonEmpty)),
-					statecheck.ExpectKnownValue("echo.azure_creds", tfjsonpath.New("data").AtMapKey("expiration"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.azure_creds", tfjsonpath.New("data").AtMapKey(consts.FieldClientID), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.azure_creds", tfjsonpath.New("data").AtMapKey(consts.FieldClientSecret), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.azure_creds", tfjsonpath.New("data").AtMapKey(consts.FieldSecretID), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.azure_creds", tfjsonpath.New("data").AtMapKey(consts.FieldExpiration), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.azure_creds", tfjsonpath.New("data").AtMapKey(consts.FieldMetadata).AtMapKey("hello"), knownvalue.StringExact("world")),
+					statecheck.ExpectKnownValue("echo.azure_creds", tfjsonpath.New("data").AtMapKey(consts.FieldMetadata).AtMapKey("team"), knownvalue.StringExact("eco")),
+					statecheck.ExpectKnownValue("echo.azure_creds", tfjsonpath.New("data").AtMapKey(consts.FieldMetadata).AtMapKey("foo"), knownvalue.StringExact("bar")),
 				},
 			},
 		},
@@ -81,6 +85,10 @@ ephemeral "vault_azure_static_credentials" "role" {
   mount_id = vault_azure_secret_backend_static_role.role.id
   backend  = vault_azure_secret_backend.azure.path
   role     = vault_azure_secret_backend_static_role.role.role
+
+  request_metadata = {
+	foo = "bar"
+  }
 }
 
 provider "echo" {
