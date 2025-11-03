@@ -72,6 +72,14 @@ The following arguments are supported:
 * `identity_token_key` - (Optional) The key to use for signing plugin identity
   tokens. Requires Vault 1.17+. *Available only for Vault Enterprise*.
 
+* `iam_alias` - (Optional) Defines what alias needs to be used during login and refelects the same in token metadata and audit logs.
+
+* `iam_metadata` - (Optional) Controls the metadata to include on the token returned by the login endpoint.
+
+* `gce_alias` - (Optional) Defines what alias needs to be used during login and refelects the same in token metadata and audit logs.
+
+* `gce_metadata` - (Optional) Controls which instance metadata fields from the GCE login are captured into Vault's token metadata or audit logs.
+
 * `custom_endpoint` - (Optional) Specifies overrides to
   [service endpoints](https://cloud.google.com/apis/design/glossary#api_service_endpoint)
   used when making API requests. This allows specific requests made during authentication
