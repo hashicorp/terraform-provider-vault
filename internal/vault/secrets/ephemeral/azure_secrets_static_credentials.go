@@ -6,6 +6,7 @@ package ephemeralsecrets
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
@@ -155,7 +156,14 @@ func (r *AzureStaticCredsEphemeralSecretResource) Open(ctx context.Context, req 
 	data.ClientID = types.StringValue(apiResp.ClientID)
 	data.ClientSecret = types.StringValue(apiResp.ClientSecret)
 	data.SecretID = types.StringValue(apiResp.SecretID)
-	data.Expiration = types.StringValue(apiResp.Expiration.(string))
+
+	// Convert expiration (always time.Time from Vault) to RFC3339 string, with fallback for safety
+	if t, ok := apiResp.Expiration.(time.Time); ok {
+		data.Expiration = types.StringValue(t.UTC().Format(time.RFC3339))
+	} else {
+		data.Expiration = types.StringValue(fmt.Sprint(apiResp.Expiration))
+	}
+
 	metaVal, md := types.MapValueFrom(ctx, types.StringType, apiResp.Metadata)
 	resp.Diagnostics.Append(md...)
 	data.Metadata = metaVal
