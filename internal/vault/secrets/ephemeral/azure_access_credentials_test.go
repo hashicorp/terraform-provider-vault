@@ -100,7 +100,7 @@ resource "echo" "test_azure" {}
 		conf.ClientID,
 		conf.ClientSecret,
 		backend,
-		"*",
+		conf.Scope,
 		conf.SubscriptionID,
 	)
 }
