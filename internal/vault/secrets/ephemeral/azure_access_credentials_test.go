@@ -87,8 +87,10 @@ ephemeral "vault_azure_access_credentials" "test" {
 }
 
 provider "echo" {
-  client_id     = ephemeral.vault_azure_access_credentials.test.client_id
-  client_secret = ephemeral.vault_azure_access_credentials.test.client_secret
+  data = {
+    client_id     = ephemeral.vault_azure_access_credentials.test.client_id
+    client_secret = ephemeral.vault_azure_access_credentials.test.client_secret
+  }
 }
 
 resource "echo" "test_azure" {}
