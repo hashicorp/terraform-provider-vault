@@ -130,6 +130,10 @@ These arguments are common across all resources that mount a secret engine.
 * `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
   not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
 
+* `ttl` - (Optional) The default TTL for long-lived credentials (i.e. service account keys).
+
+* `max_ttl` - (Optional) The maximum TTL for long-lived credentials (i.e. service account keys).
+
 ## Ephemeral Attributes Reference
 
 The following write-only attributes are supported:

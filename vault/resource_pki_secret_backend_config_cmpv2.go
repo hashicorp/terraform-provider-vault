@@ -103,29 +103,20 @@ func pkiSecretBackendConfigCMPV2Write(ctx context.Context, d *schema.ResourceDat
 	backend := d.Get(consts.FieldBackend).(string)
 	path := pkiSecretBackendConfigCMPV2Path(backend)
 
-	fieldsToSet := []string{
-		consts.FieldEnabled,
-		consts.FieldDefaultPathPolicy,
-		consts.FieldEnableSentinelParsing,
-		consts.FieldAuditFields,
-		consts.FieldDisabledValidations,
-	}
-
 	data := map[string]interface{}{}
-	for _, field := range fieldsToSet {
-		if val, ok := d.GetOk(field); ok {
-			data[field] = val
+	for field := range pkiSecretBackendConfigCMPV2Resource().Schema {
+		switch field {
+		case consts.FieldBackend, consts.FieldLastUpdated, consts.FieldNamespace:
+			continue
+		case consts.FieldAuthenticators:
+			if value, ok := getListOfNotEmptyMaps(d, field); ok {
+				data[field] = value
+			}
+		default:
+			if value, ok := d.GetOkExists(field); ok {
+				data[field] = value
+			}
 		}
-	}
-
-	if authenticatorsRaw, ok := d.GetOk(consts.FieldAuthenticators); ok {
-		authenticators := authenticatorsRaw.([]interface{})
-		var authenticator interface{}
-		if len(authenticators) > 0 {
-			authenticator = authenticators[0]
-		}
-
-		data[consts.FieldAuthenticators] = authenticator
 	}
 
 	log.Printf("[DEBUG] Updating CMPv2 config on PKI secret backend %q:\n%v", backend, data)

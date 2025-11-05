@@ -24,6 +24,10 @@ resource "vault_ldap_auth_backend" "ldap" {
     groupfilter       = "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
     rotation_schedule = "0 * * * SAT"
     rotation_window   = 3600
+    request_timeout               = 30
+    dereference_aliases           = "always"
+    enable_samaccountname_login   = false
+    anonymous_group_search        = false
 }
 ```
 
@@ -104,9 +108,47 @@ The following arguments are supported:
 
 * `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
 
+* `tune` - (Optional) Extra configuration block. Structure is documented below.
+
+The `tune` block is used to tune the auth backend:
+
+* `default_lease_ttl` - (Optional) Specifies the default time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `max_lease_ttl` - (Optional) Specifies the maximum time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the request data object.
+
+* `listing_visibility` - (Optional) Specifies whether to show this mount in
+  the UI-specific listing endpoint. Valid values are "unauth" or "hidden".
+
+* `passthrough_request_headers` - (Optional) List of headers to whitelist and
+  pass from the request to the backend.
+
+* `allowed_response_headers` - (Optional) List of headers to whitelist and allowing
+  a plugin to include them in the response.
+
+* `token_type` - (Optional) Specifies the type of tokens that should be returned by
+  the mount. Valid values are "default-service", "default-batch", "service", "batch".
+
 ### Common Token Arguments
 
 These arguments are common across several Authentication Token resources since Vault 1.2.
+
+* `request_timeout` - (Optional) Timeout, in seconds, for the connection when making requests against the server before returning back an error.
+
+* `dereference_aliases` - (Optional) When aliases should be dereferenced on search operations. Accepted values are 'never', 'finding', 'searching', 'always'. Defaults to 'never'.
+
+* `enable_samaccountname_login` - (Optional) Lets Active Directory LDAP users log in using sAMAccountName or userPrincipalName when the upndomain parameter is set. Requires Vault 1.19.0+.
+
+* `anonymous_group_search` - (Optional) Use anonymous binds when performing LDAP group searches (note: even when true, the initial credentials will still be used for the initial connection test).
 
 * `token_ttl` - (Optional) The incremental lifetime for generated tokens in number of seconds.
   Its current value will be referenced at renewal time.

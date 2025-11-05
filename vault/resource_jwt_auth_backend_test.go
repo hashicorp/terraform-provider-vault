@@ -12,8 +12,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -68,6 +70,15 @@ func TestAccJWTAuthBackend(t *testing.T) {
 						resource.TestCheckResourceAttr(resourceName, "bound_issuer", "api://default"),
 						resource.TestCheckResourceAttr(resourceName, "jwt_supported_algs.#", "1"),
 						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+						resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.#", "2"),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+						// ensure the global default effect from Vault tune API is ignored,
+						// these fields should stay empty
+						resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", ""),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", ""),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", ""),
 					)...,
 				),
 			},
@@ -79,6 +90,15 @@ func TestAccJWTAuthBackend(t *testing.T) {
 						resource.TestCheckResourceAttr(resourceName, "bound_issuer", "api://default"),
 						resource.TestCheckResourceAttr(resourceName, "jwt_supported_algs.#", "2"),
 						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+						resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.#", "2"),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+						// ensure the global default effect from Vault tune API is ignored,
+						// these fields should stay empty
+						resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", ""),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", ""),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", ""),
+						resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", ""),
 					)...,
 				),
 			},
@@ -367,6 +387,9 @@ resource "vault_jwt_auth_backend" "jwt" {
   bound_issuer       = "%s"
   jwt_supported_algs = [%s]
   path               = "%s"
+  tune {
+	passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To"]
+  }
 `, oidcDiscoveryUrl, boundIssuer, supportedAlgs, path)
 
 	var fragments []string
@@ -706,4 +729,47 @@ EOT`
 			},
 		},
 	})
+}
+
+func TestAccJWTAuthBackend_importTune(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
+	path := acctest.RandomWithPrefix("jwt")
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".test"
+	var resAuth api.AuthMount
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendConfig_tuning(path),
+				Check: testutil.TestAccCheckAuthMountExists(resourceName,
+					&resAuth,
+					testProvider.Meta().(*provider.ProviderMeta).MustGetClient()),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "description", "disable_remount"),
+		},
+	})
+}
+
+func testAccJWTAuthBackendConfig_tuning(path string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  description        = "JWT backend"
+  oidc_discovery_url = "https://myco.auth0.com/"
+  path			     = "%s"
+  tune {
+    default_lease_ttl = "10m"
+    max_lease_ttl = "20m"
+    listing_visibility = "hidden"
+    audit_non_hmac_request_keys = ["key1", "key2"]
+    audit_non_hmac_response_keys = ["key3", "key4"]
+    passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To"]
+    allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To"]
+    token_type = "batch"
+  }
+}
+`, path)
 }

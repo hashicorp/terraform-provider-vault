@@ -9,7 +9,9 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -80,6 +82,24 @@ func azureAuthBackendConfigResource() *schema.Resource {
 				Computed:    true,
 				Description: "The TTL of generated identity tokens in seconds.",
 			},
+			consts.FieldMaxRetries: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     3,
+				Description: "Maximum number of retries for Azure API requests. Defaults to 3.",
+			},
+			consts.FieldRetryDelay: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     4,
+				Description: "The initial delay in seconds between retries for Azure API requests. Defaults to 4.",
+			},
+			consts.FieldMaxRetryDelay: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     60,
+				Description: "The maximum delay in seconds between retries for Azure API requests. Defaults to 60.",
+			},
 		},
 	}
 
@@ -114,6 +134,11 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 		consts.FieldResource:     resource,
 		consts.FieldEnvironment:  environment,
 	}
+
+	// Always send retry fields (using schema defaults when not specified)
+	data[consts.FieldMaxRetries] = d.Get(consts.FieldMaxRetries)
+	data[consts.FieldRetryDelay] = d.Get(consts.FieldRetryDelay)
+	data[consts.FieldMaxRetryDelay] = d.Get(consts.FieldMaxRetryDelay)
 
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
@@ -181,10 +206,28 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		consts.FieldClientSecret,
 		consts.FieldResource,
 		consts.FieldEnvironment,
+		consts.FieldMaxRetries,
 	}
 	for _, k := range fields {
 		if v, ok := secret.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
+	// Handle retry delay fields - convert nanoseconds from API to seconds
+	retryDelayFields := []string{
+		consts.FieldRetryDelay,
+		consts.FieldMaxRetryDelay,
+	}
+	for _, field := range retryDelayFields {
+		if v, ok := secret.Data[field]; ok {
+			ns, err := parseutil.ParseInt(v)
+			if err != nil {
+				return diag.Errorf("failed to parse %s from API response: %v (value: %v)", field, err, v)
+			}
+			if err := d.Set(field, int(time.Duration(ns).Seconds())); err != nil {
 				return diag.FromErr(err)
 			}
 		}

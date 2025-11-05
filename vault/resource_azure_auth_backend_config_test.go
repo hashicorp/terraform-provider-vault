@@ -19,17 +19,74 @@ import (
 
 func TestAccAzureAuthBackendConfig_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("azure/foo/bar")
+
+	resourceName := "vault_azure_auth_backend_config.config"
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
+				// Start with basic config
 				Config: testAccAzureAuthBackendConfig_basic(backend),
-				Check:  testAccAzureAuthBackendConfigCheck_attrs(backend),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAzureAuthBackendConfigCheck_attrs(backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "4"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "60"),
+				),
 			},
 			{
-				ResourceName:            "vault_azure_auth_backend_config.config",
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldClientSecret},
+			},
+			{
+				// Add max_retries
+				Config: testAccAzureAuthBackendConfig_maxRetries(backend, 7),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAzureAuthBackendConfigCheck_attrs(backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "7"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "4"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "60"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldClientSecret},
+			},
+			{
+				// Add retry_delay
+				Config: testAccAzureAuthBackendConfig_maxRetriesAndDelay(backend, 7, 8),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAzureAuthBackendConfigCheck_attrs(backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "7"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "8"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "60"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldClientSecret},
+			},
+			{
+				// Add max_retry_delay
+				Config: testAccAzureAuthBackendConfig_retryFields(backend, 7, 8, 90),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAzureAuthBackendConfigCheck_attrs(backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "7"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "8"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "90"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{consts.FieldClientSecret},
@@ -40,6 +97,10 @@ func TestAccAzureAuthBackendConfig_import(t *testing.T) {
 
 func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("azure")
+
+	resourceType := "vault_azure_auth_backend_config"
+	resourceName := resourceType + ".config"
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
@@ -47,12 +108,69 @@ func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAzureAuthBackendConfig_basic(backend),
-				Check:  testAccAzureAuthBackendConfigCheck_attrs(backend),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAzureAuthBackendConfigCheck_attrs(backend),
+					// Check API defaults for retry fields
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "4"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "60"),
+				),
 			},
 			{
 				Config: testAccAzureAuthBackendConfig_updated(backend),
 				Check:  testAccAzureAuthBackendConfigCheck_attrs(backend),
 			},
+			{
+				// Add max_retries field
+				Config: testAccAzureAuthBackendConfig_maxRetries(backend, 5),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "4"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "60"),
+				),
+			},
+			{
+				// Add retry_delay field
+				Config: testAccAzureAuthBackendConfig_maxRetriesAndDelay(backend, 5, 10),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "60"),
+				),
+			},
+			{
+				// Add max_retry_delay field (all three fields now set)
+				Config: testAccAzureAuthBackendConfig_retryFields(backend, 5, 10, 120),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "120"),
+				),
+			},
+			{
+				// Test updating all fields
+				Config: testAccAzureAuthBackendConfig_retryFields(backend, 10, 5, 180),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "5"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "180"),
+				),
+			},
+			{
+				// Test with zero max_retries
+				Config: testAccAzureAuthBackendConfig_retryFields(backend, 0, 1, 30),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRetryDelay, "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryDelay, "30"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret),
 		},
 	})
 }
@@ -295,6 +413,60 @@ resource "vault_azure_auth_backend_config" "config" {
 }`, backend)
 }
 
+func testAccAzureAuthBackendConfig_retryFields(backend string, maxRetries int, retryDelay int, maxRetryDelay int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  path = "%s"
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend = vault_auth_backend.azure.path
+  tenant_id = "11111111-2222-3333-4444-555555555555"
+  client_id = "11111111-2222-3333-4444-555555555555"
+  client_secret = "12345678901234567890"
+  resource = "http://vault.hashicorp.com"
+  max_retries = %d
+  retry_delay = %d
+  max_retry_delay = %d
+}`, backend, maxRetries, retryDelay, maxRetryDelay)
+}
+
+func testAccAzureAuthBackendConfig_maxRetries(backend string, maxRetries int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  path = "%s"
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend = vault_auth_backend.azure.path
+  tenant_id = "11111111-2222-3333-4444-555555555555"
+  client_id = "11111111-2222-3333-4444-555555555555"
+  client_secret = "12345678901234567890"
+  resource = "http://vault.hashicorp.com"
+  max_retries = %d
+}`, backend, maxRetries)
+}
+
+func testAccAzureAuthBackendConfig_maxRetriesAndDelay(backend string, maxRetries int, retryDelay int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  path = "%s"
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend = vault_auth_backend.azure.path
+  tenant_id = "11111111-2222-3333-4444-555555555555"
+  client_id = "11111111-2222-3333-4444-555555555555"
+  client_secret = "12345678901234567890"
+  resource = "http://vault.hashicorp.com"
+  max_retries = %d
+  retry_delay = %d
+}`, backend, maxRetries, retryDelay)
+}
+
 func testAccAzureAuthBackendConfig_automatedRotation(backend string, periodDuration int, scheduleString string, windowDuration int, disableRotation bool) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "azure" {
@@ -313,4 +485,13 @@ resource "vault_azure_auth_backend_config" "config" {
   rotation_window = "%d"
   disable_automated_rotation = %t
 }`, backend, periodDuration, scheduleString, windowDuration, disableRotation)
+}
+
+func testAccAzureAuthBackend_destroyed(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  path = "%s"
+  type = "azure"
+}
+`, backend)
 }

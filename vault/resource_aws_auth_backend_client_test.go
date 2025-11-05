@@ -480,3 +480,286 @@ resource "vault_aws_auth_backend_client" "test" {
   disable_automated_rotation = %t
 }`, backend, period, schedule, window, disable)
 }
+
+func testAccAWSAuthBackendClientCheck_allowedSTSHeaderValues(backend string, expectedHeaders []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["vault_aws_auth_backend_client.client"]
+		if resourceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("resource has no primary instance")
+		}
+
+		endpoint := instanceState.ID
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		resp, err := client.Logical().Read(endpoint)
+		if err != nil {
+			return fmt.Errorf("error reading back AWS auth client config from %q: %s", endpoint, err)
+		}
+		if resp == nil {
+			return fmt.Errorf("AWS auth client not configured at %q", endpoint)
+		}
+
+		// Check allowed_sts_header_values field - Vault returns this as []interface{}
+		if headersInterface, ok := resp.Data[consts.FieldAllowedSTSHeaderValues]; ok {
+			if headersList, ok := headersInterface.([]interface{}); ok {
+				if len(expectedHeaders) == 0 {
+					if len(headersList) != 0 {
+						return fmt.Errorf("expected empty allowed_sts_header_values, got %d headers: %v", len(headersList), headersList)
+					}
+				} else {
+					actualHeaders := make([]string, len(headersList))
+					for i, header := range headersList {
+						if headerStr, ok := header.(string); ok {
+							actualHeaders[i] = headerStr
+						} else {
+							return fmt.Errorf("header at index %d is not a string: %v", i, header)
+						}
+					}
+
+					// Check that all expected headers are present (allowing for duplicates)
+					for _, expected := range expectedHeaders {
+						found := false
+						for _, actual := range actualHeaders {
+							if actual == expected {
+								found = true
+								break
+							}
+						}
+						if !found {
+							return fmt.Errorf("expected header %q not found in %v", expected, actualHeaders)
+						}
+					}
+
+					// Also verify that we don't have unexpected headers (deduplicate first)
+					uniqueActual := make(map[string]bool)
+					for _, header := range actualHeaders {
+						uniqueActual[header] = true
+					}
+					expectedSet := make(map[string]bool)
+					for _, header := range expectedHeaders {
+						expectedSet[header] = true
+					}
+					for actual := range uniqueActual {
+						if !expectedSet[actual] {
+							return fmt.Errorf("unexpected header %q found in response", actual)
+						}
+					}
+				}
+			} else {
+				return fmt.Errorf("allowed_sts_header_values is not a slice: %T", headersInterface)
+			}
+		} else if len(expectedHeaders) > 0 {
+			return fmt.Errorf("expected allowed_sts_header_values to be set, but was nil")
+		}
+
+		return nil
+	}
+}
+
+func TestAccAWSAuthBackendClient_allowedSTSHeaderValues(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resourceName := "vault_aws_auth_backend_client.client"
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClientConfig_allowedSTSHeaderValues_basic(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".*", "X-Custom-Header"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".*", "X-Another-Header"),
+					// Additional validation directly from Vault API
+					testAccAWSAuthBackendClientCheck_allowedSTSHeaderValues(backend, []string{"X-Custom-Header", "X-Another-Header"}),
+				),
+			},
+			{
+				Config: testAccAWSAuthBackendClientConfig_allowedSTSHeaderValues_updated(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".#", "3"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".*", "X-Updated-Header"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".*", "X-New-Header"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".*", "X-Third-Header"),
+					// Additional validation directly from Vault API
+					testAccAWSAuthBackendClientCheck_allowedSTSHeaderValues(backend, []string{"X-Updated-Header", "X-New-Header", "X-Third-Header"}),
+				),
+			},
+			{
+				Config: testAccAWSAuthBackendClientConfig_allowedSTSHeaderValues_empty(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".#", "0"),
+					// Additional validation directly from Vault API for empty case
+					testAccAWSAuthBackendClientCheck_allowedSTSHeaderValues(backend, []string{}),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey),
+		},
+	})
+}
+
+func TestAccAWSAuthBackendClient_allowedSTSHeaderValues_canonicalization(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resourceName := "vault_aws_auth_backend_client.client"
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClientConfig_allowedSTSHeaderValues_canonicalization(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".#", "3"),
+					// All variations should be canonicalized to proper HTTP header format
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".*", "X-Custom-Header"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".*", "Content-Type"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".*", "Authorization"),
+					// Additional validation directly from Vault API - verify canonicalization worked
+					testAccAWSAuthBackendClientCheck_allowedSTSHeaderValues(backend, []string{"X-Custom-Header", "Content-Type", "Authorization"}),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey),
+		},
+	})
+}
+
+func TestAccAWSAuthBackendClient_allowedSTSHeaderValues_duplicateHandling(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resourceName := "vault_aws_auth_backend_client.client"
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClientConfig_allowedSTSHeaderValues_duplicateHandling(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					// Should only have 2 unique headers after deduplication
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".#", "2"),
+					// Both should be canonicalized and deduplicated
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".*", "Content-Type"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedSTSHeaderValues+".*", "Authorization"),
+					// Validate that duplicates were properly handled in Vault
+					testAccAWSAuthBackendClientCheck_allowedSTSHeaderValues(backend, []string{"Content-Type", "Authorization"}),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey),
+		},
+	})
+}
+
+func testAccAWSAuthBackendClientConfig_allowedSTSHeaderValues_basic(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  access_key = "AWSACCESSKEY"
+  secret_key = "AWSSECRETKEY"
+  allowed_sts_header_values = [
+    "x-custom-header",
+    "x-another-header"
+  ]
+}
+`, backend)
+}
+
+func testAccAWSAuthBackendClientConfig_allowedSTSHeaderValues_updated(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  access_key = "AWSACCESSKEY"
+  secret_key = "AWSSECRETKEY"
+  allowed_sts_header_values = [
+    "x-updated-header",
+    "x-new-header",
+    "x-third-header"
+  ]
+}
+`, backend)
+}
+
+func testAccAWSAuthBackendClientConfig_allowedSTSHeaderValues_empty(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  access_key = "AWSACCESSKEY"
+  secret_key = "AWSSECRETKEY"
+  allowed_sts_header_values = []
+}
+`, backend)
+}
+
+func testAccAWSAuthBackendClientConfig_allowedSTSHeaderValues_canonicalization(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  access_key = "AWSACCESSKEY"
+  secret_key = "AWSSECRETKEY"
+  allowed_sts_header_values = [
+    "x-custom-header",    # Should be canonicalized to X-Custom-Header
+    "CONTENT-TYPE",       # Should be canonicalized to Content-Type
+    "authorization"       # Should be canonicalized to Authorization
+  ]
+}
+`, backend)
+}
+
+func testAccAWSAuthBackendClientConfig_allowedSTSHeaderValues_duplicateHandling(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for duplicate header handling"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  access_key = "AWSACCESSKEY"
+  secret_key = "AWSSECRETKEY" 
+  allowed_sts_header_values = [
+    "content-type",       # Should be canonicalized to Content-Type
+    "Content-Type",       # Already canonical - should be deduplicated
+    "CONTENT-TYPE",       # Should be canonicalized to Content-Type - duplicate
+    "authorization",      # Should be canonicalized to Authorization
+    "Authorization",      # Already canonical - should be deduplicated
+    "AUTHORIZATION"       # Should be canonicalized to Authorization - duplicate
+  ]
+}
+`, backend)
+}

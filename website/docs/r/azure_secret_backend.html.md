@@ -77,6 +77,8 @@ The following arguments are supported:
 - `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault 1.17+.
   *Available only for Vault Enterprise*
 
+- `root_password_ttl` - (Optional) Specifies the TTL of the root password when rotate-root generates a new client secret. Requires Vault 1.15+.
+
 - `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
   A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
   *Available only for Vault Enterprise*

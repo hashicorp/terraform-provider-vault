@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -42,6 +43,18 @@ func terraformCloudSecretRoleResource() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Description: "The path of the Terraform Cloud Secret Backend the role belongs to.",
+			},
+			"credential_type": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "The type of credential to generate. Valid values are 'team', 'team_legacy', 'user', or 'organization'.",
+				ValidateFunc: validation.StringInSlice([]string{"team", "team_legacy", "user", "organization"}, false),
+			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Description of the role. This is used as a prefix to help identify the token in the HCP Terraform UI. Only valid with 'team' or 'user' credential types.",
 			},
 			"organization": {
 				Type:        schema.TypeString,
@@ -114,6 +127,16 @@ func terraformCloudSecretRoleWrite(d *schema.ResourceData, meta interface{}) err
 	if v, ok := d.GetOkExists("user_id"); ok {
 		payload["user_id"] = v
 	}
+	if v, ok := d.GetOk("description"); ok {
+		payload["description"] = v
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion120) {
+		// parse credential_type field if 1.20 server or higher
+		if v, ok := d.GetOk("credential_type"); ok {
+			payload["credential_type"] = v
+		}
+	}
 
 	log.Printf("[DEBUG] Configuring Terraform Cloud secrets backend role at %q", path)
 
@@ -167,6 +190,12 @@ func terraformCloudSecretRoleRead(d *schema.ResourceData, meta interface{}) erro
 	d.Set("user_id", data["user_id"])
 	d.Set("max_ttl", data["max_ttl"])
 	d.Set("ttl", data["ttl"])
+	if data["description"] != nil {
+		d.Set("description", data["description"])
+	}
+	if data["credential_type"] != nil {
+		d.Set("credential_type", data["credential_type"])
+	}
 
 	return nil
 }
