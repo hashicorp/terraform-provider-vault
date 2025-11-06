@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -29,9 +30,11 @@ func TestAccAzureAccessCredentialsEphemeralResource_basic(t *testing.T) {
 	role := "test-role"
 	conf := testutil.GetTestAzureConfExistingSP(t)
 
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+	resource.UnitTest(t, resource.TestCase{
+		PreCheck: func() { testutil.TestAccPreCheck(t) },
+		// Ephemeral resources are only available in 1.10 and later
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
 		},
 		// Include the provider we want to test (v5)
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -45,10 +48,10 @@ func TestAccAzureAccessCredentialsEphemeralResource_basic(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					// Verify the ephemeral resource produces client credentials
 					statecheck.ExpectKnownValue("echo.test_azure",
-						tfjsonpath.New("client_id"),
+						tfjsonpath.New("data").AtMapKey("client_id"),
 						knownvalue.NotNull()),
 					statecheck.ExpectKnownValue("echo.test_azure",
-						tfjsonpath.New("client_secret"),
+						tfjsonpath.New("data").AtMapKey("client_secret"),
 						knownvalue.NotNull()),
 				},
 			},
@@ -82,10 +85,7 @@ ephemeral "vault_azure_access_credentials" "test" {
 }
 
 provider "echo" {
-  data = {
-    client_id     = ephemeral.vault_azure_access_credentials.test.client_id
-    client_secret = ephemeral.vault_azure_access_credentials.test.client_secret
-  }
+  data = ephemeral.vault_azure_access_credentials.test
 }
 
 resource "echo" "test_azure" {}
