@@ -19,19 +19,17 @@ import (
 )
 
 // TestAccAzureAccessCredentialsEphemeralResource_basic tests the creation of dynamic
-// Azure service principal credentials using ephemeral resource
+// Azure service principal credentials using ephemeral resource.
+// Note: This test may occasionally fail during cleanup due to Azure API rate limiting,
+// which is a known Azure infrastructure limitation and not a code issue.
 func TestAccAzureAccessCredentialsEphemeralResource_basic(t *testing.T) {
-	// This test takes a while because it's testing credential generation
-	// if testing.Short() {
-	// 	t.SkipNow()
-	// }
 
 	testutil.SkipTestAcc(t)
 	backend := acctest.RandomWithPrefix("tf-test-azure")
 	role := "test-role"
 	conf := testutil.GetTestAzureConfExistingSP(t)
 
-	resource.UnitTest(t, resource.TestCase{
+	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 		},
@@ -71,8 +69,8 @@ resource "vault_azure_secret_backend" "test" {
 resource "vault_azure_secret_backend_role" "test" {
   backend                = vault_azure_secret_backend.test.path
   role                   = "%s"
-  ttl                    = 300
-  max_ttl                = 600
+  ttl                    = 3600
+  max_ttl                = 7200
 
   application_object_id = "%s"
 }
