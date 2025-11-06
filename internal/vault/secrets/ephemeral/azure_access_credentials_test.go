@@ -29,7 +29,7 @@ func TestAccAzureAccessCredentialsEphemeralResource_basic(t *testing.T) {
 	testutil.SkipTestAcc(t)
 	backend := acctest.RandomWithPrefix("tf-test-azure")
 	role := "test-role"
-	conf := testutil.GetTestAzureConf(t)
+	conf := testutil.GetTestAzureConfExistingSP(t)
 
 	resource.UnitTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -74,10 +74,7 @@ resource "vault_azure_secret_backend_role" "test" {
   ttl                    = 300
   max_ttl                = 600
 
-  azure_roles {
-    role_name = "Reader"
-    scope     = "/subscriptions/%s"
-  }
+  application_object_id = "%s"
 }
 
 ephemeral "vault_azure_access_credentials" "test" {
@@ -101,6 +98,6 @@ resource "echo" "test_azure" {}
 		conf.ClientSecret,
 		backend,
 		role,
-		conf.SubscriptionID,
+		conf.AppObjectID,
 	)
 }
