@@ -122,16 +122,8 @@ func kubernetesAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[stri
 		}
 	} else {
 		// always send the current value from state on update so the backend preserves or clears it
-		if v := d.Get("bound_service_account_namespaces"); v != nil {
-			if s, ok := v.(*schema.Set); ok {
-				data["bound_service_account_namespaces"] = s.List()
-			} else {
-				// fallback: attempt to set as-is
-				data["bound_service_account_namespaces"] = v
-			}
-		} else {
-			data["bound_service_account_namespaces"] = []interface{}{}
-		}
+		data["bound_service_account_namespace_selector"] = d.Get("bound_service_account_namespace_selector").(string)
+		// "bound_service_account_namespace_selector"] = d.Get("bound_service_account_namespace_selector").(string)
 	}
 
 	// Always set bound_service_account_namespace_selector to ensure proper clearing on updates
@@ -141,11 +133,8 @@ func kubernetesAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[stri
 		}
 	} else {
 		// always send the current value from state on update so the backend preserves or clears it
-		if v := d.Get("bound_service_account_namespace_selector"); v != nil {
-			data["bound_service_account_namespace_selector"] = v.(string)
-		} else {
-			data["bound_service_account_namespace_selector"] = ""
-		}
+		data["bound_service_account_namespace_selector"] = d.Get("bound_service_account_namespace_selector").(string)
+
 	}
 
 	params := []string{"audience", "alias_name_source"}
