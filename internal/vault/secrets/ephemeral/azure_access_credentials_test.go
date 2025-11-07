@@ -21,8 +21,6 @@ import (
 
 // TestAccAzureAccessCredentialsEphemeralResource_basic tests the creation of dynamic
 // Azure service principal credentials using ephemeral resource.
-// Note: This test may occasionally fail during cleanup due to Azure API rate limiting,
-// which is a known Azure infrastructure limitation and not a code issue.
 func TestAccAzureAccessCredentialsEphemeralResource_basic(t *testing.T) {
 
 	testutil.SkipTestAcc(t)
@@ -49,7 +47,7 @@ func TestAccAzureAccessCredentialsEphemeralResource_basic(t *testing.T) {
 					// Verify the ephemeral resource produces client credentials
 					statecheck.ExpectKnownValue("echo.test_azure",
 						tfjsonpath.New("data").AtMapKey("client_id"),
-						knownvalue.NotNull()),
+						knownvalue.StringExact(conf.ClientID)),
 					statecheck.ExpectKnownValue("echo.test_azure",
 						tfjsonpath.New("data").AtMapKey("client_secret"),
 						knownvalue.NotNull()),
