@@ -33,7 +33,7 @@ func getMountSchema(excludes ...string) schemaMap {
 			Type:        schema.TypeString,
 			Required:    true,
 			ForceNew:    true,
-			Description: "Type of the backend, such as 'aws'",
+			Description: "Type of the backend such as 'aws' or the plugin name.",
 		},
 		consts.FieldDescription: {
 			Type:        schema.TypeString,
@@ -107,10 +107,26 @@ func getMountSchema(excludes ...string) schemaMap {
 			Description: "List of headers to allow and pass from the request to the plugin",
 		},
 
+		// plugin_version should be only allowed under vault_mount resource
+		// as it's the only way to enable external plugins via specifying
+		// the plugin `type` (aka the plugin name).
+		// There is no support currently for external plugins using secret
+		// specific backend resources (e.g. vault_gcp_secret_backend) as `type`
+		// is excluded.
 		consts.FieldPluginVersion: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Specifies the semantic version of the plugin to use, e.g. 'v1.0.0'",
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: `Specifies the semantic version of the external plugin  
+to use. e.g. 'v1.0.0'. If not specified, the server will select any matching 
+unversioned plugin that may have been registered, the latest versioned plugin 
+registered, or a built-in plugin in that order of precedence.`,
+		},
+
+		consts.FieldOverridePinnedVersion: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Description: `(Enterprise only). Specifies whether to override the
+pinned version using plugin_version.`,
 		},
 
 		consts.FieldAllowedManagedKeys: {
@@ -502,6 +518,10 @@ func readMount(ctx context.Context, d *schema.ResourceData, meta interface{}, ex
 		return err
 	}
 	if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
+		return err
+	}
+	// TODO: Need the vault api update to use OverridePinnedVersion from MountConfigOutput
+	if err := d.Set(consts.FieldPluginVersion, mount.Config.PluginVersion); err != nil {
 		return err
 	}
 

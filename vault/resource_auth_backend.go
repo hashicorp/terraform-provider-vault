@@ -36,7 +36,7 @@ func AuthBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Name of the auth backend",
+				Description: "Type of the backend such as 'jwt' or the plugin name.",
 			},
 
 			consts.FieldPath: {
@@ -75,7 +75,7 @@ func AuthBackendResource() *schema.Resource {
 				Description: "The key to use for signing identity tokens.",
 			},
 
-			consts.FieldTune: authMountTuneSchema(),
+			consts.FieldTune: authExternalPluginMountTuneSchema(),
 		},
 	}, false)
 }
