@@ -10,9 +10,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	spiffeauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
+	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -226,8 +227,9 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 // the Metadata method. All resources must have unique names.
 func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		spiffe.NewSpiffeAuthConfigResource,
-		spiffe.NewSpiffeAuthRoleResource,
+		spiffeauth.NewSpiffeAuthConfigResource,
+		spiffeauth.NewSpiffeAuthRoleResource,
+		spiffesec.NewSpiffeSecretBackendConfigResource,
 		sys.NewPasswordPolicyResource,
 		azure.NewAzureStaticRoleResource,
 	}
