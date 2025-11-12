@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"regexp"
 	"testing"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -32,8 +32,8 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "86400"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
@@ -49,8 +49,8 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description updated"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "1800"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "43200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "43200"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-west-1"),
@@ -64,8 +64,8 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "1800"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "43200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "43200"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-west-1"),
@@ -251,8 +251,8 @@ func TestAccAWSSecretBackend_remount(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "86400"),
 				),
 			},
 			{
@@ -260,13 +260,194 @@ func TestAccAWSSecretBackend_remount(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "86400"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
 		},
 	})
+}
+
+func TestAccAWSSecretBackendRole_MountConfig(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+
+	resourceType := "vault_aws_secret_backend"
+	resourceName := resourceType + ".test"
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSSecretBackendConfig_MountConfig(path, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, "access-key-test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, "secret-key-test"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "36000"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "hidden"),
+					resource.TestCheckResourceAttr(resourceName, "force_no_cache", "true"),
+				),
+			},
+			{
+				Config: testAccAWSSecretBackendConfig_MountConfig(path, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, "access-key-test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, "secret-key-test"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "48000"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "passthrough_request_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.0", "header1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.2", "header3"),
+					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
+					resource.TestCheckResourceAttr(resourceName, "force_no_cache", "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldDisableRemount,
+				consts.FieldSecretKey),
+		},
+	})
+}
+
+func TestAccAWSSecretBackend_max_retries(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	resourceType := "vault_aws_secret_backend"
+	resourceName := resourceType + ".test"
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSSecretBackendConfig_max_retry_basic(path, accessKey, secretKey, 3),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "3"),
+				),
+			},
+			{
+				Config: testAccAWSSecretBackendConfig_max_retry_updated(path, accessKey, secretKey, 5),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "2100"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "21070"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "5"),
+				),
+			},
+			{
+				Config: testAccAWSSecretBackendConfig_no_max_retry(path, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test no max_retry description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMEndpoint, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSTSEndpoint, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "-1"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldUsernameTemplate),
+				),
+			},
+			{
+				Config: testAccAWSSecretBackendConfig_max_retry_basic(path, accessKey, secretKey, -1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "-1"),
+				),
+			},
+			{
+				Config: testAccAWSSecretBackendConfig_max_retry_basic(path, accessKey, secretKey, 0),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, secretKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetries, "0"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSecretKey, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func testAccAWSSecretBackendConfig_MountConfig(path string, isUpdate bool) string {
+	if !isUpdate {
+
+		return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path 					      = "%s"
+  description 			      = "test desc"
+  access_key                  = "access-key-test"
+  secret_key                  = "secret-key-test"
+  default_lease_ttl_seconds   = 3600
+  max_lease_ttl_seconds       = 36000
+  passthrough_request_headers = ["header1", "header2"]
+  allowed_response_headers    = ["header1", "header2"]
+  delegated_auth_accessors    = ["header1", "header2"]
+  listing_visibility          = "hidden"
+  force_no_cache              = true
+}`, path)
+	} else {
+		return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path 					      = "%s"
+  description 			      = "test desc updated"
+  access_key                  = "access-key-test"
+  secret_key                  = "secret-key-test"
+  default_lease_ttl_seconds   = 7200
+  max_lease_ttl_seconds       = 48000
+  passthrough_request_headers = ["header1", "header2"]
+  allowed_response_headers    = ["header1", "header2", "header3"]
+  delegated_auth_accessors    = ["header1", "header2"]
+  listing_visibility          = "unauth"
+  force_no_cache              = true
+}`, path)
+	}
 }
 
 func testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey string) string {
@@ -389,4 +570,42 @@ resource "vault_aws_secret_backend" "test" {
   rotation_window = "%d"
   disable_automated_rotation = %t
 }`, path, period, schedule, window, disable)
+}
+
+func testAccAWSSecretBackendConfig_no_max_retry(path, accessKey, secretKey string) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path = "%s"
+  description = "test no max_retry description"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  access_key = "%s"
+  secret_key = "%s"
+}`, path, accessKey, secretKey)
+}
+
+func testAccAWSSecretBackendConfig_max_retry_basic(path, accessKey, secretKey string, maxRetry int) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  access_key = "%s"
+  secret_key = "%s"
+  max_retries = "%d"
+}`, path, accessKey, secretKey, maxRetry)
+}
+
+func testAccAWSSecretBackendConfig_max_retry_updated(path, accessKey, secretKey string, maxRetry int) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path = "%s"
+  description = "test description updated"
+  default_lease_ttl_seconds = 2100
+  max_lease_ttl_seconds = 21070
+  access_key = "%s"
+  secret_key = "%s"
+  max_retries = "%d"
+}`, path, accessKey, secretKey, maxRetry)
 }

@@ -61,16 +61,6 @@ not begin or end with a `/`. Defaults to `gcp`.
 * `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
   See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
-* `description` - (Optional) A human-friendly description for this backend.
-
-* `default_lease_ttl_seconds` - (Optional) The default TTL for credentials
-issued by this backend. Defaults to '0'.
-
-* `max_lease_ttl_seconds` - (Optional) The maximum TTL that can be requested
-for credentials issued by this backend. Defaults to '0'.
-
-* `local` - (Optional) Boolean flag that can be explicitly set to true to enforce local mount in HA environment
-
 * `service_account_email` – (Optional) Service Account to impersonate for plugin workload identity federation.
   Required with `identity_token_audience`. Requires Vault 1.17+. *Available only for Vault Enterprise*.
 
@@ -81,9 +71,6 @@ for credentials issued by this backend. Defaults to '0'.
 * `identity_token_ttl` - (Optional) The TTL of generated tokens. Defaults to
   1 hour. Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
   Requires Vault 1.17+. *Available only for Vault Enterprise*.
-
-* `identity_token_key` - (Optional) The key to use for signing plugin identity
-  tokens. Requires Vault 1.17+. *Available only for Vault Enterprise*.
 
 * `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
   A zero value tells Vault not to rotate the root credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 1.19+.
@@ -100,6 +87,52 @@ for credentials issued by this backend. Defaults to '0'.
   *Available only for Vault Enterprise*.
 
 * `credentials_wo_version` - (Optional)  The version of the `credentials_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
+### Common Mount Arguments
+These arguments are common across all resources that mount a secret engine.
+
+* `description` - (Optional) Human-friendly description of the mount
+
+* `default_lease_ttl_seconds` - (Optional) Default lease duration for tokens and secrets in seconds
+
+* `max_lease_ttl_seconds` - (Optional) Maximum possible lease duration for tokens and secrets in seconds
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.
+
+* `local` - (Optional) Boolean flag that can be explicitly set to true to enforce local mount in HA environment
+
+* `options` - (Optional) Specifies mount type specific options that are passed to the backend
+
+* `seal_wrap` - (Optional) Boolean flag that can be explicitly set to true to enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability
+
+* `external_entropy_access` - (Optional) Boolean flag that can be explicitly set to true to enable the secrets engine to access Vault's external entropy source
+
+* `allowed_managed_keys` - (Optional) Set of managed key registry entry names that the mount in question is allowed to access
+
+* `listing_visibility` - (Optional) Specifies whether to show this mount in the UI-specific
+  listing endpoint. Valid values are `unauth` or `hidden`. If not set, behaves like `hidden`.
+
+* `passthrough_request_headers` - (Optional) List of headers to allow and pass from the request to
+  the plugin.
+
+* `allowed_response_headers` - (Optional) List of headers to allow, allowing a plugin to include
+  them in the response.
+
+* `delegated_auth_accessors` - (Optional)  List of allowed authentication mount accessors the
+  backend can request delegated authentication for.
+
+* `plugin_version` - (Optional) Specifies the semantic version of the plugin to use, e.g. "v1.0.0".
+  If unspecified, the server will select any matching unversioned plugin that may have been
+  registered, the latest versioned plugin registered, or a built-in plugin in that order of precedence.
+
+* `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
+  not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
+
+* `ttl` - (Optional) The default TTL for long-lived credentials (i.e. service account keys).
+
+* `max_ttl` - (Optional) The maximum TTL for long-lived credentials (i.e. service account keys).
 
 ## Ephemeral Attributes Reference
 

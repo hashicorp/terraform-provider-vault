@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -120,6 +121,38 @@ func gcpAuthBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Service Account to impersonate for plugin workload identity federation.",
+			},
+			consts.FieldIAMAlias: {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				Description:  "Defines what alias needs to be used during login and refelects the same in token metadata and audit logs.",
+				ValidateFunc: validation.StringInSlice([]string{"role_id", "unique_id"}, false),
+			},
+			consts.FieldIAMMetadata: {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Computed:    true,
+				Description: "Controls the metadata to include on the token returned by the login endpoint.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldGceAlias: {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				Description:  "Defines what alias needs to be used during login and refelects the same in token metadata and audit logs.",
+				ValidateFunc: validation.StringInSlice([]string{"role_id", "instance_id"}, false),
+			},
+			consts.FieldGceMetadata: {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Computed:    true,
+				Description: "Controls which instance metadata fields from the GCE login are captured into Vault's token metadata or audit logs.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			consts.FieldTune: authMountTuneSchema(),
 		},
@@ -285,13 +318,15 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	if d.HasChange(consts.FieldTune) {
-		log.Printf("[INFO] %s Auth %q tune configuration changed", gcpAuthType, gcpAuthPath)
+		log.Printf("[DEBUG] %s Auth %q tune configuration changed", gcpAuthType, gcpAuthPath)
 		if raw, ok := d.GetOk(consts.FieldTune); ok {
 			log.Printf("[DEBUG] Writing %s auth tune to %q", gcpAuthType, gcpAuthPath)
-			err := authMountTune(ctx, client, gcpAuthPath, raw)
-			if err != nil {
+
+			if err := authMountTune(ctx, client, gcpAuthPath, raw); err != nil {
 				return nil
 			}
+
+			log.Printf("[DEBUG] Written %s auth tune to '%q'", gcpAuthType, gcpAuthPath)
 		}
 	}
 
@@ -316,6 +351,26 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 			if v, ok := d.GetOk(k); ok {
 				data[k] = v
 			}
+		}
+	}
+
+	// Add IAM alias, IAM Metadata, GCE alias and GCE Metadata if provided
+	if iamMetadataConfig, ok := d.GetOk(consts.FieldIAMMetadata); ok {
+		data[consts.FieldIAMMetadata] = util.TerraformSetToStringArray(iamMetadataConfig)
+	}
+
+	if gceMetadataConfig, ok := d.GetOk(consts.FieldGceMetadata); ok {
+		data[consts.FieldGceMetadata] = util.TerraformSetToStringArray(gceMetadataConfig)
+	}
+
+	fields := []string{
+		consts.FieldIAMAlias,
+		consts.FieldGceAlias,
+	}
+
+	for _, k := range fields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
 		}
 	}
 
@@ -365,6 +420,10 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		consts.FieldProjectID,
 		consts.FieldClientEmail,
 		consts.FieldLocal,
+		consts.FieldIAMAlias,
+		consts.FieldIAMMetadata,
+		consts.FieldGceAlias,
+		consts.FieldGceMetadata,
 	}
 
 	if provider.IsEnterpriseSupported(meta) {
@@ -412,9 +471,13 @@ func gcpAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	if err != nil {
 		return diag.Errorf("error reading tune information from Vault: %s", err)
 	}
-	data := map[string]interface{}{}
-	data[consts.FieldTune] = []map[string]interface{}{rawTune}
-	if err := util.SetResourceData(d, data); err != nil {
+	input, err := retrieveMountConfigInput(d)
+	if err != nil {
+		return diag.Errorf("error retrieving tune configuration from state: %s", err)
+	}
+	mergedTune := mergeAuthMethodTune(rawTune, input)
+	if err := d.Set(consts.FieldTune, mergedTune); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path '%s/tune' to state: %s", gcpAuthPath, err)
 		return diag.FromErr(err)
 	}
 

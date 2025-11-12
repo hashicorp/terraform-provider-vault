@@ -84,6 +84,7 @@ state changes in the meantime.
 - [Provider: `address`](#provider-address)
 - [Provider: `token`](#provider-token)
 - [Resource: `vault_kv_secret_v2`](#resource-vault_kv_secret_v2)
+- [Resource: all `auth_backend`](#resource-all-auth_backend)
 - [Deprecated Field Removals](#deprecated-field-removals)
     - [Okta Auth Backend](#okta-auth-backend)
         - [`ttl`](#okta-secret-backend)
@@ -150,6 +151,12 @@ This resource will still store metadata and other parameters on the secret, but 
   It is also recommended to switch to using the new write-only attributes `data_json_wo` and `data_json_wo_version` to avoid 
   leaking the secret data to the TF state.
 
+## Resource: all `auth_backend`
+`vault_jwt_auth_backend`, `vault_github_auth_backend`, `vault_auth_backend`,`vault_saml_auth_backend`, `vault_gcp_auth_backend`, `vault_ldap_auth_backend`,
+`vault_oci_auth_backend`, `vault_okta_auth_backend`
+
+*BEHAVIOR CHANGE*
+With the fix for [the auth resources' tune block failure where it always updates unless its fields match Vault server defaults](https://github.com/hashicorp/terraform-provider-vault/issues/2234), Terraform Vault Provider versions `5.4.X` and greater will also read the tune metadata of the auth engines as part of tune updates. Please see the [Vault Policies and the Terraform Vault Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/policies) for more info about permitting Terraform Vault Provider to read the tune metadata.
 
 ## Deprecated Field Removals
 
@@ -164,3 +171,6 @@ The following deprecated fields have been removed:
 ### Azure Secret Backend
 
 * `use_microsoft_graph_api` - removed from the `vault_azure_secret_backend` resource.
+
+
+[def]: #resource-

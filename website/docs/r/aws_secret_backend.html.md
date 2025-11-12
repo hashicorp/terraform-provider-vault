@@ -75,14 +75,6 @@ not begin or end with a `/`. Defaults to `aws`.
 * `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
   See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
-* `description` - (Optional) A human-friendly description for this backend.
-
-* `default_lease_ttl_seconds` - (Optional) The default TTL for credentials
-issued by this backend.
-
-* `max_lease_ttl_seconds` - (Optional) The maximum TTL that can be requested
-for credentials issued by this backend.
-
 * `iam_endpoint` - (Optional) Specifies a custom HTTP IAM endpoint to use.
 
 * `sts_endpoint` - (Optional) Specifies a custom HTTP STS endpoint to use.
@@ -93,13 +85,11 @@ for credentials issued by this backend.
 
 * `sts_fallback_regions` - (Optional) Ordered list of `sts_region`s matching the fallback endpoints. Should correspond in order with those endpoints. Requires Vault 1.19+
 
-* `local` - (Optional) Specifies whether the secrets mount will be marked as local. Local mounts are not replicated to performance replicas.
-
 * `identity_token_audience` - (Optional) The audience claim value. Requires Vault 1.16+.
 
 * `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Requires Vault 1.16+.
 
-* `identity_token_key` - (Optional) The key to use for signing identity tokens. Requires Vault 1.16+.
+* `max_retries` - (Optional) Number of max retries the client should use for recoverable errors.
 
 * `role_arn` - (Optional) Role ARN to assume for plugin identity token federation. Requires Vault 1.16+.
 
@@ -125,6 +115,48 @@ unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.
 {{ end }}
 
 ```
+
+### Common Mount Arguments
+These arguments are common across all resources that mount a secret engine.
+
+* `description` - (Optional) Human-friendly description of the mount
+
+* `default_lease_ttl_seconds` - (Optional) Default lease duration for tokens and secrets in seconds
+
+* `max_lease_ttl_seconds` - (Optional) Maximum possible lease duration for tokens and secrets in seconds
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.
+
+* `local` - (Optional) Boolean flag that can be explicitly set to true to enforce local mount in HA environment
+
+* `options` - (Optional) Specifies mount type specific options that are passed to the backend
+
+* `seal_wrap` - (Optional) Boolean flag that can be explicitly set to true to enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability
+
+* `external_entropy_access` - (Optional) Boolean flag that can be explicitly set to true to enable the secrets engine to access Vault's external entropy source
+
+* `allowed_managed_keys` - (Optional) Set of managed key registry entry names that the mount in question is allowed to access
+
+* `listing_visibility` - (Optional) Specifies whether to show this mount in the UI-specific
+  listing endpoint. Valid values are `unauth` or `hidden`. If not set, behaves like `hidden`.
+
+* `passthrough_request_headers` - (Optional) List of headers to allow and pass from the request to
+  the plugin.
+
+* `allowed_response_headers` - (Optional) List of headers to allow, allowing a plugin to include
+  them in the response.
+
+* `delegated_auth_accessors` - (Optional)  List of allowed authentication mount accessors the
+  backend can request delegated authentication for.
+
+* `plugin_version` - (Optional) Specifies the semantic version of the plugin to use, e.g. "v1.0.0".
+  If unspecified, the server will select any matching unversioned plugin that may have been
+  registered, the latest versioned plugin registered, or a built-in plugin in that order of precedence.
+
+* `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
+  not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
 
 ## Attributes Reference
 

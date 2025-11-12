@@ -56,6 +56,7 @@ func TestAccPKISecretBackendConfigScep_Empty(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".#", "1"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.%", "1"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.intune.%", "0"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldLogLevel, ""),
 					resource.TestCheckResourceAttrSet(resourceBackend, consts.FieldLastUpdated),
 
 					// Validate we read back the data back as we did upon creation
@@ -75,6 +76,7 @@ func TestAccPKISecretBackendConfigScep_Empty(t *testing.T) {
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".#", "1"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.%", "1"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.intune.%", "0"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldLogLevel, ""),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldLastUpdated),
 				),
 			},
@@ -132,6 +134,7 @@ resource "vault_pki_secret_backend_config_scep" "test" {
   allowed_encryption_algorithms = ["des-cbc", "3des-cbc"]
   allowed_digest_algorithms = ["sha-1"]
   restrict_ca_chain_to_issuer = true
+  log_level = "trace"
   authenticators { 
 	cert = { "accessor" = "test", "cert_role" = "cert-role" }
     scep = { "accessor" = "auth-scep-accessor", "scep_role" = "scep-role"}
@@ -172,6 +175,7 @@ data "vault_pki_secret_backend_config_scep" "test" {
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.intune.%", "2"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.intune.client_id", "the client ID"),
 					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.intune.tenant_id", "the tenant ID"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldLogLevel, "trace"),
 
 					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(dataName, consts.FieldEnabled, "true"),
@@ -195,6 +199,7 @@ data "vault_pki_secret_backend_config_scep" "test" {
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.intune.%", "2"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.intune.client_id", "the client ID"),
 					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.intune.tenant_id", "the tenant ID"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldLogLevel, "trace"),
 				),
 			},
 			{
@@ -320,39 +325,6 @@ data "vault_pki_secret_backend_config_scep" "test" {
 	})
 }
 
-func testAccPKISecretBackendConfigScepComplete(pkiPath string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-	path        = "%s"
-	type        = "pki"
-    description = "PKI secret engine mount"
-}
-resource "vault_pki_secret_backend_config_scep" "test" {
-  backend = vault_mount.test.path
-  enabled = true
-  default_path_policy = "role:default-path-policy-role"
-  allowed_encryption_algorithms = ["des-cbc", "3des-cbc"]
-  allowed_digest_algorithms = ["sha-1"]
-  restrict_ca_chain_to_issuer = true
-  authenticators { 
-	cert = { "accessor" = "test", "cert_role" = "cert-role" }
-    scep = { "accessor" = "auth-scep-accessor", "scep_role" = "scep-role"}
-  }	
-  external_validation {
-    intune = { 
-      client_id = "the client ID"
-      tenant_id = "the tenant ID"
-      client_secret = "the client secret"
-    }
-  }
-}
-
-data "vault_pki_secret_backend_config_scep" "test" {
-  backend = vault_pki_secret_backend_config_scep.test.backend
-}
-`, pkiPath)
-}
-
 func TestAccPKISecretBackendConfigScep_Docs(t *testing.T) {
 	t.Parallel()
 
@@ -426,4 +398,138 @@ resource "vault_pki_secret_backend_config_scep" "test" {
   }
 }
 `, pkiPath, pkiPath)
+}
+
+func TestAccPKISecretBackendConfigScep_UnsetString(t *testing.T) {
+	t.Parallel()
+
+	backend := acctest.RandomWithPrefix("tf-test-pki")
+	resourceType := "vault_pki_secret_backend_config_scep"
+	resourceBackend := resourceType + ".test"
+	dataName := "data.vault_pki_secret_backend_config_scep.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{ // Step 1: Set All the Fields!
+				Config: fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path        = "%s"
+	type        = "pki"
+    description = "PKI secret engine mount"
+}
+resource "vault_pki_secret_backend_config_scep" "test" {
+  backend = vault_mount.test.path
+  enabled = true
+  default_path_policy = "role:default-path-policy-role"
+  allowed_encryption_algorithms = ["des-cbc", "3des-cbc"]
+  allowed_digest_algorithms = ["sha-1"]
+  restrict_ca_chain_to_issuer = true
+  log_level = "trace"
+  authenticators { 
+	cert = { "accessor" = "test", "cert_role" = "cert-role" }
+    scep = { "accessor" = "auth-scep-accessor", "scep_role" = "scep-role"}
+  }	
+  external_validation {
+    intune = { 
+      client_id = "the client ID"
+      tenant_id = "the tenant ID"
+      client_secret = "the client secret"
+    }
+  }
+}
+
+data "vault_pki_secret_backend_config_scep" "test" {
+  backend = vault_pki_secret_backend_config_scep.test.backend
+}
+`, backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldEnabled, "true"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDefaultPathPolicy, "role:default-path-policy-role"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAllowedEncryptionAlgorithms+".#", "2"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAllowedEncryptionAlgorithms+".0", "des-cbc"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAllowedEncryptionAlgorithms+".1", "3des-cbc"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAllowedDigestAlgorithms+".#", "1"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAllowedDigestAlgorithms+".0", "sha-1"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldRestrictCAChainToIssuer, "true"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".#", "1"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.%", "2"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.%", "2"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.accessor", "test"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.cert.cert_role", "cert-role"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.scep.%", "2"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.scep.accessor", "auth-scep-accessor"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldAuthenticators+".0.scep.scep_role", "scep-role"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".#", "1"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.%", "1"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.intune.%", "2"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.intune.client_id", "the client ID"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldExternalValidation+".0.intune.tenant_id", "the tenant ID"),
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldLogLevel, "trace"),
+
+					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(dataName, consts.FieldEnabled, "true"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultPathPolicy, "role:default-path-policy-role"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAllowedEncryptionAlgorithms+".#", "2"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAllowedEncryptionAlgorithms+".0", "des-cbc"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAllowedEncryptionAlgorithms+".1", "3des-cbc"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAllowedDigestAlgorithms+".#", "1"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAllowedDigestAlgorithms+".0", "sha-1"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldRestrictCAChainToIssuer, "true"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".#", "1"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.%", "2"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.%", "2"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.accessor", "test"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.cert.cert_role", "cert-role"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.scep.%", "2"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.scep.accessor", "auth-scep-accessor"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldAuthenticators+".0.scep.scep_role", "scep-role"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".#", "1"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.%", "1"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.intune.%", "2"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.intune.client_id", "the client ID"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldExternalValidation+".0.intune.tenant_id", "the tenant ID"),
+					resource.TestCheckResourceAttr(dataName, consts.FieldLogLevel, "trace"),
+				),
+			},
+			testutil.GetImportTestStep(resourceBackend, false, nil),
+			{ // Now unset all the fields!
+				Config: fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path        = "%s"
+	type        = "pki"
+    description = "PKI secret engine mount"
+}
+resource "vault_pki_secret_backend_config_scep" "test" {
+  backend = vault_mount.test.path
+  enabled = false
+  default_path_policy = ""
+  allowed_encryption_algorithms = ["des-cbc", "3des-cbc"]
+  allowed_digest_algorithms = ["sha-1"]
+  restrict_ca_chain_to_issuer = true
+  authenticators {
+  }	
+  external_validation {
+  }
+}
+
+data "vault_pki_secret_backend_config_scep" "test" {
+  backend = vault_pki_secret_backend_config_scep.test.backend
+}
+`, backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceBackend, consts.FieldDefaultPathPolicy, ""),
+					resource.TestCheckResourceAttr(dataName, consts.FieldDefaultPathPolicy, ""),
+				),
+			},
+			testutil.GetImportTestStep(resourceBackend, false, nil),
+		},
+	})
 }

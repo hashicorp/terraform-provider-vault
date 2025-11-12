@@ -11,13 +11,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
-	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 func azureSecretBackendResource() *schema.Resource {
@@ -108,6 +105,14 @@ func azureSecretBackendResource() *schema.Resource {
 		},
 	}, false)
 
+	// Add common mount schema to the resource
+	provider.MustAddSchema(r, getMountSchema(
+		consts.FieldPath,
+		consts.FieldType,
+		consts.FieldDescription,
+		consts.FieldIdentityTokenKey,
+	))
+
 	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
 
 	return r
@@ -120,28 +125,13 @@ func azureSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta 
 	}
 
 	path := d.Get(consts.FieldPath).(string)
-	description := d.Get(consts.FieldDescription).(string)
 	configPath := azureSecretBackendPath(path)
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Azure backend at %q", path)
 
-	mountConfig := api.MountConfigInput{}
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-	if useAPIVer117Ent {
-		identityTokenKey := d.Get(consts.FieldIdentityTokenKey).(string)
-		if identityTokenKey != "" {
-			mountConfig.IdentityTokenKey = identityTokenKey
-		}
-	}
-	input := &api.MountInput{
-		Type:        "azure",
-		Description: description,
-		Config:      mountConfig,
-	}
-
-	if err := client.Sys().MountWithContext(ctx, path, input); err != nil {
-		return diag.Errorf("error mounting to %q: %s", path, err)
+	if err := createMount(ctx, d, meta, client, path, consts.MountTypeAzure); err != nil {
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[DEBUG] Mounted Azure backend at %q", path)
@@ -165,20 +155,6 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 	}
 
 	path := d.Id()
-
-	log.Printf("[DEBUG] Reading Azure backend mount %q from Vault", path)
-
-	mount, err := mountutil.GetMount(ctx, client, path)
-	if err != nil {
-		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", path)
-			d.SetId("")
-			return nil
-		}
-		return diag.FromErr(err)
-	}
-
-	log.Printf("[DEBUG] Read Azure backend mount %q from Vault", path)
 
 	log.Printf("[DEBUG] Read Azure secret Backend config %s", path)
 	resp, err := client.Logical().ReadWithContext(ctx, azureSecretBackendPath(path))
@@ -213,15 +189,8 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set(consts.FieldDescription, mount.Description); err != nil {
-		return diag.FromErr(err)
-	}
-
 	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer117Ent {
-		if err := d.Set(consts.FieldIdentityTokenKey, mount.Config.IdentityTokenKey); err != nil {
-			return diag.FromErr(err)
-		}
 		if err := d.Set(consts.FieldIdentityTokenAudience, resp.Data[consts.FieldIdentityTokenAudience]); err != nil {
 			return diag.FromErr(err)
 		}
@@ -237,6 +206,10 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
+	if err := readMount(ctx, d, meta, true, false); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return nil
 }
 
@@ -246,26 +219,11 @@ func azureSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.FromErr(e)
 	}
 
-	path := d.Id()
-
-	path, err := util.Remount(d, client, consts.FieldPath, false)
-	if err != nil {
+	if err := updateMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
 
-	if d.HasChanges(consts.FieldIdentityTokenKey, consts.FieldDescription) {
-		desc := d.Get(consts.FieldDescription).(string)
-		config := api.MountConfigInput{
-			Description: &desc,
-		}
-		useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-		if useAPIVer117Ent {
-			config.IdentityTokenKey = d.Get(consts.FieldIdentityTokenKey).(string)
-		}
-		if err := client.Sys().TuneMountWithContext(ctx, path, config); err != nil {
-			return diag.FromErr(err)
-		}
-	}
+	path := d.Id()
 
 	data := azureSecretBackendRequestData(d, meta)
 	if len(data) > 0 {

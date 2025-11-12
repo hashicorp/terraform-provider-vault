@@ -91,6 +91,11 @@ var pkiSecretBackendConfigScepDataSourceSchema = map[string]*schema.Schema{
 			},
 		},
 	},
+	consts.FieldLogLevel: {
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The level of logging verbosity, affects only SCEP logs on this mount",
+	},
 	consts.FieldLastUpdated: {
 		Type:        schema.TypeString,
 		Computed:    true,

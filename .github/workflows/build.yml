@@ -1,15 +1,14 @@
-name: Build
+name: build
 
 on:
   push:
-    paths-ignore:
-      - 'website/**'
-      - 'CHANGELOG.md'
   workflow_dispatch:
 
 permissions:
   # Permission for checking out code
   contents: read
+env:
+  PKG_NAME: "terraform-provider-vault"
 
 jobs:
   go-version:
@@ -20,7 +19,51 @@ jobs:
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - id: go-version
         run: echo "version=$(cat .go-version)" >> "$GITHUB_OUTPUT"
-  build:
+
+  # Parses the version/VERSION file. Reference: https://github.com/hashicorp/actions-set-product-version/blob/main/README.md
+  #
+  # > This action should be implemented in product repo `build.yml` files. The action is intended to grab the version
+  # > from the version file at the beginning of the build, then passes those versions (along with metadata, where
+  # > necessary) to any workflow jobs that need version information.
+  set-product-version:
+    name: "Parse version file"
+    runs-on: ubuntu-latest
+    outputs:
+      product-version: ${{ steps.set-product-version.outputs.product-version }}
+      product-base-version: ${{ steps.set-product-version.outputs.base-product-version }}
+      product-prerelease-version: ${{ steps.set-product-version.outputs.prerelease-product-version }}
+      product-minor-version: ${{ steps.set-product-version.outputs.minor-product-version }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Set variables
+        id: set-product-version
+        uses: hashicorp/actions-set-product-version@v2
+
+  # Creates metadata.json file containing build metadata for consumption by CRT workflows.
+  #
+  # Reference: https://github.com/hashicorp/actions-generate-metadata/blob/main/README.md
+  generate-metadata-file:
+    needs: set-product-version
+    runs-on: ubuntu-latest
+    outputs:
+      filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
+    steps:
+      - name: "Checkout directory"
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Generate metadata file
+        id: generate-metadata-file
+        uses: hashicorp/actions-generate-metadata@v1
+        with:
+          version: ${{ needs.set-product-version.outputs.product-version }}
+          product: ${{ env.PKG_NAME }}
+          repositoryOwner: "hashicorp"
+          repository: "terraform-provider-vault"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: metadata.json
+          path: ${{ steps.generate-metadata-file.outputs.filepath }}
+
+  build-pre:
     needs: [go-version]
     runs-on: ubuntu-latest
     steps:
@@ -33,7 +76,7 @@ jobs:
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.11.*'
+          terraform_version: '1.12.*'
           terraform_wrapper: false
 
       - name: Cache go build
@@ -47,28 +90,81 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-golang-
 
-      - name: Build
-        run: |
-          make build
       - name: Run unit tests
         # here to short-circuit the acceptance tests, in the case of a failure.
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
           make test
+
+  build:
+    needs:
+      - build-pre
+      - go-version
+      - set-product-version
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        goos: [ freebsd, windows, linux, darwin ]
+        goarch: [ "386", "amd64", "arm", "arm64" ]
+        exclude:
+          - goos: freebsd
+            goarch: arm64
+          - goos: windows
+            goarch: arm64
+          - goos: windows
+            goarch: arm
+          - goos: darwin
+            goarch: 386
+          - goos: darwin
+            goarch: arm
+
+    name: Go ${{ needs.go-version.outputs.version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: hashicorp/actions-go-build@v1
+        env:
+          CGO_ENABLED: 0
+          BASE_VERSION: ${{ needs.set-product-version.outputs.product-base-version }}
+          PRERELEASE_VERSION: ${{ needs.set-product-version.outputs.product-prerelease-version}}
+          METADATA_VERSION: ${{ env.METADATA }}
+        with:
+          bin_name: "${{ env.PKG_NAME }}_v${{ needs.set-product-version.outputs.product-version }}_x5"
+          product_name: ${{ env.PKG_NAME }}
+          product_version: ${{ needs.set-product-version.outputs.product-version }}
+          go_version: ${{ needs.go-version.outputs.version }}
+          os: ${{ matrix.goos }}
+          arch: ${{ matrix.goarch }}
+          reproducible: report
+          instructions: |
+            go build \
+              -o "$BIN_PATH" \
+              -trimpath \
+              -buildvcs=false \
+              -ldflags "-s -w"
+            cp LICENSE "$TARGET_DIR/LICENSE.txt"
+
   acceptance:
-    needs: [go-version, build]
+    name: vault_image:${{ matrix.image }} tf_version:${{ matrix.terraform_version }}
+    needs: [go-version, build-pre]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.16.21-ent"
-        - "vault-enterprise:1.17.17-ent"
-        - "vault-enterprise:1.18.10-ent"
-        - "vault-enterprise:1.19.5-ent"
-        - "vault-enterprise:1.20.0-ent"
+        - "vault-enterprise:1.16.27-ent"
+        - "vault-enterprise:1.17.18-ent"
+        - "vault-enterprise:1.18.15-ent"
+        - "vault-enterprise:1.19.11-ent"
+        - "vault-enterprise:1.20.5-ent"
+        - "vault-enterprise:1.21.0-ent"
         - "vault:latest"
+        terraform_version:
+        - "latest" # always test against the latest stable, which might be a duplicate matrix member.
+        - "1.12.2"
+        - "1.11.4"
+        #- "1.10.5" # tests do not seem to pass with this version set, skipping for now.
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -146,16 +242,18 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       openldap:
-        image: docker.io/bitnami/openldap:2.6
+        image: osixia/openldap:1.5.0
         ports:
-          - 1389:1389
-          - 1636:1636
-        env:
-          LDAP_ADMIN_USERNAME: "admin"
-          LDAP_ADMIN_PASSWORD: "adminpassword"
-          LDAP_USERS: "alice,bob,foo"
-          LDAP_PASSWORDS: "password1,password2,password3"
+          - 10389:389
+        options: >-
+          --health-cmd "sleep 10"
+          --health-interval 1s
+          --health-timeout 30s
+          --health-retries 30
     steps:
+      - name: install ldap utils
+        run:
+          sudo apt-get install -y ldap-utils
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
@@ -165,7 +263,7 @@ jobs:
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.11.*'
+          terraform_version: ${{ matrix.terraform_version }}
           terraform_wrapper: false
       - name: Check Terraform CLI version
         run: terraform --version
@@ -221,8 +319,11 @@ jobs:
           CONSUL_HTTP_ADDR: "consul:8500"
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           LDAP_BINDDN: "cn=admin,dc=example,dc=org"
-          LDAP_BINDPASS: "adminpassword"
-          LDAP_URL: "ldap://openldap:1389"
+          LDAP_BINDPASS: "admin"
+          # host and port of the openldap container, from the pov of the github runner
+          LDAP_HOST_URL: "ldap://0.0.0.0:10389"
+          # service URL of accessible from the Vault container
+          LDAP_URL: "ldap://openldap:389"
           VAULT_PLUGIN_COMMAND: ${{ steps.plugin.outputs.command }}
         run: |
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
@@ -230,7 +331,64 @@ jobs:
           else
             target="testacc"
           fi
+          if [ -n "${{ env.LDAP_HOST_URL }}" ]; then
+            cat testdata/openldap/ldif/*.ldif | ldapadd -x -H ${{ env.LDAP_HOST_URL }} -D "${{ env.LDAP_BINDDN }}" -w "${{ env.LDAP_BINDPASS }}"
+          fi
           make $target TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
+          #
+
+  # Uploads an Actions artifact named terraform-registry-manifest.json.zip.
+  #
+  # The artifact contains a single file with a filename that Terraform Registry expects
+  # (example: terraform-provider-crt-example_2.3.6-alpha1_manifest.json). The file contents
+  # are identical to the terraform-registry-manifest.json file in the source repository.
+  upload-terraform-registry-manifest-artifact:
+    needs:
+    - set-product-version
+    - build
+    - acceptance
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout directory"
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          path: ${{ env.PKG_NAME }}
+      - name: "Copy manifest from checkout directory to a file with the desired name"
+        id: terraform-registry-manifest
+        run: |
+          name="${{ env.PKG_NAME }}"
+          version="${{ needs.set-product-version.outputs.product-version }}"
+
+          source="${name}/terraform-registry-manifest.json"
+          destination="${name}_${version}_manifest.json"
+
+          cp "$source" "$destination"
+          echo "filename=$destination" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: terraform-registry-manifest.json
+          path: ${{ steps.terraform-registry-manifest.outputs.filename }}
+          if-no-files-found: error
+
+  # This job is used as a requirement for the repo's branch protection setup.
+  build-done:
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - build
+      - acceptance
+      - upload-terraform-registry-manifest-artifact
+      - generate-metadata-file
+    steps:
+    - name: cancelled
+      if: ${{ (contains(needs.*.result, 'cancelled')) }}
+      run: exit 2
+    - name: passed
+      if: ${{ !(contains(needs.*.result, 'failure')) }}
+      run: exit 0
+    - name: failed
+      if: ${{ contains(needs.*.result, 'failure') }}
+      run: exit 1

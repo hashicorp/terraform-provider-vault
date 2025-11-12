@@ -1,11 +1,102 @@
 ## Unreleased
 
 FEATURES:
+
+* Add support for `alias_metadata` field in auth resources ([#2547](https://github.com/hashicorp/terraform-provider-vault/pull/2547))
+
+## 5.4.0 (Nov 3, 2025)
+
+BEHAVIOR CHANGES: Please refer to the [upgrade topics](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_5_upgrade.html#upgrade-topics)
+in the guide for details on all behavior changes.
+
+FEATURES:
+
+* Add support for Azure Static Secrets: ([#2635](https://github.com/hashicorp/terraform-provider-vault/pull/2635))
+* Add support for write-only token argument in vault_terraform_cloud_secret_backend resource ([#2603](https://github.com/hashicorp/terraform-provider-vault/pull/2603))
+* New parameters for `vault_terraform_cloud_secret_role` to support multi-team tokens, by @drewmullen ([#2498](https://github.com/hashicorp/terraform-provider-vault/pull/2498))
+* Add support for `tune` in `vault_saml_auth_backend` resource ([#2566](https://github.com/hashicorp/terraform-provider-vault/pull/2566))
+* Add support for `tune` in `vault_ldap_auth_backend` and `vault_okta_auth_backend` resources ([#2602](https://github.com/hashicorp/terraform-provider-vault/pull/2602))
+* Add support for `allowed_sts_header_values` parameter in `vault_aws_auth_backend_client` resource to specify additional headers allowed in STS requests
+* New parameters for `vault_gcp_secret_backend` to support ttl and max_ttl, by @vijayavelsekar ([#2627](https://github.com/hashicorp/terraform-provider-vault/pull/2627))
+* Add support for `request_timeout`, `dereference_aliases`,`enable_samaccountname_login` and `anonymous_group_search` parameters in `vault_ldap_auth_backend` resource.([#2634](https://github.com/hashicorp/terraform-provider-vault/pull/2634))
+* Add support for `max_retries` parameter in `vault_aws_secret_backend` resource. ([#2623](https://github.com/hashicorp/terraform-provider-vault/pull/2623))
+* Add support for `iam_alias`, `iam_metadata`, `gce_alias` and `gce_metadata` fields in `vault_gcp_auth_backend` resource ([#2636](https://github.com/hashicorp/terraform-provider-vault/pull/2636))
+* Add support for `role_id` field in `vault_gcp_auth_backend_role` resource ([#2636](https://github.com/hashicorp/terraform-provider-vault/pull/2636))
+* Add retry configuration fields (`max_retries`, `retry_delay`, `max_retry_delay`) to `vault_azure_auth_backend_config` resource for Azure API request resilience ([#2629](https://github.com/hashicorp/terraform-provider-vault/pull/2629))
+* Add new resources `vault_spiffe_auth_backend_config` and `vault_spiffe_auth_backend_role` ([#2620](https://github.com/hashicorp/terraform-provider-vault/pull/2620))
+* Add support for `mfa_serial_number` parameter in `vault_aws_secret_backend_role` resource. ([#2637](https://github.com/hashicorp/terraform-provider-vault/pull/2637))
+* Add support for `persist_app`parameters in `vault_azure_secret_backend_role` resource.
+  ([#2642](https://github.com/hashicorp/terraform-provider-vault/pull/2642))
+
+BUGS:
+
+* Fix pki config resources to allow unsetting of fields (to empty fields) ([#2558](https://github.com/hashicorp/terraform-provider-vault/pull/2558))
+* Fix tune auth mounts to allow unsetting of fields (setting fields to empty values) ([#2605](https://github.com/hashicorp/terraform-provider-vault/pull/2605))
+* Fix `vault_pki_secret_backend_crl_config` resource to allow disabling flags previously set to true ([#2615](https://github.com/hashicorp/terraform-provider-vault/pull/2615))
+* Fix the tune block issue where it always updates unless field values match Vault server defaults
+  * `vault_jwt_auth_backend` resource ([#2560](https://github.com/hashicorp/terraform-provider-vault/pull/2560))
+  * `vault_github_auth_backend` and `vault_auth_backend` resources ([#2565](https://github.com/hashicorp/terraform-provider-vault/pull/2565))
+  * `vault_saml_auth_backend` resource ([#2566](https://github.com/hashicorp/terraform-provider-vault/pull/2566))
+  * `vault_gcp_auth_backend` and `vault_oci_auth_backend` resources ([#2596](https://github.com/hashicorp/terraform-provider-vault/pull/2596))
+
+## 5.3.0 (Sep 4, 2025)
+
+FEATURES:
+
+* Add support for password phrases via the `credential_type` field in the `vault_ldap_secret_backend` resource ([#2548](https://github.com/hashicorp/terraform-provider-vault/pull/2548))
+
+IMPROVEMENTS:
+
+* build(deps): bump the gomod-backward-compatible group with 5 updates: [GH-2583](https://github.com/hashicorp/terraform-provider-vault/pull/2583)
+* Move to the standard CRT release workflow and tooling: [GH-2582](https://github.com/hashicorp/terraform-provider-vault/pull/2582)
+
+BUGS:
+
+* Fix `azure_secret_backend_role` to prevent persistent diff for null value on `max_ttl` and  `explicit_max_ttl` argument ([#2581](https://github.com/hashicorp/terraform-provider-vault/pull/2581))
+
+## 5.2.1 (Aug 19, 2025)
+
+BUGS:
+
+* Fix a failure to initialize the provider due to incompatible dependencies ([#2575](https://github.com/hashicorp/terraform-provider-vault/pull/2575))
+* Fix `auth_login_gcp` field constraint on field `credentials` `service_account`
+* Fix `auth_login_azure` field constraint on field `vmss_name` `tenant_id` `client_id` `scope`
+* Fix `auth_login_kerberos` field constraint on fields `username` `service` `realm` `krb5conf_path` `keytab_path` `disable_fast_negotiation` `remove_instance_name`
+* Fix `auth_login_userpass` field constraint on field `password_file`
+* Fix `auth_login` field constraint on field `use_root_namespace`
+* Fix to allow Snowflake keypair auth with Vault 1.16+ ([#2575](https://github.com/hashicorp/terraform-provider-vault/pull/2575))
+
+## 5.2.0 (Aug 18, 2025)
+
+FEATURES:
 * Add support for `jwks_pairs` in `vault_jwt_auth_backend` resource. Requires Vault 1.16+ ([#2523](https://github.com/hashicorp/terraform-provider-vault/pull/2523))
 * Add support for `root_password_ttl` in `vault_azure_secret_backend` resource. Requires Vault 1.15+ ([#2529](https://github.com/hashicorp/terraform-provider-vault/pull/2529))
 * Add support for managed key parameters in the SSH CA config endpoint ([#2480](https://github.com/hashicorp/terraform-provider-vault/pull/2480))
 * Add new resources `vault_oci_auth_backend` and `vault_oci_auth_backend_role` to manage OCI auth backend and roles. ([#1761](https://github.com/hashicorp/terraform-provider-vault/pull/1761))
-* Add support for `alias_metadata` field in auth resources ([#2547](https://github.com/hashicorp/terraform-provider-vault/pull/2547))
+* Add support for `log_level` in `vault_pki_secret_backend_config_scep` resource. Requires Vault 1.20.1+ ([#2525](https://github.com/hashicorp/terraform-provider-vault/pull/2525))
+
+IMPROVEMENTS:
+* Bump Go version to 1.24.6: ([#2550](https://github.com/hashicorp/terraform-provider-vault/pull/2550))
+* Ensure all resources that use custom mounts support all mount parameters. ([#2332](https://github.com/hashicorp/terraform-provider-vault/pull/2332))
+* Updated dependencies:
+   * `golang.org/x/oauth2` v0.24.0 -> v0.30.0
+   * `github.com/cloudflare/circl` v1.3.7 -> v1.6.1
+   * `github.com/go-jose/go-jose/v3` v3.0.3 -> v3.0.4
+   * `github.com/go-jose/go-jose/v4` v4.0.4 -> v4.1.2
+   * `github.com/golang-jwt/jwt/v5` v5.2.2 -> v5.3.0
+   * `cloud.google.com/go/iam` v1.2.2 -> v1.5.2
+   * `cloud.google.com/go/compute/metadata` v0.6.0 -> v0.8.0
+   * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.11.1 -> v1.18.2
+   * `github.com/aws/aws-sdk-go` v1.55.6 -> v1.55.8
+   * `github.com/go-sql-driver/mysql` v1.8.1 -> v1.9.3
+   * `github.com/hashicorp/consul/api` v1.27.0 -> v1.32.1
+   * `github.com/hashicorp/terraform-plugin-framework` v1.14.1 -> 1.15.1
+   * `github.com/hashicorp/terraform-plugin-framework-validators` v0.17.0 -> v0.18.0
+   * `hashicorp/ghaction-terraform-provider-release` v4.0.1 -> v5.0.0
+
+BUGS:
+* Fix panic when reading the `vault_gcp_secret_backend` resource. ([#2549](https://github.com/hashicorp/terraform-provider-vault/pull/2549))
+* Fix regression where `VAULT_NAMESPACE` was not being honored, causing child namespaces to be created in the root namespace instead ([#2540](https://github.com/hashicorp/terraform-provider-vault/pull/2540))
 
 ## 5.1.0 (Jul 9, 2025)
 
