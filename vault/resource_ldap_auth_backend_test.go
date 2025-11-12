@@ -85,8 +85,8 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 				Config: testLDAPAuthBackendConfig_params(path, 45, "always", true, false),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
-      {
-        SkipFunc: func() (bool, error) {
+			{
+				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					if !meta.IsAPISupported(provider.VaultVersion121) {
 						return true, nil
@@ -100,7 +100,7 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "alias_metadata.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "alias_metadata.foo", "bar"),
 				),
-      },
+			},
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount", "enable_samaccountname_login"),
 		},
 	})
