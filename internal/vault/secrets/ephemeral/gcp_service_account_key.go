@@ -163,7 +163,7 @@ func (r *GCPServiceAccountKeyEphemeralResource) Open(ctx context.Context, req ep
 
 	if hasRoleset {
 		roleset := data.Roleset.ValueString()
-		credsPath = backend + "/key/" + roleset
+		credsPath = backend + "/roleset/" + roleset + "/key"
 	} else {
 		staticAccount := data.StaticAccount.ValueString()
 		credsPath = backend + "/static-account/" + staticAccount + "/key"
