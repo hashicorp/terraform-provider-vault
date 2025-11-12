@@ -172,6 +172,9 @@ These arguments are common across several Authentication Token resources since V
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
 
+* `alias_metadata` - (Optional) The metadata to be tied to generated entity alias.
+  This should be a list or map containing the metadata in key value pairs.
+
 ## Attributes Reference
 
 * `role_id` - The Vault generated role ID.
