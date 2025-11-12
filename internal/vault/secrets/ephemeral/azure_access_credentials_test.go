@@ -29,7 +29,7 @@ func TestAccAzureAccessCredentialsEphemeralResource_basic(t *testing.T) {
 	role := acctest.RandomWithPrefix("tf-role")
 	nonEmpty := regexp.MustCompile(`^.+$`)
 
-	resource.UnitTest(t, resource.TestCase{
+	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 		},
