@@ -49,7 +49,7 @@ type addTokenFieldsConfig struct {
 	TokenPoliciesConflict       []string
 	TokenTTLConflict            []string
 	TokenTypeConflict           []string
-  AliasMetadataConflict       []string
+	AliasMetadataConflict       []string
 
 	TokenTypeDefault string
 }
