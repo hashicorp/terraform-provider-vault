@@ -5,6 +5,7 @@ package ephemeralsecrets_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -14,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -23,20 +24,16 @@ import (
 // Azure service principal credentials using ephemeral resource.
 func TestAccAzureAccessCredentialsEphemeralResource_basic(t *testing.T) {
 
-	testutil.SkipTestAcc(t)
-	backend := acctest.RandomWithPrefix("tf-test-azure")
-	role := "test-role"
 	conf := testutil.GetTestAzureConfExistingSP(t)
+	backend := acctest.RandomWithPrefix("tf-test-azure")
+	role := acctest.RandomWithPrefix("tf-role")
+	nonEmpty := regexp.MustCompile(`^.+$`)
 
 	resource.UnitTest(t, resource.TestCase{
-		PreCheck: func() { testutil.TestAccPreCheck(t) },
-		// Ephemeral resources are only available in 1.10 and later
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_10_0),
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
 		},
-		// Include the provider we want to test (v5)
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		// Include `echo` as a v6 provider from `terraform-plugin-testing`
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
 			"echo": echoprovider.NewProviderServer(),
 		},
@@ -44,12 +41,23 @@ func TestAccAzureAccessCredentialsEphemeralResource_basic(t *testing.T) {
 			{
 				Config: testAccAzureAccessCredentialsEphemeralResourceConfig_basic(backend, role, conf),
 				ConfigStateChecks: []statecheck.StateCheck{
-					// Verify the ephemeral resource produces client credentials
 					statecheck.ExpectKnownValue("echo.test_azure",
 						tfjsonpath.New("data").AtMapKey("client_id"),
 						knownvalue.StringExact(conf.ClientID)),
 					statecheck.ExpectKnownValue("echo.test_azure",
 						tfjsonpath.New("data").AtMapKey("client_secret"),
+						knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.test_azure",
+						tfjsonpath.New("data").AtMapKey("lease_id"),
+						knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.test_azure",
+						tfjsonpath.New("data").AtMapKey("lease_duration"),
+						knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.test_azure",
+						tfjsonpath.New("data").AtMapKey("lease_start_time"),
+						knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.test_azure",
+						tfjsonpath.New("data").AtMapKey("lease_renewable"),
 						knownvalue.NotNull()),
 				},
 			},
