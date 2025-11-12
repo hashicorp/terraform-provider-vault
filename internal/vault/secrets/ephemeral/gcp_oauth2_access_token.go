@@ -39,18 +39,18 @@ type GCPOAuth2AccessTokenModel struct {
 	base.BaseModelEphemeral
 
 	// fields specific to this resource
-	Backend       types.String `tfsdk:"backend"`
-	Roleset       types.String `tfsdk:"roleset"`
-	StaticAccount types.String `tfsdk:"static_account"`
+	Backend             types.String `tfsdk:"backend"`
+	Roleset             types.String `tfsdk:"roleset"`
+	StaticAccount       types.String `tfsdk:"static_account"`
+	ImpersonatedAccount types.String `tfsdk:"impersonated_account"`
 
 	// computed fields
-	Token               types.String `tfsdk:"token"`
-	TokenTTL            types.Int64  `tfsdk:"token_ttl"`
-	ServiceAccountEmail types.String `tfsdk:"service_account_email"`
-	LeaseID             types.String `tfsdk:"lease_id"`
-	LeaseDuration       types.Int64  `tfsdk:"lease_duration"`
-	LeaseStartTime      types.String `tfsdk:"lease_start_time"`
-	LeaseRenewable      types.Bool   `tfsdk:"lease_renewable"`
+	Token          types.String `tfsdk:"token"`
+	TokenTTL       types.Int64  `tfsdk:"token_ttl"`
+	LeaseID        types.String `tfsdk:"lease_id"`
+	LeaseDuration  types.Int64  `tfsdk:"lease_duration"`
+	LeaseStartTime types.String `tfsdk:"lease_start_time"`
+	LeaseRenewable types.Bool   `tfsdk:"lease_renewable"`
 }
 
 // Schema defines this resource's schema which is the data that is available in
@@ -63,11 +63,15 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Schema(_ context.Context, _ ephe
 				Required:            true,
 			},
 			"roleset": schema.StringAttribute{
-				MarkdownDescription: "GCP Secret Roleset to generate OAuth2 access token for. Mutually exclusive with `static_account`.",
+				MarkdownDescription: "GCP Secret Roleset to generate OAuth2 access token for. Mutually exclusive with `static_account` and `impersonated_account`.",
 				Optional:            true,
 			},
 			"static_account": schema.StringAttribute{
-				MarkdownDescription: "GCP Secret Static Account to generate OAuth2 access token for. Mutually exclusive with `roleset`.",
+				MarkdownDescription: "GCP Secret Static Account to generate OAuth2 access token for. Mutually exclusive with `roleset` and `impersonated_account`.",
+				Optional:            true,
+			},
+			"impersonated_account": schema.StringAttribute{
+				MarkdownDescription: "GCP Secret Impersonated Account to generate OAuth2 access token for. Mutually exclusive with `roleset` and `static_account`.",
 				Optional:            true,
 			},
 			"token": schema.StringAttribute{
@@ -77,10 +81,6 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Schema(_ context.Context, _ ephe
 			},
 			"token_ttl": schema.Int64Attribute{
 				MarkdownDescription: "The TTL of the token in seconds.",
-				Computed:            true,
-			},
-			"service_account_email": schema.StringAttribute{
-				MarkdownDescription: "The email of the service account.",
 				Computed:            true,
 			},
 			consts.FieldLeaseID: schema.StringAttribute{
@@ -120,22 +120,35 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 		return
 	}
 
-	// Validate that either roleset or static_account is provided, but not both
+	// Validate that exactly one of roleset, static_account, or impersonated_account is provided
 	hasRoleset := !data.Roleset.IsNull() && data.Roleset.ValueString() != ""
 	hasStaticAccount := !data.StaticAccount.IsNull() && data.StaticAccount.ValueString() != ""
+	hasImpersonatedAccount := !data.ImpersonatedAccount.IsNull() && data.ImpersonatedAccount.ValueString() != ""
 
-	if !hasRoleset && !hasStaticAccount {
+	// Count how many are provided
+	providedCount := 0
+	if hasRoleset {
+		providedCount++
+	}
+	if hasStaticAccount {
+		providedCount++
+	}
+	if hasImpersonatedAccount {
+		providedCount++
+	}
+
+	if providedCount == 0 {
 		resp.Diagnostics.AddError(
 			"Missing required field",
-			"Either 'roleset' or 'static_account' must be provided",
+			"One of 'roleset', 'static_account', or 'impersonated_account' must be provided",
 		)
 		return
 	}
 
-	if hasRoleset && hasStaticAccount {
+	if providedCount > 1 {
 		resp.Diagnostics.AddError(
 			"Conflicting fields",
-			"Only one of 'roleset' or 'static_account' can be provided, not both",
+			"Only one of 'roleset', 'static_account', or 'impersonated_account' can be provided, not multiple",
 		)
 		return
 	}
@@ -151,10 +164,13 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 
 	if hasRoleset {
 		roleset := data.Roleset.ValueString()
-		tokenPath = backend + "/token/" + roleset
-	} else {
+		tokenPath = backend + "/roleset/" + roleset + "/token"
+	} else if hasStaticAccount {
 		staticAccount := data.StaticAccount.ValueString()
 		tokenPath = backend + "/static-account/" + staticAccount + "/token"
+	} else {
+		impersonatedAccount := data.ImpersonatedAccount.ValueString()
+		tokenPath = backend + "/impersonated-account/" + impersonatedAccount + "/token"
 	}
 
 	// Read the OAuth2 access token from Vault (GET request)
@@ -193,20 +209,22 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 		data.TokenTTL = types.Int64Value(int64(tokenTTL))
 	} else if tokenTTL, ok := vaultSecret.Data["token_ttl"].(int64); ok {
 		data.TokenTTL = types.Int64Value(tokenTTL)
-	}
-
-	// Extract service_account_email if present
-	if email, ok := vaultSecret.Data["service_account_email"].(string); ok {
-		data.ServiceAccountEmail = types.StringValue(email)
+	} else {
+		// If token_ttl is not in the response data, set it to null
+		data.TokenTTL = types.Int64Null()
 	}
 
 	// Set lease information
-	data.LeaseID = types.StringValue(vaultSecret.LeaseID)
+	// Only set lease_id if it's not empty
+	if vaultSecret.LeaseID != "" {
+		data.LeaseID = types.StringValue(vaultSecret.LeaseID)
+	} else {
+		data.LeaseID = types.StringNull()
+	}
+
 	data.LeaseDuration = types.Int64Value(int64(vaultSecret.LeaseDuration))
 	data.LeaseStartTime = types.StringValue(time.Now().Format(time.RFC3339))
 	data.LeaseRenewable = types.BoolValue(vaultSecret.Renewable)
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
-
-// Made with Bob
