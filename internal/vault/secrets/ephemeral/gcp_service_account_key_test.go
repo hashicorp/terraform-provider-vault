@@ -396,5 +396,3 @@ provider "echo" {
 resource "echo" "gcp_key" {}
 `, roleset)
 }
-
-// Made with Bob

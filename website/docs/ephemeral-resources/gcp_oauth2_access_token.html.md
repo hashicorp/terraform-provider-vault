@@ -72,15 +72,38 @@ ephemeral "vault_gcp_oauth2_access_token" "token" {
 }
 ```
 
+### Using with an Impersonated Account
+
+```hcl
+resource "vault_gcp_secret_backend" "gcp" {
+  path        = "gcp"
+  credentials = file("credentials.json")
+}
+
+resource "vault_gcp_secret_impersonated_account" "impersonated" {
+  backend               = vault_gcp_secret_backend.gcp.path
+  impersonated_account  = "impersonated-account"
+  service_account_email = "vault-tester@my-project.iam.gserviceaccount.com"
+  token_scopes          = ["https://www.googleapis.com/auth/cloud-platform"]
+}
+
+ephemeral "vault_gcp_oauth2_access_token" "token" {
+  backend              = vault_gcp_secret_backend.gcp.path
+  impersonated_account = vault_gcp_secret_impersonated_account.impersonated.impersonated_account
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
 
 * `backend` - (Required) Path where the GCP secrets engine is mounted in Vault.
 
-* `roleset` - (Optional) Name of the GCP roleset to generate OAuth2 access token for. Mutually exclusive with `static_account`.
+* `roleset` - (Optional) Name of the GCP roleset to generate OAuth2 access token for. Mutually exclusive with `static_account` and `impersonated_account`.
 
-* `static_account` - (Optional) Name of the GCP static account to generate OAuth2 access token for. Mutually exclusive with `roleset`.
+* `static_account` - (Optional) Name of the GCP static account to generate OAuth2 access token for. Mutually exclusive with `roleset` and `impersonated_account`.
+
+* `impersonated_account` - (Optional) Name of the GCP impersonated account to generate OAuth2 access token for. Mutually exclusive with `roleset` and `static_account`.
 
 * `namespace` - (Optional) The namespace of the target resource.
   The value should not contain leading or trailing forward slashes.
