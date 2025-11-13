@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/vault/api"
 )
 
 // Ensure the implementation satisfies the ephemeral.EphemeralResource interface
@@ -111,6 +113,24 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Metadata(ctx context.Context, re
 	resp.TypeName = req.ProviderTypeName + "_gcp_oauth2_access_token"
 }
 
+// isRetryableError checks if the error is retryable (e.g., resource not ready yet)
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errMsg := strings.ToLower(err.Error())
+	// Common error patterns that indicate the resource might not be ready yet
+	retryablePatterns := []string{
+		"unable to generate token - make sure your roleset service account and key are still valid",
+	}
+	for _, pattern := range retryablePatterns {
+		if strings.Contains(errMsg, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
 	var data GCPOAuth2AccessTokenModel
 	// Read Terraform prior state data into the model
@@ -161,24 +181,97 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 
 	backend := data.Backend.ValueString()
 	var tokenPath string
+	var resourceType string
+	var resourceName string
 
 	if hasRoleset {
 		roleset := data.Roleset.ValueString()
 		tokenPath = backend + "/roleset/" + roleset + "/token"
+		resourceType = "roleset"
+		resourceName = roleset
 	} else if hasStaticAccount {
 		staticAccount := data.StaticAccount.ValueString()
 		tokenPath = backend + "/static-account/" + staticAccount + "/token"
+		resourceType = "static account"
+		resourceName = staticAccount
 	} else {
 		impersonatedAccount := data.ImpersonatedAccount.ValueString()
 		tokenPath = backend + "/impersonated-account/" + impersonatedAccount + "/token"
+		resourceType = "impersonated account"
+		resourceName = impersonatedAccount
 	}
 
-	// Read the OAuth2 access token from Vault (GET request)
-	vaultSecret, readErr := c.Logical().ReadWithContext(ctx, tokenPath)
+	// Retry configuration
+	maxRetries := 5
+	initialDelay := 2 * time.Second
+	maxDelay := 30 * time.Second
+
+	var vaultSecret *api.Secret
+	var readErr error
+	var lastErr error
+
+	// Retry loop with exponential backoff
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		// Read the OAuth2 access token from Vault (GET request)
+		vaultSecret, readErr = c.Logical().ReadWithContext(ctx, tokenPath)
+
+		// Check if the read was successful
+		if readErr == nil && vaultSecret != nil {
+			break
+		}
+
+		// Store the last error for reporting
+		if readErr != nil {
+			lastErr = readErr
+		} else {
+			lastErr = fmt.Errorf("no credentials found at path %q", tokenPath)
+		}
+
+		// If this is the last attempt, don't retry
+		if attempt == maxRetries {
+			break
+		}
+
+		// Check if the error is retryable
+		if !isRetryableError(lastErr) {
+			log.Printf("[DEBUG] Non-retryable error encountered for %s %q: %s", resourceType, resourceName, lastErr)
+			break
+		}
+
+		// Calculate delay with exponential backoff
+		delay := initialDelay * time.Duration(1<<uint(attempt))
+		if delay > maxDelay {
+			delay = maxDelay
+		}
+
+		log.Printf("[DEBUG] Attempt %d/%d failed for %s %q. Retrying in %v... Error: %s",
+			attempt+1, maxRetries+1, resourceType, resourceName, delay, lastErr)
+
+		// Wait before retrying
+		select {
+		case <-ctx.Done():
+			resp.Diagnostics.AddError(
+				"Context cancelled",
+				fmt.Sprintf("Operation cancelled while waiting to retry reading from path %q", tokenPath),
+			)
+			return
+		case <-time.After(delay):
+			// Continue to next retry
+		}
+	}
+
+	// Handle final error after all retries
 	if readErr != nil {
 		resp.Diagnostics.AddError(
 			"Error reading from Vault",
-			fmt.Sprintf("Error generating GCP OAuth2 access token from path %q: %s", tokenPath, readErr),
+			fmt.Sprintf("Error generating GCP OAuth2 access token from path %q after %d attempts: %s\n\n"+
+				"This may indicate that the %s %q or its associated GCP service account is not yet fully created or configured. "+
+				"Please ensure:\n"+
+				"1. The %s exists in Vault at the specified backend\n"+
+				"2. The GCP service account has been created and granted necessary permissions\n"+
+				"3. There is sufficient time between creating the %s and requesting tokens\n"+
+				"4. The Vault GCP secrets engine is properly configured",
+				tokenPath, maxRetries+1, readErr, resourceType, resourceName, resourceType, resourceType),
 		)
 		return
 	}
@@ -186,7 +279,14 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 	if vaultSecret == nil {
 		resp.Diagnostics.AddError(
 			"No credentials found",
-			fmt.Sprintf("No credentials found at path %q", tokenPath),
+			fmt.Sprintf("No credentials found at path %q after %d attempts.\n\n"+
+				"This may indicate that the %s %q or its associated GCP service account is not yet fully created or configured. "+
+				"Please ensure:\n"+
+				"1. The %s exists in Vault at the specified backend\n"+
+				"2. The GCP service account has been created and granted necessary permissions\n"+
+				"3. There is sufficient time between creating the %s and requesting tokens\n"+
+				"4. The Vault GCP secrets engine is properly configured",
+				tokenPath, maxRetries+1, resourceType, resourceName, resourceType, resourceType),
 		)
 		return
 	}
