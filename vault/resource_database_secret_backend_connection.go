@@ -722,6 +722,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendConnectionRead),
 		UpdateContext: databaseSecretBackendConnectionCreateOrUpdate,
 		DeleteContext: databaseSecretBackendConnectionDelete,
+		CustomizeDiff: validateDatabaseConnectionConfig,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -918,6 +919,11 @@ func oracleConnectionStringResource() *schema.Resource {
 	r := connectionStringResource(&connectionStringConfig{
 		includeUserPass: true,
 	})
+	r.Schema["plugin_name"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "Specifies the name of the plugin to use for this connection. Default is oracle-database-plugin.",
+	}
 	r.Schema["split_statements"] = &schema.Schema{
 		Type:        schema.TypeBool,
 		Optional:    true,
@@ -930,7 +936,11 @@ func oracleConnectionStringResource() *schema.Resource {
 		Description: "Set to true to disconnect any open sessions prior to running the revocation statements.",
 		Default:     true,
 	}
-
+	r.Schema["self_managed"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "If set, allows onboarding static roles with a rootless connection configuration.",
+	}
 	return r
 }
 
@@ -1828,6 +1838,9 @@ func setOracleDatabaseConnectionData(d *schema.ResourceData, prefix string, data
 	if v, ok := d.GetOkExists(prefix + "disconnect_sessions"); ok {
 		data["disconnect_sessions"] = v.(bool)
 	}
+	if v, ok := d.GetOkExists(prefix + "self_managed"); ok {
+		data["self_managed"] = v.(bool)
+	}
 }
 
 func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string, data map[string]interface{}) {
@@ -2325,4 +2338,51 @@ func databaseEngineNameAndIndexFromPrefix(prefix string) (string, string, error)
 		return "", "", fmt.Errorf("unexpected number of matches (%d) for name", len(res))
 	}
 	return res[1], res[2], nil
+}
+
+func validateDatabaseConnectionConfig(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	// Validate Oracle self_managed configuration
+	if oracleConfig, ok := d.GetOk(dbEngineOracle.name); ok {
+		oracleList := oracleConfig.([]interface{})
+		if len(oracleList) > 0 && oracleList[0] != nil {
+			config := oracleList[0].(map[string]interface{})
+
+			// Check if self_managed is true
+			if selfManaged, ok := config["self_managed"].(bool); ok && selfManaged {
+				// Validate that username and password/password_wo are not set when self_managed=true
+				hasUsername := false
+				hasPassword := false
+				hasPasswordWO := false
+
+				if username, ok := config[consts.FieldUsername].(string); ok && username != "" {
+					hasUsername = true
+				}
+
+				if password, ok := config[consts.FieldPassword].(string); ok && password != "" {
+					hasPassword = true
+				}
+
+				// Check password_wo using GetRawConfig
+				rawConfig := d.GetRawConfig()
+				if !rawConfig.IsNull() {
+					oracleAttr := rawConfig.GetAttr(dbEngineOracle.name)
+					if !oracleAttr.IsNull() && oracleAttr.LengthInt() > 0 {
+						firstElement := oracleAttr.Index(cty.NumberIntVal(0))
+						if !firstElement.IsNull() {
+							pwWoAttr := firstElement.GetAttr(consts.FieldPasswordWO)
+							if pwWoAttr.IsKnown() && !pwWoAttr.IsNull() && strings.TrimSpace(pwWoAttr.AsString()) != "" {
+								hasPasswordWO = true
+							}
+						}
+					}
+				}
+
+				if hasUsername || hasPassword || hasPasswordWO {
+					return fmt.Errorf("cannot use both self-managed and vault-managed workflows. Either use self_managed or username/password")
+				}
+			}
+		}
+	}
+
+	return nil
 }

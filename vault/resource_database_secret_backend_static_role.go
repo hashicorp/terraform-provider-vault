@@ -37,6 +37,7 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendStaticRoleRead),
 		UpdateContext: databaseSecretBackendStaticRoleWrite,
 		DeleteContext: databaseSecretBackendStaticRoleDelete,
+		CustomizeDiff: validatePasswordFields,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -100,7 +101,21 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 				Optional:  true,
 				Sensitive: true,
 				Description: "The password corresponding to the username in the database. " +
-					"Required when using the Rootless Password Rotation workflow for static roles.",
+					"Required when using the Rootless Password Rotation workflow for static roles. " +
+					"Deprecated in favor of password_wo field introduced in Vault 1.19.",
+			},
+			consts.FieldPasswordWO: {
+				Type:      schema.TypeString,
+				Optional:  true,
+				WriteOnly: true,
+				Description: "The password corresponding to the username in the database. " +
+					"This is a write-only field. Requires Vault 1.19+. " +
+					"Deprecates 'self_managed_password' which was introduced in Vault 1.18.",
+			},
+			consts.FieldPasswordWOVersion: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The version of the password_wo field. Used for tracking changes to the write-only password field.",
 			},
 			consts.FieldSkipImportRotation: {
 				Type:        schema.TypeBool,
@@ -177,6 +192,18 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		// Handle password write-only field for Vault 1.19+
+		// Send password on creation (d.IsNewResource()) OR when version changes
+		if d.IsNewResource() || d.HasChange(consts.FieldPasswordWOVersion) {
+			// Use GetRawConfig for write-only fields (same pattern as terraform_cloud_secret_backend)
+			pwWo := d.GetRawConfig().GetAttr(consts.FieldPasswordWO)
+			if pwWo.IsKnown() && !pwWo.IsNull() && strings.TrimSpace(pwWo.AsString()) != "" {
+				data[consts.FieldPassword] = pwWo.AsString()
+			}
+		}
+	}
+
 	log.Printf("[DEBUG] Creating static role %q on database backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -250,6 +277,15 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		// Ensure password_wo_version is maintained in state
+		if v, ok := d.GetOk(consts.FieldPasswordWOVersion); ok {
+			if err := d.Set(consts.FieldPasswordWOVersion, v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
 	for _, k := range staticRoleFields {
 		if v, ok := role.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
@@ -301,4 +337,17 @@ func databaseSecretBackendStaticRoleBackendFromPath(path string) (string, error)
 		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
 	}
 	return res[1], nil
+}
+
+func validatePasswordFields(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	// Validate that password_wo and self_managed_password are not both set
+	// Use GetRawConfig for write-only field password_wo
+	pwWo := d.GetRawConfig().GetAttr(consts.FieldPasswordWO)
+	hasPasswordWO := pwWo.IsKnown() && !pwWo.IsNull()
+	_, hasSelfManaged := d.GetOk(consts.FieldSelfManagedPassword)
+
+	if hasPasswordWO && hasSelfManaged {
+		return fmt.Errorf("password_wo and self_managed_password cannot be used together")
+	}
+	return nil
 }
