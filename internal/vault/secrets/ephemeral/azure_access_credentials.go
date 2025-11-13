@@ -5,6 +5,7 @@ package ephemeralsecrets
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -33,6 +34,11 @@ const (
 	azurePublicCloudEnvName = "AZUREPUBLICCLOUD"
 	azureChinaCloudEnvName  = "AZURECHINACLOUD"
 	azureUSGovCloudEnvName  = "AZUREUSGOVERNMENTCLOUD"
+
+	// Default values for credential validation
+	defaultNumSecondsBetweenTests   = 1
+	defaultMaxCredValidationSeconds = 300
+	defaultNumSequentialSuccesses   = 8
 )
 
 var azureCloudConfigMap = map[string]cloud.Configuration{
@@ -43,6 +49,7 @@ var azureCloudConfigMap = map[string]cloud.Configuration{
 
 // Ensure the implementation satisfies the ephemeral.EphemeralResource interface
 var _ ephemeral.EphemeralResource = &AzureAccessCredentialsEphemeralResource{}
+var _ ephemeral.EphemeralResourceWithClose = &AzureAccessCredentialsEphemeralResource{}
 
 // NewAzureAccessCredentialsEphemeralResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider
@@ -53,6 +60,12 @@ var NewAzureAccessCredentialsEphemeralResource = func() ephemeral.EphemeralResou
 // AzureAccessCredentialsEphemeralResource implements the methods that define this resource
 type AzureAccessCredentialsEphemeralResource struct {
 	base.EphemeralResourceWithConfigure
+}
+
+// AzureAccessCredentialsPrivateData stores data needed for cleanup in Close
+type AzureAccessCredentialsPrivateData struct {
+	LeaseID   string `json:"lease_id"`
+	Namespace string `json:"namespace"`
 }
 
 // AzureAccessCredentialsModel describes the Terraform resource data model to match the
@@ -180,6 +193,9 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 		return
 	}
 
+	log.Printf("[DEBUG] Sleep to prevent azure rate limits.This happens when open is called multiple times quickly during plan,apply,refresh")
+	time.Sleep(5 * time.Second)
+
 	backend := data.Backend.ValueString()
 	role := data.Role.ValueString()
 	credsPath := backend + "/creds/" + role
@@ -228,6 +244,19 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 	data.LeaseDuration = types.Int64Value(int64(secret.LeaseDuration))
 	data.LeaseStartTime = types.StringValue(time.Now().Format(time.RFC3339))
 	data.LeaseRenewable = types.BoolValue(secret.Renewable)
+
+	// Store lease information in private data for cleanup in Close
+	if secret.LeaseID != "" {
+		privateData, err := json.Marshal(AzureAccessCredentialsPrivateData{
+			LeaseID:   secret.LeaseID,
+			Namespace: data.Namespace.ValueString(),
+		})
+		if err != nil {
+			log.Printf("[WARN] Failed to marshal private data: %s", err)
+		} else {
+			resp.Private.SetKey(ctx, "lease_data", privateData)
+		}
+	}
 
 	// If we're not supposed to validate creds, we're done
 	if !data.ValidateCreds.ValueBool() {
@@ -311,17 +340,17 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 	}
 
 	// Default validation parameters
-	delay := time.Duration(1) * time.Second
+	delay := time.Duration(defaultNumSecondsBetweenTests) * time.Second
 	if !data.NumSecondsBetweenTests.IsNull() {
 		delay = time.Duration(data.NumSecondsBetweenTests.ValueInt64()) * time.Second
 	}
 
-	maxValidationSeconds := int64(300)
+	maxValidationSeconds := int64(defaultMaxCredValidationSeconds)
 	if !data.MaxCredValidationSeconds.IsNull() {
 		maxValidationSeconds = data.MaxCredValidationSeconds.ValueInt64()
 	}
 
-	wantSuccessCount := int64(8)
+	wantSuccessCount := int64(defaultNumSequentialSuccesses)
 	if !data.NumSequentialSuccesses.IsNull() {
 		wantSuccessCount = data.NumSequentialSuccesses.ValueInt64()
 	}
@@ -397,6 +426,46 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 	}
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
+}
+
+// Close revokes the credentials lease when the ephemeral resource is no longer needed
+func (r *AzureAccessCredentialsEphemeralResource) Close(ctx context.Context, req ephemeral.CloseRequest, resp *ephemeral.CloseResponse) {
+	privateBytes, diags := req.Private.GetKey(ctx, "lease_data")
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If no private data, nothing to clean up
+	if len(privateBytes) == 0 {
+		return
+	}
+
+	var privateData AzureAccessCredentialsPrivateData
+	if err := json.Unmarshal(privateBytes, &privateData); err != nil {
+		log.Printf("[WARN] Failed to unmarshal private data: %s", err)
+		return
+	}
+
+	if privateData.LeaseID == "" {
+		// No lease to revoke
+		return
+	}
+
+	c, err := client.GetClient(ctx, r.Meta(), privateData.Namespace)
+	if err != nil {
+		resp.Diagnostics.AddError("Error configuring Vault client for revoke", err.Error())
+		return
+	}
+
+	// Attempt to revoke the lease
+	err = c.Sys().Revoke(privateData.LeaseID)
+	if err != nil {
+		// Log but do not fail resource close
+		log.Printf("[WARN] Failed to revoke lease %q: %s", privateData.LeaseID, err)
+	} else {
+		log.Printf("[DEBUG] Successfully revoked lease %q", privateData.LeaseID)
+	}
 }
 
 func getAzureCloudConfigFromName(name string) (cloud.Configuration, error) {

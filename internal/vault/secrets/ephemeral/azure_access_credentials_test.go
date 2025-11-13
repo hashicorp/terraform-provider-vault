@@ -23,51 +23,72 @@ import (
 // TestAccAzureAccessCredentialsEphemeralResource_basic tests the creation of dynamic
 // Azure service principal credentials using ephemeral resource.
 func TestAccAzureAccessCredentialsEphemeralResource_basic(t *testing.T) {
-
-	conf := testutil.GetTestAzureConfExistingSP(t)
-	backend := acctest.RandomWithPrefix("tf-test-azure")
-	role := acctest.RandomWithPrefix("tf-role")
-	nonEmpty := regexp.MustCompile(`^.+$`)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestEntPreCheck(t)
+	tests := []struct {
+		name          string
+		validateCreds bool
+	}{
+		{
+			name:          "without validation",
+			validateCreds: false,
 		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
+		{
+			name:          "with validation",
+			validateCreds: true,
 		},
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAzureAccessCredentialsEphemeralResourceConfig_basic(backend, role, conf),
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.test_azure",
-						tfjsonpath.New("data").AtMapKey("client_id"),
-						knownvalue.StringExact(conf.ClientID)),
-					statecheck.ExpectKnownValue("echo.test_azure",
-						tfjsonpath.New("data").AtMapKey("client_secret"),
-						knownvalue.StringRegexp(nonEmpty)),
-					statecheck.ExpectKnownValue("echo.test_azure",
-						tfjsonpath.New("data").AtMapKey("lease_id"),
-						knownvalue.StringRegexp(nonEmpty)),
-					statecheck.ExpectKnownValue("echo.test_azure",
-						tfjsonpath.New("data").AtMapKey("lease_duration"),
-						knownvalue.NotNull()),
-					statecheck.ExpectKnownValue("echo.test_azure",
-						tfjsonpath.New("data").AtMapKey("lease_start_time"),
-						knownvalue.StringRegexp(nonEmpty)),
-					statecheck.ExpectKnownValue("echo.test_azure",
-						tfjsonpath.New("data").AtMapKey("lease_renewable"),
-						knownvalue.NotNull()),
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.validateCreds && testing.Short() {
+				t.Skip("skipping test with credential validation overhead in short mode")
+			}
+
+			conf := testutil.GetTestAzureConfExistingSP(t)
+			backend := acctest.RandomWithPrefix("tf-test-azure")
+			role := acctest.RandomWithPrefix("tf-role")
+			nonEmpty := regexp.MustCompile(`^.+$`)
+
+			resource.Test(t, resource.TestCase{
+				PreCheck: func() {
+					acctestutil.TestEntPreCheck(t)
 				},
-			},
-		},
-	})
+				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+				ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+					"echo": echoprovider.NewProviderServer(),
+				},
+				Steps: []resource.TestStep{
+					{
+						Config: testAccAzureAccessCredentialsEphemeralResourceConfig_basic(backend, role, conf, tt.validateCreds),
+						ConfigStateChecks: []statecheck.StateCheck{
+							statecheck.ExpectKnownValue("echo.test_azure",
+								tfjsonpath.New("data").AtMapKey("client_id"),
+								knownvalue.StringExact(conf.ClientID)),
+							statecheck.ExpectKnownValue("echo.test_azure",
+								tfjsonpath.New("data").AtMapKey("client_secret"),
+								knownvalue.StringRegexp(nonEmpty)),
+							statecheck.ExpectKnownValue("echo.test_azure",
+								tfjsonpath.New("data").AtMapKey("lease_id"),
+								knownvalue.StringRegexp(nonEmpty)),
+							statecheck.ExpectKnownValue("echo.test_azure",
+								tfjsonpath.New("data").AtMapKey("lease_duration"),
+								knownvalue.NotNull()),
+							statecheck.ExpectKnownValue("echo.test_azure",
+								tfjsonpath.New("data").AtMapKey("lease_start_time"),
+								knownvalue.StringRegexp(nonEmpty)),
+							statecheck.ExpectKnownValue("echo.test_azure",
+								tfjsonpath.New("data").AtMapKey("lease_renewable"),
+								knownvalue.NotNull()),
+						},
+					},
+				},
+			})
+		})
+	}
 }
 
-func testAccAzureAccessCredentialsEphemeralResourceConfig_basic(backend, role string, conf *testutil.AzureTestConf) string {
+func testAccAzureAccessCredentialsEphemeralResourceConfig_basic(backend, role string, conf *testutil.AzureTestConf, validateCreds bool) string {
 	return fmt.Sprintf(`
-resource "vault_azure_secret_backend" "test" {
+resource "vault_azure_secret_backend" "azure" {
   subscription_id = "%s"
   tenant_id      = "%s" 
   client_id      = "%s"
@@ -75,23 +96,23 @@ resource "vault_azure_secret_backend" "test" {
   path           = "%s"
 }
 
-resource "vault_azure_secret_backend_role" "test" {
-  backend                = vault_azure_secret_backend.test.path
+resource "vault_azure_secret_backend_role" "role" {
+  backend                = vault_azure_secret_backend.azure.path
   role                   = "%s"
   ttl                    = 3600
   max_ttl                = 7200
-
   application_object_id = "%s"
 }
 
-ephemeral "vault_azure_access_credentials" "test" {
-  backend  = vault_azure_secret_backend.test.path
-  role     = vault_azure_secret_backend_role.test.role
-  mount_id = vault_azure_secret_backend.test.id
+ephemeral "vault_azure_access_credentials" "cred" {
+  backend  = vault_azure_secret_backend.azure.path
+  role     = vault_azure_secret_backend_role.role.role
+  mount_id = vault_azure_secret_backend_role.role.id
+  validate_creds = %t
 }
 
 provider "echo" {
-  data = ephemeral.vault_azure_access_credentials.test
+  data = ephemeral.vault_azure_access_credentials.cred
 }
 
 resource "echo" "test_azure" {}
@@ -103,5 +124,6 @@ resource "echo" "test_azure" {}
 		backend,
 		role,
 		conf.AppObjectID,
+		validateCreds,
 	)
 }
