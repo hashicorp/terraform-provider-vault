@@ -145,8 +145,8 @@ No additional attributes are exported by this resource.
 
 ## Import
 
-LDAP secret backend can be imported using the `${mount}/config`, e.g.
+LDAP secret backend can be imported using the mount path, e.g.
 
 ```
-$ terraform import vault_ldap_secret_backend.config ldap/config
+$ terraform import vault_ldap_secret_backend.config my-custom-ldap
 ```
