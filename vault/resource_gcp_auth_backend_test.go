@@ -596,3 +596,267 @@ resource "vault_gcp_auth_backend" "test" {
 }
 `, credentials, path, description)
 }
+
+// TestGCPAuthBackend_AliasAndMetadata tests the IAM alias, IAM metadata, GCE alias, and GCE metadata fields
+func TestGCPAuthBackend_AliasAndMetadata(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
+	path := acctest.RandomWithPrefix("tf-test-gcp-alias")
+	resourceType := "vault_gcp_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testGCPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Test with default values (not explicitly setting the fields)
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials, "GCP Auth Backend"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMAlias, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGceAlias, ""),
+					// Check that default metadata fields are present
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".#", "4"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGceMetadata+".#", "9"),
+				),
+			},
+			{
+				// Test with custom values
+				Config: testGCPAuthBackendConfig_aliasAndMetadata(path, gcpJSONCredentials),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMAlias, "unique_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGceAlias, "instance_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGceMetadata+".#", "3"),
+				),
+			},
+			{
+				// Test import
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"credentials",
+					"disable_remount",
+				},
+			},
+		},
+	})
+}
+
+func testGCPAuthBackendConfig_aliasAndMetadata(path, credentials string) string {
+	return fmt.Sprintf(`
+variable "json_credentials" {
+  type    = string
+  default = %q
+}
+
+resource "vault_gcp_auth_backend" "test" {
+  path        = %q
+  credentials = var.json_credentials
+  description = "GCP Auth Backend with Alias and Metadata"
+  
+  iam_alias = "unique_id"
+  iam_metadata = [
+    "project_id",
+    "role"
+  ]
+  
+  gce_alias = "instance_id"
+  gce_metadata = [
+    "instance_id",
+    "instance_name",
+    "project_id"
+  ]
+}
+`, credentials, path)
+}
+
+// TestGCPAuthBackend_AliasAndMetadataUpdate tests updating the IAM alias, IAM metadata, GCE alias, and GCE metadata fields
+func TestGCPAuthBackend_AliasAndMetadataUpdate(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
+	path := acctest.RandomWithPrefix("tf-test-gcp-alias-update")
+	resourceType := "vault_gcp_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testGCPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Start with custom values
+				Config: testGCPAuthBackendConfig_aliasAndMetadata(path, gcpJSONCredentials),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMAlias, "unique_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGceAlias, "instance_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGceMetadata+".#", "3"),
+				),
+			},
+			{
+				// Update to different values
+				Config: testGCPAuthBackendConfig_aliasAndMetadataUpdated(path, gcpJSONCredentials),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMAlias, "role_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGceAlias, "role_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGceMetadata+".#", "2"),
+				),
+			},
+		},
+	})
+}
+
+func testGCPAuthBackendConfig_aliasAndMetadataUpdated(path, credentials string) string {
+	return fmt.Sprintf(`
+variable "json_credentials" {
+  type    = string
+  default = %q
+}
+
+resource "vault_gcp_auth_backend" "test" {
+  path        = %q
+  credentials = var.json_credentials
+  description = "GCP Auth Backend with Updated Alias and Metadata"
+  
+  iam_alias = "role_id"
+  iam_metadata = [
+    "project_id"
+  ]
+  
+  gce_alias = "role_id"
+  gce_metadata = [
+    "instance_name",
+    "project_id"
+  ]
+}
+`, credentials, path)
+}
+
+// TestGCPAuthBackend_InvalidAlias tests that invalid values for iam_alias and gce_alias are rejected
+func TestGCPAuthBackend_InvalidAlias(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
+	path := acctest.RandomWithPrefix("tf-test-gcp-invalid-alias")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testGCPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Test invalid iam_alias value
+				Config:      testGCPAuthBackendConfig_invalidIAMAlias(path, gcpJSONCredentials),
+				ExpectError: regexp.MustCompile(`expected iam_alias to be one of \["role_id" "unique_id"\], got invalid_value`),
+			},
+			{
+				// Test invalid gce_alias value
+				Config:      testGCPAuthBackendConfig_invalidGCEAlias(path, gcpJSONCredentials),
+				ExpectError: regexp.MustCompile(`expected gce_alias to be one of \["role_id" "instance_id"\], got invalid_value`),
+			},
+		},
+	})
+}
+
+func testGCPAuthBackendConfig_invalidIAMAlias(path, credentials string) string {
+	return fmt.Sprintf(`
+variable "json_credentials" {
+  type    = string
+  default = %q
+}
+
+resource "vault_gcp_auth_backend" "test" {
+  path        = %q
+  credentials = var.json_credentials
+  description = "GCP Auth Backend with Invalid IAM Alias"
+  
+  iam_alias = "invalid_value"
+}
+`, credentials, path)
+}
+
+func testGCPAuthBackendConfig_invalidGCEAlias(path, credentials string) string {
+	return fmt.Sprintf(`
+variable "json_credentials" {
+  type    = string
+  default = %q
+}
+
+resource "vault_gcp_auth_backend" "test" {
+  path        = %q
+  credentials = var.json_credentials
+  description = "GCP Auth Backend with Invalid GCE Alias"
+  
+  gce_alias = "invalid_value"
+}
+`, credentials, path)
+}
+
+// TestGCPAuthBackend_InvalidMetadata tests that invalid metadata fields are handled properly
+func TestGCPAuthBackend_InvalidMetadata(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
+	iamPath := acctest.RandomWithPrefix("tf-test-gcp-invalid-iam-metadata")
+	gcePath := acctest.RandomWithPrefix("tf-test-gcp-invalid-gce-metadata")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testGCPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Test with non-existent IAM metadata fields
+				Config:      testGCPAuthBackendConfig_invalidIAMMetadata(iamPath, gcpJSONCredentials),
+				ExpectError: regexp.MustCompile(`failed to parse iam metadata: .* contains an unavailable field, please select from "project_id, role, service_account_id, service_account_email"`),
+			},
+			{
+				// Test with non-existent GCE metadata fields
+				Config:      testGCPAuthBackendConfig_invalidGCEMetadata(gcePath, gcpJSONCredentials),
+				ExpectError: regexp.MustCompile(`failed to parse gce metadata: .* contains an unavailable field, please select from "instance_creation_timestamp, instance_id, instance_name, project_id, project_number, role, service_account_id, service_account_email, zone"`),
+			},
+		},
+	})
+}
+
+func testGCPAuthBackendConfig_invalidIAMMetadata(path, credentials string) string {
+	return fmt.Sprintf(`
+variable "json_credentials" {
+  type    = string
+  default = %q
+}
+
+resource "vault_gcp_auth_backend" "test" {
+  path        = %q
+  credentials = var.json_credentials
+  description = "GCP Auth Backend with Invalid IAM Metadata"
+  
+  iam_metadata = [
+    "non_existent_field_1",
+    "non_existent_field_2"
+  ]
+}
+`, credentials, path)
+}
+
+func testGCPAuthBackendConfig_invalidGCEMetadata(path, credentials string) string {
+	return fmt.Sprintf(`
+variable "json_credentials" {
+  type    = string
+  default = %q
+}
+
+resource "vault_gcp_auth_backend" "test" {
+  path        = %q
+  credentials = var.json_credentials
+  description = "GCP Auth Backend with Invalid GCE Metadata"
+  
+  gce_metadata = [
+    "non_existent_field_1",
+    "non_existent_field_2"
+  ]
+}
+`, credentials, path)
+}

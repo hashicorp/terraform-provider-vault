@@ -120,6 +120,16 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 				Computed:    true,
 				Description: "Accessor of the created GCP mount.",
 			},
+			consts.FieldTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The default TTL for long-lived credentials (i.e. service account keys).",
+			},
+			consts.FieldMaxTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The maximum TTL for long-lived credentials (i.e. service account keys).",
+			},
 		},
 	}, false)
 
@@ -167,7 +177,10 @@ func gcpSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 	log.Printf("[DEBUG] Writing GCP configuration to %q", configPath)
 
 	data := map[string]interface{}{}
-	fields := []string{}
+	fields := []string{
+		consts.FieldTTL,
+		consts.FieldMaxTTL,
+	}
 
 	if useAPIVer117Ent {
 		fields = append(fields,
@@ -226,31 +239,38 @@ func gcpSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 	}
 
 	// read and set config if needed
-	useAPIVer117Ent := provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta)
-	if useAPIVer117Ent {
-		resp, err := client.Logical().ReadWithContext(ctx, gcpSecretBackendConfigPath(path))
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if resp == nil {
-			return diag.FromErr(fmt.Errorf("GCP backend config %q not found", path))
-		}
+	fields := []string{}
+	fields = append(
+		fields,
+		consts.FieldTTL,
+		consts.FieldMaxTTL,
+	)
 
-		fields := []string{
+	if provider.IsAPISupported(meta, provider.VaultVersion117) && provider.IsEnterpriseSupported(meta) {
+		fields = append(
+			fields,
 			consts.FieldIdentityTokenAudience,
 			consts.FieldIdentityTokenTTL,
 			consts.FieldServiceAccountEmail,
-		}
+		)
 
 		if provider.IsAPISupported(meta, provider.VaultVersion119) {
 			fields = append(fields, automatedrotationutil.AutomatedRotationFields...)
 		}
+	}
 
-		for _, k := range fields {
-			if v, ok := resp.Data[k]; ok {
-				if err := d.Set(k, v); err != nil {
-					return diag.FromErr(err)
-				}
+	resp, err := client.Logical().ReadWithContext(ctx, gcpSecretBackendConfigPath(path))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if resp == nil {
+		return diag.FromErr(fmt.Errorf("GCP backend config %q not found", path))
+	}
+
+	for _, k := range fields {
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.FromErr(err)
 			}
 		}
 	}
@@ -306,6 +326,14 @@ func gcpSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 	if credentials != "" {
 		data[consts.FieldCredentials] = credentials
+	}
+
+	if d.HasChange(consts.FieldTTL) {
+		data[consts.FieldTTL] = d.Get(consts.FieldTTL)
+	}
+
+	if d.HasChange(consts.FieldMaxTTL) {
+		data[consts.FieldMaxTTL] = d.Get(consts.FieldMaxTTL)
 	}
 
 	if useAPIVer117Ent {
