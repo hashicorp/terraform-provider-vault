@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -201,67 +202,57 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 		resourceName = impersonatedAccount
 	}
 
-	// Retry configuration
-	maxRetries := 5
-	initialDelay := 2 * time.Second
-	maxDelay := 30 * time.Second
+	// Configure exponential backoff with max retries
+	// Initial interval: 2s, Max interval: 30s, Max retries: 5
+	exponentialBackoff := backoff.NewExponentialBackOff()
+	exponentialBackoff.InitialInterval = 2 * time.Second
+	exponentialBackoff.MaxInterval = 30 * time.Second
+	exponentialBackoff.MaxElapsedTime = 0 // No time limit, only retry count matters
+
+	bo := backoff.WithMaxRetries(exponentialBackoff, 5)
+	bo = backoff.WithContext(bo, ctx)
 
 	var vaultSecret *api.Secret
-	var readErr error
 	var lastErr error
+	attemptCount := 0
 
-	// Retry loop with exponential backoff
-	for attempt := 0; attempt <= maxRetries; attempt++ {
+	// Retry operation with exponential backoff
+	operation := func() error {
+		attemptCount++
+
 		// Read the OAuth2 access token from Vault (GET request)
-		vaultSecret, readErr = c.Logical().ReadWithContext(ctx, tokenPath)
+		secret, err := c.Logical().ReadWithContext(ctx, tokenPath)
 
-		// Check if the read was successful
-		if readErr == nil && vaultSecret != nil {
-			break
+		if err != nil {
+			lastErr = err
+			// Check if the error is retryable
+			if !isRetryableError(err) {
+				log.Printf("[DEBUG] Non-retryable error encountered for %s %q: %s", resourceType, resourceName, err)
+				return backoff.Permanent(err)
+			}
+			log.Printf("[DEBUG] Attempt %d failed for %s %q. Error: %s", attemptCount, resourceType, resourceName, err)
+			return err
 		}
 
-		// Store the last error for reporting
-		if readErr != nil {
-			lastErr = readErr
-		} else {
+		if secret == nil {
 			lastErr = fmt.Errorf("no credentials found at path %q", tokenPath)
+			// Nil response might indicate the resource isn't ready yet, so retry
+			log.Printf("[DEBUG] Attempt %d failed for %s %q: no credentials found", attemptCount, resourceType, resourceName)
+			return lastErr
 		}
 
-		// If this is the last attempt, don't retry
-		if attempt == maxRetries {
-			break
-		}
-
-		// Check if the error is retryable
-		if !isRetryableError(lastErr) {
-			log.Printf("[DEBUG] Non-retryable error encountered for %s %q: %s", resourceType, resourceName, lastErr)
-			break
-		}
-
-		// Calculate delay with exponential backoff
-		delay := initialDelay * time.Duration(1<<uint(attempt))
-		if delay > maxDelay {
-			delay = maxDelay
-		}
-
-		log.Printf("[DEBUG] Attempt %d/%d failed for %s %q. Retrying in %v... Error: %s",
-			attempt+1, maxRetries+1, resourceType, resourceName, delay, lastErr)
-
-		// Wait before retrying
-		select {
-		case <-ctx.Done():
-			resp.Diagnostics.AddError(
-				"Context cancelled",
-				fmt.Sprintf("Operation cancelled while waiting to retry reading from path %q", tokenPath),
-			)
-			return
-		case <-time.After(delay):
-			// Continue to next retry
-		}
+		// Success
+		vaultSecret = secret
+		return nil
 	}
 
+	// Execute with retry and backoff
+	retryErr := backoff.RetryNotify(operation, bo, func(err error, duration time.Duration) {
+		log.Printf("[DEBUG] Retrying %s %q in %v after error: %s", resourceType, resourceName, duration, err)
+	})
+
 	// Handle final error after all retries
-	if readErr != nil {
+	if retryErr != nil {
 		resp.Diagnostics.AddError(
 			"Error reading from Vault",
 			fmt.Sprintf("Error generating GCP OAuth2 access token from path %q after %d attempts: %s\n\n"+
@@ -271,7 +262,7 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 				"2. The GCP service account has been created and granted necessary permissions\n"+
 				"3. There is sufficient time between creating the %s and requesting tokens\n"+
 				"4. The Vault GCP secrets engine is properly configured",
-				tokenPath, maxRetries+1, readErr, resourceType, resourceName, resourceType, resourceType),
+				tokenPath, attemptCount, retryErr, resourceType, resourceName, resourceType, resourceType),
 		)
 		return
 	}
@@ -286,7 +277,7 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 				"2. The GCP service account has been created and granted necessary permissions\n"+
 				"3. There is sufficient time between creating the %s and requesting tokens\n"+
 				"4. The Vault GCP secrets engine is properly configured",
-				tokenPath, maxRetries+1, resourceType, resourceName, resourceType, resourceType),
+				tokenPath, attemptCount, resourceType, resourceName, resourceType, resourceType),
 		)
 		return
 	}
