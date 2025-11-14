@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -193,14 +194,41 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 		return
 	}
 
-	log.Printf("[DEBUG] Sleep to prevent azure rate limits.This happens when open is called multiple times quickly during plan,apply,refresh")
-	time.Sleep(5 * time.Second)
-
 	backend := data.Backend.ValueString()
 	role := data.Role.ValueString()
 	credsPath := backend + "/creds/" + role
 
-	secret, err := c.Logical().ReadWithContext(ctx, credsPath)
+	// Retry logic for reading credentials from Vault with exponential backoff
+	// Azure can return rate limit errors generating credentials when multiple
+	// requests are made during plan,apply,refresh in quick succession
+	var secret *api.Secret
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 2 * time.Second
+	bo.MaxInterval = 30 * time.Second
+	bo.MaxElapsedTime = 5 * time.Minute
+
+	err = backoff.RetryNotify(
+		func() error {
+			var readErr error
+			secret, readErr = c.Logical().ReadWithContext(ctx, credsPath)
+			if readErr != nil {
+				errMsg := readErr.Error()
+				// Check if this is a rate limit error from Azure
+				if strings.Contains(errMsg, "concurrent requests being made") {
+					// Retryable error
+					return readErr
+				}
+				// Non-retryable error
+				return backoff.Permanent(readErr)
+			}
+			return nil
+		},
+		bo,
+		func(err error, duration time.Duration) {
+			log.Printf("[WARN] Azure rate limit error reading credentials, retrying in %s: %s", duration, err)
+		},
+	)
+
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading from Vault",

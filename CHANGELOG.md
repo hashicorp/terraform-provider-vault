@@ -1,9 +1,5 @@
 ## Unreleased
 
-FEATURES:
-
-* Add support for ephemeral resource `vault_azure_access_credentials`: ([#2654](https://github.com/hashicorp/terraform-provider-vault/pull/2654))
-
 ## 5.4.0 (Nov 3, 2025)
 
 BEHAVIOR CHANGES: Please refer to the [upgrade topics](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_5_upgrade.html#upgrade-topics)

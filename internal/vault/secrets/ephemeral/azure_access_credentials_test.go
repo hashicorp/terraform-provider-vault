@@ -109,6 +109,7 @@ ephemeral "vault_azure_access_credentials" "cred" {
   role     = vault_azure_secret_backend_role.role.role
   mount_id = vault_azure_secret_backend_role.role.id
   validate_creds = %t
+  num_sequential_successes = 2
 }
 
 provider "echo" {
