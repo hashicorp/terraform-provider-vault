@@ -1563,7 +1563,7 @@ func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix
 	return result
 }
 
-func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret, meta interface{}) map[string]interface{} {
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
 	if !ok {
@@ -1571,12 +1571,24 @@ func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix strin
 	}
 
 	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+
+	// plugin_name is at the top level of the response, not in connection_details
+	if v, ok := resp.Data["plugin_name"]; ok {
+		result["plugin_name"] = v.(string)
+	}
+
 	if v, ok := data["split_statements"]; ok {
 		result["split_statements"] = v.(bool)
 	}
 
 	if v, ok := data["disconnect_sessions"]; ok {
 		result["disconnect_sessions"] = v.(bool)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := data["self_managed"]; ok {
+			result["self_managed"] = v.(bool)
+		}
 	}
 
 	return result
@@ -2169,7 +2181,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineMySQLLegacy:
 		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineOracle:
-		result = getOracleConnectionDetailsFromResponse(d, prefix, resp)
+		result = getOracleConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEnginePostgres:
 		result = getPostgresConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineElasticSearch:
@@ -2342,46 +2354,50 @@ func databaseEngineNameAndIndexFromPrefix(prefix string) (string, string, error)
 
 func validateDatabaseConnectionConfig(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	// Validate Oracle self_managed configuration
-	if oracleConfig, ok := d.GetOk(dbEngineOracle.name); ok {
-		oracleList := oracleConfig.([]interface{})
-		if len(oracleList) > 0 && oracleList[0] != nil {
-			config := oracleList[0].(map[string]interface{})
+	oracleConfig, ok := d.GetOk(dbEngineOracle.name)
+	if !ok {
+		return nil
+	}
 
-			// Check if self_managed is true
-			if selfManaged, ok := config["self_managed"].(bool); ok && selfManaged {
-				// Validate that username and password/password_wo are not set when self_managed=true
-				hasUsername := false
-				hasPassword := false
-				hasPasswordWO := false
+	oracleList := oracleConfig.([]interface{})
+	if len(oracleList) == 0 || oracleList[0] == nil {
+		return nil
+	}
 
-				if username, ok := config[consts.FieldUsername].(string); ok && username != "" {
-					hasUsername = true
-				}
+	config := oracleList[0].(map[string]interface{})
+	selfManaged, ok := config["self_managed"].(bool)
+	if !ok || !selfManaged {
+		return nil
+	}
 
-				if password, ok := config[consts.FieldPassword].(string); ok && password != "" {
-					hasPassword = true
-				}
+	// Check for username
+	hasUsername := false
+	if username, ok := config[consts.FieldUsername].(string); ok && username != "" {
+		hasUsername = true
+	}
 
-				// Check password_wo using GetRawConfig
-				rawConfig := d.GetRawConfig()
-				if !rawConfig.IsNull() {
-					oracleAttr := rawConfig.GetAttr(dbEngineOracle.name)
-					if !oracleAttr.IsNull() && oracleAttr.LengthInt() > 0 {
-						firstElement := oracleAttr.Index(cty.NumberIntVal(0))
-						if !firstElement.IsNull() {
-							pwWoAttr := firstElement.GetAttr(consts.FieldPasswordWO)
-							if pwWoAttr.IsKnown() && !pwWoAttr.IsNull() && strings.TrimSpace(pwWoAttr.AsString()) != "" {
-								hasPasswordWO = true
-							}
-						}
-					}
-				}
+	// Check for password
+	hasPassword := false
+	if password, ok := config[consts.FieldPassword].(string); ok && password != "" {
+		hasPassword = true
+	}
 
-				if hasUsername || hasPassword || hasPasswordWO {
-					return fmt.Errorf("cannot use both self-managed and vault-managed workflows. Either use self_managed or username/password")
+	// Check password_wo using GetRawConfig
+	hasPasswordWO := false
+	rawConfig := d.GetRawConfig()
+	if !rawConfig.IsNull() {
+		if oracleAttr := rawConfig.GetAttr(dbEngineOracle.name); !oracleAttr.IsNull() && oracleAttr.LengthInt() > 0 {
+			if firstElement := oracleAttr.Index(cty.NumberIntVal(0)); !firstElement.IsNull() {
+				pwWoAttr := firstElement.GetAttr(consts.FieldPasswordWO)
+				if pwWoAttr.IsKnown() && !pwWoAttr.IsNull() && strings.TrimSpace(pwWoAttr.AsString()) != "" {
+					hasPasswordWO = true
 				}
 			}
 		}
+	}
+
+	if hasUsername || hasPassword || hasPasswordWO {
+		return fmt.Errorf("cannot use both self-managed and vault-managed workflows. Either use self_managed or username/password")
 	}
 
 	return nil

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	_ "github.com/sijms/go-ora/v2"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -379,6 +381,43 @@ func createTestUser(connURL, username string) error {
 	return nil
 }
 
+func createOracleTestUser(connURL, username, password string) error {
+	ctx := context.Background()
+	db, err := sql.Open("oracle", connURL)
+	if err != nil {
+		return fmt.Errorf("failed to open Oracle connection: %w", err)
+	}
+	defer db.Close()
+
+	// Test the connection
+	if err := db.PingContext(ctx); err != nil {
+		return fmt.Errorf("failed to ping Oracle database: %w", err)
+	}
+
+	// Drop user if exists (ignore errors)
+	_, _ = db.ExecContext(ctx, fmt.Sprintf("DROP USER %s CASCADE", username))
+
+	// Create user
+	createUserSQL := fmt.Sprintf("CREATE USER %s IDENTIFIED BY %s", username, password)
+	if _, err := db.ExecContext(ctx, createUserSQL); err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Grant necessary permissions
+	grants := []string{
+		fmt.Sprintf("GRANT CONNECT TO %s", username),
+		fmt.Sprintf("GRANT CREATE SESSION TO %s", username),
+	}
+
+	for _, grant := range grants {
+		if _, err := db.ExecContext(ctx, grant); err != nil {
+			return fmt.Errorf("failed to grant permissions: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func testAccDatabaseSecretBackendStaticRoleConfig_credentialType(name, username, db, path, connURL string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
@@ -660,6 +699,152 @@ resource "vault_database_secret_backend_static_role" "test" {
   rotation_period = 3600
 }
 `, path, db, connURL, name, username, smPassword)
+}
+
+// TestAccDatabaseSecretBackendStaticRole_password_wo ensures
+// write-only attribute `password_wo` works as expected
+func TestAccDatabaseSecretBackendStaticRole_password_wo(t *testing.T) {
+	connURL := testutil.SkipTestEnvUnset(t, "ORACLE_URL")[0]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	username := "TESTUSER" // Fixed username for Oracle testing
+	dbName := acctest.RandomWithPrefix("db")
+	name := acctest.RandomWithPrefix("staticrole")
+	resourceName := "vault_database_secret_backend_static_role.test"
+	password1 := "test-password-1"
+	password2 := "test-password-2"
+	staticUserPassword := "StaticUserPass123"
+
+	// Try to create Oracle test user (may fail if Oracle is not locally accessible)
+	if err := createOracleTestUser(connURL, username, staticUserPassword); err != nil {
+		t.Logf("Warning: Could not create Oracle user automatically: %v", err)
+		t.Logf("Please manually create user '%s' with password '%s' in Oracle", username, staticUserPassword)
+		t.Logf("SQL commands:")
+		t.Logf("  DROP USER %s CASCADE;", username)
+		t.Logf("  CREATE USER %s IDENTIFIED BY %s;", username, staticUserPassword)
+		t.Logf("  GRANT CONNECT TO %s;", username)
+		t.Logf("  GRANT CREATE SESSION TO %s;", username)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_password_wo(name, username, dbName, backend, connURL, password1, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
+					resource.TestCheckResourceAttr(resourceName, "password_wo_version", "1"),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_password_wo(name, username, dbName, backend, connURL, password2, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
+					resource.TestCheckResourceAttr(resourceName, "password_wo_version", "2"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldPasswordWO, consts.FieldPasswordWOVersion},
+			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretBackendStaticRole_password_wo_conflict ensures
+// that password_wo and self_managed_password cannot be used together
+func TestAccDatabaseSecretBackendStaticRole_password_wo_conflict(t *testing.T) {
+	connURL := testutil.SkipTestEnvUnset(t, "ORACLE_URL")[0]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	username := acctest.RandomWithPrefix("user")
+	dbName := acctest.RandomWithPrefix("db")
+	name := acctest.RandomWithPrefix("staticrole")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccDatabaseSecretBackendStaticRoleConfig_password_wo_conflict(name, username, dbName, backend, connURL),
+				ExpectError: regexp.MustCompile("password_wo and self_managed_password cannot be used together"),
+			},
+		},
+	})
+}
+
+func testAccDatabaseSecretBackendStaticRoleConfig_password_wo_conflict(name, username, db, path, connURL string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+
+  oracle {
+	  connection_url = "%s"
+	  plugin_name = "vault-plugin-database-oracle"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  password_wo = "test-password"
+  password_wo_version = 1
+  self_managed_password = "test-password"
+  rotation_period = 3600
+  rotation_statements = ["ALTER USER {{username}} IDENTIFIED BY \"{{password}}\";"]
+}
+`, path, db, connURL, name, username)
+}
+
+func testAccDatabaseSecretBackendStaticRoleConfig_password_wo(name, username, db, path, connURL, password string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+
+  oracle {
+	  connection_url = "%s"
+	  plugin_name = "vault-plugin-database-oracle"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  password_wo = "%s"
+  password_wo_version = %d
+  rotation_period = 3600
+  rotation_statements = ["ALTER USER {{username}} IDENTIFIED BY \"{{password}}\";"]
+}
+`, path, db, connURL, name, username, password, version)
 }
 
 var testRoleStaticCreate = `

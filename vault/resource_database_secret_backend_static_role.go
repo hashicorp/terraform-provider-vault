@@ -277,14 +277,11 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion119) {
-		// Ensure password_wo_version is maintained in state
-		if v, ok := d.GetOk(consts.FieldPasswordWOVersion); ok {
-			if err := d.Set(consts.FieldPasswordWOVersion, v); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-	}
+	// Note: password_wo_version is not explicitly set in Read function.
+	// It's a client-side tracking field that Terraform SDK manages automatically.
+	// This follows the pattern used by other resources with write-only version fields
+	// (gcp_secret_backend, terraform_cloud_secret_backend, kv_secret_v2).
+	// ensure password_wo_version is updated in state
 
 	for _, k := range staticRoleFields {
 		if v, ok := role.Data[k]; ok {
@@ -344,9 +341,9 @@ func validatePasswordFields(ctx context.Context, d *schema.ResourceDiff, meta in
 	// Use GetRawConfig for write-only field password_wo
 	pwWo := d.GetRawConfig().GetAttr(consts.FieldPasswordWO)
 	hasPasswordWO := pwWo.IsKnown() && !pwWo.IsNull()
-	_, hasSelfManaged := d.GetOk(consts.FieldSelfManagedPassword)
+	_, hasSelfManagedPassword := d.GetOk(consts.FieldSelfManagedPassword)
 
-	if hasPasswordWO && hasSelfManaged {
+	if hasPasswordWO && hasSelfManagedPassword {
 		return fmt.Errorf("password_wo and self_managed_password cannot be used together")
 	}
 	return nil
