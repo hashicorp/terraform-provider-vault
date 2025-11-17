@@ -1,5 +1,9 @@
 ## Unreleased
 
+CHANGES:
+
+* `vault_ldap_auth_backend`: Set `deny_null_bind` to `true` by default if not provided in configuration ([#2622](https://github.com/hashicorp/terraform-provider-vault/pull/2622))
+
 ## 5.4.0 (Nov 3, 2025)
 
 BEHAVIOR CHANGES: Please refer to the [upgrade topics](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_5_upgrade.html#upgrade-topics)
