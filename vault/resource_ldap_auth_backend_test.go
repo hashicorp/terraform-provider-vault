@@ -360,6 +360,48 @@ func TestLDAPAuthBackend_tune_conflicts(t *testing.T) {
 	})
 }
 
+func TestLDAPAuthBackend_denyNullBindDefault(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-ldap-deny-null-bind")
+
+	resourceName := "vault_ldap_auth_backend.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_denyNullBindNotSet(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify deny_null_bind defaults to true when not explicitly set
+					resource.TestCheckResourceAttr(resourceName, "deny_null_bind", "true"),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_denyNullBindExplicitFalse(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify deny_null_bind can be explicitly set to false
+					resource.TestCheckResourceAttr(resourceName, "deny_null_bind", "false"),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_denyNullBindNotSet(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify deny_null_bind returns to default true when removed from config
+					resource.TestCheckResourceAttr(resourceName, "deny_null_bind", "true"),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
+		},
+	})
+}
+
 func testLDAPAuthBackendDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ldap_auth_backend" {
@@ -740,6 +782,32 @@ resource "vault_ldap_auth_backend" "test" {
 		passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To"]
 		allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To"]
 	}
+}
+`, path)
+}
+
+func testLDAPAuthBackendConfig_denyNullBindNotSet(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path        = "%s"
+    url         = "ldaps://example.org"
+    binddn      = "cn=example.com"
+    bindpass    = "supersecurepassword"
+    description = "Test LDAP auth backend for deny_null_bind behavior"
+    # deny_null_bind is intentionally not set to test default behavior
+}
+`, path)
+}
+
+func testLDAPAuthBackendConfig_denyNullBindExplicitFalse(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path            = "%s"
+    url             = "ldaps://example.org"
+    binddn          = "cn=example.com"
+    bindpass        = "supersecurepassword"
+    description     = "Test LDAP auth backend for deny_null_bind behavior"
+    deny_null_bind  = false
 }
 `, path)
 }

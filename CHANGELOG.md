@@ -1,5 +1,9 @@
 ## Unreleased
 
+CHANGES:
+
+* `vault_ldap_auth_backend`: Set `deny_null_bind` to `true` by default if not provided in configuration ([#2622](https://github.com/hashicorp/terraform-provider-vault/pull/2622))
+
 FEATURES:
 
 * Add support for `alias_metadata` field in auth resources ([#2547](https://github.com/hashicorp/terraform-provider-vault/pull/2547))
