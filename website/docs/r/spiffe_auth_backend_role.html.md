@@ -121,5 +121,5 @@ In the case of the example above the `id` would be `auth/spiffe/role/example-rol
 where the `spiffe` component is the resource's `mount`, e.g.
 
 ```
-$ terraform import vault_spiffe_auth_backend_role.example-role auth/spiffe/role/example-role
+$ terraform import vault_spiffe_auth_backend_role.spiffe_role auth/spiffe/role/example-role
 ```
