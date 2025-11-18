@@ -6,8 +6,11 @@ package ephemeralsecrets
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -161,12 +164,37 @@ func (r *AWSAccessCredentialsEphemeralSecretResource) Open(ctx context.Context, 
 		requestData["region"] = []string{data.Region.ValueString()}
 	}
 
+	// Use exponential backoff for retrying if the required AWS role is not ready.
 	var sec *api.Secret
-	if len(requestData) > 0 {
-		sec, err = c.Logical().ReadWithDataWithContext(ctx, path, requestData)
-	} else {
-		sec, err = c.Logical().ReadWithContext(ctx, path)
-	}
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 2 * time.Second
+	bo.MaxInterval = 30 * time.Second
+	bo.MaxElapsedTime = 1 * time.Minute
+
+	err = backoff.RetryNotify(
+		func() error {
+			var readErr error
+			if len(requestData) > 0 {
+				sec, readErr = c.Logical().ReadWithDataWithContext(ctx, path, requestData)
+			} else {
+				sec, readErr = c.Logical().ReadWithContext(ctx, path)
+			}
+
+			if readErr != nil {
+				errMsg := readErr.Error()
+				if strings.Contains(errMsg, "Errors") {
+					return readErr
+				}
+				// Non-retryable error - fail immediately
+				return backoff.Permanent(readErr)
+			}
+			return nil
+		},
+		bo,
+		func(err error, duration time.Duration) {
+			log.Printf("[WARN] AWS rate limit error reading credentials, retrying in %s: %s", duration, err)
+		},
+	)
 
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
