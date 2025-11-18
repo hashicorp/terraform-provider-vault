@@ -12,6 +12,11 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+const aliasMetadataConfig = `
+	alias_metadata = {
+		"foo" = "bar"
+	}`
+
 func Test_handleCIDRField(t *testing.T) {
 	tests := []struct {
 		name        string
