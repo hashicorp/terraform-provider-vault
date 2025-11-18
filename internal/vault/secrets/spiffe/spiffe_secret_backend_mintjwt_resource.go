@@ -22,20 +22,20 @@ import (
 var mintjwtNameRegexp = regexp.MustCompile("^(.+)/role/(.+)/mintjwt$")
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
-var _ ephemeral.EphemeralResource = &SpiffeSecretMintJwtResource{}
+var _ ephemeral.EphemeralResource = &SpiffeSecretBackendMintJwtResource{}
 
-// NewSpiffeMintJwtResource returns the implementation for this resource to be
+// NewSpiffeSecretBackendMintJwtResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider
-func NewSpiffeMintJwtResource() ephemeral.EphemeralResource {
-	return &SpiffeSecretMintJwtResource{}
+func NewSpiffeSecretBackendMintJwtResource() ephemeral.EphemeralResource {
+	return &SpiffeSecretBackendMintJwtResource{}
 }
 
-// SpiffeSecretMintJwtResource implements the methods that define this resource
-type SpiffeSecretMintJwtResource struct {
+// SpiffeSecretBackendMintJwtResource implements the methods that define this resource
+type SpiffeSecretBackendMintJwtResource struct {
 	base.EphemeralResourceWithConfigure
 }
 
-type SpiffeSecretMintJwtModel struct {
+type SpiffeSecretBackendMintJwtModel struct {
 	base.BaseModelEphemeral
 
 	Mount    types.String `tfsdk:"mount"`
@@ -44,17 +44,17 @@ type SpiffeSecretMintJwtModel struct {
 	Token    types.String `tfsdk:"token"`
 }
 
-type SpiffeSecretMintJwtAPIModel struct {
+type SpiffeSecretBackendMintJwtAPIModel struct {
 	Name     string `json:"name" mapstructure:"name"`
 	Audience string `json:"audience" mapstructure:"audience"`
 	Token    string `json:"token" mapstructure:"token"`
 }
 
-func (s *SpiffeSecretMintJwtResource) Metadata(_ context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_spiffe_mintjwt"
+func (s *SpiffeSecretBackendMintJwtResource) Metadata(_ context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_spiffe_secret_backend_mintjwt"
 }
 
-func (s *SpiffeSecretMintJwtResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
+func (s *SpiffeSecretBackendMintJwtResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
@@ -80,8 +80,8 @@ func (s *SpiffeSecretMintJwtResource) Schema(_ context.Context, _ ephemeral.Sche
 	base.MustAddBaseEphemeralSchema(&resp.Schema)
 }
 
-func (s *SpiffeSecretMintJwtResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
-	var data SpiffeSecretMintJwtModel
+func (s *SpiffeSecretBackendMintJwtResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
+	var data SpiffeSecretBackendMintJwtModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
@@ -126,7 +126,7 @@ func (s *SpiffeSecretMintJwtResource) Open(ctx context.Context, req ephemeral.Op
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
-func (s *SpiffeSecretMintJwtResource) path(data *SpiffeSecretMintJwtModel) (string, error) {
+func (s *SpiffeSecretBackendMintJwtResource) path(data *SpiffeSecretBackendMintJwtModel) (string, error) {
 	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
 	if mount == "" || name == "" {
@@ -135,8 +135,8 @@ func (s *SpiffeSecretMintJwtResource) path(data *SpiffeSecretMintJwtModel) (stri
 	return fmt.Sprintf("%s/role/%s/mintjwt", mount, name), nil
 }
 
-func (s *SpiffeSecretMintJwtResource) getApiModel(_ context.Context, data *SpiffeSecretMintJwtModel) (map[string]any, diag.Diagnostics) {
-	apiModel := SpiffeSecretMintJwtAPIModel{
+func (s *SpiffeSecretBackendMintJwtResource) getApiModel(_ context.Context, data *SpiffeSecretBackendMintJwtModel) (map[string]any, diag.Diagnostics) {
+	apiModel := SpiffeSecretBackendMintJwtAPIModel{
 		Name:     data.Name.ValueString(),
 		Audience: data.Audience.ValueString(),
 		Token:    data.Token.ValueString(),
@@ -152,27 +152,25 @@ func (s *SpiffeSecretMintJwtResource) getApiModel(_ context.Context, data *Spiff
 	return vaultRequest, nil
 }
 
-func (s *SpiffeSecretMintJwtResource) populateDataModelFromApi(_ context.Context, data *SpiffeSecretMintJwtModel, resp *api.Secret) diag.Diagnostics {
+func (s *SpiffeSecretBackendMintJwtResource) populateDataModelFromApi(_ context.Context, data *SpiffeSecretBackendMintJwtModel, resp *api.Secret) diag.Diagnostics {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{
 			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
 		}
 	}
 
-	var readResp SpiffeSecretMintJwtAPIModel
+	var readResp SpiffeSecretBackendMintJwtAPIModel
 	if err := model.ToAPIModel(resp.Data, &readResp); err != nil {
 		return diag.Diagnostics{
 			diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error()),
 		}
 	}
-	//data.Name = types.StringValue(readResp.Name)
-	//data.Audience = types.StringValue(readResp.Audience)
 	data.Token = types.StringValue(readResp.Token)
 
 	return diag.Diagnostics{}
 }
 
-func (s *SpiffeSecretMintJwtResource) extractSpiffeRoleIdentifiers(id string) (string, string, error) {
+func (s *SpiffeSecretBackendMintJwtResource) extractSpiffeRoleIdentifiers(id string) (string, string, error) {
 	if id == "" {
 		return "", "", fmt.Errorf("import identifier cannot be empty")
 	}

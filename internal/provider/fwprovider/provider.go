@@ -233,7 +233,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffeauth.NewSpiffeAuthConfigResource,
 		spiffeauth.NewSpiffeAuthRoleResource,
 		spiffesec.NewSpiffeSecretBackendConfigResource,
-		spiffesec.NewSpiffeRoleResource,
+		spiffesec.NewSpiffeSecretBackendRoleResource,
 		sys.NewPasswordPolicyResource,
 		azure.NewAzureStaticRoleResource,
 		kmip.NewKMIPListenerResource,
@@ -260,7 +260,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewAWSStaticAccessCredentialsEphemeralSecretResource,
 		ephemeralauth.NewApproleAuthBackendRoleSecretIDEphemeralResource,
 		ephemeralsecrets.NewKubernetesServiceAccountTokenEphemeralResource,
-		spiffesec.NewSpiffeMintJwtResource,
+		spiffesec.NewSpiffeSecretBackendMintJwtResource,
 	}
 
 }

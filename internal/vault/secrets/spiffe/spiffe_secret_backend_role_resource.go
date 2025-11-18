@@ -25,20 +25,20 @@ import (
 var roleNameRegexp = regexp.MustCompile("^(.+)/role/(.+)$")
 
 // Ensure the implementation satisfies the resource.ResourceWithImportState interface
-var _ resource.ResourceWithImportState = &SpiffeSecretRoleResource{}
+var _ resource.ResourceWithImportState = &SpiffeSecretBackendRoleResource{}
 
-// NewSpiffeRoleResource returns the implementation for this resource to be
+// NewSpiffeSecretBackendRoleResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider
-func NewSpiffeRoleResource() resource.Resource {
-	return &SpiffeSecretRoleResource{}
+func NewSpiffeSecretBackendRoleResource() resource.Resource {
+	return &SpiffeSecretBackendRoleResource{}
 }
 
-// SpiffeSecretRoleResource implements the methods that define this resource
-type SpiffeSecretRoleResource struct {
+// SpiffeSecretBackendRoleResource implements the methods that define this resource
+type SpiffeSecretBackendRoleResource struct {
 	base.ResourceWithConfigure
 }
 
-type SpiffeSecretRoleModel struct {
+type SpiffeSecretBackendRoleModel struct {
 	base.BaseModel
 
 	Mount       types.String `tfsdk:"mount"`
@@ -48,18 +48,18 @@ type SpiffeSecretRoleModel struct {
 	UseJtiClaim types.Bool   `tfsdk:"use_jti_claim"`
 }
 
-type SpiffeSecretRoleAPIModel struct {
+type SpiffeSecretBackendRoleAPIModel struct {
 	Name        string `json:"name" mapstructure:"name"`
 	Ttl         string `json:"ttl" mapstructure:"ttl,omitempty"`
 	Template    string `json:"template" mapstructure:"template"`
 	UseJtiClaim bool   `json:"use_jti_claim" mapstructure:"use_jti_claim,omitempty"`
 }
 
-func (s *SpiffeSecretRoleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_spiffe_role"
+func (s *SpiffeSecretBackendRoleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_spiffe_secret_backend_role"
 }
 
-func (s *SpiffeSecretRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (s *SpiffeSecretBackendRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
@@ -90,8 +90,8 @@ func (s *SpiffeSecretRoleResource) Schema(_ context.Context, _ resource.SchemaRe
 	base.MustAddBaseSchema(&resp.Schema)
 }
 
-func (s *SpiffeSecretRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data SpiffeSecretRoleModel
+func (s *SpiffeSecretBackendRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data SpiffeSecretBackendRoleModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -138,8 +138,8 @@ func (s *SpiffeSecretRoleResource) Create(ctx context.Context, req resource.Crea
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (s *SpiffeSecretRoleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data SpiffeSecretRoleModel
+func (s *SpiffeSecretBackendRoleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data SpiffeSecretBackendRoleModel
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
@@ -177,8 +177,8 @@ func (s *SpiffeSecretRoleResource) Read(ctx context.Context, req resource.ReadRe
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (s *SpiffeSecretRoleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data SpiffeSecretRoleModel
+func (s *SpiffeSecretBackendRoleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data SpiffeSecretBackendRoleModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -225,8 +225,8 @@ func (s *SpiffeSecretRoleResource) Update(ctx context.Context, req resource.Upda
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (s *SpiffeSecretRoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data SpiffeSecretRoleModel
+func (s *SpiffeSecretBackendRoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data SpiffeSecretBackendRoleModel
 
 	// Read Terraform state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -251,7 +251,7 @@ func (s *SpiffeSecretRoleResource) Delete(ctx context.Context, req resource.Dele
 	}
 }
 
-func (s *SpiffeSecretRoleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (s *SpiffeSecretBackendRoleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	mount, roleName, err := s.extractSpiffeRoleIdentifiers(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -276,7 +276,7 @@ func (s *SpiffeSecretRoleResource) ImportState(ctx context.Context, req resource
 	}
 }
 
-func (s *SpiffeSecretRoleResource) path(data *SpiffeSecretRoleModel) (string, error) {
+func (s *SpiffeSecretBackendRoleResource) path(data *SpiffeSecretBackendRoleModel) (string, error) {
 	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
 	if mount == "" || name == "" {
@@ -285,8 +285,8 @@ func (s *SpiffeSecretRoleResource) path(data *SpiffeSecretRoleModel) (string, er
 	return fmt.Sprintf("%s/role/%s", mount, name), nil
 }
 
-func (s *SpiffeSecretRoleResource) getApiModel(ctx context.Context, data *SpiffeSecretRoleModel) (map[string]any, diag.Diagnostics) {
-	apiModel := SpiffeSecretRoleAPIModel{
+func (s *SpiffeSecretBackendRoleResource) getApiModel(ctx context.Context, data *SpiffeSecretBackendRoleModel) (map[string]any, diag.Diagnostics) {
+	apiModel := SpiffeSecretBackendRoleAPIModel{
 		Name:        data.Name.ValueString(),
 		Ttl:         data.Ttl.ValueString(),
 		Template:    data.Template.ValueString(),
@@ -303,14 +303,14 @@ func (s *SpiffeSecretRoleResource) getApiModel(ctx context.Context, data *Spiffe
 	return vaultRequest, nil
 }
 
-func (s *SpiffeSecretRoleResource) populateDataModelFromApi(_ context.Context, data *SpiffeSecretRoleModel, resp *api.Secret) diag.Diagnostics {
+func (s *SpiffeSecretBackendRoleResource) populateDataModelFromApi(_ context.Context, data *SpiffeSecretBackendRoleModel, resp *api.Secret) diag.Diagnostics {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{
 			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
 		}
 	}
 
-	var readResp SpiffeSecretRoleAPIModel
+	var readResp SpiffeSecretBackendRoleAPIModel
 	if err := model.ToAPIModel(resp.Data, &readResp); err != nil {
 		return diag.Diagnostics{
 			diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error()),
@@ -324,7 +324,7 @@ func (s *SpiffeSecretRoleResource) populateDataModelFromApi(_ context.Context, d
 	return diag.Diagnostics{}
 }
 
-func (s *SpiffeSecretRoleResource) extractSpiffeRoleIdentifiers(id string) (string, string, error) {
+func (s *SpiffeSecretBackendRoleResource) extractSpiffeRoleIdentifiers(id string) (string, string, error) {
 	if id == "" {
 		return "", "", fmt.Errorf("import identifier cannot be empty")
 	}

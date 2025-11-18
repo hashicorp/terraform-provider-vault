@@ -17,7 +17,7 @@ import (
 	"github.com/spiffe/go-spiffe/v2/svid/jwtsvid"
 )
 
-func TestAccSpiffeSecretMintJwtResource(t *testing.T) {
+func TestAccSpiffeSecretBackendMintJwtResource(t *testing.T) {
 	mount := acctest.RandomWithPrefix("spiffe-mount")
 
 	resource.UnitTest(t, resource.TestCase{
@@ -38,11 +38,11 @@ func TestAccSpiffeSecretMintJwtResource(t *testing.T) {
 						path            = "%s"
 						type            = "spiffe"
 					}
-					resource "vault_spiffe_backend_config" "config" {
+					resource "vault_spiffe_secret_backend_config" "config" {
 						mount			= vault_mount.the_backend.path
 						trust_domain	= "dadgarcorp.com"
 					}
-					resource "vault_spiffe_role" "role" {
+					resource "vault_spiffe_secret_backend_role" "role" {
                       	mount		    = vault_mount.the_backend.path
                       	name		    = "the-role-name"
                       	template	    = jsonencode(
@@ -51,15 +51,15 @@ func TestAccSpiffeSecretMintJwtResource(t *testing.T) {
                             }
                         )
 					}
-					ephemeral "vault_spiffe_mintjwt" "test" {
+					ephemeral "vault_spiffe_secret_backend_mintjwt" "test" {
 						mount		    = vault_mount.the_backend.path
                         mount_id	    = vault_mount.the_backend.id
-						name		    = vault_spiffe_role.role.name
+						name		    = vault_spiffe_secret_backend_role.role.name
 
 						audience	    = "test audience"
 					}
 		            provider "echo" {
-		            	data            = ephemeral.vault_spiffe_mintjwt.test
+		            	data            = ephemeral.vault_spiffe_secret_backend_mintjwt.test
 		            }
 
                     resource "echo" "jwtsvid" {}

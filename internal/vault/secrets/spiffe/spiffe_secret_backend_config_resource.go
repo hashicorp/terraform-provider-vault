@@ -42,7 +42,7 @@ type SpiffeSecretBackendConfigResource struct {
 	base.ResourceWithConfigure
 }
 
-type SpiffeSecretBackendModel struct {
+type SpiffeSecretBackendConfigModel struct {
 	base.BaseModel
 
 	Mount                    types.String `tfsdk:"mount"`
@@ -54,7 +54,7 @@ type SpiffeSecretBackendModel struct {
 	JwtOidcCompatibilityMode types.Bool   `tfsdk:"jwt_oidc_compatibility_mode"`
 }
 
-type SpiffeSecretsConfigAPIModel struct {
+type SpiffeSecretConfigAPIModel struct {
 	TrustDomain              string `json:"trust_domain" mapstructure:"trust_domain"`
 	BundleRefreshHint        string `json:"bundle_refresh_hint" mapstructure:"bundle_refresh_hint,omitempty"`
 	KeyLifetime              string `json:"key_lifetime" mapstructure:"key_lifetime,omitempty"`
@@ -64,7 +64,7 @@ type SpiffeSecretsConfigAPIModel struct {
 }
 
 func (s *SpiffeSecretBackendConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_spiffe_backend_config"
+	resp.TypeName = req.ProviderTypeName + "_spiffe_secret_backend_config"
 }
 
 func (s *SpiffeSecretBackendConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -99,7 +99,7 @@ func (s *SpiffeSecretBackendConfigResource) Schema(_ context.Context, _ resource
 				Computed:    true,
 			},
 			"jwt_oidc_compatibility_mode": schema.BoolAttribute{
-				Description: "If true, SPIFFEIDs in JWT SVIDs must not exceed 255 bytes, the limit for the sub claim in OIDC.",
+				Description: "If true, SPIFFE IDs in JWT SVIDs must not exceed 255 bytes, the limit for the sub claim in OIDC.",
 				Optional:    true,
 				Computed:    true,
 			},
@@ -110,7 +110,7 @@ func (s *SpiffeSecretBackendConfigResource) Schema(_ context.Context, _ resource
 }
 
 func (s *SpiffeSecretBackendConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data SpiffeSecretBackendModel
+	var data SpiffeSecretBackendConfigModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -153,7 +153,7 @@ func (s *SpiffeSecretBackendConfigResource) Create(ctx context.Context, req reso
 }
 
 func (s *SpiffeSecretBackendConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data SpiffeSecretBackendModel
+	var data SpiffeSecretBackendConfigModel
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
@@ -186,7 +186,7 @@ func (s *SpiffeSecretBackendConfigResource) Read(ctx context.Context, req resour
 }
 
 func (s *SpiffeSecretBackendConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data SpiffeSecretBackendModel
+	var data SpiffeSecretBackendConfigModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -261,8 +261,8 @@ func (s *SpiffeSecretBackendConfigResource) path(mount string) string {
 	return fmt.Sprintf("%s/%s", mount, spiffeConfigPath)
 }
 
-func (s *SpiffeSecretBackendConfigResource) getApiModel(_ context.Context, data *SpiffeSecretBackendModel) (map[string]any, diag.Diagnostics) {
-	apiModel := SpiffeSecretsConfigAPIModel{
+func (s *SpiffeSecretBackendConfigResource) getApiModel(_ context.Context, data *SpiffeSecretBackendConfigModel) (map[string]any, diag.Diagnostics) {
+	apiModel := SpiffeSecretConfigAPIModel{
 		TrustDomain:              data.TrustDomain.ValueString(),
 		BundleRefreshHint:        data.BundleRefreshHint.ValueString(),
 		KeyLifetime:              data.KeyLifetime.ValueString(),
@@ -281,14 +281,14 @@ func (s *SpiffeSecretBackendConfigResource) getApiModel(_ context.Context, data 
 	return vaultRequest, nil
 }
 
-func (s *SpiffeSecretBackendConfigResource) populateDataModelFromApi(_ context.Context, data *SpiffeSecretBackendModel, resp *api.Secret) diag.Diagnostics {
+func (s *SpiffeSecretBackendConfigResource) populateDataModelFromApi(_ context.Context, data *SpiffeSecretBackendConfigModel, resp *api.Secret) diag.Diagnostics {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{
 			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
 		}
 	}
 
-	var readResp SpiffeSecretsConfigAPIModel
+	var readResp SpiffeSecretConfigAPIModel
 	if err := model.ToAPIModel(resp.Data, &readResp); err != nil {
 		return diag.Diagnostics{
 			diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error()),
