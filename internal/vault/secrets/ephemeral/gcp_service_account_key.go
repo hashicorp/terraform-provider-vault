@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
@@ -41,7 +42,7 @@ type GCPServiceAccountKeyModel struct {
 	base.BaseModelEphemeral
 
 	// fields specific to this resource
-	Backend       types.String `tfsdk:"backend"`
+	Mount         types.String `tfsdk:"mount"`
 	Roleset       types.String `tfsdk:"roleset"`
 	StaticAccount types.String `tfsdk:"static_account"`
 	KeyAlgorithm  types.String `tfsdk:"key_algorithm"`
@@ -62,36 +63,36 @@ type GCPServiceAccountKeyModel struct {
 func (r *GCPServiceAccountKeyEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"backend": schema.StringAttribute{
-				MarkdownDescription: "GCP Secret Backend to read credentials from.",
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Mount path for the GCP Secret Backend to read credentials from.",
 				Required:            true,
 			},
-			"roleset": schema.StringAttribute{
+			consts.FieldRoleset: schema.StringAttribute{
 				MarkdownDescription: "GCP Secret Roleset to generate credentials for. Mutually exclusive with `static_account`.",
 				Optional:            true,
 			},
-			"static_account": schema.StringAttribute{
+			consts.FieldStaticAccount: schema.StringAttribute{
 				MarkdownDescription: "GCP Secret Static Account to generate credentials for. Mutually exclusive with `roleset`.",
 				Optional:            true,
 			},
-			"key_algorithm": schema.StringAttribute{
+			consts.FieldKeyAlgorithm: schema.StringAttribute{
 				MarkdownDescription: "Key algorithm used to generate key. Defaults to 2k RSA key. Accepted values: `KEY_ALG_UNSPECIFIED`, `KEY_ALG_RSA_1024`, `KEY_ALG_RSA_2048`.",
 				Optional:            true,
 			},
-			"key_type": schema.StringAttribute{
+			consts.FieldKeyType: schema.StringAttribute{
 				MarkdownDescription: "Private key type to generate. Defaults to JSON credentials file. Accepted values: `TYPE_UNSPECIFIED`, `TYPE_PKCS12_FILE`, `TYPE_GOOGLE_CREDENTIALS_FILE`.",
 				Optional:            true,
 			},
-			"private_key_data": schema.StringAttribute{
+			consts.FieldPrivateKeyData: schema.StringAttribute{
 				MarkdownDescription: "The private key data in JSON format.",
 				Computed:            true,
 				Sensitive:           true,
 			},
-			"private_key_type": schema.StringAttribute{
+			consts.FieldPrivateKeyType: schema.StringAttribute{
 				MarkdownDescription: "The type of the private key.",
 				Computed:            true,
 			},
-			"service_account_email": schema.StringAttribute{
+			consts.FieldServiceAccountEmail: schema.StringAttribute{
 				MarkdownDescription: "The email of the service account.",
 				Computed:            true,
 			},
@@ -103,7 +104,7 @@ func (r *GCPServiceAccountKeyEphemeralResource) Schema(_ context.Context, _ ephe
 				MarkdownDescription: "Lease duration in seconds relative to the time in lease_start_time.",
 				Computed:            true,
 			},
-			"lease_start_time": schema.StringAttribute{
+			consts.FieldLeaseStartTime: schema.StringAttribute{
 				MarkdownDescription: "Time at which the lease was read, using the clock of the system where Terraform was running.",
 				Computed:            true,
 			},
@@ -158,15 +159,15 @@ func (r *GCPServiceAccountKeyEphemeralResource) Open(ctx context.Context, req ep
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	var credsPath string
 
 	if hasRoleset {
 		roleset := data.Roleset.ValueString()
-		credsPath = backend + "/roleset/" + roleset + "/key"
+		credsPath = mount + "/roleset/" + roleset + "/key"
 	} else {
 		staticAccount := data.StaticAccount.ValueString()
-		credsPath = backend + "/static-account/" + staticAccount + "/key"
+		credsPath = mount + "/static-account/" + staticAccount + "/key"
 	}
 
 	// Build request data

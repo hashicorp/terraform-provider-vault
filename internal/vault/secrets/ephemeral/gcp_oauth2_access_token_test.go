@@ -15,10 +15,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
+)
+
+var (
+	// Common regexp patterns used across GCP ephemeral resource tests
+	regexpNonEmpty = regexp.MustCompile(`^.+$`)
 )
 
 // TestAccGCPOAuth2AccessToken_roleset tests generating an OAuth2 access token
@@ -28,8 +34,6 @@ func TestAccGCPOAuth2AccessToken_roleset(t *testing.T) {
 	roleset := acctest.RandomWithPrefix("tf-roleset")
 
 	creds, project := testutil.GetTestGCPCreds(t)
-
-	nonEmpty := regexp.MustCompile(`^.+$`)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -42,10 +46,22 @@ func TestAccGCPOAuth2AccessToken_roleset(t *testing.T) {
 				Config: testAccGCPOAuth2AccessTokenRolesetConfig(backend, roleset, creds, project),
 				ConfigStateChecks: []statecheck.StateCheck{
 					// Verify token is set and not empty
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
 					// Verify lease_start_time is set
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
 					// Verify lease_renewable is set to false
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.Bool(false)),
+				},
+			},
+			{
+				// Second step: Apply the same config again to verify multiple calls work
+				Config: testAccGCPOAuth2AccessTokenRolesetConfig(backend, roleset, creds, project),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify token is still set and not empty (should be a new token)
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
+					// Verify lease_start_time is set (should be a new timestamp)
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+					// Verify lease_renewable is still false
 					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.Bool(false)),
 				},
 			},
@@ -62,8 +78,6 @@ func TestAccGCPOAuth2AccessToken_staticAccount(t *testing.T) {
 	creds, _ := testutil.GetTestGCPCreds(t)
 	serviceAccountEmail := testutil.SkipTestEnvUnset(t, "GOOGLE_SERVICE_ACCOUNT_EMAIL")[0]
 
-	nonEmpty := regexp.MustCompile(`^.+$`)
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -75,9 +89,9 @@ func TestAccGCPOAuth2AccessToken_staticAccount(t *testing.T) {
 				Config: testAccGCPOAuth2AccessTokenStaticAccountConfig(backend, staticAccount, creds, serviceAccountEmail),
 				ConfigStateChecks: []statecheck.StateCheck{
 					// Verify token is set and not empty
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
 					// Verify lease_start_time is set
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
 				},
 			},
 		},
@@ -93,8 +107,6 @@ func TestAccGCPOAuth2AccessToken_impersonatedAccount(t *testing.T) {
 	creds, _ := testutil.GetTestGCPCreds(t)
 	serviceAccountEmail := testutil.SkipTestEnvUnset(t, "GOOGLE_SERVICE_ACCOUNT_EMAIL")[0]
 
-	nonEmpty := regexp.MustCompile(`^.+$`)
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -106,9 +118,9 @@ func TestAccGCPOAuth2AccessToken_impersonatedAccount(t *testing.T) {
 				Config: testAccGCPOAuth2AccessTokenImpersonatedAccountConfig(backend, impersonatedAccount, creds, serviceAccountEmail),
 				ConfigStateChecks: []statecheck.StateCheck{
 					// Verify token is set and not empty
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
 					// Verify lease_start_time is set
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
 				},
 			},
 		},
@@ -213,8 +225,6 @@ func TestAccGCPOAuth2AccessToken_withNamespace(t *testing.T) {
 
 	creds, project := testutil.GetTestGCPCreds(t)
 
-	nonEmpty := regexp.MustCompile(`^.+$`)
-
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
@@ -228,7 +238,7 @@ func TestAccGCPOAuth2AccessToken_withNamespace(t *testing.T) {
 			{
 				Config: testAccGCPOAuth2AccessTokenWithNamespaceConfig(backend, roleset, namespace, creds, project),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
 				},
 			},
 		},
@@ -261,7 +271,7 @@ resource "vault_gcp_secret_roleset" "roleset" {
 
 ephemeral "vault_gcp_oauth2_access_token" "token" {
   mount_id = vault_gcp_secret_roleset.roleset.id
-  backend  = vault_gcp_secret_backend.gcp.path
+  mount    = vault_gcp_secret_backend.gcp.path
   roleset  = vault_gcp_secret_roleset.roleset.roleset
 }
 
@@ -292,7 +302,7 @@ resource "vault_gcp_secret_static_account" "static" {
 
 ephemeral "vault_gcp_oauth2_access_token" "token" {
   mount_id       = vault_gcp_secret_static_account.static.id
-  backend        = vault_gcp_secret_backend.gcp.path
+  mount          = vault_gcp_secret_backend.gcp.path
   static_account = vault_gcp_secret_static_account.static.static_account
 }
 
@@ -322,7 +332,7 @@ resource "vault_gcp_secret_impersonated_account" "impersonated" {
 
 ephemeral "vault_gcp_oauth2_access_token" "token" {
   mount_id            = vault_gcp_secret_impersonated_account.impersonated.id
-  backend             = vault_gcp_secret_backend.gcp.path
+  mount               = vault_gcp_secret_backend.gcp.path
   impersonated_account = vault_gcp_secret_impersonated_account.impersonated.impersonated_account
 }
 
@@ -344,7 +354,7 @@ CREDS
 }
 
 ephemeral "vault_gcp_oauth2_access_token" "token" {
-  backend = vault_gcp_secret_backend.gcp.path
+  mount = vault_gcp_secret_backend.gcp.path
 }
 
 provider "echo" {
@@ -386,7 +396,7 @@ resource "vault_gcp_secret_static_account" "static" {
 }
 
 ephemeral "vault_gcp_oauth2_access_token" "token" {
-  backend        = vault_gcp_secret_backend.gcp.path
+  mount          = vault_gcp_secret_backend.gcp.path
   roleset        = vault_gcp_secret_roleset.roleset.roleset
   static_account = vault_gcp_secret_static_account.static.static_account
 }
@@ -402,7 +412,7 @@ resource "echo" "gcp_token" {}
 func testAccGCPOAuth2AccessTokenInvalidBackendConfig(roleset string) string {
 	return fmt.Sprintf(`
 ephemeral "vault_gcp_oauth2_access_token" "token" {
-  backend = "nonexistent-backend"
+  mount   = "nonexistent-backend"
   roleset = "%s"
 }
 
@@ -424,7 +434,7 @@ CREDS
 }
 
 ephemeral "vault_gcp_oauth2_access_token" "token" {
-  backend = vault_gcp_secret_backend.gcp.path
+  mount   = vault_gcp_secret_backend.gcp.path
   roleset = "nonexistent-roleset"
 }
 
@@ -467,7 +477,7 @@ resource "vault_gcp_secret_roleset" "roleset" {
 ephemeral "vault_gcp_oauth2_access_token" "token" {
   namespace = vault_namespace.test.path
   mount_id  = vault_gcp_secret_roleset.roleset.id
-  backend   = vault_gcp_secret_backend.gcp.path
+  mount     = vault_gcp_secret_backend.gcp.path
   roleset   = vault_gcp_secret_roleset.roleset.roleset
 }
 

@@ -7,18 +7,19 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
+	"net/http"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/vault/api"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
-	"github.com/hashicorp/vault/api"
 )
 
 // Ensure the implementation satisfies the ephemeral.EphemeralResource interface
@@ -42,7 +43,7 @@ type GCPOAuth2AccessTokenModel struct {
 	base.BaseModelEphemeral
 
 	// fields specific to this resource
-	Backend             types.String `tfsdk:"backend"`
+	Mount               types.String `tfsdk:"mount"`
 	Roleset             types.String `tfsdk:"roleset"`
 	StaticAccount       types.String `tfsdk:"static_account"`
 	ImpersonatedAccount types.String `tfsdk:"impersonated_account"`
@@ -61,28 +62,28 @@ type GCPOAuth2AccessTokenModel struct {
 func (r *GCPOAuth2AccessTokenEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"backend": schema.StringAttribute{
-				MarkdownDescription: "GCP Secret Backend to read credentials from.",
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Mount path for the GCP Secret Backend to read credentials from.",
 				Required:            true,
 			},
-			"roleset": schema.StringAttribute{
+			consts.FieldRoleset: schema.StringAttribute{
 				MarkdownDescription: "GCP Secret Roleset to generate OAuth2 access token for. Mutually exclusive with `static_account` and `impersonated_account`.",
 				Optional:            true,
 			},
-			"static_account": schema.StringAttribute{
+			consts.FieldStaticAccount: schema.StringAttribute{
 				MarkdownDescription: "GCP Secret Static Account to generate OAuth2 access token for. Mutually exclusive with `roleset` and `impersonated_account`.",
 				Optional:            true,
 			},
-			"impersonated_account": schema.StringAttribute{
+			consts.FieldImpersonatedAccount: schema.StringAttribute{
 				MarkdownDescription: "GCP Secret Impersonated Account to generate OAuth2 access token for. Mutually exclusive with `roleset` and `static_account`.",
 				Optional:            true,
 			},
-			"token": schema.StringAttribute{
+			consts.FieldToken: schema.StringAttribute{
 				MarkdownDescription: "The OAuth2 access token.",
 				Computed:            true,
 				Sensitive:           true,
 			},
-			"token_ttl": schema.Int64Attribute{
+			consts.FieldTokenTTL: schema.Int64Attribute{
 				MarkdownDescription: "The TTL of the token in seconds.",
 				Computed:            true,
 			},
@@ -94,7 +95,7 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Schema(_ context.Context, _ ephe
 				MarkdownDescription: "Lease duration in seconds relative to the time in lease_start_time.",
 				Computed:            true,
 			},
-			"lease_start_time": schema.StringAttribute{
+			consts.FieldLeaseStartTime: schema.StringAttribute{
 				MarkdownDescription: "Time at which the lease was read, using the clock of the system where Terraform was running.",
 				Computed:            true,
 			},
@@ -112,24 +113,6 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Schema(_ context.Context, _ ephe
 // Metadata sets the full name for this resource
 func (r *GCPOAuth2AccessTokenEphemeralResource) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_gcp_oauth2_access_token"
-}
-
-// isRetryableError checks if the error is retryable (e.g., resource not ready yet)
-func isRetryableError(err error) bool {
-	if err == nil {
-		return false
-	}
-	errMsg := strings.ToLower(err.Error())
-	// Common error patterns that indicate the resource might not be ready yet
-	retryablePatterns := []string{
-		"unable to generate token - make sure your roleset service account and key are still valid",
-	}
-	for _, pattern := range retryablePatterns {
-		if strings.Contains(errMsg, pattern) {
-			return true
-		}
-	}
-	return false
 }
 
 func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
@@ -180,24 +163,24 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	var tokenPath string
 	var resourceType string
 	var resourceName string
 
 	if hasRoleset {
 		roleset := data.Roleset.ValueString()
-		tokenPath = backend + "/roleset/" + roleset + "/token"
+		tokenPath = mount + "/roleset/" + roleset + "/token"
 		resourceType = "roleset"
 		resourceName = roleset
 	} else if hasStaticAccount {
 		staticAccount := data.StaticAccount.ValueString()
-		tokenPath = backend + "/static-account/" + staticAccount + "/token"
+		tokenPath = mount + "/static-account/" + staticAccount + "/token"
 		resourceType = "static account"
 		resourceName = staticAccount
 	} else {
 		impersonatedAccount := data.ImpersonatedAccount.ValueString()
-		tokenPath = backend + "/impersonated-account/" + impersonatedAccount + "/token"
+		tokenPath = mount + "/impersonated-account/" + impersonatedAccount + "/token"
 		resourceType = "impersonated account"
 		resourceName = impersonatedAccount
 	}
@@ -213,7 +196,6 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 	bo = backoff.WithContext(bo, ctx)
 
 	var vaultSecret *api.Secret
-	var lastErr error
 	attemptCount := 0
 
 	// Retry operation with exponential backoff
@@ -224,21 +206,22 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 		secret, err := c.Logical().ReadWithContext(ctx, tokenPath)
 
 		if err != nil {
-			lastErr = err
-			// Check if the error is retryable
-			if !isRetryableError(err) {
-				log.Printf("[DEBUG] Non-retryable error encountered for %s %q: %s", resourceType, resourceName, err)
-				return backoff.Permanent(err)
+			// Check if the error is retryable based on HTTP status code
+			// Retry on 400 Bad Request - this typically indicates the resource isn't ready yet
+			if respErr, ok := err.(*api.ResponseError); ok && respErr.StatusCode == http.StatusBadRequest {
+				log.Printf("[DEBUG] Attempt %d failed for %s %q. Error: %s", attemptCount, resourceType, resourceName, err)
+				return err
 			}
-			log.Printf("[DEBUG] Attempt %d failed for %s %q. Error: %s", attemptCount, resourceType, resourceName, err)
-			return err
+			// Non-retryable error
+			log.Printf("[DEBUG] Non-retryable error encountered for %s %q: %s", resourceType, resourceName, err)
+			return backoff.Permanent(err)
 		}
 
 		if secret == nil {
-			lastErr = fmt.Errorf("no credentials found at path %q", tokenPath)
+			err := fmt.Errorf("no credentials found at path %q", tokenPath)
 			// Nil response might indicate the resource isn't ready yet, so retry
 			log.Printf("[DEBUG] Attempt %d failed for %s %q: no credentials found", attemptCount, resourceType, resourceName)
-			return lastErr
+			return err
 		}
 
 		// Success
