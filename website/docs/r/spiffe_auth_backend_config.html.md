@@ -87,5 +87,5 @@ In the case of the example above the `id` would be `auth/spiffe/config`,
 where the `spiffe` component is the resource's `mount`, e.g.
 
 ```
-$ terraform import vault_spiffe_auth_backend_config.example auth/spiffe/config
+$ terraform import vault_spiffe_auth_backend_config.spiffe_config auth/spiffe/config
 ```
