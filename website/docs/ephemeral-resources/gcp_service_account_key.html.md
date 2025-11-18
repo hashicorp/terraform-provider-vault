@@ -36,7 +36,7 @@ resource "vault_gcp_secret_roleset" "roleset" {
 }
 
 ephemeral "vault_gcp_service_account_key" "key" {
-  backend = vault_gcp_secret_backend.gcp.path
+  mount   = vault_gcp_secret_backend.gcp.path
   roleset = vault_gcp_secret_roleset.roleset.roleset
 }
 
@@ -67,7 +67,7 @@ resource "vault_gcp_secret_static_account" "static" {
 }
 
 ephemeral "vault_gcp_service_account_key" "key" {
-  backend        = vault_gcp_secret_backend.gcp.path
+  mount          = vault_gcp_secret_backend.gcp.path
   static_account = vault_gcp_secret_static_account.static.static_account
 }
 ```
@@ -76,7 +76,7 @@ ephemeral "vault_gcp_service_account_key" "key" {
 
 The following arguments are supported:
 
-* `backend` - (Required) Path where the GCP secrets engine is mounted in Vault.
+* `mount` - (Required) Path where the GCP secrets engine is mounted in Vault.
 
 * `roleset` - (Optional) Name of the GCP roleset to generate credentials for. Mutually exclusive with `static_account`.
 

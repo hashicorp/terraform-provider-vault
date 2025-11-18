@@ -16,10 +16,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
+)
+
+var (
+	// Common regexp patterns used across GCP ephemeral resource tests
+	regexpGCPServiceAccountEmail = regexp.MustCompile(`^.+@.+\.iam\.gserviceaccount\.com$`)
+	regexpGCPServiceAccountType  = regexp.MustCompile(`(?s).*"type":\s*"service_account".*`)
+	regexpGCPPrivateKey          = regexp.MustCompile(`(?s).*"private_key":\s*"-----BEGIN PRIVATE KEY-----.*`)
+	regexpGCPClientEmail         = regexp.MustCompile(`(?s).*"client_email":\s*".+@.+\.iam\.gserviceaccount\.com".*`)
 )
 
 // TestAccGCPServiceAccountKey_roleset tests generating a service account key
@@ -30,9 +39,6 @@ func TestAccGCPServiceAccountKey_roleset(t *testing.T) {
 
 	// Get GCP credentials and project
 	creds, project := testutil.GetTestGCPCreds(t)
-
-	nonEmpty := regexp.MustCompile(`^.+$`)
-	emailRegex := regexp.MustCompile(`^.+@.+\.iam\.gserviceaccount\.com$`)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -45,18 +51,37 @@ func TestAccGCPServiceAccountKey_roleset(t *testing.T) {
 				Config: testAccGCPServiceAccountKeyRolesetConfig(backend, roleset, creds, project),
 				ConfigStateChecks: []statecheck.StateCheck{
 					// Verify private_key_data contains expected JSON structure (matches service_account type and has private_key)
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexp.MustCompile(`(?s).*"type":\s*"service_account".*`))),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexp.MustCompile(`(?s).*"private_key":\s*"-----BEGIN PRIVATE KEY-----.*`))),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexp.MustCompile(`(?s).*"client_email":\s*".+@.+\.iam\.gserviceaccount\.com".*`))),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPServiceAccountType)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPPrivateKey)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPClientEmail)),
 					// Verify private_key_type is set
 					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_type"), knownvalue.StringExact("TYPE_GOOGLE_CREDENTIALS_FILE")),
 					// Verify service_account_email matches expected pattern
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("service_account_email"), knownvalue.StringRegexp(emailRegex)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("service_account_email"), knownvalue.StringRegexp(regexpGCPServiceAccountEmail)),
 					// Verify lease fields are set
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseID), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseID), knownvalue.StringRegexp(regexpNonEmpty)),
 					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseDuration), knownvalue.NotNull()),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
 					// lease_renewable can be true or false depending on Vault configuration
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.NotNull()),
+				},
+			},
+			{
+				// Second step: Apply the same config again to verify multiple calls work
+				Config: testAccGCPServiceAccountKeyRolesetConfig(backend, roleset, creds, project),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify private_key_data still contains expected JSON structure (should be a new key)
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPServiceAccountType)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPPrivateKey)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPClientEmail)),
+					// Verify private_key_type is still set
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_type"), knownvalue.StringExact("TYPE_GOOGLE_CREDENTIALS_FILE")),
+					// Verify service_account_email still matches expected pattern
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("service_account_email"), knownvalue.StringRegexp(regexpGCPServiceAccountEmail)),
+					// Verify lease fields are still set (should be new lease)
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseID), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseDuration), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
 					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.NotNull()),
 				},
 			},
@@ -88,8 +113,6 @@ func TestAccGCPServiceAccountKey_staticAccount(t *testing.T) {
 		t.Fatal("GCP credentials must contain client_email field")
 	}
 
-	nonEmpty := regexp.MustCompile(`^.+$`)
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -101,10 +124,10 @@ func TestAccGCPServiceAccountKey_staticAccount(t *testing.T) {
 				Config: testAccGCPServiceAccountKeyStaticAccountConfig(backend, staticAccount, creds, serviceAccountEmail),
 				ConfigStateChecks: []statecheck.StateCheck{
 					// Verify private_key_data contains expected JSON structure
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexp.MustCompile(`(?s).*"type":\s*"service_account".*`))),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexp.MustCompile(`(?s).*"private_key":\s*"-----BEGIN PRIVATE KEY-----.*`))),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPServiceAccountType)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPPrivateKey)),
 					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("service_account_email"), knownvalue.StringExact(serviceAccountEmail)),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseID), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseID), knownvalue.StringRegexp(regexpNonEmpty)),
 				},
 			},
 		},
@@ -130,8 +153,8 @@ func TestAccGCPServiceAccountKey_withKeyOptions(t *testing.T) {
 				Config: testAccGCPServiceAccountKeyWithOptionsConfig(backend, roleset, creds, project),
 				ConfigStateChecks: []statecheck.StateCheck{
 					// Verify private_key_data contains expected JSON structure
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexp.MustCompile(`(?s).*"type":\s*"service_account".*`))),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexp.MustCompile(`(?s).*"private_key":\s*"-----BEGIN PRIVATE KEY-----.*`))),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPServiceAccountType)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPPrivateKey)),
 					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_type"), knownvalue.StringExact("TYPE_GOOGLE_CREDENTIALS_FILE")),
 				},
 			},
@@ -237,7 +260,7 @@ resource "vault_gcp_secret_roleset" "roleset" {
 
 ephemeral "vault_gcp_service_account_key" "key" {
   mount_id = vault_gcp_secret_roleset.roleset.id
-  backend  = vault_gcp_secret_backend.gcp.path
+  mount    = vault_gcp_secret_backend.gcp.path
   roleset  = vault_gcp_secret_roleset.roleset.roleset
 }
 
@@ -268,7 +291,7 @@ resource "vault_gcp_secret_static_account" "static" {
 
 ephemeral "vault_gcp_service_account_key" "key" {
   mount_id       = vault_gcp_secret_static_account.static.id
-  backend        = vault_gcp_secret_backend.gcp.path
+  mount          = vault_gcp_secret_backend.gcp.path
   static_account = vault_gcp_secret_static_account.static.static_account
 }
 
@@ -304,7 +327,7 @@ resource "vault_gcp_secret_roleset" "roleset" {
 
 ephemeral "vault_gcp_service_account_key" "key" {
   mount_id      = vault_gcp_secret_roleset.roleset.id
-  backend       = vault_gcp_secret_backend.gcp.path
+  mount         = vault_gcp_secret_backend.gcp.path
   roleset       = vault_gcp_secret_roleset.roleset.roleset
   key_algorithm = "KEY_ALG_RSA_2048"
   key_type      = "TYPE_GOOGLE_CREDENTIALS_FILE"
@@ -328,7 +351,7 @@ CREDS
 }
 
 ephemeral "vault_gcp_service_account_key" "key" {
-  backend = vault_gcp_secret_backend.gcp.path
+  mount = vault_gcp_secret_backend.gcp.path
 }
 
 provider "echo" {
@@ -370,7 +393,7 @@ resource "vault_gcp_secret_static_account" "static" {
 }
 
 ephemeral "vault_gcp_service_account_key" "key" {
-  backend        = vault_gcp_secret_backend.gcp.path
+  mount          = vault_gcp_secret_backend.gcp.path
   roleset        = vault_gcp_secret_roleset.roleset.roleset
   static_account = vault_gcp_secret_static_account.static.static_account
 }
@@ -386,7 +409,7 @@ resource "echo" "gcp_key" {}
 func testAccGCPServiceAccountKeyInvalidBackendConfig(roleset string) string {
 	return fmt.Sprintf(`
 ephemeral "vault_gcp_service_account_key" "key" {
-  backend = "nonexistent-backend"
+  mount   = "nonexistent-backend"
   roleset = "%s"
 }
 
