@@ -519,6 +519,25 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
 				),
 			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_mysql_rds(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineMySQL)
+
+	// TODO: make these fatal once we auto provision the required test infrastructure.
+	values := testutil.SkipTestEnvUnset(t,
+		"MYSQL_CONNECTION_URL", "MYSQL_CONNECTION_USERNAME", "MYSQL_CONNECTION_PASSWORD")
+	connURL, username, password := values[0], values[1], values[2]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_rds(name, backend, connURL, username, password),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLRDS.DefaultPluginName(),
@@ -535,6 +554,25 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.max_connection_lifetime", "0"),
 				),
 			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_mysql_aurora(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineMySQL)
+
+	// TODO: make these fatal once we auto provision the required test infrastructure.
+	values := testutil.SkipTestEnvUnset(t,
+		"MYSQL_CONNECTION_URL", "MYSQL_CONNECTION_USERNAME", "MYSQL_CONNECTION_PASSWORD")
+	connURL, username, password := values[0], values[1], values[2]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_aurora(name, backend, connURL, username, password),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLAurora.DefaultPluginName(),
@@ -551,6 +589,25 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_connection_lifetime", "0"),
 				),
 			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_mysql_legacy(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineMySQL)
+
+	// TODO: make these fatal once we auto provision the required test infrastructure.
+	values := testutil.SkipTestEnvUnset(t,
+		"MYSQL_CONNECTION_URL", "MYSQL_CONNECTION_USERNAME", "MYSQL_CONNECTION_PASSWORD")
+	connURL, username, password := values[0], values[1], values[2]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_legacy(name, backend, connURL, username, password),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLLegacy.DefaultPluginName(),
