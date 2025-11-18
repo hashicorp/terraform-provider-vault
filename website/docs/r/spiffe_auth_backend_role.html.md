@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_spiffe_auth_backend_role resource"
-sidebar_current: "docs-vault-resource-vault_spiffe_auth_backend_role"
+sidebar_current: "docs-vault-resource-vault-spiffe-auth-backend-role"
 description: |-
  Manage a named role within a SPIFFE auth backend that maps SPIFFE IDs to Vault policies.
 ---

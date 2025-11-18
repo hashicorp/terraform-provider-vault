@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
 )
 
-func TestSpiffeSecretBackendResourceSchema(t *testing.T) {
+func TestSpiffeSecretBackendConfigResourceSchema(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -38,9 +38,9 @@ func TestSpiffeSecretBackendResourceSchema(t *testing.T) {
 	}
 }
 
-func TestAccSpiffeSecretsConfigResource(t *testing.T) {
+func TestAccSpiffeSecretBackendConfigResource(t *testing.T) {
 	mount := acctest.RandomWithPrefix("spiffe-mount")
-	resourceAddress := "vault_spiffe_backend_config.test"
+	resourceAddress := "vault_spiffe_secret_backend_config.test"
 
 	checkPresent := func(res string, attrs ...string) resource.TestCheckFunc {
 		var fs []resource.TestCheckFunc
@@ -73,7 +73,7 @@ func TestAccSpiffeSecretsConfigResource(t *testing.T) {
 			    path			= "%s"
 			    type			= "spiffe"
 			}
-			resource "vault_spiffe_backend_config" "test" {
+			resource "vault_spiffe_secret_backend_config" "test" {
 			    mount			= vault_mount.the_backend.path
 			    trust_domain	= "dadgarcorp.com"
 			}
@@ -92,7 +92,7 @@ func TestAccSpiffeSecretsConfigResource(t *testing.T) {
 				    path			= "%s"
 				    type			= "spiffe"
 				}
-				resource "vault_spiffe_backend_config" "test" {
+				resource "vault_spiffe_secret_backend_config" "test" {
 				    mount			= vault_mount.the_backend.path
 				    trust_domain	= "changed.dadgarcorp.com"
 				}
@@ -111,7 +111,7 @@ func TestAccSpiffeSecretsConfigResource(t *testing.T) {
 				    path				= "%s"
 				    type				= "spiffe"
 				}
-				resource "vault_spiffe_backend_config" "test" {
+				resource "vault_spiffe_secret_backend_config" "test" {
 				    mount				= vault_mount.the_backend.path
 				    trust_domain		= "changed.dadgarcorp.com"
 				    bundle_refresh_hint = "123"
@@ -133,7 +133,7 @@ func TestAccSpiffeSecretsConfigResource(t *testing.T) {
 				    path			= "%s"
 				    type			= "spiffe"
 				}
-				resource "vault_spiffe_backend_config" "test" {
+				resource "vault_spiffe_secret_backend_config" "test" {
 				    mount			= vault_mount.the_backend.path
 				    trust_domain	= "changed.dadgarcorp.com"
 				    key_lifetime	= "6666"
@@ -155,7 +155,7 @@ func TestAccSpiffeSecretsConfigResource(t *testing.T) {
 				    path			= "%s"
 				    type			= "spiffe"
 				}
-				resource "vault_spiffe_backend_config" "test" {
+				resource "vault_spiffe_secret_backend_config" "test" {
 				    mount			= vault_mount.the_backend.path
 				    trust_domain	= "changed.dadgarcorp.com"
 				    jwt_issuer_url	= "https://spiffe.com"
@@ -177,7 +177,7 @@ func TestAccSpiffeSecretsConfigResource(t *testing.T) {
 				    path					= "%s"
 				    type					= "spiffe"
 				}
-				resource "vault_spiffe_backend_config" "test" {
+				resource "vault_spiffe_secret_backend_config" "test" {
 				    mount					= vault_mount.the_backend.path
 				    trust_domain			= "changed.dadgarcorp.com"
 				    jwt_signing_algorithm	= "ES384"
@@ -201,7 +201,7 @@ func TestAccSpiffeSecretsConfigResource(t *testing.T) {
 				    path						= "%s"
 				    type						= "spiffe"
 				}
-				resource "vault_spiffe_backend_config" "test" {
+				resource "vault_spiffe_secret_backend_config" "test" {
 				    mount						= vault_mount.the_backend.path
 				    trust_domain				= "complete.dadgarcorp.com"
 				    bundle_refresh_hint			= "7200" # FIXME(victorr): how can we make it so that "2h" works?

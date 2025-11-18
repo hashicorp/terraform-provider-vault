@@ -1,7 +1,7 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_spiffe__config resource"
-sidebar_current: "docs-vault-resource-vault_spiffe__config"
+page_title: "Vault: vault_spiffe_config resource"
+sidebar_current: "docs-vault-resource-vault-spiffe-secret-backend-config"
 description: |-
   Update the main configuration of the SPIFFE backend in Vault.
 ---
@@ -19,7 +19,7 @@ resource "vault_mount" "spiffe_secrets" {
   type = "spiffe"
 }
 
-resource "vault_spiffe_backend_config" "spiffe_config" {
+resource "vault_spiffe_secret_backend_config" "spiffe_config" {
 	mount		 = vault_mount.spiffe_secrets.path
 	trust_domain = "example.com"
 }
@@ -65,5 +65,5 @@ In the case of the example above the `id` would be `spiffe/config`,
 where the `spiffe` component is the resource's `mount`, e.g.
 
 ```
-$ terraform import vault_spiffe_backend_config.spiffe_config spiffe/config
+$ terraform import vault_spiffe_secret_backend_config.spiffe_config spiffe/config
 ```

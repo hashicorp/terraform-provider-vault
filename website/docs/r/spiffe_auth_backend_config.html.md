@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_spiffe_auth_backend_config resource"
-sidebar_current: "docs-vault-resource-vault_spiffe_auth_backend_config"
+sidebar_current: "docs-vault-resource-vault-spiffe-auth-backend-config"
 description: |-
   Update the main configuration of the SPIFFE auth backend in Vault.
 ---

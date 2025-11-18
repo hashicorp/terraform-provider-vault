@@ -1,7 +1,7 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_spiffe__role resource"
-sidebar_current: "docs-vault-resource-vault_spiffe__role"
+page_title: "Vault: vault_spiffe_secret_backend_role resource"
+sidebar_current: "docs-vault-resource-vault-spiffe-secret-backend-role"
 description: |-
  Manage a named role within a SPIFFE backend for Vault.
 ---
@@ -26,12 +26,12 @@ resource "vault_mount" "spiffe_secrets" {
   type = "spiffe"
 }
 
-resource "vault_spiffe_backend_config" "spiffe_config" {
+resource "vault_spiffe_secret_backend_config" "spiffe_config" {
 	mount			= vault_mount.spiffe_secrets.path
 	trust_domain	= "example.com"
 }
 
-resource "vault_spiffe_role" "spiffe_role" {
+resource "vault_spiffe_secret_backend_role" "spiffe_role" {
   	mount		    = vault_mount.spiffe_secrets.path
   	name		    = "example-role"
   	template	    = jsonencode(
@@ -78,5 +78,5 @@ In the case of the example above the `id` would be `spiffe/role/example-role`,
 where the `spiffe` component is the resource's `mount`, e.g.
 
 ```
-$ terraform import vault_spiffe_role.spiffe_role spiffe/role/example-role
+$ terraform import vault_spiffe_secret_backend_role.spiffe_role spiffe/role/example-role
 ```

@@ -27,7 +27,7 @@ func TestSpiffeSecretRoleResourceSchema(t *testing.T) {
 	schemaResponse := &fwresource.SchemaResponse{}
 
 	// Instantiate the resource.Resource and call its Schema method
-	spiffe.NewSpiffeRoleResource().Schema(ctx, schemaRequest, schemaResponse)
+	spiffe.NewSpiffeSecretBackendRoleResource().Schema(ctx, schemaRequest, schemaResponse)
 	if schemaResponse.Diagnostics.HasError() {
 		t.Fatalf("Schema method diagnostics: %+v", schemaResponse.Diagnostics)
 	}
@@ -41,7 +41,7 @@ func TestSpiffeSecretRoleResourceSchema(t *testing.T) {
 
 func TestAccSpiffeSecretRoleResource(t *testing.T) {
 	mount := acctest.RandomWithPrefix("spiffe-mount")
-	resourceAddress := "vault_spiffe_role.test"
+	resourceAddress := "vault_spiffe_secret_backend_role.test"
 
 	checkPresent := func(res string, attrs ...string) resource.TestCheckFunc {
 		var fs []resource.TestCheckFunc
@@ -79,11 +79,11 @@ func TestAccSpiffeSecretRoleResource(t *testing.T) {
 						path			= "%s"
 						type			= "spiffe"
 					}
-					resource "vault_spiffe_backend_config" "config" {
+					resource "vault_spiffe_secret_backend_config" "config" {
 						mount			= vault_mount.the_backend.path
 						trust_domain	= "dadgarcorp.com"
 					}
-					resource "vault_spiffe_role" "test" {
+					resource "vault_spiffe_secret_backend_role" "test" {
 						mount			= vault_mount.the_backend.path
 						name			= "the-role-name"
 						template		= "%s"
@@ -103,11 +103,11 @@ func TestAccSpiffeSecretRoleResource(t *testing.T) {
 						path			= "%s"
 						type			= "spiffe"
 					}
-					resource "vault_spiffe_backend_config" "config" {
+					resource "vault_spiffe_secret_backend_config" "config" {
 						mount			= vault_mount.the_backend.path
 						trust_domain	= "dadgarcorp.com"
 					}
-					resource "vault_spiffe_role" "test" {
+					resource "vault_spiffe_secret_backend_role" "test" {
 						mount			= vault_mount.the_backend.path
 						name			= "the-role-name"
 						template		= "%s"
@@ -129,11 +129,11 @@ func TestAccSpiffeSecretRoleResource(t *testing.T) {
 						path			= "%s"
 						type			= "spiffe"
 					}
-					resource "vault_spiffe_backend_config" "config" {
+					resource "vault_spiffe_secret_backend_config" "config" {
 						mount			= vault_mount.the_backend.path
 						trust_domain	= "dadgarcorp.com"
 					}
-					resource "vault_spiffe_role" "test" {
+					resource "vault_spiffe_secret_backend_role" "test" {
 						mount			= vault_mount.the_backend.path
 						name			= "the-role-name"
 						template		= "%s"

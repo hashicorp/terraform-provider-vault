@@ -1,7 +1,7 @@
 ---
 layout: "vault"
-page_title: "Vault: ephemeral vault_spiffe_mintjwt resource"
-sidebar_current: "docs-vault-ephemeral-spiffe-mintjwt"
+page_title: "Vault: ephemeral vault_spiffe_secret_backend_mintjwt resource"
+sidebar_current: "docs-vault-ephemeral-vault-spiffe-secret-backend-mintjwt"
 description: |-
   Mint a JWT token from the Vault SPIFFE Secrets engine 
 
@@ -21,12 +21,12 @@ resource "vault_mount" "spiffe_secrets" {
   type = "spiffe"
 }
 
-resource "vault_spiffe_backend_config" "spiffe_config" {
+resource "vault_spiffe_secret_backend_config" "spiffe_config" {
 	mount			= vault_mount.spiffe_secrets.path
 	trust_domain	= "example.com"
 }
 
-resource "vault_spiffe_role" "spiffe_role" {
+resource "vault_spiffe_secret_backend_role" "spiffe_role" {
   	mount		    = vault_mount.spiffe_secrets.path
   	name		    = "example-role"
   	template	    = jsonencode(
@@ -36,10 +36,10 @@ resource "vault_spiffe_role" "spiffe_role" {
     )
 }
 
-ephemeral "vault_spiffe_mintjwt" "token" {
+ephemeral "vault_spiffe_secret_backend_mintjwt" "token" {
 	mount		    = vault_mount.spiffe_mount.path
     mount_id	    = vault_mount.spiffe_mount.id
-	name		    = vault_spiffe_role.spiffe_role.name
+	name		    = vault_spiffe_secret_backend_role.spiffe_role.name
 
 	audience	    = "test"
 }
