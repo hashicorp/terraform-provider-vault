@@ -6,7 +6,7 @@ description: |-
   Update the main configuration of the SPIFFE backend in Vault.
 ---
 
-# vault\_spiffe\_config
+# vault\_spiffe\_secret\_backend\_config
 
 Configure the SPIFFE trust domain.
 
