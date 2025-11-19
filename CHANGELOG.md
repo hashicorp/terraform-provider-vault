@@ -3,6 +3,8 @@
 FEATURES:
 
 * **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
+* Add support for SPIFFE secrets backend: ([#2660](https://github.com/hashicorp/terraform-provider-vault/pull/2660))
+
 
 IMPROVEMENTS:
 
