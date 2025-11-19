@@ -576,6 +576,7 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   country              = "US"
   locality             = "San Francisco"
   province             = "CA"
+  not_before_duration  = "240s"
 }
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
