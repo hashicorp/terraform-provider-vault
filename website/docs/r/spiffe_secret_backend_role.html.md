@@ -6,7 +6,7 @@ description: |-
  Manage a named role within a SPIFFE backend for Vault.
 ---
 
-# vault\_spiffe\_role
+# vault\_spiffe\_secret\_backend\_config
 
 Manage a named role within a SPIFFE secrets backend. The role specifies
 the content of JWTs.
