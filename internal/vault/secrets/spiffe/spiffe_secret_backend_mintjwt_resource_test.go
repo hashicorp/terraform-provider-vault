@@ -23,7 +23,7 @@ func TestAccSpiffeSecretBackendMintJwtResource(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion122)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		// Include `echo` as a v6 provider from `terraform-plugin-testing`

@@ -61,7 +61,7 @@ func TestAccSpiffeSecretBackendConfigResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion122)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 
