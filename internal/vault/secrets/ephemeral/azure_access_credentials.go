@@ -95,58 +95,52 @@ type AzureAccessCredentialsModel struct {
 	LeaseRenewable types.Bool   `tfsdk:"lease_renewable"`
 }
 
-// AzureAccessCredentialsAPIModel describes the Vault API data model.
-type AzureAccessCredentialsAPIModel struct {
-	ClientID     string `json:"client_id" mapstructure:"client_id"`
-	ClientSecret string `json:"client_secret" mapstructure:"client_secret"`
-}
-
 // Schema defines this resource's schema which is the data that is available in
 // the resource's configuration, plan, and state
 func (r *AzureAccessCredentialsEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"backend": schema.StringAttribute{
+			consts.FieldBackend: schema.StringAttribute{
 				MarkdownDescription: "Azure Secret Backend to read credentials from.",
 				Required:            true,
 			},
-			"role": schema.StringAttribute{
+			consts.FieldRole: schema.StringAttribute{
 				MarkdownDescription: "Azure Secret Role to read credentials from.",
 				Required:            true,
 			},
-			"validate_creds": schema.BoolAttribute{
+			consts.FieldValidateCreds: schema.BoolAttribute{
 				MarkdownDescription: "Whether generated credentials should be validated before being returned.",
 				Optional:            true,
 			},
-			"num_sequential_successes": schema.Int64Attribute{
+			consts.FieldNumSequentialSuccesses: schema.Int64Attribute{
 				MarkdownDescription: "If 'validate_creds' is true, the number of sequential successes required to validate generated credentials.",
 				Optional:            true,
 			},
-			"num_seconds_between_tests": schema.Int64Attribute{
+			consts.FieldNumSecondsBetweenTests: schema.Int64Attribute{
 				MarkdownDescription: "If 'validate_creds' is true, the number of seconds to wait between each test of generated credentials.",
 				Optional:            true,
 			},
-			"max_cred_validation_seconds": schema.Int64Attribute{
+			consts.FieldMaxCredValidationSeconds: schema.Int64Attribute{
 				MarkdownDescription: "If 'validate_creds' is true, the number of seconds after which to give up validating credentials.",
 				Optional:            true,
 			},
-			"subscription_id": schema.StringAttribute{
+			consts.FieldSubscriptionID: schema.StringAttribute{
 				MarkdownDescription: "The subscription ID to use during credential validation. Defaults to the subscription ID configured in the Vault backend.",
 				Optional:            true,
 			},
-			"tenant_id": schema.StringAttribute{
+			consts.FieldTenantID: schema.StringAttribute{
 				MarkdownDescription: "The tenant ID to use during credential validation. Defaults to the tenant ID configured in the Vault backend.",
 				Optional:            true,
 			},
-			"environment": schema.StringAttribute{
+			consts.FieldEnvironment: schema.StringAttribute{
 				MarkdownDescription: "The Azure environment to use during credential validation. Defaults to the Azure Public Cloud. Some possible values: AzurePublicCloud, AzureUSGovernmentCloud.",
 				Optional:            true,
 			},
-			"client_id": schema.StringAttribute{
+			consts.FieldClientID: schema.StringAttribute{
 				MarkdownDescription: "The client id for credentials to query the Azure APIs.",
 				Computed:            true,
 			},
-			"client_secret": schema.StringAttribute{
+			consts.FieldClientSecret: schema.StringAttribute{
 				MarkdownDescription: "The client secret for credentials to query the Azure APIs.",
 				Computed:            true,
 				Sensitive:           true,
@@ -159,7 +153,7 @@ func (r *AzureAccessCredentialsEphemeralResource) Schema(_ context.Context, _ ep
 				MarkdownDescription: "Lease duration in seconds relative to the time in lease_start_time.",
 				Computed:            true,
 			},
-			"lease_start_time": schema.StringAttribute{
+			consts.FieldLeaseStartTime: schema.StringAttribute{
 				MarkdownDescription: "Time at which the lease was read, using the clock of the system where Terraform was running.",
 				Computed:            true,
 			},
@@ -297,14 +291,14 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 	var config *api.Secret
 	getConfigData := func() (map[string]interface{}, error) {
 		if config == nil {
-			c, err := c.Logical().ReadWithContext(ctx, configPath)
+			configSecret, err := c.Logical().ReadWithContext(ctx, configPath)
 			if err != nil {
 				return nil, fmt.Errorf("error reading from Vault: %w", err)
 			}
-			if c == nil {
+			if configSecret == nil {
 				return nil, fmt.Errorf("config not found at %q", configPath)
 			}
-			config = c
+			config = configSecret
 		}
 		return config.Data, nil
 	}
