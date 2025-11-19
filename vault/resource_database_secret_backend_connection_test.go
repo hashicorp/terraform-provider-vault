@@ -838,6 +838,55 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_oracle(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineOracle)
+
+	// ORACLE_PLUGIN_NAME is required as not built-in plugin (already installed or installed during test, cf below)
+	//  if ORACLE_PLUGIN_INSTALL=true
+	//    plugin ORACLE_PLUGIN_NAME will be add to the catalog using vault_plugin resources:
+	//    resource "vault_plugin" "plugin" {
+    //       type    = "database"
+    //       name    = "$ORACLE_PLUGIN_NAME"
+    //       command = "$ORACLE_PLUGIN_NAME"
+    //       version = "$ORACLE_PLUGIN_VERSION"
+    //       sha256  = "$ORACLE_PLUGIN_SHA"
+    //    }
+	//
+	//  To work, it requires the oracle binary plugin in Vault plugin directory
+	//
+	values := testutil.SkipTestEnvUnset(t, "ORACLE_CONNECTION_URL", "ORACLE_CONNECTION_USERNAME", "ORACLE_CONNECTION_PASSWORD", "ORACLE_PLUGIN_NAME", "ORACLE_PLUGIN_INSTALL")
+	connURL, username, password, pluginName, pluginInstall := values[0], values[1], values[2], values[3], values[4]
+	
+	var pluginVersion, pluginSHA string
+	if pluginInstall == "true" {
+		values2 := testutil.SkipTestEnvUnset(t,"ORACLE_PLUGIN_VERSION", "ORACLE_PLUGIN_SHA")
+		pluginVersion, pluginSHA = values2[0], values2[1]
+	} 
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_oracle(name, backend, pluginName, connURL, username, password, "*", pluginInstall, pluginVersion, pluginSHA),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.password", password),
+				),
+			},
+		},
+	})
+}
+
+
 func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 	MaybeSkipDBTests(t, dbEnginePostgres)
 
@@ -2017,6 +2066,41 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, connURL, authType, serviceAccountJSON)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_oracle(name, path, pluginName, connURL, username, password, allowedRoles, pluginInstall, pluginVersion, pluginSHA string) string {
+	config := fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+`, path) 
+
+if pluginInstall == "true" {
+    config += fmt.Sprintf(`
+resource "vault_plugin" "plugin" {
+  type    = "database"
+  name    = "%s"
+  command = "%s"
+  version = "%s"
+  sha256  = "%s"
+}
+`, pluginName, pluginName, pluginVersion, pluginSHA)
+}
+	config += fmt.Sprintf(`
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  plugin_name = "%s"
+  name = "%s"
+  allowed_roles = [%q]
+  oracle {
+    	connection_url = "%s"
+		username = "%s"
+		password = "%s"
+  }
+}`, pluginName, name, allowedRoles, connURL, username, password)
+
+	return config
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_postgresql(name, path, userTempl, username, password, openConn, idleConn, maxConnLifetime string, parsedURL *url.URL) string {
