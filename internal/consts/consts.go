@@ -209,6 +209,7 @@ const (
 	FieldPolicies                       = "policies"
 	FieldNoParent                       = "no_parent"
 	FieldNoDefaultPolicy                = "no_default_policy"
+	FieldEntityAlias                    = "entity_alias"
 	FieldRenewable                      = "renewable"
 	FieldExplicitMaxTTL                 = "explicit_max_ttl"
 	FieldPersistApp                     = "persist_app"

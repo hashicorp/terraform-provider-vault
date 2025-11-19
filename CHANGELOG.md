@@ -3,6 +3,7 @@
 CHANGES:
 
 * `vault_ldap_auth_backend`: Set `deny_null_bind` to `true` by default if not provided in configuration ([#2622](https://github.com/hashicorp/terraform-provider-vault/pull/2622))
+* `vault_token`: Add support for `entity_alias` argument ([#2662](https://github.com/hashicorp/terraform-provider-vault/pull/2662))
 
 FEATURES:
 
