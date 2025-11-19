@@ -114,13 +114,13 @@ func TestAccSpiffeSecretBackendConfigResource(t *testing.T) {
 				resource "vault_spiffe_secret_backend_config" "test" {
 				    mount				= vault_mount.the_backend.path
 				    trust_domain		= "changed.dadgarcorp.com"
-				    bundle_refresh_hint = "123"
+				    bundle_refresh_hint = "2m3s"
 				}
 				`, mount),
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceAttr(resourceAddress,
 						"trust_domain", "changed.dadgarcorp.com",
-						"bundle_refresh_hint", "123"),
+						"bundle_refresh_hint", "2m3s"),
 					checkPresent(resourceAddress, "jwt_oidc_compatibility_mode", "jwt_signing_algorithm",
 						"key_lifetime"),
 					resource.TestCheckNoResourceAttr(resourceAddress, "jwt_issuer_url"),
@@ -136,14 +136,14 @@ func TestAccSpiffeSecretBackendConfigResource(t *testing.T) {
 				resource "vault_spiffe_secret_backend_config" "test" {
 				    mount			= vault_mount.the_backend.path
 				    trust_domain	= "changed.dadgarcorp.com"
-				    key_lifetime	= "6666"
+				    key_lifetime	= "2h"
 				}
 				`, mount),
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceAttr(resourceAddress,
 						"trust_domain", "changed.dadgarcorp.com",
-						"bundle_refresh_hint", "123",
-						"key_lifetime", "6666"),
+						"bundle_refresh_hint", "2m3s",
+						"key_lifetime", "2h"),
 					checkPresent(resourceAddress, "jwt_oidc_compatibility_mode", "jwt_signing_algorithm"),
 					resource.TestCheckNoResourceAttr(resourceAddress, "jwt_issuer_url"),
 				),
@@ -164,8 +164,8 @@ func TestAccSpiffeSecretBackendConfigResource(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceAttr(resourceAddress,
 						"trust_domain", "changed.dadgarcorp.com",
-						"bundle_refresh_hint", "123",
-						"key_lifetime", "6666",
+						"bundle_refresh_hint", "2m3s",
+						"key_lifetime", "2h",
 						"jwt_issuer_url", "https://spiffe.com"),
 					checkPresent(resourceAddress, "jwt_oidc_compatibility_mode", "jwt_signing_algorithm"),
 				),
@@ -186,8 +186,8 @@ func TestAccSpiffeSecretBackendConfigResource(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceAttr(resourceAddress,
 						"trust_domain", "changed.dadgarcorp.com",
-						"bundle_refresh_hint", "123",
-						"key_lifetime", "6666",
+						"bundle_refresh_hint", "2m3s",
+						"key_lifetime", "2h",
 						"jwt_issuer_url", "https://spiffe.com",
 						"jwt_signing_algorithm", "ES384",
 					),
@@ -204,8 +204,8 @@ func TestAccSpiffeSecretBackendConfigResource(t *testing.T) {
 				resource "vault_spiffe_secret_backend_config" "test" {
 				    mount						= vault_mount.the_backend.path
 				    trust_domain				= "complete.dadgarcorp.com"
-				    bundle_refresh_hint			= "7200" # FIXME(victorr): how can we make it so that "2h" works?
-				    key_lifetime				= "172800" # "48h"
+				    bundle_refresh_hint			= "2h"
+				    key_lifetime				= "48h"
 				    jwt_issuer_url				= "https://issuer.complete.dadgarcorp.com"
 				    jwt_signing_algorithm		= "ES512"
 				    jwt_oidc_compatibility_mode = true
@@ -214,8 +214,8 @@ func TestAccSpiffeSecretBackendConfigResource(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceAttr(resourceAddress,
 						"trust_domain", "complete.dadgarcorp.com",
-						"bundle_refresh_hint", "7200",
-						"key_lifetime", "172800",
+						"bundle_refresh_hint", "2h",
+						"key_lifetime", "48h",
 						"jwt_issuer_url", "https://issuer.complete.dadgarcorp.com",
 						"jwt_signing_algorithm", "ES512",
 						"jwt_oidc_compatibility_mode", "true",
