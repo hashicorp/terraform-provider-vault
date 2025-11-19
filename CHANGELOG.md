@@ -7,6 +7,7 @@ CHANGES:
 FEATURES:
 
 * Add support for `alias_metadata` field in auth resources ([#2547](https://github.com/hashicorp/terraform-provider-vault/pull/2547))
+* Add support for `not_before_duration` field in `vault_pki_secret_backend_root_cert` ([#2664](https://github.com/hashicorp/terraform-provider-vault/pull/2664))
 
 ## 5.4.0 (Nov 3, 2025)
 
