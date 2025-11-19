@@ -452,6 +452,7 @@ const (
 	FieldAllowedResponseHeaders         = "allowed_response_headers"
 	FieldDelegatedAuthAccessors         = "delegated_auth_accessors"
 	FieldPluginVersion                  = "plugin_version"
+	FieldOverridePinnedVersion          = "override_pinned_version"
 	FieldEnabled                        = "enabled"
 	FieldDefaultMount                   = "default_mount"
 	FieldDefaultPathPolicy              = "default_path_policy"
