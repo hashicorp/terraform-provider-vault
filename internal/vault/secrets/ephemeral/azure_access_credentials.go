@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
@@ -67,6 +68,12 @@ type AzureAccessCredentialsEphemeralResource struct {
 type AzureAccessCredentialsPrivateData struct {
 	LeaseID   string `json:"lease_id"`
 	Namespace string `json:"namespace"`
+}
+
+// AzureAccessCredentialsAPIModel describes the Vault API data model.
+type AzureAccessCredentialsAPIModel struct {
+	ClientID     string `json:"client_id" mapstructure:"client_id"`
+	ClientSecret string `json:"client_secret" mapstructure:"client_secret"`
 }
 
 // AzureAccessCredentialsModel describes the Terraform resource data model to match the
@@ -243,27 +250,15 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 
 	log.Printf("[DEBUG] Read %q from Vault", credsPath)
 
-	clientID, ok := secret.Data["client_id"].(string)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Invalid response from Vault",
-			"client_id field not found or not a string in Vault response",
-		)
-		return
-	}
-
-	clientSecret, ok := secret.Data["client_secret"].(string)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Invalid response from Vault",
-			"client_secret field not found or not a string in Vault response",
-		)
+	var apiResp AzureAccessCredentialsAPIModel
+	if err := model.ToAPIModel(secret.Data, &apiResp); err != nil {
+		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
 		return
 	}
 
 	// Set the basic credential fields
-	data.ClientID = types.StringValue(clientID)
-	data.ClientSecret = types.StringValue(clientSecret)
+	data.ClientID = types.StringValue(apiResp.ClientID)
+	data.ClientSecret = types.StringValue(apiResp.ClientSecret)
 	data.LeaseID = types.StringValue(secret.LeaseID)
 	data.LeaseDuration = types.Int64Value(int64(secret.LeaseDuration))
 	data.LeaseStartTime = types.StringValue(time.Now().Format(time.RFC3339))
@@ -385,7 +380,7 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 	// Credential validation retry loop
 	for {
 		creds, err := azidentity.NewClientSecretCredential(
-			tenantID, clientID, clientSecret, &azidentity.ClientSecretCredentialOptions{})
+			tenantID, apiResp.ClientID, apiResp.ClientSecret, &azidentity.ClientSecretCredentialOptions{})
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Failed to create credentials",
