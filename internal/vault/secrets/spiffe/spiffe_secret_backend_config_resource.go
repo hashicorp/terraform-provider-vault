@@ -131,7 +131,6 @@ func (s *SpiffeSecretBackendConfigResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	// vault returns a nil response on success
 	mountPath := s.path(data.Mount.ValueString())
 	vaultResp, err := vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest)
 	if err != nil {
