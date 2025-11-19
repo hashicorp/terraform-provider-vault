@@ -111,14 +111,14 @@ func TestAccSpiffeSecretRoleResource(t *testing.T) {
 						mount			= vault_mount.the_backend.path
 						name			= "the-role-name"
 						template		= "%s"
-                        ttl				= 3600
+                        ttl				= "24h"
 					}
 					`, mount, formatTemplate(subTemplate)),
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceAttr(resourceAddress,
 						"name", "the-role-name",
 						"template", subTemplate,
-						"ttl", "3600"),
+						"ttl", "24h"),
 					checkPresent(resourceAddress, "use_jti_claim"),
 				),
 			},
@@ -137,7 +137,7 @@ func TestAccSpiffeSecretRoleResource(t *testing.T) {
 						mount			= vault_mount.the_backend.path
 						name			= "the-role-name"
 						template		= "%s"
-                        ttl				= 3678
+                        ttl				= "25h"
                         use_jti_claim	= true
 					}
 					`, mount, formatTemplate(subTemplate)),
@@ -145,7 +145,7 @@ func TestAccSpiffeSecretRoleResource(t *testing.T) {
 					checkResourceAttr(resourceAddress,
 						"name", "the-role-name",
 						"template", subTemplate,
-						"ttl", "3678",
+						"ttl", "25h",
 						"use_jti_claim", "true"),
 				),
 			},

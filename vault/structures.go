@@ -4,17 +4,15 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func expandAuthMethodTune(raw interface{}) (api.MountConfigInput, error) {
@@ -59,8 +57,8 @@ func expandAuthMethodTune(raw interface{}) (api.MountConfigInput, error) {
 func flattenAuthMethodTune(dt *api.MountConfigOutput) map[string]interface{} {
 	m := make(map[string]interface{})
 
-	m[consts.FieldDefaultLeaseTTL] = flattenVaultDuration(dt.DefaultLeaseTTL)
-	m[consts.FieldMaxLeaseTTL] = flattenVaultDuration(dt.MaxLeaseTTL)
+	m[consts.FieldDefaultLeaseTTL] = helper.FlattenVaultDuration(dt.DefaultLeaseTTL)
+	m[consts.FieldMaxLeaseTTL] = helper.FlattenVaultDuration(dt.MaxLeaseTTL)
 	if len(dt.AuditNonHMACRequestKeys) > 0 && dt.AuditNonHMACRequestKeys[0] != "" {
 		m[consts.FieldAuditNonHMACRequestKeys] = flattenStringSlice(dt.AuditNonHMACRequestKeys)
 	}
@@ -177,23 +175,4 @@ func flattenCommaSeparatedStringSlice(s string) []interface{} {
 	}
 	log.Printf("[INFO] flattenedCommaSeparatedList: %+v", vs)
 	return vs
-}
-
-func flattenVaultDuration(d interface{}) string {
-	if d == nil {
-		return time.Duration(0).String()
-	}
-
-	switch d.(type) {
-	case int:
-		return util.ShortDur(time.Duration(d.(int)) * time.Second)
-	case int64:
-		return util.ShortDur(time.Duration(d.(int64)) * time.Second)
-	case json.Number:
-		if i, err := d.(json.Number).Int64(); err == nil {
-			return util.ShortDur(time.Duration(i) * time.Second)
-		}
-	}
-
-	return time.Duration(0).String()
 }

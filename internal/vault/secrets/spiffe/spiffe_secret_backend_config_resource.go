@@ -2,6 +2,7 @@ package spiffe
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -12,13 +13,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -82,11 +86,17 @@ func (s *SpiffeSecretBackendConfigResource) Schema(_ context.Context, _ resource
 				Description: "Refresh hint to use in trust bundles.",
 				Optional:    true,
 				Computed:    true,
+				Validators: []validator.String{
+					validators.DurationValidator(),
+				},
 			},
 			"key_lifetime": schema.StringAttribute{
 				Description: "How long a signing key will live for once it starts being used to sign.",
 				Optional:    true,
 				Computed:    true,
+				Validators: []validator.String{
+					validators.DurationValidator(),
+				},
 			},
 			"jwt_issuer_url": schema.StringAttribute{
 				Description: "Base URL to use for JWT iss claim.",
@@ -294,8 +304,8 @@ func (s *SpiffeSecretBackendConfigResource) populateDataModelFromApi(_ context.C
 		}
 	}
 	data.TrustDomain = types.StringValue(readResp.TrustDomain)
-	data.BundleRefreshHint = types.StringValue(readResp.BundleRefreshHint)
-	data.KeyLifetime = types.StringValue(readResp.KeyLifetime)
+	data.BundleRefreshHint = types.StringValue(helper.FlattenVaultDuration(json.Number(readResp.BundleRefreshHint)))
+	data.KeyLifetime = types.StringValue(helper.FlattenVaultDuration(json.Number(readResp.KeyLifetime)))
 
 	data.JwtIssuerUrl = types.StringNull()
 	if readResp.JwtIssuerUrl != "" {
