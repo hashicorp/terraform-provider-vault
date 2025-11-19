@@ -2085,8 +2085,22 @@ resource "vault_plugin" "plugin" {
   version = "%s"
   sha256  = "%s"
 }
-`, pluginName, pluginName, pluginVersion, pluginSHA)
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  plugin_name = vault_plugin.plugin.name
+  name = "%s"
+  allowed_roles = [%q]
+  oracle {
+    	connection_url = "%s"
+		username = "%s"
+		password = "%s"
+  }
 }
+`, pluginName, pluginName, pluginVersion, pluginSHA,name, allowedRoles, connURL, username, password)
+
+} else {
+
 	config += fmt.Sprintf(`
 resource "vault_database_secret_backend_connection" "test" {
   backend = vault_mount.db.path
@@ -2099,6 +2113,7 @@ resource "vault_database_secret_backend_connection" "test" {
 		password = "%s"
   }
 }`, pluginName, name, allowedRoles, connURL, username, password)
+}
 
 	return config
 }
