@@ -68,20 +68,25 @@ func (r *GCPServiceAccountKeyEphemeralResource) Schema(_ context.Context, _ ephe
 				Required:            true,
 			},
 			consts.FieldRoleset: schema.StringAttribute{
-				MarkdownDescription: "GCP Secret Roleset to generate credentials for. Mutually exclusive with `static_account`.",
-				Optional:            true,
+				MarkdownDescription: "GCP Secret Roleset to generate credentials for. " +
+					"Mutually exclusive with `static_account`.",
+				Optional: true,
 			},
 			consts.FieldStaticAccount: schema.StringAttribute{
-				MarkdownDescription: "GCP Secret Static Account to generate credentials for. Mutually exclusive with `roleset`.",
-				Optional:            true,
+				MarkdownDescription: "GCP Secret Static Account to generate credentials for. " +
+					"Mutually exclusive with `roleset`.",
+				Optional: true,
 			},
 			consts.FieldKeyAlgorithm: schema.StringAttribute{
-				MarkdownDescription: "Key algorithm used to generate key. Defaults to 2k RSA key. Accepted values: `KEY_ALG_UNSPECIFIED`, `KEY_ALG_RSA_1024`, `KEY_ALG_RSA_2048`.",
-				Optional:            true,
+				MarkdownDescription: "Key algorithm used to generate key. Defaults to 2k RSA key. " +
+					"Accepted values: `KEY_ALG_UNSPECIFIED`, `KEY_ALG_RSA_1024`, `KEY_ALG_RSA_2048`.",
+				Optional: true,
 			},
 			consts.FieldKeyType: schema.StringAttribute{
-				MarkdownDescription: "Private key type to generate. Defaults to JSON credentials file. Accepted values: `TYPE_UNSPECIFIED`, `TYPE_PKCS12_FILE`, `TYPE_GOOGLE_CREDENTIALS_FILE`.",
-				Optional:            true,
+				MarkdownDescription: "Private key type to generate. Defaults to JSON credentials file. " +
+					"Accepted values: `TYPE_UNSPECIFIED`, `TYPE_PKCS12_FILE`, " +
+					"`TYPE_GOOGLE_CREDENTIALS_FILE`.",
+				Optional: true,
 			},
 			consts.FieldPrivateKeyData: schema.StringAttribute{
 				MarkdownDescription: "The private key data in JSON format.",
@@ -101,19 +106,23 @@ func (r *GCPServiceAccountKeyEphemeralResource) Schema(_ context.Context, _ ephe
 				Computed:            true,
 			},
 			consts.FieldLeaseDuration: schema.Int64Attribute{
-				MarkdownDescription: "Lease duration in seconds relative to the time in lease_start_time.",
-				Computed:            true,
+				MarkdownDescription: "Lease duration in seconds relative to the time in " +
+					"lease_start_time.",
+				Computed: true,
 			},
 			consts.FieldLeaseStartTime: schema.StringAttribute{
-				MarkdownDescription: "Time at which the lease was read, using the clock of the system where Terraform was running.",
-				Computed:            true,
+				MarkdownDescription: "Time at which the lease was read, using the clock of the " +
+					"system where Terraform was running.",
+				Computed: true,
 			},
 			consts.FieldLeaseRenewable: schema.BoolAttribute{
-				MarkdownDescription: "True if the duration of this lease can be extended through renewal.",
-				Computed:            true,
+				MarkdownDescription: "True if the duration of this lease can be extended through " +
+					"renewal.",
+				Computed: true,
 			},
 		},
-		MarkdownDescription: "Provides an ephemeral resource to generate GCP service account keys from Vault.",
+		MarkdownDescription: "Provides an ephemeral resource to generate GCP service account keys " +
+			"from Vault.",
 	}
 
 	base.MustAddBaseEphemeralSchema(&resp.Schema)
