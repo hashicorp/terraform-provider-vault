@@ -31,8 +31,8 @@ type AWSStaticAccessCredentialsEphemeralSecretResource struct {
 type AWSStaticAccessCredentialsEphemeralSecretModel struct {
 	base.BaseModelEphemeral
 
-	Backend types.String `tfsdk:"backend"`
-	Name    types.String `tfsdk:"name"`
+	Mount types.String `tfsdk:"mount"`
+	Name  types.String `tfsdk:"name"`
 
 	AccessKey types.String `tfsdk:"access_key"`
 	SecretKey types.String `tfsdk:"secret_key"`
@@ -46,8 +46,8 @@ type AWSStaticAccessCredentialsAPIModel struct {
 func (r *AWSStaticAccessCredentialsEphemeralSecretResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
-				MarkdownDescription: "AWS Secret Backend to read credentials from.",
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Mount path for the AWS secret engine in Vault.",
 				Required:            true,
 			},
 			consts.FieldName: schema.StringAttribute{
@@ -87,7 +87,7 @@ func (r *AWSStaticAccessCredentialsEphemeralSecretResource) Open(ctx context.Con
 		return
 	}
 
-	path := fmt.Sprintf("%s/static-creds/%s", data.Backend.ValueString(), data.Name.ValueString())
+	path := fmt.Sprintf("%s/static-creds/%s", data.Mount.ValueString(), data.Name.ValueString())
 
 	var secret *api.Secret
 	secret, err = c.Logical().ReadWithContext(ctx, path)

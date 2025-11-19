@@ -72,7 +72,7 @@ resource "vault_aws_secret_backend_static_role" "role" {
 }
 
 ephemeral "vault_aws_static_access_credentials" "creds" {
-  backend = vault_aws_secret_backend.aws.path
+  mount = vault_aws_secret_backend.aws.path
   name    = vault_aws_secret_backend_static_role.role.name
   mount_id = vault_aws_secret_backend_static_role.role.id
 }
