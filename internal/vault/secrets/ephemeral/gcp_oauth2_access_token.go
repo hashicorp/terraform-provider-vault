@@ -5,9 +5,11 @@ package ephemeralsecrets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -21,6 +23,20 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 )
+
+// isGCPTokenGenerationError checks if the error is a retryable GCP token generation error.
+// This error typically indicates that the GCP service account or key is not yet ready.
+func isGCPTokenGenerationError(err error) bool {
+	var respErr *api.ResponseError
+	if errors.As(err, &respErr) && respErr != nil {
+		if respErr.StatusCode == http.StatusBadRequest {
+			return len(respErr.Errors) == 1 &&
+				strings.Contains(respErr.Errors[0],
+					"make sure your roleset service account and key are still valid")
+		}
+	}
+	return false
+}
 
 // Ensure the implementation satisfies the ephemeral.EphemeralResource interface
 var _ ephemeral.EphemeralResource = &GCPOAuth2AccessTokenEphemeralResource{}
@@ -67,16 +83,19 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Schema(_ context.Context, _ ephe
 				Required:            true,
 			},
 			consts.FieldRoleset: schema.StringAttribute{
-				MarkdownDescription: "GCP Secret Roleset to generate OAuth2 access token for. Mutually exclusive with `static_account` and `impersonated_account`.",
-				Optional:            true,
+				MarkdownDescription: "GCP Secret Roleset to generate OAuth2 access token for. " +
+					"Mutually exclusive with `static_account` and `impersonated_account`.",
+				Optional: true,
 			},
 			consts.FieldStaticAccount: schema.StringAttribute{
-				MarkdownDescription: "GCP Secret Static Account to generate OAuth2 access token for. Mutually exclusive with `roleset` and `impersonated_account`.",
-				Optional:            true,
+				MarkdownDescription: "GCP Secret Static Account to generate OAuth2 access token for. " +
+					"Mutually exclusive with `roleset` and `impersonated_account`.",
+				Optional: true,
 			},
 			consts.FieldImpersonatedAccount: schema.StringAttribute{
-				MarkdownDescription: "GCP Secret Impersonated Account to generate OAuth2 access token for. Mutually exclusive with `roleset` and `static_account`.",
-				Optional:            true,
+				MarkdownDescription: "GCP Secret Impersonated Account to generate OAuth2 access token for. " +
+					"Mutually exclusive with `roleset` and `static_account`.",
+				Optional: true,
 			},
 			consts.FieldToken: schema.StringAttribute{
 				MarkdownDescription: "The OAuth2 access token.",
@@ -92,19 +111,23 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Schema(_ context.Context, _ ephe
 				Computed:            true,
 			},
 			consts.FieldLeaseDuration: schema.Int64Attribute{
-				MarkdownDescription: "Lease duration in seconds relative to the time in lease_start_time.",
-				Computed:            true,
+				MarkdownDescription: "Lease duration in seconds relative to the time in " +
+					"lease_start_time.",
+				Computed: true,
 			},
 			consts.FieldLeaseStartTime: schema.StringAttribute{
-				MarkdownDescription: "Time at which the lease was read, using the clock of the system where Terraform was running.",
-				Computed:            true,
+				MarkdownDescription: "Time at which the lease was read, using the clock of the " +
+					"system where Terraform was running.",
+				Computed: true,
 			},
 			consts.FieldLeaseRenewable: schema.BoolAttribute{
-				MarkdownDescription: "True if the duration of this lease can be extended through renewal.",
-				Computed:            true,
+				MarkdownDescription: "True if the duration of this lease can be extended through " +
+					"renewal.",
+				Computed: true,
 			},
 		},
-		MarkdownDescription: "Provides an ephemeral resource to generate GCP OAuth2 access tokens from Vault.",
+		MarkdownDescription: "Provides an ephemeral resource to generate GCP OAuth2 access tokens " +
+			"from Vault.",
 	}
 
 	base.MustAddBaseEphemeralSchema(&resp.Schema)
@@ -187,12 +210,12 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 
 	// Configure exponential backoff with max retries
 	// Initial interval: 2s, Max interval: 30s, Max retries: 5
-	exponentialBackoff := backoff.NewExponentialBackOff()
-	exponentialBackoff.InitialInterval = 2 * time.Second
-	exponentialBackoff.MaxInterval = 30 * time.Second
-	exponentialBackoff.MaxElapsedTime = 0 // No time limit, only retry count matters
+	expBackoff := backoff.NewExponentialBackOff()
+	expBackoff.InitialInterval = 2 * time.Second
+	expBackoff.MaxInterval = 30 * time.Second
+	expBackoff.MaxElapsedTime = 0 // No time limit, only retry count matters
 
-	bo := backoff.WithMaxRetries(exponentialBackoff, 5)
+	bo := backoff.WithMaxRetries(expBackoff, 5)
 	bo = backoff.WithContext(bo, ctx)
 
 	var vaultSecret *api.Secret
@@ -206,9 +229,10 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 		secret, err := c.Logical().ReadWithContext(ctx, tokenPath)
 
 		if err != nil {
-			// Check if the error is retryable based on HTTP status code
-			// Retry on 400 Bad Request - this typically indicates the resource isn't ready yet
-			if respErr, ok := err.(*api.ResponseError); ok && respErr.StatusCode == http.StatusBadRequest {
+			// Check if the error is retryable based on HTTP status code and error message
+			// Retry on 400 Bad Request with specific error message - this typically
+			// indicates the resource isn't ready yet
+			if isGCPTokenGenerationError(err) {
 				log.Printf("[DEBUG] Attempt %d failed for %s %q. Error: %s", attemptCount, resourceType, resourceName, err)
 				return err
 			}
@@ -238,14 +262,8 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 	if retryErr != nil {
 		resp.Diagnostics.AddError(
 			"Error reading from Vault",
-			fmt.Sprintf("Error generating GCP OAuth2 access token from path %q after %d attempts: %s\n\n"+
-				"This may indicate that the %s %q or its associated GCP service account is not yet fully created or configured. "+
-				"Please ensure:\n"+
-				"1. The %s exists in Vault at the specified backend\n"+
-				"2. The GCP service account has been created and granted necessary permissions\n"+
-				"3. There is sufficient time between creating the %s and requesting tokens\n"+
-				"4. The Vault GCP secrets engine is properly configured",
-				tokenPath, attemptCount, retryErr, resourceType, resourceName, resourceType, resourceType),
+			fmt.Sprintf("Error generating GCP OAuth2 access token from path %q after %d attempts: %s",
+				tokenPath, attemptCount, retryErr),
 		)
 		return
 	}
@@ -253,14 +271,8 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 	if vaultSecret == nil {
 		resp.Diagnostics.AddError(
 			"No credentials found",
-			fmt.Sprintf("No credentials found at path %q after %d attempts.\n\n"+
-				"This may indicate that the %s %q or its associated GCP service account is not yet fully created or configured. "+
-				"Please ensure:\n"+
-				"1. The %s exists in Vault at the specified backend\n"+
-				"2. The GCP service account has been created and granted necessary permissions\n"+
-				"3. There is sufficient time between creating the %s and requesting tokens\n"+
-				"4. The Vault GCP secrets engine is properly configured",
-				tokenPath, attemptCount, resourceType, resourceName, resourceType, resourceType),
+			fmt.Sprintf("No credentials found at path %q after %d attempts",
+				tokenPath, attemptCount),
 		)
 		return
 	}
