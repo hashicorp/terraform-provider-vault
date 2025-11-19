@@ -16,6 +16,16 @@ FEATURES:
 
 * Add support for `alias_metadata` field in auth resources ([#2547](https://github.com/hashicorp/terraform-provider-vault/pull/2547))
 
+IMPROVEMENTS:
+* Updated dependencies:
+  * `golang.org/x/crypto` v0.41.0 -> v0.44.0
+  * `golang.org/x/net` v0.43.0 -> v0.46.0
+  * `golang.org/x/mod` v0.26.0 -> v0.29.0
+  * `golang.org/x/sync` v0.16.0 -> v0.18.0
+  * `golang.org/x/sys` v0.35.0 -> v0.38.0
+  * `golang.org/x/text` v0.28.0 -> v0.31.0
+  * `golang.org/x/tools` v0.35.0 -> v0.38.0
+
 ## 5.4.0 (Nov 3, 2025)
 
 BEHAVIOR CHANGES: Please refer to the [upgrade topics](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/version_5_upgrade.html#upgrade-topics)
