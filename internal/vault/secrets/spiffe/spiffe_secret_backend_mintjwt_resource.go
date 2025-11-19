@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -168,35 +167,4 @@ func (s *SpiffeSecretBackendMintJwtResource) populateDataModelFromApi(_ context.
 	data.Token = types.StringValue(readResp.Token)
 
 	return diag.Diagnostics{}
-}
-
-func (s *SpiffeSecretBackendMintJwtResource) extractSpiffeRoleIdentifiers(id string) (string, string, error) {
-	if id == "" {
-		return "", "", fmt.Errorf("import identifier cannot be empty")
-	}
-	// Trim leading slash if present
-	id = strings.Trim(id, "/")
-
-	if !mintjwtNameRegexp.MatchString(id) {
-		return "", "", fmt.Errorf("import identifier must be of the form '<mount>/role/<rolename>', "+
-			"namespace can be specified using the env var %s", consts.EnvVarVaultNamespaceImport)
-	}
-
-	matches := mintjwtNameRegexp.FindStringSubmatch(id)
-	if len(matches) != 3 {
-		return "", "", fmt.Errorf("import identifier must be of the form '<mount>/role/<rolename>', "+
-			"namespace can be specified using the env var %s", consts.EnvVarVaultNamespaceImport)
-	}
-
-	mount := strings.TrimSpace(matches[1])
-	if mount == "" {
-		return "", "", fmt.Errorf("mount cannot be empty")
-	}
-
-	roleName := strings.TrimSpace(matches[2])
-	if roleName == "" {
-		return "", "", fmt.Errorf("role name cannot be empty")
-	}
-
-	return mount, roleName, nil
 }
