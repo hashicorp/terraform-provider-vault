@@ -206,11 +206,13 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 			var readErr error
 			secret, readErr = c.Logical().ReadWithContext(ctx, credsPath)
 			if readErr != nil {
-				errMsg := readErr.Error()
-				// Check if this is a rate limit error from Azure
-				if strings.Contains(errMsg, "concurrent requests being made") {
-					// Retryable error
-					return readErr
+				if respErr, ok := readErr.(*api.ResponseError); ok {
+					if respErr.StatusCode == 500 && strings.Contains(respErr.Error(), "concurrent requests being made") {
+						// Retryable error
+						return respErr
+					}
+					// Non-retryable error
+					return backoff.Permanent(respErr)
 				}
 				// Non-retryable error
 				return backoff.Permanent(readErr)
