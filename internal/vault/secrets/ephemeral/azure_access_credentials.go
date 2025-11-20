@@ -40,7 +40,7 @@ const (
 	// Default values for credential validation
 	defaultNumSecondsBetweenTests   = 1
 	defaultMaxCredValidationSeconds = 300
-	defaultNumSequentialSuccesses   = 8
+	defaultNumSequentialSuccesses   = 4
 )
 
 var azureCloudConfigMap = map[string]cloud.Configuration{
