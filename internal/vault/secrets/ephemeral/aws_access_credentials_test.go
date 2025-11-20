@@ -166,7 +166,7 @@ resource "vault_aws_secret_backend_role" "role" {
   })
 }
 
-ephemeral "vault_aws_access_credentials" "creds" {
+ephemeral "vault_aws_access_credentials" "sts" {
   mount  = vault_aws_secret_backend.aws.path
   role     = vault_aws_secret_backend_role.role.name
   type     = "sts"
@@ -177,10 +177,10 @@ ephemeral "vault_aws_access_credentials" "creds" {
 
 provider "echo" {
   data = {
-    access_key = ephemeral.vault_aws_access_credentials.creds.access_key
-    secret_key = ephemeral.vault_aws_access_credentials.creds.secret_key
-    security_token = ephemeral.vault_aws_access_credentials.creds.security_token
-    type = ephemeral.vault_aws_access_credentials.creds.type
+    access_key = ephemeral.vault_aws_access_credentials.sts.access_key
+    secret_key = ephemeral.vault_aws_access_credentials.sts.secret_key
+    security_token = ephemeral.vault_aws_access_credentials.sts.security_token
+    type = ephemeral.vault_aws_access_credentials.sts.type
   }
 }
 
