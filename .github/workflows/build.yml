@@ -153,11 +153,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.16.28-ent"
+        - "vault-enterprise:1.16.27-ent"
         - "vault-enterprise:1.17.18-ent"
         - "vault-enterprise:1.18.15-ent"
         - "vault-enterprise:1.19.12-ent"
-        - "vault-enterprise:1.20.6-ent"
+        - "vault-enterprise:1.20.5-ent"
         - "vault-enterprise:1.21.1-ent"
         - "vault:latest"
         terraform_version:
