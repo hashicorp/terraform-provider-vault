@@ -24,7 +24,7 @@ func TestAccAppRoleAuthBackendRoleID_basic(t *testing.T) {
 		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role),
+				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"backend", backend),
@@ -92,7 +92,7 @@ func testAccAppRoleAuthBackendRoleIDConfig_basic(backend, role string) string {
 data "vault_approle_auth_backend_role_id" "role" {
   backend = "%s"
   role_name = "%s"
-}`, testAccAppRoleAuthBackendRoleConfig_basic(backend, role), backend, role)
+}`, testAccAppRoleAuthBackendRoleConfig_basic(backend, role, ""), backend, role)
 }
 
 func testAccAppRoleAuthBackendRoleIDConfig_customID(backend, role, roleID string) string {

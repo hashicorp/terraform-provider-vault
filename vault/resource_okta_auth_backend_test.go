@@ -33,7 +33,7 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOktaAuthConfig_basic(path, organization),
+				Config: testAccOktaAuthConfig_basic(path, organization, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, TokenFieldTTL, "3600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldOrganization, "example"),
@@ -66,6 +66,35 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "user.0.groups.0", "example"),
 				),
 			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if !meta.IsAPISupported(provider.VaultVersion121) {
+						return true, nil
+					}
+
+					return !meta.IsEnterpriseSupported(), nil
+				},
+				Config: testAccOktaAuthConfig_basic(path, organization, aliasMetadataConfig),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, TokenFieldTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOrganization, "example"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "Testing the Terraform okta auth backend"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
+					resource.TestCheckResourceAttr(resourceName, "group.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "group.0.group_name", "dummy"),
+					resource.TestCheckResourceAttr(resourceName, "group.0.policies.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "group.0.policies.0", "default"),
+					resource.TestCheckResourceAttr(resourceName, "group.0.policies.1", "one"),
+					resource.TestCheckResourceAttr(resourceName, "group.0.policies.2", "two"),
+					resource.TestCheckResourceAttr(resourceName, "user.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "user.0.username", "foo"),
+					resource.TestCheckResourceAttr(resourceName, "user.0.groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "user.0.groups.0", "dummy"),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.foo", "bar"),
+				),
+			},
 		},
 	})
 }
@@ -83,7 +112,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeOkta, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOktaAuthConfig_basic(path, organization),
+				Config: testAccOktaAuthConfig_basic(path, organization, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, TokenFieldTTL, "3600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldOrganization, "example"),
@@ -167,7 +196,7 @@ func TestAccOktaAuthBackend_remount(t *testing.T) {
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOktaAuthConfig_basic(path, organization),
+				Config: testAccOktaAuthConfig_basic(path, organization, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, TokenFieldTTL, "3600"),
@@ -177,7 +206,7 @@ func TestAccOktaAuthBackend_remount(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccOktaAuthConfig_basic(updatedPath, organization),
+				Config: testAccOktaAuthConfig_basic(updatedPath, organization, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
 					resource.TestCheckResourceAttr(resourceName, TokenFieldTTL, "3600"),
@@ -365,7 +394,7 @@ func TestAccOktaAuthBackend_tune_conflicts(t *testing.T) {
 	})
 }
 
-func testAccOktaAuthConfig_basic(path string, organization string) string {
+func testAccOktaAuthConfig_basic(path, organization, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_okta_auth_backend" "test" {
     description = "Testing the Terraform okta auth backend"
@@ -381,8 +410,9 @@ resource "vault_okta_auth_backend" "test" {
         username = "foo"
         groups = ["dummy"]
     }
+	%s
 }
-`, path, organization)
+`, path, organization, extraConfig)
 }
 
 func testAccOktaAuthConfig_updated(path string, organization string) string {
