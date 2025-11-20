@@ -97,37 +97,6 @@ func TestAccAWSAccessCredentialsSTSFederationToken(t *testing.T) {
 	})
 }
 
-func TestAccAWSAccessCredentialsSTSAssumeRole(t *testing.T) {
-	a, s := testutil.GetTestAWSCreds(t)
-	region := testutil.GetTestAWSRegion(t)
-	mount := acctest.RandomWithPrefix("tf-aws-sts")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionEQ(t, provider.VaultVersion119)
-		},
-		// Include the provider we want to test
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		// Include `echo` as a v6 provider from `terraform-plugin-testing`
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testAWSAccessCredentialsSTSAssumeRoleConfig(mount, a, s, region),
-				ConfigStateChecks: []statecheck.StateCheck{
-					// Verify that we got the access_key, secret_key, and security_token set
-					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("access_key"), knownvalue.NotNull()),
-					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("secret_key"), knownvalue.NotNull()),
-					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("security_token"), knownvalue.NotNull()),
-					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("type"), knownvalue.StringExact("sts")),
-				},
-			},
-		},
-	})
-}
-
 func testAWSAccessCredentialsConfigIamUser(mount, access, secret, region string) string {
 	return fmt.Sprintf(`
 resource "vault_aws_secret_backend" "aws" {
@@ -153,7 +122,7 @@ resource "vault_aws_secret_backend_role" "role" {
 }
 
 ephemeral "vault_aws_access_credentials" "creds" {
-  backend  = vault_aws_secret_backend.aws.path
+  mount  = vault_aws_secret_backend.aws.path
   role     = vault_aws_secret_backend_role.role.name
   type     = "creds"
   mount_id = vault_aws_secret_backend_role.role.id
@@ -197,8 +166,8 @@ resource "vault_aws_secret_backend_role" "role" {
   })
 }
 
-ephemeral "vault_aws_access_credentials" "creds" {
-  backend  = vault_aws_secret_backend.aws.path
+ephemeral "vault_aws_access_credentials" "sts" {
+  mount  = vault_aws_secret_backend.aws.path
   role     = vault_aws_secret_backend_role.role.name
   type     = "sts"
   region   = vault_aws_secret_backend.aws.region
@@ -208,51 +177,13 @@ ephemeral "vault_aws_access_credentials" "creds" {
 
 provider "echo" {
   data = {
-    access_key = ephemeral.vault_aws_access_credentials.creds.access_key
-    secret_key = ephemeral.vault_aws_access_credentials.creds.secret_key
-    security_token = ephemeral.vault_aws_access_credentials.creds.security_token
-    type = ephemeral.vault_aws_access_credentials.creds.type
+    access_key = ephemeral.vault_aws_access_credentials.sts.access_key
+    secret_key = ephemeral.vault_aws_access_credentials.sts.secret_key
+    security_token = ephemeral.vault_aws_access_credentials.sts.security_token
+    type = ephemeral.vault_aws_access_credentials.sts.type
   }
 }
 
 resource "echo" "test" {}
 `, mount, access, secret, region, ttl)
-}
-
-func testAWSAccessCredentialsSTSAssumeRoleConfig(mount, access, secret, region string) string {
-	return fmt.Sprintf(`
-resource "vault_aws_secret_backend" "aws" {
-  path = "%s"
-  description = "Obtain AWS credentials."
-  access_key = "%s"
-  secret_key = "%s"
-  region = "%s"
-}
-
-resource "vault_aws_secret_backend_role" "role" {
-  backend = vault_aws_secret_backend.aws.path
-  name = "test"
-  credential_type = "assumed_role"
-  role_arns       = ["arn:aws:iam::774077852947:role/MyExistingRole"]
-}
-
-ephemeral "vault_aws_access_credentials" "creds" {
-  backend  = vault_aws_secret_backend.aws.path
-  role     = vault_aws_secret_backend_role.role.name
-  type     = "sts"
-  region   = "%s"
-  mount_id = vault_aws_secret_backend_role.role.id
-}
-
-provider "echo" {
-  data = {
-    access_key = ephemeral.vault_aws_access_credentials.creds.access_key
-    secret_key = ephemeral.vault_aws_access_credentials.creds.secret_key
-    security_token = ephemeral.vault_aws_access_credentials.creds.security_token
-    type = ephemeral.vault_aws_access_credentials.creds.type
-  }
-}
-
-resource "echo" "test" {}
-`, mount, access, secret, region, region)
 }
