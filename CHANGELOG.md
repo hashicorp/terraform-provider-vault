@@ -1,5 +1,10 @@
 ## Unreleased
 
+FEATURES:
+
+* Add support for SPIFFE secrets backend: ([#2660](https://github.com/hashicorp/terraform-provider-vault/pull/2660))
+
+
 ## 5.5.0 (Nov 19, 2025)
 
 BEHAVIOR CHANGES: With v5.5.0, the default value for `deny_null_bind` in the `vault_ldap_auth_backend` resource has changed from `false` to `true` 
