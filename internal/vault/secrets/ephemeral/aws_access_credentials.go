@@ -145,28 +145,43 @@ func (r *AWSAccessCredentialsEphemeralSecretResource) Open(ctx context.Context, 
 	// Build path
 	path := fmt.Sprintf("%s/%s/%s", data.Mount.ValueString(), credType, data.Role.ValueString())
 
-	// Build request data
-	requestData := map[string][]string{}
-
-	// Only include role_arn if it's actually specified
-	if !data.RoleArn.IsNull() && !data.RoleArn.IsUnknown() && data.RoleArn.ValueString() != "" {
-		requestData["role_arn"] = []string{data.RoleArn.ValueString()}
-	}
-
-	if !data.TTL.IsNull() && !data.TTL.IsUnknown() && data.TTL.ValueString() != "" {
-		requestData["ttl"] = []string{data.TTL.ValueString()}
-	}
-
-	if !data.Region.IsNull() && !data.Region.IsUnknown() && data.Region.ValueString() != "" {
-		requestData["region"] = []string{data.Region.ValueString()}
-	}
-
+	// Build request data based on credential type
 	var sec *api.Secret
 
-	if len(requestData) > 0 {
-		sec, err = c.Logical().ReadWithDataWithContext(ctx, path, requestData)
+	if credType == "sts" {
+		// For STS, use POST method (WriteWithContext) with map[string]interface{}
+		writeData := make(map[string]interface{})
+
+		if !data.RoleArn.IsNull() && !data.RoleArn.IsUnknown() && data.RoleArn.ValueString() != "" {
+			writeData["role_arn"] = data.RoleArn.ValueString()
+		}
+		if !data.TTL.IsNull() && !data.TTL.IsUnknown() && data.TTL.ValueString() != "" {
+			writeData["ttl"] = data.TTL.ValueString()
+		}
+		if !data.Region.IsNull() && !data.Region.IsUnknown() && data.Region.ValueString() != "" {
+			writeData["region"] = data.Region.ValueString()
+		}
+
+		sec, err = c.Logical().WriteWithContext(ctx, path, writeData)
 	} else {
-		sec, err = c.Logical().ReadWithContext(ctx, path)
+		// For creds, use GET method (ReadWithContext) with map[string][]string
+		requestData := map[string][]string{}
+
+		if !data.RoleArn.IsNull() && !data.RoleArn.IsUnknown() && data.RoleArn.ValueString() != "" {
+			requestData["role_arn"] = []string{data.RoleArn.ValueString()}
+		}
+		if !data.TTL.IsNull() && !data.TTL.IsUnknown() && data.TTL.ValueString() != "" {
+			requestData["ttl"] = []string{data.TTL.ValueString()}
+		}
+		if !data.Region.IsNull() && !data.Region.IsUnknown() && data.Region.ValueString() != "" {
+			requestData["region"] = []string{data.Region.ValueString()}
+		}
+
+		if len(requestData) > 0 {
+			sec, err = c.Logical().ReadWithDataWithContext(ctx, path, requestData)
+		} else {
+			sec, err = c.Logical().ReadWithContext(ctx, path)
+		}
 	}
 
 	if err != nil {
@@ -190,11 +205,7 @@ func (r *AWSAccessCredentialsEphemeralSecretResource) Open(ctx context.Context, 
 	data.SecretKey = types.StringValue(apiResp.SecretKey)
 
 	// Security token is only available for STS type
-	if apiResp.SecurityToken != "" {
-		data.SecurityToken = types.StringValue(apiResp.SecurityToken)
-	} else {
-		data.SecurityToken = types.StringValue("")
-	}
+	data.SecurityToken = types.StringValue(apiResp.SecurityToken)
 
 	data.LeaseID = types.StringValue(sec.LeaseID)
 	data.LeaseDuration = types.Int64Value(int64(sec.LeaseDuration))
