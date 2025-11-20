@@ -1,12 +1,31 @@
 ## Unreleased
 
-CHANGES:
+## 5.5.0 (Nov 19, 2025)
 
-* `vault_ldap_auth_backend`: Set `deny_null_bind` to `true` by default if not provided in configuration ([#2622](https://github.com/hashicorp/terraform-provider-vault/pull/2622))
+BEHAVIOR CHANGES: With v5.5.0, the default value for `deny_null_bind` in the `vault_ldap_auth_backend` resource has changed from `false` to `true` 
+to match with the Vault API defaults. Configurations that do not explicitly set `deny_null_bind` will now have it set to `true` upon upgrade, and 
+customers should verify that this change aligns with their intended LDAP authentication behavior. Furthermore, Customers should also consider 
+upgrading to Vault Community Edition 1.21.1 and Vault Enterprise 1.21.1, 1.20.6, 1.19.12, and 1.16.28, which no longer allows Vault to perform 
+unauthenticated or null binds against the LDAP server.
+
+BUGS:
+
+* `vault_ldap_auth_backend`: Fix incorrect `deny_null_bind` default. Set `deny_null_bind` to `true` if not provided in configuration ([#2622](https://github.com/hashicorp/terraform-provider-vault/pull/2622))
 
 FEATURES:
 
 * Add support for `alias_metadata` field in auth resources ([#2547](https://github.com/hashicorp/terraform-provider-vault/pull/2547))
+* Add support for `not_before_duration` field in `vault_pki_secret_backend_root_cert` ([#2664](https://github.com/hashicorp/terraform-provider-vault/pull/2664))
+
+IMPROVEMENTS:
+* Updated dependencies:
+  * `golang.org/x/crypto` v0.41.0 -> v0.45.0
+  * `golang.org/x/net` v0.43.0 -> v0.47.0
+  * `golang.org/x/mod` v0.26.0 -> v0.29.0
+  * `golang.org/x/sync` v0.16.0 -> v0.18.0
+  * `golang.org/x/sys` v0.35.0 -> v0.38.0
+  * `golang.org/x/text` v0.28.0 -> v0.31.0
+  * `golang.org/x/tools` v0.35.0 -> v0.38.0
 
 ## 5.4.0 (Nov 3, 2025)
 
