@@ -27,8 +27,10 @@ import (
 // Uses the Echo Provider to test values set in ephemeral resources
 // see documentation here for more details:
 // https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/ephemeral-resources#using-echo-provider-in-acceptance-tests
-// Note: This test skips on Vault 1.19 with "number of regions does not match number of endpoints" error.
-// This appears to be a Vault bug where the AWS secrets engine incorrectly validates
+// Note: This test will fail on Vault 1.19 with "number of regions does not match number of endpoints" error.
+// This is a known Vault bug affecting the AWS secrets engine's Creds endpoint.
+// Hence skipping the test for Vault 1.19.
+
 func TestAccAWSAccessCredentialsCredIamUser(t *testing.T) {
 	a, s := testutil.GetTestAWSCreds(t)
 	region := testutil.GetTestAWSRegion(t)
@@ -63,8 +65,8 @@ func TestAccAWSAccessCredentialsCredIamUser(t *testing.T) {
 
 // TestAccAWSAccessCredentialsSTS tests STS token generation
 // creates the AWS backend and role,then uses the ephemeral resource to generate STS credentials.
-// Note: This test skips on Vault 1.19 with "number of regions does not match number of endpoints"
-// error. This is a known Vault bug affecting the AWS secrets engine's STS endpoint.
+// Note: This test skips on Vault 1.19 with "number of regions does not match number of endpoints" error.
+// This is a known Vault bug affecting the AWS secrets engine's STS endpoint.
 func TestAccAWSAccessCredentialsSTSFederationToken(t *testing.T) {
 	a, s := testutil.GetTestAWSCreds(t)
 	region := testutil.GetTestAWSRegion(t)

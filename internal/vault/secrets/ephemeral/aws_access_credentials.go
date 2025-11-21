@@ -25,20 +25,24 @@ var NewAWSAccessCredentialsEphemeralSecretResource = func() ephemeral.EphemeralR
 	return &AWSAccessCredentialsEphemeralSecretResource{}
 }
 
+// AWSAccessCredentialsEphemeralSecretResource defines the method that defines this resource.
 type AWSAccessCredentialsEphemeralSecretResource struct {
 	base.EphemeralResourceWithConfigure
 }
 
+// AWSAccessCredentialsEphemeralSecretModel describes the terraform resource data model to match the
+// resource schema.
 type AWSAccessCredentialsEphemeralSecretModel struct {
+	// common fields to all ephemeral resources
 	base.BaseModelEphemeral
 
-	Mount   types.String `tfsdk:"mount"`
-	Role    types.String `tfsdk:"role"`
-	Type    types.String `tfsdk:"type"`
-	RoleArn types.String `tfsdk:"role_arn"`
-	Region  types.String `tfsdk:"region"`
-	TTL     types.String `tfsdk:"ttl"`
-
+	// fields specific to this resource
+	Mount          types.String `tfsdk:"mount"`
+	Role           types.String `tfsdk:"role"`
+	Type           types.String `tfsdk:"type"`
+	RoleArn        types.String `tfsdk:"role_arn"`
+	Region         types.String `tfsdk:"region"`
+	TTL            types.String `tfsdk:"ttl"`
 	AccessKey      types.String `tfsdk:"access_key"`
 	SecretKey      types.String `tfsdk:"secret_key"`
 	SecurityToken  types.String `tfsdk:"security_token"`
@@ -48,12 +52,17 @@ type AWSAccessCredentialsEphemeralSecretModel struct {
 	LeaseRenewable types.Bool   `tfsdk:"lease_renewable"`
 }
 
+// AWSAccessCredentialsAPIModel describes Vault API data model.
 type AWSAccessCredentialsAPIModel struct {
 	AccessKey     string `json:"access_key" mapstructure:"access_key"`
 	SecretKey     string `json:"secret_key" mapstructure:"secret_key"`
 	SecurityToken string `json:"security_token" mapstructure:"security_token"`
 }
 
+// Schema defines this resource's schema which is the data that is available in
+// the resource's configuration, plan, and state
+//
+// https://developer.hashicorp.com/terraform/plugin/framework/resources#schema-method
 func (r *AWSAccessCredentialsEphemeralSecretResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -119,12 +128,14 @@ func (r *AWSAccessCredentialsEphemeralSecretResource) Schema(_ context.Context, 
 	base.MustAddBaseEphemeralSchema(&resp.Schema)
 }
 
+// Metadata sets the full name for this resource
 func (r *AWSAccessCredentialsEphemeralSecretResource) Metadata(_ context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_aws_access_credentials"
 }
 
 func (r *AWSAccessCredentialsEphemeralSecretResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
 	var data AWSAccessCredentialsEphemeralSecretModel
+	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
