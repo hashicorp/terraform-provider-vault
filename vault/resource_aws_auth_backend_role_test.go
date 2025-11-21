@@ -27,7 +27,7 @@ func TestAccAWSAuthBackendRole_importInferred(t *testing.T) {
 		CheckDestroy:             testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSAuthBackendRoleConfig_inferred(backend, role),
+				Config: testAccAWSAuthBackendRoleConfig_inferred(backend, role, ""),
 				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 			{
@@ -102,7 +102,19 @@ func TestAccAWSAuthBackendRole_inferred(t *testing.T) {
 		CheckDestroy:             testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSAuthBackendRoleConfig_inferred(backend, role),
+				Config: testAccAWSAuthBackendRoleConfig_inferred(backend, role, ""),
+				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if !meta.IsAPISupported(provider.VaultVersion121) {
+						return true, nil
+					}
+
+					return !meta.IsEnterpriseSupported(), nil
+				},
+				Config: testAccAWSAuthBackendRoleConfig_inferred(backend, role, aliasMetadataConfig),
 				Check:  testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role),
 			},
 		},
@@ -294,7 +306,7 @@ func testAccAWSAuthBackendRoleCheck_attrs(resourceName, backend, role string) re
 	}
 }
 
-func testAccAWSAuthBackendRoleConfig_inferred(backend, role string) string {
+func testAccAWSAuthBackendRoleConfig_inferred(backend, role, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "aws" {
   type = "aws"
@@ -316,7 +328,8 @@ resource "vault_aws_auth_backend_role" "role" {
   token_ttl = 60
   token_max_ttl = 120
   token_policies = ["default", "dev", "prod"]
-}`, backend, role)
+	%s
+}`, backend, role, extraConfig)
 }
 
 func testAccAWSAuthBackendRoleConfig_iam(backend, role string) string {
