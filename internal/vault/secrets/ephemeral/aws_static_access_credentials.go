@@ -18,16 +18,22 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
 var _ ephemeral.EphemeralResource = &AWSStaticAccessCredentialsEphemeralSecretResource{}
 
+// NewAWSStaticAccessCredentialsEphemeralSecretResource returns the implementation for this resource to be
+// imported by the Terraform Plugin Framework provider
 var NewAWSStaticAccessCredentialsEphemeralSecretResource = func() ephemeral.EphemeralResource {
 	return &AWSStaticAccessCredentialsEphemeralSecretResource{}
 }
 
+// AWSStaticAccessCredentialsEphemeralSecretResource implements the methods that define this resource
 type AWSStaticAccessCredentialsEphemeralSecretResource struct {
 	base.EphemeralResourceWithConfigure
 }
 
+// AWSStaticAccessCredentialsEphemeralSecretModel describes the Terraform resource data model to match the
+// resource schema.
 type AWSStaticAccessCredentialsEphemeralSecretModel struct {
 	base.BaseModelEphemeral
 
@@ -38,11 +44,16 @@ type AWSStaticAccessCredentialsEphemeralSecretModel struct {
 	SecretKey types.String `tfsdk:"secret_key"`
 }
 
+// AWSStaticAccessCredentialsAPIModel describes the Vault API data model .
 type AWSStaticAccessCredentialsAPIModel struct {
 	AccessKey string `json:"access_key" mapstructure:"access_key"`
 	SecretKey string `json:"secret_key" mapstructure:"secret_key"`
 }
 
+// Schema defines this resource's schema which is the data that is available in
+// the resource's configuration, plan, and state
+//
+// https://developer.hashicorp.com/terraform/plugin/framework/resources#schema-method
 func (r *AWSStaticAccessCredentialsEphemeralSecretResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -70,12 +81,16 @@ func (r *AWSStaticAccessCredentialsEphemeralSecretResource) Schema(_ context.Con
 	base.MustAddBaseEphemeralSchema(&resp.Schema)
 }
 
+// Metadata sets the full name for this resource
 func (r *AWSStaticAccessCredentialsEphemeralSecretResource) Metadata(_ context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_aws_static_access_credentials"
 }
 
+// Open retrieves AWS static access credentials from Vault for the specified static role.
+// This method is called when the ephemeral resource is accessed during a Terraform operation.
 func (r *AWSStaticAccessCredentialsEphemeralSecretResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
 	var data AWSStaticAccessCredentialsEphemeralSecretModel
+	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
