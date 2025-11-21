@@ -8,9 +8,9 @@ customers should verify that this change aligns with their intended LDAP authent
 upgrading to Vault Community Edition 1.21.1 and Vault Enterprise 1.21.1, 1.20.6, 1.19.12, and 1.16.28, which no longer allows Vault to perform 
 unauthenticated or null binds against the LDAP server.
 
-BUGS:
+SECURITY:
 
-* `vault_ldap_auth_backend`: Fix incorrect `deny_null_bind` default. Set `deny_null_bind` to `true` if not provided in configuration ([#2622](https://github.com/hashicorp/terraform-provider-vault/pull/2622))
+* `vault_ldap_auth_backend`: Fix incorrect `deny_null_bind` default. Set `deny_null_bind` to `true` if not provided in configuration ([#2622](https://github.com/hashicorp/terraform-provider-vault/pull/2622)) (CVE-13357,[HCSEC-2025-33](https://discuss.hashicorp.com/t/hcsec-2025-33-vault-terraform-provider-applied-incorrect-defaults-for-ldap-auth-method/76822))
 
 FEATURES:
 
