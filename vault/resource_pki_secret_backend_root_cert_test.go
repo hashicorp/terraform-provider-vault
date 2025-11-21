@@ -55,7 +55,8 @@ func TestPkiSecretBackendRootCertificate_notAfter(t *testing.T) {
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
 	notAfterTime := time.Now().Add(2 * time.Hour).Format(time.RFC3339)
-	config := testPkiSecretBackendRootCertificateConfig_basic(path, fmt.Sprintf("not_after = \"%s\"", notAfterTime))
+	// setting both not_after and not_before_duration to verify fields work as expected
+	config := testPkiSecretBackendRootCertificateConfig_basic(path, fmt.Sprintf("not_after = \"%s\" \n not_before_duration = \"%s\"", notAfterTime, "120s"))
 
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
@@ -72,6 +73,7 @@ func TestPkiSecretBackendRootCertificate_notAfter(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldLocality, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldNotAfter, notAfterTime),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldNotBeforeDuration, "120s"),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
 		assertCertificateAttributes(resourceName, notAfterTime, x509.SHA512WithRSA),
 	}
