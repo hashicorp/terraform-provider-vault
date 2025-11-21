@@ -61,7 +61,7 @@ The following arguments are supported:
 
 * `validate_creds` - (Optional) Whether generated credentials should be validated before being returned.
 
-* `num_sequential_successes` - (Optional) If 'validate_creds' is true, the number of sequential successes required to validate generated credentials. Defaults to 8.
+* `num_sequential_successes` - (Optional) If 'validate_creds' is true, the number of sequential successes required to validate generated credentials. Defaults to 4.
 
 * `num_seconds_between_tests` - (Optional) If 'validate_creds' is true, the number of seconds to wait between each test of generated credentials. Defaults to 1.
 
