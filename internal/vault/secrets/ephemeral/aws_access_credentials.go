@@ -133,6 +133,7 @@ func (r *AWSAccessCredentialsEphemeralSecretResource) Metadata(_ context.Context
 	resp.TypeName = req.ProviderTypeName + "_aws_access_credentials"
 }
 
+// Open method reads AWS credentials from Vault based on the credential type.
 func (r *AWSAccessCredentialsEphemeralSecretResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
 	var data AWSAccessCredentialsEphemeralSecretModel
 	// Read Terraform prior state data into the model
