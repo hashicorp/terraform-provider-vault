@@ -28,14 +28,14 @@ resource "vault_aws_secret_backend" "aws" {
 
 resource "vault_aws_secret_backend_static_role" "example" {
   backend         = vault_aws_secret_backend.aws.path
-  name           = "my-static-role"
-  username       = "vault-static-user"
+  name            = "my-static-role"
+  username        = "vault-static-user"
   rotation_period = "3600"
 }
 
 ephemeral "vault_aws_static_access_credentials" "example" {
-  backend = vault_aws_secret_backend.aws.path
-  name    = vault_aws_secret_backend_static_role.example.name
+  mount    = vault_aws_secret_backend.aws.path
+  name     = vault_aws_secret_backend_static_role.example.name
   mount_id = vault_aws_secret_backend_static_role.role.id
 }
 ```
@@ -54,7 +54,7 @@ The following arguments are supported:
   configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `backend` - (Required) Path to the mounted AWS Secrets Engine where the static role resides.
+* `mount` - (Required) Path where the AWS Secrets Engine is mounted in Vault.
 
 * `name` - (Required) The name of the static role to read credentials for.
 
