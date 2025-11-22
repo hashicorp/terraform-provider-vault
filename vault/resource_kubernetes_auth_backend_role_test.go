@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"testing"
 
@@ -217,6 +218,8 @@ func TestAccKubernetesAuthBackendRole_full(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"bound_service_account_namespaces.0", "example"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespace_selector", "{\"matchLabels\":{\"env\":\"dev\"}}"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_policies.0", "default"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_policies.1", "dev"),
@@ -271,6 +274,8 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"bound_service_account_namespaces.0", "example"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespace_selector", "{\"matchLabels\":{\"env\":\"dev\"}}"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_policies.0", "default"),
@@ -306,6 +311,8 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"bound_service_account_namespaces.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespace_selector", "{\"matchLabels\":{\"env\":\"dev\"}}"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_policies.0", "default"),
@@ -340,6 +347,8 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 						"bound_service_account_namespaces.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"bound_service_account_namespaces.0", "example"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespace_selector", "{\"matchLabels\":{\"env\":\"dev\"}}"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
@@ -511,6 +520,7 @@ resource "vault_kubernetes_auth_backend_role" "role" {
   role_name = %q
   bound_service_account_names = ["example"]
   bound_service_account_namespaces = ["example"]
+  bound_service_account_namespace_selector = "{\"matchLabels\":{\"env\":\"dev\"}}"
   token_ttl = %d
   token_max_ttl = %d
   token_period = 900
@@ -523,4 +533,77 @@ resource "vault_kubernetes_auth_backend_role" "role" {
 `, aliasSource)
 	}
 	return config + "}"
+}
+
+func TestAccKubernetesAuthBackendRole_failure_missing_namespace_and_selector(t *testing.T) {
+	backend := acctest.RandomWithPrefix("kubernetes")
+	role := acctest.RandomWithPrefix("test-role")
+	ttl := 3600
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesAuthBackendRoleConfig_missingNamespaceAndSelector(backend, role, ttl),
+				ExpectError: regexp.MustCompile(
+					"at least one of 'bound_service_account_namespaces' or 'bound_service_account_namespace_selector' must be provided"),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesAuthBackendRole_failure_explicit_empty_namespace_and_selector(t *testing.T) {
+	backend := acctest.RandomWithPrefix("kubernetes")
+	role := acctest.RandomWithPrefix("test-role")
+	ttl := 3600
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesAuthBackendRoleConfig_explicitlyEmptyNamespaceAndSelector(backend, role, ttl),
+				ExpectError: regexp.MustCompile(
+					"at least one of 'bound_service_account_namespaces' or 'bound_service_account_namespace_selector' must be provided"),
+			},
+		},
+	})
+}
+
+func testAccKubernetesAuthBackendRoleConfig_missingNamespaceAndSelector(backend, role string, ttl int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "kubernetes" {
+  type = "kubernetes"
+  path = %q
+}
+
+resource "vault_kubernetes_auth_backend_role" "role" {
+  backend = vault_auth_backend.kubernetes.path
+  role_name = %q
+  bound_service_account_names = ["example"]
+  token_ttl = %d
+  token_policies = ["default", "dev", "prod"]
+}`, backend, role, ttl)
+}
+
+func testAccKubernetesAuthBackendRoleConfig_explicitlyEmptyNamespaceAndSelector(backend, role string, ttl int) string {
+	// explicit empty list and empty string to exercise the emptiness checks
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "kubernetes" {
+  type = "kubernetes"
+  path = %q
+}
+
+resource "vault_kubernetes_auth_backend_role" "role" {
+  backend = vault_auth_backend.kubernetes.path
+  role_name = %q
+  bound_service_account_names = ["example"]
+  bound_service_account_namespaces = []
+  bound_service_account_namespace_selector = ""
+  token_ttl = %d
+  token_policies = ["default", "dev", "prod"]
+}`, backend, role, ttl)
 }
