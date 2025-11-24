@@ -51,7 +51,6 @@ const (
 	FieldLeaseID                        = "lease_id"
 	FieldLeaseDuration                  = "lease_duration"
 	FieldLeaseRenewable                 = "lease_renewable"
-	FieldLeaseStartTime                 = "lease_start_time"
 	FieldDepth                          = "depth"
 	FieldDataJSON                       = "data_json"
 	FieldDN                             = "dn"
