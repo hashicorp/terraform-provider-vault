@@ -23,12 +23,17 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+const (
+	// Common GCP service account email pattern (without anchors)
+	gcpServiceAccountEmailPattern = `.+@.+\.iam\.gserviceaccount\.com`
+)
+
 var (
 	// Common regexp patterns used across GCP ephemeral resource tests
-	regexpGCPServiceAccountEmail = regexp.MustCompile(`^.+@.+\.iam\.gserviceaccount\.com$`)
+	regexpGCPServiceAccountEmail = regexp.MustCompile(fmt.Sprintf(`^%s$`, gcpServiceAccountEmailPattern))
 	regexpGCPServiceAccountType  = regexp.MustCompile(`(?s).*"type":\s*"service_account".*`)
 	regexpGCPPrivateKey          = regexp.MustCompile(`(?s).*"private_key":\s*"-----BEGIN PRIVATE KEY-----.*`)
-	regexpGCPClientEmail         = regexp.MustCompile(`(?s).*"client_email":\s*".+@.+\.iam\.gserviceaccount\.com".*`)
+	regexpGCPClientEmail         = regexp.MustCompile(fmt.Sprintf(`(?s).*"client_email":\s*"%s".*`, gcpServiceAccountEmailPattern))
 )
 
 // TestAccGCPServiceAccountKey_basic tests generating service account keys
