@@ -105,6 +105,8 @@ The following arguments are supported:
 
 * `impersonated_account` - (Optional) Name of the GCP impersonated account to generate OAuth2 access token for. Mutually exclusive with `roleset` and `static_account`.
 
+* `max_retries` - (Optional) Maximum number of retries when the GCP service account or key is not yet ready. Each retry waits 1 second. Defaults to `10`.
+
 * `namespace` - (Optional) The namespace of the target resource.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).

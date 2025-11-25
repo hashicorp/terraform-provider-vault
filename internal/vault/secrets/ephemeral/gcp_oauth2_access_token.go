@@ -5,6 +5,7 @@ package ephemeralsecrets
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -63,6 +64,7 @@ type GCPOAuth2AccessTokenModel struct {
 	Roleset             types.String `tfsdk:"roleset"`
 	StaticAccount       types.String `tfsdk:"static_account"`
 	ImpersonatedAccount types.String `tfsdk:"impersonated_account"`
+	MaxRetries          types.Int64  `tfsdk:"max_retries"`
 
 	// computed fields
 	Token          types.String `tfsdk:"token"`
@@ -95,6 +97,11 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Schema(_ context.Context, _ ephe
 			consts.FieldImpersonatedAccount: schema.StringAttribute{
 				MarkdownDescription: "GCP Secret Impersonated Account to generate OAuth2 access token for. " +
 					"Mutually exclusive with `roleset` and `static_account`.",
+				Optional: true,
+			},
+			consts.FieldMaxRetries: schema.Int64Attribute{
+				MarkdownDescription: "Maximum number of retries when the GCP service account or key is not yet ready. " +
+					"Each retry waits 1 second. Defaults to 10.",
 				Optional: true,
 			},
 			consts.FieldToken: schema.StringAttribute{
@@ -208,20 +215,21 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 		resourceName = impersonatedAccount
 	}
 
-	// Configure exponential backoff with max retries
-	// Initial interval: 2s, Max interval: 30s, Max retries: 5
-	expBackoff := backoff.NewExponentialBackOff()
-	expBackoff.InitialInterval = 2 * time.Second
-	expBackoff.MaxInterval = 30 * time.Second
-	expBackoff.MaxElapsedTime = 0 // No time limit, only retry count matters
+	// Get max retries from config, default to 10
+	maxRetries := uint64(10)
+	if !data.MaxRetries.IsNull() {
+		maxRetries = uint64(data.MaxRetries.ValueInt64())
+	}
 
-	bo := backoff.WithMaxRetries(expBackoff, 5)
+	// Use constant backoff to stay within Terraform's context timeout
+	// 1 second interval × max_retries (default 10) = predictable total time
+	bo := backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Second), maxRetries)
 	bo = backoff.WithContext(bo, ctx)
 
 	var vaultSecret *api.Secret
 	attemptCount := 0
 
-	// Retry operation with exponential backoff
+	// Retry operation with constant backoff
 	operation := func() error {
 		attemptCount++
 
@@ -233,7 +241,7 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 			// Retry on 400 Bad Request with specific error message - this typically
 			// indicates the resource isn't ready yet
 			if isGCPTokenGenerationError(err) {
-				log.Printf("[DEBUG] Attempt %d failed for %s %q. Error: %s", attemptCount, resourceType, resourceName, err)
+				log.Printf("[TRACE] Attempt %d failed for %s %q. Error: %s", attemptCount, resourceType, resourceName, err)
 				return err
 			}
 			// Non-retryable error
@@ -290,24 +298,18 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 	}
 	data.Token = types.StringValue(token)
 
-	// Extract token_ttl if present
-	if tokenTTL, ok := vaultSecret.Data["token_ttl"].(float64); ok {
-		data.TokenTTL = types.Int64Value(int64(tokenTTL))
-	} else if tokenTTL, ok := vaultSecret.Data["token_ttl"].(int64); ok {
-		data.TokenTTL = types.Int64Value(tokenTTL)
-	} else {
-		// If token_ttl is not in the response data, set it to null
-		data.TokenTTL = types.Int64Null()
+	// Extract token_ttl if present (returned as json.Number by Vault client)
+	data.TokenTTL = types.Int64Null()
+	if ttlValue, exists := vaultSecret.Data["token_ttl"]; exists {
+		if jsonNum, ok := ttlValue.(json.Number); ok {
+			if ttl, err := jsonNum.Int64(); err == nil {
+				data.TokenTTL = types.Int64Value(ttl)
+			}
+		}
 	}
 
 	// Set lease information
-	// Only set lease_id if it's not empty
-	if vaultSecret.LeaseID != "" {
-		data.LeaseID = types.StringValue(vaultSecret.LeaseID)
-	} else {
-		data.LeaseID = types.StringNull()
-	}
-
+	data.LeaseID = types.StringValue(vaultSecret.LeaseID)
 	data.LeaseDuration = types.Int64Value(int64(vaultSecret.LeaseDuration))
 	data.LeaseStartTime = types.StringValue(time.Now().Format(time.RFC3339))
 	data.LeaseRenewable = types.BoolValue(vaultSecret.Renewable)

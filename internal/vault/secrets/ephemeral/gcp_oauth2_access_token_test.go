@@ -27,84 +27,16 @@ var (
 	regexpNonEmpty = regexp.MustCompile(`^.+$`)
 )
 
-// TestAccGCPOAuth2AccessToken_roleset tests generating an OAuth2 access token
-// from a GCP roleset with all ephemeral resource attributes
-func TestAccGCPOAuth2AccessToken_roleset(t *testing.T) {
+// TestAccGCPOAuth2AccessToken_basic tests generating OAuth2 access tokens
+// from different GCP credential types (roleset, static account, impersonated account)
+// and demonstrates realistic resource mutation patterns
+func TestAccGCPOAuth2AccessToken_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	roleset := acctest.RandomWithPrefix("tf-roleset")
-
-	creds, project := testutil.GetTestGCPCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testAccGCPOAuth2AccessTokenRolesetConfig(backend, roleset, creds, project),
-				ConfigStateChecks: []statecheck.StateCheck{
-					// Verify token is set and not empty
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
-					// Verify lease_start_time is set
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
-					// Verify lease_renewable is set to false
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.Bool(false)),
-				},
-			},
-			{
-				// Second step: Apply the same config again to verify multiple calls work
-				Config: testAccGCPOAuth2AccessTokenRolesetConfig(backend, roleset, creds, project),
-				ConfigStateChecks: []statecheck.StateCheck{
-					// Verify token is still set and not empty (should be a new token)
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
-					// Verify lease_start_time is set (should be a new timestamp)
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
-					// Verify lease_renewable is still false
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.Bool(false)),
-				},
-			},
-		},
-	})
-}
-
-// TestAccGCPOAuth2AccessToken_staticAccount tests generating an OAuth2 access token
-// from a GCP static account
-func TestAccGCPOAuth2AccessToken_staticAccount(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	staticAccount := acctest.RandomWithPrefix("tf-static")
-
-	creds, _ := testutil.GetTestGCPCreds(t)
-	serviceAccountEmail := testutil.SkipTestEnvUnset(t, "GOOGLE_SERVICE_ACCOUNT_EMAIL")[0]
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testAccGCPOAuth2AccessTokenStaticAccountConfig(backend, staticAccount, creds, serviceAccountEmail),
-				ConfigStateChecks: []statecheck.StateCheck{
-					// Verify token is set and not empty
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
-					// Verify lease_start_time is set
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
-				},
-			},
-		},
-	})
-}
-
-// TestAccGCPOAuth2AccessToken_impersonatedAccount tests generating an OAuth2 access token
-// from a GCP impersonated account
-func TestAccGCPOAuth2AccessToken_impersonatedAccount(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	impersonatedAccount := acctest.RandomWithPrefix("tf-impersonated")
 
-	creds, _ := testutil.GetTestGCPCreds(t)
+	creds, project := testutil.GetTestGCPCreds(t)
 	serviceAccountEmail := testutil.SkipTestEnvUnset(t, "GOOGLE_SERVICE_ACCOUNT_EMAIL")[0]
 
 	resource.Test(t, resource.TestCase{
@@ -115,24 +47,52 @@ func TestAccGCPOAuth2AccessToken_impersonatedAccount(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
+				// Step 1: Create and use roleset
+				Config: testAccGCPOAuth2AccessTokenRolesetConfig(backend, roleset, creds, project),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.Bool(false)),
+				},
+			},
+			{
+				// Step 2: Mutate to use static_account instead of roleset
+				Config: testAccGCPOAuth2AccessTokenStaticAccountConfig(backend, staticAccount, creds, serviceAccountEmail),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+				},
+			},
+			{
+				// Step 3: Mutate to use impersonated_account
 				Config: testAccGCPOAuth2AccessTokenImpersonatedAccountConfig(backend, impersonatedAccount, creds, serviceAccountEmail),
 				ConfigStateChecks: []statecheck.StateCheck{
-					// Verify token is set and not empty
 					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
-					// Verify lease_start_time is set
 					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+				},
+			},
+			{
+				// Step 4: Switch back to roleset to verify bidirectional mutation
+				Config: testAccGCPOAuth2AccessTokenRolesetConfig(backend, roleset, creds, project),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.Bool(false)),
 				},
 			},
 		},
 	})
 }
 
-// TestAccGCPOAuth2AccessToken_missingRolesetAndStaticAccount tests error handling
-// when neither roleset, static_account, nor impersonated_account is provided
-func TestAccGCPOAuth2AccessToken_missingRolesetAndStaticAccount(t *testing.T) {
+// TestAccGCPOAuth2AccessToken_validation tests various validation and error scenarios
+// including missing fields, conflicting fields, and invalid configurations
+func TestAccGCPOAuth2AccessToken_validation(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
+	roleset := acctest.RandomWithPrefix("tf-roleset")
+	staticAccount := acctest.RandomWithPrefix("tf-static")
 
-	creds, _ := testutil.GetTestGCPCreds(t)
+	creds, project := testutil.GetTestGCPCreds(t)
+	serviceAccountEmail := testutil.SkipTestEnvUnset(t, "GOOGLE_SERVICE_ACCOUNT_EMAIL")[0]
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -142,73 +102,22 @@ func TestAccGCPOAuth2AccessToken_missingRolesetAndStaticAccount(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
+				// Step 1: Missing all credential fields should error
 				Config:      testAccGCPOAuth2AccessTokenMissingFieldsConfig(backend, creds),
 				ExpectError: regexp.MustCompile(`One of 'roleset', 'static_account', or 'impersonated_account' must be\s+provided`),
 			},
-		},
-	})
-}
-
-// TestAccGCPOAuth2AccessToken_bothRolesetAndStaticAccount tests error handling
-// when both roleset and static_account are provided
-func TestAccGCPOAuth2AccessToken_bothRolesetAndStaticAccount(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-gcp")
-	roleset := acctest.RandomWithPrefix("tf-roleset")
-	staticAccount := acctest.RandomWithPrefix("tf-static")
-
-	creds, project := testutil.GetTestGCPCreds(t)
-	serviceAccountEmail := testutil.SkipTestEnvUnset(t, "GOOGLE_SERVICE_ACCOUNT_EMAIL")[0]
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
 			{
+				// Step 2: Providing both roleset and static_account should error
 				Config:      testAccGCPOAuth2AccessTokenBothFieldsConfig(backend, roleset, staticAccount, creds, project, serviceAccountEmail),
 				ExpectError: regexp.MustCompile(`Only one of 'roleset', 'static_account', or 'impersonated_account' can be\s+provided`),
 			},
-		},
-	})
-}
-
-// TestAccGCPOAuth2AccessToken_invalidBackend tests error handling
-// when an invalid backend path is provided
-func TestAccGCPOAuth2AccessToken_invalidBackend(t *testing.T) {
-	roleset := acctest.RandomWithPrefix("tf-roleset")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
 			{
+				// Step 3: Invalid backend path should error
 				Config:      testAccGCPOAuth2AccessTokenInvalidBackendConfig(roleset),
 				ExpectError: regexp.MustCompile("(Error generating GCP OAuth2 access token|No credentials found)"),
 			},
-		},
-	})
-}
-
-// TestAccGCPOAuth2AccessToken_invalidRoleset tests error handling
-// when an invalid roleset is provided
-func TestAccGCPOAuth2AccessToken_invalidRoleset(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-gcp")
-
-	creds, _ := testutil.GetTestGCPCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
 			{
+				// Step 4: Invalid roleset name should error
 				Config:      testAccGCPOAuth2AccessTokenInvalidRolesetConfig(backend, creds),
 				ExpectError: regexp.MustCompile("(Error generating GCP OAuth2 access token|No credentials found)"),
 			},
@@ -216,9 +125,9 @@ func TestAccGCPOAuth2AccessToken_invalidRoleset(t *testing.T) {
 	})
 }
 
-// TestAccGCPOAuth2AccessToken_withNamespace tests generating an OAuth2 access token
-// with a namespace specified (Enterprise feature)
-func TestAccGCPOAuth2AccessToken_withNamespace(t *testing.T) {
+// TestAccGCPOAuth2AccessToken_optionalFeatures tests optional configuration features
+// including namespace (Enterprise) and max_retries settings
+func TestAccGCPOAuth2AccessToken_optionalFeatures(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	roleset := acctest.RandomWithPrefix("tf-roleset")
 	namespace := acctest.RandomWithPrefix("tf-ns")
@@ -236,9 +145,19 @@ func TestAccGCPOAuth2AccessToken_withNamespace(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
+				// Step 1: Test with namespace (Enterprise feature)
 				Config: testAccGCPOAuth2AccessTokenWithNamespaceConfig(backend, roleset, namespace, creds, project),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+				},
+			},
+			{
+				// Step 2: Test with custom max_retries value
+				Config: testAccGCPOAuth2AccessTokenWithMaxRetriesConfig(backend, roleset, creds, project),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
 				},
 			},
 		},
@@ -487,4 +406,41 @@ provider "echo" {
 
 resource "echo" "gcp_token" {}
 `, namespace, backend, credentials, roleset, project, project)
+}
+
+func testAccGCPOAuth2AccessTokenWithMaxRetriesConfig(backend, roleset, credentials, project string) string {
+	return fmt.Sprintf(`
+resource "vault_gcp_secret_backend" "gcp" {
+  path        = "%s"
+  credentials = <<CREDS
+%s
+CREDS
+}
+
+resource "vault_gcp_secret_roleset" "roleset" {
+  backend      = vault_gcp_secret_backend.gcp.path
+  roleset      = "%s"
+  secret_type  = "access_token"
+  project      = "%s"
+  token_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+
+  binding {
+    resource = "//cloudresourcemanager.googleapis.com/projects/%s"
+    roles    = ["roles/viewer"]
+  }
+}
+
+ephemeral "vault_gcp_oauth2_access_token" "token" {
+  mount_id    = vault_gcp_secret_roleset.roleset.id
+  mount       = vault_gcp_secret_backend.gcp.path
+  roleset     = vault_gcp_secret_roleset.roleset.roleset
+  max_retries = 5
+}
+
+provider "echo" {
+  data = ephemeral.vault_gcp_oauth2_access_token.token
+}
+
+resource "echo" "gcp_token" {}
+`, backend, credentials, roleset, project, project)
 }

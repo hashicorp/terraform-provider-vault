@@ -31,77 +31,15 @@ var (
 	regexpGCPClientEmail         = regexp.MustCompile(`(?s).*"client_email":\s*".+@.+\.iam\.gserviceaccount\.com".*`)
 )
 
-// TestAccGCPServiceAccountKey_roleset tests generating a service account key
-// from a GCP roleset with all ephemeral resource attributes
-func TestAccGCPServiceAccountKey_roleset(t *testing.T) {
+// TestAccGCPServiceAccountKey_basic tests generating service account keys
+// from different GCP credential types (roleset and static account)
+// and demonstrates realistic resource mutation patterns
+func TestAccGCPServiceAccountKey_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	roleset := acctest.RandomWithPrefix("tf-roleset")
-
-	// Get GCP credentials and project
-	creds, project := testutil.GetTestGCPCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testAccGCPServiceAccountKeyRolesetConfig(backend, roleset, creds, project),
-				ConfigStateChecks: []statecheck.StateCheck{
-					// Verify private_key_data contains expected JSON structure (matches service_account type and has private_key)
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPServiceAccountType)),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPPrivateKey)),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPClientEmail)),
-					// Verify private_key_type is set
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_type"), knownvalue.StringExact("TYPE_GOOGLE_CREDENTIALS_FILE")),
-					// Verify service_account_email matches expected pattern
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("service_account_email"), knownvalue.StringRegexp(regexpGCPServiceAccountEmail)),
-					// Verify lease fields are set
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseID), knownvalue.StringRegexp(regexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseDuration), knownvalue.NotNull()),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
-					// lease_renewable can be true or false depending on Vault configuration
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.NotNull()),
-				},
-			},
-			{
-				// Second step: Apply the same config again to verify multiple calls work
-				Config: testAccGCPServiceAccountKeyRolesetConfig(backend, roleset, creds, project),
-				ConfigStateChecks: []statecheck.StateCheck{
-					// Verify private_key_data still contains expected JSON structure (should be a new key)
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPServiceAccountType)),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPPrivateKey)),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPClientEmail)),
-					// Verify private_key_type is still set
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_type"), knownvalue.StringExact("TYPE_GOOGLE_CREDENTIALS_FILE")),
-					// Verify service_account_email still matches expected pattern
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("service_account_email"), knownvalue.StringRegexp(regexpGCPServiceAccountEmail)),
-					// Verify lease fields are still set (should be new lease)
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseID), knownvalue.StringRegexp(regexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseDuration), knownvalue.NotNull()),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.NotNull()),
-				},
-			},
-		},
-	})
-}
-
-// NOTE: TestAccGCPServiceAccountKey_rolesetWithoutEphemeralAttrs is not included because
-// ephemeral resources are evaluated during the plan phase, which means the roleset must
-// already exist. The mount_id attribute is specifically designed to create this dependency.
-// Without mount_id, there's no way to ensure the roleset exists when the ephemeral resource
-// is evaluated, making this test scenario impractical for ephemeral resources.
-
-// TestAccGCPServiceAccountKey_staticAccount tests generating a service account key
-// from a GCP static account
-func TestAccGCPServiceAccountKey_staticAccount(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	staticAccount := acctest.RandomWithPrefix("tf-static")
 
-	creds, _ := testutil.GetTestGCPCreds(t)
+	creds, project := testutil.GetTestGCPCreds(t)
 
 	// Extract service account email from credentials
 	var credsMap map[string]interface{}
@@ -121,72 +59,53 @@ func TestAccGCPServiceAccountKey_staticAccount(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGCPServiceAccountKeyStaticAccountConfig(backend, staticAccount, creds, serviceAccountEmail),
+				// Step 1: Create and use roleset
+				Config: testAccGCPServiceAccountKeyRolesetConfig(backend, roleset, creds, project),
 				ConfigStateChecks: []statecheck.StateCheck{
-					// Verify private_key_data contains expected JSON structure
 					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPServiceAccountType)),
 					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPPrivateKey)),
-					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("service_account_email"), knownvalue.StringExact(serviceAccountEmail)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPClientEmail)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_type"), knownvalue.StringExact("TYPE_GOOGLE_CREDENTIALS_FILE")),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("service_account_email"), knownvalue.StringRegexp(regexpGCPServiceAccountEmail)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseID), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseDuration), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.NotNull()),
+				},
+			},
+			{
+				// Step 2: Mutate to use static_account instead of roleset
+				Config: testAccGCPServiceAccountKeyStaticAccountConfig(backend, staticAccount, creds, serviceAccountEmail),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPServiceAccountType)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPPrivateKey)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("service_account_email"), knownvalue.StringRegexp(regexpGCPServiceAccountEmail)),
 					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseID), knownvalue.StringRegexp(regexpNonEmpty)),
 				},
 			},
-		},
-	})
-}
-
-// TestAccGCPServiceAccountKey_withKeyOptions tests generating a service account key
-// with custom key_algorithm and key_type options
-func TestAccGCPServiceAccountKey_withKeyOptions(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-gcp")
-	roleset := acctest.RandomWithPrefix("tf-roleset")
-
-	creds, project := testutil.GetTestGCPCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
 			{
-				Config: testAccGCPServiceAccountKeyWithOptionsConfig(backend, roleset, creds, project),
+				// Step 3: Switch back to roleset to verify bidirectional mutation
+				Config: testAccGCPServiceAccountKeyRolesetConfig(backend, roleset, creds, project),
 				ConfigStateChecks: []statecheck.StateCheck{
-					// Verify private_key_data contains expected JSON structure
 					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPServiceAccountType)),
 					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPPrivateKey)),
 					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_type"), knownvalue.StringExact("TYPE_GOOGLE_CREDENTIALS_FILE")),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("service_account_email"), knownvalue.StringRegexp(regexpGCPServiceAccountEmail)),
 				},
 			},
 		},
 	})
 }
 
-// TestAccGCPServiceAccountKey_missingRolesetAndStaticAccount tests error handling
-// when neither roleset nor static_account is provided
-func TestAccGCPServiceAccountKey_missingRolesetAndStaticAccount(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-gcp")
+// NOTE: TestAccGCPServiceAccountKey_rolesetWithoutEphemeralAttrs is not included because
+// ephemeral resources are evaluated during the plan phase, which means the roleset must
+// already exist. The mount_id attribute is specifically designed to create this dependency.
+// Without mount_id, there's no way to ensure the roleset exists when the ephemeral resource
+// is evaluated, making this test scenario impractical for ephemeral resources.
 
-	creds, _ := testutil.GetTestGCPCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccGCPServiceAccountKeyMissingFieldsConfig(backend, creds),
-				ExpectError: regexp.MustCompile("Either 'roleset' or 'static_account' must be provided"),
-			},
-		},
-	})
-}
-
-// TestAccGCPServiceAccountKey_bothRolesetAndStaticAccount tests error handling
-// when both roleset and static_account are provided
-func TestAccGCPServiceAccountKey_bothRolesetAndStaticAccount(t *testing.T) {
+// TestAccGCPServiceAccountKey_validation tests various validation and error scenarios
+// including missing fields, conflicting fields, and invalid configurations
+func TestAccGCPServiceAccountKey_validation(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	roleset := acctest.RandomWithPrefix("tf-roleset")
 	staticAccount := acctest.RandomWithPrefix("tf-static")
@@ -207,17 +126,31 @@ func TestAccGCPServiceAccountKey_bothRolesetAndStaticAccount(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
+				// Step 1: Missing both roleset and static_account should error
+				Config:      testAccGCPServiceAccountKeyMissingFieldsConfig(backend, creds),
+				ExpectError: regexp.MustCompile("Either 'roleset' or 'static_account' must be provided"),
+			},
+			{
+				// Step 2: Providing both roleset and static_account should error
 				Config:      testAccGCPServiceAccountKeyBothFieldsConfig(backend, roleset, staticAccount, creds, project, serviceAccountEmail),
 				ExpectError: regexp.MustCompile("Only one of 'roleset' or 'static_account' can be provided"),
+			},
+			{
+				// Step 3: Invalid backend path should error
+				Config:      testAccGCPServiceAccountKeyInvalidBackendConfig(roleset),
+				ExpectError: regexp.MustCompile("Error generating GCP service account key"),
 			},
 		},
 	})
 }
 
-// TestAccGCPServiceAccountKey_invalidBackend tests error handling
-// when an invalid backend path is provided
-func TestAccGCPServiceAccountKey_invalidBackend(t *testing.T) {
+// TestAccGCPServiceAccountKey_optionalFeatures tests optional configuration features
+// including custom key_algorithm and key_type settings
+func TestAccGCPServiceAccountKey_optionalFeatures(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	roleset := acctest.RandomWithPrefix("tf-roleset")
+
+	creds, project := testutil.GetTestGCPCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -227,8 +160,13 @@ func TestAccGCPServiceAccountKey_invalidBackend(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccGCPServiceAccountKeyInvalidBackendConfig(roleset),
-				ExpectError: regexp.MustCompile("Error generating GCP service account key"),
+				// Test with custom key_algorithm and key_type options
+				Config: testAccGCPServiceAccountKeyWithOptionsConfig(backend, roleset, creds, project),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPServiceAccountType)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_data"), knownvalue.StringRegexp(regexpGCPPrivateKey)),
+					statecheck.ExpectKnownValue("echo.gcp_key", tfjsonpath.New("data").AtMapKey("private_key_type"), knownvalue.StringExact("TYPE_GOOGLE_CREDENTIALS_FILE")),
+				},
 			},
 		},
 	})
