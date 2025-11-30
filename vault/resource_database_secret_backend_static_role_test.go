@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -440,13 +441,14 @@ func TestAccDatabaseSecretBackendStaticRole_OracleSelfManaged(t *testing.T) {
 	}
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	username := acctest.RandomWithPrefix("USER")
+	user := acctest.RandomWithPrefix("USR")
 	password := "StaticUserPass123"
 	dbName := acctest.RandomWithPrefix("db")
 	name := acctest.RandomWithPrefix("staticrole")
 	resourceName := "vault_database_secret_backend_static_role.test"
 
 	// Try to create static database user, but allow test to continue if it fails
+	username := strings.ReplaceAll(user, "-", "_")
 	if err := createOracleTestUser(connURLTest, username, password); err != nil {
 		t.Logf("Warning: Failed to create Oracle user (might already exist): %v", err)
 	}
@@ -497,8 +499,8 @@ func TestAccDatabaseSecretBackendStaticRole_OraclePasswordWO(t *testing.T) {
 	}
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	username1 := acctest.RandomWithPrefix("USER")
-	username2 := acctest.RandomWithPrefix("USER")
+	username1 := acctest.RandomWithPrefix("USR")
+	username2 := acctest.RandomWithPrefix("USR")
 	password1 := "TestPass123"
 	password2 := "TestPass456"
 	dbName := acctest.RandomWithPrefix("db")
