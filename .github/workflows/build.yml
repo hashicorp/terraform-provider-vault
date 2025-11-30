@@ -330,14 +330,15 @@ jobs:
           # Download Oracle database plugin
           wget -q "https://releases.hashicorp.com/vault-plugin-database-oracle/${ORACLE_PLUGIN_VERSION}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip"
           
-          # Extract and place in workspace plugins directory (mounted as /vault/plugins in Vault container)
-          unzip -q "vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip" -d /tmp
+          # Create versioned plugin directory
+          PLUGIN_DIR="${{ github.workspace }}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
+          mkdir -p "$PLUGIN_DIR"
           
-          # Rename plugin binary with version suffix as Vault expects
-          mv /tmp/vault-plugin-database-oracle "${{ github.workspace }}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
+          # Extract plugin to the versioned directory
+          unzip -q "vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip" -d "$PLUGIN_DIR"
           
-          # Make plugin executable
-          chmod +x "${{ github.workspace }}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
+          # Make plugin binary executable
+          chmod +x "$PLUGIN_DIR/vault-plugin-database-oracle"
           
           # Wait for Vault to be ready
           sleep 5
