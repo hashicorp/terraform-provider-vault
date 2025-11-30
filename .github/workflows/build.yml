@@ -330,19 +330,22 @@ jobs:
           # Download Oracle database plugin
           wget -q "https://releases.hashicorp.com/vault-plugin-database-oracle/${ORACLE_PLUGIN_VERSION}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip"
           
-          # Extract plugin to workspace (shared with Vault container via volume)
-          unzip -q "vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip" -d "${{ github.workspace }}"
+          # Extract and place in workspace plugins directory (mounted as /vault/plugins in Vault container)
+          unzip -q "vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip" -d /tmp
+          
+          # Rename plugin binary with version suffix as Vault expects
+          mv /tmp/vault-plugin-database-oracle "${{ github.workspace }}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
           
           # Make plugin executable
-          chmod +x "${{ github.workspace }}/vault-plugin-database-oracle"
+          chmod +x "${{ github.workspace }}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
           
           # Wait for Vault to be ready
           sleep 5
           
           # Register the Oracle plugin with Vault using HTTP API
-          curl -s -X POST \
+          curl -s -X PUT \
             -H "X-Vault-Token: ${VAULT_TOKEN}" \
-            -d "{\"version\": \"${ORACLE_PLUGIN_VERSION}\"}" \
+            -d "{\"version\": \"${ORACLE_PLUGIN_VERSION}\", \"command\": \"vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64\"}" \
             "${VAULT_ADDR}/v1/sys/plugins/catalog/database/vault-plugin-database-oracle"
           
           # Verify plugin is registered
