@@ -339,6 +339,24 @@ jobs:
           # Verify installation
           ls -la /opt/oracle/instantclient_19_29/libclntsh.so
 
+      - name: Register Oracle Plugin with Vault
+        env:
+          VAULT_ADDR: "http://localhost:8200"
+          VAULT_TOKEN: "root"
+        run: |
+          # Wait for Vault to be ready
+          sleep 5
+          
+          # Register the Oracle database plugin
+          curl -X POST \
+            "${VAULT_ADDR}/v1/sys/plugins/catalog/database/vault-plugin-database-oracle" \
+            -H "X-Vault-Token: ${VAULT_TOKEN}" \
+            -d '{
+              "command": "vault-plugin-database-oracle",
+              "sha256": "'$(sha256sum "${{ github.workspace }}/vault-plugin-database-oracle" | cut -d' ' -f1)'",
+              "version": "0.13.0+ent"
+            }'
+
       - name: Cache go build
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
