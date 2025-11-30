@@ -339,13 +339,15 @@ jobs:
           # Wait for Vault to be ready
           sleep 5
           
-          # Register the Oracle plugin with Vault
-          vault plugin register \
-            -version="${ORACLE_PLUGIN_VERSION}" \
-            database vault-plugin-database-oracle
+          # Register the Oracle plugin with Vault using HTTP API
+          curl -s -X POST \
+            -H "X-Vault-Token: ${VAULT_TOKEN}" \
+            -d "{\"version\": \"${ORACLE_PLUGIN_VERSION}\"}" \
+            "${VAULT_ADDR}/v1/sys/plugins/catalog/database/vault-plugin-database-oracle"
           
           # Verify plugin is registered
-          vault plugin list database | grep oracle
+          curl -s -H "X-Vault-Token: ${VAULT_TOKEN}" \
+            "${VAULT_ADDR}/v1/sys/plugins/catalog/database" | grep -q "vault-plugin-database-oracle" && echo "Oracle plugin registered successfully"
 
       - name: Cache go build
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
