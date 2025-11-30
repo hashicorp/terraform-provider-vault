@@ -395,23 +395,23 @@ func createOracleTestUser(connURL, username, password string) error {
 	}
 
 	// Drop user if exists (cleanup from previous runs)
-	_, _ = db.ExecContext(ctx, fmt.Sprintf("DROP USER %s CASCADE", username))
-
-	// Create the user
-	_, err = db.ExecContext(ctx, fmt.Sprintf("CREATE USER %s IDENTIFIED BY %s ACCOUNT UNLOCK", username, password))
+	_, _ = db.ExecContext(ctx, "DROP USER "+username+" CASCADE")
+	// Create user
+	createSQL := "CREATE USER " + username + " IDENTIFIED BY " + password + " ACCOUNT UNLOCK"
+	_, err = db.ExecContext(ctx, createSQL)
 	if err != nil {
-		return fmt.Errorf("failed to create Oracle user: %w", err)
+		return fmt.Errorf("failed to create Oracle user (SQL: %s): %w", createSQL, err)
 	}
 
 	// Grant comprehensive privileges
 	grants := []string{
-		fmt.Sprintf("GRANT CREATE USER TO %s WITH ADMIN OPTION", username),
-		fmt.Sprintf("GRANT ALTER USER TO %s WITH ADMIN OPTION", username),
-		fmt.Sprintf("GRANT DROP USER TO %s WITH ADMIN OPTION", username),
-		fmt.Sprintf("GRANT CONNECT TO %s WITH ADMIN OPTION", username),
-		fmt.Sprintf("GRANT CREATE SESSION TO %s WITH ADMIN OPTION", username),
-		fmt.Sprintf("GRANT RESOURCE TO %s", username),
-		fmt.Sprintf("GRANT ALTER SYSTEM TO %s WITH ADMIN OPTION", username),
+		"GRANT CREATE USER TO " + username + " WITH ADMIN OPTION",
+		"GRANT ALTER USER TO " + username + " WITH ADMIN OPTION",
+		"GRANT DROP USER TO " + username + " WITH ADMIN OPTION",
+		"GRANT CONNECT TO " + username + " WITH ADMIN OPTION",
+		"GRANT CREATE SESSION TO " + username + " WITH ADMIN OPTION",
+		"GRANT RESOURCE TO " + username,
+		"GRANT ALTER SYSTEM TO " + username + " WITH ADMIN OPTION",
 	}
 
 	for _, grant := range grants {
