@@ -307,7 +307,11 @@ jobs:
           PLUGIN_DIR="vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
           mkdir -p "${{ github.workspace }}/${PLUGIN_DIR}"
           unzip -q "${ORACLE_ZIP}" -d "${{ github.workspace }}/${PLUGIN_DIR}"
-          chmod +x "${{ github.workspace }}/${PLUGIN_DIR}/${ORACLE_PLUGIN}"
+          
+          # Set proper permissions for Vault to read (755 for directory, 644 for files, 755 for binary)
+          chmod 755 "${{ github.workspace }}/${PLUGIN_DIR}"
+          chmod 755 "${{ github.workspace }}/${PLUGIN_DIR}/${ORACLE_PLUGIN}"
+          chmod 644 "${{ github.workspace }}/${PLUGIN_DIR}/"*.json* 2>/dev/null || true
           
           # Output command for use in tests
           echo "command=${ORACLE_PLUGIN}" >> "${GITHUB_OUTPUT}"
