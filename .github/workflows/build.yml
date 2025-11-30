@@ -291,6 +291,26 @@ jobs:
           unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
+      - name: Download Oracle database plugin
+        id: oracle_plugin
+        env:
+          ORACLE_PLUGIN: "vault-plugin-database-oracle"
+          ORACLE_PLUGIN_VERSION: "0.13.0+ent"
+        run: |
+          # Download Oracle plugin
+          ORACLE_ZIP="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip"
+          ORACLE_SHA256SUMS="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_SHA256SUMS"
+          wget -q "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_ZIP}"
+          wget -q "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_SHA256SUMS}"
+          shasum -a 256 -c "${ORACLE_SHA256SUMS}" --ignore-missing
+          
+          # Extract to workspace root (same as JWT plugin)
+          unzip -q "${ORACLE_ZIP}" -d "${{ github.workspace }}"
+          chmod +x "${{ github.workspace }}/${ORACLE_PLUGIN}"
+          
+          # Output command for use in tests
+          echo "command=${ORACLE_PLUGIN}" >> "${GITHUB_OUTPUT}"
+
       - name: Install Oracle Instant Client
         run: |
           # Create directory for Oracle Instant Client
@@ -318,51 +338,6 @@ jobs:
           
           # Verify installation
           ls -la /opt/oracle/instantclient_19_29/libclntsh.so
-
-      - name: Download and register Oracle database plugin
-        env:
-          VAULT_TOKEN: "root"
-          VAULT_ADDR: "http://localhost:8200"
-          ORACLE_PLUGIN_VERSION: "0.13.0+ent"
-        run: |
-          cd /tmp
-          
-          # Download Oracle database plugin and checksums
-          wget -q "https://releases.hashicorp.com/vault-plugin-database-oracle/${ORACLE_PLUGIN_VERSION}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip"
-          wget -q "https://releases.hashicorp.com/vault-plugin-database-oracle/${ORACLE_PLUGIN_VERSION}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_SHA256SUMS"
-          
-          # Create versioned plugin directory
-          PLUGIN_DIR="${{ github.workspace }}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
-          mkdir -p "$PLUGIN_DIR"
-          
-          # Extract plugin to the versioned directory
-          unzip -q "vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip" -d "$PLUGIN_DIR"
-          
-          chmod -R 755 "$PLUGIN_DIR"
-          chmod +x "$PLUGIN_DIR/vault-plugin-database-oracle"
-          
-          # Extract SHA256 hash for the binary
-          SHA256=$(grep -oP 'vault-plugin-database-oracle_\S+_linux_amd64\.zip\s+\K\S+' "vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_SHA256SUMS" || echo "")
-          
-          # Wait for Vault to be ready
-          sleep 5
-          
-          # Register the Oracle plugin with Vault using HTTP API
-          if [ -n "$SHA256" ]; then
-            curl -s -X PUT \
-              -H "X-Vault-Token: ${VAULT_TOKEN}" \
-              -d "{\"version\": \"${ORACLE_PLUGIN_VERSION}\", \"sha256\": \"${SHA256}\"}" \
-              "${VAULT_ADDR}/v1/sys/plugins/catalog/database/vault-plugin-database-oracle"
-          else
-            curl -s -X PUT \
-              -H "X-Vault-Token: ${VAULT_TOKEN}" \
-              -d "{\"version\": \"${ORACLE_PLUGIN_VERSION}\"}" \
-              "${VAULT_ADDR}/v1/sys/plugins/catalog/database/vault-plugin-database-oracle"
-          fi
-          
-          # Verify plugin is registered
-          curl -s -H "X-Vault-Token: ${VAULT_TOKEN}" \
-            "${VAULT_ADDR}/v1/sys/plugins/catalog/database" | grep -q "vault-plugin-database-oracle" && echo "Oracle plugin registered successfully"
 
       - name: Cache go build
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
@@ -418,6 +393,7 @@ jobs:
           # service URL of accessible from the Vault container
           LDAP_URL: "ldap://openldap:389"
           VAULT_PLUGIN_COMMAND: ${{ steps.plugin.outputs.command }}
+          ORACLE_PLUGIN_COMMAND: ${{ steps.oracle_plugin.outputs.command }}
         run: |
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
             target="testacc-ent"
