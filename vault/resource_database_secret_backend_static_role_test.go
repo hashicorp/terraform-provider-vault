@@ -453,7 +453,6 @@ func TestAccDatabaseSecretBackendStaticRole_OracleSelfManaged(t *testing.T) {
 		t.Logf("Warning: Failed to create Oracle user (might already exist): %v", err)
 	}
 
-	testProvider := Provider()
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
@@ -515,7 +514,6 @@ func TestAccDatabaseSecretBackendStaticRole_OraclePasswordWO(t *testing.T) {
 		t.Logf("Warning: Failed to create Oracle user %s: %v", username2, err)
 	}
 
-	testProvider := Provider()
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
