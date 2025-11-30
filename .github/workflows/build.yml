@@ -327,8 +327,9 @@ jobs:
         run: |
           cd /tmp
           
-          # Download Oracle database plugin
+          # Download Oracle database plugin and checksums
           wget -q "https://releases.hashicorp.com/vault-plugin-database-oracle/${ORACLE_PLUGIN_VERSION}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip"
+          wget -q "https://releases.hashicorp.com/vault-plugin-database-oracle/${ORACLE_PLUGIN_VERSION}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_SHA256SUMS"
           
           # Create versioned plugin directory
           PLUGIN_DIR="${{ github.workspace }}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
@@ -340,14 +341,24 @@ jobs:
           chmod -R 755 "$PLUGIN_DIR"
           chmod +x "$PLUGIN_DIR/vault-plugin-database-oracle"
           
+          # Extract SHA256 hash for the binary
+          SHA256=$(grep -oP 'vault-plugin-database-oracle_\S+_linux_amd64\.zip\s+\K\S+' "vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_SHA256SUMS" || echo "")
+          
           # Wait for Vault to be ready
           sleep 5
           
           # Register the Oracle plugin with Vault using HTTP API
-          curl -s -X PUT \
-            -H "X-Vault-Token: ${VAULT_TOKEN}" \
-            -d "{\"version\": \"${ORACLE_PLUGIN_VERSION}\", \"command\": \"vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64\"}" \
-            "${VAULT_ADDR}/v1/sys/plugins/catalog/database/vault-plugin-database-oracle"
+          if [ -n "$SHA256" ]; then
+            curl -s -X PUT \
+              -H "X-Vault-Token: ${VAULT_TOKEN}" \
+              -d "{\"version\": \"${ORACLE_PLUGIN_VERSION}\", \"sha256\": \"${SHA256}\"}" \
+              "${VAULT_ADDR}/v1/sys/plugins/catalog/database/vault-plugin-database-oracle"
+          else
+            curl -s -X PUT \
+              -H "X-Vault-Token: ${VAULT_TOKEN}" \
+              -d "{\"version\": \"${ORACLE_PLUGIN_VERSION}\"}" \
+              "${VAULT_ADDR}/v1/sys/plugins/catalog/database/vault-plugin-database-oracle"
+          fi
           
           # Verify plugin is registered
           curl -s -H "X-Vault-Token: ${VAULT_TOKEN}" \
