@@ -316,24 +316,27 @@ jobs:
           # Copy plugin directory into the Vault container
           docker cp "${PLUGIN_DIR}" "${VAULT_CONTAINER}:/vault/plugins/"
           
+          # Create wrapper script with LD_LIBRARY_PATH
+          docker exec "${VAULT_CONTAINER}" sh -c "echo '#!/bin/sh' > /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh"
+          docker exec "${VAULT_CONTAINER}" sh -c "echo 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:\$LD_LIBRARY_PATH' >> /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh"
+          docker exec "${VAULT_CONTAINER}" sh -c "echo 'exec /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} \"\$@\"' >> /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh"
+          
           # Set permissions inside container
           docker exec "${VAULT_CONTAINER}" sh -c "chmod 755 /vault/plugins/${PLUGIN_DIR}"
           docker exec "${VAULT_CONTAINER}" sh -c "chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}"
+          docker exec "${VAULT_CONTAINER}" sh -c "chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh"
           docker exec "${VAULT_CONTAINER}" sh -c "chmod 644 /vault/plugins/${PLUGIN_DIR}/*.json* 2>/dev/null || true"
           
-          # Verify the plugin binary can be executed
-          echo "Verifying plugin binary..."
-          docker exec "${VAULT_CONTAINER}" sh -c "ls -la /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}"
-          docker exec -e LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29 \
-            "${VAULT_CONTAINER}" \
-            sh -c "ldd /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} 2>&1 || echo 'Note: ldd check skipped'"
+          # Verify the wrapper script
+          echo "Wrapper script content:"
+          docker exec "${VAULT_CONTAINER}" cat "/vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh"
           
-          # Register the plugin using vault CLI inside the container
+          # Register the plugin using the wrapper script
           docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN=root \
-            -e LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29 \
             "${VAULT_CONTAINER}" \
             vault plugin register \
               -version="${ORACLE_PLUGIN_VERSION}" \
+              -command="${ORACLE_PLUGIN}-wrapper.sh" \
               database \
               "${ORACLE_PLUGIN}"
           
