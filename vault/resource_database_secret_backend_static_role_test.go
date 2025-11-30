@@ -382,11 +382,10 @@ func createTestUser(connURL, username string) error {
 }
 
 func createOracleTestUser(connURL, username, password string) error {
-	// Direct connection to Oracle database
 	ctx := context.Background()
 	db, err := sql.Open("oracle", connURL)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open Oracle connection: %w", err)
 	}
 	defer db.Close()
 
@@ -401,10 +400,10 @@ func createOracleTestUser(connURL, username, password string) error {
 	// Create the user
 	_, err = db.ExecContext(ctx, fmt.Sprintf("CREATE USER %s IDENTIFIED BY %s ACCOUNT UNLOCK", username, password))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create Oracle user: %w", err)
 	}
 
-	// Grant comprehensive privileges to prevent account locking
+	// Grant comprehensive privileges
 	grants := []string{
 		fmt.Sprintf("GRANT CREATE USER TO %s WITH ADMIN OPTION", username),
 		fmt.Sprintf("GRANT ALTER USER TO %s WITH ADMIN OPTION", username),
@@ -417,7 +416,7 @@ func createOracleTestUser(connURL, username, password string) error {
 
 	for _, grant := range grants {
 		if _, err := db.ExecContext(ctx, grant); err != nil {
-			return fmt.Errorf("failed to grant privileges: %w", err)
+			return fmt.Errorf("failed to execute grant %q: %w", grant, err)
 		}
 	}
 

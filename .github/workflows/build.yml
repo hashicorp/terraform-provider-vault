@@ -380,7 +380,7 @@ jobs:
           # the oracle container so that it can create static users.
           # Note: the host is "localhost" because the TFVP tests do not run in
           # the same docker network.
-          ORACLE_URL_TEST: "system/OraclePassword123@localhost:1521/XEPDB1"
+          ORACLE_URL_TEST: "oracle://system:OraclePassword123@localhost:1521/XEPDB1"
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
