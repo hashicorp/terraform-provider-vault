@@ -301,9 +301,9 @@ jobs:
           wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
           wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip
           
-          # Extract to /opt/oracle
-          sudo unzip -q instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
-          sudo unzip -q instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
+          # Extract to /opt/oracle (with -o flag to overwrite without prompting)
+          sudo unzip -q -o instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
+          sudo unzip -q -o instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
           
           # Create symlink for libclntsh.so
           cd /opt/oracle/instantclient_19_29
@@ -328,20 +328,20 @@ jobs:
           cd /tmp
           
           # Download Oracle database plugin
-          wget -q https://releases.hashicorp.com/vault-plugin-database-oracle/${ORACLE_PLUGIN_VERSION}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip
+          wget -q "https://releases.hashicorp.com/vault-plugin-database-oracle/${ORACLE_PLUGIN_VERSION}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip"
           
           # Extract plugin to workspace (shared with Vault container via volume)
-          unzip -q vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip -d ${{ github.workspace }}
+          unzip -q "vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip" -d "${{ github.workspace }}"
           
           # Make plugin executable
-          chmod +x ${{ github.workspace }}/vault-plugin-database-oracle
+          chmod +x "${{ github.workspace }}/vault-plugin-database-oracle"
           
           # Wait for Vault to be ready
           sleep 5
           
           # Register the Oracle plugin with Vault
           vault plugin register \
-            -version=${ORACLE_PLUGIN_VERSION} \
+            -version="${ORACLE_PLUGIN_VERSION}" \
             database vault-plugin-database-oracle
           
           # Verify plugin is registered
