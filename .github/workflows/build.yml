@@ -368,6 +368,34 @@ jobs:
           unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
+      - name: Install Oracle Instant Client on runner
+        run: |
+          # Create directory for Oracle Instant Client
+          sudo mkdir -p /opt/oracle
+          cd /tmp
+          
+          # Download Oracle Instant Client (basic and SDK)
+          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
+          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip
+          
+          # Extract to /opt/oracle
+          sudo unzip -q -o instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
+          sudo unzip -q -o instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
+          
+          # Create symlink for libclntsh.so
+          cd /opt/oracle/instantclient_19_29
+          sudo ln -sf libclntsh.so.19.1 libclntsh.so
+          
+          # Install libnsl (required dependency)
+          sudo apt-get update && sudo apt-get install -y libnsl2
+          
+          # Configure ldconfig to find Oracle libraries
+          echo '/opt/oracle/instantclient_19_29' | sudo tee /etc/ld.so.conf.d/oracle.conf
+          sudo ldconfig
+          
+          # Verify installation
+          ls -la /opt/oracle/instantclient_19_29/libclntsh.so
+
       - name: Cache go build
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
