@@ -337,7 +337,7 @@ jobs:
           # Extract plugin to the versioned directory
           unzip -q "vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip" -d "$PLUGIN_DIR"
           
-          # Make plugin binary executable
+          chmod -R 755 "$PLUGIN_DIR"
           chmod +x "$PLUGIN_DIR/vault-plugin-database-oracle"
           
           # Wait for Vault to be ready
