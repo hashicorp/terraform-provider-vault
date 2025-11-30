@@ -280,6 +280,23 @@ jobs:
           
           echo "Found Vault container: $VAULT_CONTAINER"
           
+          # Install Oracle Instant Client in the Vault container
+          echo "Installing Oracle Instant Client in Vault container..."
+          docker exec "${VAULT_CONTAINER}" sh -c "
+            apk add --no-cache wget unzip libnsl libaio && \
+            cd /tmp && \
+            wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip && \
+            mkdir -p /opt/oracle && \
+            unzip -q instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/ && \
+            ln -s /opt/oracle/instantclient_19_29/libclntsh.so.19.1 /opt/oracle/instantclient_19_29/libclntsh.so && \
+            echo '/opt/oracle/instantclient_19_29' > /etc/ld.so.conf.d/oracle.conf && \
+            ldconfig 2>/dev/null || true && \
+            rm -f /tmp/*.zip
+          "
+          
+          # Set LD_LIBRARY_PATH for Oracle libraries
+          export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:\$LD_LIBRARY_PATH
+          
           # Download Oracle plugin on the runner
           cd /tmp
           ORACLE_PLUGIN="vault-plugin-database-oracle"
@@ -304,8 +321,16 @@ jobs:
           docker exec "${VAULT_CONTAINER}" sh -c "chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}"
           docker exec "${VAULT_CONTAINER}" sh -c "chmod 644 /vault/plugins/${PLUGIN_DIR}/*.json* 2>/dev/null || true"
           
+          # Verify the plugin binary can be executed
+          echo "Verifying plugin binary..."
+          docker exec "${VAULT_CONTAINER}" sh -c "ls -la /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}"
+          docker exec -e LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29 \
+            "${VAULT_CONTAINER}" \
+            sh -c "ldd /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} 2>&1 || echo 'Note: ldd check skipped'"
+          
           # Register the plugin using vault CLI inside the container
           docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN=root \
+            -e LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29 \
             "${VAULT_CONTAINER}" \
             vault plugin register \
               -version="${ORACLE_PLUGIN_VERSION}" \
@@ -342,34 +367,6 @@ jobs:
           shasum -a 256 -c "${PLUGIN}_${VERSION}_SHA256SUMS" --ignore-missing
           unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
-
-      - name: Install Oracle Instant Client on runner
-        run: |
-          # Create directory for Oracle Instant Client
-          sudo mkdir -p /opt/oracle
-          cd /tmp
-          
-          # Download Oracle Instant Client (basic and SDK)
-          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
-          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip
-          
-          # Extract to /opt/oracle
-          sudo unzip -q -o instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
-          sudo unzip -q -o instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
-          
-          # Create symlink for libclntsh.so
-          cd /opt/oracle/instantclient_19_29
-          sudo ln -sf libclntsh.so.19.1 libclntsh.so
-          
-          # Install libnsl (required dependency)
-          sudo apt-get update && sudo apt-get install -y libnsl2
-          
-          # Configure ldconfig to find Oracle libraries
-          echo '/opt/oracle/instantclient_19_29' | sudo tee /etc/ld.so.conf.d/oracle.conf
-          sudo ldconfig
-          
-          # Verify installation
-          ls -la /opt/oracle/instantclient_19_29/libclntsh.so
 
       - name: Cache go build
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
