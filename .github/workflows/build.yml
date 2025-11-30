@@ -304,9 +304,10 @@ jobs:
           wget -q "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_SHA256SUMS}"
           shasum -a 256 -c "${ORACLE_SHA256SUMS}" --ignore-missing
           
-          # Extract to workspace root (same as JWT plugin)
-          unzip -q "${ORACLE_ZIP}" -d "${{ github.workspace }}"
-          chmod +x "${{ github.workspace }}/${ORACLE_PLUGIN}"
+          PLUGIN_DIR="vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
+          mkdir -p "${{ github.workspace }}/${PLUGIN_DIR}"
+          unzip -q "${ORACLE_ZIP}" -d "${{ github.workspace }}/${PLUGIN_DIR}"
+          chmod +x "${{ github.workspace }}/${PLUGIN_DIR}/${ORACLE_PLUGIN}"
           
           # Output command for use in tests
           echo "command=${ORACLE_PLUGIN}" >> "${GITHUB_OUTPUT}"
