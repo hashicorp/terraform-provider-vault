@@ -1,12 +1,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -15,9 +16,9 @@ import (
 func TestAccCertAuthBackendConfig_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("cert")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckCertAuthBackendConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckCertAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCertAuthBackendConfig_basic(backend),
@@ -35,9 +36,9 @@ func TestAccCertAuthBackendConfig_import(t *testing.T) {
 func TestAccCertAuthBackendConfig_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("cert")
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccCheckCertAuthBackendConfigDestroy,
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckCertAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCertAuthBackendConfig_basic(backend),
