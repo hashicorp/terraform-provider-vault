@@ -12,7 +12,7 @@ env:
 
 jobs:
   go-version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest 
     outputs:
       version: ${{ steps.go-version.outputs.version }}
     steps:
@@ -266,6 +266,58 @@ jobs:
         run:
           sudo apt-get install -y ldap-utils
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      
+      - name: Download and register Oracle plugin in existing Vault container
+        run: |
+          # Get the Vault service container ID
+          VAULT_CONTAINER=$(docker ps --filter "name=vault" --filter "ancestor=hashicorp/${{ matrix.image }}" --format "{{.ID}}" | head -n1)
+          
+          if [ -z "$VAULT_CONTAINER" ]; then
+            echo "ERROR: Could not find Vault service container"
+            docker ps
+            exit 1
+          fi
+          
+          echo "Found Vault container: $VAULT_CONTAINER"
+          
+          # Download Oracle plugin on the runner
+          cd /tmp
+          ORACLE_PLUGIN="vault-plugin-database-oracle"
+          ORACLE_PLUGIN_VERSION="0.13.0+ent"
+          ORACLE_ZIP="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip"
+          ORACLE_SHA256SUMS="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_SHA256SUMS"
+          
+          wget -q "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_ZIP}"
+          wget -q "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_SHA256SUMS}"
+          shasum -a 256 -c "${ORACLE_SHA256SUMS}" --ignore-missing
+          
+          # Extract plugin
+          PLUGIN_DIR="vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
+          mkdir -p "${PLUGIN_DIR}"
+          unzip -q "${ORACLE_ZIP}" -d "${PLUGIN_DIR}"
+          
+          # Copy plugin directory into the Vault container
+          docker cp "${PLUGIN_DIR}" "${VAULT_CONTAINER}:/vault/plugins/"
+          
+          # Set permissions inside container
+          docker exec "${VAULT_CONTAINER}" sh -c "chmod 755 /vault/plugins/${PLUGIN_DIR}"
+          docker exec "${VAULT_CONTAINER}" sh -c "chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}"
+          docker exec "${VAULT_CONTAINER}" sh -c "chmod 644 /vault/plugins/${PLUGIN_DIR}/*.json* 2>/dev/null || true"
+          
+          # Register the plugin using vault CLI inside the container
+          docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN=root \
+            "${VAULT_CONTAINER}" \
+            vault plugin register \
+              -version="${ORACLE_PLUGIN_VERSION}" \
+              database \
+              "${ORACLE_PLUGIN}"
+          
+          # Verify registration
+          echo "Verifying Oracle plugin registration..."
+          docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN=root \
+            "${VAULT_CONTAINER}" \
+            vault plugin list database | grep oracle || echo "Warning: Plugin not visible in listing"
+      
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version-file: '.go-version'
@@ -291,32 +343,7 @@ jobs:
           unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
-      - name: Download Oracle database plugin
-        id: oracle_plugin
-        env:
-          ORACLE_PLUGIN: "vault-plugin-database-oracle"
-          ORACLE_PLUGIN_VERSION: "0.13.0+ent"
-        run: |
-          # Download Oracle plugin
-          ORACLE_ZIP="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip"
-          ORACLE_SHA256SUMS="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_SHA256SUMS"
-          wget -q "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_ZIP}"
-          wget -q "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_SHA256SUMS}"
-          shasum -a 256 -c "${ORACLE_SHA256SUMS}" --ignore-missing
-          
-          PLUGIN_DIR="vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
-          mkdir -p "${{ github.workspace }}/${PLUGIN_DIR}"
-          unzip -q "${ORACLE_ZIP}" -d "${{ github.workspace }}/${PLUGIN_DIR}"
-          
-          # Set proper permissions for Vault to read (755 for directory, 644 for files, 755 for binary)
-          chmod 755 "${{ github.workspace }}/${PLUGIN_DIR}"
-          chmod 755 "${{ github.workspace }}/${PLUGIN_DIR}/${ORACLE_PLUGIN}"
-          chmod 644 "${{ github.workspace }}/${PLUGIN_DIR}/"*.json* 2>/dev/null || true
-          
-          # Output command for use in tests
-          echo "command=${ORACLE_PLUGIN}" >> "${GITHUB_OUTPUT}"
-
-      - name: Install Oracle Instant Client
+      - name: Install Oracle Instant Client on runner
         run: |
           # Create directory for Oracle Instant Client
           sudo mkdir -p /opt/oracle
@@ -326,7 +353,7 @@ jobs:
           wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
           wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip
           
-          # Extract to /opt/oracle (with -o flag to overwrite without prompting)
+          # Extract to /opt/oracle
           sudo unzip -q -o instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
           sudo unzip -q -o instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
           
@@ -398,7 +425,6 @@ jobs:
           # service URL of accessible from the Vault container
           LDAP_URL: "ldap://openldap:389"
           VAULT_PLUGIN_COMMAND: ${{ steps.plugin.outputs.command }}
-          ORACLE_PLUGIN_COMMAND: ${{ steps.oracle_plugin.outputs.command }}
         run: |
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
             target="testacc-ent"
