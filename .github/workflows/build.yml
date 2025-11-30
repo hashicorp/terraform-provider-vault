@@ -250,6 +250,17 @@ jobs:
           --health-interval 1s
           --health-timeout 30s
           --health-retries 30
+      oracle:
+        image: gvenzl/oracle-xe:21-slim
+        env:
+          ORACLE_PASSWORD: OraclePassword123
+        ports:
+          - 1521:1521
+        options: >-
+          --health-cmd "healthcheck.sh"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - name: install ldap utils
         run:
@@ -280,6 +291,62 @@ jobs:
           unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
+      - name: Install Oracle Instant Client
+        run: |
+          # Create directory for Oracle Instant Client
+          sudo mkdir -p /opt/oracle
+          cd /tmp
+          
+          # Download Oracle Instant Client (basic and SDK)
+          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
+          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip
+          
+          # Extract to /opt/oracle
+          sudo unzip -q instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
+          sudo unzip -q instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
+          
+          # Create symlink for libclntsh.so
+          cd /opt/oracle/instantclient_19_29
+          sudo ln -sf libclntsh.so.19.1 libclntsh.so
+          
+          # Install libnsl (required dependency)
+          sudo apt-get update && sudo apt-get install -y libnsl2
+          
+          # Configure ldconfig to find Oracle libraries
+          echo '/opt/oracle/instantclient_19_29' | sudo tee /etc/ld.so.conf.d/oracle.conf
+          sudo ldconfig
+          
+          # Verify installation
+          ls -la /opt/oracle/instantclient_19_29/libclntsh.so
+
+      - name: Download and register Oracle database plugin
+        env:
+          VAULT_TOKEN: "root"
+          VAULT_ADDR: "http://localhost:8200"
+          ORACLE_PLUGIN_VERSION: "0.13.0+ent"
+        run: |
+          cd /tmp
+          
+          # Download Oracle database plugin
+          wget -q https://releases.hashicorp.com/vault-plugin-database-oracle/${ORACLE_PLUGIN_VERSION}/vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip
+          
+          # Extract plugin to workspace (shared with Vault container via volume)
+          unzip -q vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip -d ${{ github.workspace }}
+          
+          # Make plugin executable
+          chmod +x ${{ github.workspace }}/vault-plugin-database-oracle
+          
+          # Wait for Vault to be ready
+          sleep 5
+          
+          # Register the Oracle plugin with Vault
+          vault plugin register \
+            -version=${ORACLE_PLUGIN_VERSION} \
+            database vault-plugin-database-oracle
+          
+          # Verify plugin is registered
+          vault plugin list database | grep oracle
+
       - name: Cache go build
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
@@ -297,6 +364,8 @@ jobs:
           VAULT_ADDR: "http://localhost:8200"
           # RUNS_IN_CONTAINER is false if not using jobs.<job_id>.container
           RUNS_IN_CONTAINER: "false"
+          TF_ACC: "1"
+          TF_ACC_ENTERPRISE: "1"
           MYSQL_URL: "root:mysql@tcp(mysql:3306)/"
           MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
           MYSQL_CONNECTION_USERNAME: "root"
@@ -313,6 +382,13 @@ jobs:
           # POSTGRES_URL_ROOTLESS is used by Vault to connect to the postgres
           # container for "rootless" static roles".
           POSTGRES_URL_ROOTLESS: "postgres://{{username}}:{{password}}@postgres:5432/database?sslmode=disable"
+          # ORACLE_URL is the standard root conn URL for Vault
+          ORACLE_URL: "system/OraclePassword123@oracle:1521/XEPDB1"
+          # ORACLE_URL_TEST is used by the TFVP test to connect directly to
+          # the oracle container so that it can create static users.
+          # Note: the host is "localhost" because the TFVP tests do not run in
+          # the same docker network.
+          ORACLE_URL_TEST: "system/OraclePassword123@localhost:1521/XEPDB1"
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
