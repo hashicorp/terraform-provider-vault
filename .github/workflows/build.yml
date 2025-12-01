@@ -269,82 +269,109 @@ jobs:
       
       - name: Download and register Oracle plugin in existing Vault container
         run: |
-          # Get the Vault service container ID
+          # Find the Vault service container
           VAULT_CONTAINER=$(docker ps --filter "name=vault" --filter "ancestor=hashicorp/${{ matrix.image }}" --format "{{.ID}}" | head -n1)
-          
           if [ -z "$VAULT_CONTAINER" ]; then
             echo "ERROR: Could not find Vault service container"
             docker ps
             exit 1
           fi
-          
-          echo "Found Vault container: $VAULT_CONTAINER"
-          
-          # Install Oracle Instant Client in the Vault container
-          echo "Installing Oracle Instant Client in Vault container..."
-          docker exec "${VAULT_CONTAINER}" sh -c "
-            apk add --no-cache wget unzip libnsl libaio && \
-            cd /tmp && \
-            wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip && \
-            mkdir -p /opt/oracle && \
-            unzip -q instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/ && \
-            ln -s /opt/oracle/instantclient_19_29/libclntsh.so.19.1 /opt/oracle/instantclient_19_29/libclntsh.so && \
-            echo '/opt/oracle/instantclient_19_29' > /etc/ld.so.conf.d/oracle.conf && \
-            ldconfig 2>/dev/null || true && \
+          echo "Vault container: $VAULT_CONTAINER"
+
+          # Wait for Vault to be healthy before registering plugin
+          echo "Waiting for Vault to become ready..."
+          for i in $(seq 1 30); do
+            if docker exec -e VAULT_ADDR="http://127.0.0.1:8200" "${VAULT_CONTAINER}" vault status >/dev/null 2>&1; then
+              echo "Vault is ready."
+              break
+            fi
+            sleep 2
+          done
+
+          # Install Oracle Instant Client in the Vault container (Debian/Ubuntu-based -ent images)
+          docker exec "${VAULT_CONTAINER}" bash -lc '
+            set -euo pipefail
+            apt-get update -y
+            DEBIAN_FRONTEND=noninteractive apt-get install -y wget unzip libnsl libaio
+            cd /tmp
+            wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
+            mkdir -p /opt/oracle
+            unzip -q instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
+            ln -sf /opt/oracle/instantclient_19_29/libclntsh.so.19.1 /opt/oracle/instantclient_19_29/libclntsh.so
+            echo "/opt/oracle/instantclient_19_29" > /etc/ld.so.conf.d/oracle.conf
+            ldconfig || true
             rm -f /tmp/*.zip
-          "
-          
-          # Set LD_LIBRARY_PATH for Oracle libraries
-          export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:\$LD_LIBRARY_PATH
-          
+          '
+
           # Download Oracle plugin on the runner
+          set -euo pipefail
           cd /tmp
           ORACLE_PLUGIN="vault-plugin-database-oracle"
           ORACLE_PLUGIN_VERSION="0.13.0+ent"
           ORACLE_ZIP="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip"
           ORACLE_SHA256SUMS="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_SHA256SUMS"
-          
+
           wget -q "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_ZIP}"
           wget -q "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_SHA256SUMS}"
           shasum -a 256 -c "${ORACLE_SHA256SUMS}" --ignore-missing
-          
-          # Extract plugin
+
+          # Extract plugin into versioned directory expected by Vault enterprise catalog
           PLUGIN_DIR="vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
+          rm -rf "${PLUGIN_DIR}"
           mkdir -p "${PLUGIN_DIR}"
           unzip -q "${ORACLE_ZIP}" -d "${PLUGIN_DIR}"
-          
+
           # Copy plugin directory into the Vault container
           docker cp "${PLUGIN_DIR}" "${VAULT_CONTAINER}:/vault/plugins/"
-          
-          # Create wrapper script with LD_LIBRARY_PATH
-          docker exec "${VAULT_CONTAINER}" sh -c "echo '#!/bin/sh' > /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh"
-          docker exec "${VAULT_CONTAINER}" sh -c "echo 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:\$LD_LIBRARY_PATH' >> /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh"
-          docker exec "${VAULT_CONTAINER}" sh -c "echo 'exec /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} \"\$@\"' >> /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh"
-          
-          # Set permissions inside container
-          docker exec "${VAULT_CONTAINER}" sh -c "chmod 755 /vault/plugins/${PLUGIN_DIR}"
-          docker exec "${VAULT_CONTAINER}" sh -c "chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}"
-          docker exec "${VAULT_CONTAINER}" sh -c "chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh"
-          docker exec "${VAULT_CONTAINER}" sh -c "chmod 644 /vault/plugins/${PLUGIN_DIR}/*.json* 2>/dev/null || true"
-          
-          # Verify the wrapper script
-          echo "Wrapper script content:"
-          docker exec "${VAULT_CONTAINER}" cat "/vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh"
-          
-          # Register the plugin using the wrapper script
-          docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN=root \
+
+          # Fix ownership and permissions inside container
+          docker exec "${VAULT_CONTAINER}" bash -lc "
+            set -e
+            chown -R vault:vault /vault/plugins/${PLUGIN_DIR}
+            chmod 755 /vault/plugins/${PLUGIN_DIR}
+            chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}
+            chmod 644 /vault/plugins/${PLUGIN_DIR}/"'"'"*.json*"'"'" 2>/dev/null || true
+          "
+
+          # Create wrapper that sets LD_LIBRARY_PATH for Instant Client
+          docker exec "${VAULT_CONTAINER}" bash -lc "
+            set -e
+            cat >/vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh <<'EOS'
+            #!/bin/sh
+            export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:\$LD_LIBRARY_PATH
+            exec /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} \"\$@\"
+            EOS
+            chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh
+            chown vault:vault /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh
+          "
+
+          # Diagnostics: OS and deps
+          echo "--- /etc/os-release ---"
+          docker exec "${VAULT_CONTAINER}" cat /etc/os-release || true
+
+          echo "--- file(1) plugin ---"
+          docker exec "${VAULT_CONTAINER}" bash -lc "file /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}" || true
+
+          echo "--- ldd plugin ---"
+          docker exec "${VAULT_CONTAINER}" bash -lc "ldd /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}" || true
+
+          echo "--- wrapper content ---"
+          docker exec "${VAULT_CONTAINER}" cat "/vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh" || true
+
+          # Register the plugin using vault CLI inside the container
+          docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN="root" \
             "${VAULT_CONTAINER}" \
             vault plugin register \
               -version="${ORACLE_PLUGIN_VERSION}" \
               -command="${ORACLE_PLUGIN}-wrapper.sh" \
               database \
               "${ORACLE_PLUGIN}"
-          
+
           # Verify registration
           echo "Verifying Oracle plugin registration..."
-          docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN=root \
+          docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN="root" \
             "${VAULT_CONTAINER}" \
-            vault plugin list database | grep oracle || echo "Warning: Plugin not visible in listing"
+            vault plugin list database | grep "${ORACLE_PLUGIN}" || (echo "Warning: Plugin not visible" && exit 1)
       
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
