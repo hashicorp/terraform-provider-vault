@@ -517,6 +517,11 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Required:    true,
 						Description: "The Project ID the Database User should be created within.",
 					},
+					"username_template": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Template describing how dynamic usernames are generated.",
+					},
 				},
 			},
 			MaxItems:      1,
@@ -1065,6 +1070,9 @@ func setMongoDBAtlasDatabaseConnectionData(d *schema.ResourceData, prefix string
 	}
 	if v, ok := d.GetOk(prefix + "project_id"); ok {
 		data["project_id"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
 	}
 }
 
@@ -2263,6 +2271,9 @@ func getConnectionDetailsMongoDBAtlas(d *schema.ResourceData, prefix string, res
 		if data, ok := details.(map[string]interface{}); ok {
 			for _, k := range []string{"public_key", "project_id"} {
 				result[k] = data[k]
+			}
+			if v, ok := data["username_template"]; ok {
+				result["username_template"] = v.(string)
 			}
 		}
 	}
