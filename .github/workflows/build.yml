@@ -12,7 +12,7 @@ env:
 
 jobs:
   go-version:
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.go-version.outputs.version }}
     steps:
@@ -153,9 +153,18 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.21.0-ent"
+        - "vault-enterprise:1.16.27-ent"
+        - "vault-enterprise:1.17.18-ent"
+        - "vault-enterprise:1.18.15-ent"
+        - "vault-enterprise:1.19.12-ent"
+        - "vault-enterprise:1.20.5-ent"
+        - "vault-enterprise:1.21.1-ent"
+        - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
+        - "1.12.2"
+        - "1.11.4"
+        #- "1.10.5" # tests do not seem to pass with this version set, skipping for now.
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -257,90 +266,6 @@ jobs:
         run:
           sudo apt-get install -y ldap-utils
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
-      
-      - name: Download and register Oracle plugin
-        run: |
-          # Find the Vault service container
-          VAULT_CONTAINER=$(docker ps --filter "name=vault" --filter "ancestor=hashicorp/${{ matrix.image }}" --format "{{.ID}}" | head -n1)
-          if [ -z "$VAULT_CONTAINER" ]; then
-            echo "ERROR: Could not find Vault service container"
-            docker ps
-            exit 1
-          fi
-          echo "Vault container: $VAULT_CONTAINER"
-
-          # Wait for Vault to be healthy before registering plugin
-          echo "Waiting for Vault to become ready..."
-          attempts=0
-          while [ "$attempts" -lt 30 ]; do
-            if docker exec -e VAULT_ADDR="http://127.0.0.1:8200" "$VAULT_CONTAINER" vault status >/dev/null 2>&1; then
-              echo "Vault is ready."
-              break
-            fi
-            sleep 2
-            attempts=$((attempts+1))
-          done
-
-          # Runner: Download Oracle plugin artifact and checksum
-          cd /tmp
-          ORACLE_PLUGIN="vault-plugin-database-oracle"
-          ORACLE_PLUGIN_VERSION="0.13.0+ent"
-          ORACLE_ZIP="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip"
-          ORACLE_SHA256SUMS="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_SHA256SUMS"
-
-          curl -sO "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_ZIP}"
-          curl -sO "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_SHA256SUMS}"
-          sha256sum -c "${ORACLE_SHA256SUMS}" --ignore-missing
-
-          PLUGIN_DIR="vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
-          rm -rf "${PLUGIN_DIR}" && mkdir -p "${PLUGIN_DIR}"
-          unzip -q "${ORACLE_ZIP}" -d "${PLUGIN_DIR}"
-
-          IC_VER_DIR="instantclient_19_29"
-          curl -sO https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
-          mkdir -p /tmp/opt/oracle
-          unzip -q instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /tmp/opt/oracle/
-          ln -sf /tmp/opt/oracle/${IC_VER_DIR}/libclntsh.so.19.1 /tmp/opt/oracle/${IC_VER_DIR}/libclntsh.so
-
-          docker cp "${PLUGIN_DIR}" "${VAULT_CONTAINER}:/vault/plugins/"
-          docker cp "/tmp/opt/oracle/${IC_VER_DIR}" "${VAULT_CONTAINER}:/opt/oracle/"
-
-          docker exec "${VAULT_CONTAINER}" sh -c "
-            chmod 755 /vault/plugins/${PLUGIN_DIR} && \
-            chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} && \
-            chmod 644 /vault/plugins/${PLUGIN_DIR}/"'""*.json*"'"" 2>/dev/null || true && \
-            { id vault >/dev/null 2>&1 && chown -R vault:vault /vault/plugins/${PLUGIN_DIR} || true; }
-          "
-
-          docker exec "${VAULT_CONTAINER}" sh -c "
-            mv /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}.real && \
-            printf '#!/bin/sh\nexport LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:\\$LD_LIBRARY_PATH\nexec /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}.real "\\$@"\n' > /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} && \
-            chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} && \
-            { id vault >/dev/null 2>&1 && chown vault:vault /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} || true; }
-          "
-
-          # Diagnostics
-          echo "--- /etc/os-release ---"
-          docker exec "${VAULT_CONTAINER}" cat /etc/os-release || true
-          echo "--- file(1) plugin ---"
-          docker exec "${VAULT_CONTAINER}" sh -c "file /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}" || true
-          echo "--- ldd plugin ---"
-          docker exec "${VAULT_CONTAINER}" sh -c "ldd /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}" || true
-
-          # Register the plugin inside the container (enterprise artifact; -command ignored)
-          docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN="root" \
-            "$VAULT_CONTAINER" \
-            vault plugin register \
-              -version="${ORACLE_PLUGIN_VERSION}" \
-              database \
-              "${ORACLE_PLUGIN}"
-
-          # Verify registration
-          echo "Verifying Oracle plugin registration..."
-          docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN="root" \
-            "$VAULT_CONTAINER" \
-            vault plugin list database | grep "${ORACLE_PLUGIN}" || (echo "Warning: Plugin not visible" && exit 1)
-      
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version-file: '.go-version'
@@ -366,34 +291,6 @@ jobs:
           unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
-      - name: Install Oracle Instant Client on runner
-        run: |
-          # Create directory for Oracle Instant Client
-          sudo mkdir -p /opt/oracle
-          cd /tmp
-          
-          # Download Oracle Instant Client (basic and SDK)
-          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
-          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip
-          
-          # Extract to /opt/oracle
-          sudo unzip -q -o instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
-          sudo unzip -q -o instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
-          
-          # Create symlink for libclntsh.so
-          cd /opt/oracle/instantclient_19_29
-          sudo ln -sf libclntsh.so.19.1 libclntsh.so
-          
-          # Install libnsl (required dependency)
-          sudo apt-get update && sudo apt-get install -y libnsl2
-          
-          # Configure ldconfig to find Oracle libraries
-          echo '/opt/oracle/instantclient_19_29' | sudo tee /etc/ld.so.conf.d/oracle.conf
-          sudo ldconfig
-          
-          # Verify installation
-          ls -la /opt/oracle/instantclient_19_29/libclntsh.so
-
       - name: Cache go build
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
@@ -405,6 +302,59 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-golang-
 
+      - name: Setup Oracle Client and Plugin
+        if: contains(matrix.image, '-ent')
+        run: |
+          # Get the container ID of the running Vault service
+          CONTAINER_ID=$(docker ps --filter "ancestor=hashicorp/${{ matrix.image }}" --format "{{.ID}}")
+          echo "Configuring Oracle in container: $CONTAINER_ID"
+          
+          # Install Oracle Libraries (Requires root)
+          docker exec -u 0 "$CONTAINER_ID" /bin/sh -c '
+            set -e
+            yum install -y wget unzip libnsl
+            mkdir -p /opt/oracle
+            cd /tmp
+            wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
+            wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip
+            unzip -o instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
+            unzip -o instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
+            cd /opt/oracle/instantclient_19_29
+            ln -sf libclntsh.so.19.1 libclntsh.so
+            echo "/opt/oracle/instantclient_19_29" > /etc/ld.so.conf.d/oracle.conf
+            ldconfig
+          '
+          
+          # Install and Register Plugin
+          # Note: Installation target is /vault/plugins because VAULT_LOCAL_CONFIG in services sets plugin_directory to /vault/plugins
+          docker exec -u 0 -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN="root" "$CONTAINER_ID" /bin/sh -c '
+            set -e
+            cd /tmp
+            wget -q https://releases.hashicorp.com/vault-plugin-database-oracle/0.13.0+ent/vault-plugin-database-oracle_0.13.0+ent_linux_amd64.zip
+            unzip -o vault-plugin-database-oracle_0.13.0+ent_linux_amd64.zip -d /vault/plugins/
+            chmod +x /vault/plugins/vault-plugin-database-oracle
+            
+            # Register the plugin
+            vault plugin register -version=0.13.0+ent vault-plugin-database-oracle
+          '
+
+      - name: Setup Oracle Client on Runner
+        if: contains(matrix.image, '-ent')
+        run: |
+          # Install dependencies for Ubuntu runner
+          sudo apt-get update && sudo apt-get install -y libaio1 libnsl
+          sudo mkdir -p /opt/oracle
+          cd /tmp
+          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
+          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip
+          sudo unzip -o instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
+          sudo unzip -o instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
+          cd /opt/oracle/instantclient_19_29
+          sudo ln -sf libclntsh.so.19.1 libclntsh.so
+          echo "/opt/oracle/instantclient_19_29" | sudo tee /etc/ld.so.conf.d/oracle.conf
+          sudo ldconfig
+          echo "LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"
@@ -413,6 +363,13 @@ jobs:
           RUNS_IN_CONTAINER: "false"
           TF_ACC: "1"
           TF_ACC_ENTERPRISE: "1"
+          # ORACLE_URL is the standard root conn URL for Vault
+          ORACLE_URL: "system/OraclePassword123@oracle:1521/XEPDB1"
+          # ORACLE_URL_TEST is used by the TFVP test to connect directly to
+          # the oracle container so that it can create static users.
+          # Note: the host is "localhost" because the TFVP tests do not run in
+          # the same docker network.
+          ORACLE_URL_TEST: "oracle://system:OraclePassword123@localhost:1521/XEPDB1"
           MYSQL_URL: "root:mysql@tcp(mysql:3306)/"
           MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
           MYSQL_CONNECTION_USERNAME: "root"
@@ -429,13 +386,6 @@ jobs:
           # POSTGRES_URL_ROOTLESS is used by Vault to connect to the postgres
           # container for "rootless" static roles".
           POSTGRES_URL_ROOTLESS: "postgres://{{username}}:{{password}}@postgres:5432/database?sslmode=disable"
-          # ORACLE_URL is the standard root conn URL for Vault
-          ORACLE_URL: "system/OraclePassword123@oracle:1521/XEPDB1"
-          # ORACLE_URL_TEST is used by the TFVP test to connect directly to
-          # the oracle container so that it can create static users.
-          # Note: the host is "localhost" because the TFVP tests do not run in
-          # the same docker network.
-          ORACLE_URL_TEST: "oracle://system:OraclePassword123@localhost:1521/XEPDB1"
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
