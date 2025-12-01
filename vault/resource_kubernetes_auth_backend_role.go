@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -24,48 +25,48 @@ var (
 
 func kubernetesAuthBackendRoleResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		"role_name": {
+		consts.FieldRoleName: {
 			Type:        schema.TypeString,
 			Required:    true,
 			ForceNew:    true,
 			Description: "Name of the role.",
 		},
-		"bound_service_account_names": {
+		consts.FieldBoundServiceAccountNames: {
 			Type:        schema.TypeSet,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Required:    true,
 			Description: "List of service account names able to access this role. If set to `[\"*\"]` all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
 		},
-		"bound_service_account_namespaces": {
+		consts.FieldBoundServiceAccountNamespaces: {
 			Type:        schema.TypeSet,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
 			Description: "List of namespaces allowed to access this role. If set to `[\"*\"]` all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
 		},
-		"bound_service_account_namespace_selector": {
+		consts.FieldBoundServiceAccountNamespaceSelector: {
 			Type:        schema.TypeString,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
 			Description: "A label selector for Kubernetes namespaces allowed to access this role. Accepts either a JSON or YAML object. The value should be of type LabelSelector. Currently, label selectors with matchExpressions are not supported. To use label selectors, Vault must have permission to read namespaces on the Kubernetes cluster. If set with bound_service_account_namespaces, the conditions are ORed.",
 		},
-		"backend": {
+		consts.FieldBackend: {
 			Type:     schema.TypeString,
 			Optional: true,
 			ForceNew: true,
-			Default:  "kubernetes",
+			Default:  consts.MountTypeKubernetes,
 			// standardise on no beginning or trailing slashes
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
 			Description: "Unique name of the kubernetes backend to configure.",
 		},
-		"audience": {
+		consts.FieldAudience: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Default:     "",
 			Description: "Optional Audience claim to verify in the JWT.",
 		},
-		"alias_name_source": {
+		consts.FieldAliasNameSource: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Computed:    true,
@@ -85,59 +86,30 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 		},
 
 		Schema: fields,
-
-		CustomizeDiff: func(ctx context.Context, d *schema.ResourceDiff, m interface{}) error {
-			// At least one of bound_service_account_namespaces or bound_service_account_namespace_selector must be provided
-			namespaces, hasNamespaces := d.GetOk("bound_service_account_namespaces")
-			selector, hasSelector := d.GetOk("bound_service_account_namespace_selector")
-
-			// Check if namespaces is empty set
-			namespacesEmpty := !hasNamespaces || namespaces.(*schema.Set).Len() == 0
-			// Check if selector is empty string
-			selectorEmpty := !hasSelector || strings.TrimSpace(selector.(string)) == ""
-
-			if namespacesEmpty && selectorEmpty {
-				return fmt.Errorf("at least one of 'bound_service_account_namespaces' or 'bound_service_account_namespace_selector' must be provided")
-			}
-
-			return nil
-		},
 	}
 }
 
 func kubernetesAuthBackendRolePath(backend, role string) string {
-	return "auth/" + strings.Trim(backend, "/") + "/role/" + strings.Trim(role, "/")
+	return consts.FieldAuth + "/" + strings.Trim(backend, "/") + "/" + consts.FieldRole + "/" + strings.Trim(role, "/")
 }
 
 func kubernetesAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, create bool) {
 	updateTokenFields(d, data, create)
 
-	if boundServiceAccountNames, ok := d.GetOk("bound_service_account_names"); ok {
-		data["bound_service_account_names"] = boundServiceAccountNames.(*schema.Set).List()
+	if boundServiceAccountNames, ok := d.GetOk(consts.FieldBoundServiceAccountNames); ok {
+		data[consts.FieldBoundServiceAccountNames] = boundServiceAccountNames.(*schema.Set).List()
 	}
 
-	if create {
-		if boundServiceAccountNamespaces, ok := d.GetOk("bound_service_account_namespaces"); ok {
-			data["bound_service_account_namespaces"] = boundServiceAccountNamespaces.(*schema.Set).List()
-		}
-	} else {
-		// always send the current value from state on update so the backend preserves or clears it
-		data["bound_service_account_namespace_selector"] = d.Get("bound_service_account_namespace_selector").(string)
-		// "bound_service_account_namespace_selector"] = d.Get("bound_service_account_namespace_selector").(string)
+	if boundServiceAccountNamespaces, ok := d.GetOk(consts.FieldBoundServiceAccountNamespaces); ok {
+		data[consts.FieldBoundServiceAccountNamespaces] = boundServiceAccountNamespaces.(*schema.Set).List()
 	}
 
-	// Always set bound_service_account_namespace_selector to ensure proper clearing on updates
-	if create {
-		if boundServiceAccountNamespaceSelector, ok := d.GetOk("bound_service_account_namespace_selector"); ok {
-			data["bound_service_account_namespace_selector"] = boundServiceAccountNamespaceSelector.(string)
-		}
-	} else {
-		// always send the current value from state on update so the backend preserves or clears it
-		data["bound_service_account_namespace_selector"] = d.Get("bound_service_account_namespace_selector").(string)
-
+	if boundServiceAccountNamespaceSelector, ok := d.GetOk(consts.FieldBoundServiceAccountNamespaceSelector); ok {
+		data[consts.FieldBoundServiceAccountNamespaceSelector] = boundServiceAccountNamespaceSelector.(string)
 	}
+	data[consts.FieldBoundServiceAccountNamespaceSelector] = d.Get(consts.FieldBoundServiceAccountNamespaceSelector).(string)
 
-	params := []string{"audience", "alias_name_source"}
+	params := []string{consts.FieldAudience, consts.FieldAliasNameSource}
 	for _, k := range params {
 		if create {
 			if v, ok := d.GetOk(k); ok {
@@ -179,8 +151,8 @@ func kubernetesAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
-	role := d.Get("role_name").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	role := d.Get(consts.FieldRoleName).(string)
 
 	path := kubernetesAuthBackendRolePath(backend, role)
 
@@ -232,14 +204,14 @@ func kubernetesAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set("backend", backend); err != nil {
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("role_name", role); err != nil {
+	if err := d.Set(consts.FieldRoleName, role); err != nil {
 		return diag.FromErr(err)
 	}
 
-	params := []string{"bound_service_account_names", "bound_service_account_namespaces", "bound_service_account_namespace_selector", "audience", "alias_name_source"}
+	params := []string{consts.FieldBoundServiceAccountNames, consts.FieldBoundServiceAccountNamespaces, consts.FieldBoundServiceAccountNamespaceSelector, consts.FieldAudience, consts.FieldAliasNameSource}
 	for _, k := range params {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
