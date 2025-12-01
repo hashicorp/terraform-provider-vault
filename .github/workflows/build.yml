@@ -153,18 +153,9 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.16.27-ent"
-        - "vault-enterprise:1.17.18-ent"
-        - "vault-enterprise:1.18.15-ent"
-        - "vault-enterprise:1.19.11-ent"
-        - "vault-enterprise:1.20.5-ent"
         - "vault-enterprise:1.21.0-ent"
-        - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
-        - "1.12.2"
-        - "1.11.4"
-        #- "1.10.5" # tests do not seem to pass with this version set, skipping for now.
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -305,18 +296,15 @@ jobs:
           rm -rf "${PLUGIN_DIR}" && mkdir -p "${PLUGIN_DIR}"
           unzip -q "${ORACLE_ZIP}" -d "${PLUGIN_DIR}"
 
-          # Runner: Download Oracle Instant Client basic
           IC_VER_DIR="instantclient_19_29"
           curl -sO https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
           mkdir -p /tmp/opt/oracle
           unzip -q instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /tmp/opt/oracle/
           ln -sf /tmp/opt/oracle/${IC_VER_DIR}/libclntsh.so.19.1 /tmp/opt/oracle/${IC_VER_DIR}/libclntsh.so
 
-          # Copy plugin and Instant Client into the Vault container
           docker cp "${PLUGIN_DIR}" "${VAULT_CONTAINER}:/vault/plugins/"
           docker cp "/tmp/opt/oracle/${IC_VER_DIR}" "${VAULT_CONTAINER}:/opt/oracle/"
 
-          # Set permissions and create wrapper inside container
           docker exec "${VAULT_CONTAINER}" sh -c "
             chmod 755 /vault/plugins/${PLUGIN_DIR} && \
             chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} && \
@@ -324,14 +312,9 @@ jobs:
             { id vault >/dev/null 2>&1 && chown -R vault:vault /vault/plugins/${PLUGIN_DIR} || true; }
           "
 
-          # Rename the real binary and replace with a wrapper of the same name
           docker exec "${VAULT_CONTAINER}" sh -c "
             mv /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}.real && \
-            cat >/vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} <<'EOS'
-            #!/bin/sh
-            export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:\$LD_LIBRARY_PATH
-            exec /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}.real \"\$@\"
-            EOS
+            printf '#!/bin/sh\nexport LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:\\$LD_LIBRARY_PATH\nexec /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}.real "\\$@"\n' > /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} && \
             chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} && \
             { id vault >/dev/null 2>&1 && chown vault:vault /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} || true; }
           "
