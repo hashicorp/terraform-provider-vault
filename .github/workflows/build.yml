@@ -302,7 +302,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-golang-
 
-      - name: Setup Oracle Client and Plugin
+      - name: Setup Oracle Client in Vault Container
         if: contains(matrix.image, '-ent')
         run: |
           # Get the container ID of the running Vault service
@@ -312,7 +312,18 @@ jobs:
           # Install Oracle Libraries (Requires root)
           docker exec -u 0 "$CONTAINER_ID" /bin/sh -c '
             set -e
-            yum install -y wget unzip libnsl
+            if command -v microdnf >/dev/null 2>&1; then
+              PKG_MGR="microdnf"
+            elif command -v yum >/dev/null 2>&1; then
+              PKG_MGR="yum"
+            else
+              echo "Error: Package manager not found (tried microdnf and yum)"
+              exit 1
+            fi
+            
+            echo "Using package manager: $PKG_MGR"
+            $PKG_MGR install -y wget unzip libnsl
+            
             mkdir -p /opt/oracle
             cd /tmp
             wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
@@ -326,15 +337,12 @@ jobs:
           '
           
           # Install and Register Plugin
-          # Note: Installation target is /vault/plugins because VAULT_LOCAL_CONFIG in services sets plugin_directory to /vault/plugins
           docker exec -u 0 -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN="root" "$CONTAINER_ID" /bin/sh -c '
             set -e
             cd /tmp
             wget -q https://releases.hashicorp.com/vault-plugin-database-oracle/0.13.0+ent/vault-plugin-database-oracle_0.13.0+ent_linux_amd64.zip
             unzip -o vault-plugin-database-oracle_0.13.0+ent_linux_amd64.zip -d /vault/plugins/
             chmod +x /vault/plugins/vault-plugin-database-oracle
-            
-            # Register the plugin
             vault plugin register -version=0.13.0+ent vault-plugin-database-oracle
           '
 
