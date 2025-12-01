@@ -329,7 +329,7 @@ jobs:
               dnf install -y wget unzip libnsl
             elif command -v apk >/dev/null 2>&1; then
               echo "Using apk"
-              apk add --no-cache wget unzip libnsl libc6-compat
+              apk add --no-cache wget unzip libnsl libaio gcompat
             elif command -v apt-get >/dev/null 2>&1; then
               echo "Using apt-get"
               apt-get update && apt-get install -y wget unzip libnsl
@@ -346,8 +346,22 @@ jobs:
             unzip -o instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
             cd /opt/oracle/instantclient_19_29
             ln -sf libclntsh.so.19.1 libclntsh.so
+            
+            mkdir -p /etc/ld.so.conf.d
             echo "/opt/oracle/instantclient_19_29" > /etc/ld.so.conf.d/oracle.conf
-            ldconfig
+            
+            if command -v ldconfig >/dev/null 2>&1; then
+              ldconfig
+            fi
+            
+            # Link libraries to /usr/lib (Alpine/musl fallback)
+            # Since the Vault service is already running, changing LD_LIBRARY_PATH via ENV 
+            # might not propagate to the server process spawning the plugin. 
+            # Symlinking libs to a standard path /usr/lib ensures they are found without env vars.
+            if [ -f /etc/alpine-release ]; then
+              echo "Alpine detected: Linking Oracle libs to /usr/lib"
+              ln -s /opt/oracle/instantclient_19_29/*.so* /usr/lib/ || true
+            fi
           '
           
           # Install and Register Plugin
