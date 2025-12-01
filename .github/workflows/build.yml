@@ -312,17 +312,31 @@ jobs:
           # Install Oracle Libraries (Requires root)
           docker exec -u 0 "$CONTAINER_ID" /bin/sh -c '
             set -e
+            
+            echo "Detecting OS..."
+            if [ -f /etc/os-release ]; then
+                cat /etc/os-release
+            fi
+
             if command -v microdnf >/dev/null 2>&1; then
-              PKG_MGR="microdnf"
+              echo "Using microdnf"
+              microdnf install -y wget unzip libnsl
             elif command -v yum >/dev/null 2>&1; then
-              PKG_MGR="yum"
+              echo "Using yum"
+              yum install -y wget unzip libnsl
+            elif command -v dnf >/dev/null 2>&1; then
+              echo "Using dnf"
+              dnf install -y wget unzip libnsl
+            elif command -v apk >/dev/null 2>&1; then
+              echo "Using apk"
+              apk add --no-cache wget unzip libnsl libc6-compat
+            elif command -v apt-get >/dev/null 2>&1; then
+              echo "Using apt-get"
+              apt-get update && apt-get install -y wget unzip libnsl
             else
-              echo "Error: Package manager not found (tried microdnf and yum)"
+              echo "Error: Package manager not found."
               exit 1
             fi
-            
-            echo "Using package manager: $PKG_MGR"
-            $PKG_MGR install -y wget unzip libnsl
             
             mkdir -p /opt/oracle
             cd /tmp
