@@ -267,7 +267,7 @@ jobs:
           sudo apt-get install -y ldap-utils
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       
-      - name: Download and register Oracle plugin entirely inside Vault container
+      - name: Download and register Oracle plugin
         run: |
           # Find the Vault service container
           VAULT_CONTAINER=$(docker ps --filter "name=vault" --filter "ancestor=hashicorp/${{ matrix.image }}" --format "{{.ID}}" | head -n1)
@@ -280,76 +280,83 @@ jobs:
 
           # Wait for Vault to be healthy before registering plugin
           echo "Waiting for Vault to become ready..."
-          for i in $(seq 1 30); do
+          attempts=0
+          while [ "$attempts" -lt 30 ]; do
             if docker exec -e VAULT_ADDR="http://127.0.0.1:8200" "$VAULT_CONTAINER" vault status >/dev/null 2>&1; then
               echo "Vault is ready."
               break
             fi
             sleep 2
+            attempts=$((attempts+1))
           done
 
-          # Perform all operations inside the Vault container
-          docker exec "$VAULT_CONTAINER" sh -c '
-            set -e
-            ORACLE_PLUGIN=vault-plugin-database-oracle
-            ORACLE_PLUGIN_VERSION=0.13.0+ent
-            PLUGIN_DIR="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_linux_amd64"
+          # Runner: Download Oracle plugin artifact and checksum
+          cd /tmp
+          ORACLE_PLUGIN="vault-plugin-database-oracle"
+          ORACLE_PLUGIN_VERSION="0.13.0+ent"
+          ORACLE_ZIP="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip"
+          ORACLE_SHA256SUMS="${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_SHA256SUMS"
 
-            # Install required tools and Oracle Instant Client
-            apt-get update -y && \
-            DEBIAN_FRONTEND=noninteractive apt-get install -y wget unzip libnsl libaio ca-certificates && \
-            update-ca-certificates || true
+          curl -sO "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_ZIP}"
+          curl -sO "https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_SHA256SUMS}"
+          sha256sum -c "${ORACLE_SHA256SUMS}" --ignore-missing
 
-            cd /tmp && \
-            wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip && \
-            mkdir -p /opt/oracle && \
-            unzip -q instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/ && \
-            ln -sf /opt/oracle/instantclient_19_29/libclntsh.so.19.1 /opt/oracle/instantclient_19_29/libclntsh.so && \
-            echo "/opt/oracle/instantclient_19_29" > /etc/ld.so.conf.d/oracle.conf && \
-            ldconfig || true
+          PLUGIN_DIR="vault-plugin-database-oracle_${ORACLE_PLUGIN_VERSION}_linux_amd64"
+          rm -rf "${PLUGIN_DIR}" && mkdir -p "${PLUGIN_DIR}"
+          unzip -q "${ORACLE_ZIP}" -d "${PLUGIN_DIR}"
 
-            # Download Oracle plugin artifact and checksum
-            wget -q https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip && \
-            wget -q https://releases.hashicorp.com/${ORACLE_PLUGIN}/${ORACLE_PLUGIN_VERSION}/${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_SHA256SUMS && \
-            (cd /tmp && shasum -a 256 -c ${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_SHA256SUMS --ignore-missing) || true
+          # Runner: Download Oracle Instant Client basic
+          IC_VER_DIR="instantclient_19_29"
+          curl -sO https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
+          mkdir -p /tmp/opt/oracle
+          unzip -q instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /tmp/opt/oracle/
+          ln -sf /tmp/opt/oracle/${IC_VER_DIR}/libclntsh.so.19.1 /tmp/opt/oracle/${IC_VER_DIR}/libclntsh.so
 
-            # Extract into enterprise-expected versioned directory under /vault/plugins
-            mkdir -p /vault/plugins/${PLUGIN_DIR} && \
-            unzip -q ${ORACLE_PLUGIN}_${ORACLE_PLUGIN_VERSION}_linux_amd64.zip -d /vault/plugins/${PLUGIN_DIR} && \
+          # Copy plugin and Instant Client into the Vault container
+          docker cp "${PLUGIN_DIR}" "${VAULT_CONTAINER}:/vault/plugins/"
+          docker cp "/tmp/opt/oracle/${IC_VER_DIR}" "${VAULT_CONTAINER}:/opt/oracle/"
+
+          # Set permissions and create wrapper inside container
+          docker exec "${VAULT_CONTAINER}" sh -c "
             chmod 755 /vault/plugins/${PLUGIN_DIR} && \
             chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} && \
-            chmod 644 /vault/plugins/${PLUGIN_DIR}/*.json* 2>/dev/null || true && \
+            chmod 644 /vault/plugins/${PLUGIN_DIR}/"'""*.json*"'"" 2>/dev/null || true && \
             chown -R vault:vault /vault/plugins/${PLUGIN_DIR}
+          "
 
-            # Wrapper to set LD_LIBRARY_PATH for Instant Client
-            cat >/vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh <<EOF
+          # Rename the real binary and replace with a wrapper of the same name
+          docker exec "${VAULT_CONTAINER}" sh -c "
+            mv /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}.real && \
+            cat >/vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} <<'EOS'
             #!/bin/sh
-            export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:$LD_LIBRARY_PATH
-            exec /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} "$@"
-            EOF
-            chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh && \
-            chown vault:vault /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}-wrapper.sh
+            export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:\$LD_LIBRARY_PATH
+            exec /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}.real \"\$@\"
+            EOS
+            chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} && \
+            chown vault:vault /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}
+          "
 
-            # Diagnostics
-            echo "--- OS Release ---" && cat /etc/os-release || true
-            echo "--- file(1) plugin ---" && file /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} || true
-            echo "--- ldd plugin ---" && ldd /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} || true
-          '
+          # Diagnostics
+          echo "--- /etc/os-release ---"
+          docker exec "${VAULT_CONTAINER}" cat /etc/os-release || true
+          echo "--- file(1) plugin ---"
+          docker exec "${VAULT_CONTAINER}" sh -c "file /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}" || true
+          echo "--- ldd plugin ---"
+          docker exec "${VAULT_CONTAINER}" sh -c "ldd /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}" || true
 
-          # Register the plugin inside the container
+          # Register the plugin inside the container (enterprise artifact; -command ignored)
           docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN="root" \
             "$VAULT_CONTAINER" \
             vault plugin register \
-              -version="0.13.0+ent" \
-              -command="vault-plugin-database-oracle-wrapper.sh" \
+              -version="${ORACLE_PLUGIN_VERSION}" \
               database \
-              "vault-plugin-database-oracle"
+              "${ORACLE_PLUGIN}"
 
           # Verify registration
           echo "Verifying Oracle plugin registration..."
           docker exec -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN="root" \
             "$VAULT_CONTAINER" \
-            vault plugin list database | grep "vault-plugin-database-oracle" || (echo "Warning: Plugin not visible" && exit 1)
+            vault plugin list database | grep "${ORACLE_PLUGIN}" || (echo "Warning: Plugin not visible" && exit 1)
       
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
