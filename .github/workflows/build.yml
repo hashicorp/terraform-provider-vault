@@ -321,7 +321,7 @@ jobs:
             chmod 755 /vault/plugins/${PLUGIN_DIR} && \
             chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} && \
             chmod 644 /vault/plugins/${PLUGIN_DIR}/"'""*.json*"'"" 2>/dev/null || true && \
-            chown -R vault:vault /vault/plugins/${PLUGIN_DIR}
+            { id vault >/dev/null 2>&1 && chown -R vault:vault /vault/plugins/${PLUGIN_DIR} || true; }
           "
 
           # Rename the real binary and replace with a wrapper of the same name
@@ -333,7 +333,7 @@ jobs:
             exec /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}.real \"\$@\"
             EOS
             chmod 755 /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} && \
-            chown vault:vault /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN}
+            { id vault >/dev/null 2>&1 && chown vault:vault /vault/plugins/${PLUGIN_DIR}/${ORACLE_PLUGIN} || true; }
           "
 
           # Diagnostics
