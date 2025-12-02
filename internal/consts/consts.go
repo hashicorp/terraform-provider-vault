@@ -50,7 +50,6 @@ const (
 	FieldNames                          = "names"
 	FieldLeaseID                        = "lease_id"
 	FieldLeaseDuration                  = "lease_duration"
-	FieldLeaseStartTime                 = "lease_start_time"
 	FieldLeaseRenewable                 = "lease_renewable"
 	FieldDepth                          = "depth"
 	FieldDataJSON                       = "data_json"
