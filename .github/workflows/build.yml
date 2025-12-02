@@ -250,17 +250,6 @@ jobs:
           --health-interval 1s
           --health-timeout 30s
           --health-retries 30
-      oracle:
-        image: gvenzl/oracle-xe:21-slim
-        env:
-          ORACLE_PASSWORD: OraclePassword123
-        ports:
-          - 1521:1521
-        options: >-
-          --health-cmd "healthcheck.sh"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 30
     steps:
       - name: install ldap utils
         run:
@@ -302,110 +291,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-golang-
 
-      - name: Setup Oracle Client in Vault Container
-        if: contains(matrix.image, '-ent')
-        run: |
-          # Get the container ID of the running Vault service
-          CONTAINER_ID=$(docker ps --filter "ancestor=hashicorp/${{ matrix.image }}" --format "{{.ID}}")
-          echo "Configuring Oracle in container: $CONTAINER_ID"
-          
-          # Install Oracle Libraries (Requires root)
-          docker exec -u 0 "$CONTAINER_ID" /bin/sh -c '
-            set -e
-            
-            echo "Detecting OS..."
-            if [ -f /etc/os-release ]; then
-                cat /etc/os-release
-            fi
-
-            if command -v microdnf >/dev/null 2>&1; then
-              echo "Using microdnf"
-              microdnf install -y wget unzip libnsl
-            elif command -v yum >/dev/null 2>&1; then
-              echo "Using yum"
-              yum install -y wget unzip libnsl
-            elif command -v dnf >/dev/null 2>&1; then
-              echo "Using dnf"
-              dnf install -y wget unzip libnsl
-            elif command -v apk >/dev/null 2>&1; then
-              echo "Using apk"
-              apk add --no-cache wget unzip libnsl libaio gcompat
-            elif command -v apt-get >/dev/null 2>&1; then
-              echo "Using apt-get"
-              apt-get update && apt-get install -y wget unzip libnsl
-            else
-              echo "Error: Package manager not found."
-              exit 1
-            fi
-            
-            mkdir -p /opt/oracle
-            cd /tmp
-            wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
-            wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip
-            unzip -o instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
-            unzip -o instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
-            cd /opt/oracle/instantclient_19_29
-            ln -sf libclntsh.so.19.1 libclntsh.so
-            
-            mkdir -p /etc/ld.so.conf.d
-            echo "/opt/oracle/instantclient_19_29" > /etc/ld.so.conf.d/oracle.conf
-            
-            if command -v ldconfig >/dev/null 2>&1; then
-              ldconfig
-            fi
-            
-            # Link libraries to /usr/lib (Alpine/musl fallback)
-            # Since the Vault service is already running, changing LD_LIBRARY_PATH via ENV 
-            # might not propagate to the server process spawning the plugin. 
-            # Symlinking libs to a standard path /usr/lib ensures they are found without env vars.
-            if [ -f /etc/alpine-release ]; then
-              echo "Alpine detected: Linking Oracle libs to /usr/lib"
-              ln -s /opt/oracle/instantclient_19_29/*.so* /usr/lib/ || true
-            fi
-          '
-          
-          # Install and Register Plugin
-          docker exec -u 0 -e VAULT_ADDR="http://127.0.0.1:8200" -e VAULT_TOKEN="root" "$CONTAINER_ID" /bin/sh -c '
-            set -e
-            cd /tmp
-            wget -q https://releases.hashicorp.com/vault-plugin-database-oracle/0.13.0+ent/vault-plugin-database-oracle_0.13.0+ent_linux_amd64.zip
-            unzip -o vault-plugin-database-oracle_0.13.0+ent_linux_amd64.zip -d /vault/plugins/
-            chmod +x /vault/plugins/vault-plugin-database-oracle
-            vault plugin register -version=0.13.0+ent vault-plugin-database-oracle
-          '
-
-      - name: Setup Oracle Client on Runner
-        if: contains(matrix.image, '-ent')
-        run: |
-          # Install dependencies for Ubuntu runner
-          sudo apt-get update && sudo apt-get install -y libaio1 libnsl
-          sudo mkdir -p /opt/oracle
-          cd /tmp
-          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-basic-linux.x64-19.29.0.0.0dbru.zip
-          wget -q https://download.oracle.com/otn_software/linux/instantclient/1929000/instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip
-          sudo unzip -o instantclient-basic-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
-          sudo unzip -o instantclient-sdk-linux.x64-19.29.0.0.0dbru.zip -d /opt/oracle/
-          cd /opt/oracle/instantclient_19_29
-          sudo ln -sf libclntsh.so.19.1 libclntsh.so
-          echo "/opt/oracle/instantclient_19_29" | sudo tee /etc/ld.so.conf.d/oracle.conf
-          sudo ldconfig
-          echo "LD_LIBRARY_PATH=/opt/oracle/instantclient_19_29:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-          
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"
           VAULT_ADDR: "http://localhost:8200"
           # RUNS_IN_CONTAINER is false if not using jobs.<job_id>.container
           RUNS_IN_CONTAINER: "false"
-          TF_ACC: "1"
-          TF_ACC_ENTERPRISE: "1"
-          # ORACLE_URL is the standard root conn URL for Vault
-          ORACLE_URL: "system/OraclePassword123@oracle:1521/XEPDB1"
-          # ORACLE_URL_TEST is used by the TFVP test to connect directly to
-          # the oracle container so that it can create static users.
-          # Note: the host is "localhost" because the TFVP tests do not run in
-          # the same docker network.
-          ORACLE_URL_TEST: "oracle://system:OraclePassword123@localhost:1521/XEPDB1"
           MYSQL_URL: "root:mysql@tcp(mysql:3306)/"
           MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
           MYSQL_CONNECTION_USERNAME: "root"

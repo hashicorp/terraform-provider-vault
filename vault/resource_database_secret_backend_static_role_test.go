@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -18,9 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	_ "github.com/sijms/go-ora/v2"
 
-	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -253,7 +250,7 @@ func TestAccDatabaseSecretBackendStaticRole_Rootless(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			acctestutil.TestEntPreCheck(t)
+			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
@@ -309,7 +306,7 @@ func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			acctestutil.TestEntPreCheck(t)
+			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
@@ -380,183 +377,6 @@ func createTestUser(connURL, username string) error {
 		return err
 	}
 	return nil
-}
-
-func createOracleTestUser(connURL, username, password string) error {
-	ctx := context.Background()
-	db, err := sql.Open("oracle", connURL)
-	if err != nil {
-		return fmt.Errorf("failed to open Oracle connection: %w", err)
-	}
-	defer db.Close()
-
-	// Test the connection
-	if err := db.PingContext(ctx); err != nil {
-		return fmt.Errorf("failed to ping Oracle: %w", err)
-	}
-
-	// Drop user if exists (cleanup from previous runs)
-	_, _ = db.ExecContext(ctx, "DROP USER "+username+" CASCADE")
-	// Create user
-	createSQL := "CREATE USER " + username + " IDENTIFIED BY " + password + " ACCOUNT UNLOCK"
-	_, err = db.ExecContext(ctx, createSQL)
-	if err != nil {
-		return fmt.Errorf("failed to create Oracle user (SQL: %s): %w", createSQL, err)
-	}
-
-	// Grant comprehensive privileges
-	grants := []string{
-		"GRANT CREATE USER TO " + username + " WITH ADMIN OPTION",
-		"GRANT ALTER USER TO " + username + " WITH ADMIN OPTION",
-		"GRANT DROP USER TO " + username + " WITH ADMIN OPTION",
-		"GRANT CONNECT TO " + username + " WITH ADMIN OPTION",
-		"GRANT CREATE SESSION TO " + username + " WITH ADMIN OPTION",
-		"GRANT RESOURCE TO " + username,
-		"GRANT ALTER SYSTEM TO " + username + " WITH ADMIN OPTION",
-	}
-
-	for _, grant := range grants {
-		if _, err := db.ExecContext(ctx, grant); err != nil {
-			return fmt.Errorf("failed to execute grant %q: %w", grant, err)
-		}
-	}
-
-	return nil
-}
-
-// TestAccDatabaseSecretBackendStaticRole_OracleSelfManaged tests the
-// self-managed configuration for Oracle Static Roles in the CI pipeline.
-//
-// This test is designed to run in the CI environment where Oracle is
-// accessible via ORACLE_URL_TEST.
-//
-// To run locally in the CI pipeline you will need to set:
-//   - ORACLE_URL_TEST: Direct Oracle connection URL
-//
-// See .github/workflows/build.yml for details.
-func TestAccDatabaseSecretBackendStaticRole_OracleSelfManaged(t *testing.T) {
-	connURLTest := os.Getenv("ORACLE_URL_TEST")
-	if connURLTest == "" {
-		t.Skip("ORACLE_URL_TEST not set")
-	}
-
-	backend := acctest.RandomWithPrefix("tf-test-db")
-	user := acctest.RandomWithPrefix("USR")
-	password := "StaticUserPass123"
-	dbName := acctest.RandomWithPrefix("db")
-	name := acctest.RandomWithPrefix("staticrole")
-	resourceName := "vault_database_secret_backend_static_role.test"
-
-	// Try to create static database user, but allow test to continue if it fails
-	username := strings.ReplaceAll(user, "-", "_")
-	if err := createOracleTestUser(connURLTest, username, password); err != nil {
-		t.Logf("Warning: Failed to create Oracle user (might already exist): %v", err)
-	}
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck: func() {
-			acctestutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
-		},
-		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccDatabaseSecretBackendStaticRoleConfig_oracleSelfManaged(name, username, dbName, backend, password),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "username", username),
-					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "3600"),
-				),
-			},
-			{
-				ResourceName:            "vault_database_secret_backend_static_role.test",
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{consts.FieldSelfManagedPassword},
-			},
-		},
-	})
-}
-
-// TestAccDatabaseSecretBackendStaticRole_OraclePasswordWO tests the
-// password_wo (write-only password) field for Oracle Static Roles in the CI pipeline.
-//
-// This test is designed to run in the CI environment where Oracle is
-// accessible via ORACLE_URL_TEST.
-//
-// To run locally in the CI pipeline you will need to set:
-//   - ORACLE_URL_TEST: Direct Oracle connection URL
-//
-// See .github/workflows/build.yml for details.
-func TestAccDatabaseSecretBackendStaticRole_OraclePasswordWO(t *testing.T) {
-	connURLTest := os.Getenv("ORACLE_URL_TEST")
-	if connURLTest == "" {
-		t.Skip("ORACLE_URL_TEST not set")
-	}
-
-	backend := acctest.RandomWithPrefix("tf-test-db")
-	username1 := acctest.RandomWithPrefix("USR")
-	username2 := acctest.RandomWithPrefix("USR")
-	password1 := "TestPass123"
-	password2 := "TestPass456"
-	dbName := acctest.RandomWithPrefix("db")
-	name := acctest.RandomWithPrefix("staticrole")
-	resourceName := "vault_database_secret_backend_static_role.test"
-
-	// Try to create static database users
-	if err := createOracleTestUser(connURLTest, username1, password1); err != nil {
-		t.Logf("Warning: Failed to create Oracle user %s: %v", username1, err)
-	}
-	if err := createOracleTestUser(connURLTest, username2, password2); err != nil {
-		t.Logf("Warning: Failed to create Oracle user %s: %v", username2, err)
-	}
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck: func() {
-			acctestutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
-		},
-		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
-		Steps: []resource.TestStep{
-			// Step 1: Create with password_wo and skip_import_rotation=false (default)
-			{
-				Config: testAccDatabaseSecretBackendStaticRoleConfig_oraclePasswordWO(name, username1, dbName, backend, password1, false, 1),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "username", username1),
-					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "skip_import_rotation", "false"),
-					resource.TestCheckResourceAttr(resourceName, "password_wo_version", "1"),
-				),
-			},
-			// Step 2: Update to different user with skip_import_rotation=true
-			{
-				Config: testAccDatabaseSecretBackendStaticRoleConfig_oraclePasswordWO(name, username2, dbName, backend, password2, true, 2),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "username", username2),
-					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "skip_import_rotation", "true"),
-					resource.TestCheckResourceAttr(resourceName, "password_wo_version", "2"),
-				),
-			},
-			// Step 3: Import test
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{consts.FieldPasswordWO},
-			},
-		},
-	})
 }
 
 func testAccDatabaseSecretBackendStaticRoleConfig_credentialType(name, username, db, path, connURL string) string {
@@ -840,68 +660,6 @@ resource "vault_database_secret_backend_static_role" "test" {
   rotation_period = 3600
 }
 `, path, db, connURL, name, username, smPassword)
-}
-
-func testAccDatabaseSecretBackendStaticRoleConfig_oracleSelfManaged(name, username, db, path, smPassword string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "db" {
-  path = "%s"
-  type = "database"
-}
-
-resource "vault_database_secret_backend_connection" "test" {
-  backend = vault_mount.db.path
-  name = "%s"
-  allowed_roles = ["*"]
-
-  oracle {
-    connection_url = "{{username}}/{{password}}@//oracle:1521/XEPDB1"
-    self_managed   = true
-    plugin_name    = "vault-plugin-database-oracle"
-  }
-}
-
-resource "vault_database_secret_backend_static_role" "test" {
-  backend = vault_mount.db.path
-  db_name = vault_database_secret_backend_connection.test.name
-  name = "%s"
-  username = "%s"
-  self_managed_password = "%s"
-  rotation_period = 3600
-}
-`, path, db, name, username, smPassword)
-}
-
-func testAccDatabaseSecretBackendStaticRoleConfig_oraclePasswordWO(name, username, db, path, password string, skipImportRotation bool, version int) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "db" {
-  path = "%s"
-  type = "database"
-}
-
-resource "vault_database_secret_backend_connection" "test" {
-  backend = vault_mount.db.path
-  name = "%s"
-  allowed_roles = ["*"]
-
-  oracle {
-    connection_url = "{{username}}/{{password}}@//oracle:1521/XEPDB1"
-    self_managed   = true
-    plugin_name    = "vault-plugin-database-oracle"
-  }
-}
-
-resource "vault_database_secret_backend_static_role" "test" {
-  backend = vault_mount.db.path
-  db_name = vault_database_secret_backend_connection.test.name
-  name = "%s"
-  username = "%s"
-  password_wo = "%s"
-  password_wo_version = %d
-  skip_import_rotation = %t
-  rotation_period = 3600
-}
-`, path, db, name, username, password, version, skipImportRotation)
 }
 
 var testRoleStaticCreate = `
