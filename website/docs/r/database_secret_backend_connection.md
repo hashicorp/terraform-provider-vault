@@ -20,6 +20,8 @@ for more details.
 
 ## Example Usage
 
+### PostgreSQL Connection
+
 ```hcl
 resource "vault_mount" "db" {
   path = "postgres"
@@ -36,6 +38,41 @@ resource "vault_database_secret_backend_connection" "postgres" {
   postgresql {
     connection_url = "postgres://username:password@host:port/database"
   }
+}
+```
+
+### Oracle Connection with Self-Managed Mode (Rootless)
+
+For Vault 1.18+ Enterprise, you can configure Oracle connections in self-managed mode,
+which allows a static role to manage its own database credentials without requiring root access:
+
+```hcl
+resource "vault_mount" "db" {
+  path = "database"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "oracle" {
+  backend       = vault_mount.db.path
+  name          = "oracle"
+  allowed_roles = ["my-role"]
+
+  oracle {
+    connection_url = "{{username}}/{{password}}@//host:port/service"
+    self_managed   = true
+    plugin_name    = "vault-plugin-database-oracle"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "oracle_role" {
+  backend = vault_mount.db.path
+  name    = "my-role"
+  db_name = vault_database_secret_backend_connection.oracle.name
+  
+  username            = "vault_user"
+  password_wo         = "initial-password"
+  password_wo_version = 1
+  rotation_period     = 3600
 }
 ```
 
@@ -401,8 +438,15 @@ See the [Vault
   maintain.
 
 * `username` - (Optional) The root credential username used in the connection URL.
+  Mutually exclusive with `self_managed`.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+  Mutually exclusive with `self_managed`.
+
+* `self_managed` - (Optional)  If set to `true`, allows onboarding static roles with a rootless
+  connection configuration. When enabled, Vault manages its own database credentials and 
+  `username`, `password`, and `password_wo` must not be set.
+  If set, will force `verify_connection` to be false. Requires Vault 1.18+ Enterprise.
 
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
