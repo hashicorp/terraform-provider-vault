@@ -274,10 +274,6 @@ func ldapAuthBackendConfigPath(path string) string {
 	return "auth/" + strings.Trim(path, "/") + "/config"
 }
 
-func ldapAuthBackendTunePath(path string) string {
-	return "auth/" + strings.Trim(path, "/") + "/tune"
-}
-
 func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -419,7 +415,6 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	d.Set(consts.FieldAccessor, mount.Accessor)
 	d.Set(consts.FieldLocal, mount.Local)
 
-	tunePath := ldapAuthBackendTunePath(path)
 	path = ldapAuthBackendConfigPath(path)
 
 	log.Printf("[DEBUG] Reading LDAP auth backend config %q", path)
@@ -488,8 +483,8 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	// Tune block support
-	log.Printf("[DEBUG] Reading ldap auth tune from %q", tunePath)
-	rawTune, err := authMountTuneGet(ctx, client, tunePath)
+	log.Printf("[DEBUG] Reading ldap auth tune from %q", "auth/"+d.Id()+"/tune")
+	rawTune, err := authMountTuneGet(ctx, client, "auth/"+d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -499,7 +494,7 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 	mergedTune := mergeAuthMethodTune(rawTune, input)
 	if err := d.Set(consts.FieldTune, mergedTune); err != nil {
-		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", tunePath, err)
+		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", "auth/"+d.Id()+"/tune", err)
 		return diag.FromErr(err)
 	}
 
