@@ -919,11 +919,6 @@ func oracleConnectionStringResource() *schema.Resource {
 	r := connectionStringResource(&connectionStringConfig{
 		includeUserPass: true,
 	})
-	// r.Schema["plugin_name"] = &schema.Schema{
-	// 	Type:        schema.TypeString,
-	// 	Optional:    true,
-	// 	Description: "Specifies the name of the plugin to use for this connection. Default is oracle-database-plugin.",
-	// }
 	r.Schema["split_statements"] = &schema.Schema{
 		Type:        schema.TypeBool,
 		Optional:    true,
@@ -1571,10 +1566,6 @@ func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix strin
 	}
 
 	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
-
-	// if v, ok := resp.Data["plugin_name"]; ok {
-	// 	result["plugin_name"] = v.(string)
-	// }
 
 	if v, ok := data["split_statements"]; ok {
 		result["split_statements"] = v.(bool)

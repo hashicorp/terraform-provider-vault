@@ -44,7 +44,7 @@ resource "vault_database_secret_backend_connection" "postgres" {
 ### Oracle Connection with Self-Managed Mode (Rootless)
 
 For Vault 1.18+ Enterprise, you can configure Oracle connections in self-managed mode,
-which allows Vault to manage its own database credentials without requiring root access:
+which allows a static role to manage its own database credentials without requiring root access:
 
 ```hcl
 resource "vault_mount" "db" {
@@ -447,10 +447,6 @@ See the [Vault
   connection configuration. When enabled, Vault manages its own database credentials and 
   `username`, `password`, and `password_wo` must not be set.
   If set, will force `verify_connection` to be false. Requires Vault 1.18+ Enterprise.
-
-* `plugin_name` - (Optional) Specifies the name of the Oracle plugin to use. 
-  Defaults to `oracle-database-plugin`. Use this if your Oracle plugin is registered 
-  under a different name (e.g., `vault-plugin-database-oracle`).
 
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
