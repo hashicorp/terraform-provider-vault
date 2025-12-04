@@ -1,4 +1,11 @@
 ## Unreleased
+FEATURES:
+* Add support for `self_managed` parameter in `vault_database_secret_backend_connection` resource for rootless config for static roles in Oracle database engine. ([#2661] (https://github.com/hashicorp/terraform-provider-vault/pull/2661))
+* Add support for `password_wo`, and `password_wo_version` parameters in `vault_database_secret_backend_static_role` resource for Oracle database engine. Requires Vault 1.19+. Deprecates `self_managed_password` which was introduced in Vault 1.18. ([#2661] (https://github.com/hashicorp/terraform-provider-vault/pull/2661))
+
+BUGS:
+
+* Fix LDAP auth tune block read failure caused by extra /tune segment in the API request path ([#2676](https://github.com/hashicorp/terraform-provider-vault/pull/2676))
 
 ## 5.5.0 (Nov 19, 2025)
 
