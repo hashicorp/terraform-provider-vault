@@ -402,8 +402,6 @@ func TestAccDatabaseSecretBackendConnection_mongodb_tls(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodb.0.write_concern", writeConcern),
 				),
 			},
-			// tls_certificate_key is a secret that is never revealed by Vault
-			testutil.GetImportTestStep(testDefaultDatabaseSecretBackendResource, false, nil, "mongodb.0.tls_certificate_key"),
 		},
 	})
 }

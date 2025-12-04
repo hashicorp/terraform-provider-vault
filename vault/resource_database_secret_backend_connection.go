@@ -1272,16 +1272,16 @@ func getMongoDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix stri
 		return result
 	}
 
-	// Non-sensitive fields - read from Vault response
+	// Read from Vault response
 	if v, ok := data["write_concern"]; ok {
 		result["write_concern"] = v.(string)
 	}
 	if v, ok := data["tls_ca"]; ok {
 		result["tls_ca"] = v.(string)
 	}
-
-	// Sensitive field - the tls_certificate_key is a secret that is never revealed by Vault
-	result["tls_certificate_key"] = d.Get(prefix + "tls_certificate_key")
+	if v, ok := data["tls_certificate_key"]; ok {
+		result["tls_certificate_key"] = v.(string)
+	}
 
 	return result
 }
