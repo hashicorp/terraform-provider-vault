@@ -3,9 +3,15 @@ FEATURES:
 * Add support for `self_managed` parameter in `vault_database_secret_backend_connection` resource for rootless config for static roles in Oracle database engine. ([#2661] (https://github.com/hashicorp/terraform-provider-vault/pull/2661))
 * Add support for `password_wo`, and `password_wo_version` parameters in `vault_database_secret_backend_static_role` resource for Oracle database engine. Requires Vault 1.19+. Deprecates `self_managed_password` which was introduced in Vault 1.18. ([#2661] (https://github.com/hashicorp/terraform-provider-vault/pull/2661))
 
+IMPROVEMENTS:
+* Updated dependencies:
+  * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
+
+
 BUGS:
 
 * Fix LDAP auth tune block read failure caused by extra /tune segment in the API request path ([#2676](https://github.com/hashicorp/terraform-provider-vault/pull/2676))
+* `provider/auth_login_aws`: Fix issue where AWS authentication with IAM role assumption (`aws_role_arn`) was not working correctly due to incorrect credential handling ([#2679](https://github.com/hashicorp/terraform-provider-vault/pull/2679))
 
 ## 5.5.0 (Nov 19, 2025)
 

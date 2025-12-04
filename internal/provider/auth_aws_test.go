@@ -628,7 +628,9 @@ func TestAuthLoginAWS_Login(t *testing.T) {
 					authField: "baz",
 					mount:     "foo",
 					params: map[string]interface{}{
-						consts.FieldRole: "bob",
+						consts.FieldRole:               "bob",
+						consts.FieldAWSAccessKeyID:     "test-key",
+						consts.FieldAWSSecretAccessKey: "test-secret",
 					},
 					initialized: true,
 				},
