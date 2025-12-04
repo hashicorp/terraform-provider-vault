@@ -570,7 +570,6 @@ const (
 	FieldBoundServiceAccountNamespaceSelector = "bound_service_account_namespace_selector"
 	FieldAudience                             = "audience"
 	FieldTokenMaxTTL                          = "token_max_ttl"
-	FieldTokenTTL                             = "token_ttl"
 	FieldTokenPeriod                          = "token_period"
 
 	/*

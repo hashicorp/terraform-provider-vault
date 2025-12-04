@@ -1,11 +1,18 @@
-## Unreleased
+## 5.6.0 (December 19, 2025)
+
 FEATURES:
-* Add support for `self_managed` parameter in `vault_database_secret_backend_connection` resource for rootless config for static roles in Oracle database engine. ([#2661] (https://github.com/hashicorp/terraform-provider-vault/pull/2661))
-* Add support for `password_wo`, and `password_wo_version` parameters in `vault_database_secret_backend_static_role` resource for Oracle database engine. Requires Vault 1.19+. Deprecates `self_managed_password` which was introduced in Vault 1.18. ([#2661] (https://github.com/hashicorp/terraform-provider-vault/pull/2661))
+* Add support for self managed workflow for rootless static roles in Oracle Secret Engine: ([#2661](https://github.com/hashicorp/terraform-provider-vault/pull/2661))
+* Add AWS access creds ephemeral resource: ([#2659](https://github.com/hashicorp/terraform-provider-vault/pull/2659))
+* Add AWS static access credentials ephemeral resource.: ([#2657](https://github.com/hashicorp/terraform-provider-vault/pull/2657))
+* Add Azure access credentials ephemeral resource: ([#2654](https://github.com/hashicorp/terraform-provider-vault/pull/2654))
+
+IMPROVEMENTS:
+* Added fields related to namespace used to create a role in kubernetes auth method: ([#2644](https://github.com/hashicorp/terraform-provider-vault/pull/2644))
 
 BUGS:
 
 * Fix LDAP auth tune block read failure caused by extra /tune segment in the API request path ([#2676](https://github.com/hashicorp/terraform-provider-vault/pull/2676))
+
 
 ## 5.5.0 (Nov 19, 2025)
 
