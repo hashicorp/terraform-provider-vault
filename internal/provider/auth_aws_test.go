@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -189,6 +189,50 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "static-creds-with-role-arn",
+			fields: fields{
+				AuthLoginCommon: AuthLoginCommon{
+					params: map[string]interface{}{
+						consts.FieldAWSAccessKeyID:     "key-id",
+						consts.FieldAWSSecretAccessKey: "secret-key",
+						consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/test-role",
+						consts.FieldAWSRoleSessionName: "test-session",
+					},
+				},
+			},
+			logger: hclog.NewNullLogger(),
+			want: &awsutil.CredentialsConfig{
+				Region:          "us-east-1",
+				AccessKey:       "key-id",
+				SecretKey:       "secret-key",
+				RoleARN:         "arn:aws:iam::123456789012:role/test-role",
+				RoleSessionName: "test-session",
+			},
+			wantErr: false,
+		},
+		{
+			name: "static-creds-with-session-token-and-role-arn",
+			fields: fields{
+				AuthLoginCommon: AuthLoginCommon{
+					params: map[string]interface{}{
+						consts.FieldAWSAccessKeyID:     "key-id",
+						consts.FieldAWSSecretAccessKey: "secret-key",
+						consts.FieldAWSSessionToken:    "session-token",
+						consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/test-role",
+					},
+				},
+			},
+			logger: hclog.NewNullLogger(),
+			want: &awsutil.CredentialsConfig{
+				Region:       "us-east-1",
+				AccessKey:    "key-id",
+				SecretKey:    "secret-key",
+				SessionToken: "session-token",
+				RoleARN:      "arn:aws:iam::123456789012:role/test-role",
+			},
+			wantErr: false,
+		},
+		{
 			name: "all",
 			fields: fields{
 				AuthLoginCommon: AuthLoginCommon{
@@ -209,11 +253,11 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 			},
 			logger: hclog.NewNullLogger(),
 			want: &awsutil.CredentialsConfig{
-				AccessKey:            "key-id",
-				SecretKey:            "sa-key",
-				SessionToken:         "session-token",
-				IAMEndpoint:          "iam.us-east-2.amazonaws.com",
-				STSEndpoint:          "sts.us-east-2.amazonaws.com",
+				AccessKey:    "key-id",
+				SecretKey:    "sa-key",
+				SessionToken: "session-token",
+				// Note: IAMEndpoint and STSEndpoint have been replaced with endpoint resolvers in v2
+				// and are no longer simple string fields
 				Region:               "us-east-2",
 				Filename:             "credentials",
 				Profile:              "profile1",
@@ -238,10 +282,299 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 			if got.HTTPClient == nil {
 				t.Errorf("getCredentialsConfig() HTTPClient not initialized")
 			}
-			// set HTTPClient to nil
+
+			// Verify custom endpoint resolvers are set correctly when endpoints are provided
+			// We check these explicitly because they're interfaces and can't be compared with DeepEqual
+			if stsEndpoint, ok := tt.fields.AuthLoginCommon.params[consts.FieldAWSSTSEndpoint].(string); ok && stsEndpoint != "" {
+				if got.STSEndpointResolver == nil {
+					t.Error("Expected STSEndpointResolver to be set when aws_sts_endpoint is provided")
+				} else {
+					resolver, ok := got.STSEndpointResolver.(*customSTSEndpointResolver)
+					if !ok {
+						t.Error("STSEndpointResolver is not of type *customSTSEndpointResolver")
+					} else if resolver.endpointURL != stsEndpoint {
+						t.Errorf("STSEndpointResolver endpointURL = %v, want %v", resolver.endpointURL, stsEndpoint)
+					}
+				}
+			}
+
+			if iamEndpoint, ok := tt.fields.AuthLoginCommon.params[consts.FieldAWSIAMEndpoint].(string); ok && iamEndpoint != "" {
+				if got.IAMEndpointResolver == nil {
+					t.Error("Expected IAMEndpointResolver to be set when aws_iam_endpoint is provided")
+				} else {
+					resolver, ok := got.IAMEndpointResolver.(*customIAMEndpointResolver)
+					if !ok {
+						t.Error("IAMEndpointResolver is not of type *customIAMEndpointResolver")
+					} else if resolver.endpointURL != iamEndpoint {
+						t.Errorf("IAMEndpointResolver endpointURL = %v, want %v", resolver.endpointURL, iamEndpoint)
+					}
+				}
+			}
+
+			// Set HTTPClient, Logger, and endpoint resolvers to nil before DeepEqual comparison
+			// We've already verified endpoint resolvers above
 			got.HTTPClient = nil
+			got.Logger = nil
+			got.STSEndpointResolver = nil
+			got.IAMEndpointResolver = nil
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getCredentialsConfig() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestAuthLoginAWS_RoleAssumption tests the manual role assumption logic
+func TestAuthLoginAWS_RoleAssumption(t *testing.T) {
+	tests := []struct {
+		name                 string
+		params               map[string]interface{}
+		expectRoleAssumption bool
+		expectSessionName    string
+	}{
+		{
+			name: "with-role-arn-and-session-name",
+			params: map[string]interface{}{
+				consts.FieldAWSAccessKeyID:     "key-id",
+				consts.FieldAWSSecretAccessKey: "secret-key",
+				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/test-role",
+				consts.FieldAWSRoleSessionName: "custom-session",
+			},
+			expectRoleAssumption: true,
+			expectSessionName:    "custom-session",
+		},
+		{
+			name: "with-role-arn-default-session-name",
+			params: map[string]interface{}{
+				consts.FieldAWSAccessKeyID:     "key-id",
+				consts.FieldAWSSecretAccessKey: "secret-key",
+				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/test-role",
+			},
+			expectRoleAssumption: true,
+			expectSessionName:    "", // Session name is not set in config when not provided
+		},
+		{
+			name: "without-role-arn",
+			params: map[string]interface{}{
+				consts.FieldAWSAccessKeyID:     "key-id",
+				consts.FieldAWSSecretAccessKey: "secret-key",
+			},
+			expectRoleAssumption: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &AuthLoginAWS{
+				AuthLoginCommon: AuthLoginCommon{
+					params: tt.params,
+				},
+			}
+
+			// Verify that getCredentialsConfig properly sets role ARN
+			config, err := l.getCredentialsConfig(hclog.NewNullLogger())
+			if err != nil {
+				t.Fatalf("getCredentialsConfig() error = %v", err)
+			}
+
+			if tt.expectRoleAssumption {
+				if config.RoleARN == "" {
+					t.Errorf("Expected RoleARN to be set, got empty string")
+				}
+				if roleARN, ok := tt.params[consts.FieldAWSRoleARN].(string); ok {
+					if config.RoleARN != roleARN {
+						t.Errorf("Expected RoleARN = %v, got %v", roleARN, config.RoleARN)
+					}
+				}
+
+				// Check session name
+				expectedSessionName := tt.expectSessionName
+				if config.RoleSessionName != expectedSessionName {
+					t.Errorf("Expected RoleSessionName = %v, got %v", expectedSessionName, config.RoleSessionName)
+				}
+			} else {
+				if config.RoleARN != "" {
+					t.Errorf("Expected RoleARN to be empty, got %v", config.RoleARN)
+				}
+			}
+		})
+	}
+}
+
+// TestAuthLoginAWS_SessionTokenWithRoleARN tests that session token is handled correctly with role assumption
+func TestAuthLoginAWS_SessionTokenWithRoleARN(t *testing.T) {
+	tests := []struct {
+		name                  string
+		params                map[string]interface{}
+		expectSessionTokenSet bool
+	}{
+		{
+			name: "session-token-without-role-arn",
+			params: map[string]interface{}{
+				consts.FieldAWSAccessKeyID:     "key-id",
+				consts.FieldAWSSecretAccessKey: "secret-key",
+				consts.FieldAWSSessionToken:    "session-token",
+			},
+			expectSessionTokenSet: true,
+		},
+		{
+			name: "session-token-with-role-arn",
+			params: map[string]interface{}{
+				consts.FieldAWSAccessKeyID:     "key-id",
+				consts.FieldAWSSecretAccessKey: "secret-key",
+				consts.FieldAWSSessionToken:    "session-token",
+				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/test-role",
+			},
+			expectSessionTokenSet: true,
+		},
+		{
+			name: "no-session-token-with-role-arn",
+			params: map[string]interface{}{
+				consts.FieldAWSAccessKeyID:     "key-id",
+				consts.FieldAWSSecretAccessKey: "secret-key",
+				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/test-role",
+			},
+			expectSessionTokenSet: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &AuthLoginAWS{
+				AuthLoginCommon: AuthLoginCommon{
+					params: tt.params,
+				},
+			}
+
+			config, err := l.getCredentialsConfig(hclog.NewNullLogger())
+			if err != nil {
+				t.Fatalf("getCredentialsConfig() error = %v", err)
+			}
+
+			hasSessionToken := config.SessionToken != ""
+			if hasSessionToken != tt.expectSessionTokenSet {
+				t.Errorf("Expected SessionToken set = %v, got %v", tt.expectSessionTokenSet, hasSessionToken)
+			}
+
+			// Verify session token value matches if it should be set
+			if tt.expectSessionTokenSet {
+				if sessionToken, ok := tt.params[consts.FieldAWSSessionToken].(string); ok {
+					if config.SessionToken != sessionToken {
+						t.Errorf("Expected SessionToken = %v, got %v", sessionToken, config.SessionToken)
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestAuthLoginAWS_CustomEndpoints tests that custom STS and IAM endpoints are properly configured
+func TestAuthLoginAWS_CustomEndpoints(t *testing.T) {
+	tests := []struct {
+		name              string
+		params            map[string]interface{}
+		expectSTSEndpoint bool
+		expectIAMEndpoint bool
+		stsEndpoint       string
+		iamEndpoint       string
+	}{
+		{
+			name: "with-custom-sts-endpoint",
+			params: map[string]interface{}{
+				consts.FieldAWSAccessKeyID:     "key-id",
+				consts.FieldAWSSecretAccessKey: "secret-key",
+				consts.FieldAWSSTSEndpoint:     "https://sts.custom.endpoint.com",
+			},
+			expectSTSEndpoint: true,
+			expectIAMEndpoint: false,
+			stsEndpoint:       "https://sts.custom.endpoint.com",
+		},
+		{
+			name: "with-custom-iam-endpoint",
+			params: map[string]interface{}{
+				consts.FieldAWSAccessKeyID:     "key-id",
+				consts.FieldAWSSecretAccessKey: "secret-key",
+				consts.FieldAWSIAMEndpoint:     "https://iam.custom.endpoint.com",
+			},
+			expectSTSEndpoint: false,
+			expectIAMEndpoint: true,
+			iamEndpoint:       "https://iam.custom.endpoint.com",
+		},
+		{
+			name: "with-both-custom-endpoints",
+			params: map[string]interface{}{
+				consts.FieldAWSAccessKeyID:     "key-id",
+				consts.FieldAWSSecretAccessKey: "secret-key",
+				consts.FieldAWSSTSEndpoint:     "https://sts.custom.endpoint.com",
+				consts.FieldAWSIAMEndpoint:     "https://iam.custom.endpoint.com",
+			},
+			expectSTSEndpoint: true,
+			expectIAMEndpoint: true,
+			stsEndpoint:       "https://sts.custom.endpoint.com",
+			iamEndpoint:       "https://iam.custom.endpoint.com",
+		},
+		{
+			name: "without-custom-endpoints",
+			params: map[string]interface{}{
+				consts.FieldAWSAccessKeyID:     "key-id",
+				consts.FieldAWSSecretAccessKey: "secret-key",
+			},
+			expectSTSEndpoint: false,
+			expectIAMEndpoint: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &AuthLoginAWS{
+				AuthLoginCommon: AuthLoginCommon{
+					params: tt.params,
+				},
+			}
+
+			logger := hclog.NewNullLogger()
+			config, err := l.getCredentialsConfig(logger)
+			if err != nil {
+				t.Errorf("getCredentialsConfig() unexpected error = %v", err)
+				return
+			}
+
+			// Check STS endpoint resolver
+			if tt.expectSTSEndpoint {
+				if config.STSEndpointResolver == nil {
+					t.Error("Expected STSEndpointResolver to be set, but it was nil")
+				} else {
+					// Verify the resolver returns the correct endpoint
+					resolver, ok := config.STSEndpointResolver.(*customSTSEndpointResolver)
+					if !ok {
+						t.Errorf("STSEndpointResolver is not of type *customSTSEndpointResolver")
+					} else if resolver.endpointURL != tt.stsEndpoint {
+						t.Errorf("STSEndpointResolver endpointURL = %v, want %v", resolver.endpointURL, tt.stsEndpoint)
+					}
+				}
+			} else {
+				if config.STSEndpointResolver != nil {
+					t.Error("Expected STSEndpointResolver to be nil, but it was set")
+				}
+			}
+
+			// Check IAM endpoint resolver
+			if tt.expectIAMEndpoint {
+				if config.IAMEndpointResolver == nil {
+					t.Error("Expected IAMEndpointResolver to be set, but it was nil")
+				} else {
+					// Verify the resolver returns the correct endpoint
+					resolver, ok := config.IAMEndpointResolver.(*customIAMEndpointResolver)
+					if !ok {
+						t.Errorf("IAMEndpointResolver is not of type *customIAMEndpointResolver")
+					} else if resolver.endpointURL != tt.iamEndpoint {
+						t.Errorf("IAMEndpointResolver endpointURL = %v, want %v", resolver.endpointURL, tt.iamEndpoint)
+					}
+				}
+			} else {
+				if config.IAMEndpointResolver != nil {
+					t.Error("Expected IAMEndpointResolver to be nil, but it was set")
+				}
 			}
 		})
 	}
