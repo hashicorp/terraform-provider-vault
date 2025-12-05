@@ -284,6 +284,8 @@ See the [Vault
 
 * `project_id` - (Required) The Project ID the Database User should be created within.
 
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
+
 ### SAP HanaDB Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See

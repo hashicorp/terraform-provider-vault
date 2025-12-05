@@ -378,3 +378,119 @@ resource "vault_database_secrets_mount" "test" {
 }
 `, path, name, connURL, period, schedule, window, disable)
 }
+
+func TestAccDatabaseSecretsMount_mongodbatlas(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineMongoDBAtlas)
+
+	values := testutil.SkipTestEnvUnset(t,
+		"MONGODB_ATLAS_PUBLIC_KEY",
+		"MONGODB_ATLAS_PRIVATE_KEY",
+		"MONGODB_ATLAS_PROJECT_ID")
+
+	publicKey, privateKey, projectID := values[0], values[1], values[2]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineMongoDBAtlas.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+	name2 := name + "-2"
+	usernameTemplate := "{{.DisplayName}}"
+
+	importIgnoreKeys := []string{
+		"engine_count",
+		"mongodbatlas.0.verify_connection",
+		"mongodbatlas.0.private_key",
+	}
+	resourceType := "vault_database_secrets_mount"
+	resourceName := resourceType + ".db"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretsMount_mongodbatlas(name, backend, pluginName, publicKey, privateKey, projectID, usernameTemplate),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.public_key", publicKey),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.private_key", privateKey),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.project_id", projectID),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.username_template", usernameTemplate),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.name", name),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: importIgnoreKeys,
+			},
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+					resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, "dev"))
+					if err != nil {
+						t.Fatal(err)
+					}
+					if resp == nil {
+						t.Fatal("empty response")
+					}
+				},
+				Config: testAccDatabaseSecretsMount_mongodbatlas(name2, backend, pluginName, publicKey, privateKey, projectID, usernameTemplate),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.public_key", publicKey),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.private_key", privateKey),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.project_id", projectID),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.username_template", usernameTemplate),
+					resource.TestCheckResourceAttr(resourceName, "mongodbatlas.0.name", name2),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: importIgnoreKeys,
+			},
+		},
+	})
+}
+
+func testAccDatabaseSecretsMount_mongodbatlas(name, path, pluginName, publicKey, privateKey, projectID, usernameTemplate string) string {
+	config := `
+  mongodbatlas {
+    allowed_roles     = ["dev", "prod"]
+    plugin_name       = "%s"
+    name              = "%s"
+    public_key        = "%s"
+    private_key       = "%s"
+    project_id        = "%s"
+    username_template = "%s"
+    verify_connection = true
+  }`
+
+	result := fmt.Sprintf(`
+resource "vault_database_secrets_mount" "db" {
+  path = "%s"
+%s
+}
+
+resource "vault_database_secret_backend_role" "test" {
+  backend = vault_database_secrets_mount.db.path
+  name    = "dev"
+  db_name = vault_database_secrets_mount.db.mongodbatlas[0].name
+  creation_statements = [
+    "{\"databaseName\": \"admin\", \"roles\": [{\"databaseName\": \"admin\", \"roleName\": \"readWrite\"}]}"
+  ]
+}
+`, path, fmt.Sprintf(config, pluginName, name, publicKey, privateKey, projectID, usernameTemplate))
+
+	return result
+}
