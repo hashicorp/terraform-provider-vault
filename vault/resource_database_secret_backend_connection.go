@@ -321,6 +321,32 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Description: "Whether to skip verification of the server certificate when using TLS.",
 						Default:     false,
 					},
+					"tls_server_name": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "SNI host for TLS connections.",
+					},
+					"local_datacenter": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Cassandra local datacenter name.",
+					},
+					"socket_keep_alive": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Enable TCP keepalive for Cassandra connections.",
+						Default:     "0",
+					},
+					"consistency": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Cassandra consistency level.",
+					},
+					"username_template": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Template for dynamic Cassandra usernames.",
+					},
 					"pem_bundle": {
 						Type:        schema.TypeString,
 						Optional:    true,
@@ -1107,6 +1133,23 @@ func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOkExists("cassandra.0.insecure_tls"); ok {
 		data["insecure_tls"] = v.(bool)
 	}
+
+	if v, ok := d.GetOk(prefix + "tls_server_name"); ok {
+		data["tls_server_name"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "local_datacenter"); ok {
+		data["local_datacenter"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "socket_keep_alive"); ok {
+		data["socket_keep_alive"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "consistency"); ok {
+		data["consistency"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
+	}
+
 	if v, ok := d.GetOkExists("cassandra.0.pem_bundle"); ok {
 		data["pem_bundle"] = v.(string)
 	}
@@ -2228,6 +2271,21 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 		}
 		if v, ok := data["insecure_tls"]; ok {
 			result["insecure_tls"] = v.(bool)
+		}
+		if v, ok := data["tls_server_name"]; ok {
+			result["tls_server_name"] = v.(string)
+		}
+		if v, ok := data["local_datacenter"]; ok {
+			result["local_datacenter"] = v.(string)
+		}
+		if v, ok := data["socket_keep_alive"]; ok {
+			result["socket_keep_alive"] = v.(string)
+		}
+		if v, ok := data["consistency"]; ok {
+			result["consistency"] = v.(string)
+		}
+		if v, ok := data["username_template"]; ok {
+			result["username_template"] = v.(string)
 		}
 		if v, ok := data["pem_bundle"]; ok {
 			result["pem_bundle"] = v.(string)
