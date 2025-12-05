@@ -1,5 +1,25 @@
 ## Unreleased
 
+IMPROVEMENTS:
+* Add support for `username_template` parameter in `vault_database_secret_backend_connection` resource for MongoDB Atlas([#2674](https://github.com/hashicorp/terraform-provider-vault/pull/2674)) 
+
+## 5.6.0 (December 19, 2025)
+
+FEATURES:
+* Add support for self managed workflow for rootless static roles in Oracle Secret Engine: ([#2661](https://github.com/hashicorp/terraform-provider-vault/pull/2661))
+* Add AWS access creds ephemeral resource: ([#2659](https://github.com/hashicorp/terraform-provider-vault/pull/2659))
+* Add AWS static access credentials ephemeral resource.: ([#2657](https://github.com/hashicorp/terraform-provider-vault/pull/2657))
+* Add GCP ephemeral resources for OAuth2 access token and service account key: ([#2655](https://github.com/hashicorp/terraform-provider-vault/pull/2655))
+* Add Azure access credentials ephemeral resource: ([#2654](https://github.com/hashicorp/terraform-provider-vault/pull/2654))
+
+IMPROVEMENTS:
+* Added fields related to namespace used to create a role in kubernetes auth method: ([#2644](https://github.com/hashicorp/terraform-provider-vault/pull/2644))
+
+BUGS:
+
+* Fix LDAP auth tune block read failure caused by extra /tune segment in the API request path ([#2676](https://github.com/hashicorp/terraform-provider-vault/pull/2676))
+
+
 ## 5.5.0 (Nov 19, 2025)
 
 BEHAVIOR CHANGES: With v5.5.0, the default value for `deny_null_bind` in the `vault_ldap_auth_backend` resource has changed from `false` to `true` 
@@ -214,6 +234,7 @@ IMPROVEMENTS:
 
 FEATURES:
 
+* Update `vault_kubernetes_auth_backend_role` to support `bound_service_account_namespace_selector`, enabling the use of namespace selectors for allowing Kubernetes namespaces to access roles. ([#2379](https://github.com/hashicorp/terraform-provider-vault/pull/2379))
 * Update `vault_database_secret_backend_connection`to support `password_authentication` for PostgreSQL, allowing to encrypt password before being passed to PostgreSQL ([#2371](https://github.com/hashicorp/terraform-provider-vault/pull/2371))
 * Add support for `external_id` field for the `vault_aws_auth_backend_sts_role` resource ([#2370](https://github.com/hashicorp/terraform-provider-vault/pull/2370))
 * Add support for ACME configuration with the `vault_pki_secret_backend_config_acme` resource. Requires Vault 1.14+ ([#2157](https://github.com/hashicorp/terraform-provider-vault/pull/2157)).

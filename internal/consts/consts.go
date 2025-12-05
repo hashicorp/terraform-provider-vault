@@ -14,6 +14,7 @@ const (
 	FieldPath = "path"
 	// FieldMount should be used for all new non-backend-mounting resources.
 	// In other words, resources that depend on a backend-mounting resource should use this.
+	FieldAuth                           = "auth"
 	FieldMount                          = "mount"
 	FieldBindDN                         = "binddn"
 	FieldBindPass                       = "bindpass"
@@ -90,7 +91,9 @@ const (
 	FieldForceRWSession                 = "force_rw_session"
 	FieldAccessKey                      = "access_key"
 	FieldSecretKey                      = "secret_key"
+	FieldSecurityToken                  = "security_token"
 	FieldEndpoint                       = "endpoint"
+	FieldKeyAlgorithm                   = "key_algorithm"
 	FieldKeyType                        = "key_type"
 	FieldKMSKey                         = "kms_key"
 	FieldRegion                         = "region"
@@ -158,6 +161,7 @@ const (
 	FieldServiceAccount                 = "service_account"
 	FieldAuthorization                  = "authorization"
 	FieldToken                          = "token"
+	FieldTokenTTL                       = "token_ttl"
 	FieldTokenWO                        = "token_wo"
 	FieldTokenWOVersion                 = "token_wo_version"
 	FieldService                        = "service"
@@ -260,7 +264,10 @@ const (
 	FieldEC2Metadata                    = "ec2_metadata"
 	FieldPublicKey                      = "public_key"
 	FieldPrivateKey                     = "private_key"
+	FieldPrivateKeyData                 = "private_key_data"
 	FieldImpersonatedAccount            = "impersonated_account"
+	FieldRoleset                        = "roleset"
+	FieldStaticAccount                  = "static_account"
 	FieldServiceAccountEmail            = "service_account_email"
 	FieldTokenScopes                    = "token_scopes"
 	FieldServiceAccountProject          = "service_account_project"
@@ -557,6 +564,13 @@ const (
 	FieldDereferenceAliases                   = "dereference_aliases"
 	FieldEnableSamaccountnameLogin            = "enable_samaccountname_login"
 	FieldAnonymousGroupSearch                 = "anonymous_group_search"
+	FieldAliasNameSource                      = "alias_name_source"
+	FieldBoundServiceAccountNames             = "bound_service_account_names"
+	FieldBoundServiceAccountNamespaces        = "bound_service_account_namespaces"
+	FieldBoundServiceAccountNamespaceSelector = "bound_service_account_namespace_selector"
+	FieldAudience                             = "audience"
+	FieldTokenMaxTTL                          = "token_max_ttl"
+	FieldTokenPeriod                          = "token_period"
 
 	/*
 		ephemeral resource constants and write-only attributes

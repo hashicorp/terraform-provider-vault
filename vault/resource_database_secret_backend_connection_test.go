@@ -325,13 +325,14 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineMongoDBAtlas.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
+	usernameTemplate := "{{.DisplayName}}"
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, backend, publicKey, privateKey, projectID),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, backend, publicKey, privateKey, projectID, usernameTemplate),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -342,6 +343,7 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodbatlas.0.public_key", publicKey),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodbatlas.0.private_key", privateKey),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodbatlas.0.project_id", projectID),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodbatlas.0.username_template", usernameTemplate),
 				),
 			},
 		},
@@ -1764,7 +1766,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, host, username, password, usernameTemplate)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, path, public_key, private_key, project_id string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, path, public_key, private_key, project_id, username_template string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1781,9 +1783,10 @@ resource "vault_database_secret_backend_connection" "test" {
     public_key  = "%s"
     private_key = "%s"
     project_id  = "%s"
+	username_template = "%s"
   }
 }
-`, path, name, public_key, private_key, project_id)
+`, path, name, public_key, private_key, project_id, username_template)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_mongodb(name, path, connURL string) string {
