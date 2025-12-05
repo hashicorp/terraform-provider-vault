@@ -2,6 +2,8 @@
 
 IMPROVEMENTS:
 * Add support for `username_template` parameter in `vault_database_secret_backend_connection` resource for MongoDB Atlas([#2674](https://github.com/hashicorp/terraform-provider-vault/pull/2674)) 
+* Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resources for HANADB connections: ([#2671](https://github.com/hashicorp/terraform-provider-vault/pull/2671))
+
 
 ## 5.6.0 (December 19, 2025)
 
@@ -14,7 +16,6 @@ FEATURES:
 
 IMPROVEMENTS:
 * Added fields related to namespace used to create a role in kubernetes auth method: ([#2644](https://github.com/hashicorp/terraform-provider-vault/pull/2644))
-* Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resources for HANADB connections: ([#2671](https://github.com/hashicorp/terraform-provider-vault/pull/2671))
 
 BUGS:
 
