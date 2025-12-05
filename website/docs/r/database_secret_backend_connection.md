@@ -308,6 +308,8 @@ See the [Vault
 
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
+
 * `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ### MSSQL Configuration Options

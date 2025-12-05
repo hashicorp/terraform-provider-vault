@@ -7,10 +7,13 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -269,6 +272,83 @@ func TestAccDatabaseSecretsMount_postgresql_automatedRootRotation(t *testing.T) 
 	})
 }
 
+func TestAccDatabaseSecretsMount_hana(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineHana)
+
+	values := testutil.SkipTestEnvUnset(t, "HANA_CONNECTION_URL")
+	connURL := values[0]
+
+	username := os.Getenv("HANA_USERNAME")
+	password := os.Getenv("HANA_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineHana.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+	userTempl := "{{.DisplayName}}_{{random 8}}"
+
+	importIgnoreKeys := []string{
+		"engine_count",
+		"hana.0.verify_connection",
+		"hana.0.password",
+		"hana.0.connection_url",
+	}
+	resourceType := "vault_database_secrets_mount"
+	resourceName := resourceType + ".db"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretsMount_hana(name, backend, pluginName, connURL, username, password, userTempl),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "hana.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.username", username),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.disable_escaping", "true"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.username_template", userTempl),
+					func(s *terraform.State) error {
+						client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+						// Validate that the mount can generate credentials through the role
+						resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, "dev"))
+						if err != nil {
+							return fmt.Errorf("error reading credentials: %v", err)
+						}
+						if resp == nil {
+							return fmt.Errorf("no credentials returned")
+						}
+						if resp.Data["username"] == nil || resp.Data["password"] == nil {
+							return fmt.Errorf("credentials missing username or password")
+						}
+
+						// Verify the generated username matches the template pattern
+						generatedUsername := resp.Data["username"].(string)
+						if !strings.Contains(generatedUsername, "TOKEN_TERRAFORM_") {
+							return fmt.Errorf("generated username %q does not match template pattern (expected format: <displayname>_<random>)", generatedUsername)
+						}
+
+						return nil
+					},
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: importIgnoreKeys,
+			},
+		},
+	})
+}
+
 func testAccDatabaseSecretsMount_mssql(name, path, pluginName string, parsedURL *url.URL) string {
 	password, _ := parsedURL.User.Password()
 
@@ -377,6 +457,40 @@ resource "vault_database_secrets_mount" "test" {
   }
 }
 `, path, name, connURL, period, schedule, window, disable)
+}
+
+func testAccDatabaseSecretsMount_hana(name, path, pluginName, connURL, username, password, userTempl string) string {
+	config := `
+  hana {
+    allowed_roles      = ["dev", "prod"]
+    plugin_name        = "%s"
+    name               = "%s"
+    connection_url     = "%s"
+    username           = "%s"
+    password           = "%s"
+    disable_escaping   = true
+    username_template  = "%s"
+    verify_connection  = true
+  }`
+
+	result := fmt.Sprintf(`
+resource "vault_database_secrets_mount" "db" {
+  path = "%s"
+%s
+}
+
+resource "vault_database_secret_backend_role" "test" {
+  backend = vault_database_secrets_mount.db.path
+  name    = "dev"
+  db_name = vault_database_secrets_mount.db.hana[0].name
+  creation_statements = [
+    "CREATE USER {{name}} PASSWORD \"{{password}}\" VALID UNTIL '{{expiration}}';",
+    "GRANT SELECT ON SCHEMA _SYS_BIC TO {{name}};",
+  ]
+}
+`, path, fmt.Sprintf(config, pluginName, name, connURL, username, password, userTempl))
+
+	return result
 }
 
 func TestAccDatabaseSecretsMount_mongodbatlas(t *testing.T) {

@@ -2830,3 +2830,122 @@ v1zW4I0I38hS4J1WZc39iCNIPJ4DVekPyvuMyZwxwjZoahsoI53D7z8UnPRfqLgi
 a/0qa6m6iLDrh6oyVXsKlRgsePBl7jUjP3HZTalWpX8+HFbVYIPN3mU50qgjR/uF
 lHWczW8tCg9aF3oBqvxt8WV/TU4oV4amunSkbD9HzqcnOuj1fGcZ9w==
 -----END RSA PRIVATE KEY-----`
+
+func TestAccDatabaseSecretBackendConnection_hana(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineHana)
+
+	values := testutil.SkipTestEnvUnset(t, "HANA_CONNECTION_URL")
+	connURL := values[0]
+
+	username := os.Getenv("HANA_USERNAME")
+	password := os.Getenv("HANA_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineHana.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+	userTempl := "{{.DisplayName}}_{{random 8}}"
+
+	importIgnoreKeys := []string{
+		"verify_connection",
+		"hana.0.password",
+		"hana.0.connection_url",
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_hana(name, backend, connURL, username, password, userTempl),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.disable_escaping", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.username_template", userTempl),
+					func(s *terraform.State) error {
+						client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+						// Validate that the connection can generate credentials through the role
+						resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, "dev"))
+						if err != nil {
+							return fmt.Errorf("error reading credentials: %v", err)
+						}
+						if resp == nil {
+							return fmt.Errorf("no credentials returned")
+						}
+						if resp.Data["username"] == nil || resp.Data["password"] == nil {
+							return fmt.Errorf("credentials missing username or password")
+						}
+
+						// Verify the generated username matches the template pattern
+						generatedUsername := resp.Data["username"].(string)
+						if !strings.Contains(generatedUsername, "TOKEN_TERRAFORM_") {
+							return fmt.Errorf("generated username %q does not match template pattern (expected format: <displayname>_<random>)", generatedUsername)
+						}
+
+						// Revoke the lease to prevent cleanup errors
+						if resp.LeaseID != "" {
+							err = client.Sys().Revoke(resp.LeaseID)
+							if err != nil {
+								return fmt.Errorf("error revoking lease: %v", err)
+							}
+						}
+
+						return nil
+					},
+				),
+			},
+			{
+				ResourceName:            testDefaultDatabaseSecretBackendResource,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: importIgnoreKeys,
+			},
+		},
+	})
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_hana(name, path, connURL, username, password, userTempl string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  hana {
+    connection_url = "%s"
+    username = "%s"
+    password = "%s"
+    disable_escaping = true
+    username_template = "%s"
+  }
+}
+
+resource "vault_database_secret_backend_role" "test" {
+  backend = vault_mount.db.path
+  name = "dev"
+  db_name = vault_database_secret_backend_connection.test.name
+  creation_statements = [
+    "CREATE USER {{name}} PASSWORD \"{{password}}\";",
+    "GRANT SELECT ON SCHEMA _SYS_BIC TO {{name}};"
+  ]
+  default_ttl = 3600
+  max_ttl = 7200
+}
+`, path, name, connURL, username, password, userTempl)
+}

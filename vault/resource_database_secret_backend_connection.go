@@ -532,9 +532,8 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Optional:    true,
 			Description: "Connection parameters for the hana-database-plugin plugin.",
 			Elem: connectionStringResource(&connectionStringConfig{
-				excludeUsernameTemplate: true,
-				includeDisableEscaping:  true,
-				includeUserPass:         true,
+				includeDisableEscaping: true,
+				includeUserPass:        true,
 			}),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineHana.Name(), dbEngineTypes),
