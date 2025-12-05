@@ -1,3 +1,8 @@
+## Unreleased
+
+IMPROVEMENTS:
+* Add support for `username_template` parameter in `vault_database_secret_backend_connection` resource for MongoDB Atlas([#2674](https://github.com/hashicorp/terraform-provider-vault/pull/2674)) 
+
 ## 5.6.0 (December 19, 2025)
 
 FEATURES:
