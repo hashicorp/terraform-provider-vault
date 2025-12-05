@@ -4,6 +4,7 @@ FEATURES:
 * Add support for self managed workflow for rootless static roles in Oracle Secret Engine: ([#2661](https://github.com/hashicorp/terraform-provider-vault/pull/2661))
 * Add AWS access creds ephemeral resource: ([#2659](https://github.com/hashicorp/terraform-provider-vault/pull/2659))
 * Add AWS static access credentials ephemeral resource.: ([#2657](https://github.com/hashicorp/terraform-provider-vault/pull/2657))
+* Add GCP ephemeral resources for OAuth2 access token and service account key: ([#2655](https://github.com/hashicorp/terraform-provider-vault/pull/2655))
 * Add Azure access credentials ephemeral resource: ([#2654](https://github.com/hashicorp/terraform-provider-vault/pull/2654))
 
 IMPROVEMENTS:
