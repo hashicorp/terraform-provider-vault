@@ -1,12 +1,51 @@
 ## Unreleased
 
-CHANGES:
+IMPROVEMENTS:
+* Add support for `username_template` parameter in `vault_database_secret_backend_connection` resource for MongoDB Atlas([#2674](https://github.com/hashicorp/terraform-provider-vault/pull/2674)) 
 
-* `vault_ldap_auth_backend`: Set `deny_null_bind` to `true` by default if not provided in configuration ([#2622](https://github.com/hashicorp/terraform-provider-vault/pull/2622))
+## 5.6.0 (December 19, 2025)
+
+FEATURES:
+* Add support for self managed workflow for rootless static roles in Oracle Secret Engine: ([#2661](https://github.com/hashicorp/terraform-provider-vault/pull/2661))
+* Add AWS access creds ephemeral resource: ([#2659](https://github.com/hashicorp/terraform-provider-vault/pull/2659))
+* Add AWS static access credentials ephemeral resource.: ([#2657](https://github.com/hashicorp/terraform-provider-vault/pull/2657))
+* Add GCP ephemeral resources for OAuth2 access token and service account key: ([#2655](https://github.com/hashicorp/terraform-provider-vault/pull/2655))
+* Add Azure access credentials ephemeral resource: ([#2654](https://github.com/hashicorp/terraform-provider-vault/pull/2654))
+
+IMPROVEMENTS:
+* Added fields related to namespace used to create a role in kubernetes auth method: ([#2644](https://github.com/hashicorp/terraform-provider-vault/pull/2644))
+
+BUGS:
+
+* Fix LDAP auth tune block read failure caused by extra /tune segment in the API request path ([#2676](https://github.com/hashicorp/terraform-provider-vault/pull/2676))
+
+
+## 5.5.0 (Nov 19, 2025)
+
+BEHAVIOR CHANGES: With v5.5.0, the default value for `deny_null_bind` in the `vault_ldap_auth_backend` resource has changed from `false` to `true` 
+to match with the Vault API defaults. Configurations that do not explicitly set `deny_null_bind` will now have it set to `true` upon upgrade, and 
+customers should verify that this change aligns with their intended LDAP authentication behavior. Furthermore, Customers should also consider 
+upgrading to Vault Community Edition 1.21.1 and Vault Enterprise 1.21.1, 1.20.6, 1.19.12, and 1.16.28, which no longer allows Vault to perform 
+unauthenticated or null binds against the LDAP server.
+
+SECURITY:
+
+* `vault_ldap_auth_backend`: Fix incorrect `deny_null_bind` default. Set `deny_null_bind` to `true` if not provided in configuration ([#2622](https://github.com/hashicorp/terraform-provider-vault/pull/2622)) (CVE-13357,[HCSEC-2025-33](https://discuss.hashicorp.com/t/hcsec-2025-33-vault-terraform-provider-applied-incorrect-defaults-for-ldap-auth-method/76822))
 
 FEATURES:
 
 * Add support for `alias_metadata` field in auth resources ([#2547](https://github.com/hashicorp/terraform-provider-vault/pull/2547))
+* Add support for `not_before_duration` field in `vault_pki_secret_backend_root_cert` ([#2664](https://github.com/hashicorp/terraform-provider-vault/pull/2664))
+
+IMPROVEMENTS:
+* Updated dependencies:
+  * `golang.org/x/crypto` v0.41.0 -> v0.45.0
+  * `golang.org/x/net` v0.43.0 -> v0.47.0
+  * `golang.org/x/mod` v0.26.0 -> v0.29.0
+  * `golang.org/x/sync` v0.16.0 -> v0.18.0
+  * `golang.org/x/sys` v0.35.0 -> v0.38.0
+  * `golang.org/x/text` v0.28.0 -> v0.31.0
+  * `golang.org/x/tools` v0.35.0 -> v0.38.0
 
 ## 5.4.0 (Nov 3, 2025)
 
@@ -195,6 +234,7 @@ IMPROVEMENTS:
 
 FEATURES:
 
+* Update `vault_kubernetes_auth_backend_role` to support `bound_service_account_namespace_selector`, enabling the use of namespace selectors for allowing Kubernetes namespaces to access roles. ([#2379](https://github.com/hashicorp/terraform-provider-vault/pull/2379))
 * Update `vault_database_secret_backend_connection`to support `password_authentication` for PostgreSQL, allowing to encrypt password before being passed to PostgreSQL ([#2371](https://github.com/hashicorp/terraform-provider-vault/pull/2371))
 * Add support for `external_id` field for the `vault_aws_auth_backend_sts_role` resource ([#2370](https://github.com/hashicorp/terraform-provider-vault/pull/2370))
 * Add support for ACME configuration with the `vault_pki_secret_backend_config_acme` resource. Requires Vault 1.14+ ([#2157](https://github.com/hashicorp/terraform-provider-vault/pull/2157)).
