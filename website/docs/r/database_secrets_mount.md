@@ -314,7 +314,7 @@ Supported list of database secrets engines that can be configured:
 
 ### SAP HanaDB Configuration Options
 
-* `connection_url` - (Required) A URL containing connection information.  
+* `connection_url` - (Required) A URL containing connection information.
   See [Vault docs](https://www.vaultproject.io/api-docs/secret/databases/hanadb.html#sample-payload)
 
 * `max_open_connections` - (Optional) The maximum number of open connections to
@@ -331,6 +331,8 @@ Supported list of database secrets engines that can be configured:
 * `password` - (Optional) The root credential password used in the connection URL.
 
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
+
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
 
 * `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
