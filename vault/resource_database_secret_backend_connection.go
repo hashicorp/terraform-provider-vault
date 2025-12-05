@@ -884,9 +884,11 @@ func mongodbConnectionStringResource() *schema.Resource {
 		includeUserPass: true,
 	})
 	r.Schema["write_concern"] = &schema.Schema{
-		Type:        schema.TypeString,
-		Optional:    true,
-		Description: "Specifies the MongoDB write concern for Vault management operations.",
+		Type:         schema.TypeString,
+		Optional:     true,
+		Description:  "Specifies the MongoDB write concern for Vault management operations.",
+		StateFunc:    NormalizeDataJSONFunc(dbEngineMongoDB.Name()),
+		ValidateFunc: ValidateDataJSONFunc(dbEngineMongoDB.Name()),
 	}
 	r.Schema["tls_certificate_key"] = &schema.Schema{
 		Type:        schema.TypeString,
