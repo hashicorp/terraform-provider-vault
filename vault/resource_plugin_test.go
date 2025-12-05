@@ -86,9 +86,9 @@ func TestPlugin(t *testing.T) {
 
 func TestPlugin_ent(t *testing.T) {
 	const (
-		typ     = "database"
-		args    = `["--foo"]`
-		env     = `["FOO=BAR"]`
+		typ  = "database"
+		args = `["--foo"]`
+		env  = `["FOO=BAR"]`
 
 		argsUpdated = `["--bar"]`
 		envUpdated  = `["FOO=BAZ"]`
@@ -101,7 +101,6 @@ func TestPlugin_ent(t *testing.T) {
 	name := os.Getenv(envPluginEntName)
 	cmd := os.Getenv(envPluginEntCommand)
 	version := os.Getenv(envPluginEntVersion)
-
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
