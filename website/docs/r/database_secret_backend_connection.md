@@ -99,6 +99,8 @@ The following arguments are supported:
 
 * `root_rotation_statements` - (Optional) A list of database statements to be executed to rotate the root user's credentials.
 
+* `password_policy` - (Optional) The name of the password policy to use when generating passwords for this database.
+
 * `data` - (Optional) A map of sensitive data to pass to the endpoint. Useful for templated connection strings.
 
 * `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the root credential.
