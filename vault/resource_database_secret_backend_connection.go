@@ -1055,11 +1055,17 @@ func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) 
 	return nil, fmt.Errorf("no supported database engines found for plugin %q", pluginName)
 }
 
-func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData, meta interface{}) (map[string]interface{}, error) {
+func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData, meta interface{}, unifiedSchema bool) (map[string]interface{}, error) {
 	prefix := engine.ResourcePrefix(idx)
 	data := map[string]interface{}{}
 
-	pluginName, err := engine.GetPluginName(d, prefix)
+	var pluginPrefix string
+	if unifiedSchema {
+		pluginPrefix = prefix
+	} else {
+		pluginPrefix = ""
+	}
+	pluginName, err := engine.GetPluginName(d, pluginPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -2057,7 +2063,7 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 }
 
 func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, client *api.Client, engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{}) error {
-	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta)
+	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta, unifiedSchema)
 	if err != nil {
 		return err
 	}
