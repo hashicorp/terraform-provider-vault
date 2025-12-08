@@ -20,6 +20,8 @@ for more details.
 
 ## Example Usage
 
+### PostgreSQL Connection
+
 ```hcl
 resource "vault_mount" "db" {
   path = "postgres"
@@ -36,6 +38,41 @@ resource "vault_database_secret_backend_connection" "postgres" {
   postgresql {
     connection_url = "postgres://username:password@host:port/database"
   }
+}
+```
+
+### Oracle Connection with Self-Managed Mode (Rootless)
+
+For Vault 1.18+ Enterprise, you can configure Oracle connections in self-managed mode,
+which allows a static role to manage its own database credentials without requiring root access:
+
+```hcl
+resource "vault_mount" "db" {
+  path = "database"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "oracle" {
+  backend       = vault_mount.db.path
+  name          = "oracle"
+  allowed_roles = ["my-role"]
+
+  oracle {
+    connection_url = "{{username}}/{{password}}@//host:port/service"
+    self_managed   = true
+    plugin_name    = "vault-plugin-database-oracle"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "oracle_role" {
+  backend = vault_mount.db.path
+  name    = "my-role"
+  db_name = vault_database_secret_backend_connection.oracle.name
+  
+  username            = "vault_user"
+  password_wo         = "initial-password"
+  password_wo_version = 1
+  rotation_period     = 3600
 }
 ```
 
@@ -142,6 +179,17 @@ Exactly one of the nested blocks of configuration options must be supplied.
   These checks ensure that Vault is able to create roles, but can be resource intensive in clusters with many roles.
 
 * `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
+* `username_template` - (Optional)  Template describing how dynamic usernames are generated.
+
+* `tls_server_name` - (Optional) Specifies the name to use as the SNI host when connecting to the Cassandra server via TLS.
+
+* `local_datacenter` - (Optional) If set, enables host selection policy which will prioritize and use hosts which are in the local datacenter before hosts in all other datacenters.
+
+* `socket_keep_alive` - (Optional) The keep-alive period for an active network connection. If zero, keep-alives are not enabled.
+
+* `consistency` - (Optional)  Specifies the consistency option to use. See the gocql definition for valid options.
+
 
 ### Couchbase Configuration Options
 
@@ -253,6 +301,8 @@ See the [Vault
 
 * `project_id` - (Required) The Project ID the Database User should be created within.
 
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
+
 ### SAP HanaDB Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -274,6 +324,8 @@ See the [Vault
 * `password` - (Optional) The root credential password used in the connection URL.
 
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
+
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
 
 * `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
@@ -407,8 +459,15 @@ See the [Vault
   maintain.
 
 * `username` - (Optional) The root credential username used in the connection URL.
+  Mutually exclusive with `self_managed`.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+  Mutually exclusive with `self_managed`.
+
+* `self_managed` - (Optional)  If set to `true`, allows onboarding static roles with a rootless
+  connection configuration. When enabled, Vault manages its own database credentials and 
+  `username`, `password`, and `password_wo` must not be set.
+  If set, will force `verify_connection` to be false. Requires Vault 1.18+ Enterprise.
 
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.

@@ -321,6 +321,32 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Description: "Whether to skip verification of the server certificate when using TLS.",
 						Default:     false,
 					},
+					"tls_server_name": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "SNI host for TLS connections.",
+					},
+					"local_datacenter": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Cassandra local datacenter name.",
+					},
+					"socket_keep_alive": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Enable TCP keepalive for Cassandra connections.",
+						Default:     "0",
+					},
+					"consistency": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Cassandra consistency level.",
+					},
+					"username_template": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Template for dynamic Cassandra usernames.",
+					},
 					"pem_bundle": {
 						Type:        schema.TypeString,
 						Optional:    true,
@@ -515,6 +541,11 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Required:    true,
 						Description: "The Project ID the Database User should be created within.",
 					},
+					"username_template": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Template describing how dynamic usernames are generated.",
+					},
 				},
 			},
 			MaxItems:      1,
@@ -525,9 +556,8 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Optional:    true,
 			Description: "Connection parameters for the hana-database-plugin plugin.",
 			Elem: connectionStringResource(&connectionStringConfig{
-				excludeUsernameTemplate: true,
-				includeDisableEscaping:  true,
-				includeUserPass:         true,
+				includeDisableEscaping: true,
+				includeUserPass:        true,
 			}),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineHana.Name(), dbEngineTypes),
@@ -720,6 +750,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendConnectionRead),
 		UpdateContext: databaseSecretBackendConnectionCreateOrUpdate,
 		DeleteContext: databaseSecretBackendConnectionDelete,
+		CustomizeDiff: validateDatabaseConnectionConfig,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -954,7 +985,11 @@ func oracleConnectionStringResource() *schema.Resource {
 		Description: "Set to true to disconnect any open sessions prior to running the revocation statements.",
 		Default:     true,
 	}
-
+	r.Schema["self_managed"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "If set, allows onboarding static roles with a rootless connection configuration.",
+	}
 	return r
 }
 
@@ -1085,6 +1120,9 @@ func setMongoDBAtlasDatabaseConnectionData(d *schema.ResourceData, prefix string
 	if v, ok := d.GetOk(prefix + "project_id"); ok {
 		data["project_id"] = v.(string)
 	}
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
+	}
 }
 
 func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
@@ -1119,6 +1157,23 @@ func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOkExists("cassandra.0.insecure_tls"); ok {
 		data["insecure_tls"] = v.(bool)
 	}
+
+	if v, ok := d.GetOk(prefix + "tls_server_name"); ok {
+		data["tls_server_name"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "local_datacenter"); ok {
+		data["local_datacenter"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "socket_keep_alive"); ok {
+		data["socket_keep_alive"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "consistency"); ok {
+		data["consistency"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
+	}
+
 	if v, ok := d.GetOkExists("cassandra.0.pem_bundle"); ok {
 		data["pem_bundle"] = v.(string)
 	}
@@ -1599,7 +1654,7 @@ func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix
 	return result
 }
 
-func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret, meta interface{}) map[string]interface{} {
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
 	if !ok {
@@ -1607,12 +1662,19 @@ func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix strin
 	}
 
 	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+
 	if v, ok := data["split_statements"]; ok {
 		result["split_statements"] = v.(bool)
 	}
 
 	if v, ok := data["disconnect_sessions"]; ok {
 		result["disconnect_sessions"] = v.(bool)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := data["self_managed"]; ok {
+			result["self_managed"] = v.(bool)
+		}
 	}
 
 	return result
@@ -1886,6 +1948,9 @@ func setOracleDatabaseConnectionData(d *schema.ResourceData, prefix string, data
 	}
 	if v, ok := d.GetOkExists(prefix + "disconnect_sessions"); ok {
 		data["disconnect_sessions"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "self_managed"); ok {
+		data["self_managed"] = v.(bool)
 	}
 }
 
@@ -2215,7 +2280,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineMySQLLegacy:
 		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineOracle:
-		result = getOracleConnectionDetailsFromResponse(d, prefix, resp)
+		result = getOracleConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEnginePostgres:
 		result = getPostgresConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineElasticSearch:
@@ -2266,6 +2331,21 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 		if v, ok := data["insecure_tls"]; ok {
 			result["insecure_tls"] = v.(bool)
 		}
+		if v, ok := data["tls_server_name"]; ok {
+			result["tls_server_name"] = v.(string)
+		}
+		if v, ok := data["local_datacenter"]; ok {
+			result["local_datacenter"] = v.(string)
+		}
+		if v, ok := data["socket_keep_alive"]; ok {
+			result["socket_keep_alive"] = v.(string)
+		}
+		if v, ok := data["consistency"]; ok {
+			result["consistency"] = v.(string)
+		}
+		if v, ok := data["username_template"]; ok {
+			result["username_template"] = v.(string)
+		}
 		if v, ok := data["pem_bundle"]; ok {
 			result["pem_bundle"] = v.(string)
 		} else if v, ok := d.GetOk(prefix + "pem_bundle"); ok {
@@ -2307,6 +2387,9 @@ func getConnectionDetailsMongoDBAtlas(d *schema.ResourceData, prefix string, res
 		if data, ok := details.(map[string]interface{}); ok {
 			for _, k := range []string{"public_key", "project_id"} {
 				result[k] = data[k]
+			}
+			if v, ok := data["username_template"]; ok {
+				result["username_template"] = v.(string)
 			}
 		}
 	}
@@ -2384,4 +2467,55 @@ func databaseEngineNameAndIndexFromPrefix(prefix string) (string, string, error)
 		return "", "", fmt.Errorf("unexpected number of matches (%d) for name", len(res))
 	}
 	return res[1], res[2], nil
+}
+
+func validateDatabaseConnectionConfig(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	// Validate Oracle self_managed configuration
+	oracleConfig, ok := d.GetOk(dbEngineOracle.name)
+	if !ok {
+		return nil
+	}
+
+	oracleList := oracleConfig.([]interface{})
+	if len(oracleList) == 0 || oracleList[0] == nil {
+		return nil
+	}
+
+	config := oracleList[0].(map[string]interface{})
+	selfManaged, ok := config["self_managed"].(bool)
+	if !ok || !selfManaged {
+		return nil
+	}
+
+	// Check for username
+	hasUsername := false
+	if username, ok := config[consts.FieldUsername].(string); ok && username != "" {
+		hasUsername = true
+	}
+
+	// Check for password
+	hasPassword := false
+	if password, ok := config[consts.FieldPassword].(string); ok && password != "" {
+		hasPassword = true
+	}
+
+	// Check password_wo using GetRawConfig
+	hasPasswordWO := false
+	rawConfig := d.GetRawConfig()
+	if !rawConfig.IsNull() {
+		if oracleAttr := rawConfig.GetAttr(dbEngineOracle.name); !oracleAttr.IsNull() && oracleAttr.LengthInt() > 0 {
+			if firstElement := oracleAttr.Index(cty.NumberIntVal(0)); !firstElement.IsNull() {
+				pwWoAttr := firstElement.GetAttr(consts.FieldPasswordWO)
+				if pwWoAttr.IsKnown() && !pwWoAttr.IsNull() && strings.TrimSpace(pwWoAttr.AsString()) != "" {
+					hasPasswordWO = true
+				}
+			}
+		}
+	}
+
+	if hasUsername || hasPassword || hasPasswordWO {
+		return fmt.Errorf("cannot use both self-managed and vault-managed workflows. Either use self_managed or username/password")
+	}
+
+	return nil
 }
