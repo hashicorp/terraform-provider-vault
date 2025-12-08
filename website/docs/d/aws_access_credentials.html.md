@@ -86,6 +86,8 @@ in addition to the keys.
 from the configured role. If the role does not have multiple ARNs, this does
 not need to be specified.
 
+* `role_session_name` - (Optional) The role session name to attach to the assumed role ARN. role_session_name is limited to 64 characters; if exceeded, the `role_session_name` in the assumed role ARN will be truncated to 64 characters. If `role_session_name` is not provided, then it will be generated dynamically by the Vault server itself.
+
 * `region` - (Required when reading from AWS GovCloud) The region the read credentials belong to.
 
 * `ttl` - (Optional) Specifies the TTL for the use of the STS token. This
