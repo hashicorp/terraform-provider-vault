@@ -179,6 +179,17 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
+* `username_template` - (Optional)  Template describing how dynamic usernames are generated.
+
+* `tls_server_name` - (Optional) Specifies the name to use as the SNI host when connecting to the Cassandra server via TLS.
+
+* `local_datacenter` - (Optional) If set, enables host selection policy which will prioritize and use hosts which are in the local datacenter before hosts in all other datacenters.
+
+* `socket_keep_alive` - (Optional) The keep-alive period for an active network connection. If zero, keep-alives are not enabled.
+
+* `consistency` - (Optional)  Specifies the consistency option to use. See the gocql definition for valid options.
+
+
 ### Couchbase Configuration Options
 
 * `hosts` - (Required) A set of Couchbase URIs to connect to. Must use `couchbases://` scheme if `tls` is `true`.
@@ -306,6 +317,8 @@ See the [Vault
 * `password` - (Optional) The root credential password used in the connection URL.
 
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
+
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
 
 * `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 

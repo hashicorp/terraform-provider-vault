@@ -16,6 +16,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -83,6 +84,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 	})
 }
 
+// TestAccDatabaseSecretBackendConnection_cassandra tests cassandra DB connection for default values
 func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineCassandra)
 
@@ -121,12 +123,18 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.protocol_version", "4"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.connect_timeout", "5"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.skip_verification", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.tls_server_name", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.local_datacenter", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.socket_keep_alive", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.consistency", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username_template", ""),
 				),
 			},
 		},
 	})
 }
 
+// TestAccDatabaseSecretBackendConnection_cassandraProtocol tests cassandra DB connection when optional fields are ommitted
 func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineCassandra)
 
@@ -162,9 +170,142 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.pem_bundle", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.pem_json", ""),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.protocol_version", "5"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.protocol_version", "4"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.connect_timeout", "5"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.skip_verification", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.tls_server_name", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.local_datacenter", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.socket_keep_alive", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.consistency", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username_template", ""),
+				),
+			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretBackendConnection_cassandra_invalidFields tests cassandra DB connection errors when wrong values are provided
+func TestAccDatabaseSecretBackendConnection_cassandra_invalidFields(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCassandra)
+
+	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
+	host := values[0]
+	username := os.Getenv("CASSANDRA_USERNAME")
+	password := os.Getenv("CASSANDRA_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, "tls_server_name"),
+				ExpectError: regexp.MustCompile(`(?i)invalid|error|tls_server_name`),
+			},
+			{
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, "local_datacenter"),
+				ExpectError: regexp.MustCompile(`(?i)invalid|error|local_datacenter|required|empty`),
+			},
+			{
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, "socket_keep_alive"),
+				ExpectError: regexp.MustCompile(`(?i)invalid|error|socket_keep_alive|must be|positive`),
+			},
+			{
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, "consistency"),
+				ExpectError: regexp.MustCompile(`(?i)invalid|error|consistency|unsupported`),
+			},
+			{
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, "username_template"),
+				ExpectError: regexp.MustCompile(`(?i)invalid|error|username_template|template`),
+			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretBackendConnection_cassandra_customFields tests cassandra DB connection when tls=true and proper values given to fields
+func TestAccDatabaseSecretBackendConnection_cassandra_customFields(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCassandra)
+
+	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
+	host := values[0]
+	username := os.Getenv("CASSANDRA_USERNAME")
+	password := os.Getenv("CASSANDRA_PASSWORD")
+
+	// Skip if TLS is not enabled
+	tlsStr := os.Getenv("CASSANDRA_TLS")
+	if tlsStr == "" {
+		tlsStr = "false"
+	}
+	useTLS, err := strconv.ParseBool(tlsStr)
+	if err != nil {
+		t.Fatalf("Invalid CASSANDRA_TLS value: %s", tlsStr)
+	}
+	if !useTLS {
+		t.Skip("Skipping TLS test because CASSANDRA_TLS is not set to true")
+	}
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra_customFields(name, backend, host, username, password),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineCassandra.DefaultPluginName(),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.tls_server_name", "cassandra-server"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.local_datacenter", "datacenter1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.socket_keep_alive", "30"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.consistency", "LOCAL_QUORUM"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username_template", "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretBackendConnection_cassandra_customFieldsNoTLS tests cassandra DB connection when tls=false and proper values given to fields
+func TestAccDatabaseSecretBackendConnection_cassandra_customFieldsNoTLS(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCassandra)
+
+	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
+	host := values[0]
+	username := os.Getenv("CASSANDRA_USERNAME")
+	password := os.Getenv("CASSANDRA_PASSWORD")
+
+	// Skip if TLS is enabled
+	tlsStr := os.Getenv("CASSANDRA_TLS")
+	if tlsStr == "" {
+		tlsStr = "false"
+	}
+	useTLS, err := strconv.ParseBool(tlsStr)
+	if err != nil {
+		t.Fatalf("Invalid CASSANDRA_TLS value: %s", tlsStr)
+	}
+	if useTLS {
+		t.Skip("Skipping non-TLS test because CASSANDRA_TLS is set to true")
+	}
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra_customFieldsNoTLS(name, backend, host, username, password),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineCassandra.DefaultPluginName(),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.tls", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.local_datacenter", "datacenter1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.socket_keep_alive", "30"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.consistency", "LOCAL_QUORUM"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username_template", "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"),
 				),
 			},
 		},
@@ -1488,27 +1629,33 @@ func testAccDatabaseSecretBackendConnectionCheckDestroy(s *terraform.State) erro
 
 func testAccDatabaseSecretBackendConnectionConfig_cassandra(name, path, host, username, password, timeout string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "db" {
-  path = "%s"
-  type = "database"
-}
+	resource "vault_mount" "db" {
+		path = "%s"
+		type = "database"
+	}
 
-resource "vault_database_secret_backend_connection" "test" {
-  backend = vault_mount.db.path
-  name = "%s"
-  allowed_roles = ["dev", "prod"]
-  root_rotation_statements = ["FOOBAR"]
+	resource "vault_database_secret_backend_connection" "test" {
+		backend = vault_mount.db.path
+		name = "%s"
+		allowed_roles = ["dev", "prod"]
+		verify_connection = true
+		root_rotation_statements = ["FOOBAR"]
 
-  cassandra {
-    hosts = ["%s"]
-    username = "%s"
-    password = "%s"
-    tls = false
-    protocol_version = 4
-    connect_timeout = %s
-  }
-}
-`, path, name, host, username, password, timeout)
+		cassandra {
+			hosts = ["%s"]
+			username = "%s"
+			password = "%s"
+			tls = false
+			protocol_version = 4
+			connect_timeout = %s
+			tls_server_name = ""
+			local_datacenter = ""
+			socket_keep_alive = 0
+			consistency = ""
+			username_template = ""
+		}
+	}
+	`, path, name, host, username, password, timeout)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_cassandraProtocol(name, path, host, username, password string) string {
@@ -1522,6 +1669,7 @@ resource "vault_database_secret_backend_connection" "test" {
   backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
+  verify_connection = true
   root_rotation_statements = ["FOOBAR"]
 
   cassandra {
@@ -1529,10 +1677,127 @@ resource "vault_database_secret_backend_connection" "test" {
     username = "%s"
     password = "%s"
     tls = false
-    protocol_version = 5
+    protocol_version = 4
   }
 }
 `, path, name, host, username, password)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, invalidField string) string {
+	// Base configuration with valid values
+	config := fmt.Sprintf(`
+
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  name    = "%s"
+  backend = vault_mount.db.path
+  plugin_name = "cassandra-database-plugin"
+  allowed_roles = ["dev", "prod"]
+  verify_connection = true
+
+  cassandra {
+    hosts              = ["%s"]
+    port               = 9042
+    username           = "%s"
+    password           = "%s"
+    connect_timeout    = 30`, backend, name, host, username, password)
+
+	// Add the specific invalid field based on the parameter
+	switch invalidField {
+	case "tls_server_name":
+		config += `
+    tls                = true
+    tls_server_name    = "!!invalid!!"
+    insecure_tls       = true`
+	case "local_datacenter":
+		config += `
+    local_datacenter   = ""`
+	case "socket_keep_alive":
+		config += `
+    socket_keep_alive  = -1`
+	case "consistency":
+		config += `
+    consistency        = "INVALID"`
+	case "username_template":
+		config += `
+    username_template  = "{{.Invalid}}"`
+	}
+
+	config += `
+  }
+}
+`
+	return config
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_cassandra_customFields(name, backend, host, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  name    = "%s"
+  backend = vault_mount.db.path
+  plugin_name = "cassandra-database-plugin"
+  allowed_roles = ["dev", "prod"]
+  verify_connection = true
+
+  cassandra {
+    hosts              = ["%s"]
+    port               = 9042
+    username           = "%s"
+    password           = "%s"
+    protocol_version   = 4
+    tls                = true
+    tls_server_name    = "cassandra-server"
+    local_datacenter   = "datacenter1"
+    socket_keep_alive  = 30
+    consistency        = "LOCAL_QUORUM"
+    username_template  = "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"
+    insecure_tls       = true
+    connect_timeout    = 30
+  }
+}
+`, backend, name, host, username, password)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_cassandra_customFieldsNoTLS(name, backend, host, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  name    = "%s"
+  backend = vault_mount.db.path
+  plugin_name = "cassandra-database-plugin"
+  allowed_roles = ["dev", "prod"]
+  verify_connection = true
+
+  cassandra {
+    hosts              = ["%s"]
+    port               = 9042
+    username           = "%s"
+    password           = "%s"
+    protocol_version   = 4
+    tls                = false
+    tls_server_name    = "cassandra-server"
+    local_datacenter   = "datacenter1"
+    socket_keep_alive  = 30
+    consistency        = "LOCAL_QUORUM"
+    username_template  = "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"
+    insecure_tls       = false
+    connect_timeout    = 30
+  }
+}
+`, backend, name, host, username, password)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_import(name, path, connURL, userTempl string) string {
@@ -2830,3 +3095,122 @@ v1zW4I0I38hS4J1WZc39iCNIPJ4DVekPyvuMyZwxwjZoahsoI53D7z8UnPRfqLgi
 a/0qa6m6iLDrh6oyVXsKlRgsePBl7jUjP3HZTalWpX8+HFbVYIPN3mU50qgjR/uF
 lHWczW8tCg9aF3oBqvxt8WV/TU4oV4amunSkbD9HzqcnOuj1fGcZ9w==
 -----END RSA PRIVATE KEY-----`
+
+func TestAccDatabaseSecretBackendConnection_hana(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineHana)
+
+	values := testutil.SkipTestEnvUnset(t, "HANA_CONNECTION_URL")
+	connURL := values[0]
+
+	username := os.Getenv("HANA_USERNAME")
+	password := os.Getenv("HANA_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineHana.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+	userTempl := "{{.DisplayName}}_{{random 8}}"
+
+	importIgnoreKeys := []string{
+		"verify_connection",
+		"hana.0.password",
+		"hana.0.connection_url",
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_hana(name, backend, connURL, username, password, userTempl),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.disable_escaping", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.username_template", userTempl),
+					func(s *terraform.State) error {
+						client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+						// Validate that the connection can generate credentials through the role
+						resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, "dev"))
+						if err != nil {
+							return fmt.Errorf("error reading credentials: %v", err)
+						}
+						if resp == nil {
+							return fmt.Errorf("no credentials returned")
+						}
+						if resp.Data["username"] == nil || resp.Data["password"] == nil {
+							return fmt.Errorf("credentials missing username or password")
+						}
+
+						// Verify the generated username matches the template pattern
+						generatedUsername := resp.Data["username"].(string)
+						if !strings.Contains(generatedUsername, "TOKEN_TERRAFORM_") {
+							return fmt.Errorf("generated username %q does not match template pattern (expected format: <displayname>_<random>)", generatedUsername)
+						}
+
+						// Revoke the lease to prevent cleanup errors
+						if resp.LeaseID != "" {
+							err = client.Sys().Revoke(resp.LeaseID)
+							if err != nil {
+								return fmt.Errorf("error revoking lease: %v", err)
+							}
+						}
+
+						return nil
+					},
+				),
+			},
+			{
+				ResourceName:            testDefaultDatabaseSecretBackendResource,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: importIgnoreKeys,
+			},
+		},
+	})
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_hana(name, path, connURL, username, password, userTempl string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  hana {
+    connection_url = "%s"
+    username = "%s"
+    password = "%s"
+    disable_escaping = true
+    username_template = "%s"
+  }
+}
+
+resource "vault_database_secret_backend_role" "test" {
+  backend = vault_mount.db.path
+  name = "dev"
+  db_name = vault_database_secret_backend_connection.test.name
+  creation_statements = [
+    "CREATE USER {{name}} PASSWORD \"{{password}}\";",
+    "GRANT SELECT ON SCHEMA _SYS_BIC TO {{name}};"
+  ]
+  default_ttl = 3600
+  max_ttl = 7200
+}
+`, path, name, connURL, username, password, userTempl)
+}

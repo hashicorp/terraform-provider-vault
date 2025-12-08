@@ -7,10 +7,14 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -269,6 +273,83 @@ func TestAccDatabaseSecretsMount_postgresql_automatedRootRotation(t *testing.T) 
 	})
 }
 
+func TestAccDatabaseSecretsMount_hana(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineHana)
+
+	values := testutil.SkipTestEnvUnset(t, "HANA_CONNECTION_URL")
+	connURL := values[0]
+
+	username := os.Getenv("HANA_USERNAME")
+	password := os.Getenv("HANA_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineHana.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+	userTempl := "{{.DisplayName}}_{{random 8}}"
+
+	importIgnoreKeys := []string{
+		"engine_count",
+		"hana.0.verify_connection",
+		"hana.0.password",
+		"hana.0.connection_url",
+	}
+	resourceType := "vault_database_secrets_mount"
+	resourceName := resourceType + ".db"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretsMount_hana(name, backend, pluginName, connURL, username, password, userTempl),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "hana.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.username", username),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.disable_escaping", "true"),
+					resource.TestCheckResourceAttr(resourceName, "hana.0.username_template", userTempl),
+					func(s *terraform.State) error {
+						client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+						// Validate that the mount can generate credentials through the role
+						resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, "dev"))
+						if err != nil {
+							return fmt.Errorf("error reading credentials: %v", err)
+						}
+						if resp == nil {
+							return fmt.Errorf("no credentials returned")
+						}
+						if resp.Data["username"] == nil || resp.Data["password"] == nil {
+							return fmt.Errorf("credentials missing username or password")
+						}
+
+						// Verify the generated username matches the template pattern
+						generatedUsername := resp.Data["username"].(string)
+						if !strings.Contains(generatedUsername, "TOKEN_TERRAFORM_") {
+							return fmt.Errorf("generated username %q does not match template pattern (expected format: <displayname>_<random>)", generatedUsername)
+						}
+
+						return nil
+					},
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: importIgnoreKeys,
+			},
+		},
+	})
+}
+
 func testAccDatabaseSecretsMount_mssql(name, path, pluginName string, parsedURL *url.URL) string {
 	password, _ := parsedURL.User.Password()
 
@@ -377,6 +458,40 @@ resource "vault_database_secrets_mount" "test" {
   }
 }
 `, path, name, connURL, period, schedule, window, disable)
+}
+
+func testAccDatabaseSecretsMount_hana(name, path, pluginName, connURL, username, password, userTempl string) string {
+	config := `
+  hana {
+    allowed_roles      = ["dev", "prod"]
+    plugin_name        = "%s"
+    name               = "%s"
+    connection_url     = "%s"
+    username           = "%s"
+    password           = "%s"
+    disable_escaping   = true
+    username_template  = "%s"
+    verify_connection  = true
+  }`
+
+	result := fmt.Sprintf(`
+resource "vault_database_secrets_mount" "db" {
+  path = "%s"
+%s
+}
+
+resource "vault_database_secret_backend_role" "test" {
+  backend = vault_database_secrets_mount.db.path
+  name    = "dev"
+  db_name = vault_database_secrets_mount.db.hana[0].name
+  creation_statements = [
+    "CREATE USER {{name}} PASSWORD \"{{password}}\" VALID UNTIL '{{expiration}}';",
+    "GRANT SELECT ON SCHEMA _SYS_BIC TO {{name}};",
+  ]
+}
+`, path, fmt.Sprintf(config, pluginName, name, connURL, username, password, userTempl))
+
+	return result
 }
 
 func TestAccDatabaseSecretsMount_mongodbatlas(t *testing.T) {
@@ -491,6 +606,261 @@ resource "vault_database_secret_backend_role" "test" {
   ]
 }
 `, path, fmt.Sprintf(config, pluginName, name, publicKey, privateKey, projectID, usernameTemplate))
+
+	return result
+}
+
+// TestAccDatabaseSecretsMount_cassandra tests basic Cassandra configuration
+// with TLS setting from environment variable
+func TestAccDatabaseSecretsMount_cassandra(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCassandra)
+
+	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
+	host := values[0]
+
+	username := os.Getenv("CASSANDRA_USERNAME")
+	password := os.Getenv("CASSANDRA_PASSWORD")
+	// Get TLS setting from environment, default to false if not set
+	tlsStr := os.Getenv("CASSANDRA_TLS")
+	if tlsStr == "" {
+		tlsStr = "false"
+	}
+	useTLS, err := strconv.ParseBool(tlsStr)
+	if err != nil {
+		t.Fatalf("Invalid CASSANDRA_TLS value: %s", tlsStr)
+	}
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineCassandra.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+
+	importIgnoreKeys := []string{
+		"engine_count",
+		"cassandra.0.verify_connection",
+		"cassandra.0.password",
+	}
+	resourceType := "vault_database_secrets_mount"
+	resourceName := resourceType + ".db"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretsMount_cassandra(name, backend, pluginName, host, username, password, useTLS),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "cassandra.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.hosts.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.hosts.0", host),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.port", "9042"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.username", username),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.tls", strconv.FormatBool(useTLS)),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.protocol_version", "4"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.connect_timeout", "5"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: importIgnoreKeys,
+			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretsMount_cassandra_customFields tests Cassandra with all custom fields when TLS is enabled
+func TestAccDatabaseSecretsMount_cassandra_customFields(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCassandra)
+
+	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
+	host := values[0]
+	username := os.Getenv("CASSANDRA_USERNAME")
+	password := os.Getenv("CASSANDRA_PASSWORD")
+
+	// Skip if TLS is not enabled
+	tlsStr := os.Getenv("CASSANDRA_TLS")
+	if tlsStr == "" {
+		tlsStr = "false"
+	}
+	useTLS, err := strconv.ParseBool(tlsStr)
+	if err != nil {
+		t.Fatalf("Invalid CASSANDRA_TLS value: %s", tlsStr)
+	}
+	if !useTLS {
+		t.Skip("Skipping TLS test because CASSANDRA_TLS is not set to true")
+	}
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineCassandra.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+
+	resourceType := "vault_database_secrets_mount"
+	resourceName := resourceType + ".db"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretsMount_cassandra_customFields(name, backend, pluginName, host, username, password, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "cassandra.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.tls", "true"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.tls_server_name", "cassandra-server"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.insecure_tls", "true"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.local_datacenter", "datacenter1"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.socket_keep_alive", "30"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.consistency", "LOCAL_QUORUM"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.username_template", "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretsMount_cassandra_customFieldsNoTLS tests Cassandra with all custom fields when TLS is disabled
+func TestAccDatabaseSecretsMount_cassandra_customFieldsNoTLS(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCassandra)
+
+	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
+	host := values[0]
+	username := os.Getenv("CASSANDRA_USERNAME")
+	password := os.Getenv("CASSANDRA_PASSWORD")
+
+	// Skip if TLS is enabled
+	tlsStr := os.Getenv("CASSANDRA_TLS")
+	if tlsStr == "" {
+		tlsStr = "false"
+	}
+	useTLS, err := strconv.ParseBool(tlsStr)
+	if err != nil {
+		t.Fatalf("Invalid CASSANDRA_TLS value: %s", tlsStr)
+	}
+	if useTLS {
+		t.Skip("Skipping non-TLS test because CASSANDRA_TLS is set to true")
+	}
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineCassandra.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+
+	resourceType := "vault_database_secrets_mount"
+	resourceName := resourceType + ".db"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretsMount_cassandra_customFields(name, backend, pluginName, host, username, password, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "cassandra.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.tls", "false"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.local_datacenter", "datacenter1"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.socket_keep_alive", "30"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.consistency", "LOCAL_QUORUM"),
+					resource.TestCheckResourceAttr(resourceName, "cassandra.0.username_template", "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"),
+				),
+			},
+		},
+	})
+}
+
+func testAccDatabaseSecretsMount_cassandra(name, path, pluginName, host, username, password string, useTLS bool) string {
+	tlsFields := ""
+	if useTLS {
+		tlsFields = `
+    insecure_tls      = true`
+	}
+
+	config := fmt.Sprintf(`
+  cassandra {
+    allowed_roles     = ["dev", "prod"]
+    plugin_name       = "%s"
+    name              = "%s"
+    hosts             = ["%s"]
+    port              = 9042
+    username          = "%s"
+    password          = "%s"
+    tls               = %t%s
+    protocol_version  = 4
+    connect_timeout   = 5
+    verify_connection = true
+  }`, pluginName, name, host, username, password, useTLS, tlsFields)
+
+	result := fmt.Sprintf(`
+resource "vault_database_secrets_mount" "db" {
+  path = "%s"
+%s
+}
+
+resource "vault_database_secret_backend_role" "test" {
+  backend = vault_database_secrets_mount.db.path
+  name    = "dev"
+  db_name = vault_database_secrets_mount.db.cassandra[0].name
+  creation_statements = [
+    "CREATE USER '{{name}}' WITH PASSWORD '{{password}}' NOSUPERUSER;",
+    "GRANT SELECT ON ALL KEYSPACES TO '{{name}}';",
+  ]
+}
+`, path, config)
+
+	return result
+}
+
+func testAccDatabaseSecretsMount_cassandra_customFields(name, path, pluginName, host, username, password string, useTLS bool) string {
+	tlsFields := ""
+	if useTLS {
+		tlsFields = `
+    tls_server_name     = "cassandra-server"
+    insecure_tls        = true`
+	}
+
+	config := fmt.Sprintf(`
+  cassandra {
+    allowed_roles       = ["dev", "prod"]
+    plugin_name         = "%s"
+    name                = "%s"
+    hosts               = ["%s"]
+    port                = 9042
+    username            = "%s"
+    password            = "%s"
+    tls                 = %t%s
+    local_datacenter    = "datacenter1"
+    socket_keep_alive   = 30
+    consistency         = "LOCAL_QUORUM"
+    username_template   = "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"
+    protocol_version    = 4
+    connect_timeout     = 30
+    verify_connection   = true
+  }`, pluginName, name, host, username, password, useTLS, tlsFields)
+
+	result := fmt.Sprintf(`
+resource "vault_database_secrets_mount" "db" {
+  path = "%s"
+%s
+}
+
+resource "vault_database_secret_backend_role" "test" {
+  backend = vault_database_secrets_mount.db.path
+  name    = "dev"
+  db_name = vault_database_secrets_mount.db.cassandra[0].name
+  creation_statements = [
+    "CREATE USER '{{name}}' WITH PASSWORD '{{password}}' NOSUPERUSER;",
+    "GRANT SELECT ON ALL KEYSPACES TO '{{name}}';",
+  ]
+}
+`, path, config)
 
 	return result
 }
