@@ -10,7 +10,6 @@ Relates OR Closes #0000
 
 
 ### Checklist
-- [ ] Added [CHANGELOG](https://github.com/hashicorp/terraform-provider-vault/blob/master/CHANGELOG.md) entry (only for user-facing changes)
 - [ ] Acceptance tests where run against all supported Vault Versions
 
 
