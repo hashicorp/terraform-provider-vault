@@ -287,6 +287,12 @@ See the [Vault
 
 * `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
+* `write_concern` - (Optional) A JSON string specifying the MongoDB write concern. For example: `{"wmode": "majority", "wtimeout": 5000}`.
+
+* `tls_ca` - (Optional) The CA certificate to use when verifying the MongoDB server's TLS certificate.
+
+* `tls_certificate_key` - (Optional) The client certificate and private key (concatenated in PEM format) to use for TLS authentication with MongoDB. This is a sensitive field that will not be returned in API responses.
+
 ### MongoDB Atlas Configuration Options
 
 * `public_key` - (Required) The Public Programmatic API Key used to authenticate with the MongoDB Atlas API.

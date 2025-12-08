@@ -512,12 +512,10 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			ConflictsWith: util.CalculateConflictsWith(dbEngineInfluxDB.Name(), dbEngineTypes),
 		},
 		dbEngineMongoDB.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the mongodb-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the mongodb-database-plugin plugin.",
+			Elem:          mongodbConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDB.Name(), dbEngineTypes),
 		},
@@ -912,6 +910,32 @@ func postgresConnectionStringResource() *schema.Resource {
 	return r
 }
 
+func mongodbConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass: true,
+	})
+	r.Schema["write_concern"] = &schema.Schema{
+		Type:         schema.TypeString,
+		Optional:     true,
+		Description:  "Specifies the MongoDB write concern for Vault management operations.",
+		StateFunc:    NormalizeDataJSONFunc(dbEngineMongoDB.Name()),
+		ValidateFunc: ValidateDataJSONFunc(dbEngineMongoDB.Name()),
+	}
+	r.Schema["tls_certificate_key"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 certificate and private key bundle for connecting to the database. Must be PEM encoded.",
+		Sensitive:   true,
+	}
+	r.Schema["tls_ca"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.",
+	}
+
+	return r
+}
+
 func mysqlConnectionStringResource() *schema.Resource {
 	r := connectionStringResource(&connectionStringConfig{
 		includeUserPass: true,
@@ -1052,7 +1076,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineHana:
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	case dbEngineMongoDB:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setMongoDBDatabaseConnectionData(d, prefix, data)
 	case dbEngineMongoDBAtlas:
 		setMongoDBAtlasDatabaseConnectionData(d, prefix, data)
 	case dbEngineMSSQL:
@@ -1292,6 +1316,28 @@ func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData,
 	details := resp.Data["connection_details"].(map[string]interface{})
 	if v, ok := details["disable_escaping"]; ok {
 		result["disable_escaping"] = v.(bool)
+	}
+
+	return result
+}
+
+func getMongoDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return result
+	}
+
+	// Read from Vault response
+	if v, ok := data["write_concern"]; ok {
+		result["write_concern"] = v.(string)
+	}
+	if v, ok := data["tls_ca"]; ok {
+		result["tls_ca"] = v.(string)
+	}
+	if v, ok := data["tls_certificate_key"]; ok {
+		result["tls_certificate_key"] = v.(string)
 	}
 
 	return result
@@ -1678,6 +1724,19 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
 	setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	setCloudDatabaseConnectionData(d, prefix, data, meta)
+	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
+		data["tls_certificate_key"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
+		data["tls_ca"] = v.(string)
+	}
+}
+
+func setMongoDBDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+	if v, ok := d.GetOk(prefix + "write_concern"); ok {
+		data["write_concern"] = v.(string)
+	}
 	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		data["tls_certificate_key"] = v.(string)
 	}
@@ -2203,7 +2262,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineHana:
 		result = getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
 	case dbEngineMongoDB:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getMongoDBConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineMongoDBAtlas:
 		result = getConnectionDetailsMongoDBAtlas(d, prefix, resp)
 	case dbEngineMSSQL:
