@@ -1,9 +1,21 @@
+## Unreleased
+
+IMPROVEMENTS:
+
+* `vault_database_secret_backend_connection`: Add support for MongoDB `write_concern` parameter and TLS parameters (`tls_ca`, `tls_certificate_key`) ([#2678](https://github.com/hashicorp/terraform-provider-vault/pull/2678))
+* Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resource for MongoDB Atlas([#2674](https://github.com/hashicorp/terraform-provider-vault/pull/2674)) 
+* Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resources for HANADB connections: ([#2671](https://github.com/hashicorp/terraform-provider-vault/pull/2671))
+* Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`) in `vault_secrets_sync_vercel_destination` resource. Requires Vault 1.19+. ([#2681](https://github.com/hashicorp/terraform-provider-vault/pull/2681))
+* Add support for `tls_server_name` , `local_datacenter`, `socket_keep_alive`, `consistency` and `username_template`  parameters for Cassandra in `vault_database_secret_backend_connection` resource. ([#2677](https://github.com/hashicorp/terraform-provider-vault/pull/2677))
+
+
 ## 5.6.0 (December 19, 2025)
 
 FEATURES:
 * Add support for self managed workflow for rootless static roles in Oracle Secret Engine: ([#2661](https://github.com/hashicorp/terraform-provider-vault/pull/2661))
 * Add AWS access creds ephemeral resource: ([#2659](https://github.com/hashicorp/terraform-provider-vault/pull/2659))
 * Add AWS static access credentials ephemeral resource.: ([#2657](https://github.com/hashicorp/terraform-provider-vault/pull/2657))
+* Add GCP ephemeral resources for OAuth2 access token and service account key: ([#2655](https://github.com/hashicorp/terraform-provider-vault/pull/2655))
 * Add Azure access credentials ephemeral resource: ([#2654](https://github.com/hashicorp/terraform-provider-vault/pull/2654))
 
 IMPROVEMENTS:
