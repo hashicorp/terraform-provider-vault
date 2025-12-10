@@ -143,13 +143,13 @@ func githubSecretsSyncDestinationResource() *schema.Resource {
 			consts.FieldSecretsLocation: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Description: "Determines where secrets will be stored in GitHub." +
+				Description: "Determines where secrets will be stored in GitHub. " +
 					"Valid values are 'repository' or 'environment'.",
 			},
 			consts.FieldEnvironmentName: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Description: "GitHub environment name where secrets will be synced." +
+				Description: "GitHub environment name where secrets will be synced. " +
 					"Required when secrets_location is set to 'environment'.",
 				ForceNew: true,
 			},
