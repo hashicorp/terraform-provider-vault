@@ -27,6 +27,10 @@ func buildGCPSyncWriteFields(meta interface{}) []string {
 		consts.FieldProjectID,
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+		fields = append(fields, consts.FieldReplicationLocations)
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
 		fields = append(fields, []string{
 			consts.FieldAllowedIPv4Addresses,
@@ -35,7 +39,6 @@ func buildGCPSyncWriteFields(meta interface{}) []string {
 			consts.FieldDisableStrictNetworking,
 			consts.FieldLocationalKmsKeys,
 			consts.FieldGlobalKmsKey,
-			consts.FieldReplicationLocations,
 		}...)
 	}
 
@@ -50,6 +53,10 @@ func buildGCPSyncReadFields(meta interface{}) []string {
 		consts.FieldProjectID,
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion118) {
+		fields = append(fields, consts.FieldReplicationLocations)
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
 		fields = append(fields, []string{
 			consts.FieldAllowedIPv4Addresses,
@@ -58,7 +65,6 @@ func buildGCPSyncReadFields(meta interface{}) []string {
 			consts.FieldDisableStrictNetworking,
 			consts.FieldLocationalKmsKeys,
 			consts.FieldGlobalKmsKey,
-			consts.FieldReplicationLocations,
 		}...)
 	}
 

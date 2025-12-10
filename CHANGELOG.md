@@ -2,7 +2,7 @@
 
 IMPROVEMENTS:
 
-* `vault_secrets_sync_gcp_destination`: Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`), encryption fields (`global_kms_key`, `locational_kms_keys`), and replication field (`replication_locations`) in `vault_secrets_sync_gcp_destination` resource. Requires Vault 1.19+. ([#2699](https://github.com/hashicorp/terraform-provider-vault/pull/2699))
+* `vault_secrets_sync_gcp_destination`: Add support for replication field (`replication_locations`; Vault 1.18+), networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`; Vault 1.19+), and encryption fields (`global_kms_key`, `locational_kms_keys`; Vault 1.19+) in `vault_secrets_sync_gcp_destination` resource. ([#2699](https://github.com/hashicorp/terraform-provider-vault/pull/2699))
 * `vault_database_secret_backend_connection`: Add support for MongoDB `write_concern` parameter and TLS parameters (`tls_ca`, `tls_certificate_key`) ([#2678](https://github.com/hashicorp/terraform-provider-vault/pull/2678))
 * Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resource for MongoDB Atlas([#2674](https://github.com/hashicorp/terraform-provider-vault/pull/2674)) 
 * Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resources for HANADB connections: ([#2671](https://github.com/hashicorp/terraform-provider-vault/pull/2671))

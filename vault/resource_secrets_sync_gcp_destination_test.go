@@ -157,11 +157,36 @@ func TestGCPSecretsSyncDestination_Replication(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPSecretsSyncDestinationConfig_replicationBasic(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp-rep")),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".0", "us-central1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".1", "us-east1"),
+				),
+			},
+		},
+	})
+}
+
+func TestGCPSecretsSyncDestination_ReplicationWithLocationalKMS(t *testing.T) {
+	resourceName := "vault_secrets_sync_gcp_destination.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPSecretsSyncDestinationConfig_replication(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp-rep")),
+				Config: testGCPSecretsSyncDestinationConfig_replication(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp-rep-kms")),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocationalKmsKeys+".%", "2"),
@@ -207,6 +232,22 @@ CREDS
   granularity          = "secret-path"
   
   global_kms_key       = "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"
+}
+`, destName, project, credentials)
+}
+
+func testGCPSecretsSyncDestinationConfig_replicationBasic(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "%s"
+  credentials          = <<CREDS
+%s
+CREDS
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+  granularity          = "secret-path"
+  
+  replication_locations = ["us-central1", "us-east1"]
 }
 `, destName, project, credentials)
 }

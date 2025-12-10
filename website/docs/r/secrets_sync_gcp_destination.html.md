@@ -64,11 +64,11 @@ resource "vault_secrets_sync_gcp_destination" "gcp_encryption" {
 }
 ```
 
-### With Multi-Region Replication (Vault 1.19+)
+### With Multi-Region Replication and Regional Encryption (Vault 1.19+)
 
 ```hcl
-resource "vault_secrets_sync_gcp_destination" "gcp_replication" {
-  name                 = "gcp-dest-replication"
+resource "vault_secrets_sync_gcp_destination" "gcp_replication_encryption" {
+  name                 = "gcp-dest-replication-encryption"
   project_id           = "gcp-project-id"
   credentials          = file(var.credentials_file)
   secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}_{{ .SecretKey | lowercase }}"
@@ -126,8 +126,6 @@ The following arguments are supported:
 
 * `global_kms_key` - (Optional) KMS key resource name for encrypting all secrets. 
   Format: `projects/{project}/locations/{location}/keyRings/{keyring}/cryptoKeys/{key}`.
-  
-  ~> **Note:** Cannot be used together with `locational_kms_keys` and `replication_locations`.
 
 * `locational_kms_keys` - (Optional) Map of GCP regions to KMS key resource names for regional encryption. 
   Each replication location must have a corresponding KMS key.
@@ -139,15 +137,11 @@ The following arguments are supported:
     "us-east1"    = "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"
   }
   ```
-  
-  ~> **Note:** Cannot be used together with `global_kms_key`. Must be paired with `replication_locations`.
 
-### Replication Configuration (Vault 1.19+)
+### Replication Configuration (Vault 1.18+)
 
 * `replication_locations` - (Optional) List of GCP regions where secrets should be replicated. 
   Example: `["us-central1", "us-east1"]`.
-  
-  ~> **Note:** Requires `locational_kms_keys` to be specified. Each region must have a corresponding KMS key defined.
 
 ## Attributes Reference
 
