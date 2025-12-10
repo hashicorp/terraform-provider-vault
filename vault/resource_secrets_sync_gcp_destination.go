@@ -103,19 +103,19 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 			consts.FieldAllowedIPv4Addresses: {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "Allowed IPv4 addresses for network connectivity.",
+				Description: "Allowed IPv4 addresses for outbound network connectivity in CIDR notation. If not set, all IPv6 addresses are allowed.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldAllowedIPv6Addresses: {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "Allowed IPv6 addresses for network connectivity.",
+				Description: "Allowed IPv6 addresses for outbound network connectivity in CIDR notation. If not set, all IPv6 addresses are allowed.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldAllowedPorts: {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "Allowed ports for network connectivity.",
+				Description: "Allowed ports for outbound network connectivity. If not set, all ports are allowed.",
 				Elem:        &schema.Schema{Type: schema.TypeInt},
 			},
 			consts.FieldDisableStrictNetworking: {
