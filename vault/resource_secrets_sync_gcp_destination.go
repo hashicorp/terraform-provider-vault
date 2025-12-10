@@ -101,22 +101,25 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Description: "The target project to manage secrets in.",
 			},
 			consts.FieldAllowedIPv4Addresses: {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Allowed IPv4 addresses for outbound network connectivity in CIDR notation. If not set, all IPv6 addresses are allowed.",
-				Elem:        &schema.Schema{Type: schema.TypeString},
+				Type:     schema.TypeList,
+				Optional: true,
+				Description: "Allowed IPv4 addresses for outbound network connectivity in CIDR notation. " +
+					"If not set, all IPv4 addresses are allowed.",
+				Elem: &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldAllowedIPv6Addresses: {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Allowed IPv6 addresses for outbound network connectivity in CIDR notation. If not set, all IPv6 addresses are allowed.",
-				Elem:        &schema.Schema{Type: schema.TypeString},
+				Type:     schema.TypeList,
+				Optional: true,
+				Description: "Allowed IPv6 addresses for outbound network connectivity in CIDR notation. " +
+					"If not set, all IPv6 addresses are allowed.",
+				Elem: &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldAllowedPorts: {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Allowed ports for outbound network connectivity. If not set, all ports are allowed.",
-				Elem:        &schema.Schema{Type: schema.TypeInt},
+				Type:     schema.TypeList,
+				Optional: true,
+				Description: "Allowed ports for outbound network connectivity. " +
+					"If not set, all ports are allowed.",
+				Elem: &schema.Schema{Type: schema.TypeInt},
 			},
 			consts.FieldDisableStrictNetworking: {
 				Type:        schema.TypeBool,
