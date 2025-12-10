@@ -97,17 +97,19 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 				Description: "Extra protection that must match the trust policy granting access to the AWS IAM role ARN.",
 			},
 			consts.FieldAllowedIPv4Addresses: {
-				Type:        schema.TypeSet,
-				Optional:    true,
-				Description: "Allowed IPv4 addresses for outbound connections from Vault to AWS Secrets Manager. Can also be set via an IP address range using CIDR notation.",
+				Type:     schema.TypeSet,
+				Optional: true,
+				Description: "Allowed IPv4 addresses for outbound connections from Vault to AWS Secrets Manager. " +
+					"Can also be set via an IP address range using CIDR notation.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
 			consts.FieldAllowedIPv6Addresses: {
-				Type:        schema.TypeSet,
-				Optional:    true,
-				Description: "Allowed IPv6 addresses for outbound connections from Vault to AWS Secrets Manager. Can also be set via an IP address range using CIDR notation.",
+				Type:     schema.TypeSet,
+				Optional: true,
+				Description: "Allowed IPv6 addresses for outbound connections from Vault to AWS Secrets Manager. " +
+					"Can also be set via an IP address range using CIDR notation.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -121,10 +123,11 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 				},
 			},
 			consts.FieldDisableStrictNetworking: {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "Disable strict networking mode. When set to true, Vault will not enforce allowed IP addresses and ports.",
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+				Description: "Disable strict networking mode. When set to true, " +
+					"Vault will not enforce allowed IP addresses and ports.",
 			},
 		},
 	})
