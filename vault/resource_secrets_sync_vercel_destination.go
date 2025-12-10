@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -44,6 +45,13 @@ var vercelSyncFieldsV119 = []string{
 	consts.FieldAllowedIPv6Addresses,
 	consts.FieldAllowedPorts,
 	consts.FieldDisableStrictNetworking,
+}
+
+// Fields that need TypeSet to List conversion for JSON serialization
+var vercelTypeSetFields = map[string]bool{
+	consts.FieldAllowedIPv4Addresses: true,
+	consts.FieldAllowedIPv6Addresses: true,
+	consts.FieldAllowedPorts:         true,
 }
 
 func vercelSecretsSyncDestinationResource() *schema.Resource {
@@ -90,24 +98,24 @@ func vercelSecretsSyncDestinationResource() *schema.Resource {
 					"'preview' & 'production'.",
 			},
 			consts.FieldAllowedIPv4Addresses: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Optional: true,
-				Description: "List of allowed IPv4 addresses in CIDR notation (e.g., 192.168.1.1/32) " +
+				Description: "Set of allowed IPv4 addresses in CIDR notation (e.g., 192.168.1.1/32) " +
 					"for outbound connections from Vault to the destination. If not set, all IPv4 addresses are allowed.",
 			},
 			consts.FieldAllowedIPv6Addresses: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Optional: true,
-				Description: "List of allowed IPv6 addresses in CIDR notation (e.g., 2001:db8::1/128) " +
+				Description: "Set of allowed IPv6 addresses in CIDR notation (e.g., 2001:db8::1/128) " +
 					"for outbound connections from Vault to the destination. If not set, all IPv6 addresses are allowed.",
 			},
 			consts.FieldAllowedPorts: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Elem:     &schema.Schema{Type: schema.TypeInt},
 				Optional: true,
-				Description: "List of allowed ports for outbound connections from Vault to the destination. " +
+				Description: "Set of allowed ports for outbound connections from Vault to the destination. " +
 					"If not set, all ports are allowed.",
 			},
 			consts.FieldDisableStrictNetworking: {
@@ -122,6 +130,14 @@ func vercelSecretsSyncDestinationResource() *schema.Resource {
 }
 
 func vercelSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
+	name := d.Get(consts.FieldName).(string)
+	path := syncutil.SecretsSyncDestinationPath(name, vercelSyncType)
+
 	writeFields := make([]string, len(vercelSyncWriteFields))
 	copy(writeFields, vercelSyncWriteFields)
 	readFields := make([]string, len(vercelSyncReadFields))
@@ -131,10 +147,37 @@ func vercelSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Res
 	isV119Supported := provider.IsAPISupported(meta, provider.VaultVersion119)
 	if isV119Supported {
 		writeFields = append(writeFields, vercelSyncFieldsV119...)
-		readFields = append(readFields, vercelSyncFieldsV119...)
 	}
 
-	return syncutil.SyncDestinationCreateUpdate(ctx, d, meta, vercelSyncType, writeFields, readFields)
+	data := map[string]interface{}{}
+
+	for _, k := range writeFields {
+		if v, ok := d.GetOk(k); ok {
+			// Convert TypeSet to List for JSON serialization
+			if vercelTypeSetFields[k] {
+				if set, ok := v.(*schema.Set); ok {
+					data[k] = set.List()
+				} else {
+					data[k] = v
+				}
+			} else {
+				data[k] = v
+			}
+		}
+	}
+
+	log.Printf("[DEBUG] Writing sync destination data to %q", path)
+	_, err := client.Logical().WriteWithContext(ctx, path, data)
+	if err != nil {
+		return diag.Errorf("error writing sync destination data to %q: %s", path, err)
+	}
+	log.Printf("[DEBUG] Wrote sync destination data to %q", path)
+
+	if d.IsNewResource() {
+		d.SetId(name)
+	}
+
+	return vercelSecretsSyncDestinationRead(ctx, d, meta)
 }
 
 func vercelSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
