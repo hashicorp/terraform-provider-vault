@@ -108,44 +108,50 @@ func githubSecretsSyncDestinationResource() *schema.Resource {
 					"app_name was installed in the user's GitHub account. Necessary if the app_name field is also provided.",
 			},
 			consts.FieldAllowedIPv4Addresses: {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "List of allowed IPv4 addresses for the destination.",
+				Type:     schema.TypeList,
+				Optional: true,
+				Description: "List of allowed IPv4 addresses in CIDR notation (e.g., 192.168.1.1/32) " +
+					"for outbound connections from Vault to the destination. If not set, all IPv4 addresses are allowed.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
 			consts.FieldAllowedIPv6Addresses: {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "List of allowed IPv6 addresses for the destination.",
+				Type:     schema.TypeList,
+				Optional: true,
+				Description: "List of allowed IPv6 addresses in CIDR notation (e.g., 2001:db8::1/128) " +
+					"for outbound connections from Vault to the destination. If not set, all IPv6 addresses are allowed.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
 			consts.FieldAllowedPorts: {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "List of allowed ports for the destination.",
+				Type:     schema.TypeList,
+				Optional: true,
+				Description: "List of allowed ports for outbound connections from Vault to the destination. " +
+					"If not set, all ports are allowed.",
 				Elem: &schema.Schema{
 					Type: schema.TypeInt,
 				},
 			},
 			consts.FieldDisableStrictNetworking: {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: "Disable strict networking for the destination.",
+				Type:     schema.TypeBool,
+				Optional: true,
+				Description: "If set to true, disables strict networking enforcement for this destination. " +
+					"When disabled, Vault will not enforce allowed IP addresses and ports.",
 			},
 			consts.FieldSecretsLocation: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Location where secrets are stored in the destination.",
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Determines where secrets will be stored in GitHub." +
+					"Valid values are 'repository' or 'environment'.",
 			},
 			consts.FieldEnvironmentName: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Environment name for the destination.",
-				ForceNew:    true,
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "GitHub environment name where secrets will be synced." +
+					"Required when secrets_location is set to 'environment'.",
+				ForceNew: true,
 			},
 		},
 	})
