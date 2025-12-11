@@ -21,6 +21,12 @@ const (
 )
 
 func SyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}, typ string, writeFields, readFields []string) diag.Diagnostics {
+	return SyncDestinationCreateUpdateWithOptions(ctx, d, meta, typ, writeFields, readFields, nil)
+}
+
+// SyncDestinationCreateUpdateWithOptions creates or updates a sync destination with additional options.
+// typeSetFields is an optional map of field names that need to be converted from TypeSet to List for JSON serialization.
+func SyncDestinationCreateUpdateWithOptions(ctx context.Context, d *schema.ResourceData, meta interface{}, typ string, writeFields, readFields []string, typeSetFields map[string]bool) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -33,7 +39,16 @@ func SyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, me
 
 	for _, k := range writeFields {
 		if v, ok := d.GetOk(k); ok {
-			data[k] = v
+			// Convert TypeSet to List for JSON serialization if needed
+			if typeSetFields != nil && typeSetFields[k] {
+				if set, ok := v.(*schema.Set); ok {
+					data[k] = set.List()
+				} else {
+					data[k] = v
+				}
+			} else {
+				data[k] = v
+			}
 		}
 	}
 

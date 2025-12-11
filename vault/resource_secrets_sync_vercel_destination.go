@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -130,14 +129,6 @@ func vercelSecretsSyncDestinationResource() *schema.Resource {
 }
 
 func vercelSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return diag.FromErr(e)
-	}
-
-	name := d.Get(consts.FieldName).(string)
-	path := syncutil.SecretsSyncDestinationPath(name, vercelSyncType)
-
 	writeFields := make([]string, len(vercelSyncWriteFields))
 	copy(writeFields, vercelSyncWriteFields)
 	readFields := make([]string, len(vercelSyncReadFields))
@@ -147,37 +138,10 @@ func vercelSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Res
 	isV119Supported := provider.IsAPISupported(meta, provider.VaultVersion119)
 	if isV119Supported {
 		writeFields = append(writeFields, vercelSyncFieldsV119...)
+		readFields = append(readFields, vercelSyncFieldsV119...)
 	}
 
-	data := map[string]interface{}{}
-
-	for _, k := range writeFields {
-		if v, ok := d.GetOk(k); ok {
-			// Convert TypeSet to List for JSON serialization
-			if vercelTypeSetFields[k] {
-				if set, ok := v.(*schema.Set); ok {
-					data[k] = set.List()
-				} else {
-					data[k] = v
-				}
-			} else {
-				data[k] = v
-			}
-		}
-	}
-
-	log.Printf("[DEBUG] Writing sync destination data to %q", path)
-	_, err := client.Logical().WriteWithContext(ctx, path, data)
-	if err != nil {
-		return diag.Errorf("error writing sync destination data to %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Wrote sync destination data to %q", path)
-
-	if d.IsNewResource() {
-		d.SetId(name)
-	}
-
-	return vercelSecretsSyncDestinationRead(ctx, d, meta)
+	return syncutil.SyncDestinationCreateUpdateWithOptions(ctx, d, meta, vercelSyncType, writeFields, readFields, vercelTypeSetFields)
 }
 
 func vercelSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
