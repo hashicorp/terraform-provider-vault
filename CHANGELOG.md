@@ -7,7 +7,12 @@ IMPROVEMENTS:
 * Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resources for HANADB connections: ([#2671](https://github.com/hashicorp/terraform-provider-vault/pull/2671))
 * Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`) in `vault_secrets_sync_vercel_destination` resource. Requires Vault 1.19+. ([#2681](https://github.com/hashicorp/terraform-provider-vault/pull/2681))
 * Add support for `tls_server_name` , `local_datacenter`, `socket_keep_alive`, `consistency` and `username_template`  parameters for Cassandra in `vault_database_secret_backend_connection` resource. ([#2677](https://github.com/hashicorp/terraform-provider-vault/pull/2677))
+* Updated dependencies:
+  * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
 
+BUGS:
+
+* `provider/auth_login_aws`: Fix issue where AWS authentication with IAM role assumption (`aws_role_arn`) was not working correctly due to incorrect credential handling ([#2679](https://github.com/hashicorp/terraform-provider-vault/pull/2679))
 
 ## 5.6.0 (December 19, 2025)
 
@@ -21,16 +26,9 @@ FEATURES:
 IMPROVEMENTS:
 * Added fields related to namespace used to create a role in kubernetes auth method: ([#2644](https://github.com/hashicorp/terraform-provider-vault/pull/2644))
 
-IMPROVEMENTS:
-* Updated dependencies:
-  * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
-
-
 BUGS:
 
 * Fix LDAP auth tune block read failure caused by extra /tune segment in the API request path ([#2676](https://github.com/hashicorp/terraform-provider-vault/pull/2676))
-* `provider/auth_login_aws`: Fix issue where AWS authentication with IAM role assumption (`aws_role_arn`) was not working correctly due to incorrect credential handling ([#2679](https://github.com/hashicorp/terraform-provider-vault/pull/2679))
-
 
 ## 5.5.0 (Nov 19, 2025)
 
