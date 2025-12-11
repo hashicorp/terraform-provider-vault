@@ -417,29 +417,16 @@ func generateLoginData(ctx context.Context, awsConfig *aws.Config, headerValue s
 
 	loginData := make(map[string]interface{})
 
-	// Force credential retrieval to ensure any AssumeRole calls happen before presigning
-	// This is critical when role assumption is configured
-	tempCreds, err := awsConfig.Credentials.Retrieve(ctx)
-	if err != nil {
+	// Validate credentials are available before attempting presign
+	// This catches configuration errors earlier with a clearer error message
+	if _, err := awsConfig.Credentials.Retrieve(ctx); err != nil {
 		return nil, fmt.Errorf("failed to retrieve AWS credentials: %w", err)
 	}
-
-	// Check if credentials are actually populated
-	if tempCreds.AccessKeyID == "" {
-		return nil, fmt.Errorf("retrieved AWS credentials are empty")
-	}
-
-	// Create a NEW config using the retrieved credentials
-	// This ensures we're using the assumed role credentials if role assumption occurred
-	configWithCreds := awsConfig.Copy()
-	configWithCreds.Credentials = aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
-		return tempCreds, nil
-	})
 
 	// If a header value is provided, we need to add it to the signed request
 	// We'll do this by adding middleware to the config
 	if headerValue != "" {
-		configWithCreds.APIOptions = append(configWithCreds.APIOptions, func(stack *middleware.Stack) error {
+		awsConfig.APIOptions = append(awsConfig.APIOptions, func(stack *middleware.Stack) error {
 			return stack.Build.Add(middleware.BuildMiddlewareFunc(
 				"AddVaultHeader",
 				func(ctx context.Context, in middleware.BuildInput, next middleware.BuildHandler) (middleware.BuildOutput, middleware.Metadata, error) {
@@ -453,10 +440,10 @@ func generateLoginData(ctx context.Context, awsConfig *aws.Config, headerValue s
 		})
 	}
 
-	// Create STS client with the config that has the assumed role credentials
-	stsClient := sts.NewFromConfig(configWithCreds)
+	// Create STS client with awsConfig (which already contains the correct credentials)
+	stsClient := sts.NewFromConfig(*awsConfig)
 
-	// Create presigner with the same STS client (which has the assumed credentials)
+	// Create presigner - credentials will be retrieved automatically during presigning
 	presignClient := sts.NewPresignClient(stsClient)
 
 	// Presign the GetCallerIdentity request
