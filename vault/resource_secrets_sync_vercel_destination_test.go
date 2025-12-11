@@ -116,21 +116,37 @@ func TestVercelSecretsSyncDestination_Negative(t *testing.T) {
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion119), nil
+				},
 				// Test with invalid CIDR notation for IPv4
 				Config:      testVercelSecretsSyncDestinationConfig_invalidIPv4(accessToken, projectID, destName),
 				ExpectError: regexp.MustCompile("invalid CIDR address|Error"),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion119), nil
+				},
 				// Test with invalid CIDR notation for IPv6
 				Config:      testVercelSecretsSyncDestinationConfig_invalidIPv6(accessToken, projectID, destName),
 				ExpectError: regexp.MustCompile("invalid CIDR address|Error"),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion119), nil
+				},
 				// Test with invalid port (out of range)
 				Config:      testVercelSecretsSyncDestinationConfig_invalidPort(accessToken, projectID, destName),
 				ExpectError: regexp.MustCompile("invalid port|Error"),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion119), nil
+				},
 				// Test that duplicates in sets are handled correctly (should not error)
 				Config: testVercelSecretsSyncDestinationConfig_duplicates(accessToken, projectID, destName),
 				Check: resource.ComposeTestCheckFunc(
