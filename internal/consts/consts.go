@@ -14,6 +14,7 @@ const (
 	FieldPath = "path"
 	// FieldMount should be used for all new non-backend-mounting resources.
 	// In other words, resources that depend on a backend-mounting resource should use this.
+	FieldAuth                           = "auth"
 	FieldMount                          = "mount"
 	FieldBindDN                         = "binddn"
 	FieldBindPass                       = "bindpass"
@@ -453,6 +454,10 @@ const (
 	FieldLink                           = "link"
 	FieldGranularity                    = "granularity"
 	FieldGranularityLevel               = "granularity_level"
+	FieldAllowedIPv4Addresses           = "allowed_ipv4_addresses"
+	FieldAllowedIPv6Addresses           = "allowed_ipv6_addresses"
+	FieldAllowedPorts                   = "allowed_ports"
+	FieldDisableStrictNetworking        = "disable_strict_networking"
 	FieldEC2Endpoint                    = "ec2_endpoint"
 	FieldSTSRegion                      = "sts_region"
 	FieldSTSFallbackRegions             = "sts_fallback_regions"
@@ -563,6 +568,13 @@ const (
 	FieldDereferenceAliases                   = "dereference_aliases"
 	FieldEnableSamaccountnameLogin            = "enable_samaccountname_login"
 	FieldAnonymousGroupSearch                 = "anonymous_group_search"
+	FieldAliasNameSource                      = "alias_name_source"
+	FieldBoundServiceAccountNames             = "bound_service_account_names"
+	FieldBoundServiceAccountNamespaces        = "bound_service_account_namespaces"
+	FieldBoundServiceAccountNamespaceSelector = "bound_service_account_namespace_selector"
+	FieldAudience                             = "audience"
+	FieldTokenMaxTTL                          = "token_max_ttl"
+	FieldTokenPeriod                          = "token_period"
 
 	/*
 		ephemeral resource constants and write-only attributes
