@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -119,14 +118,6 @@ func githubSecretsSyncDestinationResource() *schema.Resource {
 }
 
 func githubSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return diag.FromErr(e)
-	}
-
-	name := d.Get(consts.FieldName).(string)
-	path := syncutil.SecretsSyncDestinationPath(name, ghSyncType)
-
 	writeFields := []string{
 		fieldAccessToken,
 		fieldRepositoryOwner,
@@ -175,35 +166,14 @@ func githubSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Res
 		)
 	}
 
-	data := map[string]interface{}{}
-
-	for _, k := range writeFields {
-		if v, ok := d.GetOk(k); ok {
-			// Convert TypeSet to list for JSON serialization
-			if k == consts.FieldAllowedIPv4Addresses || k == consts.FieldAllowedIPv6Addresses || k == consts.FieldAllowedPorts {
-				if set, ok := v.(*schema.Set); ok {
-					data[k] = set.List()
-				} else {
-					data[k] = v
-				}
-			} else {
-				data[k] = v
-			}
-		}
+	// Fields that need TypeSet to List conversion for JSON serialization
+	var ghTypeSetFields = map[string]bool{
+		consts.FieldAllowedIPv4Addresses: true,
+		consts.FieldAllowedIPv6Addresses: true,
+		consts.FieldAllowedPorts:         true,
 	}
 
-	log.Printf("[DEBUG] Writing sync destination data to %q", path)
-	_, err := client.Logical().WriteWithContext(ctx, path, data)
-	if err != nil {
-		return diag.Errorf("error writing sync destination data to %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Wrote sync destination data to %q", path)
-
-	if d.IsNewResource() {
-		d.SetId(name)
-	}
-
-	return githubSecretsSyncDestinationRead(ctx, d, meta)
+	return syncutil.SyncDestinationCreateUpdateWithOptions(ctx, d, meta, ghSyncType, writeFields, readFields, ghTypeSetFields)
 }
 
 func githubSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
