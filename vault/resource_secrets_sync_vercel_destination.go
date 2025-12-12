@@ -46,6 +46,13 @@ var vercelSyncFieldsV119 = []string{
 	consts.FieldDisableStrictNetworking,
 }
 
+// Fields that need TypeSet to List conversion for JSON serialization
+var vercelTypeSetFields = map[string]bool{
+	consts.FieldAllowedIPv4Addresses: true,
+	consts.FieldAllowedIPv6Addresses: true,
+	consts.FieldAllowedPorts:         true,
+}
+
 func vercelSecretsSyncDestinationResource() *schema.Resource {
 	return provider.MustAddSecretsSyncCommonSchema(&schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(vercelSecretsSyncDestinationCreateUpdate, provider.VaultVersion116),
@@ -90,24 +97,24 @@ func vercelSecretsSyncDestinationResource() *schema.Resource {
 					"'preview' & 'production'.",
 			},
 			consts.FieldAllowedIPv4Addresses: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Optional: true,
-				Description: "List of allowed IPv4 addresses in CIDR notation (e.g., 192.168.1.1/32) " +
+				Description: "Set of allowed IPv4 addresses in CIDR notation (e.g., 192.168.1.1/32) " +
 					"for outbound connections from Vault to the destination. If not set, all IPv4 addresses are allowed.",
 			},
 			consts.FieldAllowedIPv6Addresses: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Optional: true,
-				Description: "List of allowed IPv6 addresses in CIDR notation (e.g., 2001:db8::1/128) " +
+				Description: "Set of allowed IPv6 addresses in CIDR notation (e.g., 2001:db8::1/128) " +
 					"for outbound connections from Vault to the destination. If not set, all IPv6 addresses are allowed.",
 			},
 			consts.FieldAllowedPorts: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Elem:     &schema.Schema{Type: schema.TypeInt},
 				Optional: true,
-				Description: "List of allowed ports for outbound connections from Vault to the destination. " +
+				Description: "Set of allowed ports for outbound connections from Vault to the destination. " +
 					"If not set, all ports are allowed.",
 			},
 			consts.FieldDisableStrictNetworking: {
@@ -134,7 +141,7 @@ func vercelSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Res
 		readFields = append(readFields, vercelSyncFieldsV119...)
 	}
 
-	return syncutil.SyncDestinationCreateUpdate(ctx, d, meta, vercelSyncType, writeFields, readFields)
+	return syncutil.SyncDestinationCreateUpdateWithOptions(ctx, d, meta, vercelSyncType, writeFields, readFields, vercelTypeSetFields)
 }
 
 func vercelSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

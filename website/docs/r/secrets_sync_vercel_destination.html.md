@@ -66,15 +66,15 @@ The following arguments are supported:
 * `granularity` - (Optional) Determines what level of information is synced as a distinct resource
   at the destination. Supports `secret-path` and `secret-key`.
 
-* `allowed_ipv4_addresses` - (Optional) List of allowed IPv4 addresses in CIDR notation (e.g., `192.168.1.1/32`)
+* `allowed_ipv4_addresses` - (Optional) Set of allowed IPv4 addresses in CIDR notation (e.g., `192.168.1.1/32`)
   for outbound connections from Vault to the destination. If not set, all IPv4 addresses are allowed.
   Requires Vault 1.19+.
 
-* `allowed_ipv6_addresses` - (Optional) List of allowed IPv6 addresses in CIDR notation (e.g., `2001:db8::1/128`)
+* `allowed_ipv6_addresses` - (Optional) Set of allowed IPv6 addresses in CIDR notation (e.g., `2001:db8::1/128`)
   for outbound connections from Vault to the destination. If not set, all IPv6 addresses are allowed.
   Requires Vault 1.19+.
 
-* `allowed_ports` - (Optional) List of allowed ports for outbound connections from Vault to the
+* `allowed_ports` - (Optional) Set of allowed ports for outbound connections from Vault to the
   destination. If not set, all ports are allowed. Requires Vault 1.19+.
 
 * `disable_strict_networking` - (Optional) If set to `true`, disables strict networking enforcement
