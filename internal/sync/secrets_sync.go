@@ -43,12 +43,10 @@ func SyncDestinationCreateUpdateWithOptions(ctx context.Context, d *schema.Resou
 			if typeSetFields != nil && typeSetFields[k] {
 				if set, ok := v.(*schema.Set); ok {
 					data[k] = set.List()
-				} else {
-					data[k] = v
+					continue
 				}
-			} else {
-				data[k] = v
 			}
+			data[k] = v
 		}
 	}
 
