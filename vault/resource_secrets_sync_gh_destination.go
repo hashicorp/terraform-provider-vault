@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -20,46 +21,6 @@ const (
 	fieldRepositoryName  = "repository_name"
 	ghSyncType           = "gh"
 )
-
-var githubSyncWriteFields = []string{
-	fieldAccessToken,
-	fieldRepositoryOwner,
-	fieldRepositoryName,
-	consts.FieldSecretNameTemplate,
-	consts.FieldGranularity,
-	consts.FieldAppName,
-	consts.FieldInstallationID,
-}
-
-var githubSyncUpdateFields = []string{
-	fieldAccessToken,
-	consts.FieldSecretNameTemplate,
-	consts.FieldAppName,
-	consts.FieldInstallationID,
-}
-
-var githubSyncReadFields = []string{
-	fieldRepositoryOwner,
-	fieldRepositoryName,
-	consts.FieldGranularity,
-	consts.FieldSecretNameTemplate,
-	consts.FieldAppName,
-	consts.FieldInstallationID,
-}
-
-// These fields are conditionally added to read and write operations when Vault 1.18+ is detected
-var githubSyncFieldsV118 = []string{
-	consts.FieldSecretsLocation,
-	consts.FieldEnvironmentName,
-}
-
-// These fields are conditionally added to read and write operations when Vault 1.19+ is detected
-var githubSyncFieldsV119 = []string{
-	consts.FieldAllowedIPv4Addresses,
-	consts.FieldAllowedIPv6Addresses,
-	consts.FieldAllowedPorts,
-	consts.FieldDisableStrictNetworking,
-}
 
 func githubSecretsSyncDestinationResource() *schema.Resource {
 	return provider.MustAddSecretsSyncCommonSchema(&schema.Resource{
@@ -108,7 +69,7 @@ func githubSecretsSyncDestinationResource() *schema.Resource {
 					"app_name was installed in the user's GitHub account. Necessary if the app_name field is also provided.",
 			},
 			consts.FieldAllowedIPv4Addresses: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Description: "List of allowed IPv4 addresses in CIDR notation (e.g., 192.168.1.1/32) " +
 					"for outbound connections from Vault to the destination. If not set, all IPv4 addresses are allowed.",
@@ -117,7 +78,7 @@ func githubSecretsSyncDestinationResource() *schema.Resource {
 				},
 			},
 			consts.FieldAllowedIPv6Addresses: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Description: "List of allowed IPv6 addresses in CIDR notation (e.g., 2001:db8::1/128) " +
 					"for outbound connections from Vault to the destination. If not set, all IPv6 addresses are allowed.",
@@ -126,7 +87,7 @@ func githubSecretsSyncDestinationResource() *schema.Resource {
 				},
 			},
 			consts.FieldAllowedPorts: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Description: "List of allowed ports for outbound connections from Vault to the destination. " +
 					"If not set, all ports are allowed.",
@@ -158,42 +119,121 @@ func githubSecretsSyncDestinationResource() *schema.Resource {
 }
 
 func githubSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	writeFields := make([]string, len(githubSyncWriteFields))
-	copy(writeFields, githubSyncWriteFields)
-	readFields := make([]string, len(githubSyncReadFields))
-	copy(readFields, githubSyncReadFields)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
+	name := d.Get(consts.FieldName).(string)
+	path := syncutil.SecretsSyncDestinationPath(name, ghSyncType)
+
+	writeFields := []string{
+		fieldAccessToken,
+		fieldRepositoryOwner,
+		fieldRepositoryName,
+		consts.FieldSecretNameTemplate,
+		consts.FieldGranularity,
+		consts.FieldAppName,
+		consts.FieldInstallationID,
+	}
+	readFields := []string{
+		fieldRepositoryOwner,
+		fieldRepositoryName,
+		consts.FieldGranularity,
+		consts.FieldSecretNameTemplate,
+		consts.FieldAppName,
+		consts.FieldInstallationID,
+	}
 
 	// Add Vault 1.18+ fields if supported
 	isV118Supported := provider.IsAPISupported(meta, provider.VaultVersion118)
 	if isV118Supported {
-		writeFields = append(writeFields, githubSyncFieldsV118...)
-		readFields = append(readFields, githubSyncFieldsV118...)
+		writeFields = append(writeFields,
+			consts.FieldSecretsLocation,
+			consts.FieldEnvironmentName,
+		)
+		readFields = append(readFields,
+			consts.FieldSecretsLocation,
+			consts.FieldEnvironmentName,
+		)
 	}
 
 	// Add Vault 1.19+ fields if supported
 	isV119Supported := provider.IsAPISupported(meta, provider.VaultVersion119)
 	if isV119Supported {
-		writeFields = append(writeFields, githubSyncFieldsV119...)
-		readFields = append(readFields, githubSyncFieldsV119...)
+		writeFields = append(writeFields,
+			consts.FieldAllowedIPv4Addresses,
+			consts.FieldAllowedIPv6Addresses,
+			consts.FieldAllowedPorts,
+			consts.FieldDisableStrictNetworking,
+		)
+		readFields = append(readFields,
+			consts.FieldAllowedIPv4Addresses,
+			consts.FieldAllowedIPv6Addresses,
+			consts.FieldAllowedPorts,
+			consts.FieldDisableStrictNetworking,
+		)
 	}
 
-	return syncutil.SyncDestinationCreateUpdate(ctx, d, meta, ghSyncType, writeFields, readFields)
+	data := map[string]interface{}{}
+
+	for _, k := range writeFields {
+		if v, ok := d.GetOk(k); ok {
+			// Convert TypeSet to list for JSON serialization
+			if k == consts.FieldAllowedIPv4Addresses || k == consts.FieldAllowedIPv6Addresses || k == consts.FieldAllowedPorts {
+				if set, ok := v.(*schema.Set); ok {
+					data[k] = set.List()
+				} else {
+					data[k] = v
+				}
+			} else {
+				data[k] = v
+			}
+		}
+	}
+
+	log.Printf("[DEBUG] Writing sync destination data to %q", path)
+	_, err := client.Logical().WriteWithContext(ctx, path, data)
+	if err != nil {
+		return diag.Errorf("error writing sync destination data to %q: %s", path, err)
+	}
+	log.Printf("[DEBUG] Wrote sync destination data to %q", path)
+
+	if d.IsNewResource() {
+		d.SetId(name)
+	}
+
+	return githubSecretsSyncDestinationRead(ctx, d, meta)
 }
 
 func githubSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	readFields := make([]string, len(githubSyncReadFields))
-	copy(readFields, githubSyncReadFields)
+	readFields := []string{
+		fieldRepositoryOwner,
+		fieldRepositoryName,
+		consts.FieldGranularity,
+		consts.FieldSecretNameTemplate,
+		consts.FieldAppName,
+		consts.FieldInstallationID,
+	}
 
 	// Add Vault 1.18+ fields if supported
 	isV118Supported := provider.IsAPISupported(meta, provider.VaultVersion118)
 	if isV118Supported {
-		readFields = append(readFields, githubSyncFieldsV118...)
+		readFields = append(readFields,
+			consts.FieldSecretsLocation,
+			consts.FieldEnvironmentName,
+		)
 	}
 
 	// Add Vault 1.19+ fields if supported
 	isV119Supported := provider.IsAPISupported(meta, provider.VaultVersion119)
 	if isV119Supported {
-		readFields = append(readFields, githubSyncFieldsV119...)
+		readFields = append(readFields,
+			consts.FieldAllowedIPv4Addresses,
+			consts.FieldAllowedIPv6Addresses,
+			consts.FieldAllowedPorts,
+			consts.FieldDisableStrictNetworking,
+		)
 	}
 
 	return syncutil.SyncDestinationRead(ctx, d, meta, ghSyncType, readFields, map[string]string{
