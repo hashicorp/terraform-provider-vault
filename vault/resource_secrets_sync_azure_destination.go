@@ -41,6 +41,14 @@ var azureSyncReadFields = []string{
 	consts.FieldTenantID,
 }
 
+// These fields are conditionally added to read and write operations when Vault 1.19+ is detected
+var azureSyncFieldsV119 = []string{
+	consts.FieldAllowedIPv4Addresses,
+	consts.FieldAllowedIPv6Addresses,
+	consts.FieldAllowedPorts,
+	consts.FieldDisableStrictNetworking,
+}
+
 func azureSecretsSyncDestinationResource() *schema.Resource {
 	return provider.MustAddSecretsSyncCloudSchema(&schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(azureSecretsSyncDestinationCreateUpdate, provider.VaultVersion115),
@@ -87,16 +95,101 @@ func azureSecretsSyncDestinationResource() *schema.Resource {
 				Description: "Specifies a cloud for the client.",
 				ForceNew:    true,
 			},
+			consts.FieldAllowedIPv4Addresses: {
+				Type:     schema.TypeSet,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Optional: true,
+				Description: "Set of allowed IPv4 addresses in CIDR notation (e.g., 192.168.1.1/32) " +
+					"for outbound connections from Vault to the destination. If not set, all IPv4 addresses are allowed. " +
+					"Requires Vault 1.19+.",
+			},
+			consts.FieldAllowedIPv6Addresses: {
+				Type:     schema.TypeSet,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Optional: true,
+				Description: "Set of allowed IPv6 addresses in CIDR notation (e.g., 2001:db8::1/128) " +
+					"for outbound connections from Vault to the destination. If not set, all IPv6 addresses are allowed. " +
+					"Requires Vault 1.19+.",
+			},
+			consts.FieldAllowedPorts: {
+				Type:     schema.TypeSet,
+				Elem:     &schema.Schema{Type: schema.TypeInt},
+				Optional: true,
+				Description: "Set of allowed ports for outbound connections from Vault to the destination. " +
+					"If not set, all ports are allowed. Requires Vault 1.19+.",
+			},
+			consts.FieldDisableStrictNetworking: {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+				Description: "If set to true, disables strict networking enforcement for this destination. " +
+					"When disabled, Vault will not enforce allowed IP addresses and ports. Requires Vault 1.19+.",
+			},
 		},
 	})
 }
 
 func azureSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationCreateUpdate(ctx, d, meta, azureSyncType, azureSyncWriteFields, azureSyncReadFields)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
+	name := d.Get(consts.FieldName).(string)
+	path := syncutil.SecretsSyncDestinationPath(name, azureSyncType)
+
+	data := map[string]interface{}{}
+
+	// Check if Vault 1.19+ fields are being used
+	isV119Supported := provider.IsAPISupported(meta, provider.VaultVersion119)
+
+	// Process base fields (all versions)
+	for _, k := range azureSyncWriteFields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
+	}
+
+	// Process Vault 1.19+ fields only if version is supported
+	if isV119Supported {
+		for _, k := range azureSyncFieldsV119 {
+			if v, ok := d.GetOk(k); ok {
+				// Handle TypeSet fields by converting to list
+				switch k {
+				case consts.FieldAllowedIPv4Addresses, consts.FieldAllowedIPv6Addresses, consts.FieldAllowedPorts:
+					if set, ok := v.(*schema.Set); ok {
+						data[k] = set.List()
+					}
+				default:
+					data[k] = v
+				}
+			}
+		}
+	}
+
+	_, err := client.Logical().WriteWithContext(ctx, path, data)
+	if err != nil {
+		return diag.Errorf("error writing sync destination data to %q: %s", path, err)
+	}
+
+	if d.IsNewResource() {
+		d.SetId(name)
+	}
+
+	return azureSecretsSyncDestinationRead(ctx, d, meta)
 }
 
 func azureSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationRead(ctx, d, meta, azureSyncType, azureSyncReadFields, map[string]string{
+	readFields := make([]string, len(azureSyncReadFields))
+	copy(readFields, azureSyncReadFields)
+
+	// Add Vault 1.19+ fields if supported
+	isV119Supported := provider.IsAPISupported(meta, provider.VaultVersion119)
+	if isV119Supported {
+		readFields = append(readFields, azureSyncFieldsV119...)
+	}
+
+	return syncutil.SyncDestinationRead(ctx, d, meta, azureSyncType, readFields, map[string]string{
 		consts.FieldGranularity: consts.FieldGranularityLevel,
 	})
 }
