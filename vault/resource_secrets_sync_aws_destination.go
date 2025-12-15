@@ -33,14 +33,6 @@ var awsSyncWriteFields = []string{
 	consts.FieldExternalID,
 }
 
-// awsSync119Fields contains fields that require Vault 1.19+
-var awsSync119Fields = []string{
-	consts.FieldAllowedIPv4Addresses,
-	consts.FieldAllowedIPv6Addresses,
-	consts.FieldAllowedPorts,
-	consts.FieldDisableStrictNetworking,
-}
-
 // awsSyncReadFields contains base fields that are returned on read from the API (all versions)
 var awsSyncReadFields = []string{
 	consts.FieldRegion,
@@ -49,6 +41,14 @@ var awsSyncReadFields = []string{
 	consts.FieldSecretNameTemplate,
 	consts.FieldRoleArn,
 	consts.FieldExternalID,
+}
+
+// awsSync119Fields contains fields that require Vault 1.19+
+var awsSync119Fields = []string{
+	consts.FieldAllowedIPv4Addresses,
+	consts.FieldAllowedIPv6Addresses,
+	consts.FieldAllowedPorts,
+	consts.FieldDisableStrictNetworking,
 }
 
 func awsSecretsSyncDestinationResource() *schema.Resource {
@@ -134,62 +134,25 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 }
 
 func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return diag.FromErr(e)
-	}
+	readFields := awsSyncReadFields
+	writeFields := awsSyncWriteFields
 
-	name := d.Get(consts.FieldName).(string)
-	path := syncutil.SecretsSyncDestinationPath(name, awsSyncType)
-
-	data := map[string]interface{}{}
-
-	// Check if Vault 1.19+ fields are being used
+	// Add Vault 1.19+ fields if supported
 	isVaultVersion119 := provider.IsAPISupported(meta, provider.VaultVersion119)
-
-	// Validate version support if user is trying to set 1.19+ fields on older Vault
-	if !isVaultVersion119 {
-		for _, field := range awsSync119Fields {
-			if _, ok := d.GetOk(field); ok {
-				return diag.Errorf("networking configuration fields (allowed_ipv4_addresses, allowed_ipv6_addresses, allowed_ports, disable_strict_networking) require Vault version 1.19.0 or later")
-			}
-		}
-	}
-
-	// Process base fields (all versions)
-	for _, k := range awsSyncWriteFields {
-		if v, ok := d.GetOk(k); ok {
-			data[k] = v
-		}
-	}
-
-	// Process Vault 1.19+ fields only if version is supported
 	if isVaultVersion119 {
-		for _, k := range awsSync119Fields {
-			if v, ok := d.GetOk(k); ok {
-				// Handle TypeSet fields by converting to list
-				switch k {
-				case consts.FieldAllowedIPv4Addresses, consts.FieldAllowedIPv6Addresses, consts.FieldAllowedPorts:
-					if set, ok := v.(*schema.Set); ok {
-						data[k] = set.List()
-					}
-				default:
-					data[k] = v
-				}
-			}
-		}
+		writeFields = append(writeFields, awsSync119Fields...)
+		readFields = append(readFields, awsSync119Fields...)
 	}
 
-	_, err := client.Logical().WriteWithContext(ctx, path, data)
-	if err != nil {
-		return diag.Errorf("error writing sync destination data to %q: %s", path, err)
+	// Fields that need TypeSet to List conversion for JSON serialization
+	awsTypeSetFields := make(map[string]bool)
+	if isVaultVersion119 {
+		awsTypeSetFields[consts.FieldAllowedIPv4Addresses] = true
+		awsTypeSetFields[consts.FieldAllowedIPv6Addresses] = true
+		awsTypeSetFields[consts.FieldAllowedPorts] = true
 	}
 
-	if d.IsNewResource() {
-		d.SetId(name)
-	}
-
-	return awsSecretsSyncDestinationRead(ctx, d, meta)
+	return syncutil.SyncDestinationCreateUpdateWithOptions(ctx, d, meta, awsSyncType, writeFields, readFields, awsTypeSetFields)
 }
 
 func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
