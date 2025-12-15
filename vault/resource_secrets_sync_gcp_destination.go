@@ -101,21 +101,21 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Description: "The target project to manage secrets in.",
 			},
 			consts.FieldAllowedIPv4Addresses: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Description: "Allowed IPv4 addresses for outbound network connectivity in CIDR notation. " +
 					"If not set, all IPv4 addresses are allowed.",
 				Elem: &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldAllowedIPv6Addresses: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Description: "Allowed IPv6 addresses for outbound network connectivity in CIDR notation. " +
 					"If not set, all IPv6 addresses are allowed.",
 				Elem: &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldAllowedPorts: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Description: "Allowed ports for outbound network connectivity. " +
 					"If not set, all ports are allowed.",
@@ -138,7 +138,7 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Description: "Global KMS key for encryption.",
 			},
 			consts.FieldReplicationLocations: {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Replication locations for secrets.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
@@ -150,7 +150,13 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 func gcpSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	writeFields := buildGCPSyncWriteFields(meta)
 	readFields := buildGCPSyncReadFields(meta)
-	return syncutil.SyncDestinationCreateUpdate(ctx, d, meta, gcpSyncType, writeFields, readFields)
+	typeSetFields := map[string]bool{
+		consts.FieldAllowedIPv4Addresses: true,
+		consts.FieldAllowedIPv6Addresses: true,
+		consts.FieldAllowedPorts:         true,
+		consts.FieldReplicationLocations: true,
+	}
+	return syncutil.SyncDestinationCreateUpdateWithOptions(ctx, d, meta, gcpSyncType, writeFields, readFields, typeSetFields)
 }
 
 func gcpSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
