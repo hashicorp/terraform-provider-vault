@@ -9,6 +9,9 @@ IMPROVEMENTS:
 * Add support for `tls_server_name` , `local_datacenter`, `socket_keep_alive`, `consistency` and `username_template`  parameters for Cassandra in `vault_database_secret_backend_connection` resource. ([#2677](https://github.com/hashicorp/terraform-provider-vault/pull/2677))
 * `vault_secrets_sync_aws_destination`: Add support for networking configuration parameters `allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, and `disable_strict_networking` to control outbound connections from Vault to AWS Secrets Manager. Requires Vault 1.19.0+.([#2698](https://github.com/hashicorp/terraform-provider-vault/pull/2698))
 
+BUGS:
+* Fix plugin_name attribute not correctly use in vault_database_secret_backend_connection. ([#2705](https://github.com/hashicorp/terraform-provider-vault/pull/2705))
+
 
 ## 5.6.0 (December 19, 2025)
 
