@@ -190,14 +190,16 @@ func managedKeysPKCSConfigSchema() schemaMap {
 				"to lookup the local library path",
 		},
 		consts.FieldKeyLabel: {
-			Type:        schema.TypeString,
-			Required:    true,
-			Description: "The label of the key to use",
+			Type:         schema.TypeString,
+			Optional:     true,
+			Description:  "The label of the key to use",
+			AtLeastOneOf: []string{"pkcs." + consts.FieldKeyID},
 		},
 		consts.FieldKeyID: {
-			Type:        schema.TypeString,
-			Required:    true,
-			Description: "The id of a PKCS#11 key to use",
+			Type:         schema.TypeString,
+			Optional:     true,
+			Description:  "The id of a PKCS#11 key to use",
+			AtLeastOneOf: []string{"pkcs." + consts.FieldKeyLabel},
 		},
 		consts.FieldMechanism: {
 			Type:     schema.TypeString,
