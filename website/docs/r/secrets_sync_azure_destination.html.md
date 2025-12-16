@@ -31,6 +31,22 @@ resource "vault_secrets_sync_azure_destination" "az" {
   client_secret        = var.client_secret
   tenant_id            = var.tenant_id
   secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
+  # NEW: Networking configuration (Vault 1.19+)
+  allowed_ipv4_addresses = [
+    "192.168.1.1/24",   # Allow private network
+    "10.0.0.1/8"        # Allow corporate network
+  ]
+  
+  allowed_ipv6_addresses = [
+    "2001:db9::/32"     # Allow IPv6 range
+  ]
+  
+  allowed_ports = [
+    443,                # HTTPS
+    9443                # Alternative HTTPS port
+  ]
+  
+  disable_strict_networking = false  # Enforce networking restrictions
   custom_tags = {
     "foo" = "bar"
   }
@@ -72,6 +88,18 @@ The following arguments are supported:
 
 * `granularity` - (Optional) Determines what level of information is synced as a distinct resource
   at the destination. Supports `secret-path` and `secret-key`.
+
+* `allowed_ipv4_addresses` - (Optional) List of IPv4 addresses or CIDR blocks allowed to make outbound
+  connections from Vault to the destination. Requires Vault 1.19+.
+
+* `allowed_ipv6_addresses` - (Optional) List of IPv6 addresses or CIDR blocks allowed to make outbound
+  connections from Vault to the destination. Requires Vault 1.19+.
+
+* `allowed_ports` - (Optional) List of port numbers allowed for outbound connections from Vault to the
+  destination. Requires Vault 1.19+.
+
+* `disable_strict_networking` - (Optional) When set to `true`, disables strict enforcement of networking
+  restrictions. Defaults to `false`. Requires Vault 1.19+.
 
 ## Attributes Reference
 
