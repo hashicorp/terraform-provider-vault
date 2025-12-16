@@ -321,6 +321,32 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Description: "Whether to skip verification of the server certificate when using TLS.",
 						Default:     false,
 					},
+					"tls_server_name": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "SNI host for TLS connections.",
+					},
+					"local_datacenter": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Cassandra local datacenter name.",
+					},
+					"socket_keep_alive": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Enable TCP keepalive for Cassandra connections.",
+						Default:     "0",
+					},
+					"consistency": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Cassandra consistency level.",
+					},
+					"username_template": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Template for dynamic Cassandra usernames.",
+					},
 					"pem_bundle": {
 						Type:        schema.TypeString,
 						Optional:    true,
@@ -486,12 +512,10 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			ConflictsWith: util.CalculateConflictsWith(dbEngineInfluxDB.Name(), dbEngineTypes),
 		},
 		dbEngineMongoDB.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the mongodb-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the mongodb-database-plugin plugin.",
+			Elem:          mongodbConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDB.Name(), dbEngineTypes),
 		},
@@ -886,6 +910,32 @@ func postgresConnectionStringResource() *schema.Resource {
 	return r
 }
 
+func mongodbConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass: true,
+	})
+	r.Schema["write_concern"] = &schema.Schema{
+		Type:         schema.TypeString,
+		Optional:     true,
+		Description:  "Specifies the MongoDB write concern for Vault management operations.",
+		StateFunc:    NormalizeDataJSONFunc(dbEngineMongoDB.Name()),
+		ValidateFunc: ValidateDataJSONFunc(dbEngineMongoDB.Name()),
+	}
+	r.Schema["tls_certificate_key"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 certificate and private key bundle for connecting to the database. Must be PEM encoded.",
+		Sensitive:   true,
+	}
+	r.Schema["tls_ca"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.",
+	}
+
+	return r
+}
+
 func mysqlConnectionStringResource() *schema.Resource {
 	r := connectionStringResource(&connectionStringConfig{
 		includeUserPass: true,
@@ -1026,7 +1076,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineHana:
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	case dbEngineMongoDB:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setMongoDBDatabaseConnectionData(d, prefix, data)
 	case dbEngineMongoDBAtlas:
 		setMongoDBAtlasDatabaseConnectionData(d, prefix, data)
 	case dbEngineMSSQL:
@@ -1107,6 +1157,23 @@ func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOkExists("cassandra.0.insecure_tls"); ok {
 		data["insecure_tls"] = v.(bool)
 	}
+
+	if v, ok := d.GetOk(prefix + "tls_server_name"); ok {
+		data["tls_server_name"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "local_datacenter"); ok {
+		data["local_datacenter"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "socket_keep_alive"); ok {
+		data["socket_keep_alive"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "consistency"); ok {
+		data["consistency"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
+	}
+
 	if v, ok := d.GetOkExists("cassandra.0.pem_bundle"); ok {
 		data["pem_bundle"] = v.(string)
 	}
@@ -1249,6 +1316,28 @@ func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData,
 	details := resp.Data["connection_details"].(map[string]interface{})
 	if v, ok := details["disable_escaping"]; ok {
 		result["disable_escaping"] = v.(bool)
+	}
+
+	return result
+}
+
+func getMongoDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return result
+	}
+
+	// Read from Vault response
+	if v, ok := data["write_concern"]; ok {
+		result["write_concern"] = v.(string)
+	}
+	if v, ok := data["tls_ca"]; ok {
+		result["tls_ca"] = v.(string)
+	}
+	if v, ok := data["tls_certificate_key"]; ok {
+		result["tls_certificate_key"] = v.(string)
 	}
 
 	return result
@@ -1635,6 +1724,19 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
 	setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	setCloudDatabaseConnectionData(d, prefix, data, meta)
+	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
+		data["tls_certificate_key"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
+		data["tls_ca"] = v.(string)
+	}
+}
+
+func setMongoDBDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+	if v, ok := d.GetOk(prefix + "write_concern"); ok {
+		data["write_concern"] = v.(string)
+	}
 	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		data["tls_certificate_key"] = v.(string)
 	}
@@ -2160,7 +2262,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineHana:
 		result = getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
 	case dbEngineMongoDB:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getMongoDBConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineMongoDBAtlas:
 		result = getConnectionDetailsMongoDBAtlas(d, prefix, resp)
 	case dbEngineMSSQL:
@@ -2228,6 +2330,21 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 		}
 		if v, ok := data["insecure_tls"]; ok {
 			result["insecure_tls"] = v.(bool)
+		}
+		if v, ok := data["tls_server_name"]; ok {
+			result["tls_server_name"] = v.(string)
+		}
+		if v, ok := data["local_datacenter"]; ok {
+			result["local_datacenter"] = v.(string)
+		}
+		if v, ok := data["socket_keep_alive"]; ok {
+			result["socket_keep_alive"] = v.(string)
+		}
+		if v, ok := data["consistency"]; ok {
+			result["consistency"] = v.(string)
+		}
+		if v, ok := data["username_template"]; ok {
+			result["username_template"] = v.(string)
 		}
 		if v, ok := data["pem_bundle"]; ok {
 			result["pem_bundle"] = v.(string)
