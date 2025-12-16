@@ -150,6 +150,7 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 func gcpSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	writeFields := buildGCPSyncWriteFields(meta)
 	readFields := buildGCPSyncReadFields(meta)
+	// typeSetFields indicates which fields are of TypeSet type and need conversion to List during write
 	typeSetFields := map[string]bool{
 		consts.FieldAllowedIPv4Addresses: true,
 		consts.FieldAllowedIPv6Addresses: true,
