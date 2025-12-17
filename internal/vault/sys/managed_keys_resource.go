@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
@@ -116,23 +117,41 @@ func (r *ManagedKeysResource) Schema(ctx context.Context, req resource.SchemaReq
 }
 
 // helper: build map[string]interface{} for a nested block object
-func buildMapFromAttrList(ctx context.Context, list types.List) ([]map[string]interface{}, diag.Diagnostics) {
+func buildMapFromAttrList(ctx context.Context, list types.List) ([]map[string]any, diag.Diagnostics) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
 
-	var result []map[string]interface{}
-	var elems []map[string]interface{}
-	// Convert list to Go slice
-	if d := list.ElementsAs(ctx, &elems, false); d != nil {
-		return nil, d
+	var d diag.Diagnostics
+
+	var elems []map[string]any
+	for _, elem := range list.Elements() {
+		v, err := elem.ToTerraformValue(ctx)
+		if err != nil {
+			d.AddError(errutil.ClientConfigureErr(err))
+			return nil, d
+		}
+		e := map[string]tftypes.Value{}
+		if err := v.As(&e); err != nil {
+			d.AddError(errutil.ClientConfigureErr(err))
+			return nil, d
+		}
+		sm := map[string]any{}
+		for k, v := range e {
+			var s string
+			if v.IsNull() {
+				continue
+			}
+			if err := v.As(&s); err != nil {
+				d.AddError(errutil.ClientConfigureErr(err))
+				return nil, d
+			}
+			sm[k] = s
+		}
+		elems = append(elems, sm)
 	}
 
-	for _, e := range elems {
-		result = append(result, e)
-	}
-
-	return result, nil
+	return elems, nil
 }
 
 func (r *ManagedKeysResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
