@@ -779,10 +779,10 @@ var (
 			Resource:      UpdateSchemaResource(kubernetesSecretBackendRoleResource()),
 			PathInventory: []string{"/kubernetes/roles/{name}"},
 		},
-		"vault_managed_keys": {
-			Resource:      UpdateSchemaResource(managedKeysResource()),
-			PathInventory: []string{"/sys/managed-keys/{type}/{name}"},
-		},
+		//"vault_managed_keys": {
+		//	Resource:      UpdateSchemaResource(managedKeysResource()),
+		//	PathInventory: []string{"/sys/managed-keys/{type}/{name}"},
+		//},
 		"vault_transform_transformation": {
 			Resource:      UpdateSchemaResource(transformTransformationResource()),
 			PathInventory: []string{"/transform/transformation/{name}"},
