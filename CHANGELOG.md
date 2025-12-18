@@ -10,7 +10,12 @@ IMPROVEMENTS:
 * Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`) in `vault_secrets_sync_vercel_destination` resource. Requires Vault 1.19+. ([#2681](https://github.com/hashicorp/terraform-provider-vault/pull/2681))
 * Add support for `tls_server_name` , `local_datacenter`, `socket_keep_alive`, `consistency` and `username_template`  parameters for Cassandra in `vault_database_secret_backend_connection` resource. ([#2677](https://github.com/hashicorp/terraform-provider-vault/pull/2677))
 * `vault_secrets_sync_aws_destination`: Add support for networking configuration parameters `allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, and `disable_strict_networking` to control outbound connections from Vault to AWS Secrets Manager. Requires Vault 1.19.0+.([#2698](https://github.com/hashicorp/terraform-provider-vault/pull/2698))
+* Updated dependencies:
+  * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
 
+BUGS:
+
+* `provider/auth_login_aws`: Fix issue where AWS authentication with IAM role assumption (`aws_role_arn`) was not working correctly due to incorrect credential handling ([#2679](https://github.com/hashicorp/terraform-provider-vault/pull/2679))
 
 ## 5.6.0 (December 19, 2025)
 
@@ -27,7 +32,6 @@ IMPROVEMENTS:
 BUGS:
 
 * Fix LDAP auth tune block read failure caused by extra /tune segment in the API request path ([#2676](https://github.com/hashicorp/terraform-provider-vault/pull/2676))
-
 
 ## 5.5.0 (Nov 19, 2025)
 
