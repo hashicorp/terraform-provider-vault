@@ -190,7 +190,7 @@ func TestManagedKeysPKCS(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_bits", "4096"),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.slot", slot),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.pin", pin),
-					resource.TestCheckResourceAttr(resourceName, "pkcs.0.mechanism", "1"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.mechanism", "0x0001"),
 				),
 			},
 			{
