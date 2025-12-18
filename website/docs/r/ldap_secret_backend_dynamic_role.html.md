@@ -44,6 +44,7 @@ EOT
   deletion_ldif = <<EOT
 dn: cn={{.Username}},ou=users,dc=learn,dc=example
 changetype: delete
+EOT
   rollback_ldif = <<EOT
 dn: cn={{.Username}},ou=users,dc=learn,dc=example
 changetype: delete
