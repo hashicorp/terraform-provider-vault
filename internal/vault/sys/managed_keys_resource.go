@@ -106,11 +106,6 @@ type ManagedKeyEntryPKCS struct {
 	KeyBits        types.String `tfsdk:"key_bits"`
 }
 
-func (m *ManagedKeyEntryPKCS) PatchRedacted(from ManagedKeyEntryPKCS) {
-	m.KeyID = from.KeyID
-	m.Pin = from.Pin
-}
-
 type ManagedKeyEntryPKCSAPIModel struct {
 	ManagedKeyEntryCommonAPIModel
 	Name           string  `json:"name"`
@@ -154,48 +149,53 @@ type ManagedKeyEntryAzureAPIModel struct {
 	KeyType      string `json:"key_type"`
 }
 
-//func apiModelToModel[A, M any](a A) (*M, error) {
-//	// First turn the api model into a temporary map t via json
-//	j, err := json.Marshal(a)
-//	if err != nil {
-//		return nil, err
-//	}
-//	t := map[string]any{}
-//	err = json.Unmarshal(j, &t)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	// Now change the values of t to hold the same types as the model object fields
-//	for k, v := range t {
-//		switch x := v.(type) {
-//		case *string:
-//			t[k] = types.StringPointerValue(x)
-//		case string:
-//			t[k] = types.StringValue(x)
-//		case *bool:
-//			t[k] = types.BoolPointerValue(x)
-//		case bool:
-//			t[k] = types.BoolValue(x)
-//		default:
-//			return nil, fmt.Errorf("unknown type %T", x)
-//		}
-//	}
-//	var m M
-//	cfg1, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-//		TagName: "tfsdk",
-//		Result:  &m,
-//		Squash:  true,
-//	})
-//	if err != nil {
-//		return nil, err
-//	}
-//	if err := cfg1.Decode(t); err != nil {
-//		return nil, err
-//	}
-//	return &m, nil
-//}
+/*
+func apiModelToModel[A, M any](a A) (*M, error) {
+	// First turn the api model into a temporary map t via json
+	j, err := json.Marshal(a)
+	if err != nil {
+		return nil, err
+	}
+	t := map[string]any{}
+	err = json.Unmarshal(j, &t)
+	if err != nil {
+		return nil, err
+	}
 
+	// Now change the values of t to hold the same types as the model object fields
+	for k, v := range t {
+		switch x := v.(type) {
+		case *string:
+			t[k] = types.StringPointerValue(x)
+		case string:
+			t[k] = types.StringValue(x)
+		case *bool:
+			t[k] = types.BoolPointerValue(x)
+		case bool:
+			t[k] = types.BoolValue(x)
+		default:
+			return nil, fmt.Errorf("unknown type %T", x)
+		}
+	}
+	var m M
+	cfg1, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		TagName: "tfsdk",
+		Result:  &m,
+		Squash:  true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := cfg1.Decode(t); err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+*/
+
+// apiModelToModel populates m based on a.  Both are expected to be structs that
+// have the same keys in the same order, but while a has regular Go types like
+// string or *string, m has tf types like StringValue.
 func apiModelToModel(a, m any) error {
 	return apiModelToModelValues(reflect.ValueOf(a), reflect.ValueOf(m).Elem())
 }
@@ -209,9 +209,6 @@ func apiModelToModelValues(aVal, mVal reflect.Value) error {
 	}
 	for i := 0; i < aVal.NumField(); i++ {
 		aT := aType.Field(i)
-		//name := aT.Name
-		//aF := aVal.FieldByName(name)
-		//mF := mVal.FieldByName(name)
 		aF := aVal.Field(i)
 		mF := mVal.Field(i)
 		switch aF.Kind() {
@@ -264,10 +261,6 @@ func getManagedKeysPath(keyType, name string) string {
 
 func isUnsupportedKeyTypeError(err error) bool {
 	return strings.Contains(err.Error(), "unsupported managed key type")
-}
-
-type AttrGetter interface {
-	GetAttribute(ctx context.Context, path path.Path, target interface{}) diag.Diagnostics
 }
 
 type managedKeysConfig struct {
@@ -407,7 +400,7 @@ func managedKeysPKCSConfigAttributes() map[string]schema.Attribute {
 				path.MatchRelative().AtParent().AtName("key_id"),
 			)},
 		},
-		"key_id":           schema.StringAttribute{Optional: true, Sensitive: true},
+		"key_id":           schema.StringAttribute{Optional: true, Computed: true, Sensitive: true},
 		"mechanism":        schema.StringAttribute{Required: true},
 		"pin":              schema.StringAttribute{Required: true, Sensitive: true},
 		"slot":             schema.StringAttribute{Optional: true},
@@ -463,6 +456,9 @@ func buildMapFromAttrList(ctx context.Context, list types.List) ([]map[string]an
 			elems = append(elems, m)
 		}
 	}
+	if d.HasError() {
+		return nil, d
+	}
 
 	return elems, nil
 }
@@ -482,16 +478,30 @@ func buildMapFromAttrValue(ctx context.Context, value attr.Value) (map[string]an
 		return nil, d
 	}
 	for k, v := range e {
-		var s string
 		if v.IsNull() {
+			// TODO do we always want to ignore null values?  What about unsetting an existing value?
 			continue
 		}
 		if v.IsKnown() {
-			if err := v.As(&s); err != nil {
-				d.AddError(errutil.ClientConfigureErr(err))
+			switch {
+			case v.Type().Is(tftypes.String):
+				var s string
+				if err := v.As(&s); err != nil {
+					d.AddError(errutil.ClientConfigureErr(err))
+					return nil, d
+				}
+				ret[k] = s
+			case v.Type().Is(tftypes.Bool):
+				var b bool
+				if err := v.As(&b); err != nil {
+					d.AddError(errutil.ClientConfigureErr(err))
+					return nil, d
+				}
+				ret[k] = b
+			default:
+				d.AddError("unknown type when building attr map", v.Type().String())
 				return nil, d
 			}
-			ret[k] = s
 		}
 	}
 	return ret, d
