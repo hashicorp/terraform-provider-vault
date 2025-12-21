@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -27,6 +28,12 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/vault/api"
+)
+
+const (
+	kmsTypePKCS  = "pkcs11"
+	kmsTypeAWS   = "awskms"
+	kmsTypeAzure = "azurekeyvault"
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
@@ -47,6 +54,14 @@ type ManagedKeysModel struct {
 	AWS   types.List `tfsdk:"aws"`
 	Azure types.List `tfsdk:"azure"`
 	PKCS  types.List `tfsdk:"pkcs"`
+}
+
+func (m *ManagedKeysModel) AsMap() map[string]types.List {
+	return map[string]types.List{
+		kmsTypeAWS:   m.AWS,
+		kmsTypeAzure: m.Azure,
+		kmsTypePKCS:  m.PKCS,
+	}
 }
 
 type ManagedKeyEntryCommon struct {
@@ -244,12 +259,6 @@ func apiModelToModelValues(aVal, mVal reflect.Value) error {
 	}
 	return nil
 }
-
-const (
-	kmsTypePKCS  = "pkcs11"
-	kmsTypeAWS   = "awskms"
-	kmsTypeAzure = "azurekeyvault"
-)
 
 func getManagedKeysPathPrefix(keyType string) string {
 	return fmt.Sprintf("sys/managed-keys/%s", keyType)
@@ -507,66 +516,90 @@ func buildMapFromAttrValue(ctx context.Context, value attr.Value) (map[string]an
 	return ret, d
 }
 
+// TODO MountCreateContextWrapper 1.10
 func (r *ManagedKeysResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	data := &ManagedKeysModel{}
-	resp.Diagnostics.Append(req.Plan.Get(ctx, data)...)
+	resp.Diagnostics = r.createUpdate(ctx, &req.Plan, &resp.State)
+}
+
+func (r *ManagedKeysResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	oldData, newData := &ManagedKeysModel{}, &ManagedKeysModel{}
+	resp.Diagnostics.Append(req.State.Get(ctx, oldData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(req.Plan.Get(ctx, newData)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	cli, err := client.GetClient(ctx, r.Meta(), newData.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
-	// write entries for each block type
-	if !data.AWS.IsNull() {
-		awsEntries, diags := buildMapFromAttrList(ctx, data.AWS)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
+	// Delete all the old keys that don't exist in the new planned state
+	for keyType, oldList := range oldData.AsMap() {
+		entries, d := buildMapFromAttrList(ctx, oldList)
+		resp.Diagnostics.Append(d...)
+		if d.HasError() {
 			return
 		}
-		for _, ent := range awsEntries {
-			name := ent["name"].(string)
-			path := fmt.Sprintf("sys/managed-keys/awskms/%s", name)
-			log.Printf("[DEBUG] Writing AWS managed key to %s", path)
-			if _, err := cli.Logical().WriteWithContext(ctx, path, ent); err != nil {
-				resp.Diagnostics.AddError("Vault write error", err.Error())
+		toDelete := map[string]struct{}{}
+		for _, e := range entries {
+			toDelete[e[consts.FieldName].(string)] = struct{}{}
+		}
+
+		entries, d = buildMapFromAttrList(ctx, newData.AsMap()[keyType])
+		resp.Diagnostics.Append(d...)
+		if d.HasError() {
+			return
+		}
+		for _, e := range entries {
+			delete(toDelete, e[consts.FieldName].(string))
+		}
+
+		for name := range toDelete {
+			_, err := cli.Logical().DeleteWithContext(ctx, getManagedKeysPath(keyType, name))
+			if err != nil {
+				resp.Diagnostics.AddError(fmt.Sprintf("error deleting key %q of type %s", name, keyType), err.Error())
 				return
 			}
 		}
 	}
 
-	if !data.PKCS.IsNull() {
-		pkcsEntries, diags := buildMapFromAttrList(ctx, data.PKCS)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		for _, ent := range pkcsEntries {
-			name := ent["name"].(string)
-			path := fmt.Sprintf("sys/managed-keys/pkcs11/%s", name)
-			log.Printf("[DEBUG] Writing PKCS managed key to %s", path)
-			if _, err := cli.Logical().WriteWithContext(ctx, path, ent); err != nil {
-				resp.Diagnostics.AddError("Vault write error", err.Error())
-				return
-			}
-		}
+	// Now create or update any keys that do belong in the new planned state
+	resp.Diagnostics = r.createUpdate(ctx, &req.Plan, &resp.State)
+}
+
+func (r *ManagedKeysResource) createUpdate(ctx context.Context, plan *tfsdk.Plan, state *tfsdk.State) (diags diag.Diagnostics) {
+	data := &ManagedKeysModel{}
+	diags.Append(plan.Get(ctx, data)...)
+	if diags.HasError() {
+		return
 	}
 
-	if !data.Azure.IsNull() {
-		azureEntries, diags := buildMapFromAttrList(ctx, data.Azure)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	for keyType, list := range data.AsMap() {
+		if list.IsNull() {
+			continue
+		}
+		entries, d := buildMapFromAttrList(ctx, list)
+		diags.Append(d...)
+		if d.HasError() {
 			return
 		}
-		for _, ent := range azureEntries {
+		for _, ent := range entries {
 			name := ent["name"].(string)
-			path := fmt.Sprintf("sys/managed-keys/azurekeyvault/%s", name)
-			log.Printf("[DEBUG] Writing Azure managed key to %s", path)
+			path := getManagedKeysPath(keyType, name)
+			log.Printf("[DEBUG] Writing managed key data to %s", path)
 			if _, err := cli.Logical().WriteWithContext(ctx, path, ent); err != nil {
-				resp.Diagnostics.AddError("Vault write error", err.Error())
+				diags.AddError("Vault write error", err.Error())
 				return
 			}
 		}
@@ -574,10 +607,11 @@ func (r *ManagedKeysResource) Create(ctx context.Context, req resource.CreateReq
 
 	// write ID default for backwards compatibility
 	data.ID = types.StringValue("default")
-	data, resp.Diagnostics = r.read(ctx, data)
-	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(resp.State.Set(ctx, data)...)
+	data, diags = r.read(ctx, data)
+	if !diags.HasError() {
+		diags.Append(state.Set(ctx, data)...)
 	}
+	return
 }
 
 func (r *ManagedKeysResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -726,7 +760,7 @@ func readManagedKeys[A, M any](ctx context.Context, curList types.List, client *
 	}
 	curMap := map[string]map[string]any{}
 	for _, ent := range ents {
-		curMap[ent["name"].(string)] = ent
+		curMap[ent[consts.FieldName].(string)] = ent
 	}
 
 	var ret []M
@@ -782,7 +816,6 @@ func readManagedKeys[A, M any](ctx context.Context, curList types.List, client *
 				d.AddError(fmt.Sprintf("error converting managed keys read from %s to api model", p), err.Error())
 				return nil, d
 			}
-			//if m, err := apiModelToModel[A, M](apiModel); err != nil {
 			var model M
 			if err := apiModelToModel(apiModel, &model); err != nil {
 				d.AddError(fmt.Sprintf("error converting managed keys read from %s to model", p), err.Error())
@@ -790,109 +823,15 @@ func readManagedKeys[A, M any](ctx context.Context, curList types.List, client *
 			} else {
 				ret = append(ret, model)
 			}
-			//for attrName := range config.attributes() {
-			//	// Map TF schema fields to Vault API
-			//	vaultKey := attrName
-			//	//if v, ok := sm[k]; ok {
-			//	//	vaultKey = v
-			//	//}
-			//
-			//	if v, ok := resp.Data[vaultKey]; ok {
-			//		// log an out-of-band change on UUID
-			//		//if vaultKey == "UUID" {
-			//		//	stateKey := fmt.Sprintf("%s.%d.%s", providerType, getHashFromName(name.(string)), k)
-			//		//
-			//		//	if id, ok := d.GetOk(stateKey); ok && id.(string) != "" {
-			//		//		// check if UUID in TF state is different
-			//		//		if id.(string) != v.(string) {
-			//		//			log.Printf("[DEBUG] Out-of-band change detected for %q,  vault has %s, was %s for path=%q", stateKey, v, id, path)
-			//		//		}
-			//		//	}
-			//		//}
-			//
-			//		if _, ok := m[attrName]; !ok {
-			//			m[attrName] = v
-			//		}
-			//	}
-			//}
 		}
 	}
 
 	return ret, nil
 }
 
-func (r *ManagedKeysResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data ManagedKeysModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	// For simplicity, rewrite all entries similar to Create
-
-	// --- Write aws entries ---
-	if !data.AWS.IsNull() {
-		awsEntries, diags := buildMapFromAttrList(ctx, data.AWS)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		for _, ent := range awsEntries {
-			name := ent["name"].(string)
-			path := fmt.Sprintf("sys/managed-keys/awskms/%s", name)
-			if _, err := cli.Logical().WriteWithContext(ctx, path, ent); err != nil {
-				resp.Diagnostics.AddError("Vault write error", err.Error())
-				return
-			}
-		}
-	}
-
-	// PKCS
-	if !data.PKCS.IsNull() {
-		pkcsEntries, diags := buildMapFromAttrList(ctx, data.PKCS)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		for _, ent := range pkcsEntries {
-			name := ent["name"].(string)
-			path := fmt.Sprintf("sys/managed-keys/pkcs11/%s", name)
-			if _, err := cli.Logical().WriteWithContext(ctx, path, ent); err != nil {
-				resp.Diagnostics.AddError("Vault write error", err.Error())
-				return
-			}
-		}
-	}
-
-	// Azure
-	if !data.Azure.IsNull() {
-		azureEntries, diags := buildMapFromAttrList(ctx, data.Azure)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		for _, ent := range azureEntries {
-			name := ent["name"].(string)
-			path := fmt.Sprintf("sys/managed-keys/azurekeyvault/%s", name)
-			if _, err := cli.Logical().WriteWithContext(ctx, path, ent); err != nil {
-				resp.Diagnostics.AddError("Vault write error", err.Error())
-				return
-			}
-		}
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-}
-
 func (r *ManagedKeysResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data ManagedKeysModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	data := &ManagedKeysModel{}
+	resp.Diagnostics.Append(req.State.Get(ctx, data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -903,34 +842,34 @@ func (r *ManagedKeysResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	// delete all keys of each type
-	// AWS
-	if respList, err := cli.Logical().ListWithContext(ctx, "sys/managed-keys/awskms"); err == nil && respList != nil {
+	// TODO why are we listing?  Why don't we just delete everything in state?
+	for keyType, list := range data.AsMap() {
+		if list.IsNull() {
+			continue
+		}
+		respList, err := cli.Logical().ListWithContext(ctx, getManagedKeysPathPrefix(keyType))
+		if err != nil {
+			resp.Diagnostics.AddError("error listing keys of type "+keyType, err.Error())
+			return
+		}
+		if respList == nil {
+			continue
+		}
 		if v, ok := respList.Data["keys"]; ok {
 			for _, n := range v.([]interface{}) {
 				name := n.(string)
-				cli.Logical().DeleteWithContext(ctx, fmt.Sprintf("sys/managed-keys/awskms/%s", name))
+				_, err = cli.Logical().DeleteWithContext(ctx, getManagedKeysPath(keyType, name))
+				if err != nil {
+					resp.Diagnostics.AddError(fmt.Sprintf("error deleting key %q of type %s", name, keyType), err.Error())
+					return
+				}
 			}
 		}
 	}
 
-	// PKCS
-	if respList, err := cli.Logical().ListWithContext(ctx, "sys/managed-keys/pkcs11"); err == nil && respList != nil {
-		if v, ok := respList.Data["keys"]; ok {
-			for _, n := range v.([]interface{}) {
-				name := n.(string)
-				cli.Logical().DeleteWithContext(ctx, fmt.Sprintf("sys/managed-keys/pkcs11/%s", name))
-			}
-		}
-	}
-
-	// Azure
-	if respList, err := cli.Logical().ListWithContext(ctx, "sys/managed-keys/azurekeyvault"); err == nil && respList != nil {
-		if v, ok := respList.Data["keys"]; ok {
-			for _, n := range v.([]interface{}) {
-				name := n.(string)
-				cli.Logical().DeleteWithContext(ctx, fmt.Sprintf("sys/managed-keys/azurekeyvault/%s", name))
-			}
-		}
-	}
+	// TODO we don't actually have to do a read, but maybe we should?
+	//data, resp.Diagnostics = r.read(ctx, data)
+	//if !resp.Diagnostics.HasError() {
+	//	resp.Diagnostics.Append(resp.State.Set(ctx, data)...)
+	//}
 }

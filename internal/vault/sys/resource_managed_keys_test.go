@@ -173,7 +173,9 @@ func TestManagedKeys(t *testing.T) {
 func TestManagedKeysPKCS(t *testing.T) {
 	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
 
-	name := acctest.RandomWithPrefix("pkcs-keys")
+	namePrefix := acctest.RandomWithPrefix("pkcs-keys")
+	name0 := namePrefix + "-0"
+	name1 := namePrefix + "-1"
 	resourceName := "vault_managed_keys.test"
 
 	library, slot, pin := testutil.GetTestPKCSCreds(t)
@@ -183,16 +185,17 @@ func TestManagedKeysPKCS(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testManagedKeysConfig_pkcs(name, library, slot, pin),
+				// Create a resource with name0
+				Config: testManagedKeysConfig_pkcs(name0, library, slot, pin, "label1"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "pkcs.*",
 						map[string]string{
-							consts.FieldName:             name,
+							consts.FieldName:             name0,
 							consts.FieldKeyBits:          "4096",
 							consts.FieldLibrary:          library,
 							consts.FieldSlot:             slot,
 							consts.FieldPin:              pin,
-							consts.FieldKeyLabel:         "kms-intermediate",
+							consts.FieldKeyLabel:         "label1",
 							consts.FieldMechanism:        "0x0001",
 							consts.FieldAnyMount:         "true",
 							consts.FieldAllowReplaceKey:  "false",
@@ -206,7 +209,49 @@ func TestManagedKeysPKCS(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"pkcs.0.pin", "pkcs.0.key_id"},
+				ImportStateVerifyIgnore: []string{"pkcs.0.pin"},
+			},
+			{
+				// Update name0 to have a new label
+				Config: testManagedKeysConfig_pkcs(name0, library, slot, pin, "label2"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "pkcs.*",
+						map[string]string{
+							consts.FieldName:             name0,
+							consts.FieldKeyBits:          "4096",
+							consts.FieldLibrary:          library,
+							consts.FieldSlot:             slot,
+							consts.FieldPin:              pin,
+							consts.FieldKeyLabel:         "label2",
+							consts.FieldMechanism:        "0x0001",
+							consts.FieldAnyMount:         "true",
+							consts.FieldAllowReplaceKey:  "false",
+							consts.FieldAllowStoreKey:    "false",
+							consts.FieldAllowGenerateKey: "false",
+						},
+					),
+				),
+			},
+			{
+				// Replace existing config block with a new one having a different name.
+				Config: testManagedKeysConfig_pkcs(name1, library, slot, pin, "label2"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "pkcs.*",
+						map[string]string{
+							consts.FieldName:             name1,
+							consts.FieldKeyBits:          "4096",
+							consts.FieldLibrary:          library,
+							consts.FieldSlot:             slot,
+							consts.FieldPin:              pin,
+							consts.FieldKeyLabel:         "label2",
+							consts.FieldMechanism:        "0x0001",
+							consts.FieldAnyMount:         "true",
+							consts.FieldAllowReplaceKey:  "false",
+							consts.FieldAllowStoreKey:    "false",
+							consts.FieldAllowGenerateKey: "false",
+						},
+					),
+				),
 			},
 		},
 	})
@@ -251,13 +296,13 @@ resource "vault_managed_keys" "test" {
 `, name)
 }
 
-func testManagedKeysConfig_pkcs(name, library, slot, pin string) string {
+func testManagedKeysConfig_pkcs(name, library, slot, pin, label string) string {
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
   pkcs {
     name               = "%s"
     library            = "%s"
-    key_label          = "kms-intermediate"
+    key_label          = "%s"
     key_bits           = "4096"
     slot               = "%s"
     pin                = "%s"
@@ -265,5 +310,5 @@ resource "vault_managed_keys" "test" {
     any_mount          = true
   }
 }
-`, name, library, slot, pin)
+`, name, library, label, slot, pin)
 }
