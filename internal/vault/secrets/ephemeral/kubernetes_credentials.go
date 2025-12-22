@@ -73,11 +73,11 @@ func (r *KubernetesServiceAccountTokenEphemeralResource) Schema(_ context.Contex
 				MarkdownDescription: "The name of the role.",
 				Required:            true,
 			},
-			"kubernetes_namespace": schema.StringAttribute{
+			consts.FieldKubernetesNamespace: schema.StringAttribute{
 				MarkdownDescription: "The name of the Kubernetes namespace in which to generate the credentials.",
 				Required:            true,
 			},
-			"cluster_role_binding": schema.BoolAttribute{
+			consts.FieldClusterRoleBinding: schema.BoolAttribute{
 				MarkdownDescription: "If true, generate a ClusterRoleBinding to grant permissions across the whole cluster instead of within a namespace.",
 				Optional:            true,
 			},
@@ -85,15 +85,15 @@ func (r *KubernetesServiceAccountTokenEphemeralResource) Schema(_ context.Contex
 				MarkdownDescription: "The TTL of the generated Kubernetes service account token, specified in seconds or as a Go duration format string.",
 				Optional:            true,
 			},
-			"service_account_name": schema.StringAttribute{
+			consts.FieldServiceAccountName: schema.StringAttribute{
 				MarkdownDescription: "The name of the service account associated with the token.",
 				Computed:            true,
 			},
-			"service_account_namespace": schema.StringAttribute{
+			consts.FieldServiceAccountNamespace: schema.StringAttribute{
 				MarkdownDescription: "The Kubernetes namespace that the service account resides in.",
 				Computed:            true,
 			},
-			"service_account_token": schema.StringAttribute{
+			consts.FieldServiceAccountToken: schema.StringAttribute{
 				MarkdownDescription: "The Kubernetes service account token.",
 				Computed:            true,
 				Sensitive:           true,
@@ -139,14 +139,14 @@ func (r *KubernetesServiceAccountTokenEphemeralResource) Open(ctx context.Contex
 
 	// Prepare the request data
 	requestData := make(map[string]interface{})
-	requestData["kubernetes_namespace"] = data.KubernetesNamespace.ValueString()
+	requestData[consts.FieldKubernetesNamespace] = data.KubernetesNamespace.ValueString()
 
 	if !data.ClusterRoleBinding.IsNull() {
-		requestData["cluster_role_binding"] = data.ClusterRoleBinding.ValueBool()
+		requestData[consts.FieldClusterRoleBinding] = data.ClusterRoleBinding.ValueBool()
 	}
 
 	if !data.TTL.IsNull() {
-		requestData["ttl"] = data.TTL.ValueString()
+		requestData[consts.FieldTTL] = data.TTL.ValueString()
 	}
 
 	path := r.path(data.Backend.ValueString(), data.Role.ValueString())
