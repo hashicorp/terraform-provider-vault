@@ -449,7 +449,7 @@ func (r *ManagedKeysResource) Schema(_ context.Context, _ resource.SchemaRequest
 	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
-// helper: build map[string]interface{} for a nested block object
+// buildMapFromAttrList builds a list of map[string]any from a list of nested block objects
 func buildMapFromAttrList(ctx context.Context, list types.List) ([]map[string]any, diag.Diagnostics) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
@@ -472,6 +472,7 @@ func buildMapFromAttrList(ctx context.Context, list types.List) ([]map[string]an
 	return elems, nil
 }
 
+// buildMapFromAttrList builds a map[string]any from a block object
 func buildMapFromAttrValue(ctx context.Context, value attr.Value) (map[string]any, diag.Diagnostics) {
 	var d diag.Diagnostics
 
@@ -710,7 +711,7 @@ func handleKeyProviderRequired(providerType string, err error) error {
 	return err
 }
 
-func updateRedactedFields(ctx context.Context, cur map[string]any, providerType, name string, fields []string, m map[string]interface{}) diag.Diagnostics {
+func updateRedactedFields(ctx context.Context, cur map[string]any, providerType, name string, fields []string, m map[string]interface{}) {
 	for _, field := range fields {
 		m[field] = cur[field]
 
@@ -729,9 +730,12 @@ func updateRedactedFields(ctx context.Context, cur map[string]any, providerType,
 		//	m[field] = s
 		//}
 	}
-	return nil
 }
 
+// readManagedKeys
+// 1. query Vault to list the names of managed keys of the specified type
+// 2. convert the curList into curMap, a map from name to a map of attributes (map[string]map[string]any)
+// 3. for each name returned by the Vault list, call getEnt to fetch the details from Vault,
 func readManagedKeys[A, M any](ctx context.Context, curList types.List, client *api.Client, providerType string) ([]M, diag.Diagnostics) {
 	var d diag.Diagnostics
 	config, err := getManagedKeyConfig(providerType)
@@ -754,6 +758,12 @@ func readManagedKeys[A, M any](ctx context.Context, curList types.List, client *
 		return nil, nil
 	}
 
+	respKeysRaw, ok := resp.Data["keys"]
+	if !ok {
+		d.AddError("error reading managed keys", "non-nil list resp but no keys present")
+		return nil, d
+	}
+
 	ents, diags := buildMapFromAttrList(ctx, curList)
 	if diags.HasError() {
 		return nil, diags
@@ -764,69 +774,74 @@ func readManagedKeys[A, M any](ctx context.Context, curList types.List, client *
 	}
 
 	var ret []M
-	if v, ok := resp.Data["keys"]; ok {
-		for _, nameRaw := range v.([]interface{}) {
-			name := nameRaw.(string)
+	for _, nameRaw := range respKeysRaw.([]interface{}) {
+		name := nameRaw.(string)
+		ent, err := getEnt[A, M](ctx, client, name, config, curMap[name])
+		if err != nil {
+			d.AddError(fmt.Sprintf("error reading managed keys from %s", p), err.Error())
+			return nil, d
+		}
+		if ent != nil {
+			ret = append(ret, *ent)
+		}
+	}
+	return ret, nil
+}
 
-			p := getManagedKeysPath(config.keyType, name)
-			log.Printf("[DEBUG] Reading from Vault at %s", p)
-			resp, err := client.Logical().ReadWithContext(ctx, p)
-			if err != nil {
-				d.AddError(fmt.Sprintf("error reading managed keys from %s", p), err.Error())
-				return nil, d
-			}
-			if resp == nil {
-				continue
-			}
+// getEnt fetches a managed key entry from Vault and augments it based on cur.
+// 1. read the details for the named entry from Vault
+// 2. replace redacted field values with the value in cur
+// 3. adjust any values that are returned by Vault in a different format from how they're provided in our config
+// 4. decode the api model from the returned data map
+// 5. convert the api model to our internal model
+func getEnt[A, M any](ctx context.Context, client *api.Client, name string, config *managedKeysConfig, cur map[string]any) (*M, error) {
+	p := getManagedKeysPath(config.keyType, name)
+	log.Printf("[DEBUG] Reading from Vault at %s", p)
+	resp, err := client.Logical().ReadWithContext(ctx, p)
+	if err != nil {
+		return nil, fmt.Errorf("error reading managed keys from %s: %w", p, err)
+	}
+	if resp == nil {
+		return nil, nil
+	}
 
-			respData := resp.Data
+	respData := resp.Data
 
-			// set fields from TF config
-			// these values are returned as "redacted" from Vault
-			cur := curMap[name]
-			if cur != nil {
-				if d := updateRedactedFields(ctx, cur, providerType, name, config.redacted, respData); d.HasError() {
-					return nil, d.Errors()
-				}
-			}
+	// set fields from TF config
+	// these values are returned as "redacted" from Vault
+	if cur != nil {
+		updateRedactedFields(ctx, cur, config.providerType, name, config.redacted, respData)
+	}
 
-			var apiModel A
-
-			if rdmr, ok := respData["mechanism"]; ok {
-				val := rdmr.(json.Number)
-				i, err := val.Int64()
-				if err != nil {
-					diags.AddError("error parsing mechanism", err.Error())
-				} else {
-					respData["mechanism"] = fmt.Sprintf("0x%04x", i)
-				}
-			}
-			// Use WeakDecode because we want to coerce numbers into strings
-			cfg, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-				WeaklyTypedInput: true,
-				Squash:           true,
-				Result:           &apiModel,
-				TagName:          "json",
-			})
-			if err != nil {
-				d.AddError(fmt.Sprintf("error decoding"), err.Error())
-				return nil, d
-			}
-			if err := cfg.Decode(respData); err != nil {
-				d.AddError(fmt.Sprintf("error converting managed keys read from %s to api model", p), err.Error())
-				return nil, d
-			}
-			var model M
-			if err := apiModelToModel(apiModel, &model); err != nil {
-				d.AddError(fmt.Sprintf("error converting managed keys read from %s to model", p), err.Error())
-				return nil, d
-			} else {
-				ret = append(ret, model)
-			}
+	if rdmr, ok := respData["mechanism"]; ok {
+		val := rdmr.(json.Number)
+		i, err := val.Int64()
+		if err != nil {
+			return nil, fmt.Errorf("error parsing mechanism: %w", err)
+		} else {
+			respData["mechanism"] = fmt.Sprintf("0x%04x", i)
 		}
 	}
 
-	return ret, nil
+	// Use WeakDecode because we want to coerce numbers into strings
+	var apiModel A
+	cfg, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		WeaklyTypedInput: true,
+		Squash:           true,
+		Result:           &apiModel,
+		TagName:          "json",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error decoding: %w", err)
+	}
+	if err := cfg.Decode(respData); err != nil {
+		return nil, fmt.Errorf("error converting managed keys read from %s to api model: %w", p, err)
+	}
+	var model M
+	if err := apiModelToModel(apiModel, &model); err != nil {
+		return nil, fmt.Errorf("error converting managed keys read from %s to model: %w", p, err)
+	}
+	return &model, nil
 }
 
 func (r *ManagedKeysResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
