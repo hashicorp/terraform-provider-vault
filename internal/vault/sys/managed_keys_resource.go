@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -93,6 +94,10 @@ type ManagedKeyEntryAWS struct {
 	Region    types.String `tfsdk:"region"`
 }
 
+func (m ManagedKeyEntryAWS) RecordName() string {
+	return m.Name.ValueString()
+}
+
 type ManagedKeyEntryAWSAPIModel struct {
 	ManagedKeyEntryCommonAPIModel
 	Name      string `json:"name"`
@@ -119,6 +124,10 @@ type ManagedKeyEntryPKCS struct {
 	Curve          types.String `tfsdk:"curve"`
 	ForceRwSession types.String `tfsdk:"force_rw_session"`
 	KeyBits        types.String `tfsdk:"key_bits"`
+}
+
+func (m ManagedKeyEntryPKCS) RecordName() string {
+	return m.Name.ValueString()
 }
 
 type ManagedKeyEntryPKCSAPIModel struct {
@@ -148,6 +157,10 @@ type ManagedKeyEntryAzure struct {
 	Resource     types.String `tfsdk:"resource"`
 	KeyBits      types.String `tfsdk:"key_bits"`
 	KeyType      types.String `tfsdk:"key_type"`
+}
+
+func (m ManagedKeyEntryAzure) RecordName() string {
+	return m.Name.ValueString()
 }
 
 type ManagedKeyEntryAzureAPIModel struct {
@@ -217,15 +230,19 @@ func apiModelToModel(a, m any) error {
 
 func apiModelToModelValues(aVal, mVal reflect.Value) error {
 	aType := aVal.Type()
-	mType := mVal.Type()
-
-	if aType.NumField() != mType.NumField() {
-		return fmt.Errorf("field count mismatch")
-	}
 	for i := 0; i < aVal.NumField(); i++ {
 		aT := aType.Field(i)
 		aF := aVal.Field(i)
-		mF := mVal.Field(i)
+		var mF reflect.Value
+		if aT.Anonymous {
+			// We expect that any embeds will be at the same field position,
+			// since we don't expect them to have the same names in aVal and mVal.
+			mF = mVal.Field(i)
+		} else {
+			// We use field names for non-embeds, since we want to allow for
+			// different number of fields in aVal and mVal.
+			mF = mVal.FieldByName(aT.Name)
+		}
 		switch aF.Kind() {
 		case reflect.Struct:
 			if err := apiModelToModelValues(aF, mF); err != nil {
@@ -260,6 +277,55 @@ func apiModelToModelValues(aVal, mVal reflect.Value) error {
 	return nil
 }
 
+func modelToApiModel(m, a any) error {
+	return modelToApiModelValues(reflect.ValueOf(m), reflect.ValueOf(a).Elem())
+}
+
+func modelToApiModelValues(mVal, aVal reflect.Value) error {
+	aType := aVal.Type()
+	for i := 0; i < aVal.NumField(); i++ {
+		aT := aType.Field(i)
+		aF := aVal.Field(i)
+		var mF reflect.Value
+		if aT.Anonymous {
+			// We expect that any embeds will be at the same field position,
+			// since we don't expect them to have the same names in aVal and mVal.
+			mF = mVal.Field(i)
+		} else {
+			// We use field names for non-embeds, since we want to allow for
+			// different number of fields in aVal and mVal.
+			mF = mVal.FieldByName(aT.Name)
+		}
+		isKnown := mF.MethodByName("IsKnown")
+		if isKnown.IsValid() && !isKnown.Call(nil)[0].Bool() {
+			continue
+		}
+		switch aF.Kind() {
+		case reflect.Struct:
+			if err := modelToApiModelValues(mF, aF); err != nil {
+				return err
+			}
+		case reflect.Bool:
+			aF.Set(mF.MethodByName("ValueBool").Call(nil)[0])
+		case reflect.String:
+			aF.Set(mF.MethodByName("ValueString").Call(nil)[0])
+		case reflect.Pointer:
+			e := aF.Elem()
+			switch aT.Type.Elem().Kind() {
+			case reflect.Bool:
+				aF.Set(mF.MethodByName("ValueBoolPointer").Call(nil)[0])
+			case reflect.String:
+				aF.Set(mF.MethodByName("ValueStringPointer").Call(nil)[0])
+			default:
+				return fmt.Errorf("unknown pointer type %T of kind %v on field %s", aF, e.Kind(), aType.Field(i).Name)
+			}
+		default:
+			return fmt.Errorf("unknown type %T with kind %v on field %s", aF, aF.Kind(), aType.Field(i).Name)
+		}
+	}
+	return nil
+}
+
 func getManagedKeysPathPrefix(keyType string) string {
 	return fmt.Sprintf("sys/managed-keys/%s", keyType)
 }
@@ -280,42 +346,26 @@ type managedKeysConfig struct {
 }
 
 var (
-	managedKeysAWSConfig = &managedKeysConfig{
+	managedKeysAWSConfig = managedKeysConfig{
 		providerType: consts.FieldAWS,
 		keyType:      kmsTypeAWS,
 		attributes:   managedKeysAWSConfigAttributes,
 		redacted:     []string{consts.FieldAccessKey, consts.FieldSecretKey},
 	}
 
-	managedKeysAzureConfig = &managedKeysConfig{
+	managedKeysAzureConfig = managedKeysConfig{
 		providerType: consts.FieldAzure,
 		keyType:      kmsTypeAzure,
 		attributes:   managedKeysAzureConfigAttributes,
 	}
 
-	managedKeysPKCSConfig = &managedKeysConfig{
+	managedKeysPKCSConfig = managedKeysConfig{
 		providerType: consts.FieldPKCS,
 		keyType:      kmsTypePKCS,
 		attributes:   managedKeysPKCSConfigAttributes,
 		redacted:     []string{consts.FieldPin, consts.FieldKeyID},
 	}
-
-	managedKeyProviders = []*managedKeysConfig{
-		managedKeysAWSConfig,
-		managedKeysAzureConfig,
-		managedKeysPKCSConfig,
-	}
 )
-
-func getManagedKeyConfig(providerType string) (*managedKeysConfig, error) {
-	for _, config := range managedKeyProviders {
-		if config.providerType == providerType {
-			return config, nil
-		}
-	}
-
-	return nil, fmt.Errorf("invalid provider type %s", providerType)
-}
 
 func commonManagedKeysAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
@@ -449,8 +499,8 @@ func (r *ManagedKeysResource) Schema(_ context.Context, _ resource.SchemaRequest
 	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
-// buildMapFromAttrList builds a list of map[string]any from a list of nested block objects
-func buildMapFromAttrList(ctx context.Context, list types.List) ([]map[string]any, diag.Diagnostics) {
+// attrListToMaps builds a list of map[string]any from a list of nested block objects
+func attrListToMaps(ctx context.Context, list types.List) ([]map[string]any, diag.Diagnostics) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
@@ -459,7 +509,7 @@ func buildMapFromAttrList(ctx context.Context, list types.List) ([]map[string]an
 
 	var elems []map[string]any
 	for _, elem := range list.Elements() {
-		m, dd := buildMapFromAttrValue(ctx, elem)
+		m, dd := attrValueToMap(ctx, elem)
 		d.Append(dd...)
 		if m != nil {
 			elems = append(elems, m)
@@ -472,8 +522,86 @@ func buildMapFromAttrList(ctx context.Context, list types.List) ([]map[string]an
 	return elems, nil
 }
 
-// buildMapFromAttrList builds a map[string]any from a block object
-func buildMapFromAttrValue(ctx context.Context, value attr.Value) (map[string]any, diag.Diagnostics) {
+func attrListToModels[M any](ctx context.Context, list types.List) ([]M, diag.Diagnostics) {
+	if list.IsNull() || list.IsUnknown() {
+		return nil, nil
+	}
+
+	var d diag.Diagnostics
+
+	var elems []M
+	for _, elem := range list.Elements() {
+		m, dd := attrValueToModel[M](ctx, elem)
+		d.Append(dd...)
+		if m != nil {
+			elems = append(elems, *m)
+		}
+	}
+	if d.HasError() {
+		return nil, d
+	}
+
+	return elems, nil
+}
+
+func attrValueToModel[M any](ctx context.Context, value attr.Value) (*M, diag.Diagnostics) {
+	var d diag.Diagnostics
+
+	v, err := value.ToTerraformValue(ctx)
+	if err != nil {
+		d.AddError(errutil.ClientConfigureErr(err))
+		return nil, d
+	}
+	e := map[string]tftypes.Value{}
+	if err := v.As(&e); err != nil {
+		d.AddError(errutil.ClientConfigureErr(err))
+		return nil, d
+	}
+
+	var model M
+	cfg, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		//WeaklyTypedInput: true,
+		Squash:  true,
+		Result:  &model,
+		TagName: "tfsdk",
+		DecodeHook: func(from, to reflect.Type, data any) (any, error) {
+			val, ok := data.(tftypes.Value)
+			if !ok {
+				return data, nil
+			}
+			if !val.IsKnown() {
+				return data, nil
+			}
+			switch to.Name() {
+			case "BoolValue":
+				var b bool
+				if err := val.As(&b); err != nil {
+					return nil, err
+				}
+				return types.BoolValue(b), nil
+			case "StringValue":
+				var s string
+				if err := val.As(&s); err != nil {
+					return nil, err
+				}
+				return types.StringValue(s), nil
+			}
+			return data, nil
+		},
+	})
+	if err != nil {
+		d.AddError(errutil.ClientConfigureErr(err))
+		return nil, d
+	}
+	if err := cfg.Decode(e); err != nil {
+		d.AddError(errutil.ClientConfigureErr(err))
+		return nil, d
+	}
+	return &model, d
+}
+
+// attrValueToMap builds a map[string]any from an object attr value
+func attrValueToMap(ctx context.Context, value attr.Value) (map[string]any, diag.Diagnostics) {
 	var d diag.Diagnostics
 
 	ret := map[string]any{}
@@ -541,7 +669,7 @@ func (r *ManagedKeysResource) Update(ctx context.Context, req resource.UpdateReq
 
 	// Delete all the old keys that don't exist in the new planned state
 	for keyType, oldList := range oldData.AsMap() {
-		entries, d := buildMapFromAttrList(ctx, oldList)
+		entries, d := attrListToMaps(ctx, oldList)
 		resp.Diagnostics.Append(d...)
 		if d.HasError() {
 			return
@@ -551,7 +679,7 @@ func (r *ManagedKeysResource) Update(ctx context.Context, req resource.UpdateReq
 			toDelete[e[consts.FieldName].(string)] = struct{}{}
 		}
 
-		entries, d = buildMapFromAttrList(ctx, newData.AsMap()[keyType])
+		entries, d = attrListToMaps(ctx, newData.AsMap()[keyType])
 		resp.Diagnostics.Append(d...)
 		if d.HasError() {
 			return
@@ -590,7 +718,7 @@ func (r *ManagedKeysResource) createUpdate(ctx context.Context, plan *tfsdk.Plan
 		if list.IsNull() {
 			continue
 		}
-		entries, d := buildMapFromAttrList(ctx, list)
+		entries, d := attrListToMaps(ctx, list)
 		diags.Append(d...)
 		if d.HasError() {
 			return
@@ -636,61 +764,23 @@ func (r *ManagedKeysResource) read(ctx context.Context, cur *ManagedKeysModel) (
 		return nil, diag
 	}
 
-	awsList, d := readManagedKeys[ManagedKeyEntryAWSAPIModel, ManagedKeyEntryAWS](ctx, cur.AWS, cli, consts.FieldAWS)
+	awsList, d := readManagedKeys[ManagedKeyEntryAWS](ctx, cur.AWS, cli, managedKeysAWSConfig, newAwsMapper)
 	diag.Append(d...)
 	if !d.HasError() {
 		// Convert to types and set on data
-		config, err := getManagedKeyConfig(consts.FieldAWS)
-		if err != nil {
-			d.AddError("error reading managed keys", err.Error())
-			return nil, d
-		}
-		t := types.ObjectType{
-			AttrTypes: attrsToTypes(config.attributes()),
-		}
-		if val, diags := types.ListValueFrom(ctx, t, awsList); diags.HasError() {
-			diag.Append(diags...)
-		} else {
-			data.AWS = val
-		}
+		data.AWS = awsList
 	}
 
-	pkcsList, d := readManagedKeys[ManagedKeyEntryPKCSAPIModel, ManagedKeyEntryPKCS](ctx, cur.PKCS, cli, consts.FieldPKCS)
+	pkcsList, d := readManagedKeys[ManagedKeyEntryPKCS](ctx, cur.PKCS, cli, managedKeysPKCSConfig, newPkcsMapper)
 	diag.Append(d...)
 	if !d.HasError() {
-		// Convert to types and set on data
-		config, err := getManagedKeyConfig(consts.FieldPKCS)
-		if err != nil {
-			d.AddError("error reading managed keys", err.Error())
-			return nil, d
-		}
-		t := types.ObjectType{
-			AttrTypes: attrsToTypes(config.attributes()),
-		}
-		if val, diags := types.ListValueFrom(ctx, t, pkcsList); diags.HasError() {
-			diag.Append(diags...)
-		} else {
-			data.PKCS = val
-		}
+		data.PKCS = pkcsList
 	}
 
-	azureList, d := readManagedKeys[ManagedKeyEntryAzureAPIModel, ManagedKeyEntryAzure](ctx, cur.Azure, cli, consts.FieldAzure)
+	azureList, d := readManagedKeys[ManagedKeyEntryAzure](ctx, cur.Azure, cli, managedKeysAzureConfig, newAzureMapper)
 	diag.Append(d...)
 	if !d.HasError() {
-		// Convert to types and set on data
-		config, err := getManagedKeyConfig(consts.FieldAzure)
-		if err != nil {
-			d.AddError("error reading managed keys", err.Error())
-			return nil, d
-		}
-		t := types.ObjectType{
-			AttrTypes: attrsToTypes(config.attributes()),
-		}
-		if val, diags := types.ListValueFrom(ctx, t, azureList); diags.HasError() {
-			diag.Append(diags...)
-		} else {
-			data.Azure = val
-		}
+		data.Azure = azureList
 	}
 
 	data.ID = types.StringValue("default")
@@ -711,91 +801,82 @@ func handleKeyProviderRequired(providerType string, err error) error {
 	return err
 }
 
-func updateRedactedFields(ctx context.Context, cur map[string]any, providerType, name string, fields []string, m map[string]interface{}) {
-	for _, field := range fields {
-		m[field] = cur[field]
-
-		//ps, diag := state.PathMatches(ctx, path.MatchRoot(providerType).AtName(name).AtName(field))
-		//if diag.HasError() {
-		//	return diag
-		//}
-		//if len(ps) != 1 {
-		//	diag.AddError("expected single path match", fmt.Sprintf("got %d matches for provider=%s, name=%s, field=%s", len(ps), providerType, name, field))
-		//	return diag
-		//}
-		//var s string
-		//if d := state.GetAttribute(ctx, ps[0], &s); d.HasError() {
-		//	return d.Errors()
-		//} else {
-		//	m[field] = s
-		//}
-	}
+type NamedRecord interface {
+	RecordName() string
 }
 
 // readManagedKeys
 // 1. query Vault to list the names of managed keys of the specified type
 // 2. convert the curList into curMap, a map from name to a map of attributes (map[string]map[string]any)
 // 3. for each name returned by the Vault list, call getEnt to fetch the details from Vault,
-func readManagedKeys[A, M any](ctx context.Context, curList types.List, client *api.Client, providerType string) ([]M, diag.Diagnostics) {
+func readManagedKeys[M NamedRecord](ctx context.Context, curList types.List, client *api.Client, config managedKeysConfig, f func(M) mapper) (basetypes.ListValue, diag.Diagnostics) {
 	var d diag.Diagnostics
-	config, err := getManagedKeyConfig(providerType)
-	if err != nil {
-		d.AddError("error reading managed keys", err.Error())
-		return nil, d
+	t := types.ObjectType{
+		AttrTypes: attrsToTypes(config.attributes()),
 	}
+	errVal := basetypes.NewListUnknown(t)
 
 	p := getManagedKeysPathPrefix(config.keyType)
 	log.Printf("[DEBUG] Listing data from Vault at %s", p)
 	resp, err := client.Logical().List(p)
 	if err != nil {
-		if err := handleKeyProviderRequired(providerType, err); err != nil {
+		if err := handleKeyProviderRequired(config.providerType, err); err != nil {
 			d.AddError("error reading managed keys", err.Error())
-			return nil, d
+			return errVal, d
 		}
 	}
 
+	ret := make([]attr.Value, 0)
 	if resp == nil {
-		return nil, nil
+		return basetypes.NewListValue(t, ret)
 	}
 
 	respKeysRaw, ok := resp.Data["keys"]
 	if !ok {
 		d.AddError("error reading managed keys", "non-nil list resp but no keys present")
-		return nil, d
+		return errVal, d
 	}
 
-	ents, diags := buildMapFromAttrList(ctx, curList)
+	ents, diags := attrListToModels[M](ctx, curList)
 	if diags.HasError() {
-		return nil, diags
+		return errVal, diags
 	}
-	curMap := map[string]map[string]any{}
+	cur := map[string]M{}
 	for _, ent := range ents {
-		curMap[ent[consts.FieldName].(string)] = ent
+		cur[ent.RecordName()] = ent
 	}
 
-	var ret []M
 	for _, nameRaw := range respKeysRaw.([]interface{}) {
 		name := nameRaw.(string)
-		ent, err := getEnt[A, M](ctx, client, name, config, curMap[name])
+		respData, err := readManagedKeyRaw(ctx, client, config.keyType, name)
 		if err != nil {
 			d.AddError(fmt.Sprintf("error reading managed keys from %s", p), err.Error())
-			return nil, d
+			return errVal, d
 		}
-		if ent != nil {
-			ret = append(ret, *ent)
+		if respData == nil {
+			continue
 		}
+
+		m := f(cur[name])
+		err = m.UpdateValues(respData)
+		if err != nil {
+			d.AddError(fmt.Sprintf("error tweaking managed key read from %s", p), err.Error())
+			return errVal, d
+		}
+		var val attr.Value
+		val, d = m.ToAttrValue(ctx, respData)
+		if d.HasError() {
+			return errVal, d
+		}
+
+		ret = append(ret, val)
 	}
-	return ret, nil
+
+	return basetypes.NewListValue(t, ret)
 }
 
-// getEnt fetches a managed key entry from Vault and augments it based on cur.
-// 1. read the details for the named entry from Vault
-// 2. replace redacted field values with the value in cur
-// 3. adjust any values that are returned by Vault in a different format from how they're provided in our config
-// 4. decode the api model from the returned data map
-// 5. convert the api model to our internal model
-func getEnt[A, M any](ctx context.Context, client *api.Client, name string, config *managedKeysConfig, cur map[string]any) (*M, error) {
-	p := getManagedKeysPath(config.keyType, name)
+func readManagedKeyRaw(ctx context.Context, client *api.Client, providerType, name string) (map[string]any, error) {
+	p := getManagedKeysPath(providerType, name)
 	log.Printf("[DEBUG] Reading from Vault at %s", p)
 	resp, err := client.Logical().ReadWithContext(ctx, p)
 	if err != nil {
@@ -804,44 +885,7 @@ func getEnt[A, M any](ctx context.Context, client *api.Client, name string, conf
 	if resp == nil {
 		return nil, nil
 	}
-
-	respData := resp.Data
-
-	// set fields from TF config
-	// these values are returned as "redacted" from Vault
-	if cur != nil {
-		updateRedactedFields(ctx, cur, config.providerType, name, config.redacted, respData)
-	}
-
-	if rdmr, ok := respData["mechanism"]; ok {
-		val := rdmr.(json.Number)
-		i, err := val.Int64()
-		if err != nil {
-			return nil, fmt.Errorf("error parsing mechanism: %w", err)
-		} else {
-			respData["mechanism"] = fmt.Sprintf("0x%04x", i)
-		}
-	}
-
-	// Use WeakDecode because we want to coerce numbers into strings
-	var apiModel A
-	cfg, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		WeaklyTypedInput: true,
-		Squash:           true,
-		Result:           &apiModel,
-		TagName:          "json",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error decoding: %w", err)
-	}
-	if err := cfg.Decode(respData); err != nil {
-		return nil, fmt.Errorf("error converting managed keys read from %s to api model: %w", p, err)
-	}
-	var model M
-	if err := apiModelToModel(apiModel, &model); err != nil {
-		return nil, fmt.Errorf("error converting managed keys read from %s to model: %w", p, err)
-	}
-	return &model, nil
+	return resp.Data, nil
 }
 
 func (r *ManagedKeysResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -887,4 +931,136 @@ func (r *ManagedKeysResource) Delete(ctx context.Context, req resource.DeleteReq
 	//if !resp.Diagnostics.HasError() {
 	//	resp.Diagnostics.Append(resp.State.Set(ctx, data)...)
 	//}
+}
+
+type mapper interface {
+	UpdateValues(respData map[string]any) error
+	ToAttrValue(ctx context.Context, respData map[string]any) (attr.Value, diag.Diagnostics)
+}
+
+type pkcsMapper struct {
+	cur ManagedKeyEntryPKCS
+}
+
+func newPkcsMapper(m ManagedKeyEntryPKCS) mapper {
+	return &pkcsMapper{cur: m}
+}
+
+var _ mapper = &pkcsMapper{}
+
+func (p *pkcsMapper) UpdateValues(data map[string]any) error {
+	// these values are returned as "redacted" from Vault
+	data[consts.FieldPin] = p.cur.Pin.ValueString()
+	data[consts.FieldKeyID] = p.cur.KeyID.ValueString()
+
+	// mechanism is returned as an int but is provided as a hex value
+	if rdmr, ok := data["mechanism"]; ok {
+		val := rdmr.(json.Number)
+		i, err := val.Int64()
+		if err != nil {
+			return fmt.Errorf("error parsing mechanism: %w", err)
+		} else {
+			data["mechanism"] = fmt.Sprintf("0x%04x", i)
+		}
+	}
+	return nil
+}
+
+func (p *pkcsMapper) ToAttrValue(ctx context.Context, respData map[string]any) (attr.Value, diag.Diagnostics) {
+	var d diag.Diagnostics
+	model, err := getEnt[ManagedKeyEntryPKCSAPIModel, ManagedKeyEntryPKCS](respData)
+	if err != nil {
+		d.AddError("failed to convert from api model to internal model", err.Error())
+		return nil, d
+	}
+	t := types.ObjectType{
+		AttrTypes: attrsToTypes(managedKeysPKCSConfigAttributes()),
+	}
+	var ret attr.Value
+	d = tfsdk.ValueFrom(ctx, model, t, &ret)
+	return ret, d
+}
+
+type awsMapper struct {
+	cur ManagedKeyEntryAWS
+}
+
+func newAwsMapper(m ManagedKeyEntryAWS) mapper {
+	return &awsMapper{cur: m}
+}
+
+var _ mapper = &awsMapper{}
+
+func (p *awsMapper) UpdateValues(data map[string]any) error {
+	// these values are returned as "redacted" from Vault
+	data[consts.FieldAccessKey] = p.cur.AccessKey.ValueString()
+	data[consts.FieldSecretKey] = p.cur.SecretKey.ValueString()
+
+	return nil
+}
+
+func (p *awsMapper) ToAttrValue(ctx context.Context, respData map[string]any) (attr.Value, diag.Diagnostics) {
+	var d diag.Diagnostics
+	model, err := getEnt[ManagedKeyEntryAWSAPIModel, ManagedKeyEntryAWS](respData)
+	if err != nil {
+		d.AddError("failed to convert from api model to internal model", err.Error())
+		return nil, d
+	}
+	t := types.ObjectType{
+		AttrTypes: attrsToTypes(managedKeysAWSConfigAttributes()),
+	}
+	var ret attr.Value
+	d = tfsdk.ValueFrom(ctx, model, t, &ret)
+	return ret, d
+}
+
+type azureMapper struct {
+	cur ManagedKeyEntryAzure
+}
+
+func newAzureMapper(m ManagedKeyEntryAzure) mapper {
+	return &azureMapper{cur: m}
+}
+
+var _ mapper = &azureMapper{}
+
+func (p *azureMapper) UpdateValues(_ map[string]any) error {
+	return nil
+}
+
+func (p *azureMapper) ToAttrValue(ctx context.Context, respData map[string]any) (attr.Value, diag.Diagnostics) {
+	var d diag.Diagnostics
+	model, err := getEnt[ManagedKeyEntryAzureAPIModel, ManagedKeyEntryAzure](respData)
+	if err != nil {
+		d.AddError("failed to convert from api model to internal model", err.Error())
+		return nil, d
+	}
+	t := types.ObjectType{
+		AttrTypes: attrsToTypes(managedKeysAzureConfigAttributes()),
+	}
+	var ret attr.Value
+	d = tfsdk.ValueFrom(ctx, model, t, &ret)
+	return ret, d
+}
+
+func getEnt[A, M any](respData map[string]any) (*M, error) {
+	// Use WeakDecode because we want to coerce numbers into strings
+	var apiModel A
+	cfg, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		WeaklyTypedInput: true,
+		Squash:           true,
+		Result:           &apiModel,
+		TagName:          "json",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error decoding: %w", err)
+	}
+	if err := cfg.Decode(respData); err != nil {
+		return nil, fmt.Errorf("error converting managed keys to api model: %w", err)
+	}
+	var model M
+	if err := apiModelToModel(apiModel, &model); err != nil {
+		return nil, fmt.Errorf("error converting managed keys to model: %w", err)
+	}
+	return &model, nil
 }
