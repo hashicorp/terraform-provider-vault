@@ -3,12 +3,12 @@ layout: "vault"
 page_title: "Vault: vault_secrets_sync_vercel_destination resource"
 sidebar_current: "docs-vault-resource-secrets-sync-vercel-destination"
 description: |-
-  Creates a GitHub destination to synchronize secrets in Vault
+  Creates a Vercel destination to synchronize secrets in Vault
 ---
 
 # vault\_secrets\_sync\_vercel\_destination
 
-Creates a GitHub destination to synchronize secrets in Vault. Requires Vault 1.16+.
+Creates a Vercel destination to synchronize secrets in Vault. Requires Vault 1.16+.
 *Available only for Vault Enterprise*.
 
 ~> **Important** All data provided in the resource configuration will be
@@ -18,8 +18,8 @@ artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
-For more information on syncing secrets with GitHub, please refer to the Vault
-[documentation](https://developer.hashicorp.com/vault/docs/sync/github).
+For more information on syncing secrets with Vercel, please refer to the Vault
+[documentation](https://developer.hashicorp.com/vault/docs/sync/vercelproject).
 
 ## Example Usage
 
@@ -30,6 +30,13 @@ resource "vault_secrets_sync_vercel_destination" "vercel" {
   project_id              = var.project_id
   deployment_environments = ["development", "preview", "production"]
   secret_name_template    = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
+  
+  # Networking allowlist fields (Vault 1.19+)
+  # IP addresses must be in CIDR notation
+  allowed_ipv4_addresses    = ["192.168.1.1/32", "10.0.0.1/32"]
+  allowed_ipv6_addresses    = ["2001:db8:85a3::8a2e:370:7334/128"]
+  allowed_ports             = [443, 8443]
+  disable_strict_networking = false
 }
 ```
 
@@ -59,6 +66,21 @@ The following arguments are supported:
 * `granularity` - (Optional) Determines what level of information is synced as a distinct resource
   at the destination. Supports `secret-path` and `secret-key`.
 
+* `allowed_ipv4_addresses` - (Optional) Set of allowed IPv4 addresses in CIDR notation (e.g., `192.168.1.1/32`)
+  for outbound connections from Vault to the destination. If not set, all IPv4 addresses are allowed.
+  Requires Vault 1.19+.
+
+* `allowed_ipv6_addresses` - (Optional) Set of allowed IPv6 addresses in CIDR notation (e.g., `2001:db8::1/128`)
+  for outbound connections from Vault to the destination. If not set, all IPv6 addresses are allowed.
+  Requires Vault 1.19+.
+
+* `allowed_ports` - (Optional) Set of allowed ports for outbound connections from Vault to the
+  destination. If not set, all ports are allowed. Requires Vault 1.19+.
+
+* `disable_strict_networking` - (Optional) If set to `true`, disables strict networking enforcement
+  for this destination. When disabled, Vault will not enforce allowed IP addresses and ports.
+  Defaults to `false`. Requires Vault 1.19+.
+
 ## Attributes Reference
 
 The following attributes are exported in addition to the above:
@@ -67,7 +89,7 @@ The following attributes are exported in addition to the above:
 
 ## Import
 
-GitHub Secrets sync destinations can be imported using the `name`, e.g.
+Vercel Secrets sync destinations can be imported using the `name`, e.g.
 
 ```
 $ terraform import vault_secrets_sync_vercel_destination.vercel vercel-dest

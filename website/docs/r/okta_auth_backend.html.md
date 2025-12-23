@@ -76,6 +76,36 @@ If this is not supplied only locally configured groups will be enabled.
 
 * `policies` - (Optional) List of Vault policies to associate with this user
 
+* `tune` - (Optional) Extra configuration block. Structure is documented below.
+
+The `tune` block is used to tune the auth backend:
+
+* `default_lease_ttl` - (Optional) Specifies the default time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `max_lease_ttl` - (Optional) Specifies the maximum time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the request data object.
+
+* `listing_visibility` - (Optional) Specifies whether to show this mount in
+  the UI-specific listing endpoint. Valid values are "unauth" or "hidden".
+
+* `passthrough_request_headers` - (Optional) List of headers to whitelist and
+  pass from the request to the backend.
+
+* `allowed_response_headers` - (Optional) List of headers to whitelist and allowing
+  a plugin to include them in the response.
+
+* `token_type` - (Optional) Specifies the type of tokens that should be returned by
+  the mount. Valid values are "default-service", "default-batch", "service", "batch".
+
 ### Common Token Arguments
 
 These arguments are common across several Authentication Token resources since Vault 1.2.
@@ -114,6 +144,9 @@ These arguments are common across several Authentication Token resources since V
   `service` tokens). For token store roles, there are two additional possibilities:
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
+
+* `alias_metadata` - (Optional) The metadata to be tied to generated entity alias.
+  This should be a list or map containing the metadata in key value pairs.
 
 ## Attributes Reference
 

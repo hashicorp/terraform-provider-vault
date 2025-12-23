@@ -406,6 +406,14 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 					"The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the " +
 					"Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.",
 			},
+			consts.FieldNotBeforeDuration: {
+				Type:         schema.TypeString,
+				Required:     false,
+				Optional:     true,
+				Description:  "Specifies the duration by which to backdate the NotBefore property.",
+				ForceNew:     true,
+				ValidateFunc: provider.ValidateDuration,
+			},
 		},
 	}
 }
@@ -438,6 +446,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		consts.FieldManagedKeyID,
 		consts.FieldSignatureBits,
 		consts.FieldNotAfter,
+		consts.FieldNotBeforeDuration,
 	}
 
 	rootCertBooleanAPIFields := []string{

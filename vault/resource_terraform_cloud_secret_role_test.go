@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestTerraformCloudSecretRole(t *testing.T) {
+func TestTerraformCloudSecretRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-backend")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	organization := "hashicorp-vault-testing"
@@ -67,6 +67,53 @@ func TestTerraformCloudSecretRole(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "user_id", userID),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "ttl", "120"),
 					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_user", "max_ttl", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestTerraformCloudSecretRole_options(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-backend")
+	name := acctest.RandomWithPrefix("tf-test-name")
+	vals := testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN", "TEST_TF_TEAM_ID")
+	token, teamID := vals[0], vals[1]
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+		},
+		CheckDestroy: testAccTerraformCloudSecretRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testTerraformCloudSecretRole_optionsInitialConfig(backend, token, name, teamID),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "name", name+"_team_id"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "description", "team role"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "credential_type", "team"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "team_id", teamID),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "ttl", "100"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "max_ttl", "200"),
+
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team_legacy", "name", name+"_team_legacy_id"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team_legacy", "credential_type", "team_legacy"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team_legacy", "team_id", teamID),
+				),
+			},
+			{
+				Config: testTerraformCloudSecretRole_optionsUpdatedConfig(backend, token, name, teamID),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "name", name+"_team_id"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "description", "team role2"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "credential_type", "team"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "team_id", teamID),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "ttl", "200"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team", "max_ttl", "300"),
+
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team_legacy", "name", name+"_team_legacy_id"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team_legacy", "credential_type", "team_legacy"),
+					resource.TestCheckResourceAttr("vault_terraform_cloud_secret_role.test_team_legacy", "team_id", teamID),
 				),
 			},
 		},
@@ -161,6 +208,60 @@ resource "vault_terraform_cloud_secret_role" "test_user" {
   ttl = 120
 }
 `, backend, token, name, organization, teamId, userId)
+}
+
+func testTerraformCloudSecretRole_optionsInitialConfig(backend, token, name, teamId string) string {
+	return fmt.Sprintf(`
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend     = "%s"
+  description = "test description"
+  token       = "%s"
+}
+
+resource "vault_terraform_cloud_secret_role" "test_team" {
+  backend         = vault_terraform_cloud_secret_backend.test.backend
+  name            = "%[3]s_team_id"
+  team_id         = "%[4]s"
+  credential_type = "team"
+  description     = "team role"
+  ttl             = 100
+  max_ttl         = 200
+}
+
+resource "vault_terraform_cloud_secret_role" "test_team_legacy" {
+  backend         = vault_terraform_cloud_secret_backend.test.backend
+  name            = "%[3]s_team_legacy_id"
+  team_id         = "%[4]s"
+  credential_type = "team_legacy"
+}
+`, backend, token, name, teamId)
+}
+
+func testTerraformCloudSecretRole_optionsUpdatedConfig(backend, token, name, teamId string) string {
+	return fmt.Sprintf(`
+resource "vault_terraform_cloud_secret_backend" "test" {
+  backend     = "%s"
+  description = "test description"
+  token       = "%s"
+}
+
+resource "vault_terraform_cloud_secret_role" "test_team" {
+  backend         = vault_terraform_cloud_secret_backend.test.backend
+  name            = "%[3]s_team_id"
+  team_id         = "%[4]s"
+  credential_type = "team"
+  description     = "team role2"
+  ttl             = 200
+  max_ttl         = 300
+}
+
+resource "vault_terraform_cloud_secret_role" "test_team_legacy" {
+  backend         = vault_terraform_cloud_secret_backend.test.backend
+  name            = "%[3]s_team_legacy_id"
+  team_id         = "%[4]s"
+  credential_type = "team_legacy"
+}
+`, backend, token, name, teamId)
 }
 
 func TestTerraformCloudSecretBackendRoleNameFromPath(t *testing.T) {

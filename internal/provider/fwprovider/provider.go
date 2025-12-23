@@ -6,10 +6,13 @@ package fwprovider
 import (
 	"context"
 	"fmt"
+	"regexp"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
-	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -223,7 +226,10 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 // the Metadata method. All resources must have unique names.
 func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		spiffe.NewSpiffeAuthConfigResource,
+		spiffe.NewSpiffeAuthRoleResource,
 		sys.NewPasswordPolicyResource,
+		azure.NewAzureStaticRoleResource,
 	}
 }
 
@@ -231,6 +237,12 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 	return []func() ephemeral.EphemeralResource{
 		ephemeralsecrets.NewKVV2EphemeralSecretResource,
 		ephemeralsecrets.NewDBEphemeralSecretResource,
+		ephemeralsecrets.NewAzureStaticCredsEphemeralSecretResource,
+		ephemeralsecrets.NewAzureAccessCredentialsEphemeralResource,
+		ephemeralsecrets.NewGCPServiceAccountKeyEphemeralResource,
+		ephemeralsecrets.NewGCPOAuth2AccessTokenEphemeralResource,
+		ephemeralsecrets.NewAWSAccessCredentialsEphemeralSecretResource,
+		ephemeralsecrets.NewAWSStaticAccessCredentialsEphemeralSecretResource,
 	}
 
 }

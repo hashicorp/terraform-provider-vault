@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -23,6 +24,7 @@ const (
 	TokenFieldPolicies        = "token_policies"
 	TokenFieldType            = "token_type"
 	TokenFieldNumUses         = "token_num_uses"
+	FieldAliasMetadata        = "alias_metadata" // Vault 1.21+
 )
 
 var commonTokenFields = []string{
@@ -35,6 +37,7 @@ var commonTokenFields = []string{
 	TokenFieldPolicies,
 	TokenFieldType,
 	TokenFieldNumUses,
+	FieldAliasMetadata,
 }
 
 type addTokenFieldsConfig struct {
@@ -45,6 +48,8 @@ type addTokenFieldsConfig struct {
 	TokenPeriodConflict         []string
 	TokenPoliciesConflict       []string
 	TokenTTLConflict            []string
+	TokenTypeConflict           []string
+	AliasMetadataConflict       []string
 
 	TokenTypeDefault string
 }
@@ -53,6 +58,23 @@ type addTokenFieldsConfig struct {
 func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConfig) {
 	if config.TokenTypeDefault == "" {
 		config.TokenTypeDefault = "default"
+	}
+
+	if _, ok := fields[consts.FieldTune]; ok {
+		config.TokenMaxTTLConflict = append(
+			config.TokenMaxTTLConflict,
+			fmt.Sprintf("%s.0.%s", consts.FieldTune, consts.FieldMaxLeaseTTL),
+		)
+
+		config.TokenTTLConflict = append(
+			config.TokenTTLConflict,
+			fmt.Sprintf("%s.0.%s", consts.FieldTune, consts.FieldDefaultLeaseTTL),
+		)
+
+		config.TokenTypeConflict = append(
+			config.TokenTypeConflict,
+			fmt.Sprintf("%s.0.%s", consts.FieldTune, consts.FieldTokenType),
+		)
 	}
 
 	fields[TokenFieldBoundCIDRs] = &schema.Schema{
@@ -102,10 +124,11 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 	}
 
 	fields[TokenFieldType] = &schema.Schema{
-		Type:        schema.TypeString,
-		Description: "The type of token to generate, service or batch",
-		Optional:    true,
-		Default:     config.TokenTypeDefault,
+		Type:          schema.TypeString,
+		Description:   "The type of token to generate, service or batch",
+		Optional:      true,
+		Default:       config.TokenTypeDefault,
+		ConflictsWith: config.TokenTypeConflict,
 	}
 
 	fields[TokenFieldTTL] = &schema.Schema{
@@ -120,6 +143,13 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		Description:   "The maximum number of times a token may be used, a value of zero means unlimited",
 		Optional:      true,
 		ConflictsWith: config.TokenNumUsesConflict,
+	}
+
+	fields[FieldAliasMetadata] = &schema.Schema{
+		Type:          schema.TypeMap,
+		Description:   "The metadata to be tied to generated entity alias.\n  This should be a list or map containing the metadata in key value pairs.",
+		Optional:      true,
+		ConflictsWith: config.AliasMetadataConflict,
 	}
 }
 
@@ -203,6 +233,18 @@ func setTokenFields(d *schema.ResourceData, data map[string]interface{}, config 
 	if !conflicted {
 		data[TokenFieldBoundCIDRs] = d.Get(TokenFieldBoundCIDRs).(*schema.Set).List()
 	}
+
+	conflicted = false
+	for _, k := range config.AliasMetadataConflict {
+		if _, ok := d.GetOk(k); ok {
+			conflicted = true
+			break
+		}
+	}
+
+	if !conflicted {
+		data[FieldAliasMetadata] = d.Get(FieldAliasMetadata)
+	}
 }
 
 func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, create bool) {
@@ -242,6 +284,10 @@ func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, crea
 		if v, ok := d.GetOk(TokenFieldNumUses); ok {
 			data[TokenFieldNumUses] = v.(int)
 		}
+
+		if v, ok := d.GetOk(FieldAliasMetadata); ok {
+			data[FieldAliasMetadata] = v
+		}
 	} else {
 		if d.HasChange(TokenFieldBoundCIDRs) {
 			data[TokenFieldBoundCIDRs] = d.Get(TokenFieldBoundCIDRs).(*schema.Set).List()
@@ -277,6 +323,10 @@ func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, crea
 
 		if d.HasChange(TokenFieldNumUses) {
 			data[TokenFieldNumUses] = d.Get(TokenFieldNumUses).(int)
+		}
+
+		if d.HasChange(FieldAliasMetadata) {
+			data[FieldAliasMetadata] = d.Get(FieldAliasMetadata)
 		}
 	}
 }

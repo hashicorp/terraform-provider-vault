@@ -49,6 +49,7 @@ var (
 	VaultVersion1185 = version.Must(version.NewSemver(consts.VaultVersion1185))
 	VaultVersion119  = version.Must(version.NewSemver(consts.VaultVersion119))
 	VaultVersion120  = version.Must(version.NewSemver(consts.VaultVersion120))
+	VaultVersion121  = version.Must(version.NewSemver(consts.VaultVersion121))
 
 	TokenTTLMinRecommended = time.Minute * 15
 )
@@ -243,7 +244,9 @@ func (p *ProviderMeta) setClient() error {
 	client.SetCloneToken(true)
 
 	// Set headers if provided
-	headers := d.Get("headers").([]interface{})
+	// Get the ok value to avoid panics but don't need to check it explicitly
+	// as we handle nil headers gracefully below.
+	headers, _ := d.Get("headers").([]interface{})
 	parsedHeaders := client.Headers().Clone()
 
 	if parsedHeaders == nil {
@@ -365,7 +368,15 @@ func (p *ProviderMeta) setClient() error {
 	}
 
 	if namespace != "" {
+		// set the namespace on the provider to ensure that all child
+		// namespace paths are properly honoured.
+		log.Printf("[DEBUG] Setting namespace on provider to %q", namespace)
+		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
+			return fmt.Errorf("failed to set namespace on provider: %w", err)
+		}
+
 		// set the namespace on the parent client
+		log.Printf("[DEBUG] Setting namespace on client to %q", namespace)
 		client.SetNamespace(namespace)
 	}
 
@@ -594,7 +605,7 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 	// Caution is still required with state files since not all secrets
 	// can explicitly be revoked, and this limited scope won't apply to
 	// any secrets that are *written* by Terraform to Vault.
-	ttl := GetResourceDataInt(d, consts.FieldMaxLeaseTTL, "TERRAFORM_VAULT_MAX_TTL", 1200)
+	ttl := GetResourceDataInt(d, consts.FieldMaxLeaseTTLSeconds, "TERRAFORM_VAULT_MAX_TTL", 1200)
 	childTokenLease, err := clone.Auth().Token().Create(&api.TokenCreateRequest{
 		DisplayName:    tokenName,
 		TTL:            fmt.Sprintf("%ds", ttl),
@@ -617,7 +628,7 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 // If the value is the zero value, then it checks the environment variable. If
 // the environment variable is empty, the default dv is returned
 func GetResourceDataStr(d *schema.ResourceData, field, env, dv string) string {
-	if s := d.Get(field).(string); s != "" {
+	if s, ok := d.Get(field).(string); ok && s != "" {
 		return s
 	}
 
@@ -635,7 +646,7 @@ func GetResourceDataStr(d *schema.ResourceData, field, env, dv string) string {
 // If the value is the zero value, then it checks the environment variable. If
 // the environment variable is empty, the default dv is returned
 func GetResourceDataInt(d *schema.ResourceData, field, env string, dv int) int {
-	if v := d.Get(field).(int); v != 0 {
+	if v, ok := d.Get(field).(int); ok && v != 0 {
 		return v
 	}
 	if env != "" {
@@ -692,18 +703,27 @@ func GetResourceDataBool(d *schema.ResourceData, field, env string, dv bool) boo
 	}
 
 	// If the value is set in config, return using d.Get
-	return d.Get(field).(bool)
+	if v, ok := d.Get(field).(bool); ok {
+		return v
+	}
+
+	return dv
 }
 
 func GetToken(d *schema.ResourceData) (string, error) {
-	if token := d.Get("token").(string); token != "" {
+	token, ok := d.Get("token").(string)
+	if !ok {
+		return "", fmt.Errorf("type assertion failed for %T", token)
+	}
+
+	if token != "" {
 		return token, nil
 	} else if token = os.Getenv(api.EnvVaultToken); token != "" {
 		return token, nil
 	}
 
-	if addAddr := d.Get("add_address_to_env").(string); addAddr == "true" {
-		if addr := d.Get("address").(string); addr != "" {
+	if addAddr, ok := d.Get("add_address_to_env").(string); ok && addAddr == "true" {
+		if addr, ok := d.Get("address").(string); addr != "" && ok {
 			addrEnvVar := api.EnvVaultAddress
 			if current, exists := os.LookupEnv(addrEnvVar); exists {
 				defer func() {
@@ -725,7 +745,7 @@ func GetToken(d *schema.ResourceData) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error getting token helper: %s", err)
 	}
-	token, err := tokenHelper.Get()
+	token, err = tokenHelper.Get()
 	if err != nil {
 		return "", fmt.Errorf("error getting token: %s", err)
 	}

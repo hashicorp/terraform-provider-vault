@@ -37,7 +37,7 @@ func mustAddLoginSchema(s *schema.ListNestedBlock, defaultMount string) schema.B
 			),
 			Validators: []validator.Bool{
 				boolvalidator.ConflictsWith(
-					path.MatchRelative().AtParent().AtName(consts.FieldUseRootNamespace),
+					path.MatchRelative().AtParent().AtName(consts.FieldNamespace),
 				),
 			},
 		},

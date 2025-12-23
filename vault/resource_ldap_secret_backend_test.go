@@ -42,7 +42,6 @@ func TestLDAPSecretBackend(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		}, PreventPostDestroyRefresh: true,
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -52,8 +51,8 @@ func TestLDAPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "openldap"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, description),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "0"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPass, bindPass),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, "ldap://127.0.0.1"),
@@ -70,13 +69,29 @@ func TestLDAPSecretBackend(t *testing.T) {
 				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldSkipStaticRoleImportRotation, "true"),
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion118) && meta.IsEnterpriseSupported()), nil
+				},
+				Config: testLDAPSecretBackendConfig_defaults(path, bindDN, bindPass),
+				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialType, "password"),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion118) && meta.IsEnterpriseSupported()), nil
+				},
+				Config: testLDAPSecretBackendConfig_withCredType(path, bindDN, bindPass),
+				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialType, "phrase"),
+			},
+			{
 				Config: testLDAPSecretBackendConfig(path, updatedDescription, bindDN, bindPass, url, updatedUserDN, "openldap", false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "openldap"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, updatedDescription),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "7200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "7200"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPass, bindPass),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
@@ -135,8 +150,8 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "ad"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, ""),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "0"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPass, bindPass),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
@@ -158,8 +173,8 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "ad"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "new description"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "0"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserDN, userDN),
@@ -246,6 +261,17 @@ resource "vault_ldap_secret_backend" "test" {
   binddn                    = "%s"
   bindpass                  = "%s"
   skip_static_role_import_rotation = true
+}`, path, bindDN, bindPass)
+}
+
+func testLDAPSecretBackendConfig_withCredType(path, bindDN, bindPass string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path            = "%s"
+  description     = "test description"
+  binddn          = "%s"
+  bindpass        = "%s"
+  credential_type = "phrase"
 }`, path, bindDN, bindPass)
 }
 

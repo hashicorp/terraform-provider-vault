@@ -5,14 +5,16 @@ package vault
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func terraformCloudSecretBackendResource() *schema.Resource {
@@ -27,7 +29,7 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     consts.MountTypeTerraform,
@@ -39,36 +41,51 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 					return old+"/" == new || new+"/" == old
 				},
 			},
-			"token": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Specifies the Terraform Cloud access token to use.",
-				Sensitive:   true,
+			consts.FieldToken: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Specifies the Terraform Cloud access token to use.",
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldTokenWO},
 			},
-			"address": {
+			consts.FieldTokenWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Write-only Terraform Cloud access token to use.",
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldToken},
+			},
+			consts.FieldTokenWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only secret data.",
+				RequiredWith: []string{consts.FieldTokenWO},
+			},
+			consts.FieldAddress: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "https://app.terraform.io",
 				Description: "Specifies the address of the Terraform Cloud instance, provided as \"host:port\" like \"127.0.0.1:8500\".",
 			},
-			"base_path": {
+			consts.FieldBasePath: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "/api/v2/",
 				Description: "Specifies the base path for the Terraform Cloud or Enterprise API.",
 			},
-			"description": {
+			consts.FieldDescription: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
-			"default_lease_ttl_seconds": {
+			consts.FieldDefaultLeaseTTLSeconds: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     "0",
 				Description: "Default lease duration for secrets in seconds",
 			},
-			"max_lease_ttl_seconds": {
+			consts.FieldMaxLeaseTTLSeconds: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     "0",
@@ -82,8 +99,8 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 		consts.FieldPath,
 		consts.FieldType,
 		consts.FieldDescription,
-		consts.FieldDefaultLeaseTTL,
-		consts.FieldMaxLeaseTTL,
+		consts.FieldDefaultLeaseTTLSeconds,
+		consts.FieldMaxLeaseTTLSeconds,
 	))
 
 	return r
@@ -95,10 +112,9 @@ func terraformCloudSecretBackendCreate(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
-	address := d.Get("address").(string)
-	token := d.Get("token").(string)
-	basePath := d.Get("base_path").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	address := d.Get(consts.FieldAddress).(string)
+	basePath := d.Get(consts.FieldBasePath).(string)
 
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
@@ -113,14 +129,31 @@ func terraformCloudSecretBackendCreate(ctx context.Context, d *schema.ResourceDa
 
 	log.Printf("[DEBUG] Writing Terraform Cloud configuration to %q", configPath)
 	data := map[string]interface{}{
-		"address":   address,
-		"token":     token,
-		"base_path": basePath,
+		consts.FieldAddress:  address,
+		consts.FieldBasePath: basePath,
 	}
+	var token string
+	if v, ok := d.GetOk(consts.FieldToken); ok {
+		token = v.(string)
+		d.Set(consts.FieldToken, token)
+	} else if d.IsNewResource() || d.HasChange(consts.FieldTokenWOVersion) {
+		p := cty.GetAttrPath(consts.FieldTokenWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			token = woVal.AsString()
+		}
+	}
+
+	if token != "" {
+		data[consts.FieldToken] = token
+	}
+
 	if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
 		return diag.Errorf("Error writing Terraform Cloud configuration for %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Wrote Terraform Cloud configuration to %q", configPath)
+	d.Set(consts.FieldAddress, address)
+	d.Set(consts.FieldBasePath, basePath)
 
 	return terraformCloudSecretBackendRead(ctx, d, meta)
 }
@@ -152,7 +185,6 @@ func terraformCloudSecretBackendRead(ctx context.Context, d *schema.ResourceData
 	}
 	if err := d.Set("base_path", secret.Data["base_path"].(string)); err != nil {
 		return diag.FromErr(err)
-
 	}
 
 	return nil
@@ -177,12 +209,11 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
-	if d.HasChange("address") || d.HasChange("token") || d.HasChange("base_path") {
+	if d.HasChange(consts.FieldAddress) || d.HasChange(consts.FieldBasePath) {
 		log.Printf("[DEBUG] Updating Terraform Cloud configuration at %q", configPath)
 		data := map[string]interface{}{
-			"address":   d.Get("address").(string),
-			"token":     d.Get("token").(string),
-			"base_path": d.Get("base_path").(string),
+			consts.FieldAddress:  d.Get(consts.FieldAddress).(string),
+			consts.FieldBasePath: d.Get(consts.FieldBasePath).(string),
 		}
 		if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
 			return diag.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
@@ -191,13 +222,40 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 		if err := d.Set("address", data["address"]); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("token", data["token"]); err != nil {
-			return diag.FromErr(err)
-		}
 		if err := d.Set("base_path", data["base_path"]); err != nil {
 			return diag.FromErr(err)
 		}
 	}
+
+	if d.HasChange(consts.FieldToken) {
+		log.Printf("[DEBUG] Updating Terraform Cloud configuration token at %q", configPath)
+		data := map[string]interface{}{
+			consts.FieldToken: d.Get(consts.FieldToken).(string),
+		}
+		if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
+			return diag.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
+		}
+		if err := d.Set("token", data["token"]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange(consts.FieldTokenWOVersion) {
+		versionVal := d.GetRawConfig().GetAttr(consts.FieldTokenWOVersion)
+		if versionVal.IsKnown() && !versionVal.IsNull() {
+			woVal := d.GetRawConfig().GetAttr(consts.FieldTokenWO)
+			if !woVal.IsKnown() || woVal.IsNull() || strings.TrimSpace(woVal.AsString()) == "" {
+				return diag.Errorf("token_wo must be provided whenever token_wo_version changes")
+			}
+			token := woVal.AsString()
+			if _, err := client.Logical().WriteWithContext(ctx, configPath, map[string]interface{}{
+				consts.FieldToken: token,
+			}); err != nil {
+				return diag.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
+			}
+		}
+	}
+
 	return terraformCloudSecretBackendRead(ctx, d, meta)
 }
 
