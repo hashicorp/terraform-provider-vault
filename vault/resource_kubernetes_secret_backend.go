@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -43,8 +44,25 @@ func kubernetesSecretBackendResource() *schema.Resource {
 				Description: "The JSON web token of the service account used by the " +
 					"secrets engine to manage Kubernetes credentials. Defaults to the " +
 					"local pod’s JWT if found.",
-				Optional:  true,
-				Sensitive: true,
+				Optional:      true,
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldServiceAccountJWTWO},
+			},
+			consts.FieldServiceAccountJWTWO: {
+				Type: schema.TypeString,
+				Description: "Write-only JSON web token of the service account used by the " +
+					"secrets engine to manage Kubernetes credentials. This value will not be " +
+					"stored in state.",
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldServiceAccountJWT},
+			},
+			consts.FieldServiceAccountJWTWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only service account JWT.",
+				RequiredWith: []string{consts.FieldServiceAccountJWTWO},
 			},
 			consts.FieldDisableLocalCAJWT: {
 				Type: schema.TypeBool,
@@ -85,12 +103,52 @@ func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.Resource
 	data := make(map[string]interface{})
 	fields := []string{
 		consts.FieldKubernetesCACert,
-		consts.FieldServiceAccountJWT,
 		consts.FieldDisableLocalCAJWT,
 	}
 	for _, k := range fields {
 		if d.HasChange(k) {
 			data[k] = d.Get(k)
+		}
+	}
+
+	// Credentials are not returned by the read API, so support both a stateful
+	// attribute and a write-only alternative.
+	//
+	// For the write-only JWT, only re-send on create or when the write-only
+	// version counter changes. This avoids re-sending credentials just because
+	// they're present in config.
+	//
+	// For the legacy (non-write-only) field, re-send when the value changes.
+	shouldSendJWT := d.IsNewResource() ||
+		d.HasChange(consts.FieldServiceAccountJWTWOVersion) ||
+		d.HasChange(consts.FieldServiceAccountJWT)
+
+	log.Printf("[DEBUG] JWT decision: isNewResource=%v hasChangeWOVersion=%v hasChangeJWT=%v shouldSend=%v",
+		d.IsNewResource(),
+		d.HasChange(consts.FieldServiceAccountJWTWOVersion),
+		d.HasChange(consts.FieldServiceAccountJWT),
+		shouldSendJWT)
+
+	if shouldSendJWT {
+		var jwt string
+		// For write-only field, use GetRawConfigAt instead of Get
+		if d.IsNewResource() || d.HasChange(consts.FieldServiceAccountJWTWOVersion) {
+			p := cty.GetAttrPath(consts.FieldServiceAccountJWTWO)
+			woVal, _ := d.GetRawConfigAt(p)
+			if !woVal.IsNull() {
+				jwt = woVal.AsString()
+				log.Printf("[DEBUG] Got JWT from WO field via GetRawConfigAt: length=%d", len(jwt))
+			}
+		}
+		if jwt == "" {
+			jwt = d.Get(consts.FieldServiceAccountJWT).(string)
+			log.Printf("[DEBUG] Got JWT from regular field: length=%d", len(jwt))
+		}
+		if jwt != "" {
+			data[consts.FieldServiceAccountJWT] = jwt
+			log.Printf("[DEBUG] Adding JWT to write payload: length=%d", len(jwt))
+		} else {
+			log.Printf("[DEBUG] JWT is empty, not adding to payload")
 		}
 	}
 

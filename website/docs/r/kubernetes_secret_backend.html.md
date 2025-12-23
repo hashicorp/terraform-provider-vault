@@ -20,6 +20,8 @@ artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
+~> **Note** Use the write-only arguments (for example `service_account_jwt_wo`) to avoid storing sensitive values in Terraform state.
+
 ## Example Usage
 
 ```hcl
@@ -30,7 +32,8 @@ resource "vault_kubernetes_secret_backend" "config" {
   max_lease_ttl_seconds     = 86400
   kubernetes_host           = "https://127.0.0.1:61233"
   kubernetes_ca_cert        = file("/path/to/cert")
-  service_account_jwt       = file("/path/to/token")
+  service_account_jwt_wo         = file("/path/to/token")
+  service_account_jwt_wo_version = 1
   disable_local_ca_jwt      = false
 }
 ```
@@ -58,6 +61,11 @@ Additionally, the following arguments are supported:
 * `service_account_jwt` - (Optional) The JSON web token of the service account used by the
   secrets engine to manage Kubernetes credentials. Defaults to the local pod’s JWT if Vault 
   is running in Kubernetes.
+
+* `service_account_jwt_wo` - (Optional) Write-only JSON web token of the service account used by the
+  secrets engine to manage Kubernetes credentials. This value is not stored in state.
+
+* `service_account_jwt_wo_version` - (Optional) Version counter for `service_account_jwt_wo`. Increment to force an update.
 
 * `disable_local_ca_jwt` - (Optional) Disable defaulting to the local CA certificate and 
   service account JWT when Vault is running in a Kubernetes pod.

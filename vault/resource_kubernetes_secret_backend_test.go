@@ -81,7 +81,7 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{consts.FieldServiceAccountJWT},
+				ImportStateVerifyIgnore: []string{consts.FieldServiceAccountJWT, consts.FieldServiceAccountJWTWO, consts.FieldServiceAccountJWTWOVersion},
 			},
 		},
 	})
@@ -116,7 +116,8 @@ resource "vault_kubernetes_secret_backend" "test" {
   description          = "kubernetes secrets description updated"
   kubernetes_host      = "https://127.0.0.1:63247"
   kubernetes_ca_cert   = "test_ca_cert"
-  service_account_jwt  = "header.payload.signature"
+	service_account_jwt_wo         = "header.payload.signature"
+	service_account_jwt_wo_version = 1
   disable_local_ca_jwt = true
 }`, path)
 }
