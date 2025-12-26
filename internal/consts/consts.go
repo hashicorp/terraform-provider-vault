@@ -91,6 +91,8 @@ const (
 	FieldForceRWSession                 = "force_rw_session"
 	FieldAccessKey                      = "access_key"
 	FieldSecretKey                      = "secret_key"
+	FieldSecretKeyWO                    = "secret_key_wo"
+	FieldSecretKeyWOVersion             = "secret_key_wo_version"
 	FieldSecurityToken                  = "security_token"
 	FieldEndpoint                       = "endpoint"
 	FieldKeyAlgorithm                   = "key_algorithm"

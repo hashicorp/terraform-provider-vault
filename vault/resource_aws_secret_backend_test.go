@@ -609,3 +609,56 @@ resource "vault_aws_secret_backend" "test" {
   max_retries = "%d"
 }`, path, accessKey, secretKey, maxRetry)
 }
+
+func TestAccAWSSecretBackend_secretKeyWriteOnly(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	resourceType := "vault_aws_secret_backend"
+	resourceName := resourceType + ".test"
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSSecretBackendConfig_secretKeyWO(path, accessKey, secretKey, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					// secret_key_wo is write-only, so it should not be in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWO),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKeyWOVersion, "1"),
+				),
+			},
+			// Update secret_key_wo by incrementing the version
+			{
+				Config: testAccAWSSecretBackendConfig_secretKeyWO(path, accessKey, secretKey+"-updated", 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWO),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKeyWOVersion, "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldSecretKey,
+				consts.FieldSecretKeyWO,
+				consts.FieldSecretKeyWOVersion,
+				consts.FieldDisableRemount),
+		},
+	})
+}
+
+func testAccAWSSecretBackendConfig_secretKeyWO(path, accessKey, secretKey string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  access_key = "%s"
+  secret_key_wo = "%s"
+  secret_key_wo_version = %d
+}`, path, accessKey, secretKey, version)
+}
