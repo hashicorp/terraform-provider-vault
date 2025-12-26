@@ -10,6 +10,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -76,12 +77,28 @@ func jwtAuthBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Client ID used for OIDC",
 			},
-
 			"oidc_client_secret": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Sensitive:   true,
-				Description: "Client Secret used for OIDC",
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				Description:   "Client Secret used for OIDC",
+				ConflictsWith: []string{consts.FieldOIDCClientSecretWO},
+			},
+
+			consts.FieldOIDCClientSecretWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				Description:   "Write-only Client Secret used for OIDC. This field is recommended over oidc_client_secret for enhanced security.",
+				ConflictsWith: []string{"oidc_client_secret"},
+			},
+
+			consts.FieldOIDCClientSecretWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only oidc_client_secret field. Increment this value to force update of the secret.",
+				RequiredWith: []string{consts.FieldOIDCClientSecretWO},
 			},
 
 			"oidc_response_mode": {
@@ -413,9 +430,26 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 					return diag.FromErr(err)
 				}
 				configuration[configOption] = newConfig
+			case "oidc_client_secret":
+				// Handle legacy oidc_client_secret field
+				if v, ok := d.GetOk("oidc_client_secret"); ok && v != nil {
+					configuration["oidc_client_secret"] = v.(string)
+				}
 			default:
 				configuration[configOption] = d.Get(configOption)
 			}
+		}
+	}
+
+	// Handle write-only oidc_client_secret field.
+	// Vault's OIDC config requires oidc_client_secret to be sent
+	// on every write operation when type="oidc". We send the secret whenever the
+	// write-only version field is set, regardless of whether it changed.
+	if _, ok := d.GetOk(consts.FieldOIDCClientSecretWOVersion); ok {
+		p := cty.GetAttrPath(consts.FieldOIDCClientSecretWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			configuration["oidc_client_secret"] = woVal.AsString()
 		}
 	}
 

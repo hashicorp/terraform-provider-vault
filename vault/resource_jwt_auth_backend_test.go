@@ -773,3 +773,124 @@ resource "vault_jwt_auth_backend" "test" {
 }
 `, path)
 }
+
+func TestAccJWTAuthBackend_OIDCClientSecretWriteOnly(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("oidc-wo")
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendConfig_OIDCClientSecretWriteOnly(path, "secret-v1", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "oidc"),
+					resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttr(resourceName, "oidc_client_id", "test-client-id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientSecretWOVersion, "1"),
+					// Verify that legacy oidc_client_secret is not set
+					resource.TestCheckNoResourceAttr(resourceName, "oidc_client_secret"),
+					// Note: oidc_client_secret_wo is write-only and won't be in state
+				),
+			},
+			{
+				// Update the secret by incrementing version
+				Config: testAccJWTAuthBackendConfig_OIDCClientSecretWriteOnly(path, "secret-v2", 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientSecretWOVersion, "2"),
+				),
+			},
+			{
+				// Change other fields without changing secret (same version)
+				Config: testAccJWTAuthBackendConfig_OIDCClientSecretWriteOnlyUpdated(path, "secret-v2", 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "oidc_client_id", "updated-client-id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientSecretWOVersion, "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccJWTAuthBackend_OIDCClientSecretLegacy(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("oidc-legacy")
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendConfig_OIDCClientSecretLegacy(path, "legacy-secret-v1"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "oidc"),
+					resource.TestCheckResourceAttr(resourceName, "oidc_client_secret", "legacy-secret-v1"),
+					// Verify write-only fields are not set
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldOIDCClientSecretWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldOIDCClientSecretWOVersion),
+				),
+			},
+			{
+				Config: testAccJWTAuthBackendConfig_OIDCClientSecretLegacy(path, "legacy-secret-v2"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "oidc_client_secret", "legacy-secret-v2"),
+				),
+			},
+		},
+	})
+}
+
+func testAccJWTAuthBackendConfig_OIDCClientSecretWriteOnly(path, secret string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path                        = "%s"
+  type                        = "oidc"
+  description                 = "OIDC backend with write-only secret"
+  oidc_discovery_url          = "https://myco.auth0.com/"
+  oidc_client_id              = "test-client-id"
+  oidc_client_secret_wo       = "%s"
+  oidc_client_secret_wo_version = %d
+  default_role                = "test-role"
+}
+`, path, secret, version)
+}
+
+func testAccJWTAuthBackendConfig_OIDCClientSecretWriteOnlyUpdated(path, secret string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path                        = "%s"
+  type                        = "oidc"
+  description                 = "OIDC backend with write-only secret - updated"
+  oidc_discovery_url          = "https://myco.auth0.com/"
+  oidc_client_id              = "updated-client-id"
+  oidc_client_secret_wo       = "%s"
+  oidc_client_secret_wo_version = %d
+  default_role                = "test-role"
+}
+`, path, secret, version)
+}
+
+func testAccJWTAuthBackendConfig_OIDCClientSecretLegacy(path, secret string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path                = "%s"
+  type                = "oidc"
+  description         = "OIDC backend with legacy secret"
+  oidc_discovery_url  = "https://myco.auth0.com/"
+  oidc_client_id      = "test-client-id"
+  oidc_client_secret  = "%s"
+  default_role        = "test-role"
+}
+`, path, secret)
+}
