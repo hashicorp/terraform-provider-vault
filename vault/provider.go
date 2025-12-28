@@ -401,6 +401,10 @@ var (
 			Resource:      UpdateSchemaResource(certAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/cert/certs/{name}"},
 		},
+		"vault_cert_auth_backend_config": {
+			Resource:      UpdateSchemaResource(certAuthBackendConfigResource()),
+			PathInventory: []string{"/auth/cert/config"},
+		},
 		"vault_scep_auth_backend_role": {
 			Resource:      UpdateSchemaResource(scepAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/scep/role/{name}"},
