@@ -29,6 +29,24 @@ resource "vault_kubernetes_auth_backend_config" "example" {
 }
 ```
 
+### Example Usage with Write-Only JWT
+
+```hcl
+resource "vault_auth_backend" "kubernetes" {
+  type = "kubernetes"
+}
+
+resource "vault_kubernetes_auth_backend_config" "example" {
+  backend                       = vault_auth_backend.kubernetes.path
+  kubernetes_host               = "http://example.com:443"
+  kubernetes_ca_cert            = "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----"
+  token_reviewer_jwt_wo         = var.k8s_token_reviewer_jwt
+  token_reviewer_jwt_wo_version = 1
+  issuer                        = "api"
+  disable_iss_validation        = "true"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -42,7 +60,12 @@ The following arguments are supported:
 
 * `kubernetes_ca_cert` - (Optional) PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API.
 
-* `token_reviewer_jwt` - (Optional) A service account JWT (or other token) used as a bearer token to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API.
+* `token_reviewer_jwt` - (Optional) A service account JWT (or other token) used as a bearer token to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API. Conflicts with `token_reviewer_jwt_wo`.
+
+* `token_reviewer_jwt_wo` - (Optional) A write-only service account JWT (or other token) used as a bearer token to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API. Conflicts with `token_reviewer_jwt`.
+  **Note**: This property is write-only and will not be read from the API.
+
+* `token_reviewer_jwt_wo_version` - (Optional) The version of `token_reviewer_jwt_wo` to use during write operations. Required with `token_reviewer_jwt_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 * `pem_keys` - (Optional) List of PEM-formatted public keys or certificates used to verify the signatures of Kubernetes service account JWTs. If a certificate is given, its public key will be extracted. Not every installation of Kubernetes exposes these keys.
 
@@ -54,6 +77,12 @@ The following arguments are supported:
 
 * `use_annotations_as_alias_metadata` - (Optional) Use annotations from the client token's associated service account as alias metadata for the Vault entity. Requires Vault `v1.16+` or Vault auth kubernetes plugin `v0.18.0+`
 
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `token_reviewer_jwt_wo` - (Optional) A write-only service account JWT used as a bearer token to access the TokenReview API. Can be updated by incrementing `token_reviewer_jwt_wo_version`.
+  **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
 
