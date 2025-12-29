@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -202,6 +203,45 @@ func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldBindPass, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func TestLDAPAuthBackend_bindpassWO(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-ldap-bindpass-wo")
+
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_bindpassWO(path, "supersecurepassword", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "1"),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_bindpassWO(path, "updatedsecurepassword", 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldBindPassWO,
+				consts.FieldBindPassWOVersion,
+				consts.FieldDisableRemount,
+			),
 		},
 	})
 }
@@ -810,4 +850,17 @@ resource "vault_ldap_auth_backend" "test" {
     deny_null_bind  = false
 }
 `, path)
+}
+
+func testLDAPAuthBackendConfig_bindpassWO(path, bindpass string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path               = "%s"
+    url                = "ldaps://example.org"
+    binddn             = "cn=example.com"
+    bindpass_wo        = "%s"
+    bindpass_wo_version = %d
+    description        = "Test LDAP auth backend with write-only bindpass"
+}
+`, path, bindpass, version)
 }

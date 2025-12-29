@@ -59,7 +59,15 @@ The following arguments are supported:
 
 * `binddn` - (Optional) DN of object to bind when performing user search
 
-* `bindpass` - (Optional) Password to use with `binddn` when performing user search
+* `bindpass` - (Optional) Password to use with `binddn` when performing user search. Conflicts with `bindpass_wo`.
+
+* `bindpass_wo` - (Optional) Write-only bind password to use for LDAP authentication. 
+  This is a write-only field that will not be stored in state. Conflicts with `bindpass`.
+  For more information about write-only attributes, see 
+  [using write-only attributes](/docs/providers/vault/guides/using_write_only_attributes).
+
+* `bindpass_wo_version` - (Optional) Version counter for write-only bind password.
+  Required when using `bindpass_wo`
 
 * `userdn` - (Optional) Base DN under which to perform user search
 
