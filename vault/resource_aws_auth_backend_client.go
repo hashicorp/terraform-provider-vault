@@ -297,13 +297,6 @@ func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		consts.FieldMaxRetries,
 	}
 	for _, k := range fields {
-		// The secret_key is sensitive and will not be returned by Vault's API.
-		// Both the legacy secret_key field (stored in state) and the new
-		// secret_key_wo field (write-only, never in state) are write-only
-		// from Vault's perspective and never appear in read responses.
-		if k == consts.FieldSecretKey {
-			continue
-		}
 		if v, ok := secret.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return diag.FromErr(err)
