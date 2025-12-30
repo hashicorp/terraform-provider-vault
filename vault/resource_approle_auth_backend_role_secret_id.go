@@ -54,6 +54,16 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 				ForceNew: true,
 			},
 
+			consts.FieldTokenBoundCIDRs: {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "Specifies the blocks of IP addresses which are allowed to use the generated token.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				ForceNew: true,
+			},
+
 			consts.FieldMetadata: {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -159,12 +169,21 @@ func approleAuthBackendRoleSecretIDCreate(ctx context.Context, d *schema.Resourc
 		cidrs = append(cidrs, iCIDR.(string))
 	}
 
+	iTokenBoundCIDRs := d.Get(consts.FieldTokenBoundCIDRs).(*schema.Set).List()
+	tokenBoundCIDRs := make([]string, 0, len(iTokenBoundCIDRs))
+	for _, iCIDR := range iTokenBoundCIDRs {
+		tokenBoundCIDRs = append(tokenBoundCIDRs, iCIDR.(string))
+	}
+
 	data := map[string]interface{}{}
 	if v, ok := d.GetOk(consts.FieldSecretID); ok {
 		data[consts.FieldSecretID] = v.(string)
 	}
 	if len(cidrs) > 0 {
 		data[consts.FieldCIDRList] = strings.Join(cidrs, ",")
+	}
+	if len(tokenBoundCIDRs) > 0 {
+		data[consts.FieldTokenBoundCIDRs] = strings.Join(tokenBoundCIDRs, ",")
 	}
 	if v, ok := d.GetOk(consts.FieldMetadata); ok {
 		name := "vault_approle_auth_backend_role_secret_id"
@@ -312,6 +331,23 @@ func approleAuthBackendRoleSecretIDRead(ctx context.Context, d *schema.ResourceD
 		return diag.Errorf("unknown type %T for cidr_list in response for SecretID %q", data, accessor)
 	}
 
+	var tokenBoundCIDRs []string
+	switch data := resp.Data[consts.FieldTokenBoundCIDRs].(type) {
+	case string:
+		if data != "" {
+			tokenBoundCIDRs = strings.Split(data, ",")
+		}
+	case []interface{}:
+		tokenBoundCIDRs = make([]string, 0, len(data))
+		for _, i := range data {
+			tokenBoundCIDRs = append(tokenBoundCIDRs, i.(string))
+		}
+	case nil:
+		tokenBoundCIDRs = make([]string, 0)
+	default:
+		return diag.Errorf("unknown type %T for token_bound_cidrs in response for SecretID %q", data, accessor)
+	}
+
 	metadata, err := json.Marshal(resp.Data["metadata"])
 	if err != nil {
 		return diag.Errorf("error encoding metadata for SecretID %q to JSON: %s", id, err)
@@ -321,13 +357,14 @@ func approleAuthBackendRoleSecretIDRead(ctx context.Context, d *schema.ResourceD
 	numUses := resp.Data["secret_id_num_uses"]
 
 	fields := map[string]interface{}{
-		consts.FieldBackend:  backend,
-		consts.FieldRoleName: role,
-		consts.FieldCIDRList: cidrs,
-		consts.FieldMetadata: string(metadata),
-		consts.FieldAccessor: accessor,
-		consts.FieldTTL:      ttl,
-		consts.FieldNumUses:  numUses,
+		consts.FieldBackend:         backend,
+		consts.FieldRoleName:        role,
+		consts.FieldCIDRList:        cidrs,
+		consts.FieldTokenBoundCIDRs: tokenBoundCIDRs,
+		consts.FieldMetadata:        string(metadata),
+		consts.FieldAccessor:        accessor,
+		consts.FieldTTL:             ttl,
+		consts.FieldNumUses:         numUses,
 	}
 
 	for k, v := range fields {

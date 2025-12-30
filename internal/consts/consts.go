@@ -463,6 +463,7 @@ const (
 	FieldAllowedManagedKeys             = "allowed_managed_keys"
 	FieldIdentityTokenKey               = "identity_token_key"
 	FieldCIDRList                       = "cidr_list"
+	FieldTokenBoundCIDRs                = "token_bound_cidrs"
 	FieldSecretID                       = "secret_id"
 	FieldSecretIDWO                     = "secret_id_wo"
 	FieldSecretIDWOVersion              = "secret_id_wo_version"
