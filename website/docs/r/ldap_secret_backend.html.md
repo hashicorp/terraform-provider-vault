@@ -47,7 +47,17 @@ The following arguments are supported:
 
 * `binddn` - (Required) Distinguished name of object to bind when performing user and group search.
 
-* `bindpass` - (Required) Password to use along with binddn when performing user search.
+* `bindpass` - (Optional) Password to use along with binddn when performing user search. Conflicts with `bindpass_wo`.
+  Exactly one of `bindpass` or `bindpass_wo` must be provided.
+
+* `bindpass_wo` - (Optional) Write-only password to use along with binddn when performing user search.
+  This is a write-only field that will not be stored in state. Conflicts with `bindpass`.
+  Exactly one of `bindpass` or `bindpass_wo` must be provided.
+  For more information about write-only attributes, see
+  [using write-only attributes](/docs/providers/vault/guides/using_write_only_attributes).
+
+* `bindpass_wo_version` - (Optional) Version counter for write-only bind password.
+  Required when using `bindpass_wo`.
 
 * `certificate` - (Optional) CA certificate to use when verifying LDAP server certificate, must be
   x509 PEM encoded.

@@ -10,8 +10,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -102,6 +104,48 @@ func TestLDAPSecretBackend(t *testing.T) {
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldBindPass, consts.FieldConnectionTimeout, consts.FieldDescription, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func TestLDAPSecretBackend_bindpassWO(t *testing.T) {
+	var (
+		path                = acctest.RandomWithPrefix("tf-test-ldap-wo")
+		bindDN, bindPass, _ = testutil.GetTestLDAPCreds(t)
+		resourceType        = "vault_ldap_secret_backend"
+		resourceName        = resourceType + ".test"
+	)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPSecretBackendConfig_bindpassWO(path, bindDN, bindPass, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "1"),
+				),
+			},
+			{
+				Config: testLDAPSecretBackendConfig_bindpassWO(path, bindDN, "updated-password", 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldBindPassWO,
+				consts.FieldBindPassWOVersion,
+				consts.FieldConnectionTimeout,
+				consts.FieldDescription,
+				consts.FieldDisableRemount,
+			),
 		},
 	})
 }
@@ -336,4 +380,15 @@ resource "vault_ldap_secret_backend" "test" {
   rotation_period           = "%d"
   disable_automated_rotation = %t
 }`, path, bindDN, bindPass, schedule, window, period, disable)
+}
+
+func testLDAPSecretBackendConfig_bindpassWO(path, bindDN, bindPass string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                 = "%s"
+  description          = "test description with write-only bindpass"
+  binddn               = "%s"
+  bindpass_wo          = "%s"
+  bindpass_wo_version  = %d
+}`, path, bindDN, bindPass, version)
 }
