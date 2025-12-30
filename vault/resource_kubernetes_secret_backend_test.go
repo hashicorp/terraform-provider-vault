@@ -78,6 +78,23 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 				),
 			},
 			{
+				Config: testKubernetesSecretBackend_updateConfigV2(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "kubernetes secrets description updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTLSeconds, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTLSeconds, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAuditNonHMACRequestKeys+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAuditNonHMACResponseKeys+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSealWrap, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalEntropyAccess, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesHost, "https://127.0.0.1:63247"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesCACert, "test_ca_cert"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableLocalCAJWT, "true"),
+				),
+			},
+			{
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -118,6 +135,19 @@ resource "vault_kubernetes_secret_backend" "test" {
   kubernetes_ca_cert   = "test_ca_cert"
 	service_account_jwt_wo         = "header.payload.signature"
 	service_account_jwt_wo_version = 1
+  disable_local_ca_jwt = true
+}`, path)
+}
+
+func testKubernetesSecretBackend_updateConfigV2(path string) string {
+	return fmt.Sprintf(`
+resource "vault_kubernetes_secret_backend" "test" {
+  path                 = "%s"
+  description          = "kubernetes secrets description updated"
+  kubernetes_host      = "https://127.0.0.1:63247"
+  kubernetes_ca_cert   = "test_ca_cert"
+	service_account_jwt_wo         = "header.payload.signature-updated"
+	service_account_jwt_wo_version = 2
   disable_local_ca_jwt = true
 }`, path)
 }

@@ -123,12 +123,6 @@ func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.Resource
 		d.HasChange(consts.FieldServiceAccountJWTWOVersion) ||
 		d.HasChange(consts.FieldServiceAccountJWT)
 
-	log.Printf("[DEBUG] JWT decision: isNewResource=%v hasChangeWOVersion=%v hasChangeJWT=%v shouldSend=%v",
-		d.IsNewResource(),
-		d.HasChange(consts.FieldServiceAccountJWTWOVersion),
-		d.HasChange(consts.FieldServiceAccountJWT),
-		shouldSendJWT)
-
 	if shouldSendJWT {
 		var jwt string
 		// For write-only field, use GetRawConfigAt instead of Get
@@ -137,18 +131,13 @@ func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.Resource
 			woVal, _ := d.GetRawConfigAt(p)
 			if !woVal.IsNull() {
 				jwt = woVal.AsString()
-				log.Printf("[DEBUG] Got JWT from WO field via GetRawConfigAt: length=%d", len(jwt))
 			}
 		}
 		if jwt == "" {
 			jwt = d.Get(consts.FieldServiceAccountJWT).(string)
-			log.Printf("[DEBUG] Got JWT from regular field: length=%d", len(jwt))
 		}
 		if jwt != "" {
 			data[consts.FieldServiceAccountJWT] = jwt
-			log.Printf("[DEBUG] Adding JWT to write payload: length=%d", len(jwt))
-		} else {
-			log.Printf("[DEBUG] JWT is empty, not adding to payload")
 		}
 	}
 
