@@ -12,6 +12,7 @@ import (
 
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -52,10 +53,25 @@ func awsAuthBackendClientResource() *schema.Resource {
 				Sensitive:   true,
 			},
 			consts.FieldSecretKey: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "AWS Secret key with permissions to query AWS APIs.",
-				Sensitive:   true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "AWS Secret key with permissions to query AWS APIs.",
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldSecretKeyWO},
+			},
+			consts.FieldSecretKeyWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				Description:   "Write-only AWS Secret key with permissions to query AWS APIs. This field is recommended over secret_key for enhanced security.",
+				ConflictsWith: []string{consts.FieldSecretKey},
+			},
+			consts.FieldSecretKeyWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only secret_key field. Increment this value to force update of the secret.",
+				RequiredWith: []string{consts.FieldSecretKeyWO},
 			},
 			consts.FieldEC2Endpoint: {
 				Type:        schema.TypeString,
@@ -184,10 +200,99 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		consts.FieldMaxRetries:             maxRetries,
 	}
 
-	if d.HasChange(consts.FieldAccessKey) || d.HasChange(consts.FieldSecretKey) {
+	// if d.HasChange(consts.FieldAccessKey) {
+	// 	log.Printf("[DEBUG] Updating AWS credentials at %q", path)
+	// 	data[consts.FieldAccessKey] = d.Get(consts.FieldAccessKey).(string)
+	// }
+
+	// var secretKey string
+	// if v, ok := d.GetOk(consts.FieldSecretKey); ok {
+	// 	secretKey = v.(string)
+	// } else if d.IsNewResource() || d.HasChange(consts.FieldSecretKeyWOVersion) {
+	// 	p := cty.GetAttrPath(consts.FieldSecretKeyWO)
+	// 	woVal, _ := d.GetRawConfigAt(p)
+	// 	if !woVal.IsNull() {
+	// 		secretKey = woVal.AsString()
+	// 	}
+	// }
+
+	// if secretKey != "" {
+	// 	log.Printf("[DEBUG] Updating AWS secret key at %q", path)
+	// 	data[consts.FieldSecretKey] = secretKey
+	// }
+
+	// Handle AWS credentials - follows standard write-only pattern
+	// Send credentials on initial create, when credentials change, or when version changes
+	// var accessKey, secretKey string
+	// var hasCredentials bool
+
+	// // Check if using legacy secret_key field
+	// if v, ok := d.GetOk(consts.FieldSecretKey); ok {
+	// 	// Legacy pattern: send credentials when they change
+	// 	if d.HasChange(consts.FieldAccessKey) || d.HasChange(consts.FieldSecretKey) {
+	// 		accessKey = d.Get(consts.FieldAccessKey).(string)
+	// 		secretKey = v.(string)
+	// 		hasCredentials = true
+	// 		log.Printf("[DEBUG] Using legacy secret_key field for credentials")
+	// 	}
+	// } else if v, ok := d.GetOk(consts.FieldAccessKey); ok {
+	// 	// access_key without secret_key (IAM role-based auth)
+	// 	if d.HasChange(consts.FieldAccessKey) {
+	// 		accessKey = v.(string)
+	// 		hasCredentials = true
+	// 		log.Printf("[DEBUG] Using access_key without secret_key")
+	// 	}
+	// }
+
+	// // Check if using write-only secret_key_wo field
+	// // send secret on create OR when version changes
+	// if d.IsNewResource() || d.HasChange(consts.FieldSecretKeyWOVersion) {
+	// 	if _, ok := d.GetOk(consts.FieldSecretKeyWOVersion); ok {
+	// 		accessKey = d.Get(consts.FieldAccessKey).(string)
+	// 		p := cty.GetAttrPath(consts.FieldSecretKeyWO)
+	// 		woVal, _ := d.GetRawConfigAt(p)
+	// 		if !woVal.IsNull() {
+	// 			secretKey = woVal.AsString()
+	// 			hasCredentials = true
+	// 			log.Printf("[DEBUG] Using write-only secret_key_wo field for credentials")
+	// 		}
+	// 	}
+	// }
+
+	// // Only include credentials in update if they're configured
+	// if hasCredentials {
+	// 	data[consts.FieldAccessKey] = accessKey
+	// 	if secretKey != "" {
+	// 		data[consts.FieldSecretKey] = secretKey
+	// 	}
+	// }
+
+	// Simplified pattern (less optimal for auth backend client)
+	if d.HasChanges(consts.FieldAccessKey, consts.FieldSecretKey, consts.FieldSecretKeyWOVersion) {
 		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
-		data[consts.FieldAccessKey] = d.Get(consts.FieldAccessKey).(string)
-		data[consts.FieldSecretKey] = d.Get(consts.FieldSecretKey).(string)
+
+		// Get access_key
+		accessKey := d.Get(consts.FieldAccessKey).(string)
+
+		// Get secret_key from either legacy or write-only field
+		var secretKey string
+		if v, ok := d.GetOk(consts.FieldSecretKey); ok {
+			secretKey = v.(string)
+		} else if d.IsNewResource() || d.HasChange(consts.FieldSecretKeyWOVersion) {
+			p := cty.GetAttrPath(consts.FieldSecretKeyWO)
+			woVal, _ := d.GetRawConfigAt(p)
+			if !woVal.IsNull() {
+				secretKey = woVal.AsString()
+			}
+		}
+
+		// Only set if we have credentials
+		if accessKey != "" || secretKey != "" {
+			data[consts.FieldAccessKey] = accessKey
+			if secretKey != "" {
+				data[consts.FieldSecretKey] = secretKey
+			}
+		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {
@@ -260,6 +365,13 @@ func awsAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		consts.FieldMaxRetries,
 	}
 	for _, k := range fields {
+		// The secret_key is sensitive and will not be returned by Vault's API.
+		// Both the legacy secret_key field (stored in state) and the new
+		// secret_key_wo field (write-only, never in state) are write-only
+		// from Vault's perspective and never appear in read responses.
+		if k == consts.FieldSecretKey {
+			continue
+		}
 		if v, ok := secret.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return diag.FromErr(err)

@@ -239,6 +239,93 @@ func TestAccAWSAuthBackendClient_automatedRotation(t *testing.T) {
 	})
 }
 
+// TestAccAWSAuthBackendClient_SecretKeyWriteOnly tests the write-only secret_key field
+func TestAccAWSAuthBackendClient_SecretKeyWriteOnly(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resourceName := "vault_aws_auth_backend_client.client"
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			// Step 1: Create with write-only secret (version 1)
+			{
+				Config: testAccAWSAuthBackendClientConfig_secretKeyWriteOnly(backend, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, "AWSACCESSKEY"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKeyWOVersion, "1"),
+					// Write-only field should NOT be in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWO),
+					// Legacy field should NOT be set
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKey),
+				),
+			},
+			// Step 2: Rotate secret (version 1 -> 2)
+			{
+				Config: testAccAWSAuthBackendClientConfig_secretKeyWriteOnly(backend, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, "AWSACCESSKEY"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKeyWOVersion, "2"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKey),
+				),
+			},
+			// Step 3: Update other fields without changing secret (version stays at 2)
+			{
+				Config: testAccAWSAuthBackendClientConfig_secretKeyWriteOnlyWithUpdatedEndpoint(backend, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, "AWSACCESSKEY"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKeyWOVersion, "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Endpoint, "http://updated.vault.test/ec2"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKey),
+				),
+			},
+		},
+	})
+}
+
+// TestAccAWSAuthBackendClient_SecretKeyLegacy tests backward compatibility with legacy secret_key field
+func TestAccAWSAuthBackendClient_SecretKeyLegacy(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resourceName := "vault_aws_auth_backend_client.client"
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			// Create with legacy secret_key field
+			{
+				Config: testAccAWSAuthBackendClientConfig_secretKeyLegacy(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, "AWSACCESSKEY"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, "LEGACYSECRETKEY"),
+					// Write-only fields should NOT be set
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWOVersion),
+				),
+			},
+			// Update with legacy field
+			{
+				Config: testAccAWSAuthBackendClientConfig_secretKeyLegacyUpdated(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, "UPDATEDACCESSKEY"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKey, "UPDATEDSECRETKEY"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWOVersion),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_client" {
@@ -760,6 +847,73 @@ resource "vault_aws_auth_backend_client" "client" {
     "Authorization",      # Already canonical - should be deduplicated
     "AUTHORIZATION"       # Should be canonicalized to Authorization - duplicate
   ]
+}
+`, backend)
+}
+
+func testAccAWSAuthBackendClientConfig_secretKeyWriteOnly(backend string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+  description = "Test auth backend for AWS client with write-only secret"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend                = vault_auth_backend.aws.path
+  access_key             = "AWSACCESSKEY"
+  secret_key_wo          = "super-secret-key-v%d"
+  secret_key_wo_version  = %d
+}
+`, backend, version, version)
+}
+
+func testAccAWSAuthBackendClientConfig_secretKeyWriteOnlyWithUpdatedEndpoint(backend string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+  description = "Test auth backend for AWS client with write-only secret"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend                = vault_auth_backend.aws.path
+  access_key             = "AWSACCESSKEY"
+  secret_key_wo          = "super-secret-key-v%d"
+  secret_key_wo_version  = %d
+  ec2_endpoint           = "http://updated.vault.test/ec2"
+}
+`, backend, version, version)
+}
+
+func testAccAWSAuthBackendClientConfig_secretKeyLegacy(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+  description = "Test auth backend for AWS client with legacy secret"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend     = vault_auth_backend.aws.path
+  access_key  = "AWSACCESSKEY"
+  secret_key  = "LEGACYSECRETKEY"
+}
+`, backend)
+}
+
+func testAccAWSAuthBackendClientConfig_secretKeyLegacyUpdated(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+  description = "Test auth backend for AWS client with legacy secret"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend     = vault_auth_backend.aws.path
+  access_key  = "UPDATEDACCESSKEY"
+  secret_key  = "UPDATEDSECRETKEY"
 }
 `, backend)
 }
