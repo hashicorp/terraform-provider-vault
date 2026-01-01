@@ -109,6 +109,47 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesSecretBackendRole_TokenDefaultAudiences(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
+	resourceName := "vault_kubernetes_secret_backend_role.test"
+	backend := acctest.RandomWithPrefix("tf-test-kubernetes")
+	name := acctest.RandomWithPrefix("tf-test-role")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccKubernetesSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion115), nil
+				},
+				Config: testKubernetesSecretBackendRole_TokenDefaultAudiencesConfig(backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultAudiences+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, fieldTokenDefaultAudiences+".*", "https://kubernetes.default.svc"),
+					resource.TestCheckTypeSetElemAttr(resourceName, fieldTokenDefaultAudiences+".*", "https://api.example.com"),
+					resource.TestCheckResourceAttr(resourceName, fieldServiceAccountName, "test-service-account"),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion115), nil
+				},
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldServiceAccountJWT},
+			},
+		},
+	})
+}
+
 func testAccKubernetesSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_kubernetes_secret_backend_role" {
@@ -202,6 +243,24 @@ resource "vault_kubernetes_secret_backend_role" "test" {
   name                                  = "%s"
   allowed_kubernetes_namespace_selector = "{\"matchLabels\":{\"team\":\"hades\"}}"
   kubernetes_role_name                  = "existing_role"
+}
+`, backend, name)
+}
+
+func testKubernetesSecretBackendRole_TokenDefaultAudiencesConfig(backend, name string) string {
+	return fmt.Sprintf(`
+resource "vault_kubernetes_secret_backend" "backend" {
+  path = "%s"
+}
+
+resource "vault_kubernetes_secret_backend_role" "test" {
+  backend                       = vault_kubernetes_secret_backend.backend.path
+  name                          = "%s"
+  allowed_kubernetes_namespaces = ["*"]
+  service_account_name          = "test-service-account"
+  token_default_audiences       = ["https://kubernetes.default.svc", "https://api.example.com"]
+  token_max_ttl                 = 86400
+  token_default_ttl             = 43200
 }
 `, backend, name)
 }

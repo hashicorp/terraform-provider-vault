@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var kubernetesSecretBackendFromPathRegex = regexp.MustCompile("^(.+)/roles/.+$")
@@ -24,6 +25,7 @@ const (
 	fieldAllowedKubernetesNamespaceSelector = "allowed_kubernetes_namespace_selector"
 	fieldTokenMaxTTL                        = "token_max_ttl"
 	fieldTokenDefaultTTL                    = "token_default_ttl"
+	fieldTokenDefaultAudiences              = "token_default_audiences"
 	fieldServiceAccountName                 = "service_account_name"
 	fieldKubernetesRoleName                 = "kubernetes_role_name"
 	fieldKubernetesRoleType                 = "kubernetes_role_type"
@@ -86,6 +88,16 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 				Description: "The default TTL for generated Kubernetes tokens in seconds.",
 				Optional:    true,
 				Default:     0,
+			},
+			fieldTokenDefaultAudiences: {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "The default audiences for generated Kubernetes tokens. " +
+					"If not set, defaults to the Kubernetes cluster's default audiences. " +
+					"Requires Vault 1.15+.",
+				Optional: true,
 			},
 			fieldServiceAccountName: {
 				Type: schema.TypeString,
@@ -155,6 +167,7 @@ func kubernetesSecretBackendRoleCreateUpdate(ctx context.Context, d *schema.Reso
 		fieldAllowedKubernetesNamespaceSelector,
 		fieldTokenMaxTTL,
 		fieldTokenDefaultTTL,
+		fieldTokenDefaultAudiences,
 		fieldServiceAccountName,
 		fieldKubernetesRoleName,
 		fieldKubernetesRoleType,
@@ -167,8 +180,18 @@ func kubernetesSecretBackendRoleCreateUpdate(ctx context.Context, d *schema.Reso
 		if k == fieldAllowedKubernetesNamespaceSelector && !provider.IsAPISupported(meta, provider.VaultVersion112) {
 			continue
 		}
+		if k == fieldTokenDefaultAudiences && !provider.IsAPISupported(meta, provider.VaultVersion115) {
+			continue
+		}
 		if d.HasChange(k) {
-			data[k] = d.Get(k)
+			// Handle TypeSet fields by converting to list
+			if k == fieldTokenDefaultAudiences {
+				if set, ok := d.Get(k).(*schema.Set); ok {
+					data[k] = util.TerraformSetToStringArray(set)
+				}
+			} else {
+				data[k] = d.Get(k)
+			}
 		}
 	}
 
@@ -216,6 +239,7 @@ func kubernetesSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, 
 		fieldAllowedKubernetesNamespaceSelector,
 		fieldTokenMaxTTL,
 		fieldTokenDefaultTTL,
+		fieldTokenDefaultAudiences,
 		fieldServiceAccountName,
 		fieldKubernetesRoleName,
 		fieldKubernetesRoleType,
@@ -226,6 +250,9 @@ func kubernetesSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, 
 	}
 	for _, k := range fields {
 		if k == fieldAllowedKubernetesNamespaceSelector && !provider.IsAPISupported(meta, provider.VaultVersion112) {
+			continue
+		}
+		if k == fieldTokenDefaultAudiences && !provider.IsAPISupported(meta, provider.VaultVersion115) {
 			continue
 		}
 		if err := d.Set(k, resp.Data[k]); err != nil {
