@@ -31,7 +31,7 @@ The following arguments are supported:
 
 In addition to the fields above, the following attributes are exported:
 
-* `type` - The name of the auth method type.
+* `type` - (Required) Type of the backend, such as "jwt" or the plugin name.
 
 * `description` - A description of the auth method.
 
