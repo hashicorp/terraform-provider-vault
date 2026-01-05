@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -40,6 +41,7 @@ func TestAccAppRoleAuthBackendRole_import(t *testing.T) {
 					resource.TestCheckResourceAttr(resourcePath, "secret_id_num_uses", "5"),
 					resource.TestCheckResourceAttr(resourcePath, "token_period", "0"),
 					resource.TestCheckResourceAttr(resourcePath, "bind_secret_id", "false"),
+					resource.TestCheckResourceAttr(resourcePath, "local_secret_ids", "true"),
 					resource.TestCheckResourceAttr(resourcePath, "secret_id_bound_cidrs.#", "2"),
 					resource.TestCheckResourceAttr(resourcePath, "secret_id_bound_cidrs.0", "10.148.0.0/20"),
 					resource.TestCheckResourceAttr(resourcePath, "secret_id_bound_cidrs.1", "10.150.0.0/20"),
@@ -96,6 +98,8 @@ func TestAccAppRoleAuthBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"bind_secret_id", "true"),
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"local_secret_ids", "false"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"secret_id_bound_cidrs.#", "0"),
 				),
 			},
@@ -138,6 +142,8 @@ func TestAccAppRoleAuthBackendRole_basic(t *testing.T) {
 						"alias_metadata.%", "1"),
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"alias_metadata.foo", "bar"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"local_secret_ids", "false"),
 				),
 			},
 		},
@@ -246,6 +252,7 @@ func TestAccAppRoleAuthBackendRole_full(t *testing.T) {
 					resource.TestCheckResourceAttr(resourcePath, "token_period", "0"),
 					resource.TestCheckResourceAttr(resourcePath, "bind_secret_id", "false"),
 					resource.TestCheckResourceAttr(resourcePath, "secret_id_bound_cidrs.#", "2"),
+					resource.TestCheckResourceAttr(resourcePath, "local_secret_ids", "true"),
 				),
 			},
 		},
@@ -322,7 +329,7 @@ func TestAccAppRoleAuthBackendRole_fullUpdate(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role, ""),
+				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role, `local_secret_ids = true`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"backend", backend),
@@ -348,6 +355,8 @@ func TestAccAppRoleAuthBackendRole_fullUpdate(t *testing.T) {
 						"bind_secret_id", "true"),
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"secret_id_bound_cidrs.#", "0"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"local_secret_ids", "true"),
 				),
 			},
 		},
@@ -387,6 +396,7 @@ resource "vault_approle_auth_backend_role" "role" {
   backend = vault_auth_backend.approle.path
   role_name = "%s"
   token_policies = ["default", "dev", "prod"]
+ 
   %s
 }`, backend, role, extraConfig)
 }
@@ -402,6 +412,7 @@ resource "vault_approle_auth_backend_role" "role" {
   backend = vault_auth_backend.approle.path
   role_name = "%s"
   token_policies = ["default", "dev"]
+
 }`, backend, role)
 }
 
@@ -425,6 +436,7 @@ resource "vault_approle_auth_backend_role" "role" {
   token_ttl = 3600
   token_max_ttl = 7200
   token_bound_cidrs = ["10.148.1.1/32", "10.150.0.0/20", "10.150.2.1", "::1/128"]
+  local_secret_ids = true
 }
 `, backend, role, roleID)
 
@@ -449,6 +461,32 @@ resource "vault_approle_auth_backend_role" "role" {
   secret_id_ttl = 1200
   token_num_uses = 24
   token_ttl = 7200
+  local_secret_ids = true
   token_max_ttl = 10800
 }`, backend, role, roleID)
+}
+
+func TestAccAppRoleAuthBackendRole_localSecretIDs_cannotUpdate(t *testing.T) {
+	backend := acctest.RandomWithPrefix("approle")
+	role := acctest.RandomWithPrefix("test-role")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				// create with local_secret_ids = true
+				Config: testAccAppRoleAuthBackendRoleConfig_basic(backend, role, `local_secret_ids = true`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role", "local_secret_ids", "true"),
+				),
+			},
+			{
+				// attempt to update local_secret_ids to false — Vault returns an immutability error.
+				Config:      testAccAppRoleAuthBackendRoleConfig_basic(backend, role, `local_secret_ids = false`),
+				ExpectError: regexp.MustCompile(`local_secret_ids can only be modified during role creation`),
+			},
+		},
+	})
 }

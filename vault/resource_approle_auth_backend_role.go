@@ -60,6 +60,12 @@ func approleAuthBackendRoleResource() *schema.Resource {
 			Optional:    true,
 			Description: "Number of seconds a SecretID remains valid for.",
 		},
+		"local_secret_ids": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "If true, SecretIDs generated against this role will be 'local' to the node they were generated on. This means that they will only be valid when used against the same node that they were generated on.",
+			Default:     false,
+		},
 		"backend": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -106,6 +112,10 @@ func approleAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 		if v, ok := d.GetOk("secret_id_bound_cidrs"); ok {
 			data["secret_id_bound_cidrs"] = v.(*schema.Set).List()
 		}
+		//This can only be set during role creation and once set, it can't be reset later.
+		if v, ok := d.GetOkExists("local_secret_ids"); ok {
+			data["local_secret_ids"] = v.(bool)
+		}
 	} else {
 		if d.HasChange("bind_secret_id") {
 			data["bind_secret_id"] = d.Get("bind_secret_id").(bool)
@@ -122,6 +132,10 @@ func approleAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 		if d.HasChange("secret_id_bound_cidrs") {
 			data["secret_id_bound_cidrs"] = d.Get("secret_id_bound_cidrs").(*schema.Set).List()
 		}
+		if d.HasChange("local_secret_ids") {
+			data["local_secret_ids"] = d.Get("local_secret_ids").(bool)
+		}
+
 	}
 }
 
@@ -228,6 +242,12 @@ func approleAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 
 	for _, k := range []string{"bind_secret_id", "secret_id_num_uses", "secret_id_ttl"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if v, ok := resp.Data["local_secret_ids"]; ok {
+		if err := d.Set("local_secret_ids", v); err != nil {
 			return diag.FromErr(err)
 		}
 	}
