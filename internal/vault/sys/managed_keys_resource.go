@@ -177,50 +177,6 @@ type ManagedKeyEntryAzureAPIModel struct {
 	KeyType      string `json:"key_type"`
 }
 
-/*
-func apiModelToModel[A, M any](a A) (*M, error) {
-	// First turn the api model into a temporary map t via json
-	j, err := json.Marshal(a)
-	if err != nil {
-		return nil, err
-	}
-	t := map[string]any{}
-	err = json.Unmarshal(j, &t)
-	if err != nil {
-		return nil, err
-	}
-
-	// Now change the values of t to hold the same types as the model object fields
-	for k, v := range t {
-		switch x := v.(type) {
-		case *string:
-			t[k] = types.StringPointerValue(x)
-		case string:
-			t[k] = types.StringValue(x)
-		case *bool:
-			t[k] = types.BoolPointerValue(x)
-		case bool:
-			t[k] = types.BoolValue(x)
-		default:
-			return nil, fmt.Errorf("unknown type %T", x)
-		}
-	}
-	var m M
-	cfg1, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		TagName: "tfsdk",
-		Result:  &m,
-		Squash:  true,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := cfg1.Decode(t); err != nil {
-		return nil, err
-	}
-	return &m, nil
-}
-*/
-
 // apiModelToModel populates m based on a.  Both are expected to be structs that
 // have the same keys in the same order, but while a has regular Go types like
 // string or *string, m has tf types like StringValue.
@@ -324,179 +280,6 @@ func modelToApiModelValues(mVal, aVal reflect.Value) error {
 		}
 	}
 	return nil
-}
-
-func getManagedKeysPathPrefix(keyType string) string {
-	return fmt.Sprintf("sys/managed-keys/%s", keyType)
-}
-
-func getManagedKeysPath(keyType, name string) string {
-	return fmt.Sprintf("%s/%s", getManagedKeysPathPrefix(keyType), name)
-}
-
-func isUnsupportedKeyTypeError(err error) bool {
-	return strings.Contains(err.Error(), "unsupported managed key type")
-}
-
-type managedKeysConfig struct {
-	providerType string
-	keyType      string
-	attributes   func() map[string]schema.Attribute
-	redacted     []string
-}
-
-var (
-	managedKeysAWSConfig = managedKeysConfig{
-		providerType: consts.FieldAWS,
-		keyType:      kmsTypeAWS,
-		attributes:   managedKeysAWSConfigAttributes,
-		redacted:     []string{consts.FieldAccessKey, consts.FieldSecretKey},
-	}
-
-	managedKeysAzureConfig = managedKeysConfig{
-		providerType: consts.FieldAzure,
-		keyType:      kmsTypeAzure,
-		attributes:   managedKeysAzureConfigAttributes,
-	}
-
-	managedKeysPKCSConfig = managedKeysConfig{
-		providerType: consts.FieldPKCS,
-		keyType:      kmsTypePKCS,
-		attributes:   managedKeysPKCSConfigAttributes,
-		redacted:     []string{consts.FieldPin, consts.FieldKeyID},
-	}
-)
-
-func commonManagedKeysAttributes() map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		consts.FieldAllowGenerateKey: schema.BoolAttribute{
-			Optional: true,
-			Computed: true,
-			Description: "If no existing key can be found in the referenced " +
-				"backend, instructs Vault to generate a key within the backend",
-		},
-
-		consts.FieldAllowReplaceKey: schema.BoolAttribute{
-			Optional: true,
-			Computed: true,
-			Description: "Controls the ability for Vault to replace through " +
-				"generation or importing a key into the configured backend even " +
-				"if a key is present, if set to false those operations are forbidden " +
-				"if a key exists.",
-		},
-
-		consts.FieldAllowStoreKey: schema.BoolAttribute{
-			Optional: true,
-			Computed: true,
-			Description: "Controls the ability for Vault to import a key to the " +
-				"configured backend, if 'false', those operations will be forbidden",
-		},
-
-		consts.FieldAnyMount: schema.BoolAttribute{
-			Optional:    true,
-			Computed:    true,
-			Description: "Allow usage from any mount point within the namespace if 'true'",
-		},
-
-		consts.FieldUUID: schema.StringAttribute{
-			Computed:    true,
-			Description: "ID of the managed key read from Vault",
-		},
-	}
-}
-
-func attrsToTypes(m map[string]schema.Attribute) map[string]attr.Type {
-	ret := map[string]attr.Type{}
-	for k, v := range m {
-		ret[k] = v.GetType()
-	}
-	return ret
-}
-
-func managedKeysAWSConfigAttributes() map[string]schema.Attribute {
-	ret := map[string]schema.Attribute{
-		"name":       schema.StringAttribute{Required: true},
-		"access_key": schema.StringAttribute{Optional: true, Sensitive: true},
-		"secret_key": schema.StringAttribute{Optional: true, Sensitive: true},
-		"curve":      schema.StringAttribute{Optional: true},
-		"endpoint":   schema.StringAttribute{Optional: true},
-		"key_bits":   schema.StringAttribute{Optional: true},
-		"key_type":   schema.StringAttribute{Required: true},
-		"kms_key":    schema.StringAttribute{Required: true},
-		"region":     schema.StringAttribute{Optional: true, Computed: true},
-	}
-
-	maps.Insert(ret, maps.All(commonManagedKeysAttributes()))
-
-	return ret
-}
-
-func managedKeysAzureConfigAttributes() map[string]schema.Attribute {
-	ret := map[string]schema.Attribute{
-		"name":          schema.StringAttribute{Required: true},
-		"tenant_id":     schema.StringAttribute{Required: true},
-		"client_id":     schema.StringAttribute{Required: true},
-		"client_secret": schema.StringAttribute{Required: true, Sensitive: true},
-		"environment":   schema.StringAttribute{Optional: true, Computed: true},
-		"vault_name":    schema.StringAttribute{Required: true},
-		"key_name":      schema.StringAttribute{Required: true},
-		"resource":      schema.StringAttribute{Optional: true, Computed: true},
-		"key_bits":      schema.StringAttribute{Optional: true},
-		"key_type":      schema.StringAttribute{Required: true},
-	}
-
-	maps.Insert(ret, maps.All(commonManagedKeysAttributes()))
-
-	return ret
-}
-
-func managedKeysPKCSConfigAttributes() map[string]schema.Attribute {
-	ret := map[string]schema.Attribute{
-		"name":    schema.StringAttribute{Required: true},
-		"library": schema.StringAttribute{Required: true},
-		"key_label": schema.StringAttribute{Optional: true,
-			Validators: []validator.String{stringvalidator.AtLeastOneOf(
-				path.MatchRelative().AtParent().AtName("key_id"),
-			)},
-		},
-		"key_id":           schema.StringAttribute{Optional: true, Computed: true, Sensitive: true},
-		"mechanism":        schema.StringAttribute{Required: true},
-		"pin":              schema.StringAttribute{Required: true, Sensitive: true},
-		"slot":             schema.StringAttribute{Optional: true},
-		"token_label":      schema.StringAttribute{Optional: true},
-		"curve":            schema.StringAttribute{Optional: true},
-		"key_bits":         schema.StringAttribute{Optional: true},
-		"force_rw_session": schema.StringAttribute{Optional: true},
-	}
-
-	maps.Insert(ret, maps.All(commonManagedKeysAttributes()))
-
-	return ret
-}
-
-// Metadata sets the resource type name
-func (r *ManagedKeysResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_managed_keys"
-}
-
-// Schema defines the resource schema using nested blocks for aws/azure/pkcs
-func (r *ManagedKeysResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: make(map[string]schema.Attribute),
-		Blocks: map[string]schema.Block{
-			"aws": schema.ListNestedBlock{
-				NestedObject: schema.NestedBlockObject{Attributes: managedKeysAWSConfigAttributes()},
-			},
-			"azure": schema.ListNestedBlock{
-				NestedObject: schema.NestedBlockObject{Attributes: managedKeysAzureConfigAttributes()},
-			},
-			"pkcs": schema.ListNestedBlock{
-				NestedObject: schema.NestedBlockObject{Attributes: managedKeysPKCSConfigAttributes()},
-			},
-		},
-		MarkdownDescription: "Provides a resource to manage Managed Keys.",
-	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
 // attrListToMaps builds a list of map[string]any from a list of nested block objects
@@ -643,6 +426,171 @@ func attrValueToMap(ctx context.Context, value attr.Value) (map[string]any, diag
 		}
 	}
 	return ret, d
+}
+
+func getManagedKeysPathPrefix(keyType string) string {
+	return fmt.Sprintf("sys/managed-keys/%s", keyType)
+}
+
+func getManagedKeysPath(keyType, name string) string {
+	return fmt.Sprintf("%s/%s", getManagedKeysPathPrefix(keyType), name)
+}
+
+func isUnsupportedKeyTypeError(err error) bool {
+	return strings.Contains(err.Error(), "unsupported managed key type")
+}
+
+type managedKeysConfig struct {
+	providerType string
+	keyType      string
+	attributes   func() map[string]schema.Attribute
+	redacted     []string
+}
+
+var (
+	managedKeysAWSConfig = managedKeysConfig{
+		providerType: consts.FieldAWS,
+		keyType:      kmsTypeAWS,
+		attributes:   managedKeysAWSConfigAttributes,
+		redacted:     []string{consts.FieldAccessKey, consts.FieldSecretKey},
+	}
+
+	managedKeysAzureConfig = managedKeysConfig{
+		providerType: consts.FieldAzure,
+		keyType:      kmsTypeAzure,
+		attributes:   managedKeysAzureConfigAttributes,
+	}
+
+	managedKeysPKCSConfig = managedKeysConfig{
+		providerType: consts.FieldPKCS,
+		keyType:      kmsTypePKCS,
+		attributes:   managedKeysPKCSConfigAttributes,
+		redacted:     []string{consts.FieldPin, consts.FieldKeyID},
+	}
+)
+
+func commonManagedKeysAttributes() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		consts.FieldAllowGenerateKey: schema.BoolAttribute{
+			Optional: true,
+			Computed: true,
+			Description: "If no existing key can be found in the referenced " +
+				"backend, instructs Vault to generate a key within the backend",
+		},
+
+		consts.FieldAllowReplaceKey: schema.BoolAttribute{
+			Optional: true,
+			Computed: true,
+			Description: "Controls the ability for Vault to replace through " +
+				"generation or importing a key into the configured backend even " +
+				"if a key is present, if set to false those operations are forbidden " +
+				"if a key exists.",
+		},
+
+		consts.FieldAllowStoreKey: schema.BoolAttribute{
+			Optional: true,
+			Computed: true,
+			Description: "Controls the ability for Vault to import a key to the " +
+				"configured backend, if 'false', those operations will be forbidden",
+		},
+
+		consts.FieldAnyMount: schema.BoolAttribute{
+			Optional:    true,
+			Computed:    true,
+			Description: "Allow usage from any mount point within the namespace if 'true'",
+		},
+
+		consts.FieldUUID: schema.StringAttribute{
+			Computed:    true,
+			Description: "ID of the managed key read from Vault",
+		},
+	}
+}
+
+func managedKeysAWSConfigAttributes() map[string]schema.Attribute {
+	ret := map[string]schema.Attribute{
+		"name":       schema.StringAttribute{Required: true},
+		"access_key": schema.StringAttribute{Optional: true, Sensitive: true},
+		"secret_key": schema.StringAttribute{Optional: true, Sensitive: true},
+		"curve":      schema.StringAttribute{Optional: true},
+		"endpoint":   schema.StringAttribute{Optional: true},
+		"key_bits":   schema.StringAttribute{Optional: true},
+		"key_type":   schema.StringAttribute{Required: true},
+		"kms_key":    schema.StringAttribute{Required: true},
+		"region":     schema.StringAttribute{Optional: true, Computed: true},
+	}
+
+	maps.Insert(ret, maps.All(commonManagedKeysAttributes()))
+
+	return ret
+}
+
+func managedKeysAzureConfigAttributes() map[string]schema.Attribute {
+	ret := map[string]schema.Attribute{
+		"name":          schema.StringAttribute{Required: true},
+		"tenant_id":     schema.StringAttribute{Required: true},
+		"client_id":     schema.StringAttribute{Required: true},
+		"client_secret": schema.StringAttribute{Required: true, Sensitive: true},
+		"environment":   schema.StringAttribute{Optional: true, Computed: true},
+		"vault_name":    schema.StringAttribute{Required: true},
+		"key_name":      schema.StringAttribute{Required: true},
+		"resource":      schema.StringAttribute{Optional: true, Computed: true},
+		"key_bits":      schema.StringAttribute{Optional: true},
+		"key_type":      schema.StringAttribute{Required: true},
+	}
+
+	maps.Insert(ret, maps.All(commonManagedKeysAttributes()))
+
+	return ret
+}
+
+func managedKeysPKCSConfigAttributes() map[string]schema.Attribute {
+	ret := map[string]schema.Attribute{
+		"name":    schema.StringAttribute{Required: true},
+		"library": schema.StringAttribute{Required: true},
+		"key_label": schema.StringAttribute{Optional: true,
+			Validators: []validator.String{stringvalidator.AtLeastOneOf(
+				path.MatchRelative().AtParent().AtName("key_id"),
+			)},
+		},
+		"key_id":           schema.StringAttribute{Optional: true, Computed: true, Sensitive: true},
+		"mechanism":        schema.StringAttribute{Required: true},
+		"pin":              schema.StringAttribute{Required: true, Sensitive: true},
+		"slot":             schema.StringAttribute{Optional: true},
+		"token_label":      schema.StringAttribute{Optional: true},
+		"curve":            schema.StringAttribute{Optional: true},
+		"key_bits":         schema.StringAttribute{Optional: true},
+		"force_rw_session": schema.StringAttribute{Optional: true},
+	}
+
+	maps.Insert(ret, maps.All(commonManagedKeysAttributes()))
+
+	return ret
+}
+
+// Metadata sets the resource type name
+func (r *ManagedKeysResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_managed_keys"
+}
+
+// Schema defines the resource schema using nested blocks for aws/azure/pkcs
+func (r *ManagedKeysResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Attributes: make(map[string]schema.Attribute),
+		Blocks: map[string]schema.Block{
+			"aws": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{Attributes: managedKeysAWSConfigAttributes()},
+			},
+			"azure": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{Attributes: managedKeysAzureConfigAttributes()},
+			},
+			"pkcs": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{Attributes: managedKeysPKCSConfigAttributes()},
+			},
+		},
+		MarkdownDescription: "Provides a resource to manage Managed Keys.",
+	}
+	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
 // TODO MountCreateContextWrapper 1.10
@@ -803,6 +751,14 @@ func handleKeyProviderRequired(providerType string, err error) error {
 
 type NamedRecord interface {
 	RecordName() string
+}
+
+func attrsToTypes(m map[string]schema.Attribute) map[string]attr.Type {
+	ret := map[string]attr.Type{}
+	for k, v := range m {
+		ret[k] = v.GetType()
+	}
+	return ret
 }
 
 // readManagedKeys
