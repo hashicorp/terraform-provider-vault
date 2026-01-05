@@ -744,6 +744,24 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			return strings.Trim(v.(string), "/")
 		},
 	}
+	s["plugin_version"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "Optional plugin version to use for this connection",
+	}
+
+	s["password_policy"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "Optional name of the password policy to use for generated passwords.",
+	}
+
+	s["skip_static_role_import_rotation"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Computed:    true,
+		Description: "Optional name of the password policy to use for generated passwords.",
+	}
 
 	return &schema.Resource{
 		CreateContext: databaseSecretBackendConnectionCreateOrUpdate,
@@ -1055,16 +1073,27 @@ func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) 
 	return nil, fmt.Errorf("no supported database engines found for plugin %q", pluginName)
 }
 
-func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData, meta interface{}) (map[string]interface{}, error) {
+func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData, meta interface{}, unifiedSchema bool) (map[string]interface{}, error) {
 	prefix := engine.ResourcePrefix(idx)
 	data := map[string]interface{}{}
-
-	pluginName, err := engine.GetPluginName(d, prefix)
+	var pluginPrefix string
+	if unifiedSchema {
+		pluginPrefix = prefix
+	} else {
+		pluginPrefix = ""
+	}
+	pluginName, err := engine.GetPluginName(d, pluginPrefix)
 	if err != nil {
 		return nil, err
 	}
 
 	data["plugin_name"] = pluginName
+	if v, ok := d.GetOk("plugin_version"); ok {
+		data["plugin_version"] = v.(string)
+	}
+	if v, ok := d.GetOk("password_policy"); ok {
+		data["password_policy"] = v.(string)
+	}
 
 	switch engine {
 	case dbEngineCassandra:
@@ -2057,7 +2086,7 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 }
 
 func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, client *api.Client, engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{}) error {
-	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta)
+	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta, unifiedSchema)
 	if err != nil {
 		return err
 	}
@@ -2085,6 +2114,14 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 		data["root_rotation_statements"] = v
 	}
 
+	if v, ok := d.GetOk("plugin_version"); ok {
+		data["plugin_version"] = v.(string)
+	}
+	if v, ok := d.GetOk("password_policy"); ok {
+		data["password_policy"] = v.(string)
+	}
+
+	log.Printf("[DEBUG] database config payload : %+v", data)
 	if m, ok := d.GetOkExists(prefix + "data"); ok {
 		for k, v := range m.(map[string]interface{}) {
 			// Vault does not return the password in the API. If the root credentials have been rotated, sending
@@ -2224,6 +2261,8 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 		"data":              d.Get(prefix + "data"),
 		"verify_connection": d.Get(prefix + "verify_connection"),
 		"plugin_name":       resp.Data["plugin_name"],
+
+		"password_policy": resp.Data["password_policy"],
 	}
 
 	//"root_rotation_statements": resp.Data["root_credentials_rotate_statements"],
@@ -2233,6 +2272,10 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 			rootRotationStmts = append(rootRotationStmts, s.(string))
 		}
 	}
+
+	// if pv, ok := resp.Data["plugin_version"]; ok && pv != nil {
+	// 	result["plugin_version"] = fmt.Sprintf("%v", pv)
+	// }
 	result["root_rotation_statements"] = rootRotationStmts
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {

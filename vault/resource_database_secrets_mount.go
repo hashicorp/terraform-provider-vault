@@ -199,6 +199,11 @@ func getCommonDatabaseSchema() schemaMap {
 				Type: schema.TypeString,
 			},
 		},
+		"plugin_version": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Optional plugin version to use for this connection.",
+		},
 		"root_rotation_statements": {
 			Type:        schema.TypeList,
 			Optional:    true,
