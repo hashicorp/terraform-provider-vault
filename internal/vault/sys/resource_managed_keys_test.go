@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -296,6 +297,24 @@ resource "vault_managed_keys" "test" {
 `, name)
 }
 
+func testManagedKeysConfig_pkcs_legacy(name, library, slot, pin, label string) string {
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  pkcs {
+    name               = "%s"
+    library            = "%s"
+    key_label          = "%s"
+    key_id             = "bogus"
+    key_bits           = "4096"
+    slot               = "%s"
+    pin                = "%s"
+    mechanism          = "0x0001"
+    any_mount          = true
+  }
+}
+`, name, library, label, slot, pin)
+}
+
 func testManagedKeysConfig_pkcs(name, library, slot, pin, label string) string {
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
@@ -311,4 +330,53 @@ resource "vault_managed_keys" "test" {
   }
 }
 `, name, library, label, slot, pin)
+}
+
+func TestManagedKeysPKCS_Upgrade(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	namePrefix := acctest.RandomWithPrefix("pkcs-keys")
+	name0 := namePrefix + "-0"
+	resourceName := "vault_managed_keys.test"
+
+	library, slot, pin := testutil.GetTestPKCSCreds(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { testutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"terraform-provider-vault": {
+						VersionConstraint: "5.6.0",
+						Source:            "hashicorp/vault",
+					},
+				},
+				Config: testManagedKeysConfig_pkcs_legacy(name0, library, slot, pin, "label1"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "pkcs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.library", library),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_label", "label1"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_id", "bogus"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_bits", "4096"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.slot", slot),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.pin", pin),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.mechanism", "1"),
+				),
+			},
+			{
+				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+				Config:                   testManagedKeysConfig_pkcs(name0, library, slot, pin, "label1"),
+				// ConfigPlanChecks is a terraform-plugin-testing feature.
+				// If acceptance testing is still using terraform-plugin-sdk/v2,
+				// use `PlanOnly: true` instead. When migrating to
+				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
+				// will likely experience test failures.
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
 }
