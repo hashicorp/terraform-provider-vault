@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
@@ -194,6 +195,52 @@ func TestGCPAuthBackend_WIF(t *testing.T) {
 				consts.FieldCredentials,
 				consts.FieldDisableRemount,
 				consts.FieldIdentityTokenKey,
+			),
+		},
+	})
+}
+
+// TestGCPAuthBackend_credentials_wo ensures write-only attribute
+// `credentials_wo` works as expected
+//
+// Since we cannot read the credentials value back from Vault
+// there is no way of actually confirming that it is updated.
+// Hence, we ensure that the `credentials_wo_version` parameter
+// gets updated appropriately.
+func TestGCPAuthBackend_credentials_wo(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-gcp-wo")
+
+	resourceType := "vault_gcp_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testGCPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPAuthBackendConfig_credentialsWO(path, gcpJSONCredentials, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "1"),
+				),
+			},
+			{
+				Config: testGCPAuthBackendConfig_credentialsWO(path, gcpJSONCredentials, 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldDisableRemount,
+				consts.FieldCredentialsWO,
+				consts.FieldCredentialsWOVersion,
 			),
 		},
 	})
@@ -549,6 +596,20 @@ resource "vault_gcp_auth_backend" "test" {
   rotation_window = "%d"
   disable_automated_rotation = %t
 }`, path, period, schedule, window, disable)
+}
+
+func testGCPAuthBackendConfig_credentialsWO(path, credentials string, version int) string {
+	return fmt.Sprintf(`
+variable "json_credentials" {
+	type    = string
+	default = %q
+}
+
+resource "vault_gcp_auth_backend" "test" {
+  path                   = %q
+  credentials_wo         = var.json_credentials
+  credentials_wo_version = %d
+}`, credentials, path, version)
 }
 
 func testGCPAuthBackendConfig_tune_partial(path, credentials, description string) string {

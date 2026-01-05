@@ -47,7 +47,11 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
-* `credentials` - A JSON string containing the contents of a GCP credentials file. If this value is empty, Vault will try to use Application Default Credentials from the machine on which the Vault server is running.
+* `credentials` - (Optional) A JSON string containing the contents of a GCP credentials file. If this value is empty, Vault will try to use Application Default Credentials from the machine on which the Vault server is running. Mutually exclusive with `credentials_wo`.
+
+* `credentials_wo` - (Optional, Write-only) A JSON string containing the contents of a GCP credentials file. This field is write-only and the value cannot be read back from Vault. If this value is empty, Vault will try to use Application Default Credentials from the machine on which the Vault server is running. Mutually exclusive with `credentials`.
+
+* `credentials_wo_version` - (Optional) A version counter for write-only credentials. Incrementing this value will cause the provider to send the credentials to Vault. Required with `credentials_wo`.
 
 * `path` - (Optional) The path to mount the auth method — this defaults to 'gcp'.
 
