@@ -143,10 +143,11 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	role := d.Get("role").(string)
 	path := backend + "/" + credType + "/" + role
 
-	arn := d.Get("role_arn").(string)
-	// If the ARN is empty and only one is specified in the role definition, this should work without issue
-	data := map[string][]string{
-		"role_arn": {arn},
+	data := map[string][]string{}
+
+	// Only include role_arn if it's actually specified
+	if arn := d.Get("role_arn").(string); arn != "" {
+		data["role_arn"] = []string{arn}
 	}
 
 	if v, ok := d.GetOk("ttl"); ok {
