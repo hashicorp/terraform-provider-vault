@@ -1073,16 +1073,10 @@ func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) 
 	return nil, fmt.Errorf("no supported database engines found for plugin %q", pluginName)
 }
 
-func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData, meta interface{}, unifiedSchema bool) (map[string]interface{}, error) {
+func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData, meta interface{}) (map[string]interface{}, error) {
 	prefix := engine.ResourcePrefix(idx)
 	data := map[string]interface{}{}
-	var pluginPrefix string
-	if unifiedSchema {
-		pluginPrefix = prefix
-	} else {
-		pluginPrefix = ""
-	}
-	pluginName, err := engine.GetPluginName(d, pluginPrefix)
+	pluginName, err := engine.GetPluginName(d, prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -2086,7 +2080,7 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 }
 
 func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, client *api.Client, engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{}) error {
-	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta, unifiedSchema)
+	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta)
 	if err != nil {
 		return err
 	}
@@ -2120,7 +2114,7 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 	if v, ok := d.GetOk("password_policy"); ok {
 		data["password_policy"] = v.(string)
 	}
-
+	data["skip_static_role_import_rotation"] = d.Get("skip_static_role_import_rotation").(bool)
 	log.Printf("[DEBUG] database config payload : %+v", data)
 	if m, ok := d.GetOkExists(prefix + "data"); ok {
 		for k, v := range m.(map[string]interface{}) {
