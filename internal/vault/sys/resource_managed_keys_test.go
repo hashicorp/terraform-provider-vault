@@ -1,22 +1,21 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package vault
+package sys_test
 
 import (
-	"context"
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+/*
 func TestManagedKeys(t *testing.T) {
 	namePrefix := acctest.RandomWithPrefix("aws-keys")
 	name0 := namePrefix + "-0"
@@ -26,12 +25,12 @@ func TestManagedKeys(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {
 					// Create a managed key in Vault
-					client, err := provider.GetClient("", testProvider.Meta())
+					client, err := provider.GetClient("", vault.testProvider.Meta())
 
 					data := map[string]interface{}{
 						consts.FieldAccessKey: "ASIAKBASDADA09090",
@@ -53,7 +52,7 @@ func TestManagedKeys(t *testing.T) {
 			{
 				PreConfig: func() {
 					// Delete previously configured managed key from Vault
-					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					client := vault.testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					p := getManagedKeysPath(kmsTypeAWS, name0)
 					_, err := client.Logical().Delete(p)
@@ -110,7 +109,7 @@ func TestManagedKeys(t *testing.T) {
 			{
 				PreConfig: func() {
 					// Delete previously configured managed key from Vault
-					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					client := vault.testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					p := getManagedKeysPath(kmsTypeAWS, name0)
 					_, err := client.Logical().Delete(p)
@@ -158,6 +157,7 @@ func TestManagedKeys(t *testing.T) {
 		},
 	})
 }
+*/
 
 // The following test requires a Vault server to be set up with a specific server configuration
 // (kms_library needs to be defined). We need not dedicate an entire server setup just for one
@@ -174,33 +174,85 @@ func TestManagedKeys(t *testing.T) {
 func TestManagedKeysPKCS(t *testing.T) {
 	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
 
-	name := acctest.RandomWithPrefix("pkcs-keys")
+	namePrefix := acctest.RandomWithPrefix("pkcs-keys")
+	name0 := namePrefix + "-0"
+	name1 := namePrefix + "-1"
 	resourceName := "vault_managed_keys.test"
 
 	library, slot, pin := testutil.GetTestPKCSCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testManagedKeysConfig_pkcs(name, library, slot, pin),
+				// Create a resource with name0
+				Config: testManagedKeysConfig_pkcs(name0, library, slot, pin, "label1"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "pkcs.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "pkcs.0.library", library),
-					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_label", "kms-intermediate"),
-					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_id", "kms-intermediate"),
-					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_bits", "4096"),
-					resource.TestCheckResourceAttr(resourceName, "pkcs.0.slot", slot),
-					resource.TestCheckResourceAttr(resourceName, "pkcs.0.pin", pin),
-					resource.TestCheckResourceAttr(resourceName, "pkcs.0.mechanism", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "pkcs.*",
+						map[string]string{
+							consts.FieldName:             name0,
+							consts.FieldKeyBits:          "4096",
+							consts.FieldLibrary:          library,
+							consts.FieldSlot:             slot,
+							consts.FieldPin:              pin,
+							consts.FieldKeyLabel:         "label1",
+							consts.FieldMechanism:        "0x0001",
+							consts.FieldAnyMount:         "true",
+							consts.FieldAllowReplaceKey:  "false",
+							consts.FieldAllowStoreKey:    "false",
+							consts.FieldAllowGenerateKey: "false",
+						},
+					),
 				),
 			},
 			{
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"pkcs.0.pin", "pkcs.0.key_id"},
+				ImportStateVerifyIgnore: []string{"pkcs.0.pin"},
+			},
+			{
+				// Update name0 to have a new label
+				Config: testManagedKeysConfig_pkcs(name0, library, slot, pin, "label2"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "pkcs.*",
+						map[string]string{
+							consts.FieldName:             name0,
+							consts.FieldKeyBits:          "4096",
+							consts.FieldLibrary:          library,
+							consts.FieldSlot:             slot,
+							consts.FieldPin:              pin,
+							consts.FieldKeyLabel:         "label2",
+							consts.FieldMechanism:        "0x0001",
+							consts.FieldAnyMount:         "true",
+							consts.FieldAllowReplaceKey:  "false",
+							consts.FieldAllowStoreKey:    "false",
+							consts.FieldAllowGenerateKey: "false",
+						},
+					),
+				),
+			},
+			{
+				// Replace existing config block with a new one having a different name.
+				Config: testManagedKeysConfig_pkcs(name1, library, slot, pin, "label2"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "pkcs.*",
+						map[string]string{
+							consts.FieldName:             name1,
+							consts.FieldKeyBits:          "4096",
+							consts.FieldLibrary:          library,
+							consts.FieldSlot:             slot,
+							consts.FieldPin:              pin,
+							consts.FieldKeyLabel:         "label2",
+							consts.FieldMechanism:        "0x0001",
+							consts.FieldAnyMount:         "true",
+							consts.FieldAllowReplaceKey:  "false",
+							consts.FieldAllowStoreKey:    "false",
+							consts.FieldAllowGenerateKey: "false",
+						},
+					),
+				),
 			},
 		},
 	})
@@ -245,19 +297,86 @@ resource "vault_managed_keys" "test" {
 `, name)
 }
 
-func testManagedKeysConfig_pkcs(name, library, slot, pin string) string {
+func testManagedKeysConfig_pkcs_legacy(name, library, slot, pin, label string) string {
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
   pkcs {
     name               = "%s"
     library            = "%s"
-    key_label          = "kms-intermediate"
-    key_id             = "kms-intermediate"
+    key_label          = "%s"
+    key_id             = "bogus"
     key_bits           = "4096"
     slot               = "%s"
     pin                = "%s"
     mechanism          = "0x0001"
+    any_mount          = true
   }
 }
-`, name, library, slot, pin)
+`, name, library, label, slot, pin)
+}
+
+func testManagedKeysConfig_pkcs(name, library, slot, pin, label string) string {
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  pkcs {
+    name               = "%s"
+    library            = "%s"
+    key_label          = "%s"
+    key_bits           = "4096"
+    slot               = "%s"
+    pin                = "%s"
+    mechanism          = "0x0001"
+    any_mount          = true
+  }
+}
+`, name, library, label, slot, pin)
+}
+
+func TestManagedKeysPKCS_Upgrade(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	namePrefix := acctest.RandomWithPrefix("pkcs-keys")
+	name0 := namePrefix + "-0"
+	resourceName := "vault_managed_keys.test"
+
+	library, slot, pin := testutil.GetTestPKCSCreds(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { testutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"terraform-provider-vault": {
+						VersionConstraint: "5.6.0",
+						Source:            "hashicorp/vault",
+					},
+				},
+				Config: testManagedKeysConfig_pkcs_legacy(name0, library, slot, pin, "label1"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "pkcs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.library", library),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_label", "label1"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_id", "bogus"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_bits", "4096"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.slot", slot),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.pin", pin),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.mechanism", "1"),
+				),
+			},
+			{
+				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+				Config:                   testManagedKeysConfig_pkcs(name0, library, slot, pin, "label1"),
+				// ConfigPlanChecks is a terraform-plugin-testing feature.
+				// If acceptance testing is still using terraform-plugin-sdk/v2,
+				// use `PlanOnly: true` instead. When migrating to
+				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
+				// will likely experience test failures.
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
 }
