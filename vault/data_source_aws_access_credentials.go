@@ -93,9 +93,17 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Sensitive:   true,
 			},
 
+			consts.FieldSessionToken: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "AWS session token read from Vault. (Only returned if type is 'sts'). Requires Vault 1.16+.",
+				Sensitive:   true,
+			},
+
 			"security_token": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Deprecated:  "Deprecated. Will be removed in a future version. Use session_token instead.",
 				Description: "AWS security token read from Vault. (Only returned if type is 'sts').",
 				Sensitive:   true,
 			},
@@ -179,6 +187,15 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	d.Set(consts.FieldLeaseDuration, secret.LeaseDuration)
 	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
 	d.Set(consts.FieldLeaseRenewable, secret.Renewable)
+
+	useAPIVer116 := provider.IsAPISupported(meta, provider.VaultVersion116)
+	if useAPIVer116 {
+		if v, ok := secret.Data[consts.FieldSessionToken]; ok {
+			if err := d.Set(consts.FieldSessionToken, v); err != nil {
+				return err
+			}
+		}
+	}
 
 	awsConfig := &aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),

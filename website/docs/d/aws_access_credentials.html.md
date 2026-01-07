@@ -100,7 +100,9 @@ In addition to the arguments above, the following attributes are exported:
 
 * `secret_key` - The AWS Secret Key returned by Vault.
 
-* `security_token` - The STS token returned by Vault, if any.
+* `session_token` - The STS token returned by Vault, if any. Requires Vault 1.16+.
+
+* `security_token` - **Deprecated** The STS token returned by Vault, if any. Please use `session_token` instead.
 
 * `lease_id` - The lease identifier assigned by Vault.
 
