@@ -9,6 +9,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -69,10 +70,27 @@ func consulSecretBackendResource() *schema.Resource {
 				Description: "Specifies the URL scheme to use. Defaults to \"http\".",
 			},
 			"token": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Specifies the Consul token to use when managing or issuing new tokens.",
-				Sensitive:   true,
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Specifies the Consul token to use when managing or issuing new tokens. " +
+					"Mutually exclusive with 'token_wo'.",
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldTokenWO},
+			},
+			consts.FieldTokenWO: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Specifies the Consul token to use when managing or issuing new tokens. This field is write-only and will never be stored in state. " +
+					"Mutually exclusive with 'token'. Requires 'token_wo_version' to trigger updates.",
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldToken},
+			},
+			consts.FieldTokenWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for the write-only token. Increment this value to trigger rotation of the token. Required when using 'token_wo'.",
+				RequiredWith: []string{consts.FieldTokenWO},
 			},
 			"bootstrap": {
 				Type:        schema.TypeBool,
@@ -95,11 +113,28 @@ func consulSecretBackendResource() *schema.Resource {
 				Sensitive:   true,
 			},
 			"client_key": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "",
-				Description: "Client key used for Consul's TLS communication, must be x509 PEM encoded and if this is set you need to also set client_cert.",
-				Sensitive:   true,
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "",
+				Description: "Client key used for Consul's TLS communication, must be x509 PEM encoded and if this is set you need to also set client_cert. " +
+					"Mutually exclusive with 'client_key_wo'.",
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldClientKeyWO},
+			},
+			consts.FieldClientKeyWO: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Client key used for Consul's TLS communication, must be x509 PEM encoded. This field is write-only and will never be stored in state. " +
+					"Mutually exclusive with 'client_key'. Requires 'client_key_wo_version' to trigger updates.",
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldClientKey},
+			},
+			consts.FieldClientKeyWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for the write-only client key. Increment this value to trigger rotation of the client key. Required when using 'client_key_wo'.",
+				RequiredWith: []string{consts.FieldClientKeyWO},
 			},
 			"local": {
 				Type:        schema.TypeBool,
@@ -133,10 +168,54 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 	path := d.Get("path").(string)
 	address := d.Get("address").(string)
 	scheme := d.Get("scheme").(string)
-	token := d.Get("token").(string)
 	caCert := d.Get("ca_cert").(string)
 	clientCert := d.Get("client_cert").(string)
-	clientKey := d.Get("client_key").(string)
+
+	// Handle token: legacy field or write-only field
+	// Only send the token on create or when the write-only version changes
+	var token string
+
+	// Check if using write-only field
+	if d.IsNewResource() || d.HasChange(consts.FieldTokenWOVersion) {
+		if _, ok := d.GetOk(consts.FieldTokenWOVersion); ok {
+			// Using write-only field - get from raw config
+			p := cty.GetAttrPath(consts.FieldTokenWO)
+			woVal, _ := d.GetRawConfigAt(p)
+			if !woVal.IsNull() {
+				token = woVal.AsString()
+			}
+		}
+	}
+
+	// Fall back to legacy field if not using write-only
+	if token == "" {
+		if v, ok := d.GetOk(consts.FieldToken); ok {
+			token = v.(string)
+		}
+	}
+
+	// Handle client_key: legacy field or write-only field
+	// Only send the client_key on create or when the write-only version changes
+	var clientKey string
+
+	// Check if using write-only field
+	if d.IsNewResource() || d.HasChange(consts.FieldClientKeyWOVersion) {
+		if _, ok := d.GetOk(consts.FieldClientKeyWOVersion); ok {
+			// Using write-only field - get from raw config
+			p := cty.GetAttrPath(consts.FieldClientKeyWO)
+			woVal, _ := d.GetRawConfigAt(p)
+			if !woVal.IsNull() {
+				clientKey = woVal.AsString()
+			}
+		}
+	}
+
+	// Fall back to legacy field if not using write-only
+	if clientKey == "" {
+		if v, ok := d.GetOk(consts.FieldClientKey); ok {
+			clientKey = v.(string)
+		}
+	}
 
 	configPath := consulSecretBackendConfigPath(path)
 
@@ -162,10 +241,16 @@ Vault client version does not meet the minimum requirement for this feature (Vau
 		"scheme":      scheme,
 		"ca_cert":     caCert,
 		"client_cert": clientCert,
-		"client_key":  clientKey,
 	}
+
+	// Only add token to data if we have a value
 	if token != "" {
 		data["token"] = token
+	}
+
+	// Only add client_key to data if we have a value
+	if clientKey != "" {
+		data["client_key"] = clientKey
 	}
 
 	if _, err := client.Logical().Write(configPath, data); err != nil {
@@ -229,17 +314,72 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 	path := d.Id()
 	configPath := consulSecretBackendConfigPath(path)
 
-	if d.HasChange("address") || d.HasChange("token") || d.HasChange("scheme") ||
-		d.HasChange("ca_cert") || d.HasChange("client_cert") || d.HasChange("client_key") {
+	if d.HasChange("address") || d.HasChange("token") || d.HasChange(consts.FieldTokenWOVersion) ||
+		d.HasChange("scheme") || d.HasChange("ca_cert") || d.HasChange("client_cert") ||
+		d.HasChange("client_key") || d.HasChange(consts.FieldClientKeyWOVersion) {
 		log.Printf("[DEBUG] Updating Consul configuration at %q", configPath)
+
+		// Handle token: legacy field or write-only field
+		var token string
+
+		// Check if using write-only field and version changed
+		if d.HasChange(consts.FieldTokenWOVersion) {
+			if _, ok := d.GetOk(consts.FieldTokenWOVersion); ok {
+				// Using write-only field - get from raw config
+				p := cty.GetAttrPath(consts.FieldTokenWO)
+				woVal, _ := d.GetRawConfigAt(p)
+				if !woVal.IsNull() {
+					token = woVal.AsString()
+				}
+			}
+		}
+
+		// Fall back to legacy field if not using write-only
+		if token == "" {
+			if v, ok := d.GetOk(consts.FieldToken); ok {
+				token = v.(string)
+			}
+		}
+
+		// Handle client_key: legacy field or write-only field
+		var clientKey string
+
+		// Check if using write-only field and version changed
+		if d.HasChange(consts.FieldClientKeyWOVersion) {
+			if _, ok := d.GetOk(consts.FieldClientKeyWOVersion); ok {
+				// Using write-only field - get from raw config
+				p := cty.GetAttrPath(consts.FieldClientKeyWO)
+				woVal, _ := d.GetRawConfigAt(p)
+				if !woVal.IsNull() {
+					clientKey = woVal.AsString()
+				}
+			}
+		}
+
+		// Fall back to legacy field if not using write-only
+		if clientKey == "" {
+			if v, ok := d.GetOk(consts.FieldClientKey); ok {
+				clientKey = v.(string)
+			}
+		}
+
 		data := map[string]interface{}{
 			"address":     d.Get("address").(string),
-			"token":       d.Get("token").(string),
 			"scheme":      d.Get("scheme").(string),
 			"ca_cert":     d.Get("ca_cert").(string),
 			"client_cert": d.Get("client_cert").(string),
-			"client_key":  d.Get("client_key").(string),
 		}
+
+		// Only add token to data if we have a value
+		if token != "" {
+			data["token"] = token
+		}
+
+		// Only add client_key to data if we have a value
+		if clientKey != "" {
+			data["client_key"] = clientKey
+		}
+
 		if _, err := client.Logical().Write(configPath, data); err != nil {
 			return diag.Errorf("error configuring Consul configuration for %q: %s", path, err)
 		}
@@ -271,21 +411,30 @@ func consulSecretBackendConfigPath(backend string) string {
 }
 
 func consulSecretsBackendCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	// Check both legacy token and write-only token
 	newToken := diff.Get("token").(string)
 	isTokenValueKnown := diff.NewValueKnown("token")
 
+	// Check if using write-only token
+	newTokenWO := diff.Get(consts.FieldTokenWO).(string)
+	isTokenWOValueKnown := diff.NewValueKnown(consts.FieldTokenWO)
+
+	// Determine if any token is provided (legacy or write-only)
+	hasToken := newToken != "" || newTokenWO != ""
+	isAnyTokenKnown := isTokenValueKnown || isTokenWOValueKnown
+
 	// Disallow the following:
-	//   1. Bootstrap is true and the token field is set to something.
-	//   2. Bootstrap is true and the token field is empty, but we don't know the final value of token.
-	//   3. Bootstrap is false, the token field is empty, and we know this is the final value of token.
+	//   1. Bootstrap is true and any token field is set to something.
+	//   2. Bootstrap is true and no token field is set, but we don't know the final value.
+	//   3. Bootstrap is false, no token field is set, and we know this is the final value.
 	if newBootstrap := diff.Get("bootstrap").(bool); newBootstrap {
-		if newToken != "" ||
-			(newToken == "" && !isTokenValueKnown) {
-			return fmt.Errorf("field 'bootstrap' must be set to false when 'token' is specified")
+		if hasToken ||
+			(!hasToken && !isAnyTokenKnown) {
+			return fmt.Errorf("field 'bootstrap' must be set to false when 'token' or 'token_wo' is specified")
 		}
 	} else {
-		if newToken == "" && isTokenValueKnown {
-			return fmt.Errorf("field 'bootstrap' must be set to true when 'token' is unspecified")
+		if !hasToken && isAnyTokenKnown {
+			return fmt.Errorf("field 'bootstrap' must be set to true when neither 'token' nor 'token_wo' is specified")
 		}
 	}
 
