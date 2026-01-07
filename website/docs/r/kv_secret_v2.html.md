@@ -78,7 +78,7 @@ The following arguments are supported:
   written as the secret data at the given path. This is required if `data_json_wo` is not set.
 
 * `data_json_wo` - (Optional) JSON-encoded string that will be
-  written as the secret data at the given path. This is required if `data_json` is not set.
+  written as the secret data at the given path. This is required if `data_json` is not set. **Note**: This property is write-only and will not be read from the API.
 
 * `data_json_wo_version` - (Optional) The version of the `data_json_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
@@ -104,13 +104,6 @@ and the `read` capability for drift detection (by default).
   a version is deleted. Accepts duration in integer seconds.
 
 * `data` - (Optional) A string to string map describing the secret.
-
-## Ephemeral Attributes Reference
-
-The following write-only attributes are supported:
-
-* `data_json_wo` - (Optional) JSON-encoded secret data to write to Vault. Can be updated.
-  **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
 
