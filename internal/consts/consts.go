@@ -162,8 +162,7 @@ const (
 	FieldAuthorization                  = "authorization"
 	FieldToken                          = "token"
 	FieldTokenTTL                       = "token_ttl"
-	FieldTokenWO                        = "token_wo"
-	FieldTokenWOVersion                 = "token_wo_version"
+	FieldClientKey                      = "client_key"
 	FieldService                        = "service"
 	FieldRealm                          = "realm"
 	FieldKeytabPath                     = "keytab_path"
@@ -595,6 +594,10 @@ const (
 	FieldDataJSONWOVersion    = "data_json_wo_version"
 	FieldPrivateKeyWO         = "private_key_wo"
 	FieldPrivateKeyWOVersion  = "private_key_wo_version"
+	FieldClientKeyWO          = "client_key_wo"
+	FieldClientKeyWOVersion   = "client_key_wo_version"
+	FieldTokenWO              = "token_wo"
+	FieldTokenWOVersion       = "token_wo_version"
 
 	/*
 		common environment variables
