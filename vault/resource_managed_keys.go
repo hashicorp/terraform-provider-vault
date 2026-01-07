@@ -191,12 +191,12 @@ func managedKeysPKCSConfigSchema() schemaMap {
 		},
 		consts.FieldKeyLabel: {
 			Type:        schema.TypeString,
-			Required:    true,
+			Optional:    true,
 			Description: "The label of the key to use",
 		},
 		consts.FieldKeyID: {
 			Type:        schema.TypeString,
-			Required:    true,
+			Optional:    true,
 			Description: "The id of a PKCS#11 key to use",
 		},
 		consts.FieldMechanism: {
@@ -462,6 +462,10 @@ func writeManagedKeysData(d *schema.ResourceData, client *api.Client, providerTy
 	newKeySet := map[string]bool{}
 	for _, block := range newBlocks.(*schema.Set).List() {
 		keyName, data := getManagedKeysConfigData(block.(map[string]interface{}), config.schemaFunc())
+
+		if err := validateConfigData(providerType, data); err != nil {
+			return diag.Errorf("bad configuration for %s: %v", keyName, err)
+		}
 		path := getManagedKeysPath(config.keyType, keyName)
 
 		log.Printf("[DEBUG] Writing data to Vault at %s", path)
@@ -482,6 +486,20 @@ func writeManagedKeysData(d *schema.ResourceData, client *api.Client, providerTy
 				return diags
 			}
 		}
+	}
+
+	return nil
+}
+
+// atLeastOne doesn't work in SDKv2 if the fields in question are in a nested block
+func validateConfigData(name string, data map[string]interface{}) error {
+	if name != consts.FieldPKCS {
+		return nil
+	}
+	_, okID := data[consts.FieldKeyID]
+	_, okLabel := data[consts.FieldKeyLabel]
+	if !okID && !okLabel {
+		return fmt.Errorf("at least one of %s or %s must be provided", consts.FieldKeyID, consts.FieldKeyLabel)
 	}
 
 	return nil

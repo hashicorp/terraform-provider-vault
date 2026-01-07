@@ -184,12 +184,15 @@ func TestManagedKeysPKCS(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
+				Config:      testManagedKeysConfig_pkcs_nokeyidorlabel(name, library, slot, pin),
+				ExpectError: regexp.MustCompile("at least one of key_id or key_label must be provided"),
+			},
+			{
 				Config: testManagedKeysConfig_pkcs(name, library, slot, pin),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "pkcs.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.library", library),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_label", "kms-intermediate"),
-					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_id", "kms-intermediate"),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_bits", "4096"),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.slot", slot),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.pin", pin),
@@ -252,7 +255,21 @@ resource "vault_managed_keys" "test" {
     name               = "%s"
     library            = "%s"
     key_label          = "kms-intermediate"
-    key_id             = "kms-intermediate"
+    key_bits           = "4096"
+    slot               = "%s"
+    pin                = "%s"
+    mechanism          = "0x0001"
+  }
+}
+`, name, library, slot, pin)
+}
+
+func testManagedKeysConfig_pkcs_nokeyidorlabel(name, library, slot, pin string) string {
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  pkcs {
+    name               = "%s"
+    library            = "%s"
     key_bits           = "4096"
     slot               = "%s"
     pin                = "%s"
