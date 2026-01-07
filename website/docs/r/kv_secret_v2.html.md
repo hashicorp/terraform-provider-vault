@@ -24,16 +24,17 @@ resource "vault_mount" "kvv2" {
 }
 
 resource "vault_kv_secret_v2" "example" {
-  mount                      = vault_mount.kvv2.path
-  name                       = "secret"
-  cas                        = 1
-  delete_all_versions        = true
-  data_json                  = jsonencode(
-  {
-    zip       = "zap",
-    foo       = "bar"
-  }
+  mount               = vault_mount.kvv2.path
+  name                = "secret"
+  cas                 = 1
+  delete_all_versions = true
+  data_json_wo = jsonencode(
+    {
+      zip = "zap",
+      foo = "bar"
+    }
   )
+  data_json_wo_version = 1
   custom_metadata {
     max_versions = 5
     data = {
@@ -73,14 +74,17 @@ The following arguments are supported:
 * `delete_all_versions` - (Optional) If set to true, permanently deletes all
   versions for the specified key.
 
-* `data_json` - (Required) JSON-encoded string that will be
-  written as the secret data at the given path.
+* `data_json` - (Optional) JSON-encoded string that will be
+  written as the secret data at the given path. This is required if `data_json_wo` is not set.
+
+* `data_json_wo` - (Optional) JSON-encoded string that will be
+  written as the secret data at the given path. This is required if `data_json` is not set.
+
+* `data_json_wo_version` - (Optional) The version of the `data_json_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 * `custom_metadata` - (Optional) A nested block that allows configuring metadata for the
   KV secret. Refer to the
   [Configuration Options](#custom-metadata-configuration-options) for more info.
-
-* `data_json_wo_version` - (Optional) The version of the `data_json_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ## Required Vault Capabilities
 
