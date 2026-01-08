@@ -170,3 +170,57 @@ resource "vault_rabbitmq_secret_backend" "test" {
   password_policy   = "%s"
 }`, path, connectionUri, username, password, uTemplate, passPolicy)
 }
+
+func TestAccRabbitMQSecretBackend_passwordWriteOnly(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
+	resourceType := "vault_rabbitmq_secret_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRabbitMQSecretBackendConfig_passwordWO(path, connectionUri, username, password, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, "connection_uri", connectionUri),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPasswordWOVersion, "1"),
+				),
+			},
+			{
+				Config: testAccRabbitMQSecretBackendConfig_passwordWO(path, connectionUri, username, password, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPasswordWOVersion, "2"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"connection_uri", "username", "verify_connection", "disable_remount",
+					consts.FieldPasswordWO, consts.FieldPasswordWOVersion,
+				},
+			},
+		},
+	})
+}
+
+func testAccRabbitMQSecretBackendConfig_passwordWO(path, connectionUri, username, password string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_rabbitmq_secret_backend" "test" {
+  path                = "%s"
+  description         = "test description"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  connection_uri      = "%s"
+  username            = "%s"
+  password_wo         = "%s"
+  password_wo_version = %d
+}`, path, connectionUri, username, password, version)
+}
