@@ -544,6 +544,13 @@ const (
 	FieldDisableAutomatedRotation = "disable_automated_rotation"
 	FieldMACLength                = "mac_length"
 	FieldURLMACLength             = "url_mac_length"
+	FieldBindSecretID             = "bind_secret_id"
+	FieldSecretIDBoundCIDRs       = "secret_id_bound_cidrs"
+	FieldSecretIDNumUses          = "secret_id_num_uses"
+	FieldSecretIDTTL              = "secret_id_ttl"
+	FieldTokenBoundCIDRs          = "token_bound_cidrs"
+	FieldLocalSecretIDs           = "local_secret_ids"
+	FieldTokenNumUses             = "token_num_uses"
 
 	FieldIntervalDuration                     = "interval_duration"
 	FieldMaintainStoredCertificateCounts      = "maintain_stored_certificate_counts"
