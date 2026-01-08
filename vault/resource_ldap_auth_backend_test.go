@@ -185,7 +185,7 @@ func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		Steps: []resource.TestStep{
@@ -243,6 +243,23 @@ func TestLDAPAuthBackend_bindpassWO(t *testing.T) {
 				consts.FieldBindPassWOVersion,
 				consts.FieldDisableRemount,
 			),
+		},
+	})
+}
+
+func TestLDAPAuthBackend_bindpassConflict(t *testing.T) {
+	t.Parallel()
+
+	path := acctest.RandomWithPrefix("tf-test-ldap-bindpass-conflict")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testLDAPAuthBackendConfig_bindpassConflict(path),
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+				Destroy:     false,
+			},
 		},
 	})
 }
@@ -864,4 +881,18 @@ resource "vault_ldap_auth_backend" "test" {
     description        = "Test LDAP auth backend with write-only bindpass"
 }
 `, path, bindpass, version)
+}
+
+func testLDAPAuthBackendConfig_bindpassConflict(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path               = "%s"
+    url                = "ldaps://example.org"
+    binddn             = "cn=example.com"
+    bindpass           = "supersecurepassword"
+    bindpass_wo        = "anothersecurepassword"
+    bindpass_wo_version = 1
+    description        = "Test LDAP auth backend with conflicting bindpass"
+}
+`, path)
 }
