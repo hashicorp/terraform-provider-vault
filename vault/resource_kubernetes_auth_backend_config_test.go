@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"testing"
 
@@ -78,7 +79,7 @@ func TestAccKubernetesAuthBackendConfig_import(t *testing.T) {
 	issuer := "kubernetes/serviceaccount"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
@@ -142,7 +143,7 @@ func TestAccKubernetesAuthBackendConfig_basic(t *testing.T) {
 	jwt := kubernetesJWT
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
@@ -191,7 +192,7 @@ func TestAccKubernetesAuthBackendConfig_update(t *testing.T) {
 	newJWT := kubernetesAnotherJWT
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
@@ -232,7 +233,7 @@ func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 	testResource := "vault_kubernetes_auth_backend_config.config"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
@@ -273,7 +274,7 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 	newIssuer := "api"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
@@ -362,7 +363,7 @@ func TestAccKubernetesAuthBackendConfig_localCA(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionGTE(t, testProvider.Meta(), vaultVersion193)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -573,7 +574,7 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			testutil.SkipTestEnvSet(t, envVarTFAccK8sSkipInCluster)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), vaultVersion193)
 		},
@@ -751,4 +752,39 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 			},
 		},
 	})
+}
+func TestAccKubernetesAuthBackendConfig_tokenReviewerJwtConflict(t *testing.T) {
+	t.Parallel()
+
+	backend := acctest.RandomWithPrefix("kubernetes-conflict")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccKubernetesAuthBackendConfigConfig_tokenReviewerJwtConflict(backend),
+				ExpectError: regexp.MustCompile("Conflicting configuration arguments"),
+				Destroy:     false,
+			},
+		},
+	})
+}
+
+func testAccKubernetesAuthBackendConfigConfig_tokenReviewerJwtConflict(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "kubernetes" {
+  type = "kubernetes"
+  path = "%s"
+}
+
+resource "vault_kubernetes_auth_backend_config" "config" {
+  backend = vault_auth_backend.kubernetes.path
+  kubernetes_host = "http://example.com:443"
+  kubernetes_ca_cert = %q
+  token_reviewer_jwt = %q
+  token_reviewer_jwt_wo = %q
+  token_reviewer_jwt_wo_version = 1
+  disable_local_ca_jwt = true
+}
+`, backend, kubernetesCAcert, kubernetesJWT, kubernetesAnotherJWT)
 }

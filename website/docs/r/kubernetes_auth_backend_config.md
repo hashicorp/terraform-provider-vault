@@ -62,9 +62,6 @@ The following arguments are supported:
 
 * `token_reviewer_jwt` - (Optional) A service account JWT (or other token) used as a bearer token to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API. Conflicts with `token_reviewer_jwt_wo`.
 
-* `token_reviewer_jwt_wo` - (Optional) A write-only service account JWT (or other token) used as a bearer token to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API. Conflicts with `token_reviewer_jwt`.
-  **Note**: This property is write-only and will not be read from the API.
-
 * `token_reviewer_jwt_wo_version` - (Optional) The version of `token_reviewer_jwt_wo` to use during write operations. Required with `token_reviewer_jwt_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 * `pem_keys` - (Optional) List of PEM-formatted public keys or certificates used to verify the signatures of Kubernetes service account JWTs. If a certificate is given, its public key will be extracted. Not every installation of Kubernetes exposes these keys.
@@ -81,7 +78,7 @@ The following arguments are supported:
 
 The following write-only attributes are supported:
 
-* `token_reviewer_jwt_wo` - (Optional) A write-only service account JWT used as a bearer token to access the TokenReview API. Can be updated by incrementing `token_reviewer_jwt_wo_version`.
+* `token_reviewer_jwt_wo` - (Optional) A write-only service account JWT (or other token) used as a bearer token to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API. Conflicts with `token_reviewer_jwt`.
   **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
