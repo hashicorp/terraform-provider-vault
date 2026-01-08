@@ -301,11 +301,11 @@ func pluginCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta inter
 	curVersion := d.Get(consts.FieldVersion).(string)
 	if strings.HasSuffix(curVersion, "+ent") {
 		if d.Get(fieldSHA256).(string) != "" {
-			return fmt.Errorf("field %s need to be empty for enteprise plugin", fieldSHA256)
+			return fmt.Errorf("field %s needs to be empty for enterprise plugin", fieldSHA256)
 		}
 	} else {
 		if d.Get(fieldSHA256).(string) == "" {
-			return fmt.Errorf("field %s need to be set for non enteprise plugin", fieldSHA256)
+			return fmt.Errorf("field %s needs to be set for non enterprise plugin", fieldSHA256)
 		}
 	}
 	return nil
