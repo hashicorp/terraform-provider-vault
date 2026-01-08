@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -67,10 +68,25 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Description: "Specifies the RabbitMQ management administrator username",
 			},
 			"password": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Sensitive:   true,
-				Description: "Specifies the RabbitMQ management administrator password",
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				Description:   "Specifies the RabbitMQ management administrator password",
+				ConflictsWith: []string{consts.FieldPasswordWO},
+			},
+			consts.FieldPasswordWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				Description:   "Specifies the RabbitMQ management administrator password. This is a write-only field and will not be read back from Vault.",
+				ConflictsWith: []string{"password"},
+			},
+			consts.FieldPasswordWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only password_wo field. Incrementing this value will trigger an update to the password.",
+				RequiredWith: []string{consts.FieldPasswordWO},
 			},
 			"verify_connection": {
 				Type:        schema.TypeBool,
@@ -112,8 +128,19 @@ func rabbitMQSecretBackendCreate(ctx context.Context, d *schema.ResourceData, me
 	path := d.Get(consts.FieldPath).(string)
 	connectionUri := d.Get("connection_uri").(string)
 	username := d.Get("username").(string)
-	password := d.Get("password").(string)
 	verifyConnection := d.Get("verify_connection").(bool)
+
+	// Handle password and password_wo
+	var password string
+	if v, ok := d.GetOk("password"); ok {
+		password = v.(string)
+	} else {
+		p := cty.GetAttrPath(consts.FieldPasswordWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			password = woVal.AsString()
+		}
+	}
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Rabbitmq backend at %q", path)
@@ -171,12 +198,24 @@ func rabbitMQSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, me
 	}
 	path := d.Id()
 
-	if d.HasChanges("connection_uri", "username", "password", "verify_connection", "username_template", "password_policy") {
+	if d.HasChanges("connection_uri", "username", "password", consts.FieldPasswordWOVersion, "verify_connection", "username_template", "password_policy") {
 		log.Printf("[DEBUG] Updating connection credentials at %q", path+"/config/connection")
+
+		// Handle password and password_wo
+		var password string
+		if v, ok := d.GetOk("password"); ok {
+			password = v.(string)
+		} else if d.HasChange(consts.FieldPasswordWOVersion) {
+			woVal := d.GetRawConfig().GetAttr(consts.FieldPasswordWO)
+			if !woVal.IsNull() {
+				password = woVal.AsString()
+			}
+		}
+
 		data := map[string]interface{}{
 			"connection_uri":    d.Get("connection_uri").(string),
 			"username":          d.Get("username").(string),
-			"password":          d.Get("password").(string),
+			"password":          password,
 			"verify_connection": d.Get("verify_connection").(bool),
 			"username_template": d.Get("username_template").(string),
 			"password_policy":   d.Get("password_policy").(string),
