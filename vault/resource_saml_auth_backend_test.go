@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -23,7 +24,7 @@ func TestAccSAMLAuthBackend_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -103,7 +104,7 @@ func TestAccSAMLAuthBackend_tune(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -196,7 +197,7 @@ func TestAccSAMLAuthBackend_importTune(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -208,4 +209,128 @@ func TestAccSAMLAuthBackend_importTune(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),
 		},
 	})
+}
+
+func TestAccSAMLAuthBackend_booleanFlags(t *testing.T) {
+	path := acctest.RandomWithPrefix("saml-bool")
+	resourceType := "vault_saml_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeSAML, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSAMLAuthBackendConfig_booleansDefault(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, fieldVerboseLogging, "false"),
+					resource.TestCheckResourceAttr(resourceName, fieldValidateAssertionSignature, "false"),
+					resource.TestCheckResourceAttr(resourceName, fieldValidateResponseSignature, "false"),
+				),
+			},
+			{
+				Config: testAccSAMLAuthBackendConfig_booleansExplicit(path, true, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, fieldVerboseLogging, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldValidateAssertionSignature, "false"),
+					resource.TestCheckResourceAttr(resourceName, fieldValidateResponseSignature, "false"),
+				),
+			},
+			{
+				Config: testAccSAMLAuthBackendConfig_booleansDefault(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, fieldVerboseLogging, "false"),
+					resource.TestCheckResourceAttr(resourceName, fieldValidateAssertionSignature, "false"),
+					resource.TestCheckResourceAttr(resourceName, fieldValidateResponseSignature, "false"),
+				),
+			},
+		},
+	})
+}
+
+func testAccSAMLAuthBackendConfig_booleansDefault(path string) string {
+	return fmt.Sprintf(`
+resource "vault_saml_auth_backend" "test" {
+  path             = "%s"
+  idp_metadata_url = "https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml/metadata"
+  entity_id        = "https://my.vault/v1/auth/saml"
+  acs_urls         = ["https://my.vault/v1/auth/saml/callback"]
+}
+`, path)
+}
+
+func testAccSAMLAuthBackendConfig_booleansExplicit(path string, verbose, validateSignatures bool) string {
+	return fmt.Sprintf(`
+resource "vault_saml_auth_backend" "test" {
+  path                         = "%s"
+  idp_metadata_url             = "https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml/metadata"
+  entity_id                    = "https://my.vault/v1/auth/saml"
+  acs_urls                     = ["https://my.vault/v1/auth/saml/callback"]
+  verbose_logging              = %t
+  validate_assertion_signature = %t
+  validate_response_signature  = %t
+}
+`, path, verbose, validateSignatures, validateSignatures)
+}
+
+func TestAccSAMLAuthBackend_fullConfig(t *testing.T) {
+	path := acctest.RandomWithPrefix("saml-full")
+	resourceType := "vault_saml_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeSAML, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSAMLAuthBackendConfig_full(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, fieldIDPMetadataURL, "https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml/metadata"),
+					resource.TestCheckResourceAttr(resourceName, fieldEntityID, "https://my.vault/v1/auth/saml"),
+					resource.TestCheckResourceAttr(resourceName, "acs_urls.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, fieldDefaultRole, "default"),
+					resource.TestCheckResourceAttr(resourceName, fieldVerboseLogging, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldValidateAssertionSignature, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldValidateResponseSignature, "false"),
+					resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "10m"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "20m"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount, "tune.0.token_type"),
+		},
+	})
+}
+
+func testAccSAMLAuthBackendConfig_full(path string) string {
+	return fmt.Sprintf(`
+resource "vault_saml_auth_backend" "test" {
+  path                         = "%s"
+  idp_metadata_url             = "https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml/metadata"
+  entity_id                    = "https://my.vault/v1/auth/saml"
+  acs_urls                     = [
+    "https://my.vault.primary/v1/auth/saml/callback",
+    "https://my.vault.secondary/v1/auth/saml/callback"
+  ]
+  default_role                 = "default"
+  verbose_logging              = true
+  validate_assertion_signature = true
+  validate_response_signature  = false
+
+  tune {
+    default_lease_ttl = "10m"
+    max_lease_ttl     = "20m"
+  }
+}
+`, path)
 }
