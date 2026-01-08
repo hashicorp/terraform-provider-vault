@@ -59,7 +59,11 @@ The following arguments are supported:
 
 * `binddn` - (Optional) DN of object to bind when performing user search
 
-* `bindpass` - (Optional) Password to use with `binddn` when performing user search
+* `bindpass` - (Optional) Password to use with `binddn` when performing user search. Conflicts with `bindpass_wo`.
+
+* `bindpass_wo_version` - (Optional) Version counter for write-only bind password.
+  Required when using `bindpass_wo`. For more information about write-only attributes, see 
+  [using write-only attributes](/docs/providers/vault/guides/using_write_only_attributes).
 
 * `userdn` - (Optional) Base DN under which to perform user search
 
@@ -194,6 +198,13 @@ For more details on the usage of each argument consult the [Vault LDAP API docum
 credentials back from the API, Terraform cannot detect and correct drift
 on `bindpass`. Changing the values, however, _will_ overwrite the
 previously stored values.
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `bindpass_wo` - (Optional) Write-only bind password to use for LDAP authentication. Can be updated. Conflicts with `bindpass`.
+  **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
 
