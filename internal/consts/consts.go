@@ -595,6 +595,8 @@ const (
 	FieldDataJSONWOVersion    = "data_json_wo_version"
 	FieldPrivateKeyWO         = "private_key_wo"
 	FieldPrivateKeyWOVersion  = "private_key_wo_version"
+	FieldBindPassWO           = "bindpass_wo"
+	FieldBindPassWOVersion    = "bindpass_wo_version"
 
 	/*
 		common environment variables
