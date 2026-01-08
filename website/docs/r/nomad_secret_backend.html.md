@@ -59,10 +59,6 @@ x509 PEM encoded.
 * `client_key` - (Optional) Client certificate key to provide to the Nomad server, must be x509 PEM encoded.
   Conflicts with `client_key_wo`.
 
-* `client_key_wo` - (Optional) Write-only client certificate key to provide to the Nomad server, must be x509 PEM encoded.
-  This field is write-only and will not be stored in Terraform state. Use this for enhanced security when you don't want
-  the client key to appear in state files. Requires `client_key_wo_version`. Conflicts with `client_key`.
-
 * `client_key_wo_version` - (Optional) Version counter for the write-only client key. This must be incremented
   each time the `client_key_wo` value is changed to trigger an update. Required when using `client_key_wo`.
 
@@ -73,10 +69,6 @@ by the Nomad version.
 * `max_ttl` - (Optional) Maximum possible lease duration for secrets in seconds.
 
 * `token` - (Optional) Specifies the Nomad Management token to use. Conflicts with `token_wo`.
-
-* `token_wo` - (Optional) Write-only Nomad Management token to use. This field is write-only and will not be stored
-  in Terraform state. Use this for enhanced security when you don't want the token to appear in state files.
-  Requires `token_wo_version`. Conflicts with `token`.
 
 * `token_wo_version` - (Optional) Version counter for the write-only token. This must be incremented each time
   the `token_wo` value is changed to trigger an update. Required when using `token_wo`.
@@ -124,6 +116,18 @@ These arguments are common across all resources that mount a secret engine.
 
 * `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
   not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `client_key_wo` - (Optional) Write-only client certificate key to provide to the Nomad server, must be x509 PEM encoded.
+  Use this for enhanced security when you don't want the client key to appear in state files. Requires `client_key_wo_version`. Conflicts with `client_key`.
+  **Note**: This property is write-only and will not be read from the API.
+
+* `token_wo` - (Optional) Write-only Nomad Management token to use.
+  Use this for enhanced security when you don't want the token to appear in state files. Requires `token_wo_version`. Conflicts with `token`.
+  **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
 
