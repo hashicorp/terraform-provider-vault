@@ -6,11 +6,13 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -23,7 +25,7 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKubernetes, ""),
 		Steps: []resource.TestStep{
 			{
@@ -104,6 +106,23 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesSecretBackend_serviceAccountJwtConflict(t *testing.T) {
+	t.Parallel()
+
+	path := acctest.RandomWithPrefix("tf-test-k8s-jwt-conflict")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testKubernetesSecretBackend_serviceAccountJwtConflict(path),
+				ExpectError: regexp.MustCompile("Conflicting configuration arguments"),
+				Destroy:     false,
+			},
+		},
+	})
+}
+
 func testKubernetesSecretBackend_initialConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_kubernetes_secret_backend" "test" {
@@ -149,5 +168,19 @@ resource "vault_kubernetes_secret_backend" "test" {
 	service_account_jwt_wo         = "header.payload.signature-updated"
 	service_account_jwt_wo_version = 2
   disable_local_ca_jwt = true
+}`, path)
+}
+
+func testKubernetesSecretBackend_serviceAccountJwtConflict(path string) string {
+	return fmt.Sprintf(`
+resource "vault_kubernetes_secret_backend" "test" {
+  path                           = "%s"
+  description                    = "test with conflicting service account jwt"
+  kubernetes_host                = "https://127.0.0.1:63247"
+  kubernetes_ca_cert             = "test_ca_cert"
+  service_account_jwt            = "header.payload.signature"
+  service_account_jwt_wo         = "header.payload.signature-wo"
+  service_account_jwt_wo_version = 1
+  disable_local_ca_jwt           = true
 }`, path)
 }

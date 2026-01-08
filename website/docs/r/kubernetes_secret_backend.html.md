@@ -62,10 +62,9 @@ Additionally, the following arguments are supported:
   secrets engine to manage Kubernetes credentials. Defaults to the local pod’s JWT if Vault 
   is running in Kubernetes.
 
-* `service_account_jwt_wo` - (Optional) Write-only JSON web token of the service account used by the
-  secrets engine to manage Kubernetes credentials. This value is not stored in state.
-
 * `service_account_jwt_wo_version` - (Optional) Version counter for `service_account_jwt_wo`. Increment to force an update.
+  For more information about write-only attributes, see
+  [using write-only attributes](/docs/providers/vault/guides/using_write_only_attributes).
 
 * `disable_local_ca_jwt` - (Optional) Disable defaulting to the local CA certificate and 
   service account JWT when Vault is running in a Kubernetes pod.
@@ -111,6 +110,13 @@ These arguments are common across all resources that mount a secret engine.
 
 * `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
   not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `service_account_jwt_wo` - (Optional) Write-only JSON web token of the service account used by the secrets engine to manage Kubernetes credentials. This value is not stored in state.
+  **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
 
