@@ -23,7 +23,6 @@ import (
 const envPluginCommand = "VAULT_PLUGIN_COMMAND"
 const envPluginEntCommand = "VAULT_PLUGIN_ENT_COMMAND"
 const envPluginEntVersion = "VAULT_PLUGIN_ENT_VERSION"
-const envPluginEntName = "VAULT_PLUGIN_ENT_NAME"
 
 func TestPlugin(t *testing.T) {
 	const (
@@ -94,11 +93,11 @@ func TestPlugin_ent(t *testing.T) {
 		envUpdated  = `["FOO=BAZ"]`
 	)
 
+	destName := acctest.RandomWithPrefix("tf/plugin")
 	resourceName := "vault_plugin.test"
 
-	// VAULT_PLUGIN_ENT_NAME, VAULT_PLUGIN_ENT_COMMAND,VAULT_PLUGIN_ENT_VERSION should be set to the name of the plugin executable
+	// VAULT_PLUGIN_ENT_COMMAND,VAULT_PLUGIN_ENT_VERSION should be set to the name of the plugin executable
 	// in the configured plugin_directory for Vault.
-	name := os.Getenv(envPluginEntName)
 	cmd := os.Getenv(envPluginEntCommand)
 	version := os.Getenv(envPluginEntVersion)
 
@@ -111,11 +110,11 @@ func TestPlugin_ent(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testPluginConfig_ent(typ, name, version, cmd, args, env),
+				Config: testPluginConfig_ent(typ, destName, version, cmd, args, env),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
 					resource.TestCheckResourceAttr(resourceName, fieldCommand, cmd),
 					testValidateList(resourceName, fieldArgs, []string{"--foo"}),
