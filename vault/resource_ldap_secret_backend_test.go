@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -43,7 +44,7 @@ func TestLDAPSecretBackend(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 		}, PreventPostDestroyRefresh: true,
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -150,6 +151,23 @@ func TestLDAPSecretBackend_bindpassWO(t *testing.T) {
 	})
 }
 
+func TestLDAPSecretBackend_bindpassConflict(t *testing.T) {
+	t.Parallel()
+
+	path := acctest.RandomWithPrefix("tf-test-ldap-bindpass-conflict")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testLDAPSecretBackendConfig_bindpassConflict(path),
+				ExpectError: regexp.MustCompile("Invalid combination of arguments"),
+				Destroy:     false,
+			},
+		},
+	})
+}
+
 // TestLDAPSecretBackend_SchemaAD tests vault_ldap_secret_backend for the AD
 // schema and tests that the bindpass is not overwritten unless it is
 // explicitly changed in the TF config so that we don't clobber a bindpass that
@@ -176,7 +194,7 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
@@ -391,4 +409,16 @@ resource "vault_ldap_secret_backend" "test" {
   bindpass_wo          = "%s"
   bindpass_wo_version  = %d
 }`, path, bindDN, bindPass, version)
+}
+
+func testLDAPSecretBackendConfig_bindpassConflict(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                 = "%s"
+  description          = "test description with conflicting bindpass"
+  binddn               = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
+  bindpass             = "supersecurepassword"
+  bindpass_wo          = "anothersecurepassword"
+  bindpass_wo_version  = 1
+}`, path)
 }
