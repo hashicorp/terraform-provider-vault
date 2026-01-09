@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES : 
+
+* Add ephemeral resource for vault_generic_secret ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
+
 IMPROVEMENTS:
 
 * `vault_secrets_sync_gcp_destination`: Add support for replication field (`replication_locations`; Vault 1.18+), networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`; Vault 1.19+), and encryption fields (`global_kms_key`, `locational_kms_keys`; Vault 1.19+) in `vault_secrets_sync_gcp_destination` resource. ([#2699](https://github.com/hashicorp/terraform-provider-vault/pull/2699))
