@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -57,19 +58,55 @@ func oktaAuthBackendResource() *schema.Resource {
 			Description: "The description of the auth backend",
 		},
 
+		consts.FieldOrgName: {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Computed:     true,
+			Description:  "The Okta organization. This will be the first part of the url https://XXX.okta.com.",
+			ExactlyOneOf: []string{consts.FieldOrgName, consts.FieldOrganization},
+		},
+
 		consts.FieldOrganization: {
-			Type:        schema.TypeString,
-			Required:    true,
-			Optional:    false,
-			Description: "The Okta organization. This will be the first part of the url https://XXX.okta.com.",
+			Type:         schema.TypeString,
+			Optional:     true,
+			Computed:     true,
+			Description:  "The Okta organization. This will be the first part of the url https://XXX.okta.com. Use org_name instead.",
+			Deprecated:   "Use org_name instead",
+			ExactlyOneOf: []string{consts.FieldOrgName, consts.FieldOrganization},
+		},
+
+		consts.FieldAPIToken: {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Description:   "The Okta API token. This is required to query Okta for user group membership. If this is not supplied only locally configured groups will be enabled.",
+			Sensitive:     true,
+			ConflictsWith: []string{consts.FieldToken, consts.FieldAPITokenWO},
+		},
+
+		consts.FieldAPITokenWO: {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Description:   "Write-only Okta API token. This is required to query Okta for user group membership. If this is not supplied only locally configured groups will be enabled.",
+			Sensitive:     true,
+			WriteOnly:     true,
+			ConflictsWith: []string{consts.FieldToken, consts.FieldAPIToken},
+			RequiredWith:  []string{consts.FieldAPITokenWOVersion},
+		},
+
+		consts.FieldAPITokenWOVersion: {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Description:  "Version counter for write-only api_token.",
+			RequiredWith: []string{consts.FieldAPITokenWO},
 		},
 
 		consts.FieldToken: {
-			Type:        schema.TypeString,
-			Required:    false,
-			Optional:    true,
-			Description: "The Okta API token. This is required to query Okta for user group membership. If this is not supplied only locally configured groups will be enabled.",
-			Sensitive:   true,
+			Type:          schema.TypeString,
+			Optional:      true,
+			Description:   "The Okta API token. This is required to query Okta for user group membership. If this is not supplied only locally configured groups will be enabled. Use api_token instead.",
+			Sensitive:     true,
+			Deprecated:    "Use api_token instead",
+			ConflictsWith: []string{consts.FieldAPIToken, consts.FieldAPITokenWO},
 		},
 
 		consts.FieldBaseURL: {
@@ -244,10 +281,28 @@ func parseDurationSeconds(i interface{}) (string, error) {
 	return strconv.Itoa(int(d.Seconds())), nil
 }
 
+// getOrgName returns the organization name from config, preferring the new field name
+func getOrgName(d *schema.ResourceData) string {
+	rawConfig := d.GetRawConfig()
+	if !rawConfig.IsNull() {
+		// Check config for org_name first
+		orgNameAttr := rawConfig.GetAttr(consts.FieldOrgName)
+		if !orgNameAttr.IsNull() {
+			return orgNameAttr.AsString()
+		}
+		// Fallback to deprecated organization field in config
+		organizationAttr := rawConfig.GetAttr(consts.FieldOrganization)
+		if !organizationAttr.IsNull() {
+			return organizationAttr.AsString()
+		}
+	}
+	return ""
+}
+
 func oktaAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		diag.FromErr(e)
+		return diag.FromErr(e)
 	}
 
 	authType := oktaAuthType
@@ -369,13 +424,37 @@ func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData)
 		return err
 	}
 
+	// Set fields that don't need backward compatibility handling
 	params := []string{
 		consts.FieldBaseURL,
 		fieldBypassOktaMFA,
-		consts.FieldOrganization,
 	}
 	for _, param := range params {
 		if err := d.Set(param, config.Data[param]); err != nil {
+			return err
+		}
+	}
+
+	// Handle organization field with backward compatibility
+	// Vault API returns "org_name" and "organization" in the response
+	var orgValue string
+	var ok bool
+
+	// Get the org value from Vault API response
+	if val, exists := config.Data[consts.FieldOrgName]; exists {
+		orgValue, ok = val.(string)
+	} else if val, exists := config.Data[consts.FieldOrganization]; exists {
+		orgValue, ok = val.(string)
+	}
+
+	if ok {
+		// Set org_name as the primary field in state
+		if err := d.Set(consts.FieldOrgName, orgValue); err != nil {
+			return err
+		}
+
+		// Also set organization for backward compatibility
+		if err := d.Set(consts.FieldOrganization, orgValue); err != nil {
 			return err
 		}
 	}
@@ -401,10 +480,23 @@ func oktaAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
 	configuration := map[string]interface{}{
-		consts.FieldBaseURL:      d.Get(consts.FieldBaseURL),
-		fieldBypassOktaMFA:       d.Get(fieldBypassOktaMFA),
-		consts.FieldOrganization: d.Get(consts.FieldOrganization),
-		consts.FieldToken:        d.Get(consts.FieldToken),
+		consts.FieldBaseURL: d.Get(consts.FieldBaseURL),
+		fieldBypassOktaMFA:  d.Get(fieldBypassOktaMFA),
+		consts.FieldOrgName: getOrgName(d),
+	}
+
+	// Handle token field - check regular fields first, then write-only versions
+	// Vault API expects the field name to be "api_token"
+	if v, ok := d.GetOk(consts.FieldAPIToken); ok {
+		configuration[consts.FieldAPIToken] = v.(string)
+	} else if v, ok := d.GetOk(consts.FieldToken); ok {
+		// Support deprecated "token" field for backward compatibility
+		configuration[consts.FieldAPIToken] = v.(string)
+	} else if d.HasChange(consts.FieldAPITokenWOVersion) {
+		// User is using write-only api_token_wo and version changed
+		if apiTokenWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldAPITokenWO)); !apiTokenWo.IsNull() {
+			configuration[consts.FieldAPIToken] = apiTokenWo.AsString()
+		}
 	}
 
 	updateTokenFields(d, configuration, false)
