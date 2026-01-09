@@ -587,14 +587,16 @@ const (
 
 	FieldMountID = "mount_id"
 
-	FieldPasswordWO           = "password_wo"
-	FieldPasswordWOVersion    = "password_wo_version"
-	FieldCredentialsWO        = "credentials_wo"
-	FieldCredentialsWOVersion = "credentials_wo_version"
-	FieldDataJSONWO           = "data_json_wo"
-	FieldDataJSONWOVersion    = "data_json_wo_version"
-	FieldPrivateKeyWO         = "private_key_wo"
-	FieldPrivateKeyWOVersion  = "private_key_wo_version"
+	FieldPasswordWO            = "password_wo"
+	FieldPasswordWOVersion     = "password_wo_version"
+	FieldCredentialsWO         = "credentials_wo"
+	FieldCredentialsWOVersion  = "credentials_wo_version"
+	FieldDataJSONWO            = "data_json_wo"
+	FieldDataJSONWOVersion     = "data_json_wo_version"
+	FieldPrivateKeyWO          = "private_key_wo"
+	FieldPrivateKeyWOVersion   = "private_key_wo_version"
+	FieldClientSecretWO        = "client_secret_wo"
+	FieldClientSecretWOVersion = "client_secret_wo_version"
 
 	/*
 		common environment variables
