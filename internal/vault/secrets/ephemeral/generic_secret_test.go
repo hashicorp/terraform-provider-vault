@@ -92,7 +92,7 @@ resource "vault_generic_secret" "test" {
 }
 
 ephemeral "vault_generic_secret" "test" {
-	path = "${vault_mount.test.path}/%s"
+	path = vault_generic_secret.test.path
 }
 
 provider "echo" {
@@ -100,7 +100,7 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`, mount, path, path)
+`, mount, path)
 }
 
 // TestAccGenericSecret_KVV1 tests reading from KV v1 secrets engine
@@ -169,7 +169,7 @@ resource "vault_generic_secret" "test" {
 }
 
 ephemeral "vault_generic_secret" "test" {
-	path = "${vault_mount.test.path}/%s"
+	path = vault_generic_secret.test.path
 }
 
 provider "echo" {
@@ -177,7 +177,7 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`, mount, path, path)
+`, mount, path)
 }
 
 // TestAccGenericSecret_KVV2 tests reading from KV v2 secrets engine
@@ -418,7 +418,7 @@ resource "vault_generic_secret" "test" {
 }
 
 ephemeral "vault_generic_secret" "test" {
-	path = "${vault_mount.test.path}/%s"
+	path = vault_generic_secret.test.path
 	with_lease_start_time = true
 }
 
@@ -427,7 +427,7 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`, mount, path, path)
+`, mount, path)
 }
 
 // TestAccGenericSecret_DifferentDatatypeValues tests handling of non-string values
@@ -510,7 +510,7 @@ resource "vault_generic_secret" "test" {
 }
 
 ephemeral "vault_generic_secret" "test" {
-	path = "${vault_mount.test.path}/%s"
+	path = vault_generic_secret.test.path
 }
 
 provider "echo" {
@@ -518,7 +518,7 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`, mount, path, path)
+`, mount, path)
 }
 
 // TestAccGenericSecret_InvalidPath tests error handling when path doesn't exist
@@ -811,7 +811,7 @@ resource "vault_generic_secret" "test" {
 }
 
 ephemeral "vault_generic_secret" "test" {
-	path = "${vault_mount.test.path}/%s"
+	path = vault_generic_secret.test.path
 }
 
 provider "echo" {
@@ -819,7 +819,7 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`, mount, path, path)
+`, mount, path)
 }
 
 // TestAccGenericSecret_TransitKey tests reading from Transit secrets engine
