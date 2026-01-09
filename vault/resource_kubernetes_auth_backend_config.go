@@ -178,19 +178,10 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 	}
 
 	// Handle token_reviewer_jwt - check both regular and write-only fields
-	var tokenReviewerJWT string
 	if v, ok := d.GetOk(consts.FieldTokenReviewerJWT); ok {
-		tokenReviewerJWT = v.(string)
-	} else {
-		// Check write-only field from raw config
-		p := cty.GetAttrPath(consts.FieldTokenReviewerJWTWO)
-		woVal, _ := d.GetRawConfigAt(p)
-		if !woVal.IsNull() && woVal.IsKnown() {
-			tokenReviewerJWT = woVal.AsString()
-		}
-	}
-	if tokenReviewerJWT != "" {
-		data[consts.FieldTokenReviewerJWT] = tokenReviewerJWT
+		data[consts.FieldTokenReviewerJWT] = v.(string)
+	} else if tokenWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldTokenReviewerJWTWO)); !tokenWo.IsNull() {
+		data[consts.FieldTokenReviewerJWT] = tokenWo.AsString()
 	}
 
 	if v, ok := d.GetOkExists(consts.FieldPEMKeys); ok {
@@ -331,20 +322,8 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 	if v, ok := d.GetOk(consts.FieldTokenReviewerJWT); ok {
 		setData(consts.FieldTokenReviewerJWT, v.(string))
 	} else if d.HasChange(consts.FieldTokenReviewerJWTWOVersion) {
-		// Check write-only field from raw config when version changes
-		versionVal := d.GetRawConfig().GetAttr(consts.FieldTokenReviewerJWTWOVersion)
-		if versionVal.IsKnown() && !versionVal.IsNull() {
-			woVal := d.GetRawConfig().GetAttr(consts.FieldTokenReviewerJWTWO)
-			if woVal.IsKnown() && !woVal.IsNull() && strings.TrimSpace(woVal.AsString()) != "" {
-				setData(consts.FieldTokenReviewerJWT, woVal.AsString())
-			}
-		}
-	} else {
-		// For new resources or when write-only field is set without version change
-		p := cty.GetAttrPath(consts.FieldTokenReviewerJWTWO)
-		woVal, _ := d.GetRawConfigAt(p)
-		if !woVal.IsNull() && woVal.IsKnown() && strings.TrimSpace(woVal.AsString()) != "" {
-			setData(consts.FieldTokenReviewerJWT, woVal.AsString())
+		if tokenWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldTokenReviewerJWTWO)); !tokenWo.IsNull() {
+			setData(consts.FieldTokenReviewerJWT, tokenWo.AsString())
 		}
 	}
 

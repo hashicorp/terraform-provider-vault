@@ -25,7 +25,7 @@ resource "vault_kubernetes_auth_backend_config" "example" {
   kubernetes_ca_cert     = "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----"
   token_reviewer_jwt     = "ZXhhbXBsZQo="
   issuer                 = "api"
-  disable_iss_validation = "true"
+  disable_iss_validation = true
 }
 ```
 
@@ -43,7 +43,7 @@ resource "vault_kubernetes_auth_backend_config" "example" {
   token_reviewer_jwt_wo         = var.k8s_token_reviewer_jwt
   token_reviewer_jwt_wo_version = 1
   issuer                        = "api"
-  disable_iss_validation        = "true"
+  disable_iss_validation        = true
 }
 ```
 
@@ -78,7 +78,9 @@ The following arguments are supported:
 
 The following write-only attributes are supported:
 
-* `token_reviewer_jwt_wo` - (Optional) A write-only service account JWT (or other token) used as a bearer token to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API. Conflicts with `token_reviewer_jwt`.
+* `token_reviewer_jwt_wo` - (Optional) A write-only service account JWT (or other token) used as a bearer token to access the 
+  TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API. 
+  Conflicts with `token_reviewer_jwt`.
   **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
