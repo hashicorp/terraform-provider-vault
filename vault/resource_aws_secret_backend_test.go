@@ -415,6 +415,26 @@ func TestAccAWSSecretBackend_max_retries(t *testing.T) {
 	})
 }
 
+func TestAccAWSSecretBackend_secretKeyConflicts(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path                  = "%s"
+  secret_key            = "test-secret-key"
+  secret_key_wo         = "test-secret-key-wo"
+  secret_key_wo_version = 1
+}`, path),
+				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
+			},
+		},
+	})
+}
+
 func testAccAWSSecretBackendConfig_MountConfig(path string, isUpdate bool) string {
 	if !isUpdate {
 
