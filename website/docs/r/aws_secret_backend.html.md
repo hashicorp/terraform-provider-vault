@@ -83,15 +83,6 @@ issue new credentials. Vault uses the official AWS SDK to authenticate, and thus
 * `secret_key` - (Optional) The AWS Secret Key this backend should use to
 issue new credentials. Vault uses the official AWS SDK to authenticate, and thus can also use standard AWS environment credentials, shared file credentials or IAM role/ECS task credentials. Conflicts with `secret_key_wo`.
 
-* `secret_key_wo` - (Optional) The AWS Secret Key this backend should use to
-issue new credentials. This is a write-only field and will not be stored in state. 
-Vault uses the official AWS SDK to authenticate, and thus can also use standard AWS 
-environment credentials, shared file credentials or IAM role/ECS task credentials. 
-Conflicts with `secret_key`.
-
-* `secret_key_wo_version` - (Optional, Required if `secret_key_wo` is set) A version counter for the 
-`secret_key_wo` field. Incrementing this value will trigger an update to the secret key.
-
 ~> **Important** Vault version 1.2.3 and older does not support reading the configured
 credentials back from the API, With these older versions, Terraform cannot detect and correct drift
 on `access_key` or `secret_key`. Changing the values, however, _will_
@@ -195,6 +186,20 @@ These arguments are common across all resources that mount a secret engine.
 
 * `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
   not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
+
+## Ephemeral Attributes Reference
+
+These attributes are write-only and will not be persisted to Terraform state. 
+Requires Terraform 1.11+.
+
+* `secret_key_wo` - (Optional) The AWS Secret Key this backend should use to
+issue new credentials. This is a write-only field and will not be stored in state. 
+Vault uses the official AWS SDK to authenticate, and thus can also use standard AWS 
+environment credentials, shared file credentials or IAM role/ECS task credentials. 
+Conflicts with `secret_key`.
+
+* `secret_key_wo_version` - (Optional, Required if `secret_key_wo` is set) A version counter for the 
+`secret_key_wo` field. Incrementing this value will trigger an update to the secret key.
 
 ## Attributes Reference
 
