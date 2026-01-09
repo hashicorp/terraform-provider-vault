@@ -1,7 +1,7 @@
 ## Unreleased
 
 IMPROVEMENTS:
-
+* `vault_okta_auth_backend`: Add support for write-only fields token_wo and api_token_wo with version counters to prevent sensitive credentials from being stored in Terraform state. Deprecate `organization` and `token` and replace with `org_name` and `api_token` respectively in `vault_okta_auth_backend` resource. ([#2736](https://github.com/hashicorp/terraform-provider-vault/pull/2736))
 * `vault_secrets_sync_gcp_destination`: Add support for replication field (`replication_locations`; Vault 1.18+), networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`; Vault 1.19+), and encryption fields (`global_kms_key`, `locational_kms_keys`; Vault 1.19+) in `vault_secrets_sync_gcp_destination` resource. ([#2699](https://github.com/hashicorp/terraform-provider-vault/pull/2699))
 * Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`) in `vault_secrets_sync_azure_destination` resource. Requires Vault 1.19+. ([#2702](https://github.com/hashicorp/terraform-provider-vault/pull/2702))
 * `vault_database_secret_backend_connection`: Add support for MongoDB `write_concern` parameter and TLS parameters (`tls_ca`, `tls_certificate_key`) ([#2678](https://github.com/hashicorp/terraform-provider-vault/pull/2678))
