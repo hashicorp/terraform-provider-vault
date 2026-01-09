@@ -348,6 +348,28 @@ func TestAccAzureAuthBackendConfig_ClientSecretLegacy(t *testing.T) {
 	})
 }
 
+func TestAccAzureAuthBackendConfig_ClientSecretWriteOnlyConflicts(t *testing.T) {
+	backend := acctest.RandomWithPrefix("azure")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Test ConflictsWith: client_secret and client_secret_wo cannot be used together
+				Config:      testAccAzureAuthBackendConfig_clientSecretConflict(backend),
+				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
+			},
+			{
+				// Test RequiredWith: client_secret_wo_version requires client_secret_wo
+				Config:      testAccAzureAuthBackendConfig_versionWithoutClientSecretWO(backend),
+				ExpectError: regexp.MustCompile(`all of\s+` + "`" + `client_secret_wo,client_secret_wo_version` + "`" + `\s+must be specified`),
+			},
+		},
+	})
+}
+
 func testAccCheckAzureAuthBackendConfigDestroy(s *terraform.State) error {
 	config := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
@@ -584,6 +606,43 @@ resource "vault_azure_auth_backend_config" "config" {
   client_id     = "test-client-id"
   client_secret = "test-client-secret"
   resource      = "https://management.azure.com/"
+}
+`, backend)
+}
+
+func testAccAzureAuthBackendConfig_clientSecretConflict(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  path = "%s"
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend                   = vault_auth_backend.azure.path
+  tenant_id                 = "test-tenant-id"
+  client_id                 = "test-client-id"
+  client_secret             = "legacy-secret"
+  client_secret_wo          = "write-only-secret"
+  client_secret_wo_version  = 1
+  resource                  = "https://management.azure.com/"
+}
+`, backend)
+}
+
+func testAccAzureAuthBackendConfig_versionWithoutClientSecretWO(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  path = "%s"
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend                   = vault_auth_backend.azure.path
+  tenant_id                 = "test-tenant-id"
+  client_id                 = "test-client-id"
+  client_secret             = "legacy-secret"
+  client_secret_wo_version  = 1
+  resource                  = "https://management.azure.com/"
 }
 `, backend)
 }
