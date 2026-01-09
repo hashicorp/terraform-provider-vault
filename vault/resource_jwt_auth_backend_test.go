@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -110,7 +111,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ""),
@@ -123,7 +124,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("jwt")
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ns),
@@ -164,7 +165,7 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ""),
@@ -177,7 +178,7 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("jwt")
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ns),
@@ -223,7 +224,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 		t.Parallel()
 		path := acctest.RandomWithPrefix("oidc")
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ""),
@@ -236,7 +237,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("oidc")
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ns),
@@ -250,7 +251,7 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
 	invalidPath := path + consts.PathDelim
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -321,7 +322,7 @@ func TestJWTAuthBackend_remount(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTAuthBackendConfig(path, "", false),
@@ -476,7 +477,7 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 
 	path := acctest.RandomWithPrefix("jwt")
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -618,7 +619,7 @@ func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
 func TestAccJWTAuthBackendProviderConfig_negative(t *testing.T) {
 	t.Skip(true)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -696,7 +697,7 @@ rF7r4gUnKeC7mYIH1zypY7laskopiLFAfe96Kg==
 EOT`
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -739,7 +740,7 @@ func TestAccJWTAuthBackend_importTune(t *testing.T) {
 	resourceName := resourceType + ".test"
 	var resAuth api.AuthMount
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -781,7 +782,7 @@ func TestAccJWTAuthBackend_OIDCClientSecretWriteOnly(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -826,7 +827,7 @@ func TestAccJWTAuthBackend_OIDCClientSecretLegacy(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -893,4 +894,58 @@ resource "vault_jwt_auth_backend" "test" {
   default_role        = "test-role"
 }
 `, path, secret)
+}
+
+func TestAccJWTAuthBackend_OIDCClientSecretWriteOnlyConflicts(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("oidc-conflicts")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			// Negative Test 1: oidc_client_secret and oidc_client_secret_wo cannot be used together
+			{
+				Config:      testAccJWTAuthBackendConfig_OIDCClientSecretConflict(path, "secret", 1),
+				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
+			},
+			// Negative Test 2: oidc_client_secret_wo_version requires oidc_client_secret_wo
+			{
+				Config:      testAccJWTAuthBackendConfig_OIDCClientSecretVersionWithoutSecret(path),
+				ExpectError: regexp.MustCompile(`all of\s+.+oidc_client_secret_wo.+oidc_client_secret_wo_version.+ must be specified`),
+			},
+		},
+	})
+}
+
+// Negative test configs
+func testAccJWTAuthBackendConfig_OIDCClientSecretConflict(path, secret string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path                          = "%s"
+  type                          = "oidc"
+  description                   = "OIDC backend with conflicting secrets"
+  oidc_discovery_url            = "https://myco.auth0.com/"
+  oidc_client_id                = "test-client-id"
+  oidc_client_secret            = "%s"
+  oidc_client_secret_wo         = "%s"
+  oidc_client_secret_wo_version = %d
+  default_role                  = "test-role"
+}
+`, path, secret, secret, version)
+}
+
+func testAccJWTAuthBackendConfig_OIDCClientSecretVersionWithoutSecret(path string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path                          = "%s"
+  type                          = "oidc"
+  description                   = "OIDC backend with version but no secret_wo"
+  oidc_discovery_url            = "https://myco.auth0.com/"
+  oidc_client_id                = "test-client-id"
+  oidc_client_secret            = "legacy-secret"
+  oidc_client_secret_wo_version = 1
+  default_role                  = "test-role"
+}
+`, path)
 }
