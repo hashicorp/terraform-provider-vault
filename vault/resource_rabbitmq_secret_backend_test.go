@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -223,4 +224,26 @@ resource "vault_rabbitmq_secret_backend" "test" {
   password_wo         = "%s"
   password_wo_version = %d
 }`, path, connectionUri, username, password, version)
+}
+
+func TestAccRabbitMQSecretBackend_passwordConflicts(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "vault_rabbitmq_secret_backend" "test" {
+  path                = "%s"
+  connection_uri      = "https://localhost:15672"
+  username            = "admin"
+  password            = "test-password"
+  password_wo         = "test-password-wo"
+  password_wo_version = 1
+}`, path),
+				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
+			},
+		},
+	})
 }

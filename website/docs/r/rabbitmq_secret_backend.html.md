@@ -54,14 +54,6 @@ The following arguments are supported:
 * `password` - (Optional) Specifies the RabbitMQ management administrator password.
   Conflicts with `password_wo`.
 
-* `password_wo` - (Optional) Specifies the RabbitMQ management administrator password.
-  This is a write-only field and will not be read back from Vault.
-  Conflicts with `password`. Requires Terraform 1.11+.
-
-* `password_wo_version` - (Optional) A version counter for the write-only `password_wo` field.
-  Incrementing this value will trigger an update to the password.
-  Required when using `password_wo`.
-
 * `verify_connection` - (Optional) Specifies whether to verify connection URI, username, and password.
 Defaults to `true`.
 
@@ -121,6 +113,19 @@ These arguments are common across all resources that mount a secret engine.
 
 * `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
   not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
+
+## Ephemeral Attributes Reference
+
+These attributes are write-only and will not be persisted to Terraform state.
+Requires Terraform 1.11+.
+
+* `password_wo` - (Optional) Specifies the RabbitMQ management administrator password.
+  This is a write-only field and will not be read back from Vault.
+  Conflicts with `password`.
+
+* `password_wo_version` - (Optional) A version counter for the write-only `password_wo` field.
+  Incrementing this value will trigger an update to the password.
+  Required when using `password_wo`.
 
 ## Attributes Reference
 
