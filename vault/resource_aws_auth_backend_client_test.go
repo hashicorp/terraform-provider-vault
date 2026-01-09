@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -22,7 +23,7 @@ import (
 func TestAccAWSAuthBackendClient_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
@@ -44,7 +45,7 @@ func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -63,7 +64,7 @@ func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws") + "/nested"
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -82,7 +83,7 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -111,7 +112,7 @@ func TestAccAWSAuthBackend_wif(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
@@ -142,7 +143,7 @@ func TestAccAWSAuthBackend_wif(t *testing.T) {
 func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
@@ -158,7 +159,7 @@ func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -193,7 +194,7 @@ func TestAccAWSAuthBackendClient_automatedRotation(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldBackend),
@@ -246,7 +247,7 @@ func TestAccAWSAuthBackendClient_SecretKeyWriteOnly(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			// Step 1: Create with write-only secret (version 1)
@@ -296,7 +297,7 @@ func TestAccAWSAuthBackendClient_SecretKeyLegacy(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			// Create with legacy secret_key field
@@ -321,6 +322,28 @@ func TestAccAWSAuthBackendClient_SecretKeyLegacy(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWO),
 					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWOVersion),
 				),
+			},
+		},
+	})
+}
+
+// TestAccAWSAuthBackendClient_SecretKeyWriteOnlyConflicts tests negative scenarios
+func TestAccAWSAuthBackendClient_SecretKeyWriteOnlyConflicts(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			// Negative Test 1: secret_key and secret_key_wo cannot be used together
+			{
+				Config:      testAccAWSAuthBackendClientConfig_secretKeyConflict(backend, 1),
+				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
+			},
+			// Negative Test 2: secret_key_wo_version requires secret_key_wo
+			{
+				Config:      testAccAWSAuthBackendClientConfig_versionWithoutSecretKeyWO(backend),
+				ExpectError: regexp.MustCompile(`all of .+secret_key_wo.+secret_key_wo_version.+ must\s+be\s+specified`),
 			},
 		},
 	})
@@ -656,7 +679,7 @@ func TestAccAWSAuthBackendClient_allowedSTSHeaderValues(t *testing.T) {
 	resourceName := "vault_aws_auth_backend_client.client"
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -701,7 +724,7 @@ func TestAccAWSAuthBackendClient_allowedSTSHeaderValues_canonicalization(t *test
 	resourceName := "vault_aws_auth_backend_client.client"
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -727,7 +750,7 @@ func TestAccAWSAuthBackendClient_allowedSTSHeaderValues_duplicateHandling(t *tes
 	resourceName := "vault_aws_auth_backend_client.client"
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -914,6 +937,42 @@ resource "vault_aws_auth_backend_client" "client" {
   backend     = vault_auth_backend.aws.path
   access_key  = "UPDATEDACCESSKEY"
   secret_key  = "UPDATEDSECRETKEY"
+}
+`, backend)
+}
+
+// Negative test configs
+func testAccAWSAuthBackendClientConfig_secretKeyConflict(backend string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+  description = "Test auth backend for conflict testing"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend               = vault_auth_backend.aws.path
+  access_key            = "AWSACCESSKEY"
+  secret_key            = "LEGACYSECRETKEY"
+  secret_key_wo         = "WRITEONLY-SECRET-KEY"
+  secret_key_wo_version = %d
+}
+`, backend, version)
+}
+
+func testAccAWSAuthBackendClientConfig_versionWithoutSecretKeyWO(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+  description = "Test auth backend for version without write-only field"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend               = vault_auth_backend.aws.path
+  access_key            = "AWSACCESSKEY"
+  secret_key            = "LEGACYSECRETKEY"
+  secret_key_wo_version = 1
 }
 `, backend)
 }
