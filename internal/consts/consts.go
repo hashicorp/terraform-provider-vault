@@ -164,6 +164,8 @@ const (
 	FieldTokenTTL                       = "token_ttl"
 	FieldTokenWO                        = "token_wo"
 	FieldTokenWOVersion                 = "token_wo_version"
+	FieldAPITokenWO                     = "api_token_wo"
+	FieldAPITokenWOVersion              = "api_token_wo_version"
 	FieldService                        = "service"
 	FieldRealm                          = "realm"
 	FieldKeytabPath                     = "keytab_path"
