@@ -67,7 +67,7 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Sensitive:   true,
 				Description: "Specifies the RabbitMQ management administrator username",
 			},
-			"password": {
+			consts.FieldPassword: {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Sensitive:     true,
@@ -80,7 +80,7 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Sensitive:     true,
 				WriteOnly:     true,
 				Description:   "Specifies the RabbitMQ management administrator password. This is a write-only field and will not be read back from Vault.",
-				ConflictsWith: []string{"password"},
+				ConflictsWith: []string{consts.FieldPassword},
 			},
 			consts.FieldPasswordWOVersion: {
 				Type:         schema.TypeInt,
@@ -132,7 +132,7 @@ func rabbitMQSecretBackendCreate(ctx context.Context, d *schema.ResourceData, me
 
 	// Handle password and password_wo
 	var password string
-	if v, ok := d.GetOk("password"); ok {
+	if v, ok := d.GetOk(consts.FieldPassword); ok {
 		password = v.(string)
 	} else {
 		p := cty.GetAttrPath(consts.FieldPasswordWO)
@@ -198,12 +198,12 @@ func rabbitMQSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, me
 	}
 	path := d.Id()
 
-	if d.HasChanges("connection_uri", "username", "password", consts.FieldPasswordWOVersion, "verify_connection", "username_template", "password_policy") {
+	if d.HasChanges("connection_uri", "username", consts.FieldPassword, consts.FieldPasswordWOVersion, "verify_connection", "username_template", "password_policy") {
 		log.Printf("[DEBUG] Updating connection credentials at %q", path+"/config/connection")
 
 		// Handle password and password_wo
 		var password string
-		if v, ok := d.GetOk("password"); ok {
+		if v, ok := d.GetOk(consts.FieldPassword); ok {
 			password = v.(string)
 		} else if d.HasChange(consts.FieldPasswordWOVersion) {
 			woVal := d.GetRawConfig().GetAttr(consts.FieldPasswordWO)
