@@ -415,6 +415,26 @@ func TestAccAWSSecretBackend_max_retries(t *testing.T) {
 	})
 }
 
+func TestAccAWSSecretBackend_secretKeyConflicts(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path                  = "%s"
+  secret_key            = "test-secret-key"
+  secret_key_wo         = "test-secret-key-wo"
+  secret_key_wo_version = 1
+}`, path),
+				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
+			},
+		},
+	})
+}
+
 func testAccAWSSecretBackendConfig_MountConfig(path string, isUpdate bool) string {
 	if !isUpdate {
 
@@ -608,4 +628,57 @@ resource "vault_aws_secret_backend" "test" {
   secret_key = "%s"
   max_retries = "%d"
 }`, path, accessKey, secretKey, maxRetry)
+}
+
+func TestAccAWSSecretBackend_secretKeyWriteOnly(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	resourceType := "vault_aws_secret_backend"
+	resourceName := resourceType + ".test"
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSSecretBackendConfig_secretKeyWO(path, accessKey, secretKey, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					// secret_key_wo is write-only, so it should not be in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWO),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKeyWOVersion, "1"),
+				),
+			},
+			// Update secret_key_wo by incrementing the version
+			{
+				Config: testAccAWSSecretBackendConfig_secretKeyWO(path, accessKey, secretKey+"-updated", 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldSecretKeyWO),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKeyWOVersion, "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldSecretKey,
+				consts.FieldSecretKeyWO,
+				consts.FieldSecretKeyWOVersion,
+				consts.FieldDisableRemount),
+		},
+	})
+}
+
+func testAccAWSSecretBackendConfig_secretKeyWO(path, accessKey, secretKey string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  access_key = "%s"
+  secret_key_wo = "%s"
+  secret_key_wo_version = %d
+}`, path, accessKey, secretKey, version)
 }
