@@ -472,3 +472,26 @@ resource "vault_azure_secret_backend" "test" {
   disable_remount          = true
 }`, path, clientSecret, version)
 }
+
+func TestAccAzureSecretBackend_clientSecretConflicts(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-azure")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "vault_azure_secret_backend" "test" {
+  path                     = "%s"
+  subscription_id          = "11111111-2222-3333-4444-111111111111"
+  tenant_id                = "11111111-2222-3333-4444-222222222222"
+  client_id                = "11111111-2222-3333-4444-333333333333"
+  client_secret            = "test-client-secret"
+  client_secret_wo         = "test-client-secret-wo"
+  client_secret_wo_version = 1
+}`, path),
+				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
+			},
+		},
+	})
+}

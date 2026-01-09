@@ -80,14 +80,6 @@ The following arguments are supported:
 - `client_secret` (`string:""`) - The OAuth2 client secret to connect to Azure.
   Conflicts with `client_secret_wo`.
 
-- `client_secret_wo` (`string:""`) - The OAuth2 client secret to connect to Azure.
-  This is a write-only field and will not be read back from Vault.
-  Conflicts with `client_secret`. Requires Terraform 1.11+.
-
-- `client_secret_wo_version` (`int:0`) - A version counter for the write-only `client_secret_wo` field.
-  Incrementing this value will trigger an update to the client secret.
-  Required when using `client_secret_wo`.
-
 - `environment` (`string:""`) - The Azure environment.
 
 - `path` (`string: <optional>`) - The unique path this backend should be mounted at. Defaults to `azure`.
@@ -161,6 +153,19 @@ These arguments are common across all resources that mount a secret engine.
 * `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
   not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
 
+
+## Ephemeral Attributes Reference
+
+These attributes are write-only and will not be persisted to Terraform state.
+Requires Terraform 1.11+.
+
+* `client_secret_wo` (`string:""`) - The OAuth2 client secret to connect to Azure.
+  This is a write-only field and will not be read back from Vault.
+  Conflicts with `client_secret`.
+
+* `client_secret_wo_version` (`int:0`) - A version counter for the write-only `client_secret_wo` field.
+  Incrementing this value will trigger an update to the client secret.
+  Required when using `client_secret_wo`.
 
 ## Attributes Reference
 
