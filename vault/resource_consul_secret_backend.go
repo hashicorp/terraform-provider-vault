@@ -159,6 +159,34 @@ func consulSecretBackendResource() *schema.Resource {
 	return r
 }
 
+// getWriteOnlyOrLegacyValue extracts a field value from either write-only or legacy field.
+// It prioritizes write-only fields when the version field is present and has changed (or is new resource).
+// Falls back to legacy field if write-only is not being used.
+func getWriteOnlyOrLegacyValue(d *schema.ResourceData, woField, woVersionField, legacyField string, isNewOrVersionChanged bool) string {
+	var value string
+
+	// Check if using write-only field
+	if isNewOrVersionChanged {
+		if _, ok := d.GetOk(woVersionField); ok {
+			// Using write-only field - get from raw config
+			p := cty.GetAttrPath(woField)
+			woVal, _ := d.GetRawConfigAt(p)
+			if !woVal.IsNull() {
+				value = woVal.AsString()
+			}
+		}
+	}
+
+	// Fall back to legacy field if not using write-only
+	if value == "" {
+		if v, ok := d.GetOk(legacyField); ok {
+			value = v.(string)
+		}
+	}
+
+	return value
+}
+
 func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -173,49 +201,11 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	// Handle token: legacy field or write-only field
 	// Only send the token on create or when the write-only version changes
-	var token string
-
-	// Check if using write-only field
-	if d.IsNewResource() || d.HasChange(consts.FieldTokenWOVersion) {
-		if _, ok := d.GetOk(consts.FieldTokenWOVersion); ok {
-			// Using write-only field - get from raw config
-			p := cty.GetAttrPath(consts.FieldTokenWO)
-			woVal, _ := d.GetRawConfigAt(p)
-			if !woVal.IsNull() {
-				token = woVal.AsString()
-			}
-		}
-	}
-
-	// Fall back to legacy field if not using write-only
-	if token == "" {
-		if v, ok := d.GetOk(consts.FieldToken); ok {
-			token = v.(string)
-		}
-	}
+	token := getWriteOnlyOrLegacyValue(d, consts.FieldTokenWO, consts.FieldTokenWOVersion, consts.FieldToken, d.IsNewResource() || d.HasChange(consts.FieldTokenWOVersion))
 
 	// Handle client_key: legacy field or write-only field
 	// Only send the client_key on create or when the write-only version changes
-	var clientKey string
-
-	// Check if using write-only field
-	if d.IsNewResource() || d.HasChange(consts.FieldClientKeyWOVersion) {
-		if _, ok := d.GetOk(consts.FieldClientKeyWOVersion); ok {
-			// Using write-only field - get from raw config
-			p := cty.GetAttrPath(consts.FieldClientKeyWO)
-			woVal, _ := d.GetRawConfigAt(p)
-			if !woVal.IsNull() {
-				clientKey = woVal.AsString()
-			}
-		}
-	}
-
-	// Fall back to legacy field if not using write-only
-	if clientKey == "" {
-		if v, ok := d.GetOk(consts.FieldClientKey); ok {
-			clientKey = v.(string)
-		}
-	}
+	clientKey := getWriteOnlyOrLegacyValue(d, consts.FieldClientKeyWO, consts.FieldClientKeyWOVersion, consts.FieldClientKey, d.IsNewResource() || d.HasChange(consts.FieldClientKeyWOVersion))
 
 	configPath := consulSecretBackendConfigPath(path)
 
@@ -319,49 +309,9 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 		d.HasChange("client_key") || d.HasChange(consts.FieldClientKeyWOVersion) {
 		log.Printf("[DEBUG] Updating Consul configuration at %q", configPath)
 
-		// Handle token: legacy field or write-only field
-		var token string
+		token := getWriteOnlyOrLegacyValue(d, consts.FieldTokenWO, consts.FieldTokenWOVersion, consts.FieldToken, d.HasChange(consts.FieldTokenWOVersion))
 
-		// Check if using write-only field and version changed
-		if d.HasChange(consts.FieldTokenWOVersion) {
-			if _, ok := d.GetOk(consts.FieldTokenWOVersion); ok {
-				// Using write-only field - get from raw config
-				p := cty.GetAttrPath(consts.FieldTokenWO)
-				woVal, _ := d.GetRawConfigAt(p)
-				if !woVal.IsNull() {
-					token = woVal.AsString()
-				}
-			}
-		}
-
-		// Fall back to legacy field if not using write-only
-		if token == "" {
-			if v, ok := d.GetOk(consts.FieldToken); ok {
-				token = v.(string)
-			}
-		}
-
-		// Handle client_key: legacy field or write-only field
-		var clientKey string
-
-		// Check if using write-only field and version changed
-		if d.HasChange(consts.FieldClientKeyWOVersion) {
-			if _, ok := d.GetOk(consts.FieldClientKeyWOVersion); ok {
-				// Using write-only field - get from raw config
-				p := cty.GetAttrPath(consts.FieldClientKeyWO)
-				woVal, _ := d.GetRawConfigAt(p)
-				if !woVal.IsNull() {
-					clientKey = woVal.AsString()
-				}
-			}
-		}
-
-		// Fall back to legacy field if not using write-only
-		if clientKey == "" {
-			if v, ok := d.GetOk(consts.FieldClientKey); ok {
-				clientKey = v.(string)
-			}
-		}
+		clientKey := getWriteOnlyOrLegacyValue(d, consts.FieldClientKeyWO, consts.FieldClientKeyWOVersion, consts.FieldClientKey, d.HasChange(consts.FieldClientKeyWOVersion))
 
 		data := map[string]interface{}{
 			"address":     d.Get("address").(string),
