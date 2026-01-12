@@ -60,6 +60,23 @@ resource "vault_azure_auth_backend_config" "example" {
 }
 ```
 
+You can use the write-only fields to prevent the client secret from being stored in Terraform state:
+
+```hcl
+resource "vault_auth_backend" "example" {
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "example" {
+  backend                  = vault_auth_backend.example.path
+  tenant_id                = "11111111-2222-3333-4444-555555555555"
+  client_id                = "11111111-2222-3333-4444-555555555555"
+  client_secret_wo         = var.azure_client_secret  # Never stored in state
+  client_secret_wo_version = 1                         # Increment to rotate
+  resource                 = "https://vault.hashicorp.com"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -82,7 +99,12 @@ The following arguments are supported:
 	Currently read permissions to query compute resources are required.
 
 * `client_secret` - (Optional) The client secret for credentials to query the
-	Azure APIs.
+	Azure APIs. Mutually exclusive with `client_secret_wo`. **Note:** This field will be
+	stored in Terraform state. Consider using `client_secret_wo` instead for enhanced security.
+
+* `client_secret_wo_version` - (Optional) Version counter for the write-only client secret.
+	Increment this value to trigger an update of the client secret in Vault.
+	Required when using `client_secret_wo`.
 
 * `environment` - (Optional) The Azure cloud environment. Valid values:
 	AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud,
@@ -119,6 +141,15 @@ The following arguments are supported:
 
 * `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
   *Available only for Vault Enterprise*
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `client_secret_wo` - (Optional) The client secret for credentials to query the Azure APIs,
+	provided as a write-only field. This value will **never** be stored in Terraform state.
+	Mutually exclusive with `client_secret`. Must be used with `client_secret_wo_version`.
+	To rotate the secret, update the value and increment `client_secret_wo_version`.
 
 ## Attributes Reference
 
