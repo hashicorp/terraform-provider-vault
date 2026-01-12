@@ -445,6 +445,39 @@ func TestConsulSecretBackend_LegacyFields(t *testing.T) {
 	})
 }
 
+func TestConsulSecretBackend_WriteOnlyConflicts(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-consul-conflicts")
+	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				// Test token ConflictsWith validation
+				Config:      testConsulSecretBackend_tokenConflict(path, token),
+				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
+			},
+			{
+				// Test token_wo_version RequiredWith validation
+				Config:      testConsulSecretBackend_tokenVersionWithoutToken(path),
+				ExpectError: regexp.MustCompile(`all of .+token_wo.+token_wo_version.+ must\s+be\s+specified`),
+			},
+			{
+				// Test client_key ConflictsWith validation
+				Config:      testConsulSecretBackend_clientKeyConflict(path, token),
+				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
+			},
+			{
+				// Test client_key_wo_version RequiredWith validation
+				Config:      testConsulSecretBackend_clientKeyVersionWithoutKey(path, token),
+				ExpectError: regexp.MustCompile(`all of .+client_key_wo.+client_key_wo_version.+ must\s+be\s+specified`),
+			},
+		},
+	})
+}
+
 func testCaptureMountUUID(path string, store *testMountStore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		mount, err := testGetMount(path)
@@ -675,5 +708,60 @@ resource "vault_consul_secret_backend" "test" {
   ca_cert                  = "FAKE-CERT-MATERIAL"
   client_cert              = "FAKE-CLIENT-CERT-MATERIAL"
   client_key               = "FAKE-CLIENT-CERT-KEY-MATERIAL"
+}`, path, token)
+}
+
+// Negative test helper configurations
+func testConsulSecretBackend_tokenConflict(path, token string) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+  path                 = "%s"
+  description          = "test token conflict"
+  address              = "127.0.0.1:8500"
+  token                = "%s"
+  token_wo             = "test-token-wo"
+  token_wo_version     = 1
+  scheme               = "http"
+}`, path, token)
+}
+
+func testConsulSecretBackend_tokenVersionWithoutToken(path string) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+  path                 = "%s"
+  description          = "test token_wo_version without token_wo"
+  address              = "127.0.0.1:8500"
+  token_wo_version     = 1
+  scheme               = "http"
+}`, path)
+}
+
+func testConsulSecretBackend_clientKeyConflict(path, token string) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+  path                     = "%s"
+  description              = "test client_key conflict"
+  address                  = "consul.domain.tld:8501"
+  token                    = "%s"
+  scheme                   = "https"
+  ca_cert                  = "FAKE-CERT-MATERIAL"
+  client_cert              = "FAKE-CLIENT-CERT-MATERIAL"
+  client_key               = "FAKE-CLIENT-KEY"
+  client_key_wo            = "FAKE-CLIENT-KEY-WO"
+  client_key_wo_version    = 1
+}`, path, token)
+}
+
+func testConsulSecretBackend_clientKeyVersionWithoutKey(path, token string) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+  path                     = "%s"
+  description              = "test client_key_wo_version without client_key_wo"
+  address                  = "consul.domain.tld:8501"
+  token                    = "%s"
+  scheme                   = "https"
+  ca_cert                  = "FAKE-CERT-MATERIAL"
+  client_cert              = "FAKE-CLIENT-CERT-MATERIAL"
+  client_key_wo_version    = 1
 }`, path, token)
 }
