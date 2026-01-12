@@ -17,34 +17,21 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const (
-	fieldIDPMetadataURL             = "idp_metadata_url"
-	fieldIDPSSOURL                  = "idp_sso_url"
-	fieldIDPEntityID                = "idp_entity_id"
-	fieldIDPCert                    = "idp_cert"
-	fieldEntityID                   = "entity_id"
-	fieldACSURLS                    = "acs_urls"
-	fieldDefaultRole                = "default_role"
-	fieldVerboseLogging             = "verbose_logging"
-	fieldValidateAssertionSignature = "validate_assertion_signature"
-	fieldValidateResponseSignature  = "validate_response_signature"
-)
-
 var (
 	samlAPIFields = []string{
-		fieldIDPMetadataURL,
-		fieldIDPSSOURL,
-		fieldIDPEntityID,
-		fieldIDPCert,
-		fieldEntityID,
-		fieldACSURLS,
-		fieldDefaultRole,
+		consts.FieldIDPMetadataURL,
+		consts.FieldIDPSSOURL,
+		consts.FieldIDPEntityID,
+		consts.FieldIDPCert,
+		consts.FieldEntityID,
+		consts.FieldACSURLs,
+		consts.FieldDefaultRole,
 	}
 
 	samlBooleanAPIFields = []string{
-		fieldVerboseLogging,
-		fieldValidateAssertionSignature,
-		fieldValidateResponseSignature,
+		consts.FieldVerboseLogging,
+		consts.FieldValidateAssertionSignature,
+		consts.FieldValidateResponseSignature,
 	}
 )
 
@@ -71,35 +58,35 @@ func samlAuthBackendResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
-			fieldIDPMetadataURL: {
+			consts.FieldIDPMetadataURL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The metadata URL of the identity provider.",
 			},
-			fieldIDPSSOURL: {
+			consts.FieldIDPSSOURL: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: "The SSO URL of the identity provider. Mutually " +
 					"exclusive with 'idp_metadata_url'.",
 			},
-			fieldIDPEntityID: {
+			consts.FieldIDPEntityID: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: "The entity ID of the identity provider. " +
 					"Mutually exclusive with 'idp_metadata_url'.",
 			},
-			fieldIDPCert: {
+			consts.FieldIDPCert: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: "The PEM encoded certificate of the identity provider. " +
 					"Mutually exclusive with 'idp_metadata_url'",
 			},
-			fieldEntityID: {
+			consts.FieldEntityID: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The entity ID of the SAML authentication service provider.",
 			},
-			fieldACSURLS: {
+			consts.FieldACSURLs: {
 				Type: schema.TypeList,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -108,24 +95,24 @@ func samlAuthBackendResource() *schema.Resource {
 				Description: "The well-formatted URLs of your Assertion Consumer Service (ACS) " +
 					"that should receive a response from the identity provider.",
 			},
-			fieldDefaultRole: {
+			consts.FieldDefaultRole: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The role to use if no role is provided during login.",
 			},
-			fieldVerboseLogging: {
+			consts.FieldVerboseLogging: {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Description: "Log additional, potentially sensitive information " +
 					"during the SAML exchange according to the current logging level. Not " +
 					"recommended for production.",
 			},
-			fieldValidateAssertionSignature: {
+			consts.FieldValidateAssertionSignature: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Whether to validate the assertion signature.",
 			},
-			fieldValidateResponseSignature: {
+			consts.FieldValidateResponseSignature: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Whether to validate the response signature.",
@@ -188,7 +175,7 @@ func samlAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	// add boolean fields
 	for _, k := range samlBooleanAPIFields {
 		// validate_assertion_signature and validate_response_signature require Vault 1.19+
-		if k == fieldValidateAssertionSignature || k == fieldValidateResponseSignature {
+		if k == consts.FieldValidateAssertionSignature || k == consts.FieldValidateResponseSignature {
 			if provider.IsAPISupported(meta, provider.VaultVersion119) {
 				data[k] = d.Get(k)
 			} else if v := d.Get(k).(bool); v {
@@ -252,8 +239,10 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	for _, k := range fields {
 		if v, ok := resp.Data[k]; ok {
 			// validate_assertion_signature and validate_response_signature require Vault 1.19+
-			if (k == fieldValidateAssertionSignature || k == fieldValidateResponseSignature) && !provider.IsAPISupported(meta, provider.VaultVersion119) {
-				continue
+			if k == consts.FieldValidateAssertionSignature || k == consts.FieldValidateResponseSignature {
+				if !provider.IsAPISupported(meta, provider.VaultVersion119) {
+					continue
+				}
 			}
 			if err := d.Set(k, v); err != nil {
 				return diag.Errorf("error setting state key %q: err=%s", k, err)
