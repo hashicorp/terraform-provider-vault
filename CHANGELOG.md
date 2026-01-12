@@ -21,6 +21,7 @@ IMPROVEMENTS:
 BUGS:
 
 * `provider/auth_login_aws`: Fix issue where AWS authentication with IAM role assumption (`aws_role_arn`) was not working correctly due to incorrect credential handling ([#2679](https://github.com/hashicorp/terraform-provider-vault/pull/2679))
+* Fix plugin_name attribute not correctly use in vault_database_secret_backend_connection. ([#2705](https://github.com/hashicorp/terraform-provider-vault/pull/2705))
 
 ## 5.6.0 (December 19, 2025)
 
