@@ -100,6 +100,8 @@ const (
 	FieldTenantID                       = "tenant_id"
 	FieldClientID                       = "client_id"
 	FieldClientSecret                   = "client_secret"
+	FieldClientSecretWO                 = "client_secret_wo"
+	FieldClientSecretWOVersion          = "client_secret_wo_version"
 	FieldEnvironment                    = "environment"
 	FieldValidateCreds                  = "validate_creds"
 	FieldNumSequentialSuccesses         = "num_sequential_successes"
