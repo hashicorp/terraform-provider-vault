@@ -150,9 +150,13 @@ func mongodbAtlasSecretBackendRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.Errorf("error setting state key %q on MongoDB Atlas config, err=%s", consts.FieldPublicKey, err)
 	}
 
-	// set private key from TF config since it won't be returned from Vault
-	if err := d.Set(consts.FieldPrivateKey, d.Get(consts.FieldPrivateKey).(string)); err != nil {
-		return diag.FromErr(err)
+	// Only set private_key if using legacy field (not write-only)
+	// Write-only fields should never be stored in state
+	if _, ok := d.GetOk(consts.FieldPrivateKeyWOVersion); !ok {
+		// Not using write-only, so set legacy field from config
+		if err := d.Set(consts.FieldPrivateKey, d.Get(consts.FieldPrivateKey).(string)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil

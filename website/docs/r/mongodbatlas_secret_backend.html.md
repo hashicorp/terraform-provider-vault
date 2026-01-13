@@ -65,8 +65,8 @@ The following arguments are supported:
 
 * `mount` - (Required) Path where the MongoDB Atlas Secrets Engine is mounted.
 
-* `private_key` - (Required) Specifies the Private API Key used to authenticate with the MongoDB Atlas API. Mutually exclusive with `private_key_wo`. **Note:** This field will be
-	stored in Terraform state. Consider using `private_key_wo` instead for enhanced security.
+* `private_key` - (Required) Specifies the Private API Key used to authenticate with the MongoDB Atlas API. Mutually exclusive
+  with `private_key_wo`. **Note:** This field will be stored in Terraform state. Consider using `private_key_wo` instead for enhanced security.
 
 * `public_key` - (Required) Specifies the Public API Key used to authenticate with the MongoDB Atlas API. 
 
