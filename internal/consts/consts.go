@@ -432,6 +432,7 @@ const (
 	FieldAllowedManagedKeys             = "allowed_managed_keys"
 	FieldIdentityTokenKey               = "identity_token_key"
 	FieldCIDRList                       = "cidr_list"
+	FieldTokenBoundCIDRs                = "token_bound_cidrs"
 	FieldSecretID                       = "secret_id"
 	FieldWrappingToken                  = "wrapping_token"
 	FieldWithWrappedAccessor            = "with_wrapped_accessor"
