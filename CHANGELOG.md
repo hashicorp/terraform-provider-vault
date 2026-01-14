@@ -14,10 +14,14 @@ IMPROVEMENTS:
 * `vault_secrets_sync_aws_destination`: Add support for networking configuration parameters `allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, and `disable_strict_networking` to control outbound connections from Vault to AWS Secrets Manager. Requires Vault 1.19.0+.([#2698](https://github.com/hashicorp/terraform-provider-vault/pull/2698))
 * Updated dependencies:
   * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
+* Docs: fix heredoc example for LDAP dynamic role LDIFs ([#2728]https://github.com/hashicorp/terraform-provider-vault/pull/2728)
+* Docs: Update example to use write-only attribute ([#2731]https://github.com/hashicorp/terraform-provider-vault/pull/2731)
+
 
 BUGS:
 
 * `provider/auth_login_aws`: Fix issue where AWS authentication with IAM role assumption (`aws_role_arn`) was not working correctly due to incorrect credential handling ([#2679](https://github.com/hashicorp/terraform-provider-vault/pull/2679))
+* Fix plugin_name attribute not correctly use in vault_database_secret_backend_connection. ([#2705](https://github.com/hashicorp/terraform-provider-vault/pull/2705))
 
 ## 5.6.0 (December 19, 2025)
 
