@@ -91,9 +91,26 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			Type:     schema.TypeMap,
 			Optional: true,
 		},
+		"default_extensions_template": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Specifies if the default_extensions field supports templating.",
+		},
 		"default_critical_options": {
 			Type:     schema.TypeMap,
 			Optional: true,
+		},
+		"exclude_cidr_list": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Comma-separated list of CIDR blocks for which credentials cannot be created.",
+		},
+		"port": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Default:     22,
+			Description: "Specifies the port number for SSH connections. Default is 22.",
 		},
 		"allowed_users_template": {
 			Type:     schema.TypeBool,
@@ -243,8 +260,20 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		data["default_extensions"] = v
 	}
 
+	if v, ok := d.GetOk("default_extensions_template"); ok {
+		data["default_extensions_template"] = v.(bool)
+	}
+
 	if v, ok := d.GetOk("default_critical_options"); ok {
 		data["default_critical_options"] = v
+	}
+
+	if v, ok := d.GetOk("exclude_cidr_list"); ok {
+		data["exclude_cidr_list"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("port"); ok {
+		data["port"] = v.(int)
 	}
 
 	if v, ok := d.GetOk("allowed_users_template"); ok {
@@ -359,9 +388,10 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		"allow_subdomains", "allow_user_certificates", "allow_user_key_ids",
 		"allowed_critical_options", "allowed_domains",
 		"cidr_list", "allowed_extensions", "default_extensions",
-		"default_critical_options", "allowed_users_template",
-		"allowed_users", "default_user", "key_id_format",
-		"max_ttl", "ttl", "algorithm_signer", "not_before_duration",
+		"default_extensions_template", "default_critical_options",
+		"allowed_users_template", "allowed_users", "default_user",
+		"key_id_format", "max_ttl", "ttl", "algorithm_signer",
+		"not_before_duration", "exclude_cidr_list", "port",
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
