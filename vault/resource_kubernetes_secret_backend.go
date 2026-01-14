@@ -119,11 +119,9 @@ func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.Resource
 	// they're present in config.
 	//
 	// For the legacy (non-write-only) field, re-send when the value changes.
-	shouldSendJWT := d.IsNewResource() ||
+	if d.IsNewResource() ||
 		d.HasChange(consts.FieldServiceAccountJWTWOVersion) ||
-		d.HasChange(consts.FieldServiceAccountJWT)
-
-	if shouldSendJWT {
+		d.HasChange(consts.FieldServiceAccountJWT) {
 		var jwt string
 		// For write-only field, use GetRawConfigAt instead of Get
 		if d.IsNewResource() || d.HasChange(consts.FieldServiceAccountJWTWOVersion) {
