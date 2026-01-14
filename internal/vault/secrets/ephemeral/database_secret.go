@@ -6,6 +6,7 @@ package ephemeralsecrets
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -37,16 +38,24 @@ type DBEphemeralSecretModel struct {
 	base.BaseModelEphemeral
 
 	// fields specific to this resource
-	Mount    types.String `tfsdk:"mount"`
-	Name     types.String `tfsdk:"name"`
-	Username types.String `tfsdk:"username"`
-	Password types.String `tfsdk:"password"`
+	Mount             types.String `tfsdk:"mount"`
+	Name              types.String `tfsdk:"name"`
+	Username          types.String `tfsdk:"username"`
+	Password          types.String `tfsdk:"password"`
+	RSAPrivateKey     types.String `tfsdk:"rsa_private_key"`
+	ClientCertificate types.String `tfsdk:"client_certificate"`
+	PrivateKey        types.String `tfsdk:"private_key"`
+	PrivateKeyType    types.String `tfsdk:"private_key_type"`
 }
 
 // DBEphemeralSecretAPIModel describes the Vault API data model.
 type DBEphemeralSecretAPIModel struct {
-	Username string `json:"username" mapstructure:"username"`
-	Password string `json:"password" mapstructure:"password"`
+	Username          string `json:"username" mapstructure:"username"`
+	Password          string `json:"password" mapstructure:"password"`
+	RSAPrivateKey     string `json:"rsa_private_key" mapstructure:"rsa_private_key"`
+	ClientCertificate string `json:"client_certificate" mapstructure:"client_certificate"`
+	PrivateKey        string `json:"private_key" mapstructure:"private_key"`
+	PrivateKeyType    string `json:"private_key_type" mapstructure:"private_key_type"`
 }
 
 // Schema defines this resource's schema which is the data that is available in
@@ -70,6 +79,24 @@ func (r *DBEphemeralSecretResource) Schema(_ context.Context, _ ephemeral.Schema
 			},
 			consts.FieldPassword: schema.StringAttribute{
 				MarkdownDescription: "Password for the newly created DB user.",
+				Computed:            true,
+			},
+			consts.FieldRSAPrivateKey: schema.StringAttribute{
+				MarkdownDescription: "RSA private key for the newly created DB user. Only returned when credential_type is 'rsa_private_key'.",
+				Computed:            true,
+				Sensitive:           true,
+			},
+			consts.FieldClientCertificate: schema.StringAttribute{
+				MarkdownDescription: "Client certificate for the newly created DB user. Only returned when credential_type is 'client_certificate'.",
+				Computed:            true,
+			},
+			consts.FieldPrivateKey: schema.StringAttribute{
+				MarkdownDescription: "Private key for the newly created DB user. Only returned when credential_type is 'client_certificate'.",
+				Computed:            true,
+				Sensitive:           true,
+			},
+			consts.FieldPrivateKeyType: schema.StringAttribute{
+				MarkdownDescription: "Type of private key (e.g., 'rsa', 'ec'). Only returned when credential_type is 'client_certificate'.",
 				Computed:            true,
 			},
 		},
@@ -124,8 +151,25 @@ func (r *DBEphemeralSecretResource) Open(ctx context.Context, req ephemeral.Open
 		return
 	}
 
+	// Set username (always present)
 	data.Username = types.StringValue(readResp.Username)
-	data.Password = types.StringValue(readResp.Password)
+
+	// Set credential fields based on what's returned
+	if readResp.Password != "" {
+		data.Password = types.StringValue(readResp.Password)
+	}
+	if readResp.RSAPrivateKey != "" {
+		data.RSAPrivateKey = types.StringValue(readResp.RSAPrivateKey)
+	}
+	if readResp.ClientCertificate != "" {
+		data.ClientCertificate = types.StringValue(readResp.ClientCertificate)
+	}
+	if readResp.PrivateKey != "" {
+		data.PrivateKey = types.StringValue(readResp.PrivateKey)
+	}
+	if readResp.PrivateKeyType != "" {
+		data.PrivateKeyType = types.StringValue(readResp.PrivateKeyType)
+	}
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
