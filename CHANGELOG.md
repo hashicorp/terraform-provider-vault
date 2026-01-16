@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES : 
+
+* Add ephemeral resource for vault_generic_secret ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
+
 IMPROVEMENTS:
 
 * `vault_kubernetes_secret_backend`: Add write-only fields `service_account_jwt_wo` and `service_account_jwt_wo_version` for managing service account JWT credentials without storing them in state.([#2720](https://github.com/hashicorp/terraform-provider-vault/pull/2720))
