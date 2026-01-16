@@ -597,6 +597,8 @@ const (
 	FieldPrivateKeyWOVersion        = "private_key_wo_version"
 	FieldServiceAccountJWTWO        = "service_account_jwt_wo"
 	FieldServiceAccountJWTWOVersion = "service_account_jwt_wo_version"
+	FieldSecretIDWO                 = "secret_id_wo"
+	FieldSecretIDWOVersion          = "secret_id_wo_version"
 
 	/*
 		common environment variables
