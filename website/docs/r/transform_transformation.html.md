@@ -31,6 +31,43 @@ resource "vault_transform_transformation" "example" {
 }
 ```
 
+### Tokenization Example
+
+```hcl
+resource "vault_mount" "transform" {
+  path = "transform"
+  type = "transform"
+}
+
+resource "vault_transform_transformation" "tokenization" {
+  path          = vault_mount.transform.path
+  name          = "ssn-tokenization"
+  type          = "tokenization"
+  mapping_mode  = "default"
+  stores        = ["my-store"]
+  allowed_roles = ["payments"]
+}
+```
+
+### FPE with Convergent Encryption
+
+```hcl
+resource "vault_mount" "transform" {
+  path = "transform"
+  type = "transform"
+}
+
+resource "vault_transform_transformation" "convergent_fpe" {
+  path          = vault_mount.transform.path
+  name          = "ccn-convergent"
+  type          = "fpe"
+  template      = "builtin/creditcardnumber"
+  tweak_source  = "internal"
+  convergent    = true
+  allowed_roles = ["payments"]
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -51,6 +88,14 @@ The following arguments are supported:
 * `deletion_allowed` - (Optional) If true, this transform can be deleted.
   Otherwise, deletion is blocked while this value remains false. Default: `false`
   *Only supported on vault-1.12+*
+* `mapping_mode` - (Optional) Specifies the mapping mode for stored values. 
+  Can be "default" or "exportable". Only used when `type` is "tokenization".
+  **Note:** This field is immutable and cannot be changed after creation. Changing this value will force recreation of the resource.
+* `stores` - (Optional) List of stores to use for tokenization state. 
+  Only used when `type` is "tokenization".
+  **Note:** This field is immutable and cannot be changed after creation. Changing this value will force recreation of the resource.
+* `convergent` - (Optional) If true, multiple transformations of the same plaintext will 
+  produce the same ciphertext. Only used when `type` is "fpe". Default: `false`
 
 ## Tutorials
 
