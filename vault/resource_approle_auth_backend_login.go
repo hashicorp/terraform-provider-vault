@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -26,37 +25,20 @@ func approleAuthBackendLoginResource() *schema.Resource {
 		Exists: approleAuthBackendLoginExists,
 
 		Schema: map[string]*schema.Schema{
-			consts.FieldRoleID: {
+			"role_id": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The RoleID to log in with.",
 				ForceNew:    true,
 			},
-			consts.FieldSecretID: {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "The SecretID to log in with. Required unless `bind_secret_id` is set to false on the role.",
-				ForceNew:      true,
-				Sensitive:     true,
-				ConflictsWith: []string{consts.FieldSecretIDWO},
+			"secret_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The SecretID to log in with.",
+				ForceNew:    true,
+				Sensitive:   true,
 			},
-			consts.FieldSecretIDWO: {
-				Type:     schema.TypeString,
-				Optional: true,
-				Description: "The SecretID to log in with. Write-only attribute that can accept ephemeral values." +
-					" Required unless `bind_secret_id` is set to false on the role.",
-				WriteOnly:     true,
-				Sensitive:     true,
-				ConflictsWith: []string{consts.FieldSecretID},
-			},
-			consts.FieldSecretIDWOVersion: {
-				Type:     schema.TypeInt,
-				Optional: true,
-				Description: "Version counter for the write-only secret_id field. " +
-					"Increment this to trigger re-authentication with a new SecretID.",
-				ForceNew: true,
-			},
-			consts.FieldPolicies: {
+			"policies": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Schema{
@@ -64,7 +46,7 @@ func approleAuthBackendLoginResource() *schema.Resource {
 				},
 				Description: "Policies set on the token.",
 			},
-			consts.FieldRenewable: {
+			"renewable": {
 				Type:        schema.TypeBool,
 				Computed:    true,
 				Description: "Whether the token is renewable or not.",
@@ -74,17 +56,17 @@ func approleAuthBackendLoginResource() *schema.Resource {
 				Computed:    true,
 				Description: "How long the token is valid for.",
 			},
-			consts.FieldLeaseStarted: {
+			"lease_started": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The timestamp the lease started on, as determined by the machine running Terraform.",
 			},
-			consts.FieldAccessor: {
+			"accessor": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The accessor for the token.",
 			},
-			consts.FieldClientToken: {
+			"client_token": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The token.",
@@ -98,7 +80,7 @@ func approleAuthBackendLoginResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			consts.FieldBackend: {
+			"backend": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Unique name of the auth backend to configure.",
@@ -119,28 +101,16 @@ func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) err
 		return e
 	}
 
-	backend := d.Get(consts.FieldBackend).(string)
+	backend := d.Get("backend").(string)
 
 	path := approleAuthBackendLoginPath(backend)
 
 	log.Printf("[DEBUG] Logging in with AppRole auth backend %q", path)
 	data := map[string]interface{}{
-		consts.FieldRoleID: d.Get(consts.FieldRoleID).(string),
+		"role_id": d.Get("role_id").(string),
 	}
-
-	// Handle secret_id from either standard or write-only field
-	if d.IsNewResource() || d.HasChange(consts.FieldSecretID) || d.HasChange(consts.FieldSecretIDWOVersion) {
-		if v, ok := d.GetOk(consts.FieldSecretID); ok && v != nil {
-			log.Printf("[DEBUG] using persisted secret_id; please use new write-only attributes `secret_id_wo` " +
-				"and `secret_id_wo_version` for security")
-			data[consts.FieldSecretID] = v.(string)
-		} else if d.HasChange(consts.FieldSecretIDWOVersion) {
-			// Use GetRawConfigAt to read write-only field value
-			path := cty.GetAttrPath(consts.FieldSecretIDWO)
-			if secretIDWO, _ := d.GetRawConfigAt(path); !secretIDWO.IsNull() {
-				data[consts.FieldSecretID] = secretIDWO.AsString()
-			}
-		}
+	if v, ok := d.GetOk("secret_id"); ok {
+		data["secret_id"] = v.(string)
 	}
 
 	resp, err := client.Logical().Write(path, data)
@@ -150,8 +120,8 @@ func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) err
 	log.Printf("[DEBUG] Logged in with AppRole auth backend %q", path)
 
 	d.SetId(resp.Auth.Accessor)
-	d.Set(consts.FieldLeaseStarted, time.Now().Format(time.RFC3339))
-	d.Set(consts.FieldClientToken, resp.Auth.ClientToken)
+	d.Set("lease_started", time.Now().Format(time.RFC3339))
+	d.Set("client_token", resp.Auth.ClientToken)
 
 	return approleAuthBackendLoginRead(d, meta)
 }
@@ -179,22 +149,22 @@ func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[DEBUG] Read token %q", d.Id())
 	if leaseExpiringSoon(d, client) {
 		log.Printf("[DEBUG] Lease for %q expiring soon, renewing", d.Id())
-		renewed, err := client.Auth().Token().Renew(d.Get(consts.FieldClientToken).(string), d.Get(consts.FieldLeaseDuration).(int))
+		renewed, err := client.Auth().Token().Renew(d.Get("client_token").(string), d.Get(consts.FieldLeaseDuration).(int))
 		if err != nil {
 			log.Printf("[DEBUG] Error renewing token %q, bailing", d.Id())
 		} else {
 			resp = renewed
-			d.Set(consts.FieldLeaseStarted, time.Now().Format(time.RFC3339))
-			d.Set(consts.FieldClientToken, resp.Auth.ClientToken)
+			d.Set("lease_started", time.Now().Format(time.RFC3339))
+			d.Set("client_token", resp.Auth.ClientToken)
 			d.SetId(resp.Auth.Accessor)
 		}
 	}
 
-	d.Set(consts.FieldPolicies, resp.Data["policies"])
-	d.Set(consts.FieldRenewable, resp.Data["renewable"])
+	d.Set("policies", resp.Data["policies"])
+	d.Set("renewable", resp.Data["renewable"])
 	d.Set(consts.FieldLeaseDuration, resp.Data["lease_duration"])
 	d.Set(consts.FieldMetadata, resp.Data["metadata"])
-	d.Set(consts.FieldAccessor, resp.Data["accessor"])
+	d.Set("accessor", resp.Data["accessor"])
 	return nil
 }
 
@@ -241,7 +211,7 @@ func approleAuthBackendLoginPath(backend string) string {
 }
 
 func leaseExpiringSoon(d *schema.ResourceData, client *api.Client) bool {
-	startedStr := d.Get(consts.FieldLeaseStarted).(string)
+	startedStr := d.Get("lease_started").(string)
 	duration := d.Get(consts.FieldLeaseDuration).(int)
 	if startedStr == "" {
 		return false
@@ -249,7 +219,7 @@ func leaseExpiringSoon(d *schema.ResourceData, client *api.Client) bool {
 	started, err := time.Parse(time.RFC3339, startedStr)
 	if err != nil {
 		log.Printf("[DEBUG] lease_started %q for %q is an invalid value, removing: %s", startedStr, d.Id(), err)
-		d.Set(consts.FieldLeaseStarted, "")
+		d.Set("lease_started", "")
 		return false
 	}
 	// whether the time the lease started plus the number of seconds specified in the duration
