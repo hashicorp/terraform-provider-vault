@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 
+* `vault_kmip_secret_role`: Add support for additional KMIP operation fields (`operation_import`, `operation_query`, `operation_encrypt`, `operation_decrypt`, `operation_create_key_pair`, `operation_delete_attribute`, `operation_rng_retrieve`, `operation_mac`, `operation_signature_verify`, `operation_sign`, `operation_rng_seed`, `operation_modify_attribute`, `operation_mac_verify`, `operation_rekey_key_pair`) to grant granular permissions for KMIP operations. ([#2744](https://github.com/hashicorp/terraform-provider-vault/pull/2744))
 * `vault_secrets_sync_gcp_destination`: Add support for replication field (`replication_locations`; Vault 1.18+), networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`; Vault 1.19+), and encryption fields (`global_kms_key`, `locational_kms_keys`; Vault 1.19+) in `vault_secrets_sync_gcp_destination` resource. ([#2699](https://github.com/hashicorp/terraform-provider-vault/pull/2699))
 * Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`) in `vault_secrets_sync_azure_destination` resource. Requires Vault 1.19+. ([#2702](https://github.com/hashicorp/terraform-provider-vault/pull/2702))
 * `vault_database_secret_backend_connection`: Add support for MongoDB `write_concern` parameter and TLS parameters (`tls_ca`, `tls_certificate_key`) ([#2678](https://github.com/hashicorp/terraform-provider-vault/pull/2678))

@@ -11,12 +11,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKMIPSecretRole_basic(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
+	acctestutil.SkipTestAccEnt(t)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	resourceType := "vault_kmip_secret_role"
@@ -35,7 +36,7 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -91,7 +92,7 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 }
 
 func TestAccKMIPSecretRole_remount(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
+	acctestutil.SkipTestAccEnt(t)
 
 	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
 	if err != nil {
@@ -110,7 +111,7 @@ func TestAccKMIPSecretRole_remount(t *testing.T) {
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -159,6 +160,61 @@ func TestAccKMIPSecretRole_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldOperationRegister, "false"),
 					resource.TestCheckResourceAttr(resourceName, fieldOperationRekey, "false"),
 					resource.TestCheckResourceAttr(resourceName, fieldOperationRevoke, "false"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKMIPSecretRole_newOperations(t *testing.T) {
+	acctestutil.SkipTestAccEnt(t)
+
+	path := acctest.RandomWithPrefix("tf-test-kmip-ops")
+	resourceType := "vault_kmip_secret_role"
+	resourceName := resourceType + ".test"
+
+	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = closer(); err != nil {
+		t.Fatal(err)
+	}
+
+	addr1 := lns[0].Addr().String()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testKMIPSecretRole_newOperationsConfig(path, addr1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
+					resource.TestCheckResourceAttr(resourceName, "role", "test"),
+					// New operation fields
+					resource.TestCheckResourceAttr(resourceName, fieldOperationImport, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationQuery, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationEncrypt, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationDecrypt, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationCreateKeyPair, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationDeleteAttribute, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationRNGRetrieve, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationMAC, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationSignatureVerify, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationSign, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationRNGSeed, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationModifyAttribute, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationMACVerify, "true"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationRekeyKeyPair, "true"),
+					// Existing operations should be false
+					resource.TestCheckResourceAttr(resourceName, fieldOperationActivate, "false"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationGet, "false"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationAll, "false"),
+					resource.TestCheckResourceAttr(resourceName, fieldOperationNone, "false"),
 				),
 			},
 		},
@@ -216,6 +272,45 @@ resource "vault_kmip_secret_role" "test" {
 	operation_get_attribute_list = true
 	operation_create = true
 	operation_destroy = true
+}
+`, path, listenAddr)
+}
+
+func testKMIPSecretRole_newOperationsConfig(path string, listenAddr string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "kmip" {
+  path = "%s"
+  listen_addrs = ["%s"]
+  description = "test description"
+}
+
+resource "vault_kmip_secret_scope" "scope-1" {
+    path = vault_kmip_secret_backend.kmip.path
+    scope = "scope-1"
+}
+
+resource "vault_kmip_secret_role" "test" {
+    path = vault_kmip_secret_scope.scope-1.path
+    scope = "scope-1"
+    role = "test"
+	tls_client_key_type = "ec"
+ 	tls_client_key_bits = 256
+	
+	# New operation fields
+	operation_import = true
+	operation_query = true
+	operation_encrypt = true
+	operation_decrypt = true
+	operation_create_key_pair = true
+	operation_delete_attribute = true
+	operation_rng_retrieve = true
+	operation_mac = true
+	operation_signature_verify = true
+	operation_sign = true
+	operation_rng_seed = true
+	operation_modify_attribute = true
+	operation_mac_verify = true
+	operation_rekey_key_pair = true
 }
 `, path, listenAddr)
 }

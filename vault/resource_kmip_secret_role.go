@@ -18,16 +18,30 @@ const (
 	fieldOperationAddAttribute     = "operation_add_attribute"
 	fieldOperationAll              = "operation_all"
 	fieldOperationCreate           = "operation_create"
+	fieldOperationCreateKeyPair    = "operation_create_key_pair"
+	fieldOperationDecrypt          = "operation_decrypt"
+	fieldOperationDeleteAttribute  = "operation_delete_attribute"
 	fieldOperationDestroy          = "operation_destroy"
 	fieldOperationDiscoverVersions = "operation_discover_versions"
+	fieldOperationEncrypt          = "operation_encrypt"
 	fieldOperationGet              = "operation_get"
 	fieldOperationGetAttributeList = "operation_get_attribute_list"
 	fieldOperationGetAttributes    = "operation_get_attributes"
+	fieldOperationImport           = "operation_import"
 	fieldOperationLocate           = "operation_locate"
+	fieldOperationMAC              = "operation_mac"
+	fieldOperationMACVerify        = "operation_mac_verify"
+	fieldOperationModifyAttribute  = "operation_modify_attribute"
 	fieldOperationNone             = "operation_none"
+	fieldOperationQuery            = "operation_query"
 	fieldOperationRegister         = "operation_register"
 	fieldOperationRekey            = "operation_rekey"
+	fieldOperationRekeyKeyPair     = "operation_rekey_key_pair"
 	fieldOperationRevoke           = "operation_revoke"
+	fieldOperationRNGRetrieve      = "operation_rng_retrieve"
+	fieldOperationRNGSeed          = "operation_rng_seed"
+	fieldOperationSign             = "operation_sign"
+	fieldOperationSignatureVerify  = "operation_signature_verify"
 	fieldTLSClientKeyType          = "tls_client_key_type"
 	fieldTLSClientKeyBits          = "tls_client_key_bits"
 	fieldTLSClientTTL              = "tls_client_ttl"
@@ -38,16 +52,30 @@ var kmipRoleAPIBooleanFields = []string{
 	fieldOperationAddAttribute,
 	fieldOperationAll,
 	fieldOperationCreate,
+	fieldOperationCreateKeyPair,
+	fieldOperationDecrypt,
+	fieldOperationDeleteAttribute,
 	fieldOperationDestroy,
 	fieldOperationDiscoverVersions,
+	fieldOperationEncrypt,
 	fieldOperationGet,
 	fieldOperationGetAttributeList,
 	fieldOperationGetAttributes,
+	fieldOperationImport,
 	fieldOperationLocate,
+	fieldOperationMAC,
+	fieldOperationMACVerify,
+	fieldOperationModifyAttribute,
 	fieldOperationNone,
+	fieldOperationQuery,
 	fieldOperationRegister,
 	fieldOperationRekey,
+	fieldOperationRekeyKeyPair,
 	fieldOperationRevoke,
+	fieldOperationRNGRetrieve,
+	fieldOperationRNGSeed,
+	fieldOperationSign,
+	fieldOperationSignatureVerify,
 }
 
 func kmipSecretRoleResource() *schema.Resource {
@@ -67,13 +95,13 @@ func kmipSecretRoleResource() *schema.Resource {
 				Description:  "Path where KMIP backend is mounted",
 				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
-			"scope": {
+			consts.FieldScope: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Name of the scope",
 			},
-			"role": {
+			consts.FieldRole: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
@@ -124,6 +152,24 @@ func kmipSecretRoleResource() *schema.Resource {
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Create operation",
 			},
+			fieldOperationCreateKeyPair: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP Create Key Pair operation",
+			},
+			fieldOperationDecrypt: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP Decrypt operation",
+			},
+			fieldOperationDeleteAttribute: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP Delete Attribute operation",
+			},
 			fieldOperationDestroy: {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -135,6 +181,12 @@ func kmipSecretRoleResource() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Discover Version operation",
+			},
+			fieldOperationEncrypt: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP Encrypt operation",
 			},
 			fieldOperationGet: {
 				Type:        schema.TypeBool,
@@ -154,11 +206,41 @@ func kmipSecretRoleResource() *schema.Resource {
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Get Attributes operation",
 			},
+			fieldOperationImport: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP Import operation",
+			},
 			fieldOperationLocate: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Locate operation",
+			},
+			fieldOperationMAC: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP MAC operation",
+			},
+			fieldOperationMACVerify: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP MAC Verify operation",
+			},
+			fieldOperationModifyAttribute: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP Modify Attribute operation",
+			},
+			fieldOperationQuery: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP Query operation",
 			},
 			fieldOperationRegister: {
 				Type:        schema.TypeBool,
@@ -172,11 +254,41 @@ func kmipSecretRoleResource() *schema.Resource {
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Rekey operation",
 			},
+			fieldOperationRekeyKeyPair: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP Rekey Key Pair operation",
+			},
 			fieldOperationRevoke: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Revoke operation",
+			},
+			fieldOperationRNGRetrieve: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP RNG Retrieve operation",
+			},
+			fieldOperationRNGSeed: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP RNG Seed operation",
+			},
+			fieldOperationSign: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP Sign operation",
+			},
+			fieldOperationSignatureVerify: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Grant permission to use the KMIP Signature Verify operation",
 			},
 		},
 	}
@@ -187,8 +299,8 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	if e != nil {
 		return e
 	}
-	scope := d.Get("scope").(string)
-	role := d.Get("role").(string)
+	scope := d.Get(consts.FieldScope).(string)
+	role := d.Get(consts.FieldRole).(string)
 
 	data := kmipSecretRoleRequestData(d)
 	rolePath := getKMIPRolePath(d)
@@ -200,11 +312,11 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(rolePath)
 
-	if err := d.Set("scope", scope); err != nil {
+	if err := d.Set(consts.FieldScope, scope); err != nil {
 		return err
 	}
 
-	if err := d.Set("role", role); err != nil {
+	if err := d.Set(consts.FieldRole, role); err != nil {
 		return err
 	}
 
@@ -255,7 +367,7 @@ func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 	rolePath := d.Id()
 
-	if d.HasChange("path") {
+	if d.HasChange(consts.FieldPath) {
 		newRolePath := getKMIPRolePath(d)
 
 		log.Printf("[DEBUG] Confirming KMIP role exists at %s", newRolePath)
@@ -329,7 +441,7 @@ func kmipSecretRoleRequestData(d *schema.ResourceData) map[string]interface{} {
 }
 
 func getKMIPRolePath(d *schema.ResourceData) string {
-	role := d.Get("role").(string)
+	role := d.Get(consts.FieldRole).(string)
 
 	return getKMIPScopePath(d) + "/role/" + role
 }
