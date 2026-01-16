@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -18,7 +19,7 @@ const transformTransformationEndpoint = "/transform/transformation/{name}"
 
 func transformTransformationResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		"path": {
+		consts.FieldPath: {
 			Type:        schema.TypeString,
 			Required:    true,
 			ForceNew:    true,
@@ -27,51 +28,69 @@ func transformTransformationResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-		"allowed_roles": {
+		consts.FieldAllowedRoles: {
 			Type:        schema.TypeList,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
 			Description: `The set of roles allowed to perform this transformation.`,
 		},
-		"masking_character": {
+		consts.FieldMaskingCharacter: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `The character used to replace data when in masking mode`,
 		},
-		"name": {
+		consts.FieldName: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: `The name of the transformation.`,
 			ForceNew:    true,
 		},
-		"template": {
+		consts.FieldTemplate: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `The name of the template to use.`,
 		},
-		"templates": {
+		consts.FieldTemplates: {
 			Type:        schema.TypeList,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
 			Computed:    true,
 			Description: `Templates configured for transformation.`,
 		},
-		"tweak_source": {
+		consts.FieldTweakSource: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `The source of where the tweak value comes from. Only valid when in FPE mode.`,
 		},
-		"type": {
+		consts.FieldType: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `The type of transformation to perform.`,
 		},
-		"deletion_allowed": {
+		consts.FieldDeletionAllowed: {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Default:  false,
 			Description: `If true, this transform can be deleted. ` +
 				`Otherwise deletion is blocked while this value remains false.`,
+		},
+		consts.FieldMappingMode: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			ForceNew:    true,
+			Description: `Specifies the mapping mode for stored values. Only used when type is "tokenization". Cannot be changed after creation.`,
+		},
+		consts.FieldStores: {
+			Type:        schema.TypeList,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Optional:    true,
+			ForceNew:    true,
+			Description: `List of stores to use for tokenization state. Only used when type is "tokenization". Cannot be changed after creation.`,
+		},
+		consts.FieldConvergent: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: `If true, multiple transformations of the same plaintext will produce the same ciphertext. Only used when type is "fpe".`,
 		},
 	}
 	return &schema.Resource{
@@ -93,30 +112,40 @@ func createTransformTransformationResource(d *schema.ResourceData, meta interfac
 		return e
 	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 	vaultPath := util.ParsePath(path, transformTransformationEndpoint, d)
 	log.Printf("[DEBUG] Creating %q", vaultPath)
 
 	data := map[string]interface{}{}
-	if v, ok := d.GetOkExists("allowed_roles"); ok {
-		data["allowed_roles"] = v
+	if v, ok := d.GetOkExists(consts.FieldAllowedRoles); ok {
+		data[consts.FieldAllowedRoles] = v
 	}
-	if v, ok := d.GetOkExists("masking_character"); ok {
-		data["masking_character"] = v
+	if v, ok := d.GetOkExists(consts.FieldMaskingCharacter); ok {
+		data[consts.FieldMaskingCharacter] = v
 	}
-	data["name"] = d.Get("name")
-	if v, ok := d.GetOkExists("template"); ok {
-		data["template"] = v
+	data[consts.FieldName] = d.Get(consts.FieldName)
+	if v, ok := d.GetOkExists(consts.FieldTemplate); ok {
+		data[consts.FieldTemplate] = v
 	}
-	if v, ok := d.GetOkExists("tweak_source"); ok {
-		data["tweak_source"] = v
+	if v, ok := d.GetOkExists(consts.FieldTweakSource); ok {
+		data[consts.FieldTweakSource] = v
 	}
-	if v, ok := d.GetOkExists("type"); ok {
-		data["type"] = v
+	if v, ok := d.GetOkExists(consts.FieldType); ok {
+		data[consts.FieldType] = v
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		data["deletion_allowed"] = d.Get("deletion_allowed")
+		data[consts.FieldDeletionAllowed] = d.Get(consts.FieldDeletionAllowed)
+	}
+
+	if v, ok := d.GetOkExists(consts.FieldMappingMode); ok {
+		data[consts.FieldMappingMode] = v
+	}
+	if v, ok := d.GetOkExists(consts.FieldStores); ok {
+		data[consts.FieldStores] = v
+	}
+	if v, ok := d.GetOkExists(consts.FieldConvergent); ok {
+		data[consts.FieldConvergent] = v
 	}
 
 	log.Printf("[DEBUG] Writing %q", vaultPath)
@@ -156,39 +185,54 @@ func readTransformTransformationResource(d *schema.ResourceData, meta interface{
 			return fmt.Errorf("error setting state %q, %q: %s", paramName, paramVal, err)
 		}
 	}
-	if val, ok := resp.Data["allowed_roles"]; ok {
-		if err := d.Set("allowed_roles", val); err != nil {
-			return fmt.Errorf("error setting state key 'allowed_roles': %s", err)
+	if val, ok := resp.Data[consts.FieldAllowedRoles]; ok {
+		if err := d.Set(consts.FieldAllowedRoles, val); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldAllowedRoles, err)
 		}
 	}
-	if val, ok := resp.Data["masking_character"]; ok {
-		if err := d.Set("masking_character", val); err != nil {
-			return fmt.Errorf("error setting state key 'masking_character': %s", err)
+	if val, ok := resp.Data[consts.FieldMaskingCharacter]; ok {
+		if err := d.Set(consts.FieldMaskingCharacter, val); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldMaskingCharacter, err)
 		}
 	}
-	if val, ok := resp.Data["template"]; ok {
-		if err := d.Set("template", val); err != nil {
-			return fmt.Errorf("error setting state key 'template': %s", err)
+	if val, ok := resp.Data[consts.FieldTemplate]; ok {
+		if err := d.Set(consts.FieldTemplate, val); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldTemplate, err)
 		}
 	}
-	if val, ok := resp.Data["templates"]; ok {
-		if err := d.Set("templates", val); err != nil {
-			return fmt.Errorf("error setting state key 'templates': %s", err)
+	if val, ok := resp.Data[consts.FieldTemplates]; ok {
+		if err := d.Set(consts.FieldTemplates, val); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldTemplates, err)
 		}
 	}
-	if val, ok := resp.Data["tweak_source"]; ok {
-		if err := d.Set("tweak_source", val); err != nil {
-			return fmt.Errorf("error setting state key 'tweak_source': %s", err)
+	if val, ok := resp.Data[consts.FieldTweakSource]; ok {
+		if err := d.Set(consts.FieldTweakSource, val); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldTweakSource, err)
 		}
 	}
-	if val, ok := resp.Data["type"]; ok {
-		if err := d.Set("type", val); err != nil {
-			return fmt.Errorf("error setting state key 'type': %s", err)
+	if val, ok := resp.Data[consts.FieldType]; ok {
+		if err := d.Set(consts.FieldType, val); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldType, err)
 		}
 	}
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		if err := d.Set("deletion_allowed", resp.Data["deletion_allowed"]); err != nil {
-			return fmt.Errorf("error setting state key 'deletion_allowed': %s", err)
+		if err := d.Set(consts.FieldDeletionAllowed, resp.Data[consts.FieldDeletionAllowed]); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldDeletionAllowed, err)
+		}
+	}
+	if val, ok := resp.Data[consts.FieldMappingMode]; ok {
+		if err := d.Set(consts.FieldMappingMode, val); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldMappingMode, err)
+		}
+	}
+	if val, ok := resp.Data[consts.FieldStores]; ok {
+		if err := d.Set(consts.FieldStores, val); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldStores, err)
+		}
+	}
+	if val, ok := resp.Data[consts.FieldConvergent]; ok {
+		if err := d.Set(consts.FieldConvergent, val); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldConvergent, err)
 		}
 	}
 	return nil
@@ -204,24 +248,34 @@ func updateTransformTransformationResource(d *schema.ResourceData, meta interfac
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
 	data := map[string]interface{}{}
-	if raw, ok := d.GetOk("allowed_roles"); ok {
-		data["allowed_roles"] = raw
+	if raw, ok := d.GetOk(consts.FieldAllowedRoles); ok {
+		data[consts.FieldAllowedRoles] = raw
 	}
-	if raw, ok := d.GetOk("masking_character"); ok {
-		data["masking_character"] = raw
+	if raw, ok := d.GetOk(consts.FieldMaskingCharacter); ok {
+		data[consts.FieldMaskingCharacter] = raw
 	}
-	if raw, ok := d.GetOk("template"); ok {
-		data["template"] = raw
+	if raw, ok := d.GetOk(consts.FieldTemplate); ok {
+		data[consts.FieldTemplate] = raw
 	}
-	if raw, ok := d.GetOk("tweak_source"); ok {
-		data["tweak_source"] = raw
+	if raw, ok := d.GetOk(consts.FieldTweakSource); ok {
+		data[consts.FieldTweakSource] = raw
 	}
-	if raw, ok := d.GetOk("type"); ok {
-		data["type"] = raw
+	if raw, ok := d.GetOk(consts.FieldType); ok {
+		data[consts.FieldType] = raw
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		data["deletion_allowed"] = d.Get("deletion_allowed")
+		data[consts.FieldDeletionAllowed] = d.Get(consts.FieldDeletionAllowed)
+	}
+
+	if raw, ok := d.GetOk(consts.FieldMappingMode); ok {
+		data[consts.FieldMappingMode] = raw
+	}
+	if raw, ok := d.GetOk(consts.FieldStores); ok {
+		data[consts.FieldStores] = raw
+	}
+	if raw, ok := d.GetOk(consts.FieldConvergent); ok {
+		data[consts.FieldConvergent] = raw
 	}
 
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
