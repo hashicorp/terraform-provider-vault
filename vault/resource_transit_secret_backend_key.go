@@ -32,64 +32,64 @@ func transitSecretBackendKeyResource() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The Transit secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
-			"name": {
+			consts.FieldName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the encryption key to create.",
 				ForceNew:    true,
 			},
-			"deletion_allowed": {
+			consts.FieldDeletionAllowed: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Specifies if the key is allowed to be deleted.",
 				Default:     false,
 			},
-			"convergent_encryption": {
+			consts.FieldConvergentEncryption: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Whether or not to support convergent encryption, where the same plaintext creates the same ciphertext. This requires derived to be set to true.",
 				ForceNew:    true,
 				Default:     false,
 			},
-			"derived": {
+			consts.FieldDerived: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Specifies if key derivation is to be used. If enabled, all encrypt/decrypt requests to this key must provide a context which is used for key derivation.",
 				ForceNew:    true,
 				Default:     false,
 			},
-			"exportable": {
+			consts.FieldExportable: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Enables keys to be exportable. This allows for all the valid keys in the key ring to be exported. Once set, this cannot be disabled.",
 				Default:     false,
 			},
-			"allow_plaintext_backup": {
+			consts.FieldAllowPlaintextBackup: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "If set, enables taking backup of named key in the plaintext format. Once set, this cannot be disabled.",
 				Default:     false,
 			},
-			"auto_rotate_period": {
+			consts.FieldAutoRotatePeriod: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Computed:    true,
 				Description: "Amount of seconds the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
 			},
-			"type": {
+			consts.FieldType: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `hmac`, `rsa-2048`, `rsa-3072`, `rsa-4096`, `managed_key`, `aes128-cmac`, `aes192-cmac`, `aes256-cmac`, `ml-dsa`, `hybrid`, and `slh-dsa`.",
 				ForceNew:    true,
 				Default:     "aes256-gcm96",
 			},
-			"keys": {
+			consts.FieldKeys: {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Description: "List of key versions in the keyring.",
@@ -98,23 +98,23 @@ func transitSecretBackendKeyResource() *schema.Resource {
 					Elem: schema.TypeString,
 				},
 			},
-			"key_size": {
+			consts.FieldKeySize: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "The key size in bytes for algorithms that allow variable key sizes. Currently only applicable to HMAC; this value must be between 32 and 512.",
 				Default:     0,
 			},
-			"latest_version": {
+			consts.FieldLatestVersion: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Latest key version in use in the keyring",
 			},
-			"min_available_version": {
+			consts.FieldMinAvailableVersion: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Minimum key version available for use.",
 			},
-			"min_decryption_version": {
+			consts.FieldMinDecryptionVersion: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Minimum key version to use for decryption.",
@@ -127,7 +127,7 @@ func transitSecretBackendKeyResource() *schema.Resource {
 					return
 				},
 			},
-			"min_encryption_version": {
+			consts.FieldMinEncryptionVersion: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Minimum key version to use for encryption",
@@ -148,22 +148,40 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Optional:    true,
 				Description: "The post-quantum algorithm to use for hybrid signatures. Currently, ML-DSA is the only supported key type.",
 			},
-			"supports_encryption": {
+			consts.FieldContext: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Base64 encoded context for key derivation. Required if derived is set to true.",
+			},
+			consts.FieldManagedKeyName: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The name of the managed key to use when the key type is managed_key.",
+			},
+			consts.FieldManagedKeyID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The UUID of the managed key to use when the key type is managed_key.",
+			},
+			consts.FieldSupportsEncryption: {
 				Type:        schema.TypeBool,
 				Computed:    true,
 				Description: "Whether or not the key supports encryption, based on key type.",
 			},
-			"supports_decryption": {
+			consts.FieldSupportsDecryption: {
 				Type:        schema.TypeBool,
 				Computed:    true,
 				Description: "Whether or not the key supports decryption, based on key type.",
 			},
-			"supports_derivation": {
+			consts.FieldSupportsDerivation: {
 				Type:        schema.TypeBool,
 				Computed:    true,
 				Description: "Whether or not the key supports derivation, based on key type.",
 			},
-			"supports_signing": {
+			consts.FieldSupportsSigning: {
 				Type:        schema.TypeBool,
 				Computed:    true,
 				Description: "Whether or not the key supports signing, based on key type.",
@@ -230,6 +248,18 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 		"derived":               d.Get("derived").(bool),
 		"type":                  d.Get("type").(string),
 		"auto_rotate_period":    autoRotatePeriod,
+	}
+
+	if context, ok := d.GetOk("context"); ok {
+		data["context"] = context
+	}
+
+	if managedKeyName, ok := d.GetOk("managed_key_name"); ok {
+		data["managed_key_name"] = managedKeyName
+	}
+
+	if managedKeyID, ok := d.GetOk("managed_key_id"); ok {
+		data["managed_key_id"] = managedKeyID
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
@@ -401,7 +431,7 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		"deletion_allowed", "derived", "exportable",
 		"supports_decryption", "supports_derivation",
 		"supports_encryption", "supports_signing", "type",
-		"auto_rotate_period",
+		"auto_rotate_period", "context", "managed_key_name", "managed_key_id",
 	}
 
 	for _, f := range fields {
