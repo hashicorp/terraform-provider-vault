@@ -735,6 +735,22 @@ var (
 			Resource:      UpdateSchemaResource(kmipSecretRoleResource()),
 			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
 		},
+		"vault_keymgmt_key": {
+			Resource:      UpdateSchemaResource(keymgmtKeyResource()),
+			PathInventory: []string{"/keymgmt/key/{name}"},
+		},
+		"vault_keymgmt_kms": {
+			Resource:      UpdateSchemaResource(keymgmtKmsResource()),
+			PathInventory: []string{"/keymgmt/kms/{name}"},
+		},
+		"vault_keymgmt_distribute_key": {
+			Resource:      UpdateSchemaResource(keymgmtDistributeKeyResource()),
+			PathInventory: []string{"/keymgmt/kms/{kms_name}/key/{key_name}"},
+		},
+		"vault_keymgmt_replicate_key": {
+			Resource:      UpdateSchemaResource(keymgmtReplicateKeyResource()),
+			PathInventory: []string{"/keymgmt/kms/{kms_name}/key/{key_name}/replicate"},
+		},
 		"vault_mongodbatlas_secret_backend": {
 			Resource:      UpdateSchemaResource(mongodbAtlasSecretBackendResource()),
 			PathInventory: []string{"/mongodbatlas/config"},

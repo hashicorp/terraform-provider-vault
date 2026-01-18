@@ -641,6 +641,7 @@ const (
 	MountTypePKI          = "pki"
 	MountTypeAWS          = "aws"
 	MountTypeKMIP         = "kmip"
+	MountTypeKeyMgmt      = "keymgmt"
 	MountTypeRabbitMQ     = "rabbitmq"
 	MountTypeMongoDBAtlas = "mongodbatlas"
 	MountTypeNomad        = "nomad"
