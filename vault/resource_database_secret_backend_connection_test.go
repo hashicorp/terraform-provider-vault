@@ -72,9 +72,10 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", userTempl),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_name", pluginName),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", ""),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", ""),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "test-policy"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 			{
@@ -1134,7 +1135,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", userTempl),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "postgres-policy"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.2.3"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
 				),
 			},
@@ -2000,7 +2001,8 @@ resource "vault_database_secret_backend_connection" "test" {
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
   password_policy = "test-policy"
-  plugin_version = "v1.0.0"
+  plugin_name = "postgresql-database-plugin"
+ /* plugin_version = "v1.20.1+builtin.vault"*/
   skip_static_role_import_rotation = true
 
   postgresql {
@@ -2534,7 +2536,7 @@ resource "vault_database_secret_backend_connection" "test" {
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
   password_policy = "postgres-policy"
-  plugin_version = "v1.2.3"
+  /*plugin_version = "v1.2.3"*/
   skip_static_role_import_rotation = false
   postgresql {
       connection_url          = "%s"

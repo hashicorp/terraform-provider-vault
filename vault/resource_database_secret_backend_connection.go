@@ -2118,7 +2118,7 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 	if v, ok := d.GetOk("plugin_version"); ok {
 		data["plugin_version"] = v.(string)
 	}
-	if v, ok := d.GetOk("password_policy"); ok {
+	if v, ok := d.GetOkExists("password_policy"); ok {
 		data["password_policy"] = v.(string)
 	}
 	data["skip_static_role_import_rotation"] = d.Get("skip_static_role_import_rotation").(bool)
