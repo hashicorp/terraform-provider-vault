@@ -2115,6 +2115,7 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 		data["password_policy"] = v.(string)
 	}
 	data["skip_static_role_import_rotation"] = d.Get("skip_static_role_import_rotation").(bool)
+
 	log.Printf("[DEBUG] database config payload : %+v", data)
 	if m, ok := d.GetOkExists(prefix + "data"); ok {
 		for k, v := range m.(map[string]interface{}) {
@@ -2267,9 +2268,12 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 		}
 	}
 
-	// if pv, ok := resp.Data["plugin_version"]; ok && pv != nil {
-	// 	result["plugin_version"] = fmt.Sprintf("%v", pv)
-	// }
+	if pv, ok := resp.Data["plugin_version"]; ok && pv != nil {
+		result["plugin_version"] = fmt.Sprintf("%v", pv)
+	}
+	if v, ok := resp.Data["skip_static_role_import_rotation"]; ok && v != nil {
+		result["skip_static_role_import_rotation"] = v.(bool)
+	}
 	result["root_rotation_statements"] = rootRotationStmts
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
