@@ -65,7 +65,30 @@ func keymgmtReplicateKeyCreate(d *schema.ResourceData, meta interface{}) error {
 	kmsName := d.Get("kms_name").(string)
 	keyName := d.Get("key_name").(string)
 
-	// First, validate that the key has replica_regions configured
+	// First, validate that the KMS provider is AWS
+	kmsPath := strings.Trim(path, "/") + "/kms/" + kmsName
+	log.Printf("[DEBUG] Validating KMS provider at %s", kmsPath)
+
+	kmsResp, err := client.Logical().Read(kmsPath)
+	if err != nil {
+		return fmt.Errorf("error reading KMS provider at %s: %w", kmsPath, err)
+	}
+
+	if kmsResp == nil {
+		return fmt.Errorf("KMS provider %s not found at %s", kmsName, kmsPath)
+	}
+
+	// Check if KMS provider is AWS
+	kmsProvider := ""
+	if v, ok := kmsResp.Data["provider"]; ok {
+		kmsProvider = v.(string)
+	}
+
+	if kmsProvider != "awskms" {
+		return fmt.Errorf("key replication is only supported for AWS KMS providers. Current provider: %s", kmsProvider)
+	}
+
+	// Validate that the key has replica_regions configured
 	keyPath := keymgmtReplicateKeyKeyPath(path, keyName)
 	log.Printf("[DEBUG] Validating key configuration at %s", keyPath)
 

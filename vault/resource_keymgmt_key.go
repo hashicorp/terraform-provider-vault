@@ -67,7 +67,7 @@ func keymgmtKeyResource() *schema.Resource {
 			"replica_regions": {
 				Type:        schema.TypeSet,
 				Optional:    true,
-				Description: "List of regions where the key should be replicated",
+				Description: "List of regions where the key should be replicated. AWS KMS only.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			// Computed fields
