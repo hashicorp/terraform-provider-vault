@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -28,20 +29,30 @@ func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	region := testutil.GetTestAWSRegion(t)
 
+	awsCredentialsCheckFuncs := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
+		resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
+		resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "security_token", ""),
+		resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "creds"),
+		resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", consts.FieldLeaseID),
+	}
+
+	isVaultVersion116 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion116)
+	if isVaultVersion116 {
+		awsCredentialsCheckFuncs = append(awsCredentialsCheckFuncs,
+			resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", consts.FieldSessionToken, ""))
+	}
+
+	awsCredentialsCheckFuncs = append(awsCredentialsCheckFuncs,
+		testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region))
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAccessCredentialsConfig_basic(mountPath, accessKey, secretKey, region),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
-					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "security_token", ""),
-					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "creds"),
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", consts.FieldLeaseID),
-					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
-				),
+				Check:  resource.ComposeTestCheckFunc(awsCredentialsCheckFuncs...),
 			},
 		},
 	})
@@ -116,14 +127,7 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 				Steps: []resource.TestStep{
 					{
 						Config: test.config,
-						Check: resource.ComposeTestCheckFunc(
-							resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
-							resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
-							resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
-							resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
-							resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", consts.FieldLeaseID),
-							testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
-						),
+						Check:  testAccDataSourceAWSAccessCredentialsCheckFunc(region, nil),
 					},
 				},
 			})
@@ -143,29 +147,40 @@ func TestAccDataSourceAWSAccessCredentials_sts_ttl(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAccessCredentialsConfig_sts_basic(mountPath, accessKey, secretKey, region),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
-					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", consts.FieldLeaseID),
-					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
-				),
+				Check:  testAccDataSourceAWSAccessCredentialsCheckFunc(region, nil),
 			},
 			{
 				Config: testAccDataSourceAWSAccessCredentialsConfig_sts_ttl(mountPath, accessKey, secretKey, region, ttl),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
-					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
-					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "ttl", ttl),
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", consts.FieldLeaseID),
-					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
-				),
+				Check:  testAccDataSourceAWSAccessCredentialsCheckFunc(region, &ttl),
 			},
 		},
 	})
+}
+
+func testAccDataSourceAWSAccessCredentialsCheckFunc(region string, ttl *string) resource.TestCheckFunc {
+	awsCredentialsCheckFuncs := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
+		resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
+		resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
+		resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
+		resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", consts.FieldLeaseID),
+	}
+
+	isVaultVersion116 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion116)
+	if isVaultVersion116 {
+		awsCredentialsCheckFuncs = append(awsCredentialsCheckFuncs,
+			resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", consts.FieldSessionToken))
+	}
+
+	if ttl != nil {
+		awsCredentialsCheckFuncs = append(awsCredentialsCheckFuncs,
+			resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "ttl", *ttl))
+	}
+
+	awsCredentialsCheckFuncs = append(awsCredentialsCheckFuncs,
+		testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region))
+
+	return resource.ComposeTestCheckFunc(awsCredentialsCheckFuncs...)
 }
 
 func testAccDataSourceAWSAccessCredentialsConfig_basic(mountPath, accessKey, secretKey, region string) string {
@@ -259,7 +274,15 @@ func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region string) resour
 		accessKey := iState.Attributes["access_key"]
 		secretKey := iState.Attributes["secret_key"]
 		credType := iState.Attributes["type"]
-		securityToken := iState.Attributes["security_token"]
+
+		var securityToken string
+
+		isVaultVersion116 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion116)
+		if isVaultVersion116 {
+			securityToken = iState.Attributes[consts.FieldSessionToken]
+		} else {
+			securityToken = iState.Attributes["security_token"]
+		}
 
 		awsConfig := &aws.Config{
 			Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
