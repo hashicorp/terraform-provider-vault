@@ -10,6 +10,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -42,7 +43,7 @@ func jwtAuthBackendResource() *schema.Resource {
 				ValidateFunc: provider.ValidateNoTrailingSlash,
 			},
 
-			"type": {
+			consts.FieldType: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				ForceNew:     true,
@@ -51,107 +52,123 @@ func jwtAuthBackendResource() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"jwt", "oidc"}, false),
 			},
 
-			"description": {
+			consts.FieldDescription: {
 				Type:        schema.TypeString,
 				Required:    false,
 				Optional:    true,
 				Description: "The description of the auth backend",
 			},
 
-			"oidc_discovery_url": {
+			consts.FieldOIDCDiscoveryURL: {
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"jwks_url", "jwt_validation_pubkeys"},
+				ConflictsWith: []string{consts.FieldJWKSURL, consts.FieldJWTValidationPubkeys},
 				Description:   "The OIDC Discovery URL, without any .well-known component (base path). Cannot be used with 'jwks_url' or 'jwt_validation_pubkeys'.",
 			},
 
-			"oidc_discovery_ca_pem": {
+			consts.FieldOIDCDiscoveryCAPEM: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate connections to the OIDC Discovery URL. If not set, system certificates are used",
 			},
 
-			"oidc_client_id": {
+			consts.FieldOIDCClientID: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Client ID used for OIDC",
 			},
-
-			"oidc_client_secret": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Sensitive:   true,
-				Description: "Client Secret used for OIDC",
+			consts.FieldOIDCClientSecret: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				Description:   "Client Secret used for OIDC",
+				ConflictsWith: []string{consts.FieldOIDCClientSecretWO},
 			},
 
-			"oidc_response_mode": {
+			consts.FieldOIDCClientSecretWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				Description:   "Write-only Client Secret used for OIDC. This field is recommended over oidc_client_secret for enhanced security.",
+				ConflictsWith: []string{"oidc_client_secret"},
+			},
+
+			consts.FieldOIDCClientSecretWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only oidc_client_secret field. Increment this value to force update of the secret.",
+				RequiredWith: []string{consts.FieldOIDCClientSecretWO},
+			},
+
+			consts.FieldOIDCResponseMode: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The response mode to be used in the OAuth2 request. Allowed values are 'query' and 'form_post'. Defaults to 'query'. If using Vault namespaces, and oidc_response_mode is 'form_post', then 'namespace_in_state' should be set to false.",
 			},
 
-			"oidc_response_types": {
+			consts.FieldOIDCResponseTypes: {
 				Type:        schema.TypeList,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Optional:    true,
 				Description: "The response types to request. Allowed values are 'code' and 'id_token'. Defaults to 'code'. Note: 'id_token' may only be used if 'oidc_response_mode' is set to 'form_post'.",
 			},
 
-			"jwks_url": {
+			consts.FieldJWKSURL: {
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"oidc_discovery_url", "jwt_validation_pubkeys"},
+				ConflictsWith: []string{consts.FieldOIDCDiscoveryURL, consts.FieldJWTValidationPubkeys},
 				Description:   "JWKS URL to use to authenticate signatures. Cannot be used with 'oidc_discovery_url' or 'jwt_validation_pubkeys'.",
 			},
 
-			"jwks_ca_pem": {
+			consts.FieldJWKSCAPEM: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.",
 			},
 
-			"jwks_pairs": {
+			consts.FieldJWKSPairs: {
 				Type:          schema.TypeList,
 				Elem:          &schema.Schema{Type: schema.TypeMap},
 				Optional:      true,
-				ConflictsWith: []string{"jwks_url", "jwks_ca_pem"},
+				ConflictsWith: []string{consts.FieldJWKSURL, consts.FieldJWKSCAPEM},
 				Description:   "List of JWKS URL and optional CA certificate pairs. Cannot be used with 'jwks_url' or 'jwks_ca_pem'. Requires Vault 1.16+.",
 			},
 
-			"jwt_validation_pubkeys": {
+			consts.FieldJWTValidationPubkeys: {
 				Type:          schema.TypeList,
 				Elem:          &schema.Schema{Type: schema.TypeString},
 				Optional:      true,
-				ConflictsWith: []string{"jwks_url", "oidc_discovery_url"},
+				ConflictsWith: []string{consts.FieldJWKSURL, consts.FieldOIDCDiscoveryURL},
 				Description:   "A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with 'jwks_url' or 'oidc_discovery_url'. ",
 			},
 
-			"bound_issuer": {
+			consts.FieldBoundIssuer: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The value against which to match the iss claim in a JWT",
 			},
 
-			"jwt_supported_algs": {
+			consts.FieldJWTSupportedAlgs: {
 				Type:        schema.TypeList,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Optional:    true,
 				Description: "A list of supported signing algorithms. Defaults to [RS256]",
 			},
 
-			"default_role": {
+			consts.FieldDefaultRole: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The default role to use if none is provided during login",
 			},
 
-			"accessor": {
+			consts.FieldAccessor: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The accessor of the JWT auth backend",
 			},
 
-			"local": {
+			consts.FieldLocal: {
 				Type:        schema.TypeBool,
 				ForceNew:    true,
 				Optional:    true,
@@ -159,7 +176,7 @@ func jwtAuthBackendResource() *schema.Resource {
 				Description: "Specifies if the auth method is local only",
 			},
 
-			"provider_config": {
+			consts.FieldProviderConfig: {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "Provider specific handling configuration",
@@ -168,7 +185,7 @@ func jwtAuthBackendResource() *schema.Resource {
 				},
 			},
 
-			"namespace_in_state": {
+			consts.FieldNamespaceInState: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
@@ -182,11 +199,11 @@ func jwtAuthBackendResource() *schema.Resource {
 
 func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	attributes := []string{
-		"oidc_discovery_url",
-		"jwks_url",
-		"jwt_validation_pubkeys",
-		"provider_config",
-		"jwks_pairs",
+		consts.FieldOIDCDiscoveryURL,
+		consts.FieldJWKSURL,
+		consts.FieldJWTValidationPubkeys,
+		consts.FieldProviderConfig,
+		consts.FieldJWKSPairs,
 	}
 
 	// to check whether mount migration is required
@@ -207,21 +224,21 @@ func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interfac
 
 // TODO: build this from the Resource Schema?
 var matchingJwtMountConfigOptions = []string{
-	"oidc_discovery_url",
-	"oidc_discovery_ca_pem",
-	"oidc_client_id",
-	"oidc_client_secret",
-	"oidc_response_mode",
-	"oidc_response_types",
-	"jwks_url",
-	"jwks_ca_pem",
-	"jwks_pairs",
-	"jwt_validation_pubkeys",
-	"bound_issuer",
-	"jwt_supported_algs",
-	"default_role",
-	"provider_config",
-	"namespace_in_state",
+	consts.FieldOIDCDiscoveryURL,
+	consts.FieldOIDCDiscoveryCAPEM,
+	consts.FieldOIDCClientID,
+	consts.FieldOIDCClientSecret,
+	consts.FieldOIDCResponseMode,
+	consts.FieldOIDCResponseTypes,
+	consts.FieldJWKSURL,
+	consts.FieldJWKSCAPEM,
+	consts.FieldJWKSPairs,
+	consts.FieldJWTValidationPubkeys,
+	consts.FieldBoundIssuer,
+	consts.FieldJWTSupportedAlgs,
+	consts.FieldDefaultRole,
+	consts.FieldProviderConfig,
+	consts.FieldNamespaceInState,
 }
 
 func jwtAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -230,12 +247,12 @@ func jwtAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(e)
 	}
 
-	authType := d.Get("type").(string)
+	authType := d.Get(consts.FieldType).(string)
 	path := getJwtPath(d)
 	options := &api.EnableAuthOptions{
 		Type:        authType,
-		Description: d.Get("description").(string),
-		Local:       d.Get("local").(bool),
+		Description: d.Get(consts.FieldDescription).(string),
+		Local:       d.Get(consts.FieldLocal).(bool),
 	}
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
@@ -286,7 +303,7 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		// use the ID value
 		path = d.Id()
 	}
-	d.Set("path", path)
+	d.Set(consts.FieldPath, path)
 
 	mount, err := mountutil.GetAuthMount(ctx, client, path)
 	if err != nil {
@@ -309,10 +326,10 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return nil
 	}
 
-	d.Set("type", mount.Type)
-	d.Set("local", mount.Local)
+	d.Set(consts.FieldType, mount.Type)
+	d.Set(consts.FieldLocal, mount.Local)
 
-	d.Set("accessor", mount.Accessor)
+	d.Set(consts.FieldAccessor, mount.Accessor)
 	for _, configOption := range matchingJwtMountConfigOptions {
 		// The oidc_client_secret is sensitive so it will not be in the response
 		// Our options are to always assume it must be updated or always assume it
@@ -323,11 +340,11 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 		//  is updated without Terraform. Since we cannot know the current state
 		//  of the oidc_secret, Terraform will show no changes necessary even if
 		//  the actual value in Vault does not match the value in state.
-		if configOption == "oidc_client_secret" {
+		if configOption == consts.FieldOIDCClientSecret {
 			continue
 		}
 
-		if configOption == "jwks_pairs" && !useAPIVer116 {
+		if configOption == consts.FieldJWKSPairs && !useAPIVer116 {
 			continue
 		}
 
@@ -401,21 +418,38 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	for _, configOption := range matchingJwtMountConfigOptions {
 		if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
 			switch configOption {
-			case "jwks_pairs":
+			case consts.FieldJWKSPairs:
 				if useAPIVer116 {
 					configuration[configOption] = d.Get(configOption)
 				} else {
 					log.Printf("[WARN] Skipping jwt auth %q update for %q, requires Vault 1.16+", configOption, path)
 				}
-			case "provider_config":
+			case consts.FieldProviderConfig:
 				newConfig, err := convertProviderConfigValues(d.Get(configOption).(map[string]interface{}))
 				if err != nil {
 					return diag.FromErr(err)
 				}
 				configuration[configOption] = newConfig
+			case consts.FieldOIDCClientSecret:
+				// Handle legacy oidc_client_secret field
+				if v, ok := d.GetOk(consts.FieldOIDCClientSecret); ok && v != nil {
+					configuration[consts.FieldOIDCClientSecret] = v.(string)
+				}
 			default:
 				configuration[configOption] = d.Get(configOption)
 			}
+		}
+	}
+
+	// Handle write-only oidc_client_secret field.
+	// Vault's OIDC config requires oidc_client_secret to be sent
+	// on every write operation when type="oidc". We send the secret whenever the
+	// write-only version field is set, regardless of whether it changed.
+	if _, ok := d.GetOk(consts.FieldOIDCClientSecretWOVersion); ok {
+		p := cty.GetAttrPath(consts.FieldOIDCClientSecretWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			configuration[consts.FieldOIDCClientSecret] = woVal.AsString()
 		}
 	}
 
@@ -424,10 +458,10 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.Errorf("error updating configuration to Vault for path %s: %s", path, err)
 	}
 
-	if d.HasChange("tune") {
+	if d.HasChange(consts.FieldTune) {
 		log.Printf("[DEBUG] JWT/OIDC Auth '%q' tune configuration changed", d.Id())
-		if raw, ok := d.GetOk("tune"); ok {
-			backendType := d.Get("type")
+		if raw, ok := d.GetOk(consts.FieldTune); ok {
+			backendType := d.Get(consts.FieldType)
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
 			err := authMountTune(ctx, client, "auth/"+path, raw)
