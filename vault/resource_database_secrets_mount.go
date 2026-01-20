@@ -219,6 +219,17 @@ func getCommonDatabaseSchema() schemaMap {
 			// TODO: revert to true
 			Sensitive: false,
 		},
+		"password_policy": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Optional name of the password policy to use for generated passwords.",
+		},
+		"skip_static_role_import_rotation": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "Skip rotation of static role credentials on import.",
+		},
 	}
 
 	// add common automated root rotation parameters
