@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 
+* `vault_ldap_secret_backend`: Add write-only field support for `bindpass` via `bindpass_wo` and `bindpass_wo_version` attributes ([#2719](https://github.com/hashicorp/terraform-provider-vault/pull/2719))
 * `vault_aws_auth_backend_client`: Add write-only field support for `secret_key` (`secret_key_wo` and `secret_key_wo_version`) to prevent sensitive AWS credentials from being stored in Terraform state. ([#2717](https://github.com/hashicorp/terraform-provider-vault/pull/2717))
 * `vault_jwt_auth_backend`: Add support for write-only `oidc_client_secret_wo` and `oidc_client_secret_wo_version` fields to prevent storing sensitive OIDC client secrets in Terraform state. ([#2714](https://github.com/hashicorp/terraform-provider-vault/pull/2714))
 * `vault_kubernetes_auth_backend_config`: Add support for write-only `token_reviewer_jwt_wo` field with `token_reviewer_jwt_wo_version` to prevent sensitive JWT token from being stored in Terraform state ([#2715](https://github.com/hashicorp/terraform-provider-vault/pull/2715))

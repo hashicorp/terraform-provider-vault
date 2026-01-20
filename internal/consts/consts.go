@@ -619,6 +619,8 @@ const (
 	FieldOIDCClientSecretWOVersion  = "oidc_client_secret_wo_version"
 	FieldServiceAccountJWTWO        = "service_account_jwt_wo"
 	FieldServiceAccountJWTWOVersion = "service_account_jwt_wo_version"
+	FieldBindPassWO                 = "bindpass_wo"
+	FieldBindPassWOVersion          = "bindpass_wo_version"
 
 	/*
 		common environment variables
