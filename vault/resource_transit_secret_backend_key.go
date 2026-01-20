@@ -188,7 +188,7 @@ func transitSecretBackendKeyResource() *schema.Resource {
 			},
 		},
 		CustomizeDiff: customdiff.All(
-			customdiff.ValidateChange("exportable", func(_ context.Context, old, new, meta interface{}) error {
+			customdiff.ValidateChange(consts.FieldExportable, func(_ context.Context, old, new, meta interface{}) error {
 				// 'exportable' Can only be enabled once, and once it is enabled, it cannot be disabled
 				//   without creating a new key
 
@@ -202,7 +202,7 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				}
 				return nil
 			}),
-			customdiff.ValidateChange("allow_plaintext_backup", func(_ context.Context, old, new, meta interface{}) error {
+			customdiff.ValidateChange(consts.FieldAllowPlaintextBackup, func(_ context.Context, old, new, meta interface{}) error {
 				// Same conditions as above. This cannot be disabled once enabled.
 				if new.(bool) && !old.(bool) {
 					return nil
@@ -212,10 +212,10 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				}
 				return nil
 			}),
-			customdiff.ForceNewIfChange("exportable", func(_ context.Context, old, new, meta interface{}) bool {
+			customdiff.ForceNewIfChange(consts.FieldExportable, func(_ context.Context, old, new, meta interface{}) bool {
 				return !new.(bool) && old.(bool)
 			}),
-			customdiff.ForceNewIfChange("allow_plaintext_backup", func(_ context.Context, old, new, meta interface{}) bool {
+			customdiff.ForceNewIfChange(consts.FieldAllowPlaintextBackup, func(_ context.Context, old, new, meta interface{}) bool {
 				return !new.(bool) && old.(bool)
 			}),
 		),
@@ -228,38 +228,38 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 		return e
 	}
 
-	backend := d.Get("backend").(string)
-	name := d.Get("name").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	name := d.Get(consts.FieldName).(string)
 
 	path := transitSecretBackendKeyPath(backend, name)
 
 	autoRotatePeriod := getTransitAutoRotatePeriod(d)
 	configData := map[string]interface{}{
-		"min_decryption_version": d.Get("min_decryption_version").(int),
-		"min_encryption_versoin": d.Get("min_encryption_version").(int),
-		"deletion_allowed":       d.Get("deletion_allowed").(bool),
-		"exportable":             d.Get("exportable").(bool),
-		"allow_plaintext_backup": d.Get("allow_plaintext_backup").(bool),
+		"min_decryption_version": d.Get(consts.FieldMinDecryptionVersion).(int),
+		"min_encryption_versoin": d.Get(consts.FieldMinEncryptionVersion).(int),
+		"deletion_allowed":       d.Get(consts.FieldDeletionAllowed).(bool),
+		"exportable":             d.Get(consts.FieldExportable).(bool),
+		"allow_plaintext_backup": d.Get(consts.FieldAllowPlaintextBackup).(bool),
 		"auto_rotate_period":     autoRotatePeriod,
 	}
 
 	data := map[string]interface{}{
-		"convergent_encryption": d.Get("convergent_encryption").(bool),
-		"derived":               d.Get("derived").(bool),
-		"type":                  d.Get("type").(string),
+		"convergent_encryption": d.Get(consts.FieldConvergentEncryption).(bool),
+		"derived":               d.Get(consts.FieldDerived).(bool),
+		"type":                  d.Get(consts.FieldType).(string),
 		"auto_rotate_period":    autoRotatePeriod,
 	}
 
-	if context, ok := d.GetOk("context"); ok {
-		data["context"] = context
+	if context, ok := d.GetOk(consts.FieldContext); ok {
+		data[consts.FieldContext] = context
 	}
 
-	if managedKeyName, ok := d.GetOk("managed_key_name"); ok {
-		data["managed_key_name"] = managedKeyName
+	if managedKeyName, ok := d.GetOk(consts.FieldManagedKeyName); ok {
+		data[consts.FieldManagedKeyName] = managedKeyName
 	}
 
-	if managedKeyID, ok := d.GetOk("managed_key_id"); ok {
-		data["managed_key_id"] = managedKeyID
+	if managedKeyID, ok := d.GetOk(consts.FieldManagedKeyID); ok {
+		data[consts.FieldManagedKeyID] = managedKeyID
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
@@ -277,13 +277,13 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		data["key_size"] = d.Get("key_size").(int)
+		data[consts.FieldKeySize] = d.Get(consts.FieldKeySize).(int)
 	}
 
 	log.Printf("[DEBUG] Creating encryption key %s on transit secret backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating encryption key %s for transit secret backend %q: %s with key size %d", name, backend, err, d.Get("key_size").(int))
+		return fmt.Errorf("error creating encryption key %s for transit secret backend %q: %s with key size %d", name, backend, err, d.Get(consts.FieldKeySize).(int))
 	}
 	log.Printf("[DEBUG] Setting configuration for encryption key %s on transit secret backend %q", name, backend)
 	_, conferr := client.Logical().Write(path+"/config", configData)
@@ -298,7 +298,7 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 
 func getTransitAutoRotatePeriod(d *schema.ResourceData) int {
 	var autoRotatePeriod int
-	v, ok := d.GetOkExists("auto_rotate_period")
+	v, ok := d.GetOkExists(consts.FieldAutoRotatePeriod)
 	if ok {
 		autoRotatePeriod = v.(int)
 	}
@@ -342,36 +342,36 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 	}
 
 	// The vault API does not use "convergent_encryption" when the key type is not one of rsa-2048, rsa-3072, rsa-4096, ed25519, ecdsa-p256, ecdsa-p384 or ecdsa-p521
-	iConvergentEncryption := secret.Data["convergent_encryption"]
+	iConvergentEncryption := secret.Data[consts.FieldConvergentEncryption]
 	convergentEncryption := false
 	if ce, ok := iConvergentEncryption.(bool); ok {
 		convergentEncryption = ce
 	}
 
-	latestVersion, err := secret.Data["latest_version"].(json.Number).Int64()
+	latestVersion, err := secret.Data[consts.FieldLatestVersion].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("expected latest_version %q to be a number, and it isn't", secret.Data["latest_version"])
+		return fmt.Errorf("expected latest_version %q to be a number, and it isn't", secret.Data[consts.FieldLatestVersion])
 	}
 
-	minAvailableVersion, err := secret.Data["min_available_version"].(json.Number).Int64()
+	minAvailableVersion, err := secret.Data[consts.FieldMinAvailableVersion].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("expected min_available_version %q to be a number, and it isn't", secret.Data["min_available_version"])
+		return fmt.Errorf("expected min_available_version %q to be a number, and it isn't", secret.Data[consts.FieldMinAvailableVersion])
 	}
 
-	minDecryptionVersion, err := secret.Data["min_decryption_version"].(json.Number).Int64()
+	minDecryptionVersion, err := secret.Data[consts.FieldMinDecryptionVersion].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("expected min_decryption_version %q to be a number, and it isn't", secret.Data["min_decryption_version"])
+		return fmt.Errorf("expected min_decryption_version %q to be a number, and it isn't", secret.Data[consts.FieldMinDecryptionVersion])
 	}
 
-	minEncryptionVersion, err := secret.Data["min_encryption_version"].(json.Number).Int64()
+	minEncryptionVersion, err := secret.Data[consts.FieldMinEncryptionVersion].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("expected min_encryption_version %q to be a number, and it isn't", secret.Data["min_encryption_version"])
+		return fmt.Errorf("expected min_encryption_version %q to be a number, and it isn't", secret.Data[consts.FieldMinEncryptionVersion])
 	}
 
-	ikeys := secret.Data["keys"]
+	ikeys := secret.Data[consts.FieldKeys]
 	keys := []interface{}{}
 	if ikeys != nil {
-		ikeys := secret.Data["keys"].(map[string]interface{})
+		ikeys := secret.Data[consts.FieldKeys].(map[string]interface{})
 		for _, v := range ikeys {
 			// Data structure of "keys" differs depending on encryption key type. Sometimes it's a single integer hash,
 			// and other times it's a full map of values describing the key version's creation date, name, and public key.
@@ -386,52 +386,52 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 
 	}
 
-	if err := d.Set("keys", keys); err != nil {
+	if err := d.Set(consts.FieldKeys, keys); err != nil {
 		return err
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		// On read, key_size will be nil if the encryption key type is not HMAC. Choosing not to set it in those cases.
-		keySize := secret.Data["key_size"]
-		if keySize != nil || secret.Data["type"] == "hmac" {
-			keySize, err := secret.Data["key_size"].(json.Number).Int64()
+		keySize := secret.Data[consts.FieldKeySize]
+		if keySize != nil || secret.Data[consts.FieldType] == "hmac" {
+			keySize, err := secret.Data[consts.FieldKeySize].(json.Number).Int64()
 			if err != nil {
-				return fmt.Errorf("expected key_size %q to be a number, and it isn't", secret.Data["key_size"])
+				return fmt.Errorf("expected key_size %q to be a number, and it isn't", secret.Data[consts.FieldKeySize])
 			}
-			if err := d.Set("key_size", keySize); err != nil {
+			if err := d.Set(consts.FieldKeySize, keySize); err != nil {
 				return err
 			}
 		}
 	}
 
-	if err := d.Set("backend", backend); err != nil {
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
 		return err
 	}
-	if err := d.Set("name", name); err != nil {
+	if err := d.Set(consts.FieldName, name); err != nil {
 		return err
 	}
-	if err := d.Set("latest_version", latestVersion); err != nil {
+	if err := d.Set(consts.FieldLatestVersion, latestVersion); err != nil {
 		return err
 	}
-	if err := d.Set("min_available_version", minAvailableVersion); err != nil {
+	if err := d.Set(consts.FieldMinAvailableVersion, minAvailableVersion); err != nil {
 		return err
 	}
-	if err := d.Set("min_decryption_version", minDecryptionVersion); err != nil {
+	if err := d.Set(consts.FieldMinDecryptionVersion, minDecryptionVersion); err != nil {
 		return err
 	}
-	if err := d.Set("min_encryption_version", minEncryptionVersion); err != nil {
+	if err := d.Set(consts.FieldMinEncryptionVersion, minEncryptionVersion); err != nil {
 		return err
 	}
-	if err := d.Set("convergent_encryption", convergentEncryption); err != nil {
+	if err := d.Set(consts.FieldConvergentEncryption, convergentEncryption); err != nil {
 		return err
 	}
 
 	fields := []string{
-		"allow_plaintext_backup",
-		"deletion_allowed", "derived", "exportable",
-		"supports_decryption", "supports_derivation",
-		"supports_encryption", "supports_signing", "type",
-		"auto_rotate_period", "context", "managed_key_name", "managed_key_id",
+		consts.FieldAllowPlaintextBackup,
+		consts.FieldDeletionAllowed, consts.FieldDerived, consts.FieldExportable,
+		consts.FieldSupportsDecryption, consts.FieldSupportsDerivation,
+		consts.FieldSupportsEncryption, consts.FieldSupportsSigning, consts.FieldType,
+		consts.FieldAutoRotatePeriod, consts.FieldContext, consts.FieldManagedKeyName, consts.FieldManagedKeyID,
 	}
 
 	for _, f := range fields {
@@ -456,11 +456,11 @@ func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) err
 	log.Printf("[DEBUG] Updating transit secret backend key %q", path)
 
 	data := map[string]interface{}{
-		"min_decryption_version": d.Get("min_decryption_version"),
-		"min_encryption_version": d.Get("min_encryption_version"),
-		"deletion_allowed":       d.Get("deletion_allowed"),
-		"exportable":             d.Get("exportable"),
-		"allow_plaintext_backup": d.Get("allow_plaintext_backup"),
+		"min_decryption_version": d.Get(consts.FieldMinDecryptionVersion),
+		"min_encryption_version": d.Get(consts.FieldMinEncryptionVersion),
+		"deletion_allowed":       d.Get(consts.FieldDeletionAllowed),
+		"exportable":             d.Get(consts.FieldExportable),
+		"allow_plaintext_backup": d.Get(consts.FieldAllowPlaintextBackup),
 		"auto_rotate_period":     getTransitAutoRotatePeriod(d),
 	}
 
