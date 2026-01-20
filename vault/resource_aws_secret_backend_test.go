@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -24,7 +25,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -85,7 +86,7 @@ func TestAccAWSSecretBackend_fallback(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -222,7 +223,7 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 	expectedTempl := fmt.Sprintf(`{{ printf "vault-%%s-%%s-%%s" (printf "%%s-%%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}`)
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -244,7 +245,7 @@ func TestAccAWSSecretBackend_remount(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey),
@@ -334,7 +335,7 @@ func TestAccAWSSecretBackend_max_retries(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -419,7 +420,7 @@ func TestAccAWSSecretBackend_secretKeyConflicts(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-aws")
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`
@@ -637,7 +638,7 @@ func TestAccAWSSecretBackend_secretKeyWriteOnly(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
