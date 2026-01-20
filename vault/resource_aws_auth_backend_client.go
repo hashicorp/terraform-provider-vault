@@ -203,8 +203,8 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 	if d.HasChanges(consts.FieldAccessKey, consts.FieldSecretKey, consts.FieldSecretKeyWOVersion) {
 		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
 
-		// Get access_key
-		accessKey := d.Get(consts.FieldAccessKey).(string)
+		// Always set access_key when credentials change (including empty to clear)
+		data[consts.FieldAccessKey] = d.Get(consts.FieldAccessKey).(string)
 
 		// Get secret_key from either legacy or write-only field
 		var secretKey string
@@ -218,12 +218,9 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 			}
 		}
 
-		// Only set if we have credentials
-		if accessKey != "" || secretKey != "" {
-			data[consts.FieldAccessKey] = accessKey
-			if secretKey != "" {
-				data[consts.FieldSecretKey] = secretKey
-			}
+		// Only set secret_key if it has a value (don't send empty secret_key)
+		if secretKey != "" {
+			data[consts.FieldSecretKey] = secretKey
 		}
 	}
 
