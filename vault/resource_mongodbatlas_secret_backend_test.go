@@ -146,12 +146,17 @@ func TestAccMongoDBAtlasSecretBackend_writeOnlyConflicts(t *testing.T) {
 			// Negative Test 1: private_key and private_key_wo cannot be used together
 			{
 				Config:      testAccMongoDBAtlasSecretBackendConfig_privateKeyConflict(mount, privateKey, publicKey, 1),
-				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
+				ExpectError: regexp.MustCompile(`only one of .+private_key,private_key_wo.+ can be specified`),
 			},
 			// Negative Test 2: private_key_wo_version requires private_key_wo
 			{
 				Config:      testAccMongoDBAtlasSecretBackendConfig_versionWithoutPrivateKeyWO(mount, privateKey, publicKey),
 				ExpectError: regexp.MustCompile(`all of .+private_key_wo.+private_key_wo_version.+ must\s+be specified`),
+			},
+			// Negative Test 3: neither private_key nor private_key_wo provided
+			{
+				Config:      testAccMongoDBAtlasSecretBackendConfig_noPrivateKey(mount, publicKey),
+				ExpectError: regexp.MustCompile(`one of .+private_key,private_key_wo.+ must be specified`),
 			},
 		},
 	})
@@ -220,4 +225,18 @@ resource "vault_mongodbatlas_secret_backend" "test" {
   private_key_wo_version  = 1
   public_key              = "%s"
 }`, path, privateKey, publicKey)
+}
+
+func testAccMongoDBAtlasSecretBackendConfig_noPrivateKey(path, publicKey string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "mongo" {
+	path        = "%s"
+	type        = "mongodbatlas"
+    description = "MongoDB Atlas secret engine mount"
+}
+
+resource "vault_mongodbatlas_secret_backend" "test" {
+  mount       = vault_mount.mongo.path
+  public_key  = "%s"
+}`, path, publicKey)
 }
