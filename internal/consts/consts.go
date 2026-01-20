@@ -170,8 +170,6 @@ const (
 	FieldAuthorization                  = "authorization"
 	FieldToken                          = "token"
 	FieldTokenTTL                       = "token_ttl"
-	FieldTokenWO                        = "token_wo"
-	FieldTokenWOVersion                 = "token_wo_version"
 	FieldTokenReviewerJWT               = "token_reviewer_jwt"
 	FieldTokenReviewerJWTWO             = "token_reviewer_jwt_wo"
 	FieldTokenReviewerJWTWOVersion      = "token_reviewer_jwt_wo_version"
@@ -621,14 +619,16 @@ const (
 	FieldDataJSONWOVersion          = "data_json_wo_version"
 	FieldPrivateKeyWO               = "private_key_wo"
 	FieldPrivateKeyWOVersion        = "private_key_wo_version"
+	FieldClientKeyWO                = "client_key_wo"
+	FieldClientKeyWOVersion         = "client_key_wo_version"
+	FieldTokenWO                    = "token_wo"
+	FieldTokenWOVersion             = "token_wo_version"
 	FieldOIDCClientSecretWO         = "oidc_client_secret_wo"
 	FieldOIDCClientSecretWOVersion  = "oidc_client_secret_wo_version"
 	FieldServiceAccountJWTWO        = "service_account_jwt_wo"
 	FieldServiceAccountJWTWOVersion = "service_account_jwt_wo_version"
 	FieldBindPassWO                 = "bindpass_wo"
 	FieldBindPassWOVersion          = "bindpass_wo_version"
-	FieldClientKeyWO                = "client_key_wo"
-	FieldClientKeyWOVersion         = "client_key_wo_version"
 
 	/*
 		common environment variables
