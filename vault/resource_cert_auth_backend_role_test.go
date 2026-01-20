@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -85,7 +87,7 @@ func TestCertAuthBackend(t *testing.T) {
 
 	resourceName := "vault_cert_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCertAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -153,7 +155,7 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 	resourceName := "vault_cert_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -161,29 +163,102 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testCertAuthBackendConfig_OCSP_default(backend, name),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPServersOverride+".#", "0"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPCACertificates, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPEnabled, "false"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPFailOpen, "false"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPQueryAllServers, "false"),
-				),
+				Check: func() resource.TestCheckFunc {
+					checks := []resource.TestCheckFunc{
+						resource.TestCheckResourceAttr(resourceName, "backend", backend),
+						resource.TestCheckResourceAttr(resourceName, "name", name),
+						resource.TestCheckResourceAttr(resourceName, fieldOCSPServersOverride+".#", "0"),
+						resource.TestCheckResourceAttr(resourceName, fieldOCSPCACertificates, ""),
+						resource.TestCheckResourceAttr(resourceName, fieldOCSPEnabled, "false"),
+						resource.TestCheckResourceAttr(resourceName, fieldOCSPFailOpen, "false"),
+						resource.TestCheckResourceAttr(resourceName, fieldOCSPQueryAllServers, "false"),
+					}
+
+					// These fields are only available from Vault 1.16+
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if meta.IsAPISupported(provider.VaultVersion116) {
+						checks = append(checks,
+							resource.TestCheckResourceAttr(resourceName, fieldOCSPMaxRetries, "4"),
+							resource.TestCheckResourceAttr(resourceName, fieldOCSPThisUpdateMaxAge, "0"),
+						)
+					}
+
+					return resource.ComposeTestCheckFunc(checks...)
+				}(),
 			},
 			{
 				Config: testCertAuthBackendConfig_OCSP_basic(backend, name),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPServersOverride+".#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, fieldOCSPServersOverride+".*", "server1.com"),
-					resource.TestCheckTypeSetElemAttr(resourceName, fieldOCSPServersOverride+".*", "server2.com"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPCACertificates, testBase64PEM),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPEnabled, "true"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPFailOpen, "true"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPQueryAllServers, "true"),
-				),
+				Check: func() resource.TestCheckFunc {
+					checks := []resource.TestCheckFunc{
+						resource.TestCheckResourceAttr(resourceName, "backend", backend),
+						resource.TestCheckResourceAttr(resourceName, "name", name),
+						resource.TestCheckResourceAttr(resourceName, fieldOCSPServersOverride+".#", "2"),
+						resource.TestCheckTypeSetElemAttr(resourceName, fieldOCSPServersOverride+".*", "server1.com"),
+						resource.TestCheckTypeSetElemAttr(resourceName, fieldOCSPServersOverride+".*", "server2.com"),
+						resource.TestCheckResourceAttr(resourceName, fieldOCSPCACertificates, testBase64PEM),
+						resource.TestCheckResourceAttr(resourceName, fieldOCSPEnabled, "true"),
+						resource.TestCheckResourceAttr(resourceName, fieldOCSPFailOpen, "true"),
+						resource.TestCheckResourceAttr(resourceName, fieldOCSPQueryAllServers, "true"),
+					}
+
+					// These fields are only available from Vault 1.16+
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if meta.IsAPISupported(provider.VaultVersion116) {
+						checks = append(checks,
+							resource.TestCheckResourceAttr(resourceName, fieldOCSPMaxRetries, "5"),
+							resource.TestCheckResourceAttr(resourceName, fieldOCSPThisUpdateMaxAge, "7200"),
+						)
+					}
+
+					return resource.ComposeTestCheckFunc(checks...)
+				}(),
+			},
+			{
+				Config: testCertAuthBackendConfig_OCSP_field_update(backend, name),
+				Check: func() resource.TestCheckFunc {
+					checks := []resource.TestCheckFunc{
+						resource.TestCheckResourceAttr(resourceName, "backend", backend),
+						resource.TestCheckResourceAttr(resourceName, "name", name),
+						resource.TestCheckResourceAttr(resourceName, fieldOCSPEnabled, "true"),
+					}
+
+					// These fields are only available from Vault 1.16+
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if meta.IsAPISupported(provider.VaultVersion116) {
+						checks = append(checks,
+							resource.TestCheckResourceAttr(resourceName, fieldOCSPMaxRetries, "10"),
+							resource.TestCheckResourceAttr(resourceName, fieldOCSPThisUpdateMaxAge, "3600"),
+						)
+					}
+
+					return resource.ComposeTestCheckFunc(checks...)
+				}(),
+			},
+		},
+	})
+}
+
+func TestCertAuthBackend_OCSP_Negative(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
+	name := acctest.RandomWithPrefix("tf-test-cert-name")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCertAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Negative ocsp_max_retries should be rejected by Vault API
+				Config:      testCertAuthBackendConfig_OCSP_negative_fields(backend, name, -1, 7200),
+				ExpectError: regexp.MustCompile("ocsp_max_retries can not be a negative number"),
+			},
+			{
+				// Negative ocsp_this_update_max_age should also be rejected by Vault API
+				Config:      testCertAuthBackendConfig_OCSP_negative_fields(backend, name, 5, -100),
+				ExpectError: regexp.MustCompile("cannot provide negative value"),
 			},
 		},
 	})
@@ -363,12 +438,66 @@ resource "vault_cert_auth_backend_role" "test" {
     ocsp_fail_open         = true
     ocsp_query_all_servers = true
     ocsp_servers_override  = ["server1.com", "server2.com"]
+	ocsp_max_retries       = 5
+	ocsp_this_update_max_age = 7200
+    certificate = <<EOF
+%s
+EOF
+}
+`, backend, name, testBase64PEM, testCertificate)
+
+	return config
+}
+
+func testCertAuthBackendConfig_OCSP_field_update(backend, name string) string {
+	config := fmt.Sprintf(`
+
+resource "vault_auth_backend" "cert" {
+    path = "%s"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name                      = "%s"
+    backend                   = vault_auth_backend.cert.path
+	ocsp_ca_certificates   = "%s"
+    ocsp_enabled              = true
+	ocsp_fail_open         = true
+    ocsp_query_all_servers = true
+	ocsp_servers_override  = ["server1.com", "server2.com"]
+    ocsp_max_retries          = 10
+    ocsp_this_update_max_age  = 3600
 
     certificate = <<EOF
 %s
 EOF
 }
 `, backend, name, testBase64PEM, testCertificate)
+
+	return config
+}
+
+func testCertAuthBackendConfig_OCSP_negative_fields(backend, name string, maxRetries, maxAge int) string {
+	config := fmt.Sprintf(`
+
+resource "vault_auth_backend" "cert" {
+    path = "%s"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name                      = "%s"
+    backend                   = vault_auth_backend.cert.path
+	ocsp_ca_certificates   = "%s"
+    ocsp_enabled              = true
+    ocsp_max_retries          = %d
+    ocsp_this_update_max_age  = %d
+
+    certificate = <<EOF
+%s
+EOF
+}
+`, backend, name, testBase64PEM, maxRetries, maxAge, testCertificate)
 
 	return config
 }

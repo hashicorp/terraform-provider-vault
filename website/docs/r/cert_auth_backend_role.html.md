@@ -83,6 +83,15 @@ The following arguments are supported:
   the certificate valid only if all servers agree.
   Requires Vault version 1.13+.
 
+* `ocsp_max_retries` (Optional int) - The number of retries to attempt when
+  connecting to an OCSP server. If not specified, defaults to 4 retries.
+  Must be a non-negative value. Requires Vault version 1.16+.
+
+* `ocsp_this_update_max_age` (Optional int) - The maximum age in seconds of the
+  'thisUpdate' field in an OCSP response before it is considered too old. If not
+  specified, defaults to 0 (disabled). Must be a non-negative value.
+  Requires Vault version 1.16+.
+
 ### Common Token Arguments
 
 These arguments are common across several Authentication Token resources since Vault 1.2.

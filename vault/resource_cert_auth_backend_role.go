@@ -28,6 +28,8 @@ const (
 	fieldOCSPFailOpen               = "ocsp_fail_open"
 	fieldOCSPQueryAllServers        = "ocsp_query_all_servers"
 	fieldOCSPServersOverride        = "ocsp_servers_override"
+	fieldOCSPMaxRetries             = "ocsp_max_retries"
+	fieldOCSPThisUpdateMaxAge       = "ocsp_this_update_max_age"
 	fieldRequiredExtensions         = "required_extensions"
 )
 
@@ -52,6 +54,10 @@ var (
 		fieldOCSPFailOpen,
 		fieldOCSPQueryAllServers,
 	}
+	certAuthIntFields = []string{
+		fieldOCSPMaxRetries,
+		fieldOCSPThisUpdateMaxAge,
+	}
 
 	// the following require Vault Server Version 1.13+
 	certAuthVault113Fields = map[string]bool{
@@ -60,6 +66,12 @@ var (
 		fieldOCSPFailOpen:        true,
 		fieldOCSPQueryAllServers: true,
 		fieldOCSPServersOverride: true,
+	}
+
+	// the following require Vault Server Version 1.16+
+	certAuthVault116Fields = map[string]bool{
+		fieldOCSPMaxRetries:       true,
+		fieldOCSPThisUpdateMaxAge: true,
 	}
 )
 
@@ -182,6 +194,22 @@ func certAuthBackendRoleResource() *schema.Resource {
 				"successful OCSP response, query all servers and consider the " +
 				"certificate valid only if all servers agree.",
 		},
+		fieldOCSPMaxRetries: {
+			Type:     schema.TypeInt,
+			Optional: true,
+			Computed: true,
+			Description: "The number of retries to attempt when connecting to " +
+				"an OCSP server. If not specified, defaults to 4 retries.",
+		},
+		fieldOCSPThisUpdateMaxAge: {
+			Type:     schema.TypeInt,
+			Optional: true,
+			Computed: true,
+			Description: "The maximum age in seconds of the 'thisUpdate' field " +
+				"in an OCSP response before it is considered too old. If not " +
+				"specified, defaults to 0 (disabled). A negative value " +
+				"disables the age check.",
+		},
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
@@ -240,6 +268,18 @@ func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta int
 		data[k] = d.Get(k)
 	}
 
+	for _, k := range certAuthIntFields {
+		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
+			continue
+		}
+		if certAuthVault116Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion116) {
+			continue
+		}
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
+	}
+
 	log.Printf("[DEBUG] Writing %q to cert auth backend", path)
 	d.SetId(path)
 	_, err := client.Logical().Write(path, data)
@@ -291,6 +331,18 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 			continue
 		}
 		data[k] = d.Get(k)
+	}
+
+	for _, k := range certAuthIntFields {
+		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
+			continue
+		}
+		if certAuthVault116Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion116) {
+			continue
+		}
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
 
 	log.Printf("[DEBUG] Updating %q in cert auth backend", path)
@@ -390,6 +442,7 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		// Handle string and boolean OCSP fields
 		ocspFields := []string{
 			fieldOCSPCACertificates,
 			fieldOCSPEnabled,
@@ -400,6 +453,20 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 		for _, f := range ocspFields {
 			if err := d.Set(f, resp.Data[f]); err != nil {
 				return diag.FromErr(err)
+			}
+		}
+
+		// Handle integer OCSP fields - only set if present in response
+		// to avoid setting zero values when field is not supported/returned
+		for _, f := range certAuthIntFields {
+			// Skip fields that require Vault 1.16+ if not supported
+			if certAuthVault116Fields[f] && !provider.IsAPISupported(meta, provider.VaultVersion116) {
+				continue
+			}
+			if val, ok := resp.Data[f]; ok && val != nil {
+				if err := d.Set(f, val); err != nil {
+					return diag.FromErr(err)
+				}
 			}
 		}
 	}
