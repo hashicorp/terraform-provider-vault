@@ -19,8 +19,12 @@ const (
 	FieldBindDN                         = "binddn"
 	FieldBindPass                       = "bindpass"
 	FieldCertificate                    = "certificate"
+	FieldCACert                         = "ca_cert"
+	FieldClientCert                     = "client_cert"
+	FieldClientKey                      = "client_key"
 	FieldClientTLSCert                  = "client_tls_cert"
 	FieldClientTLSKey                   = "client_tls_key"
+	FieldMaxTokenNameLength             = "max_token_name_length"
 	FieldDistinguishedNames             = "distinguished_names"
 	FieldUPNDomain                      = "upndomain"
 	FieldStartTLS                       = "starttls"
@@ -621,6 +625,8 @@ const (
 	FieldServiceAccountJWTWOVersion = "service_account_jwt_wo_version"
 	FieldBindPassWO                 = "bindpass_wo"
 	FieldBindPassWOVersion          = "bindpass_wo_version"
+	FieldClientKeyWO                = "client_key_wo"
+	FieldClientKeyWOVersion         = "client_key_wo_version"
 
 	/*
 		common environment variables
