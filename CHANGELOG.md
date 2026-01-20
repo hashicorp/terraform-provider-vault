@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 
+* `vault_azure_secret_backend`: Add support for write-only `client_secret_wo` and `client_secret_wo_version` fields to configure the client secret without storing it in state. Requires Terraform 1.11+. ([#2721](https://github.com/hashicorp/terraform-provider-vault/pull/2721))
 * `vault_aws_secret_backend`: Add write-only `secret_key_wo` and `secret_key_wo_version` fields to allow configuring the AWS secret key without storing it in Terraform state ([#2713](https://github.com/hashicorp/terraform-provider-vault/pull/2713))
 * `vault_gcp_auth_backend`: Add write-only credential support via `credentials_wo` and `credentials_wo_version` fields ([#2724](https://github.com/hashicorp/terraform-provider-vault/pull/2724))
 * `vault_ldap_auth_backend`: Add write-only field support for `bindpass` via `bindpass_wo` and `bindpass_wo_version` attributes ([#2716](https://github.com/hashicorp/terraform-provider-vault/pull/2716))
