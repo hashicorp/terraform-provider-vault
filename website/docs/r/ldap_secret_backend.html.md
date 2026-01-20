@@ -47,7 +47,12 @@ The following arguments are supported:
 
 * `binddn` - (Required) Distinguished name of object to bind when performing user and group search.
 
-* `bindpass` - (Required) Password to use along with binddn when performing user search.
+* `bindpass` - (Optional) Password to use along with binddn when performing user search. Conflicts with `bindpass_wo`.
+  Exactly one of `bindpass` or `bindpass_wo` must be provided.
+
+* `bindpass_wo_version` - (Optional) Version counter for write-only bind password.
+  Required when using `bindpass_wo`. For more information about write-only attributes, see
+  [using write-only attributes](/docs/providers/vault/guides/using_write_only_attributes).
 
 * `certificate` - (Optional) CA certificate to use when verifying LDAP server certificate, must be
   x509 PEM encoded.
@@ -138,6 +143,14 @@ These arguments are common across all resources that mount a secret engine.
 
 * `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
   not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `bindpass_wo` - (Optional) Write-only password to use along with binddn when performing user search. Can be updated. Conflicts with `bindpass`.
+  Exactly one of `bindpass` or `bindpass_wo` must be provided.
+  **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
 
