@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -38,13 +39,13 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				Config: testAccJWTAuthBackendConfig(path, ns, false),
 				Check: resource.ComposeTestCheckFunc(
 					append(commonChecks,
-						resource.TestCheckResourceAttr(resourceName, "description", "JWT backend"),
-						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
-						resource.TestCheckResourceAttr(resourceName, "path", path),
-						resource.TestCheckResourceAttrSet(resourceName, "accessor"),
-						resource.TestCheckResourceAttr(resourceName, "bound_issuer", ""),
-						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
-						resource.TestCheckResourceAttr(resourceName, "local", "false"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "JWT backend"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+						resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldBoundIssuer, ""),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldType, "jwt"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
 					)...,
 				),
 			},
@@ -52,13 +53,13 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				Config: testAccJWTAuthBackendConfig(path, ns, true),
 				Check: resource.ComposeTestCheckFunc(
 					append(commonChecks,
-						resource.TestCheckResourceAttr(resourceName, "description", "JWT backend"),
-						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
-						resource.TestCheckResourceAttr(resourceName, "path", path),
-						resource.TestCheckResourceAttrSet(resourceName, "accessor"),
-						resource.TestCheckResourceAttr(resourceName, "bound_issuer", ""),
-						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
-						resource.TestCheckResourceAttr(resourceName, "local", "true"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "JWT backend"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+						resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldBoundIssuer, ""),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldType, "jwt"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
 					)...,
 				),
 			},
@@ -66,10 +67,10 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				Config: testAccJWTAuthBackendConfigFullOIDC(path, "https://myco.auth0.com/", "api://default", "\"RS512\"", ns),
 				Check: resource.ComposeTestCheckFunc(
 					append(commonChecks,
-						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
-						resource.TestCheckResourceAttr(resourceName, "bound_issuer", "api://default"),
-						resource.TestCheckResourceAttr(resourceName, "jwt_supported_algs.#", "1"),
-						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldBoundIssuer, "api://default"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldJWTSupportedAlgs+".#", "1"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldType, "jwt"),
 						resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
 						resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.#", "2"),
 						resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
@@ -86,10 +87,10 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				Config: testAccJWTAuthBackendConfigFullOIDC(path, "https://myco.auth0.com/", "api://default", "\"RS256\",\"RS512\"", ns),
 				Check: resource.ComposeTestCheckFunc(
 					append(commonChecks,
-						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
-						resource.TestCheckResourceAttr(resourceName, "bound_issuer", "api://default"),
-						resource.TestCheckResourceAttr(resourceName, "jwt_supported_algs.#", "2"),
-						resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldBoundIssuer, "api://default"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldJWTSupportedAlgs+".#", "2"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldType, "jwt"),
 						resource.TestCheckResourceAttr(resourceName, "tune.#", "1"),
 						resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.#", "2"),
 						resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
@@ -110,7 +111,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ""),
@@ -123,7 +124,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("jwt")
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ns),
@@ -149,10 +150,10 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 				Config: testAccJWTAuthBackendProviderConfig(path, ns),
 				Check: resource.ComposeTestCheckFunc(
 					append(commonChecks,
-						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
-						resource.TestCheckResourceAttr(resourceName, "type", "oidc"),
-						resource.TestCheckResourceAttr(resourceName, "provider_config.provider", "azure"),
-						resource.TestCheckResourceAttr(resourceName, "provider_config.groups_recurse_max_depth", "1"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldType, "oidc"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".provider", "azure"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".groups_recurse_max_depth", "1"),
 					)...,
 				),
 			},
@@ -164,7 +165,7 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ""),
@@ -177,7 +178,7 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("jwt")
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ns),
@@ -202,15 +203,15 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 				Config: testAccJWTAuthBackendConfigOIDC(path, ns),
 				Check: resource.ComposeTestCheckFunc(
 					append(commonChecks,
-						resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
-						resource.TestCheckResourceAttr(resourceName, "bound_issuer", "api://default"),
-						resource.TestCheckResourceAttr(resourceName, "oidc_client_id", "client"),
-						resource.TestCheckResourceAttr(resourceName, "oidc_client_secret", "secret"),
-						resource.TestCheckResourceAttr(resourceName, "oidc_response_mode", "query"),
-						resource.TestCheckResourceAttr(resourceName, "oidc_response_types.#", "1"),
-						resource.TestCheckResourceAttr(resourceName, "oidc_response_types.0", "code"),
-						resource.TestCheckResourceAttr(resourceName, "type", "oidc"),
-						resource.TestCheckResourceAttr(resourceName, "default_role", "api"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldBoundIssuer, "api://default"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientID, "client"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientSecret, "secret"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCResponseMode, "query"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCResponseTypes+".#", "1"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCResponseTypes+".0", "code"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldType, "oidc"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultRole, "api"),
 					)...,
 				),
 			},
@@ -223,7 +224,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 		t.Parallel()
 		path := acctest.RandomWithPrefix("oidc")
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ""),
@@ -236,7 +237,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("oidc")
 		resource.Test(t, resource.TestCase{
-			PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 			CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:                    getSteps(path, ns),
@@ -250,7 +251,7 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
 	invalidPath := path + consts.PathDelim
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -321,30 +322,30 @@ func TestJWTAuthBackend_remount(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTAuthBackendConfig(path, "", false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
-					resource.TestCheckResourceAttr(resourceName, "description", "JWT backend"),
-					resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
-					resource.TestCheckResourceAttrSet(resourceName, "accessor"),
-					resource.TestCheckResourceAttr(resourceName, "bound_issuer", ""),
-					resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
-					resource.TestCheckResourceAttr(resourceName, "local", "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "JWT backend"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBoundIssuer, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "jwt"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
 				),
 			},
 			{
 				Config: testAccJWTAuthBackendConfig(updatedPath, "", false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
-					resource.TestCheckResourceAttr(resourceName, "description", "JWT backend"),
-					resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
-					resource.TestCheckResourceAttrSet(resourceName, "accessor"),
-					resource.TestCheckResourceAttr(resourceName, "bound_issuer", ""),
-					resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
-					resource.TestCheckResourceAttr(resourceName, "local", "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "JWT backend"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBoundIssuer, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "jwt"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "description", "disable_remount"),
@@ -476,7 +477,7 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 
 	path := acctest.RandomWithPrefix("jwt")
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -618,7 +619,7 @@ func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
 func TestAccJWTAuthBackendProviderConfig_negative(t *testing.T) {
 	t.Skip(true)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -696,7 +697,7 @@ rF7r4gUnKeC7mYIH1zypY7laskopiLFAfe96Kg==
 EOT`
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -739,7 +740,7 @@ func TestAccJWTAuthBackend_importTune(t *testing.T) {
 	resourceName := resourceType + ".test"
 	var resAuth api.AuthMount
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -770,6 +771,181 @@ resource "vault_jwt_auth_backend" "test" {
     allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To"]
     token_type = "batch"
   }
+}
+`, path)
+}
+
+func TestAccJWTAuthBackend_OIDCClientSecretWriteOnly(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("oidc-wo")
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendConfig_OIDCClientSecretWriteOnly(path, "secret-v1", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "oidc"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientID, "test-client-id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientSecretWOVersion, "1"),
+					// Verify that legacy oidc_client_secret is not set
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldOIDCClientSecret),
+					// Note: oidc_client_secret_wo is write-only and won't be in state
+				),
+			},
+			{
+				// Update the secret by incrementing version
+				Config: testAccJWTAuthBackendConfig_OIDCClientSecretWriteOnly(path, "secret-v2", 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientSecretWOVersion, "2"),
+				),
+			},
+			{
+				// Change other fields without changing secret (same version)
+				Config: testAccJWTAuthBackendConfig_OIDCClientSecretWriteOnlyUpdated(path, "secret-v2", 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientID, "updated-client-id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientSecretWOVersion, "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccJWTAuthBackend_OIDCClientSecretLegacy(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("oidc-legacy")
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendConfig_OIDCClientSecretLegacy(path, "legacy-secret-v1"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "oidc"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientSecret, "legacy-secret-v1"),
+					// Verify write-only fields are not set
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldOIDCClientSecretWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldOIDCClientSecretWOVersion),
+				),
+			},
+			{
+				Config: testAccJWTAuthBackendConfig_OIDCClientSecretLegacy(path, "legacy-secret-v2"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCClientSecret, "legacy-secret-v2"),
+				),
+			},
+		},
+	})
+}
+
+func testAccJWTAuthBackendConfig_OIDCClientSecretWriteOnly(path, secret string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path                        = "%s"
+  type                        = "oidc"
+  description                 = "OIDC backend with write-only secret"
+  oidc_discovery_url          = "https://myco.auth0.com/"
+  oidc_client_id              = "test-client-id"
+  oidc_client_secret_wo       = "%s"
+  oidc_client_secret_wo_version = %d
+  default_role                = "test-role"
+}
+`, path, secret, version)
+}
+
+func testAccJWTAuthBackendConfig_OIDCClientSecretWriteOnlyUpdated(path, secret string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path                        = "%s"
+  type                        = "oidc"
+  description                 = "OIDC backend with write-only secret - updated"
+  oidc_discovery_url          = "https://myco.auth0.com/"
+  oidc_client_id              = "updated-client-id"
+  oidc_client_secret_wo       = "%s"
+  oidc_client_secret_wo_version = %d
+  default_role                = "test-role"
+}
+`, path, secret, version)
+}
+
+func testAccJWTAuthBackendConfig_OIDCClientSecretLegacy(path, secret string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path                = "%s"
+  type                = "oidc"
+  description         = "OIDC backend with legacy secret"
+  oidc_discovery_url  = "https://myco.auth0.com/"
+  oidc_client_id      = "test-client-id"
+  oidc_client_secret  = "%s"
+  default_role        = "test-role"
+}
+`, path, secret)
+}
+
+func TestAccJWTAuthBackend_OIDCClientSecretWriteOnlyConflicts(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("oidc-conflicts")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			// Negative Test 1: oidc_client_secret and oidc_client_secret_wo cannot be used together
+			{
+				Config:      testAccJWTAuthBackendConfig_OIDCClientSecretConflict(path, "secret", 1),
+				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
+			},
+			// Negative Test 2: oidc_client_secret_wo_version requires oidc_client_secret_wo
+			{
+				Config:      testAccJWTAuthBackendConfig_OIDCClientSecretVersionWithoutSecret(path),
+				ExpectError: regexp.MustCompile(`all of\s+.+oidc_client_secret_wo.+oidc_client_secret_wo_version.+ must be specified`),
+			},
+		},
+	})
+}
+
+// Negative test configs
+func testAccJWTAuthBackendConfig_OIDCClientSecretConflict(path, secret string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path                          = "%s"
+  type                          = "oidc"
+  description                   = "OIDC backend with conflicting secrets"
+  oidc_discovery_url            = "https://myco.auth0.com/"
+  oidc_client_id                = "test-client-id"
+  oidc_client_secret            = "%s"
+  oidc_client_secret_wo         = "%s"
+  oidc_client_secret_wo_version = %d
+  default_role                  = "test-role"
+}
+`, path, secret, secret, version)
+}
+
+func testAccJWTAuthBackendConfig_OIDCClientSecretVersionWithoutSecret(path string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path                          = "%s"
+  type                          = "oidc"
+  description                   = "OIDC backend with version but no secret_wo"
+  oidc_discovery_url            = "https://myco.auth0.com/"
+  oidc_client_id                = "test-client-id"
+  oidc_client_secret            = "legacy-secret"
+  oidc_client_secret_wo_version = 1
+  default_role                  = "test-role"
 }
 `, path)
 }
