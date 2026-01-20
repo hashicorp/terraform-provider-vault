@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -23,7 +24,7 @@ func TestAccAzureAuthBackendConfig_import(t *testing.T) {
 	resourceName := "vault_azure_auth_backend_config.config"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
@@ -103,7 +104,7 @@ func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -184,7 +185,7 @@ func TestAccAzureAuthBackend_wif(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldBackend),
@@ -224,7 +225,7 @@ func TestAccAzureAuthBackendConfig_automatedRotation(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldBackend),
@@ -278,6 +279,93 @@ func TestAccAzureAuthBackendConfig_automatedRotation(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret),
+		},
+	})
+}
+
+func TestAccAzureAuthBackendConfig_ClientSecretWriteOnly(t *testing.T) {
+	backend := acctest.RandomWithPrefix("azure")
+	resourceName := "vault_azure_auth_backend_config.config"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureAuthBackendConfig_clientSecretWriteOnly(backend, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, "test-tenant-id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "test-client-id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldResource, "https://management.azure.com/"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecretWOVersion, "1"),
+					// Write-only field should not be in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldClientSecretWO),
+					// Legacy field should not be set
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldClientSecret),
+				),
+			},
+			{
+				// Rotate secret by incrementing version
+				Config: testAccAzureAuthBackendConfig_clientSecretWriteOnly(backend, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecretWOVersion, "2"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldClientSecretWO),
+				),
+			},
+			{
+				// Import should work with write-only fields
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldClientSecretWO, consts.FieldClientSecretWOVersion},
+			},
+		},
+	})
+}
+
+func TestAccAzureAuthBackendConfig_ClientSecretLegacy(t *testing.T) {
+	backend := acctest.RandomWithPrefix("azure")
+	resourceName := "vault_azure_auth_backend_config.config"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureAuthBackendConfig_clientSecretLegacy(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecret, "test-client-secret"),
+					// Write-only fields should not be set
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldClientSecretWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldClientSecretWOVersion),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAzureAuthBackendConfig_ClientSecretWriteOnlyConflicts(t *testing.T) {
+	backend := acctest.RandomWithPrefix("azure")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Test ConflictsWith: client_secret and client_secret_wo cannot be used together
+				Config:      testAccAzureAuthBackendConfig_clientSecretConflict(backend),
+				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
+			},
+			{
+				// Test RequiredWith: client_secret_wo_version requires client_secret_wo
+				Config:      testAccAzureAuthBackendConfig_versionWithoutClientSecretWO(backend),
+				ExpectError: regexp.MustCompile(`all of\s+` + "`" + `client_secret_wo,client_secret_wo_version` + "`" + `\s+must be specified`),
+			},
 		},
 	})
 }
@@ -485,6 +573,78 @@ resource "vault_azure_auth_backend_config" "config" {
   rotation_window = "%d"
   disable_automated_rotation = %t
 }`, backend, periodDuration, scheduleString, windowDuration, disableRotation)
+}
+
+func testAccAzureAuthBackendConfig_clientSecretWriteOnly(backend string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  path = "%s"
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend                   = vault_auth_backend.azure.path
+  tenant_id                 = "test-tenant-id"
+  client_id                 = "test-client-id"
+  client_secret_wo          = "test-client-secret-wo-%d"
+  client_secret_wo_version  = %d
+  resource                  = "https://management.azure.com/"
+}
+`, backend, version, version)
+}
+
+func testAccAzureAuthBackendConfig_clientSecretLegacy(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  path = "%s"
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend       = vault_auth_backend.azure.path
+  tenant_id     = "test-tenant-id"
+  client_id     = "test-client-id"
+  client_secret = "test-client-secret"
+  resource      = "https://management.azure.com/"
+}
+`, backend)
+}
+
+func testAccAzureAuthBackendConfig_clientSecretConflict(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  path = "%s"
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend                   = vault_auth_backend.azure.path
+  tenant_id                 = "test-tenant-id"
+  client_id                 = "test-client-id"
+  client_secret             = "legacy-secret"
+  client_secret_wo          = "write-only-secret"
+  client_secret_wo_version  = 1
+  resource                  = "https://management.azure.com/"
+}
+`, backend)
+}
+
+func testAccAzureAuthBackendConfig_versionWithoutClientSecretWO(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  path = "%s"
+  type = "azure"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend                   = vault_auth_backend.azure.path
+  tenant_id                 = "test-tenant-id"
+  client_id                 = "test-client-id"
+  client_secret             = "legacy-secret"
+  client_secret_wo_version  = 1
+  resource                  = "https://management.azure.com/"
+}
+`, backend)
 }
 
 func testAccAzureAuthBackend_destroyed(backend string) string {

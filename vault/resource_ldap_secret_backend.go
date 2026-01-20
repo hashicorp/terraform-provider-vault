@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/go-cty/cty"
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -33,10 +34,27 @@ func ldapSecretBackendResource() *schema.Resource {
 			Description: "Distinguished name of object to bind when performing user and group search.",
 		},
 		consts.FieldBindPass: {
-			Type:        schema.TypeString,
-			Required:    true,
-			Sensitive:   true,
-			Description: "LDAP password for searching for the user DN.",
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			Description:   "LDAP password for searching for the user DN.",
+			ConflictsWith: []string{consts.FieldBindPassWO},
+			ExactlyOneOf:  []string{consts.FieldBindPass, consts.FieldBindPassWO},
+		},
+		consts.FieldBindPassWO: {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			WriteOnly:     true,
+			Description:   "Write-only LDAP password for searching for the user DN.",
+			ConflictsWith: []string{consts.FieldBindPass},
+			ExactlyOneOf:  []string{consts.FieldBindPass, consts.FieldBindPassWO},
+		},
+		consts.FieldBindPassWOVersion: {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Description:  "Version counter for write-only bind password.",
+			RequiredWith: []string{consts.FieldBindPassWO},
 		},
 		consts.FieldCertificate: {
 			Type:        schema.TypeString,
@@ -212,6 +230,17 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 
 		if v, ok := d.GetOk(field); ok {
 			data[field] = v
+		}
+	}
+
+	// Handle write-only bindpass field
+	if _, hasBindPass := data[consts.FieldBindPass]; !hasBindPass {
+		if d.IsNewResource() || d.HasChange(consts.FieldBindPassWOVersion) {
+			p := cty.GetAttrPath(consts.FieldBindPassWO)
+			woVal, _ := d.GetRawConfigAt(p)
+			if !woVal.IsNull() {
+				data[consts.FieldBindPass] = woVal.AsString()
+			}
 		}
 	}
 

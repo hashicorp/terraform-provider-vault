@@ -3,6 +3,17 @@
 IMPROVEMENTS:
 
 * `vault_consul_secret_backend`: Add support for write-only fields (`token_wo`, `token_wo_version`, `client_key_wo`, `client_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2730](https://github.com/hashicorp/terraform-provider-vault/pull/2730))
+* `vault_azure_auth_backend_config`: Add support for write-only client secret fields (`client_secret_wo`, `client_secret_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2726](https://github.com/hashicorp/terraform-provider-vault/pull/2726))
+* `vault_azure_secret_backend`: Add support for write-only `client_secret_wo` and `client_secret_wo_version` fields to configure the client secret without storing it in state. Requires Terraform 1.11+. ([#2721](https://github.com/hashicorp/terraform-provider-vault/pull/2721))
+* `vault_aws_secret_backend`: Add write-only `secret_key_wo` and `secret_key_wo_version` fields to allow configuring the AWS secret key without storing it in Terraform state ([#2713](https://github.com/hashicorp/terraform-provider-vault/pull/2713))
+* `vault_gcp_auth_backend`: Add write-only credential support via `credentials_wo` and `credentials_wo_version` fields ([#2724](https://github.com/hashicorp/terraform-provider-vault/pull/2724))
+* `vault_ldap_auth_backend`: Add write-only field support for `bindpass` via `bindpass_wo` and `bindpass_wo_version` attributes ([#2716](https://github.com/hashicorp/terraform-provider-vault/pull/2716))
+* `vault_ldap_secret_backend`: Add write-only field support for `bindpass` via `bindpass_wo` and `bindpass_wo_version` attributes ([#2719](https://github.com/hashicorp/terraform-provider-vault/pull/2719))
+* `vault_aws_auth_backend_client`: Add write-only field support for `secret_key` (`secret_key_wo` and `secret_key_wo_version`) to prevent sensitive AWS credentials from being stored in Terraform state. ([#2717](https://github.com/hashicorp/terraform-provider-vault/pull/2717))
+* `vault_jwt_auth_backend`: Add support for write-only `oidc_client_secret_wo` and `oidc_client_secret_wo_version` fields to prevent storing sensitive OIDC client secrets in Terraform state. ([#2714](https://github.com/hashicorp/terraform-provider-vault/pull/2714))
+* `vault_kubernetes_auth_backend_config`: Add support for write-only `token_reviewer_jwt_wo` field with `token_reviewer_jwt_wo_version` to prevent sensitive JWT token from being stored in Terraform state ([#2715](https://github.com/hashicorp/terraform-provider-vault/pull/2715))
+* `vault_kubernetes_secret_backend`: Add write-only fields `service_account_jwt_wo` and `service_account_jwt_wo_version` for managing service account JWT credentials without storing them in state.([#2720](https://github.com/hashicorp/terraform-provider-vault/pull/2720))
+* `vault_nomad_secret_backend`: Add support for write-only fields `token_wo` and `client_key_wo` with version counters to prevent sensitive credentials from being stored in Terraform state. ([#2729](https://github.com/hashicorp/terraform-provider-vault/pull/2729))
 * `vault_secrets_sync_gcp_destination`: Add support for replication field (`replication_locations`; Vault 1.18+), networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`; Vault 1.19+), and encryption fields (`global_kms_key`, `locational_kms_keys`; Vault 1.19+) in `vault_secrets_sync_gcp_destination` resource. ([#2699](https://github.com/hashicorp/terraform-provider-vault/pull/2699))
 * Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`) in `vault_secrets_sync_azure_destination` resource. Requires Vault 1.19+. ([#2702](https://github.com/hashicorp/terraform-provider-vault/pull/2702))
 * `vault_database_secret_backend_connection`: Add support for MongoDB `write_concern` parameter and TLS parameters (`tls_ca`, `tls_certificate_key`) ([#2678](https://github.com/hashicorp/terraform-provider-vault/pull/2678))
@@ -14,10 +25,14 @@ IMPROVEMENTS:
 * `vault_secrets_sync_aws_destination`: Add support for networking configuration parameters `allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, and `disable_strict_networking` to control outbound connections from Vault to AWS Secrets Manager. Requires Vault 1.19.0+.([#2698](https://github.com/hashicorp/terraform-provider-vault/pull/2698))
 * Updated dependencies:
   * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
+* Docs: fix heredoc example for LDAP dynamic role LDIFs ([#2728]https://github.com/hashicorp/terraform-provider-vault/pull/2728)
+* Docs: Update example to use write-only attribute ([#2731]https://github.com/hashicorp/terraform-provider-vault/pull/2731)
+
 
 BUGS:
 
 * `provider/auth_login_aws`: Fix issue where AWS authentication with IAM role assumption (`aws_role_arn`) was not working correctly due to incorrect credential handling ([#2679](https://github.com/hashicorp/terraform-provider-vault/pull/2679))
+* Fix plugin_name attribute not correctly use in vault_database_secret_backend_connection. ([#2705](https://github.com/hashicorp/terraform-provider-vault/pull/2705))
 
 ## 5.6.0 (December 19, 2025)
 
