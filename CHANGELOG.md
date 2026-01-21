@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 
+* `vault_mongodbatlas_secret_backend`: Add support for write-only private key fields (`private_key_wo`, `private_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2741](https://github.com/hashicorp/terraform-provider-vault/pull/2741))
 * `vault_consul_secret_backend`: Add support for write-only fields (`token_wo`, `token_wo_version`, `client_key_wo`, `client_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2730](https://github.com/hashicorp/terraform-provider-vault/pull/2730))
 * `vault_azure_auth_backend_config`: Add support for write-only client secret fields (`client_secret_wo`, `client_secret_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2726](https://github.com/hashicorp/terraform-provider-vault/pull/2726))
 * `vault_azure_secret_backend`: Add support for write-only `client_secret_wo` and `client_secret_wo_version` fields to configure the client secret without storing it in state. Requires Terraform 1.11+. ([#2721](https://github.com/hashicorp/terraform-provider-vault/pull/2721))
