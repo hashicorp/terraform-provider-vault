@@ -254,12 +254,14 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 		data[consts.FieldContext] = context
 	}
 
-	if managedKeyName, ok := d.GetOk(consts.FieldManagedKeyName); ok {
-		data[consts.FieldManagedKeyName] = managedKeyName
-	}
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		if managedKeyName, ok := d.GetOk(consts.FieldManagedKeyName); ok {
+			data[consts.FieldManagedKeyName] = managedKeyName
+		}
 
-	if managedKeyID, ok := d.GetOk(consts.FieldManagedKeyID); ok {
-		data[consts.FieldManagedKeyID] = managedKeyID
+		if managedKeyID, ok := d.GetOk(consts.FieldManagedKeyID); ok {
+			data[consts.FieldManagedKeyID] = managedKeyID
+		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
@@ -431,13 +433,24 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		consts.FieldDeletionAllowed, consts.FieldDerived, consts.FieldExportable,
 		consts.FieldSupportsDecryption, consts.FieldSupportsDerivation,
 		consts.FieldSupportsEncryption, consts.FieldSupportsSigning, consts.FieldType,
-		consts.FieldAutoRotatePeriod, consts.FieldContext, consts.FieldManagedKeyName, consts.FieldManagedKeyID,
+		consts.FieldAutoRotatePeriod, consts.FieldContext,
 	}
 
 	for _, f := range fields {
 		if v, ok := secret.Data[f]; ok {
 			if err := d.Set(f, v); err != nil {
 				return err
+			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		managedKeyFields := []string{consts.FieldManagedKeyName, consts.FieldManagedKeyID}
+		for _, f := range managedKeyFields {
+			if v, ok := secret.Data[f]; ok {
+				if err := d.Set(f, v); err != nil {
+					return err
+				}
 			}
 		}
 	}

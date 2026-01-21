@@ -402,6 +402,7 @@ func TestTransitSecretBackendKey_managedKeyName(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
 		},
 		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
@@ -430,6 +431,7 @@ func TestTransitSecretBackendKey_managedKeyId(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
 		},
 		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
@@ -458,6 +460,7 @@ func TestTransitSecretBackendKey_managedKey(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
 		},
 		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
