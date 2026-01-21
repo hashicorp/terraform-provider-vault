@@ -800,22 +800,6 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 				Optional:    true,
 				Description: "Maximum number of seconds a connection may be reused.",
 			},
-			"plugin_version": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Optional plugin version to use for this connection",
-			},
-			"password_policy": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Optional name of the password policy to use for generated passwords.",
-			},
-			"skip_static_role_import_rotation": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Computed:    true,
-				Description: "If set, skip automatic rotation when importing static roles.",
-			},
 		},
 	}
 
@@ -2143,12 +2127,8 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 	if v, ok := d.GetOkExists("password_policy"); ok {
 		data["password_policy"] = v.(string)
 	}
-	// Allow skip_static_role_import_rotation to be specified either at the
-	// top-level or inside the engine-specific nested block.
-	if prefV, prefOk := d.GetOkExists(prefix + "skip_static_role_import_rotation"); prefOk {
-		data["skip_static_role_import_rotation"] = prefV.(bool)
-	} else {
-		data["skip_static_role_import_rotation"] = d.Get("skip_static_role_import_rotation").(bool)
+	if v, ok := d.GetOkExists("skip_static_role_import_rotation"); ok {
+		data["skip_static_role_import_rotation"] = v.(bool)
 	}
 
 	log.Printf("[DEBUG] database config payload : %+v", data)
@@ -2308,6 +2288,17 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 	}
 	if v, ok := resp.Data["skip_static_role_import_rotation"]; ok && v != nil {
 		result["skip_static_role_import_rotation"] = v.(bool)
+	} else {
+		// Vault may not return this attribute in the API response for some
+		// versions. Fall back to the configured value so that import/state
+		// verification succeeds when the value was set in the original
+		// configuration.
+		// Prefer the engine-specific nested setting if present.
+		if prefV := d.Get(engine.ResourcePrefix(idx) + "skip_static_role_import_rotation"); prefV != nil {
+			result["skip_static_role_import_rotation"] = prefV.(bool)
+		} else {
+			result["skip_static_role_import_rotation"] = d.Get("skip_static_role_import_rotation").(bool)
+		}
 	}
 	result["root_rotation_statements"] = rootRotationStmts
 
