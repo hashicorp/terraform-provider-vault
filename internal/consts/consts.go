@@ -604,6 +604,20 @@ const (
 	FieldAudience                             = "audience"
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
+	FieldDeletionAllowed                      = "deletion_allowed"
+	FieldConvergentEncryption                 = "convergent_encryption"
+	FieldDerived                              = "derived"
+	FieldExportable                           = "exportable"
+	FieldAllowPlaintextBackup                 = "allow_plaintext_backup"
+	FieldAutoRotatePeriod                     = "auto_rotate_period"
+	FieldLatestVersion                        = "latest_version"
+	FieldMinAvailableVersion                  = "min_available_version"
+	FieldMinDecryptionVersion                 = "min_decryption_version"
+	FieldMinEncryptionVersion                 = "min_encryption_version"
+	FieldSupportsEncryption                   = "supports_encryption"
+	FieldSupportsDecryption                   = "supports_decryption"
+	FieldSupportsDerivation                   = "supports_derivation"
+	FieldSupportsSigning                      = "supports_signing"
 
 	/*
 		ephemeral resource constants and write-only attributes
