@@ -134,7 +134,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username_template", ""),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.3.0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "cassandra-policy"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 		},
@@ -598,7 +598,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.contained_db", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mssql-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.5.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 			{
@@ -744,7 +744,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_rds(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.password_policy", "mysql-rds-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.plugin_version", "v1.1.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.skip_static_role_import_rotation", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.skip_static_role_import_rotation", "true"),
 				),
 			},
 		},
@@ -782,7 +782,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_aurora(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.password_policy", "mysql-aurora-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.plugin_version", "v1.1.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.skip_static_role_import_rotation", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.skip_static_role_import_rotation", "true"),
 				),
 			},
 		},
@@ -869,7 +869,7 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-update-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.0.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 			{
@@ -887,7 +887,7 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "10"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-update-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.0.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 		},
@@ -1136,7 +1136,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", userTempl),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "postgres-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", ""),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 			{
@@ -1402,7 +1402,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.insecure", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "elastic-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.3.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 			{
@@ -1524,7 +1524,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username_template", userTempl),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "snowflake-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.3.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 			{
@@ -1681,7 +1681,7 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redshift.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "redshift-policy"),
 					// resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.3.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 			{
@@ -1827,7 +1827,7 @@ func testAccDatabaseSecretBackendConnectionConfig_cassandra(name, path, host, us
 		root_rotation_statements = ["FOOBAR"]
 		password_policy = "cassandra-policy"
   		/* plugin_version = "v1.3.0" */
-  		skip_static_role_import_rotation = false
+  		skip_static_role_import_rotation = true
 
 		cassandra {
 			hosts = ["%s"]
@@ -2085,7 +2085,7 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
   password_policy = "elastic-policy"
   /* plugin_version = "v1.3.0" */
-  skip_static_role_import_rotation = false
+  skip_static_role_import_rotation = true
 
   elasticsearch {
     url = "%s"
@@ -2228,7 +2228,7 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
     password_policy = "mssql-policy"
     /* plugin_version = "v1.5.0" */
-  skip_static_role_import_rotation = false
+  skip_static_role_import_rotation = true
 %s
 }
 `, path, pluginName, name, fmt.Sprintf(config, parsedURL.String(), parsedURL.User.Username(), password))
@@ -2275,7 +2275,7 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
   password_policy = "mysql-update-policy"
   /* plugin_version = "v1.0.0" */
-  skip_static_role_import_rotation = false
+  skip_static_role_import_rotation = true
 
   mysql {
 	  connection_url = "%s"
@@ -2462,7 +2462,7 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
   password_policy = "mysql-cloud-policy"
   /* plugin_version = "v1.3.0" */
-  skip_static_role_import_rotation = false
+  skip_static_role_import_rotation = true
 
   mysql {
 	  connection_url       = "%s"
@@ -2537,7 +2537,7 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
   password_policy = "postgres-policy"
   /*plugin_version = "v1.2.3"*/
-  skip_static_role_import_rotation = false
+  skip_static_role_import_rotation = true
   postgresql {
       connection_url          = "%s"
       max_open_connections    = "%s"
@@ -2741,7 +2741,7 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
   password_policy = "snowflake-policy"
  /* plugin_version = "v1.3.0"*/
-  skip_static_role_import_rotation = false
+  skip_static_role_import_rotation = true
 
   snowflake {
     connection_url = "%s"
@@ -2798,7 +2798,7 @@ resource "vault_database_secret_backend_connection" "test" {
   allowed_roles = ["*"]
   password_policy = "redis-elasticache-policy"
   /* plugin_version = "v1.3.0"*/
-  skip_static_role_import_rotation = false
+  skip_static_role_import_rotation = true
   redis_elasticache {
     url = "%s"
   }
@@ -2824,7 +2824,7 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
   password_policy = "redshift-policy"
  /* plugin_version = "v1.3.0"*/
-  skip_static_role_import_rotation = false
+  skip_static_role_import_rotation = true
   redshift {
 	  connection_url = "%s"
   }
