@@ -800,6 +800,22 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 				Optional:    true,
 				Description: "Maximum number of seconds a connection may be reused.",
 			},
+			"plugin_version": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Optional plugin version to use for this connection",
+			},
+			"password_policy": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Optional name of the password policy to use for generated passwords.",
+			},
+			"skip_static_role_import_rotation": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "If set, skip automatic rotation when importing static roles.",
+			},
 		},
 	}
 
@@ -1089,10 +1105,16 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	}
 
 	data["plugin_name"] = pluginName
-	if v, ok := d.GetOk("plugin_version"); ok {
+	// Allow plugin_version/password_policy to be defined either at the
+	// top-level resource or in the engine-specific nested block (prefix).
+	if v, ok := d.GetOk(pluginPrefix + "plugin_version"); ok {
+		data["plugin_version"] = v.(string)
+	} else if v, ok := d.GetOk("plugin_version"); ok {
 		data["plugin_version"] = v.(string)
 	}
-	if v, ok := d.GetOk("password_policy"); ok {
+	if v, ok := d.GetOk(pluginPrefix + "password_policy"); ok {
+		data["password_policy"] = v.(string)
+	} else if v, ok := d.GetOk("password_policy"); ok {
 		data["password_policy"] = v.(string)
 	}
 
@@ -2121,7 +2143,13 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 	if v, ok := d.GetOkExists("password_policy"); ok {
 		data["password_policy"] = v.(string)
 	}
-	data["skip_static_role_import_rotation"] = d.Get("skip_static_role_import_rotation").(bool)
+	// Allow skip_static_role_import_rotation to be specified either at the
+	// top-level or inside the engine-specific nested block.
+	if prefV, prefOk := d.GetOkExists(prefix + "skip_static_role_import_rotation"); prefOk {
+		data["skip_static_role_import_rotation"] = prefV.(bool)
+	} else {
+		data["skip_static_role_import_rotation"] = d.Get("skip_static_role_import_rotation").(bool)
+	}
 
 	log.Printf("[DEBUG] database config payload : %+v", data)
 	if m, ok := d.GetOkExists(prefix + "data"); ok {

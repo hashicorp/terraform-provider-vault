@@ -468,7 +468,7 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 		"MONGODB_ATLAS_PRIVATE_KEY",
 		"MONGODB_ATLAS_PROJECT_ID")
 
-	publicKey, privateKey, projectID := values[0], values[1], values[0]
+	publicKey, privateKey, projectID := values[0], values[1], values[2]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineMongoDBAtlas.DefaultPluginName()
@@ -742,9 +742,9 @@ func TestAccDatabaseSecretBackendConnection_mysql_rds(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.password_policy", "mysql-rds-policy"),
-					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.plugin_version", "v1.1.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.skip_static_role_import_rotation", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-rds-policy"),
+					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.1.0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 		},
@@ -780,9 +780,9 @@ func TestAccDatabaseSecretBackendConnection_mysql_aurora(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.password_policy", "mysql-aurora-policy"),
-					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.plugin_version", "v1.1.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.skip_static_role_import_rotation", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-legacy-policy"),
+					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.1.0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 		},
@@ -818,9 +818,9 @@ func TestAccDatabaseSecretBackendConnection_mysql_legacy(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.password_policy", "mysql-legacy-policy"),
-					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.plugin_version", "v1.1.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.skip_static_role_import_rotation", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-legacy-policy"),
+					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.1.0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 		},
@@ -3688,4 +3688,304 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, connURL)
+}
+
+func TestAccDatabaseSecretBackendConnection_couchbase_externalPlugin(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCouchbase)
+
+	values := testutil.SkipTestEnvUnset(t, "COUCHBASE_HOST", "COUCHBASE_USERNAME", "COUCHBASE_PASSWORD")
+	host := values[0]
+	username := values[1]
+	password := values[2]
+
+	// Get plugin SHA256 from environment (this would be the SHA256 of the plugin binary in Vault's plugin directory)
+	pluginSHA256 := os.Getenv("COUCHBASE_PLUGIN_SHA256")
+	if pluginSHA256 == "" {
+		t.Skip("COUCHBASE_PLUGIN_SHA256 not set, skipping external plugin test")
+	}
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+	externalPluginName := "couchbase-database-plugin"
+	passwordPolicy := "couchbase-external-policy"
+	pluginVersion := "v1.0.0"
+	resourceName := testDefaultDatabaseSecretBackendResource
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: resource.ComposeTestCheckFunc(
+			testAccDatabaseSecretBackendConnectionCheckDestroy,
+			testAccPluginCheckDestroy,
+		),
+		Steps: []resource.TestStep{
+			{
+				// Step 1: Register external plugin and create connection with all three new fields
+				Config: testAccDatabaseSecretBackendConnectionConfig_couchbase_externalPlugin(
+					name, backend, host, username, password, externalPluginName,
+					passwordPolicy, pluginVersion, true, pluginSHA256),
+				Check: resource.ComposeTestCheckFunc(
+					// Verify plugin registration
+					resource.TestCheckResourceAttr("vault_plugin.couchbase_external", "type", "database"),
+					resource.TestCheckResourceAttr("vault_plugin.couchbase_external", "name", externalPluginName),
+					resource.TestCheckResourceAttr("vault_plugin.couchbase_external", "command", "vault-plugin-database-couchbase"),
+					resource.TestCheckResourceAttr("vault_plugin.couchbase_external", "version", pluginVersion),
+					resource.TestCheckResourceAttr("vault_plugin.couchbase_external", "sha256", pluginSHA256),
+
+					// Verify connection uses the external plugin
+					resource.TestCheckResourceAttr(resourceName, "plugin_name", externalPluginName),
+
+					// Verify the three new fields
+					resource.TestCheckResourceAttr(resourceName, "password_policy", passwordPolicy),
+					resource.TestCheckResourceAttr(resourceName, "plugin_version", pluginVersion),
+					resource.TestCheckResourceAttr(resourceName, "skip_static_role_import_rotation", "true"),
+
+					// Verify standard fields
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_roles.1", "prod"),
+
+					// Verify Couchbase-specific fields
+					resource.TestCheckResourceAttr(resourceName, "couchbase.0.hosts.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "couchbase.0.hosts.*", host),
+					resource.TestCheckResourceAttr(resourceName, "couchbase.0.username", username),
+					resource.TestCheckResourceAttr(resourceName, "couchbase.0.bucket_name", "travel-sample"),
+
+					// Custom check to verify fields in Vault API
+					func(s *terraform.State) error {
+						client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+						// Verify plugin is registered
+						pluginResp, err := client.Logical().Read(fmt.Sprintf("sys/plugins/catalog/database/%s", externalPluginName))
+						if err != nil {
+							return fmt.Errorf("failed to read plugin from catalog: %v", err)
+						}
+						if pluginResp == nil {
+							return fmt.Errorf("plugin not found in catalog")
+						}
+
+						// Verify connection config
+						connResp, err := client.Logical().Read(fmt.Sprintf("%s/config/%s", backend, name))
+						if err != nil {
+							return fmt.Errorf("failed to read connection config: %v", err)
+						}
+						if connResp == nil {
+							return fmt.Errorf("connection config not found")
+						}
+
+						// Verify the three new fields in Vault's response
+						if v, ok := connResp.Data["password_policy"].(string); !ok || v != passwordPolicy {
+							return fmt.Errorf("password_policy mismatch: expected %s, got %v", passwordPolicy, connResp.Data["password_policy"])
+						}
+
+						if v, ok := connResp.Data["plugin_version"].(string); !ok || v != pluginVersion {
+							return fmt.Errorf("plugin_version mismatch: expected %s, got %v", pluginVersion, connResp.Data["plugin_version"])
+						}
+
+						if v, ok := connResp.Data["skip_static_role_import_rotation"].(bool); !ok || v != true {
+							return fmt.Errorf("skip_static_role_import_rotation mismatch: expected true, got %v", connResp.Data["skip_static_role_import_rotation"])
+						}
+
+						// Verify plugin_name matches external plugin
+						if v, ok := connResp.Data["plugin_name"].(string); !ok || v != externalPluginName {
+							return fmt.Errorf("plugin_name mismatch: expected %s, got %v", externalPluginName, connResp.Data["plugin_name"])
+						}
+
+						log.Printf("[DEBUG] Successfully verified external plugin and all three new fields")
+						return nil
+					},
+				),
+			},
+			{
+				// Step 2: Update the three new fields
+				Config: testAccDatabaseSecretBackendConnectionConfig_couchbase_externalPlugin(
+					name, backend, host, username, password, externalPluginName,
+					"updated-policy", "v2.0.0", false, pluginSHA256),
+				Check: resource.ComposeTestCheckFunc(
+					// Verify plugin version updated
+					resource.TestCheckResourceAttr("vault_plugin.couchbase_external", "version", "v2.0.0"),
+
+					// Verify the three new fields updated
+					resource.TestCheckResourceAttr(resourceName, "password_policy", "updated-policy"),
+					resource.TestCheckResourceAttr(resourceName, "plugin_version", "v2.0.0"),
+					resource.TestCheckResourceAttr(resourceName, "skip_static_role_import_rotation", "false"),
+
+					// Verify update in Vault API
+					func(s *terraform.State) error {
+						client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+						resp, err := client.Logical().Read(fmt.Sprintf("%s/config/%s", backend, name))
+						if err != nil {
+							return fmt.Errorf("failed to read updated config: %v", err)
+						}
+
+						if v := resp.Data["password_policy"].(string); v != "updated-policy" {
+							return fmt.Errorf("password_policy not updated: got %s", v)
+						}
+						if v := resp.Data["plugin_version"].(string); v != "v2.0.0" {
+							return fmt.Errorf("plugin_version not updated: got %s", v)
+						}
+						if v := resp.Data["skip_static_role_import_rotation"].(bool); v != false {
+							return fmt.Errorf("skip_static_role_import_rotation not updated: got %v", v)
+						}
+
+						return nil
+					},
+				),
+			},
+			{
+				// Step 3: Remove the three new fields (test defaults)
+				Config: testAccDatabaseSecretBackendConnectionConfig_couchbase_externalPlugin_noNewFields(
+					name, backend, host, username, password, externalPluginName, pluginSHA256),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "password_policy", ""),
+					resource.TestCheckResourceAttr(resourceName, "plugin_version", ""),
+					resource.TestCheckResourceAttr(resourceName, "skip_static_role_import_rotation", "false"),
+
+					// Verify fields are not sent to Vault when omitted
+					func(s *terraform.State) error {
+						client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+						resp, err := client.Logical().Read(fmt.Sprintf("%s/config/%s", backend, name))
+						if err != nil {
+							return fmt.Errorf("failed to read config: %v", err)
+						}
+
+						// When fields are omitted, they should be empty or not present
+						if v, ok := resp.Data["password_policy"]; ok && v != "" {
+							return fmt.Errorf("password_policy should be empty when omitted, got: %v", v)
+						}
+						if v, ok := resp.Data["plugin_version"]; ok && v != "" {
+							return fmt.Errorf("plugin_version should be empty when omitted, got: %v", v)
+						}
+
+						return nil
+					},
+				),
+			},
+			{
+				// Step 4: Import state verification
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"verify_connection", "couchbase.0.password"},
+			},
+		},
+	})
+}
+
+// Config function with vault_plugin resource and all three new fields
+func testAccDatabaseSecretBackendConnectionConfig_couchbase_externalPlugin(
+	name, path, host, username, password, pluginName, passwordPolicy, pluginVersion string,
+	skipRotation bool, pluginSHA256 string) string {
+
+	return fmt.Sprintf(`
+# Register the external Couchbase plugin
+resource "vault_plugin" "couchbase_external" {
+  type    = "database"
+  name    = "%s"
+  command = "vault-plugin-database-couchbase"
+  version = "%s"
+  sha256  = "%s"
+  args    = [
+    "--log-level=debug"
+  ]
+  env     = [
+    "COUCHBASE_TLS_ENABLED=false"
+  ]
+}
+
+# Create database mount
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+# Create connection using the external plugin with the three new fields
+resource "vault_database_secret_backend_connection" "test" {
+  backend       = vault_mount.db.path
+  name          = "%s"
+  plugin_name   = vault_plugin.couchbase_external.name
+  allowed_roles = ["dev", "prod"]
+  
+  # The three new fields being tested
+  password_policy                  = "%s"
+  plugin_version                   = "%s"
+  skip_static_role_import_rotation = %t
+
+  couchbase {
+    hosts       = ["%s"]
+    username    = "%s"
+    password    = "%s"
+    bucket_name = "travel-sample"
+  }
+  
+  depends_on = [vault_plugin.couchbase_external]
+}
+`, pluginName, pluginVersion, pluginSHA256, path, name, passwordPolicy, pluginVersion, skipRotation, host, username, password)
+}
+
+// Config function without the three new fields (for testing defaults)
+func testAccDatabaseSecretBackendConnectionConfig_couchbase_externalPlugin_noNewFields(
+	name, path, host, username, password, pluginName, pluginSHA256 string) string {
+
+	return fmt.Sprintf(`
+# Register the external Couchbase plugin
+resource "vault_plugin" "couchbase_external" {
+  type    = "database"
+  name    = "%s"
+  command = "vault-plugin-database-couchbase"
+  version = "v1.0.0"
+  sha256  = "%s"
+  args    = [
+    "--log-level=debug"
+  ]
+}
+
+# Create database mount
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+# Create connection without the three new fields
+resource "vault_database_secret_backend_connection" "test" {
+  backend       = vault_mount.db.path
+  name          = "%s"
+  plugin_name   = vault_plugin.couchbase_external.name
+  allowed_roles = ["dev", "prod"]
+
+  couchbase {
+    hosts       = ["%s"]
+    username    = "%s"
+    password    = "%s"
+    bucket_name = "travel-sample"
+  }
+  
+  depends_on = [vault_plugin.couchbase_external]
+}
+`, pluginName, pluginSHA256, path, name, host, username, password)
+}
+
+// Helper function to check plugin cleanup
+func testAccPluginCheckDestroy(s *terraform.State) error {
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_plugin" {
+			continue
+		}
+
+		pluginName := rs.Primary.Attributes["name"]
+		pluginType := rs.Primary.Attributes["type"]
+
+		resp, err := client.Logical().Read(fmt.Sprintf("sys/plugins/catalog/%s/%s", pluginType, pluginName))
+		if err != nil {
+			return err
+		}
+		if resp != nil {
+			return fmt.Errorf("plugin %s still exists", pluginName)
+		}
+	}
+	return nil
 }
