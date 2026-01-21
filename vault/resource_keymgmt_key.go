@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -115,20 +116,9 @@ func keymgmtKeyCreate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Creating Key Management key at %s", apiPath)
 
+	// Create endpoint only supports type and replica_regions
 	data := map[string]interface{}{
 		"type": d.Get(consts.FieldType).(string),
-	}
-
-	if v, ok := d.GetOk("deletion_allowed"); ok {
-		data["deletion_allowed"] = v.(bool)
-	}
-
-	if v, ok := d.GetOk("allow_plaintext_backup"); ok {
-		data["allow_plaintext_backup"] = v.(bool)
-	}
-
-	if v, ok := d.GetOk("allow_generate_key"); ok {
-		data["allow_generate_key"] = v.(bool)
 	}
 
 	if v, ok := d.GetOk("replica_regions"); ok {
@@ -147,6 +137,32 @@ func keymgmtKeyCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.SetId(apiPath)
+
+	// Give Vault time to register the key before applying config updates
+	// This is necessary because KMS requires the key to exist before applying config
+	time.Sleep(500 * time.Millisecond)
+
+	// Apply configuration parameters that can only be set via update
+	configData := map[string]interface{}{}
+
+	if v, ok := d.GetOk("deletion_allowed"); ok {
+		configData["deletion_allowed"] = v.(bool)
+	}
+
+	if v, ok := d.GetOk("allow_plaintext_backup"); ok {
+		configData["allow_plaintext_backup"] = v.(bool)
+	}
+
+	if v, ok := d.GetOk("allow_generate_key"); ok {
+		configData["allow_generate_key"] = v.(bool)
+	}
+
+	if len(configData) > 0 {
+		log.Printf("[DEBUG] Updating Key Management key config at %s with data: %+v", apiPath, configData)
+		if _, err := client.Logical().Write(apiPath, configData); err != nil {
+			return fmt.Errorf("error updating Key Management key config at %s: %w", apiPath, err)
+		}
+	}
 
 	return keymgmtKeyRead(d, meta)
 }
@@ -282,12 +298,10 @@ func keymgmtKeyUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if len(data) > 0 {
-		// Update configuration endpoint
-		configPath := apiPath + "/config"
-		log.Printf("[DEBUG] Writing Key Management key config to %s with data: %+v", configPath, data)
+		log.Printf("[DEBUG] Updating Key Management key at %s with data: %+v", apiPath, data)
 
-		if _, err := client.Logical().Write(configPath, data); err != nil {
-			return fmt.Errorf("error updating Key Management key at %s: %w", configPath, err)
+		if _, err := client.Logical().Write(apiPath, data); err != nil {
+			return fmt.Errorf("error updating Key Management key at %s: %w", apiPath, err)
 		}
 	}
 
