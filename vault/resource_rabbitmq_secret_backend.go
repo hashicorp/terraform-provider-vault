@@ -68,19 +68,19 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Description: "Specifies the RabbitMQ management administrator username",
 			},
 			consts.FieldPassword: {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Sensitive:     true,
-				Description:   "Specifies the RabbitMQ management administrator password",
-				ConflictsWith: []string{consts.FieldPasswordWO},
+				Type:         schema.TypeString,
+				Optional:     true,
+				Sensitive:    true,
+				Description:  "Specifies the RabbitMQ management administrator password",
+				ExactlyOneOf: []string{consts.FieldPassword, consts.FieldPasswordWO},
 			},
 			consts.FieldPasswordWO: {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Sensitive:     true,
-				WriteOnly:     true,
-				Description:   "Specifies the RabbitMQ management administrator password. This is a write-only field and will not be read back from Vault.",
-				ConflictsWith: []string{consts.FieldPassword},
+				Type:         schema.TypeString,
+				Optional:     true,
+				Sensitive:    true,
+				WriteOnly:    true,
+				Description:  "Specifies the RabbitMQ management administrator password. This is a write-only field and will not be read back from Vault.",
+				ExactlyOneOf: []string{consts.FieldPassword, consts.FieldPasswordWO},
 			},
 			consts.FieldPasswordWOVersion: {
 				Type:         schema.TypeInt,
@@ -126,9 +126,6 @@ func rabbitMQSecretBackendCreate(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	path := d.Get(consts.FieldPath).(string)
-	connectionUri := d.Get(consts.FieldConnectionURI).(string)
-	username := d.Get(consts.FieldUsername).(string)
-	verifyConnection := d.Get(consts.FieldVerifyConnection).(bool)
 
 	// Handle password and password_wo
 	var password string
@@ -153,10 +150,10 @@ func rabbitMQSecretBackendCreate(ctx context.Context, d *schema.ResourceData, me
 
 	log.Printf("[DEBUG] Writing connection credentials to %q", path+"/config/connection")
 	data := map[string]interface{}{
-		consts.FieldConnectionURI:    connectionUri,
-		consts.FieldUsername:         username,
+		consts.FieldConnectionURI:    d.Get(consts.FieldConnectionURI).(string),
+		consts.FieldUsername:         d.Get(consts.FieldUsername).(string),
 		consts.FieldPassword:         password,
-		consts.FieldVerifyConnection: verifyConnection,
+		consts.FieldVerifyConnection: d.Get(consts.FieldVerifyConnection).(bool),
 		consts.FieldUsernameTemplate: d.Get(consts.FieldUsernameTemplate).(string),
 		consts.FieldPasswordPolicy:   d.Get(consts.FieldPasswordPolicy).(string),
 	}

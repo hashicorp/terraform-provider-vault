@@ -242,7 +242,7 @@ resource "vault_rabbitmq_secret_backend" "test" {
   password_wo         = "test-password-wo"
   password_wo_version = 1
 }`, path),
-				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
+				ExpectError: regexp.MustCompile(`Invalid combination of arguments|only one of`),
 			},
 		},
 	})
