@@ -12,7 +12,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -25,7 +27,7 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendDestroy,
 
@@ -112,7 +114,7 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendDestroy,
 
@@ -152,7 +154,7 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", ""),
@@ -183,7 +185,7 @@ func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		Steps: []resource.TestStep{
@@ -206,6 +208,62 @@ func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
 	})
 }
 
+func TestLDAPAuthBackend_bindpassWO(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-ldap-bindpass-wo")
+
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_bindpassWO(path, "supersecurepassword", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "1"),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_bindpassWO(path, "updatedsecurepassword", 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldBindPassWO,
+				consts.FieldBindPassWOVersion,
+				consts.FieldDisableRemount,
+			),
+		},
+	})
+}
+
+func TestLDAPAuthBackend_bindpassConflict(t *testing.T) {
+	t.Parallel()
+
+	path := acctest.RandomWithPrefix("tf-test-ldap-bindpass-conflict")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testLDAPAuthBackendConfig_bindpassConflict(path),
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+				Destroy:     false,
+			},
+		},
+	})
+}
+
 func TestLDAPAuthBackend_tuning(t *testing.T) {
 	t.Parallel()
 	testutil.SkipTestAcc(t)
@@ -214,7 +272,7 @@ func TestLDAPAuthBackend_tuning(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -273,7 +331,7 @@ func TestLDAPAuthBackend_importTune(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -293,7 +351,7 @@ func TestLDAPAuthBackend_tune_conflicts(t *testing.T) {
 
 	path := acctest.RandomWithPrefix("ldap")
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -366,7 +424,7 @@ func TestLDAPAuthBackend_denyNullBindDefault(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -808,6 +866,33 @@ resource "vault_ldap_auth_backend" "test" {
     bindpass        = "supersecurepassword"
     description     = "Test LDAP auth backend for deny_null_bind behavior"
     deny_null_bind  = false
+}
+`, path)
+}
+
+func testLDAPAuthBackendConfig_bindpassWO(path, bindpass string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path               = "%s"
+    url                = "ldaps://example.org"
+    binddn             = "cn=example.com"
+    bindpass_wo        = "%s"
+    bindpass_wo_version = %d
+    description        = "Test LDAP auth backend with write-only bindpass"
+}
+`, path, bindpass, version)
+}
+
+func testLDAPAuthBackendConfig_bindpassConflict(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path               = "%s"
+    url                = "ldaps://example.org"
+    binddn             = "cn=example.com"
+    bindpass           = "supersecurepassword"
+    bindpass_wo        = "anothersecurepassword"
+    bindpass_wo_version = 1
+    description        = "Test LDAP auth backend with conflicting bindpass"
 }
 `, path)
 }

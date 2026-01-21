@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -56,10 +57,26 @@ func azureAuthBackendConfigResource() *schema.Resource {
 				Sensitive:   true,
 			},
 			consts.FieldClientSecret: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The client secret for credentials to query the Azure APIs",
-				Sensitive:   true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The client secret for credentials to query the Azure APIs. Mutually exclusive with 'client_secret_wo'.",
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldClientSecretWO},
+			},
+			consts.FieldClientSecretWO: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "The client secret for credentials to query the Azure APIs. This field is write-only and will never be stored in state. " +
+					"Mutually exclusive with 'client_secret'. Requires 'client_secret_wo_version' to trigger updates.",
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldClientSecret},
+			},
+			consts.FieldClientSecretWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for the write-only client secret. Increment this value to trigger rotation of the client secret. Required when using 'client_secret_wo'.",
+				RequiredWith: []string{consts.FieldClientSecretWO},
 			},
 			consts.FieldResource: {
 				Type:        schema.TypeString,
@@ -119,7 +136,6 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 	backend := d.Get(consts.FieldBackend).(string)
 	tenantId := d.Get(consts.FieldTenantID).(string)
 	clientId := d.Get(consts.FieldClientID).(string)
-	clientSecret := d.Get(consts.FieldClientSecret).(string)
 	resource := d.Get(consts.FieldResource).(string)
 	environment := d.Get(consts.FieldEnvironment).(string)
 	identityTokenAud := d.Get(consts.FieldIdentityTokenAudience).(string)
@@ -128,11 +144,38 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 	path := azureAuthBackendConfigPath(backend)
 
 	data := map[string]interface{}{
-		consts.FieldTenantID:     tenantId,
-		consts.FieldClientID:     clientId,
-		consts.FieldClientSecret: clientSecret,
-		consts.FieldResource:     resource,
-		consts.FieldEnvironment:  environment,
+		consts.FieldTenantID:    tenantId,
+		consts.FieldClientID:    clientId,
+		consts.FieldResource:    resource,
+		consts.FieldEnvironment: environment,
+	}
+
+	// Handle client_secret: legacy field or write-only field
+	// Only send the secret on create or when the write-only version changes
+	var clientSecret string
+
+	// Check if using write-only field
+	if d.IsNewResource() || d.HasChange(consts.FieldClientSecretWOVersion) {
+		if _, ok := d.GetOk(consts.FieldClientSecretWOVersion); ok {
+			// Using write-only field - get from raw config
+			p := cty.GetAttrPath(consts.FieldClientSecretWO)
+			woVal, _ := d.GetRawConfigAt(p)
+			if !woVal.IsNull() {
+				clientSecret = woVal.AsString()
+			}
+		}
+	}
+
+	// Fall back to legacy field if not using write-only
+	if clientSecret == "" {
+		if v, ok := d.GetOk(consts.FieldClientSecret); ok {
+			clientSecret = v.(string)
+		}
+	}
+
+	// Only add client_secret to data if we have a value
+	if clientSecret != "" {
+		data[consts.FieldClientSecret] = clientSecret
 	}
 
 	// Always send retry fields (using schema defaults when not specified)
