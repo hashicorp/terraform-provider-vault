@@ -82,7 +82,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 				ResourceName:            testDefaultDatabaseSecretBackendResource,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"verify_connection", "postgresql.0.connection_url"},
+				ImportStateVerifyIgnore: []string{"verify_connection", "postgresql.0.connection_url", "skip_static_role_import_rotation"},
 			},
 		},
 	})
@@ -1085,6 +1085,9 @@ func TestAccDatabaseSecretBackendConnection_oracle(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.password", password),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "oracle-policy"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v0.10.2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
 				),
 			},
 		},
@@ -2496,6 +2499,9 @@ resource "vault_database_secret_backend_connection" "test" {
   plugin_name = vault_plugin.plugin.name
   name = "%s"
   allowed_roles = [%q]
+  password_policy = "oracle-policy"
+  plugin_version = "v0.10.2" 
+  skip_static_role_import_rotation = true
   oracle {
     	connection_url = "%s"
 		username = "%s"
