@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"golang.org/x/net/context"
@@ -44,9 +45,25 @@ func mongodbAtlasSecretBackendResource() *schema.Resource {
 				Description: "The Public Programmatic API Key used to authenticate with the MongoDB Atlas API",
 			},
 			consts.FieldPrivateKey: {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The Private Programmatic API Key used to connect with MongoDB Atlas API",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Sensitive:    true,
+				Description:  "The Private Programmatic API Key used to connect with MongoDB Atlas API",
+				ExactlyOneOf: []string{consts.FieldPrivateKey, consts.FieldPrivateKeyWO},
+			},
+			consts.FieldPrivateKeyWO: {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Sensitive:    true,
+				WriteOnly:    true,
+				Description:  "The Private Programmatic API Key used to connect with MongoDB Atlas API. This is a write-only field that is not stored in state.",
+				ExactlyOneOf: []string{consts.FieldPrivateKey, consts.FieldPrivateKeyWO},
+			},
+			consts.FieldPrivateKeyWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Incrementing version counter for the private_key_wo field. Increment to force an update to the private key.",
+				RequiredWith: []string{consts.FieldPrivateKeyWO},
 			},
 		},
 	}
@@ -59,8 +76,27 @@ func mongodbAtlasSecretBackendCreateUpdate(ctx context.Context, d *schema.Resour
 	}
 
 	mount := d.Get(consts.FieldMount).(string)
-	privateKey := d.Get(consts.FieldPrivateKey).(string)
 	publicKey := d.Get(consts.FieldPublicKey).(string)
+
+	var privateKey string
+
+	// Check if using write-only field (new resource or version changed)
+	if d.IsNewResource() || d.HasChange(consts.FieldPrivateKeyWOVersion) {
+		if _, ok := d.GetOk(consts.FieldPrivateKeyWOVersion); ok {
+			p := cty.GetAttrPath(consts.FieldPrivateKeyWO)
+			woVal, _ := d.GetRawConfigAt(p)
+			if !woVal.IsNull() {
+				privateKey = woVal.AsString()
+			}
+		}
+	}
+
+	// Fallback to legacy field if write-only not set
+	if privateKey == "" {
+		if v, ok := d.GetOk(consts.FieldPrivateKey); ok {
+			privateKey = v.(string)
+		}
+	}
 
 	data := map[string]interface{}{
 		consts.FieldPrivateKey: privateKey,
@@ -114,9 +150,13 @@ func mongodbAtlasSecretBackendRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.Errorf("error setting state key %q on MongoDB Atlas config, err=%s", consts.FieldPublicKey, err)
 	}
 
-	// set private key from TF config since it won't be returned from Vault
-	if err := d.Set(consts.FieldPrivateKey, d.Get(consts.FieldPrivateKey).(string)); err != nil {
-		return diag.FromErr(err)
+	// Only set private_key if using legacy field (not write-only)
+	// Write-only fields should never be stored in state
+	if _, ok := d.GetOk(consts.FieldPrivateKeyWOVersion); !ok {
+		// Not using write-only, so set legacy field from config
+		if err := d.Set(consts.FieldPrivateKey, d.Get(consts.FieldPrivateKey).(string)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil
