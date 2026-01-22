@@ -3767,8 +3767,11 @@ func TestAccDatabaseSecretBackendConnection_skipStaticRoleImportRotation(t *test
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				// Step 1: Create with skip_static_role_import_rotation = true
