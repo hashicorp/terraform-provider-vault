@@ -744,19 +744,19 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			return strings.Trim(v.(string), "/")
 		},
 	}
-	s["plugin_version"] = &schema.Schema{
+	s[consts.FieldPluginVersion] = &schema.Schema{
 		Type:        schema.TypeString,
 		Optional:    true,
 		Description: "Optional plugin version to use for this connection",
 	}
 
-	s["password_policy"] = &schema.Schema{
+	s[consts.FieldPasswordPolicy] = &schema.Schema{
 		Type:        schema.TypeString,
 		Optional:    true,
 		Description: "Optional name of the password policy to use for generated passwords.",
 	}
 
-	s["skip_static_role_import_rotation"] = &schema.Schema{
+	s[consts.FieldSkipStaticRoleImportRotation] = &schema.Schema{
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Computed:    true,
@@ -1091,15 +1091,15 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	data["plugin_name"] = pluginName
 	// Allow plugin_version/password_policy to be defined either at the
 	// top-level resource or in the engine-specific nested block (prefix).
-	if v, ok := d.GetOk(pluginPrefix + "plugin_version"); ok {
-		data["plugin_version"] = v.(string)
-	} else if v, ok := d.GetOk("plugin_version"); ok {
-		data["plugin_version"] = v.(string)
+	if v, ok := d.GetOk(pluginPrefix + consts.FieldPluginVersion); ok {
+		data[consts.FieldPluginVersion] = v.(string)
+	} else if v, ok := d.GetOk(consts.FieldPluginVersion); ok {
+		data[consts.FieldPluginVersion] = v.(string)
 	}
-	if v, ok := d.GetOk(pluginPrefix + "password_policy"); ok {
-		data["password_policy"] = v.(string)
-	} else if v, ok := d.GetOk("password_policy"); ok {
-		data["password_policy"] = v.(string)
+	if v, ok := d.GetOk(pluginPrefix + consts.FieldPasswordPolicy); ok {
+		data[consts.FieldPasswordPolicy] = v.(string)
+	} else if v, ok := d.GetOk(consts.FieldPasswordPolicy); ok {
+		data[consts.FieldPasswordPolicy] = v.(string)
 	}
 
 	switch engine {
@@ -2121,15 +2121,15 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 		data["root_rotation_statements"] = v
 	}
 
-	if v, ok := d.GetOk("plugin_version"); ok {
-		data["plugin_version"] = v.(string)
+	if v, ok := d.GetOk(consts.FieldPluginVersion); ok {
+		data[consts.FieldPluginVersion] = v.(string)
 	}
-	if v, ok := d.GetOkExists("password_policy"); ok {
-		data["password_policy"] = v.(string)
+	if v, ok := d.GetOkExists(consts.FieldPasswordPolicy); ok {
+		data[consts.FieldPasswordPolicy] = v.(string)
 	}
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
-		if v, ok := d.GetOkExists("skip_static_role_import_rotation"); ok {
-			data["skip_static_role_import_rotation"] = v.(bool)
+		if v, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
+			data[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
 		}
 	}
 
@@ -2274,7 +2274,7 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 		"verify_connection": d.Get(prefix + "verify_connection"),
 		"plugin_name":       resp.Data["plugin_name"],
 
-		"password_policy": resp.Data["password_policy"],
+		consts.FieldPasswordPolicy: resp.Data[consts.FieldPasswordPolicy],
 	}
 
 	//"root_rotation_statements": resp.Data["root_credentials_rotate_statements"],
@@ -2285,26 +2285,26 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 		}
 	}
 
-	if pv, ok := resp.Data["plugin_version"]; ok && pv != nil {
-		result["plugin_version"] = fmt.Sprintf("%v", pv)
+	if pv, ok := resp.Data[consts.FieldPluginVersion]; ok && pv != nil {
+		result[consts.FieldPluginVersion] = fmt.Sprintf("%v", pv)
 	}
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
-		if v, ok := resp.Data["skip_static_role_import_rotation"]; ok && v != nil {
-			result["skip_static_role_import_rotation"] = v.(bool)
+		if v, ok := resp.Data[consts.FieldSkipStaticRoleImportRotation]; ok && v != nil {
+			result[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
 		} else {
 			// Vault may not return this attribute in the API response for some
 			// versions. Fall back to the configured value so that import/state
 			// verification succeeds when the value was set in the original
 			// configuration.
 			// Prefer the engine-specific nested setting if present.
-			if prefV := d.Get(engine.ResourcePrefix(idx) + "skip_static_role_import_rotation"); prefV != nil {
-				result["skip_static_role_import_rotation"] = prefV.(bool)
+			if prefV := d.Get(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); prefV != nil {
+				result[consts.FieldSkipStaticRoleImportRotation] = prefV.(bool)
 			} else {
-				result["skip_static_role_import_rotation"] = d.Get("skip_static_role_import_rotation").(bool)
+				result[consts.FieldSkipStaticRoleImportRotation] = d.Get(consts.FieldSkipStaticRoleImportRotation).(bool)
 			}
 		}
 	} else {
-		result["skip_static_role_import_rotation"] = false
+		result[consts.FieldSkipStaticRoleImportRotation] = false
 	}
 	result["root_rotation_statements"] = rootRotationStmts
 
