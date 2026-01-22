@@ -34,6 +34,7 @@ resource "vault_approle_auth_backend_role" "example" {
 
 ephemeral "vault_approle_auth_backend_role_secret_id" "example" {
   backend   = vault_auth_backend.approle.path
+  mount_id  = vault_auth_backend.approle.id
   role_name = vault_approle_auth_backend_role.example.role_name
 }
 
@@ -50,6 +51,7 @@ resource "vault_approle_auth_backend_login" "login" {
 ```hcl
 ephemeral "vault_approle_auth_backend_role_secret_id" "example" {
   backend   = vault_auth_backend.approle.path
+  mount_id  = vault_auth_backend.approle.id
   role_name = vault_approle_auth_backend_role.example.role_name
   cidr_list = ["10.0.0.0/8", "192.168.1.0/24"]
 }
@@ -60,6 +62,7 @@ ephemeral "vault_approle_auth_backend_role_secret_id" "example" {
 ```hcl
 ephemeral "vault_approle_auth_backend_role_secret_id" "example" {
   backend   = vault_auth_backend.approle.path
+  mount_id  = vault_auth_backend.approle.id
   role_name = vault_approle_auth_backend_role.example.role_name
   
   metadata = jsonencode({
@@ -83,6 +86,10 @@ The following arguments are supported:
   *Available only for Vault Enterprise*.
 
 * `backend` - (Optional) Path to the mounted AppRole auth backend. Defaults to `approle`.
+
+* `mount_id` - (Optional) If value is set, will defer provisioning the ephemeral resource until
+  `terraform apply`. For more details, please refer to the official documentation around
+  [using ephemeral resources in the Vault Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_ephemeral_resources).
 
 * `role_name` - (Required) The name of the role to create the SecretID for.
 
