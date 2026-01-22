@@ -1845,6 +1845,7 @@ func testAccDatabaseSecretBackendConnectionConfig_cassandra(name, path, host, us
 		password_policy = "cassandra-policy"
   		/* plugin_version = "v1.3.0" */
   		skip_static_role_import_rotation = true
+  		%s
 
 		cassandra {
 			hosts = ["%s"]
