@@ -6,7 +6,6 @@ package ephemeralauth
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -153,17 +152,17 @@ func (r *ApproleAuthBackendRoleSecretIDEphemeralResource) Open(ctx context.Conte
 
 	// Handle metadata
 	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
-		requestData["metadata"] = data.Metadata.ValueString()
+		requestData[consts.FieldMetadata] = data.Metadata.ValueString()
 	}
 
 	// Handle TTL
 	if !data.TTL.IsNull() && !data.TTL.IsUnknown() {
-		requestData["ttl"] = data.TTL.ValueInt64()
+		requestData[consts.FieldTTL] = data.TTL.ValueInt64()
 	}
 
 	// Handle num_uses
 	if !data.NumUses.IsNull() && !data.NumUses.IsUnknown() {
-		requestData["num_uses"] = data.NumUses.ValueInt64()
+		requestData[consts.FieldNumUses] = data.NumUses.ValueInt64()
 	}
 
 	secretResp, err := c.Logical().WriteWithContext(ctx, path, requestData)
@@ -190,18 +189,14 @@ func (r *ApproleAuthBackendRoleSecretIDEphemeralResource) Open(ctx context.Conte
 		return
 	}
 
-	log.Printf("[DEBUG] Generated AppRole SecretID - Accessor: %s, SecretID: %s (first 8 chars)",
-		readResp.SecretIDAccessor,
-		readResp.SecretID)
-
 	data.SecretID = types.StringValue(readResp.SecretID)
 	data.Accessor = types.StringValue(readResp.SecretIDAccessor)
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 
 	// Store the accessor and backend info for cleanup in Close
-	resp.Private.SetKey(ctx, "accessor", []byte(readResp.SecretIDAccessor))
-	resp.Private.SetKey(ctx, "backend", []byte(backend))
-	resp.Private.SetKey(ctx, "role", []byte(role))
-	resp.Private.SetKey(ctx, "namespace", []byte(data.Namespace.ValueString()))
+	resp.Private.SetKey(ctx, consts.FieldAccessor, []byte(readResp.SecretIDAccessor))
+	resp.Private.SetKey(ctx, consts.FieldBackend, []byte(backend))
+	resp.Private.SetKey(ctx, consts.FieldRole, []byte(role))
+	resp.Private.SetKey(ctx, consts.FieldNamespace, []byte(data.Namespace.ValueString()))
 }

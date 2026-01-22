@@ -182,11 +182,11 @@ func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error
 		}
 	}
 
-	d.Set(consts.FieldPolicies, resp.Data["policies"])
-	d.Set(consts.FieldRenewable, resp.Data["renewable"])
-	d.Set(consts.FieldLeaseDuration, resp.Data["lease_duration"])
-	d.Set(consts.FieldMetadata, resp.Data["metadata"])
-	d.Set(consts.FieldAccessor, resp.Data["accessor"])
+	d.Set(consts.FieldPolicies, resp.Data[consts.FieldPolicies])
+	d.Set(consts.FieldRenewable, resp.Data[consts.FieldRenewable])
+	d.Set(consts.FieldLeaseDuration, resp.Data[consts.FieldLeaseDuration])
+	d.Set(consts.FieldMetadata, resp.Data[consts.FieldMetadata])
+	d.Set(consts.FieldAccessor, resp.Data[consts.FieldAccessor])
 	return nil
 }
 

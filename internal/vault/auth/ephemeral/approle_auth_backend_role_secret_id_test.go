@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
@@ -52,8 +53,8 @@ func TestAccApproleAuthBackendRoleSecretID(t *testing.T) {
 			{
 				Config: testApproleAuthBackendRoleSecretIDConfig(backend, roleName),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.test_approle", tfjsonpath.New("data").AtMapKey("secret_id"), knownvalue.StringRegexp(expectedSecretIDRegex)),
-					statecheck.ExpectKnownValue("echo.test_approle", tfjsonpath.New("data").AtMapKey("accessor"), knownvalue.StringRegexp(expectedAccessorRegex)),
+					statecheck.ExpectKnownValue("echo.test_approle", tfjsonpath.New("data").AtMapKey(consts.FieldSecretID), knownvalue.StringRegexp(expectedSecretIDRegex)),
+					statecheck.ExpectKnownValue("echo.test_approle", tfjsonpath.New("data").AtMapKey(consts.FieldAccessor), knownvalue.StringRegexp(expectedAccessorRegex)),
 				},
 			},
 		},
