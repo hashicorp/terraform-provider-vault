@@ -125,6 +125,8 @@ const (
 	FieldMountAccessor                  = "mount_accessor"
 	FieldUsername                       = "username"
 	FieldPassword                       = "password"
+	FieldConnectionURI                  = "connection_uri"
+	FieldVerifyConnection               = "verify_connection"
 	FieldPasswordFile                   = "password_file"
 	FieldClientAuth                     = "client_auth"
 	FieldAuthLoginGeneric               = "auth_login"
