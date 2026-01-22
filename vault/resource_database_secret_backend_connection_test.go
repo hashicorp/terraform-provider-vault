@@ -62,7 +62,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 			{
 				// Always include skip_static_role_import_rotation in config - Vault ignores unknown fields on < 1.19
 				// The testAccCheckSkipStaticRoleImportRotation helper handles version-aware assertion
-				Config: testAccDatabaseSecretBackendConnectionConfig_import(name, backend, connURL, userTempl, false),
+				Config: testAccDatabaseSecretBackendConnectionConfig_import(name, backend, connURL, userTempl, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -77,7 +77,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", userTempl),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_name", pluginName),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "test-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -136,7 +136,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.consistency", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username_template", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "cassandra-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
@@ -529,7 +529,7 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodb.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodb.0.write_concern", writeConcern),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mongo-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
@@ -600,7 +600,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.contained_db", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mssql-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -664,7 +664,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.service_account_json", saJSON),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -708,7 +708,7 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
@@ -746,7 +746,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_rds(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-rds-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
@@ -784,7 +784,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_aurora(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-legacy-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
@@ -822,7 +822,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_legacy(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-legacy-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
@@ -889,7 +889,7 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-update-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -906,7 +906,7 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "10"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-update-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
@@ -1106,7 +1106,7 @@ func TestAccDatabaseSecretBackendConnection_oracle(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "oracle-policy"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPluginVersion, "v0.10.2"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
@@ -1158,7 +1158,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", userTempl),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "postgres-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -1423,7 +1423,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.insecure", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "elastic-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -1544,7 +1544,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.private_key_wo_version", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username_template", userTempl),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "snowflake-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -1600,7 +1600,7 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.tls", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "redis-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -1657,7 +1657,7 @@ func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis_elasticache.0.url", url),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "redis-elasticache-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -1700,7 +1700,7 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redshift.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redshift.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "redshift-policy"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -3706,7 +3706,7 @@ func TestAccDatabaseSecretBackendConnection_skipStaticRoleImportRotation(t *test
 				// Step 1: Create with skip_static_role_import_rotation = true
 				Config: testAccDatabaseSecretBackendConnectionConfig_skipRotation(name, backend, connURL, false),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -3728,7 +3728,7 @@ func TestAccDatabaseSecretBackendConnection_skipStaticRoleImportRotation(t *test
 				// Step 4: Set back to true to verify toggle works
 				Config: testAccDatabaseSecretBackendConnectionConfig_skipRotation(name, backend, connURL, false),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
