@@ -27,12 +27,6 @@ var (
 		consts.FieldACSURLs,
 		consts.FieldDefaultRole,
 	}
-
-	samlBooleanAPIFields = []string{
-		consts.FieldVerboseLogging,
-		consts.FieldValidateAssertionSignature,
-		consts.FieldValidateResponseSignature,
-	}
 )
 
 func samlAuthBackendResource() *schema.Resource {
@@ -103,6 +97,7 @@ func samlAuthBackendResource() *schema.Resource {
 			consts.FieldVerboseLogging: {
 				Type:     schema.TypeBool,
 				Optional: true,
+				ForceNew: true,
 				Description: "Log additional, potentially sensitive information " +
 					"during the SAML exchange according to the current logging level. Not " +
 					"recommended for production.",
@@ -110,11 +105,13 @@ func samlAuthBackendResource() *schema.Resource {
 			consts.FieldValidateAssertionSignature: {
 				Type:        schema.TypeBool,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "Whether to validate the assertion signature.",
 			},
 			consts.FieldValidateResponseSignature: {
 				Type:        schema.TypeBool,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "Whether to validate the response signature.",
 			},
 			consts.FieldTune: authMountTuneSchema(),
@@ -173,17 +170,14 @@ func samlAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	}
 
 	// add boolean fields
-	for _, k := range samlBooleanAPIFields {
-		// validate_assertion_signature and validate_response_signature require Vault 1.19+
-		if k == consts.FieldValidateAssertionSignature || k == consts.FieldValidateResponseSignature {
-			if provider.IsAPISupported(meta, provider.VaultVersion119) {
-				data[k] = d.Get(k)
-			} else if v := d.Get(k).(bool); v {
-				return diag.Errorf("%q requires Vault 1.19 or later", k)
-			}
-		} else {
-			data[k] = d.Get(k)
-		}
+	// validate_assertion_signature and validate_response_signature require Vault 1.19+
+	samlBooleanFields := []string{consts.FieldVerboseLogging}
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		samlBooleanFields = append(samlBooleanFields, consts.FieldValidateAssertionSignature, consts.FieldValidateResponseSignature)
+	}
+
+	for _, k := range samlBooleanFields {
+		data[k] = d.Get(k)
 	}
 	log.Printf("[DEBUG] Writing saml auth backend config to %q", configPath)
 	_, err := client.Logical().Write(configPath, data)
@@ -234,16 +228,14 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
+	samlBooleanFields := []string{consts.FieldVerboseLogging}
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		samlBooleanFields = append(samlBooleanFields, consts.FieldValidateAssertionSignature, consts.FieldValidateResponseSignature)
+	}
 	// set all API fields to TF state
-	fields := append(samlAPIFields, samlBooleanAPIFields...)
+	fields := append(samlAPIFields, samlBooleanFields...)
 	for _, k := range fields {
 		if v, ok := resp.Data[k]; ok {
-			// validate_assertion_signature and validate_response_signature require Vault 1.19+
-			if k == consts.FieldValidateAssertionSignature || k == consts.FieldValidateResponseSignature {
-				if !provider.IsAPISupported(meta, provider.VaultVersion119) {
-					continue
-				}
-			}
 			if err := d.Set(k, v); err != nil {
 				return diag.Errorf("error setting state key %q: err=%s", k, err)
 			}

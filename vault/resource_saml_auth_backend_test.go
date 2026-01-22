@@ -234,11 +234,11 @@ func TestAccSAMLAuthBackend_booleanFlags(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccSAMLAuthBackendConfig_booleansExplicit(path, true, false),
+				Config: testAccSAMLAuthBackendConfig_booleansExplicit(path, true, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldVerboseLogging, "true"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValidateAssertionSignature, "false"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValidateResponseSignature, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldValidateAssertionSignature, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldValidateResponseSignature, "true"),
 				),
 			},
 			{

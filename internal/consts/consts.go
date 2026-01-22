@@ -628,7 +628,6 @@ const (
 	FieldIDPCert                    = "idp_cert"
 	FieldEntityID                   = "entity_id"
 	FieldACSURLs                    = "acs_urls"
-	FieldDefaultRole                = "default_role"
 	FieldVerboseLogging             = "verbose_logging"
 	FieldValidateAssertionSignature = "validate_assertion_signature"
 	FieldValidateResponseSignature  = "validate_response_signature"
