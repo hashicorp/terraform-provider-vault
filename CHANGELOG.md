@@ -13,7 +13,7 @@ IMPROVEMENTS:
 * `vault_secrets_sync_aws_destination`: Add support for networking configuration parameters `allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, and `disable_strict_networking` to control outbound connections from Vault to AWS Secrets Manager. Requires Vault 1.19.0+.([#2698](https://github.com/hashicorp/terraform-provider-vault/pull/2698))
 * Updated dependencies:
   * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
-* Add support for `local_secret_ids` which may only be set at role creation. On updates the provider will send the original creation value to Vault to avoid unintentionally attempting to modify this immutable setting.The provider now surfaces Vault's native immutability error when an update attempts to change `local_secret_ids`.
+* Add support for `local_secret_ids` which may only be set at role creation. On updates the provider will send the original creation value to Vault to avoid unintentionally attempting to modify this immutable setting.The provider now surfaces Vault's native immutability error when an update attempts to change `local_secret_ids`.([#2723](https://github.com/hashicorp/terraform-provider-vault/pull/2723))
 
 
 BUGS:
