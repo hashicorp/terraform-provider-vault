@@ -840,6 +840,9 @@ func testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName s
 	return resource.ComposeAggregateTestCheckFunc(funcs...)
 }
 
+// testAccCheckSkipStaticRoleImportRotation checks the skip_static_role_import_rotation attribute.
+// This field is only available in Vault Enterprise 1.19+, so the check is skipped for
+// non-Enterprise or older versions.
 func testAccCheckSkipStaticRoleImportRotation(resourceName, expected string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		meta := testProvider.Meta().(*provider.ProviderMeta)
@@ -847,7 +850,8 @@ func testAccCheckSkipStaticRoleImportRotation(resourceName, expected string) res
 		if curVer == nil {
 			return fmt.Errorf("vault version not set on %T", meta)
 		}
-		if curVer.LessThan(provider.VaultVersion119) {
+		// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
+		if curVer.LessThan(provider.VaultVersion119) || !meta.IsEnterpriseSupported() {
 			return nil
 		}
 		return resource.TestCheckResourceAttr(resourceName, consts.FieldSkipStaticRoleImportRotation, expected)(s)
@@ -3690,6 +3694,11 @@ func TestAccDatabaseSecretBackendConnection_skipStaticRoleImportRotation(t *test
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+			// skip_static_role_import_rotation is only available in Vault Enterprise
+			meta := testProvider.Meta().(*provider.ProviderMeta)
+			if !meta.IsEnterpriseSupported() {
+				t.Skip("skip_static_role_import_rotation is an Enterprise-only feature")
+			}
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{

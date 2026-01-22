@@ -2127,7 +2127,8 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 	if v, ok := d.GetOkExists(consts.FieldPasswordPolicy); ok {
 		data[consts.FieldPasswordPolicy] = v.(string)
 	}
-	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+	// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
 			data[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
 		}
@@ -2288,7 +2289,8 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 	if pv, ok := resp.Data[consts.FieldPluginVersion]; ok && pv != nil {
 		result[consts.FieldPluginVersion] = fmt.Sprintf("%v", pv)
 	}
-	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+	// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := resp.Data[consts.FieldSkipStaticRoleImportRotation]; ok && v != nil {
 			result[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
 		} else {
