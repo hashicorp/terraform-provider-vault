@@ -60,11 +60,9 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_import(name, backend, connURL, userTempl, skipStaticRoleConfig)
-				}(),
+				// Always include skip_static_role_import_rotation in config - Vault ignores unknown fields on < 1.19
+				// The testAccCheckSkipStaticRoleImportRotation helper handles version-aware assertion
+				Config: testAccDatabaseSecretBackendConnectionConfig_import(name, backend, connURL, userTempl, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -112,11 +110,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_cassandra(name, backend, host, username, password, "5", skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra(name, backend, host, username, password, "5", true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -524,11 +518,7 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_mongodb(name, backend, writeConcern, connURL, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mongodb(name, backend, writeConcern, connURL, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -594,11 +584,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, false, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, false, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -618,11 +604,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 				),
 			},
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, false, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, false, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_name", pluginName),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
@@ -667,11 +649,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_mysql_cloud(name, backend, connURL, "gcp_iam", saJSON, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_cloud(name, backend, connURL, "gcp_iam", saJSON, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQL.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -716,11 +694,7 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_mysql(name, backend, connURL, username, password, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql(name, backend, connURL, username, password, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQL.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -758,11 +732,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_rds(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_mysql_rds(name, backend, connURL, username, password, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_rds(name, backend, connURL, username, password, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLRDS.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -800,11 +770,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_aurora(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_mysql_aurora(name, backend, connURL, username, password, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_aurora(name, backend, connURL, username, password, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLAurora.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -842,11 +808,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_legacy(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_mysql_legacy(name, backend, connURL, username, password, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_legacy(name, backend, connURL, username, password, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLLegacy.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -910,11 +872,7 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, username, password, 0, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, username, password, 0, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -931,11 +889,7 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 				),
 			},
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, username, password, 10, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, username, password, 10, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -1138,11 +1092,7 @@ func TestAccDatabaseSecretBackendConnection_oracle(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_oracle(name, backend, pluginName, connURL, username, password, "*", pluginInstall, pluginVersion, pluginSHA, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_oracle(name, backend, pluginName, connURL, username, password, "*", pluginInstall, pluginVersion, pluginSHA, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
@@ -1186,11 +1136,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, username, password, maxOpenConnections, maxIdleConnections, maxConnLifetime, parsedURL, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, username, password, maxOpenConnections, maxIdleConnections, maxConnLifetime, parsedURL, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -1461,11 +1407,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, backend, connURL, username, password, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, backend, connURL, username, password, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -1587,11 +1529,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username, userTempl, privateKey, "1", skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username, userTempl, privateKey, "1", true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -1606,11 +1544,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
 				),
 			},
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username+"new", userTempl, privateKey, "2", skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username+"new", userTempl, privateKey, "2", true),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(testDefaultDatabaseSecretBackendResource, plancheck.ResourceActionUpdate),
@@ -1650,11 +1584,7 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "*", skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "*", true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
@@ -1682,11 +1612,7 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 					//	t.Error(err)
 					//}
 				},
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "foobar", skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "foobar", true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "foobar"),
@@ -1720,11 +1646,7 @@ func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_redis_elasticache(name, backend, url, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis_elasticache(name, backend, url, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
@@ -1761,11 +1683,7 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, false, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, false, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -1782,11 +1700,7 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 				),
 			},
 			{
-				Config: func() string {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					skipStaticRoleConfig := provider.IsAPISupported(meta, provider.VaultVersion119)
-					return testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, true, skipStaticRoleConfig)
-				}(),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, true, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -2092,6 +2006,9 @@ resource "vault_database_secret_backend_connection" "test" {
 `, backend, name, host, username, password)
 }
 
+// testAccDatabaseSecretBackendConnectionConfig_import generates config for PostgreSQL import test.
+// When includeSkipStatic is true, includes skip_static_role_import_rotation = true.
+// Note: Vault versions < 1.19 ignore this field; version-aware assertions should be used in tests.
 func testAccDatabaseSecretBackendConnectionConfig_import(name, path, connURL, userTempl string, includeSkipStatic bool) string {
 	skipStaticLine := ""
 	if includeSkipStatic {
