@@ -2289,7 +2289,6 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 	if pv, ok := resp.Data[consts.FieldPluginVersion]; ok && pv != nil {
 		result[consts.FieldPluginVersion] = fmt.Sprintf("%v", pv)
 	}
-	// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := resp.Data[consts.FieldSkipStaticRoleImportRotation]; ok && v != nil {
 			result[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
@@ -2299,14 +2298,23 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 			// verification succeeds when the value was set in the original
 			// configuration.
 			// Prefer the engine-specific nested setting if present.
-			if prefV := d.Get(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); prefV != nil {
+			if prefV, ok := d.GetOkExists(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); ok {
 				result[consts.FieldSkipStaticRoleImportRotation] = prefV.(bool)
+			} else if topV, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
+				result[consts.FieldSkipStaticRoleImportRotation] = topV.(bool)
 			} else {
-				result[consts.FieldSkipStaticRoleImportRotation] = d.Get(consts.FieldSkipStaticRoleImportRotation).(bool)
+				result[consts.FieldSkipStaticRoleImportRotation] = false
 			}
 		}
 	} else {
-		result[consts.FieldSkipStaticRoleImportRotation] = false
+		// For Vault < 1.19 or non-Enterprise, preserve the configured value to avoid plan diffs
+		if prefV, ok := d.GetOkExists(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); ok {
+			result[consts.FieldSkipStaticRoleImportRotation] = prefV.(bool)
+		} else if topV, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
+			result[consts.FieldSkipStaticRoleImportRotation] = topV.(bool)
+		} else {
+			result[consts.FieldSkipStaticRoleImportRotation] = false
+		}
 	}
 	result["root_rotation_statements"] = rootRotationStmts
 
