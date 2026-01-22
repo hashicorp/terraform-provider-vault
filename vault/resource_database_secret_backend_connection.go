@@ -2127,8 +2127,10 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 	if v, ok := d.GetOkExists("password_policy"); ok {
 		data["password_policy"] = v.(string)
 	}
-	if v, ok := d.GetOkExists("skip_static_role_import_rotation"); ok {
-		data["skip_static_role_import_rotation"] = v.(bool)
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		if v, ok := d.GetOkExists("skip_static_role_import_rotation"); ok {
+			data["skip_static_role_import_rotation"] = v.(bool)
+		}
 	}
 
 	log.Printf("[DEBUG] database config payload : %+v", data)
@@ -2286,19 +2288,23 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 	if pv, ok := resp.Data["plugin_version"]; ok && pv != nil {
 		result["plugin_version"] = fmt.Sprintf("%v", pv)
 	}
-	if v, ok := resp.Data["skip_static_role_import_rotation"]; ok && v != nil {
-		result["skip_static_role_import_rotation"] = v.(bool)
-	} else {
-		// Vault may not return this attribute in the API response for some
-		// versions. Fall back to the configured value so that import/state
-		// verification succeeds when the value was set in the original
-		// configuration.
-		// Prefer the engine-specific nested setting if present.
-		if prefV := d.Get(engine.ResourcePrefix(idx) + "skip_static_role_import_rotation"); prefV != nil {
-			result["skip_static_role_import_rotation"] = prefV.(bool)
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		if v, ok := resp.Data["skip_static_role_import_rotation"]; ok && v != nil {
+			result["skip_static_role_import_rotation"] = v.(bool)
 		} else {
-			result["skip_static_role_import_rotation"] = d.Get("skip_static_role_import_rotation").(bool)
+			// Vault may not return this attribute in the API response for some
+			// versions. Fall back to the configured value so that import/state
+			// verification succeeds when the value was set in the original
+			// configuration.
+			// Prefer the engine-specific nested setting if present.
+			if prefV := d.Get(engine.ResourcePrefix(idx) + "skip_static_role_import_rotation"); prefV != nil {
+				result["skip_static_role_import_rotation"] = prefV.(bool)
+			} else {
+				result["skip_static_role_import_rotation"] = d.Get("skip_static_role_import_rotation").(bool)
+			}
 		}
+	} else {
+		result["skip_static_role_import_rotation"] = false
 	}
 	result["root_rotation_statements"] = rootRotationStmts
 
