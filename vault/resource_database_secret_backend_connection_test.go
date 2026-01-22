@@ -75,7 +75,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_name", pluginName),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "test-policy"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -134,7 +134,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username_template", ""),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.3.0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "cassandra-policy"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 		},
@@ -527,7 +527,7 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodb.0.write_concern", writeConcern),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mongo-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v2.0.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 		},
@@ -598,7 +598,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.contained_db", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mssql-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.5.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 			{
@@ -662,7 +662,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.service_account_json", saJSON),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.3.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 			{
@@ -706,7 +706,7 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.1.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 		},
@@ -744,7 +744,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_rds(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-rds-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.1.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 		},
@@ -782,7 +782,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_aurora(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-legacy-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.1.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 		},
@@ -820,7 +820,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_legacy(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-legacy-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.1.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 		},
@@ -836,6 +836,20 @@ func testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName s
 	funcs = append(funcs, fs...)
 
 	return resource.ComposeAggregateTestCheckFunc(funcs...)
+}
+
+func testAccCheckSkipStaticRoleImportRotation(resourceName, expected string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		meta := testProvider.Meta().(*provider.ProviderMeta)
+		curVer := meta.GetVaultVersion()
+		if curVer == nil {
+			return fmt.Errorf("vault version not set on %T", meta)
+		}
+		if curVer.LessThan(provider.VaultVersion116) {
+			return nil
+		}
+		return resource.TestCheckResourceAttr(resourceName, "skip_static_role_import_rotation", expected)(s)
+	}
 }
 
 func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
@@ -869,7 +883,7 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-update-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.0.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 			{
@@ -887,7 +901,7 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "10"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "mysql-update-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.0.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 		},
@@ -1087,7 +1101,7 @@ func TestAccDatabaseSecretBackendConnection_oracle(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "oracle-policy"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v0.10.2"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 		},
@@ -1139,7 +1153,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", userTempl),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "postgres-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", ""),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 			{
@@ -1405,7 +1419,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.insecure", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "elastic-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.3.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 			{
@@ -1527,7 +1541,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username_template", userTempl),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "snowflake-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.3.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 			{
@@ -1584,7 +1598,7 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "redis-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v0.9.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 			{
@@ -1641,7 +1655,7 @@ func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis_elasticache.0.url", url),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "redis-elasticache-policy"),
 					//resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v0.9.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 			{
@@ -1684,7 +1698,7 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redshift.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "redshift-policy"),
 					// resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_version", "v1.3.0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 			{
@@ -3628,7 +3642,7 @@ func TestAccDatabaseSecretBackendConnection_skipStaticRoleImportRotation(t *test
 				// Step 1: Create with skip_static_role_import_rotation = true
 				Config: testAccDatabaseSecretBackendConnectionConfig_skipRotation(name, backend, connURL, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 			{
@@ -3636,21 +3650,21 @@ func TestAccDatabaseSecretBackendConnection_skipStaticRoleImportRotation(t *test
 				// This tests the SDK v2 bug fix - without GetOkExists, this would fail
 				Config: testAccDatabaseSecretBackendConnectionConfig_skipRotation(name, backend, connURL, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
 				// Step 3: Remove skip_static_role_import_rotation (should default to false)
 				Config: testAccDatabaseSecretBackendConnectionConfig_skipRotation_omitted(name, backend, connURL),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "false"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
 				// Step 4: Set back to true to verify toggle works
 				Config: testAccDatabaseSecretBackendConnectionConfig_skipRotation(name, backend, connURL, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 		},
@@ -3744,7 +3758,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase_externalPlugin(t *testing.
 					// Verify the three new fields
 					resource.TestCheckResourceAttr(resourceName, "password_policy", passwordPolicy),
 					resource.TestCheckResourceAttr(resourceName, "plugin_version", pluginVersion),
-					resource.TestCheckResourceAttr(resourceName, "skip_static_role_import_rotation", "true"),
+					testAccCheckSkipStaticRoleImportRotation(resourceName, "true"),
 
 					// Verify standard fields
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -3816,7 +3830,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase_externalPlugin(t *testing.
 					// Verify the three new fields updated
 					resource.TestCheckResourceAttr(resourceName, "password_policy", "updated-policy"),
 					resource.TestCheckResourceAttr(resourceName, "plugin_version", "v2.0.0"),
-					resource.TestCheckResourceAttr(resourceName, "skip_static_role_import_rotation", "false"),
+					testAccCheckSkipStaticRoleImportRotation(resourceName, "false"),
 
 					// Verify update in Vault API
 					func(s *terraform.State) error {
@@ -3847,7 +3861,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase_externalPlugin(t *testing.
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "password_policy", ""),
 					resource.TestCheckResourceAttr(resourceName, "plugin_version", ""),
-					resource.TestCheckResourceAttr(resourceName, "skip_static_role_import_rotation", "false"),
+					testAccCheckSkipStaticRoleImportRotation(resourceName, "false"),
 
 					// Verify fields are not sent to Vault when omitted
 					func(s *terraform.State) error {
