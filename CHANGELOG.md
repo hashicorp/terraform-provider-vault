@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 
+* `vault_mfa_totp`: Add support for `max_validation_attempts` field to configure the maximum number of consecutive failed validation attempts allowed. ([#2751](https://github.com/hashicorp/terraform-provider-vault/pull/2751))
 * `vault_mongodbatlas_secret_backend`: Add support for write-only private key fields (`private_key_wo`, `private_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2741](https://github.com/hashicorp/terraform-provider-vault/pull/2741))
 * `vault_consul_secret_backend`: Add support for write-only fields (`token_wo`, `token_wo_version`, `client_key_wo`, `client_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2730](https://github.com/hashicorp/terraform-provider-vault/pull/2730))
 * `vault_azure_auth_backend_config`: Add support for write-only client secret fields (`client_secret_wo`, `client_secret_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2726](https://github.com/hashicorp/terraform-provider-vault/pull/2726))
