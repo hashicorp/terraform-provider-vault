@@ -269,6 +269,16 @@ func GetTestPKCSCreds(t *testing.T) (string, string, string) {
 	return v[0], v[1], v[2]
 }
 
+func GetTestGCPKeyRing(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GCP_KEY_RING")
+	return v[0]
+}
+
+func GetTestGCPRegion(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GCP_REGION")
+	return v[0]
+}
+
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState, ok := s.RootModule().Resources[name]
