@@ -26,6 +26,29 @@ for more details.
 
 ## Example Usage
 
+### Using Write-Only Secret Key (Recommended)
+
+For enhanced security, use the write-only `secret_key_wo` field which is never stored in Terraform state:
+
+```hcl
+resource "vault_auth_backend" "example" {
+  type = "aws"
+}
+
+resource "vault_aws_auth_backend_client" "example" {
+  backend                = vault_auth_backend.example.path
+  access_key             = "INSERT_AWS_ACCESS_KEY"
+  secret_key_wo          = var.aws_secret_key  # Never stored in state
+  secret_key_wo_version  = 1                   # Increment to rotate
+}
+
+# To rotate the secret, update both the secret value and increment the version:
+# secret_key_wo          = var.new_aws_secret_key
+# secret_key_wo_version  = 2
+```
+
+### Using Workload Identity Federation (Secret-less)
+
 You can setup the AWS auth engine with Workload Identity Federation (WIF) for a secret-less configuration:
 ```hcl
 resource "vault_auth_backend" "example" {
@@ -40,6 +63,8 @@ resource "vault_aws_auth_backend_client" "example" {
   rotation_window         = 3600
 }
 ```
+
+### Using Legacy Secret Key Field
 
 ```hcl
 resource "vault_auth_backend" "example" {
@@ -75,7 +100,12 @@ The following arguments are supported:
     auth backend. Mutually exclusive with `identity_token_audience`.
 
 * `secret_key` - (Optional) The AWS secret key that Vault should use for the
-    auth backend.
+    auth backend. Mutually exclusive with `secret_key_wo`.
+    **Note:** This field stores the secret in Terraform state in plain text. 
+    Consider using `secret_key_wo` instead for enhanced security.
+
+* `secret_key_wo_version` - (Optional) Version counter for the write-only `secret_key_wo` field.
+    Increment this value to rotate the secret key. Required when `secret_key_wo` is set.
 
 * `identity_token_audience` - (Optional) The audience claim value. Mutually exclusive with `access_key`. 
     Requires Vault 1.17+. *Available only for Vault Enterprise*
@@ -126,6 +156,16 @@ The following arguments are supported:
     unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+.
 
 * `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `secret_key_wo` - (Optional) Write-only AWS secret key that Vault should use for the
+    auth backend. This field is recommended over `secret_key` for enhanced security as it
+    is never stored in Terraform state. Mutually exclusive with `secret_key`.
+    Must be used together with `secret_key_wo_version`.
+    **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
 
