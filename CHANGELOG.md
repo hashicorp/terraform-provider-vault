@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* Add Kubernetes service account token ephemeral resource `vault_kubernetes_service_account_token`: ([#2712](https://github.com/hashicorp/terraform-provider-vault/pull/2712))
+
 IMPROVEMENTS:
 
 * `vault_mfa_totp`: Add support for `max_validation_attempts` field to configure the maximum number of consecutive failed validation attempts allowed. ([#2751](https://github.com/hashicorp/terraform-provider-vault/pull/2751))
