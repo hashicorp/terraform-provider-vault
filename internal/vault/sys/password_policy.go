@@ -6,15 +6,20 @@ package sys
 import (
 	"context"
 	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
@@ -39,8 +44,9 @@ type PasswordPolicyModel struct {
 	base.BaseModelLegacy
 
 	// fields specific to this resource
-	Name   types.String `tfsdk:"name"`
-	Policy types.String `tfsdk:"policy"`
+	Name          types.String `tfsdk:"name"`
+	Policy        types.String `tfsdk:"policy"`
+	EntropySource types.String `tfsdk:"entropy_source"`
 }
 
 // PasswordPolicyAPIModel describes the Vault API data model.
@@ -62,16 +68,23 @@ func (r *PasswordPolicyResource) Metadata(_ context.Context, req resource.Metada
 func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"name": schema.StringAttribute{
+			consts.FieldName: schema.StringAttribute{
 				MarkdownDescription: "Name of the password policy.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"policy": schema.StringAttribute{
+			consts.FieldPolicy: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "The password policy document",
+			},
+			consts.FieldEntropySource: schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "Specifies an override to the default source of entropy (randomness) used to generate the passwords. Must be one of: '', 'platform', or 'seal'. Requires Vault 1.21+.",
+				Validators: []validator.String{
+					stringvalidator.OneOf("", "platform", "seal"),
+				},
 			},
 		},
 		MarkdownDescription: "Provides a resource to manage Password Policies.",
@@ -100,8 +113,31 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 	}
 
 	vaultRequest := map[string]interface{}{
-		"policy": data.Policy.ValueString(),
+		consts.FieldPolicy: data.Policy.ValueString(),
 	}
+
+	if !data.EntropySource.IsNull() && !data.EntropySource.IsUnknown() {
+		if provider.IsAPISupported(r.Meta(), provider.VaultVersion121) {
+			entropySource := data.EntropySource.ValueString()
+			// Check for enterprise requirement for 'seal' option
+			if entropySource == "seal" && !provider.IsEnterpriseSupported(r.Meta()) {
+				resp.Diagnostics.AddError(
+					"entropy_source 'seal' requires Vault Enterprise",
+					"The 'seal' entropy source option is only available in Vault Enterprise",
+				)
+				return
+			}
+			vaultRequest[consts.FieldEntropySource] = entropySource
+		} else {
+			resp.Diagnostics.AddError(
+				"entropy_source feature not supported",
+				fmt.Sprintf("entropy_source field requires Vault %s+, current version: %s",
+					provider.VaultVersion121, r.Meta().GetVaultVersion()),
+			)
+			return
+		}
+	}
+
 	path := r.path(data.Name.ValueString())
 	// vault returns a nil response on success
 	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
@@ -196,8 +232,31 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 	}
 
 	vaultRequest := map[string]interface{}{
-		"policy": data.Policy.ValueString(),
+		consts.FieldPolicy: data.Policy.ValueString(),
 	}
+
+	if !data.EntropySource.IsNull() && !data.EntropySource.IsUnknown() {
+		if provider.IsAPISupported(r.Meta(), provider.VaultVersion121) {
+			entropySource := data.EntropySource.ValueString()
+			// Check for enterprise requirement for 'seal' option
+			if entropySource == "seal" && !provider.IsEnterpriseSupported(r.Meta()) {
+				resp.Diagnostics.AddError(
+					"entropy_source 'seal' requires Vault Enterprise",
+					"The 'seal' entropy source option is only available in Vault Enterprise",
+				)
+				return
+			}
+			vaultRequest[consts.FieldEntropySource] = entropySource
+		} else {
+			resp.Diagnostics.AddError(
+				"entropy_source feature not supported",
+				fmt.Sprintf("entropy_source field requires Vault %s+, current version: %s",
+					provider.VaultVersion121, r.Meta().GetVaultVersion()),
+			)
+			return
+		}
+	}
+
 	path := r.path(data.Name.ValueString())
 	// vault returns a nil response on success
 	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
