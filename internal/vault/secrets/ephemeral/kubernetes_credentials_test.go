@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -57,9 +58,9 @@ func TestAccKubernetesServiceAccountTokenEphemeralResource_basic(t *testing.T) {
 			{
 				Config: testKubernetesServiceAccountTokenEphemeralResource_basic(backend, role, k8sHost, k8sCACert, vaultSAJwt),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.test_k8s_token", tfjsonpath.New("data").AtMapKey("service_account_token"), knownvalue.StringRegexp(expectedTokenRegex)),
-					statecheck.ExpectKnownValue("echo.test_k8s_token", tfjsonpath.New("data").AtMapKey("service_account_name"), knownvalue.StringRegexp(expectedTokenRegex)),
-					statecheck.ExpectKnownValue("echo.test_k8s_token", tfjsonpath.New("data").AtMapKey("service_account_namespace"), knownvalue.StringRegexp(expectedTokenRegex)),
+					statecheck.ExpectKnownValue("echo.test_k8s_token", tfjsonpath.New("data").AtMapKey(consts.FieldServiceAccountToken), knownvalue.StringRegexp(expectedTokenRegex)),
+					statecheck.ExpectKnownValue("echo.test_k8s_token", tfjsonpath.New("data").AtMapKey(consts.FieldServiceAccountName), knownvalue.StringRegexp(expectedTokenRegex)),
+					statecheck.ExpectKnownValue("echo.test_k8s_token", tfjsonpath.New("data").AtMapKey(consts.FieldServiceAccountNamespace), knownvalue.StringRegexp(expectedTokenRegex)),
 				},
 			},
 		},
