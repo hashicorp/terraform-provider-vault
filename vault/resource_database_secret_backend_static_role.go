@@ -276,21 +276,33 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
 		// Only set skip_import_rotation if it was explicitly configured in the raw config
 		rawConfig := d.GetRawConfig()
-		skipImportAttr := rawConfig.GetAttr(consts.FieldSkipImportRotation)
 
-		// Only set the field if it was explicitly configured (not null in raw config)
-		if !skipImportAttr.IsNull() {
-			// Field was configured, use the value from Vault's response
-			if v, ok := role.Data[consts.FieldSkipImportRotation]; ok && v != nil {
-				if err := d.Set(consts.FieldSkipImportRotation, v); err != nil {
+		// Check if rawConfig is valid (not null/unknown) before accessing attributes
+		// During import or refresh operations, rawConfig may be null
+		if !rawConfig.IsNull() && rawConfig.IsKnown() {
+			skipImportAttr := rawConfig.GetAttr(consts.FieldSkipImportRotation)
+
+			// Only set the field if it was explicitly configured (not null in raw config)
+			if !skipImportAttr.IsNull() {
+				// Field was configured, use the value from Vault's response
+				if v, ok := role.Data[consts.FieldSkipImportRotation]; ok && v != nil {
+					if err := d.Set(consts.FieldSkipImportRotation, v); err != nil {
+						return diag.FromErr(err)
+					}
+				}
+			} else {
+				// Field not configured - explicitly clear it from state
+				// This handles the case where it was previously set but is now removed from config
+				if err := d.Set(consts.FieldSkipImportRotation, nil); err != nil {
 					return diag.FromErr(err)
 				}
 			}
 		} else {
-			// Field not configured - explicitly clear it from state
-			// This handles the case where it was previously set but is now removed from config
-			if err := d.Set(consts.FieldSkipImportRotation, nil); err != nil {
-				return diag.FromErr(err)
+			// During import, read from Vault's response if available
+			if v, ok := role.Data[consts.FieldSkipImportRotation]; ok && v != nil {
+				if err := d.Set(consts.FieldSkipImportRotation, v); err != nil {
+					return diag.FromErr(err)
+				}
 			}
 		}
 	}
