@@ -121,7 +121,8 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 			consts.FieldSkipImportRotation: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Skip rotation of the password on import.",
+				Computed:    true,
+				Description: "Skip rotation of the password on import. When not set, inherits from connection's skip_static_role_import_rotation.",
 			},
 			consts.FieldCredentialType: {
 				Type:     schema.TypeString,
@@ -191,6 +192,8 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 		// Only send skip_import_rotation if explicitly set in config
 		if v, ok := d.GetOkExists(consts.FieldSkipImportRotation); ok {
 			data[consts.FieldSkipImportRotation] = v.(bool)
+		} else {
+			log.Printf("[DEBUG] skip_import_rotation GetOkExists: ok=%v (not set in config, sending nil to Vault)", ok)
 		}
 	}
 
@@ -274,35 +277,19 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
-		// Only set skip_import_rotation if it was explicitly configured in the raw config
-		rawConfig := d.GetRawConfig()
-
-		// Check if rawConfig is valid (not null/unknown) before accessing attributes
-		// During import or refresh operations, rawConfig may be null
-		if !rawConfig.IsNull() && rawConfig.IsKnown() {
-			skipImportAttr := rawConfig.GetAttr(consts.FieldSkipImportRotation)
-
-			// Only set the field if it was explicitly configured (not null in raw config)
-			if !skipImportAttr.IsNull() {
-				// Field was configured, use the value from Vault's response
-				if v, ok := role.Data[consts.FieldSkipImportRotation]; ok && v != nil {
-					if err := d.Set(consts.FieldSkipImportRotation, v); err != nil {
-						return diag.FromErr(err)
-					}
-				}
-			} else {
-				// Field not configured - explicitly clear it from state
-				// This handles the case where it was previously set but is now removed from config
-				if err := d.Set(consts.FieldSkipImportRotation, nil); err != nil {
-					return diag.FromErr(err)
-				}
-			}
+		// Debug: Log Vault's response for skip_import_rotation
+		if v, ok := role.Data[consts.FieldSkipImportRotation]; ok {
+			log.Printf("[DEBUG] Vault returned skip_import_rotation: %v (type: %T)", v, v)
 		} else {
-			// During import, read from Vault's response if available
-			if v, ok := role.Data[consts.FieldSkipImportRotation]; ok && v != nil {
-				if err := d.Set(consts.FieldSkipImportRotation, v); err != nil {
-					return diag.FromErr(err)
-				}
+			log.Printf("[DEBUG] Vault response does not contain skip_import_rotation")
+		}
+
+		// Always read skip_import_rotation from Vault's response.
+		// When not set in config, Vault computes this value based on
+		// the connection's skip_static_role_import_rotation setting.
+		if v, ok := role.Data[consts.FieldSkipImportRotation]; ok && v != nil {
+			if err := d.Set(consts.FieldSkipImportRotation, v); err != nil {
+				return diag.FromErr(err)
 			}
 		}
 	}
