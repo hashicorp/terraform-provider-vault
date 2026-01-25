@@ -11,10 +11,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -37,7 +36,9 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendStaticRoleRead),
 		UpdateContext: databaseSecretBackendStaticRoleWrite,
 		DeleteContext: databaseSecretBackendStaticRoleDelete,
-		CustomizeDiff: validatePasswordFields,
+		CustomizeDiff: customdiff.All(
+			validatePasswordFields,
+		),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -187,8 +188,9 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 		if v, ok := d.GetOk(consts.FieldSelfManagedPassword); ok && v != "" {
 			data[consts.FieldSelfManagedPassword] = v
 		}
-		if v, ok := d.Get(consts.FieldSkipImportRotation).(bool); ok {
-			data[consts.FieldSkipImportRotation] = v
+		// Only send skip_import_rotation if explicitly set in config
+		if v, ok := d.GetOkExists(consts.FieldSkipImportRotation); ok {
+			data[consts.FieldSkipImportRotation] = v.(bool)
 		}
 	}
 
@@ -272,8 +274,24 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
-		if err := d.Set(consts.FieldSkipImportRotation, role.Data[consts.FieldSkipImportRotation]); err != nil {
-			return diag.FromErr(err)
+		// Only set skip_import_rotation if it was explicitly configured in the raw config
+		rawConfig := d.GetRawConfig()
+		skipImportAttr := rawConfig.GetAttr(consts.FieldSkipImportRotation)
+
+		// Only set the field if it was explicitly configured (not null in raw config)
+		if !skipImportAttr.IsNull() {
+			// Field was configured, use the value from Vault's response
+			if v, ok := role.Data[consts.FieldSkipImportRotation]; ok && v != nil {
+				if err := d.Set(consts.FieldSkipImportRotation, v); err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		} else {
+			// Field not configured - explicitly clear it from state
+			// This handles the case where it was previously set but is now removed from config
+			if err := d.Set(consts.FieldSkipImportRotation, nil); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 

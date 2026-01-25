@@ -324,6 +324,132 @@ func TestAccDatabaseSecretBackendStaticRole_SkipImportRotation(t *testing.T) {
 	})
 }
 
+// TestAccDatabaseSecretBackendStaticRole_SkipImportRotationInheritFromConnection tests that when
+// skip_import_rotation is NOT set on the static role but skip_static_role_import_rotation IS set
+// on the connection, the static role inherits the connection's value.
+//
+// To run locally you will need to set the following env vars:
+//   - POSTGRES_URL
+//   - POSTGRES_URL_TEST
+//
+// See .github/workflows/build.yml for details.
+func TestAccDatabaseSecretBackendStaticRole_SkipImportRotationInheritFromConnection(t *testing.T) {
+	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
+	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")[0]
+
+	parsedURL, err := url.Parse(connURLTestRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vaultAdminUser := parsedURL.User.Username()
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	staticUsername := acctest.RandomWithPrefix("user")
+	dbName := acctest.RandomWithPrefix("db")
+	roleName := acctest.RandomWithPrefix("staticrole")
+	resourceName := "vault_database_secret_backend_static_role.test"
+	connectionResourceName := "vault_database_secret_backend_connection.test"
+
+	// create static database user
+	testutil.CreateTestPGUser(t, connURLTestRoot, staticUsername, "testpassword", testRoleStaticCreate)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Connection has skip_static_role_import_rotation = true
+				// Static role does NOT set skip_import_rotation in config
+				// Expected: Vault API returns skip_import_rotation = true (inherited from connection)
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_connectionSkipOnly(roleName, staticUsername, dbName, backend, connURL, vaultAdminUser),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "username", staticUsername),
+					// Verify connection has skip_static_role_import_rotation = true
+					resource.TestCheckResourceAttr(connectionResourceName, consts.FieldSkipStaticRoleImportRotation, "true"),
+					// Verify static role inherits skip_import_rotation = true from Vault API response
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSkipImportRotation, "true"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretBackendStaticRole_SkipImportRotationBothSet tests that when both
+// skip_import_rotation (on static role) and skip_static_role_import_rotation (on connection)
+// are set, both values are respected independently.
+//
+// To run locally you will need to set the following env vars:
+//   - POSTGRES_URL
+//   - POSTGRES_URL_TEST
+//
+// See .github/workflows/build.yml for details.
+func TestAccDatabaseSecretBackendStaticRole_SkipImportRotationBothSet(t *testing.T) {
+	connURLTestRoot := testutil.SkipTestEnvUnset(t, "POSTGRES_URL_TEST")[0]
+	connURL := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")[0]
+
+	parsedURL, err := url.Parse(connURLTestRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vaultAdminUser := parsedURL.User.Username()
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	staticUsername := acctest.RandomWithPrefix("user")
+	dbName := acctest.RandomWithPrefix("db")
+	roleName := acctest.RandomWithPrefix("staticrole")
+	resourceName := "vault_database_secret_backend_static_role.test"
+	connectionResourceName := "vault_database_secret_backend_connection.test"
+
+	// create static database user
+	testutil.CreateTestPGUser(t, connURLTestRoot, staticUsername, "testpassword", testRoleStaticCreate)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Both connection and static role have skip rotation set to true
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_bothSkipTrue(roleName, staticUsername, dbName, backend, connURL, vaultAdminUser),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "username", staticUsername),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSkipImportRotation, "true"),
+					resource.TestCheckResourceAttr(connectionResourceName, consts.FieldSkipStaticRoleImportRotation, "true"),
+				),
+			},
+			{
+				// Update: connection skip = true, static role skip = false
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_connectionTrueRoleFalse(roleName, staticUsername, dbName, backend, connURL, vaultAdminUser),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSkipImportRotation, "false"),
+					resource.TestCheckResourceAttr(connectionResourceName, consts.FieldSkipStaticRoleImportRotation, "true"),
+				),
+			},
+			{
+				// Update: connection skip = false, static role skip = true
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_connectionFalseRoleTrue(roleName, staticUsername, dbName, backend, connURL, vaultAdminUser),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSkipImportRotation, "true"),
+					resource.TestCheckResourceAttr(connectionResourceName, consts.FieldSkipStaticRoleImportRotation, "false"),
+				),
+			},
+		},
+	})
+}
+
 func testAccDatabaseSecretBackendStaticRoleCheckDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_database_secret_backend_static_role" {
@@ -660,6 +786,129 @@ resource "vault_database_secret_backend_static_role" "test" {
   rotation_period = 3600
 }
 `, path, db, connURL, name, username, smPassword)
+}
+
+// Config: Connection has skip_static_role_import_rotation = true, static role does NOT set skip_import_rotation
+func testAccDatabaseSecretBackendStaticRoleConfig_connectionSkipOnly(roleName, staticUsername, db, path, connURL, vaultAdminUser string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+  skip_static_role_import_rotation = true
+
+  postgresql {
+    connection_url = "%s"
+    username = "%s"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  rotation_period = 3600
+}
+`, path, db, connURL, vaultAdminUser, roleName, staticUsername)
+}
+
+// Config: Both connection and static role have skip rotation set to true
+func testAccDatabaseSecretBackendStaticRoleConfig_bothSkipTrue(roleName, staticUsername, db, path, connURL, vaultAdminUser string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+  skip_static_role_import_rotation = true
+
+  postgresql {
+    connection_url = "%s"
+    username = "%s"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  skip_import_rotation = true
+  rotation_period = 3600
+}
+`, path, db, connURL, vaultAdminUser, roleName, staticUsername)
+}
+
+// Config: Connection skip = true, static role skip = false
+func testAccDatabaseSecretBackendStaticRoleConfig_connectionTrueRoleFalse(roleName, staticUsername, db, path, connURL, vaultAdminUser string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+  skip_static_role_import_rotation = true
+
+  postgresql {
+    connection_url = "%s"
+    username = "%s"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  skip_import_rotation = false
+  rotation_period = 3600
+}
+`, path, db, connURL, vaultAdminUser, roleName, staticUsername)
+}
+
+// Config: Connection skip = false, static role skip = true
+func testAccDatabaseSecretBackendStaticRoleConfig_connectionFalseRoleTrue(roleName, staticUsername, db, path, connURL, vaultAdminUser string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+  skip_static_role_import_rotation = false
+
+  postgresql {
+    connection_url = "%s"
+    username = "%s"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  skip_import_rotation = true
+  rotation_period = 3600
+}
+`, path, db, connURL, vaultAdminUser, roleName, staticUsername)
 }
 
 var testRoleStaticCreate = `
