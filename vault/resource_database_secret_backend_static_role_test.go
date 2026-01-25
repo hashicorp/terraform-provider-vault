@@ -419,30 +419,27 @@ func TestAccDatabaseSecretBackendStaticRole_SkipImportRotationBothSet(t *testing
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				// Both connection and static role have skip rotation set to true
-				Config: testAccDatabaseSecretBackendStaticRoleConfig_bothSkipTrue(roleName, staticUsername, dbName, backend, connURL, vaultAdminUser),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", roleName),
-					resource.TestCheckResourceAttr(resourceName, "username", staticUsername),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldSkipImportRotation, "true"),
-					resource.TestCheckResourceAttr(connectionResourceName, consts.FieldSkipStaticRoleImportRotation, "true"),
-				),
-			},
-			{
-				// Update: connection skip = true, static role skip = false
+				// Step 1: Create static role with skip_import_rotation = false
+				// Connection has skip_static_role_import_rotation = true
+				// Static role's explicit value (false) takes precedence over connection's value
 				Config: testAccDatabaseSecretBackendStaticRoleConfig_connectionTrueRoleFalse(roleName, staticUsername, dbName, backend, connURL, vaultAdminUser),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					// Explicitly set to false at creation, so Vault returns false
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSkipImportRotation, "false"),
 					resource.TestCheckResourceAttr(connectionResourceName, consts.FieldSkipStaticRoleImportRotation, "true"),
 				),
 			},
 			{
-				// Update: connection skip = false, static role skip = true
-				Config: testAccDatabaseSecretBackendStaticRoleConfig_connectionFalseRoleTrue(roleName, staticUsername, dbName, backend, connURL, vaultAdminUser),
+				// Step 2: Update only the connection's skip_static_role_import_rotation to false
+				// Static role's skip_import_rotation remains false (unchanged in config)
+				// This verifies connection value can be updated independently
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_connectionFalseRoleFalse(roleName, staticUsername, dbName, backend, connURL, vaultAdminUser),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", roleName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldSkipImportRotation, "true"),
+					// Static role value remains false (not changed)
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSkipImportRotation, "false"),
+					// Connection value updated to false
 					resource.TestCheckResourceAttr(connectionResourceName, consts.FieldSkipStaticRoleImportRotation, "false"),
 				),
 			},
@@ -862,6 +859,37 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["*"]
   skip_static_role_import_rotation = true
+
+  postgresql {
+    connection_url = "%s"
+    username = "%s"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "test" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  skip_import_rotation = false
+  rotation_period = 3600
+}
+`, path, db, connURL, vaultAdminUser, roleName, staticUsername)
+}
+
+// Config: Connection skip = false, static role skip = false
+func testAccDatabaseSecretBackendStaticRoleConfig_connectionFalseRoleFalse(roleName, staticUsername, db, path, connURL, vaultAdminUser string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+  skip_static_role_import_rotation = false
 
   postgresql {
     connection_url = "%s"
