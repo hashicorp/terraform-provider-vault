@@ -187,10 +187,12 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 			data[consts.FieldSelfManagedPassword] = v
 		}
 		// Only send skip_import_rotation if explicitly set in config
-		if v, ok := d.GetOkExists(consts.FieldSkipImportRotation); ok {
-			data[consts.FieldSkipImportRotation] = v.(bool)
+		// Use GetRawConfig to distinguish between "not set" and "set to false"
+		skipImportAttr := d.GetRawConfig().GetAttr(consts.FieldSkipImportRotation)
+		if !skipImportAttr.IsNull() && skipImportAttr.IsKnown() {
+			data[consts.FieldSkipImportRotation] = skipImportAttr.True()
 		} else {
-			log.Printf("[DEBUG] skip_import_rotation GetOkExists: ok=%v (not set in config, sending nil to Vault)", ok)
+			log.Printf("[DEBUG] skip_import_rotation not set in config, sending nil to Vault")
 		}
 	}
 
