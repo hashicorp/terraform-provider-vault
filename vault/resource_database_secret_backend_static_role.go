@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -36,9 +35,7 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendStaticRoleRead),
 		UpdateContext: databaseSecretBackendStaticRoleWrite,
 		DeleteContext: databaseSecretBackendStaticRoleDelete,
-		CustomizeDiff: customdiff.All(
-			validatePasswordFields,
-		),
+		CustomizeDiff: validatePasswordFields,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
