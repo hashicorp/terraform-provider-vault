@@ -4,7 +4,6 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -91,6 +90,9 @@ func mfaTOTPResource() *schema.Resource {
 				ForceNew: true,
 				Description: "The maximum number of consecutive failed validation attempts allowed. " +
 					"Must be a positive integer. Vault defaults this value to 5 if not provided or if set to 0.",
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					return old == "5" && new == "0"
+				},
 			},
 			consts.FieldID: {
 				Type:        schema.TypeString,
@@ -160,25 +162,13 @@ func mfaTOTPRead(d *schema.ResourceData, meta interface{}) error {
 	fields := []string{
 		consts.FieldName, consts.FieldIssuer, consts.FieldPeriod,
 		consts.FieldKeySize, consts.FieldQRSize, consts.FieldAlgorithm,
-		consts.FieldDigits, consts.FieldSkew, consts.FieldID,
+		consts.FieldDigits, consts.FieldSkew, consts.FieldMaxValidationAttempts, consts.FieldID,
 	}
 
 	for _, k := range fields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return err
 		}
-	}
-
-	configMaxAttempts := d.Get(consts.FieldMaxValidationAttempts).(int)
-	vaultMaxAttempts := resp.Data[consts.FieldMaxValidationAttempts].(json.Number)
-
-	var valueToSet interface{} = vaultMaxAttempts
-	if configMaxAttempts == 0 && vaultMaxAttempts.String() == "5" {
-		valueToSet = 0
-	}
-
-	if err := d.Set(consts.FieldMaxValidationAttempts, valueToSet); err != nil {
-		return err
 	}
 
 	return nil
