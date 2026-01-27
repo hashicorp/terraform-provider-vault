@@ -59,7 +59,7 @@ The following arguments are supported:
 * `application_object_id` - (Required) The Azure AD Application Object ID associated with the existing application whose
   credentials Vault will manage.
 * `ttl` – (Optional) Duration that defines the validity period of the managed credential. Defaults to 2 years. Must be
-  at least 1 year.
+  at least 1 month.
   Accepts an integer number of seconds (31536000). Defaults to the system/engine default TTL time.
 * `metadata` – (Optional) A map of string key-value pairs that are stored alongside the role and returned with generated
   credentials.

@@ -90,7 +90,7 @@ func (r *AzureSecretsStaticRoleResource) Schema(_ context.Context, _ resource.Sc
 				Required:            true,
 			},
 			consts.FieldTTL: schema.Int64Attribute{
-				MarkdownDescription: "Timespan of 1 year (31536000) or more during which the role credentials are valid.",
+				MarkdownDescription: "Timespan of 1 month or more during which the role credentials are valid.",
 				Optional:            true,
 				Computed:            true,
 			},
