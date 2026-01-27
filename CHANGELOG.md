@@ -3,7 +3,7 @@
 FEATURES:
 
 * **New Ephemeral Resource**: `vault_approle_auth_backend_role_secret_id` - Generate AppRole SecretIDs on-demand with automatic cleanup. Requires Terraform 1.10+.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
-* Add Kubernetes service account token ephemeral resource `vault_kubernetes_service_account_token`: ([#2712](https://github.com/hashicorp/terraform-provider-vault/pull/2712))
+* **New Ephemeral Resource**: Add Kubernetes service account token ephemeral resource `vault_kubernetes_service_account_token`: ([#2712](https://github.com/hashicorp/terraform-provider-vault/pull/2712))
 
 IMPROVEMENTS:
 
