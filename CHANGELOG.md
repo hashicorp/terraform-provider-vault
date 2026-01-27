@@ -1,7 +1,15 @@
 ## Unreleased
 
+FEATURES:
+
+* **New Ephemeral Resource**: `vault_approle_auth_backend_role_secret_id` - Generate AppRole SecretIDs on-demand with automatic cleanup. Requires Terraform 1.10+.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
+* **New Ephemeral Resource**: Add Kubernetes service account token ephemeral resource `vault_kubernetes_service_account_token`: ([#2712](https://github.com/hashicorp/terraform-provider-vault/pull/2712))
+
 IMPROVEMENTS:
 
+* `vault_approle_auth_backend_login`: Add write-only fields `secret_id_wo` and `secret_id_wo_version` to support ephemeral SecretID values without persisting them in state.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
+* `vault_mfa_totp`: Add support for `max_validation_attempts` field to configure the maximum number of consecutive failed validation attempts allowed. ([#2751](https://github.com/hashicorp/terraform-provider-vault/pull/2751))
+* `vault_mongodbatlas_secret_backend`: Add support for write-only private key fields (`private_key_wo`, `private_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2741](https://github.com/hashicorp/terraform-provider-vault/pull/2741))
 * `vault_consul_secret_backend`: Add support for write-only fields (`token_wo`, `token_wo_version`, `client_key_wo`, `client_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2730](https://github.com/hashicorp/terraform-provider-vault/pull/2730))
 * `vault_azure_auth_backend_config`: Add support for write-only client secret fields (`client_secret_wo`, `client_secret_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2726](https://github.com/hashicorp/terraform-provider-vault/pull/2726))
 * `vault_azure_secret_backend`: Add support for write-only `client_secret_wo` and `client_secret_wo_version` fields to configure the client secret without storing it in state. Requires Terraform 1.11+. ([#2721](https://github.com/hashicorp/terraform-provider-vault/pull/2721))
@@ -14,6 +22,8 @@ IMPROVEMENTS:
 * `vault_kubernetes_auth_backend_config`: Add support for write-only `token_reviewer_jwt_wo` field with `token_reviewer_jwt_wo_version` to prevent sensitive JWT token from being stored in Terraform state ([#2715](https://github.com/hashicorp/terraform-provider-vault/pull/2715))
 * `vault_kubernetes_secret_backend`: Add write-only fields `service_account_jwt_wo` and `service_account_jwt_wo_version` for managing service account JWT credentials without storing them in state.([#2720](https://github.com/hashicorp/terraform-provider-vault/pull/2720))
 * `vault_nomad_secret_backend`: Add support for write-only fields `token_wo` and `client_key_wo` with version counters to prevent sensitive credentials from being stored in Terraform state. ([#2729](https://github.com/hashicorp/terraform-provider-vault/pull/2729))
+* Add support for fields: `context`,`managed_key_name`,`managed_key_id` in `vault_transit_secret_backend_key` resource. ([#2743](https://github.com/hashicorp/terraform-provider-vault/pull/2743)) 
+* `vault_rabbitmq_secret_backend`: Add support for write-only `password_wo` and `password_wo_version` fields to configure the password without storing it in state. Requires Terraform 1.11+. ([#2733](https://github.com/hashicorp/terraform-provider-vault/pull/2733))
 * `vault_secrets_sync_gcp_destination`: Add support for replication field (`replication_locations`; Vault 1.18+), networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`; Vault 1.19+), and encryption fields (`global_kms_key`, `locational_kms_keys`; Vault 1.19+) in `vault_secrets_sync_gcp_destination` resource. ([#2699](https://github.com/hashicorp/terraform-provider-vault/pull/2699))
 * Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`) in `vault_secrets_sync_azure_destination` resource. Requires Vault 1.19+. ([#2702](https://github.com/hashicorp/terraform-provider-vault/pull/2702))
 * `vault_database_secret_backend_connection`: Add support for MongoDB `write_concern` parameter and TLS parameters (`tls_ca`, `tls_certificate_key`) ([#2678](https://github.com/hashicorp/terraform-provider-vault/pull/2678))
