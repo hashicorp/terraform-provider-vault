@@ -464,6 +464,8 @@ const (
 	FieldIdentityTokenKey               = "identity_token_key"
 	FieldCIDRList                       = "cidr_list"
 	FieldSecretID                       = "secret_id"
+	FieldSecretIDWO                     = "secret_id_wo"
+	FieldSecretIDWOVersion              = "secret_id_wo_version"
 	FieldWrappingToken                  = "wrapping_token"
 	FieldWithWrappedAccessor            = "with_wrapped_accessor"
 	FieldExternalID                     = "external_id"
