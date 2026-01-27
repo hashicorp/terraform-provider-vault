@@ -116,19 +116,10 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 		consts.FieldPolicy: data.Policy.ValueString(),
 	}
 
+	// Handle entropy_source if provided
 	if !data.EntropySource.IsNull() && !data.EntropySource.IsUnknown() {
-		if provider.IsAPISupported(r.Meta(), provider.VaultVersion121) {
-			entropySource := data.EntropySource.ValueString()
-			// Check for enterprise requirement for 'seal' option
-			if entropySource == "seal" && !provider.IsEnterpriseSupported(r.Meta()) {
-				resp.Diagnostics.AddError(
-					"entropy_source 'seal' requires Vault Enterprise",
-					"The 'seal' entropy source option is only available in Vault Enterprise",
-				)
-				return
-			}
-			vaultRequest[consts.FieldEntropySource] = entropySource
-		} else {
+		// Check if API version supports entropy_source
+		if !provider.IsAPISupported(r.Meta(), provider.VaultVersion121) {
 			resp.Diagnostics.AddError(
 				"entropy_source feature not supported",
 				fmt.Sprintf("entropy_source field requires Vault %s+, current version: %s",
@@ -136,6 +127,18 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 			)
 			return
 		}
+
+		entropySource := data.EntropySource.ValueString()
+		// Check for enterprise requirement for 'seal' option
+		if entropySource == "seal" && !provider.IsEnterpriseSupported(r.Meta()) {
+			resp.Diagnostics.AddError(
+				"entropy_source 'seal' requires Vault Enterprise",
+				"The 'seal' entropy source option is only available in Vault Enterprise",
+			)
+			return
+		}
+
+		vaultRequest[consts.FieldEntropySource] = entropySource
 	}
 
 	path := r.path(data.Name.ValueString())
@@ -235,19 +238,10 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 		consts.FieldPolicy: data.Policy.ValueString(),
 	}
 
+	// Handle entropy_source if provided
 	if !data.EntropySource.IsNull() && !data.EntropySource.IsUnknown() {
-		if provider.IsAPISupported(r.Meta(), provider.VaultVersion121) {
-			entropySource := data.EntropySource.ValueString()
-			// Check for enterprise requirement for 'seal' option
-			if entropySource == "seal" && !provider.IsEnterpriseSupported(r.Meta()) {
-				resp.Diagnostics.AddError(
-					"entropy_source 'seal' requires Vault Enterprise",
-					"The 'seal' entropy source option is only available in Vault Enterprise",
-				)
-				return
-			}
-			vaultRequest[consts.FieldEntropySource] = entropySource
-		} else {
+		// Check if API version supports entropy_source
+		if !provider.IsAPISupported(r.Meta(), provider.VaultVersion121) {
 			resp.Diagnostics.AddError(
 				"entropy_source feature not supported",
 				fmt.Sprintf("entropy_source field requires Vault %s+, current version: %s",
@@ -255,6 +249,18 @@ func (r *PasswordPolicyResource) Update(ctx context.Context, req resource.Update
 			)
 			return
 		}
+
+		entropySource := data.EntropySource.ValueString()
+		// Check for enterprise requirement for 'seal' option
+		if entropySource == "seal" && !provider.IsEnterpriseSupported(r.Meta()) {
+			resp.Diagnostics.AddError(
+				"entropy_source 'seal' requires Vault Enterprise",
+				"The 'seal' entropy source option is only available in Vault Enterprise",
+			)
+			return
+		}
+
+		vaultRequest[consts.FieldEntropySource] = entropySource
 	}
 
 	path := r.path(data.Name.ValueString())
