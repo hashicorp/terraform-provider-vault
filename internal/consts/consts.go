@@ -604,6 +604,7 @@ const (
 	FieldAudience                             = "audience"
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
+	FieldDeferInitialCreds                    = "defer_initial_creds"
 
 	/*
 		ephemeral resource constants and write-only attributes

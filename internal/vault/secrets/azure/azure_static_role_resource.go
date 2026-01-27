@@ -10,10 +10,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -55,6 +57,7 @@ type AzureStaticRoleModel struct {
 	ClientSecret        types.String `tfsdk:"client_secret"`
 	Expiration          types.String `tfsdk:"expiration"`
 	SkipImportRotation  types.Bool   `tfsdk:"skip_import_rotation"`
+	DeferInitialCreds   types.Bool   `tfsdk:"defer_initial_creds"`
 }
 
 // AzureStaticRoleAPIModel describes the Vault API data model.
@@ -95,6 +98,8 @@ func (r *AzureSecretsStaticRoleResource) Schema(_ context.Context, _ resource.Sc
 				MarkdownDescription: "A map of string key/value pairs that will be stored as metadata on the secret.",
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:            true,
+				Default:             mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 			},
 			consts.FieldSecretID: schema.StringAttribute{
 				MarkdownDescription: "The secret ID of the Azure password credential you want to import.",
@@ -104,13 +109,20 @@ func (r *AzureSecretsStaticRoleResource) Schema(_ context.Context, _ resource.Sc
 				MarkdownDescription: "The plaintext secret value of the credential you want to import.",
 				Optional:            true,
 				Sensitive:           true,
+				WriteOnly:           true, // Prevents the value from being shown in state
 			},
 			consts.FieldExpiration: schema.StringAttribute{
 				MarkdownDescription: "A future expiration time for the imported credential, in RFC3339 format.",
 				Optional:            true,
+				DeprecationMessage: "This field is deprecated and will be removed in a future release. " +
+					"Vault will always read the expiration from Azure.",
 			},
 			consts.FieldSkipImportRotation: schema.BoolAttribute{
 				MarkdownDescription: "If true, skip rotation of the client secret on import.",
+				Optional:            true,
+			},
+			consts.FieldDeferInitialCreds: schema.BoolAttribute{
+				MarkdownDescription: "If true, the initial creation of credentials will be deferred until first static-creds read.",
 				Optional:            true,
 			},
 		},
@@ -123,7 +135,13 @@ func (r *AzureSecretsStaticRoleResource) Schema(_ context.Context, _ resource.Sc
 //
 // https://developer.hashicorp.com/terraform/plugin/framework/resources/create
 func (r *AzureSecretsStaticRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data AzureStaticRoleModel
+	var (
+		path         string
+		vaultRequest map[string]any
+		diags        diag.Diagnostics
+		data         AzureStaticRoleModel
+	)
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -137,9 +155,19 @@ func (r *AzureSecretsStaticRoleResource) Create(ctx context.Context, req resourc
 
 	backend := data.Backend.ValueString()
 	role := data.Role.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", backend, staticRolesAffix, role)
 
-	vaultRequest, diags := buildVaultRequestFromModel(ctx, &data, true)
+	// if secretID is set, it's an import create operation using import endpoint
+	// otherwise, it's a standard create operation
+	if !data.SecretID.IsNull() && data.SecretID.ValueString() != "" {
+		// <backend>/static-roles/<role>/import
+		path = fmt.Sprintf("%s/%s/%s/import", backend, staticRolesAffix, role)
+		vaultRequest, diags = buildVaultRequestForImportCreate(ctx, &data)
+	} else {
+		// <backend>/static-roles/<role>
+		path = fmt.Sprintf("%s/%s/%s", backend, staticRolesAffix, role)
+		vaultRequest, diags = buildVaultRequestFromModel(ctx, &data)
+	}
+
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -229,7 +257,7 @@ func (r *AzureSecretsStaticRoleResource) Update(ctx context.Context, req resourc
 	role := data.Role.ValueString()
 	path := fmt.Sprintf("%s/%s/%s", backend, staticRolesAffix, role)
 
-	vaultRequest, diags := buildVaultRequestFromModel(ctx, &data, false)
+	vaultRequest, diags := buildVaultRequestFromModel(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -244,23 +272,11 @@ func (r *AzureSecretsStaticRoleResource) Update(ctx context.Context, req resourc
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func buildVaultRequestFromModel(ctx context.Context, data *AzureStaticRoleModel, includeSkipImport bool) (map[string]any, diag.Diagnostics) {
+func buildVaultRequestFromModel(ctx context.Context, data *AzureStaticRoleModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	vaultRequest := map[string]any{
 		consts.FieldApplicationObjectID: data.ApplicationObjectID.ValueString(),
-	}
-
-	fieldMap := map[string]any{
-		consts.FieldSecretID:     data.SecretID.ValueString(),
-		consts.FieldClientSecret: data.ClientSecret.ValueString(),
-		consts.FieldExpiration:   data.Expiration.ValueString(),
-	}
-
-	for k, v := range fieldMap {
-		if s, ok := v.(string); ok && s != "" {
-			vaultRequest[k] = s
-		}
 	}
 
 	if !data.TTL.IsNull() {
@@ -276,12 +292,48 @@ func buildVaultRequestFromModel(ctx context.Context, data *AzureStaticRoleModel,
 		vaultRequest[consts.FieldMetadata] = meta
 	}
 
-	// only include on create and only when true
-	if includeSkipImport && data.SkipImportRotation.ValueBool() {
-		vaultRequest[consts.FieldSkipImportRotation] = true
+	// Prefer defer_initial_creds if true
+	deferInitial := !data.DeferInitialCreds.IsNull() && data.DeferInitialCreds.ValueBool()
+	// Legacy alias (back comp) skip_import_rotation == true means defer_initial_creds == true
+	legacyAlias := !data.SkipImportRotation.IsNull() && data.SkipImportRotation.ValueBool()
+
+	if deferInitial || legacyAlias {
+		vaultRequest[consts.FieldDeferInitialCreds] = true
 	}
 
 	return vaultRequest, diags
+}
+
+func buildVaultRequestForImportCreate(ctx context.Context, data *AzureStaticRoleModel) (map[string]any, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	req := map[string]any{
+		consts.FieldApplicationObjectID: data.ApplicationObjectID.ValueString(),
+		consts.FieldSecretID:            data.SecretID.ValueString(),
+	}
+
+	if !data.ClientSecret.IsNull() && data.ClientSecret.ValueString() != "" {
+		req[consts.FieldClientSecret] = data.ClientSecret.ValueString()
+	}
+
+	if !data.TTL.IsNull() {
+		req[consts.FieldTTL] = data.TTL.ValueInt64()
+	}
+
+	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
+		var meta map[string]string
+		if mdDiags := data.Metadata.ElementsAs(ctx, &meta, false); mdDiags.HasError() {
+			diags.Append(mdDiags...)
+			return nil, diags
+		}
+		req[consts.FieldMetadata] = meta
+	}
+
+	if !data.SkipImportRotation.IsNull() && data.SkipImportRotation.ValueBool() {
+		req[consts.FieldSkipImportRotation] = true
+	}
+
+	return req, diags
 }
 
 func (r *AzureSecretsStaticRoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
