@@ -99,6 +99,29 @@ func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 	})
 }
 
+func TestAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
+			testutil.TestEntPreCheck(t)
+		},
+		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload(name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", "name", name),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", "autoload_enabled", "true"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", "azure_client_id", "test-client-id"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", "azure_auth_mode", "managed"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
@@ -219,5 +242,22 @@ resource "vault_raft_snapshot_agent_config" "azure_backups" {
   azure_account_name = "azure-account-name"
   azure_account_key = "azure-account-key"
   azure_blob_environment = "azure-env"
+}`, name)
+}
+
+func testAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload(name string) string {
+	return fmt.Sprintf(`
+resource "vault_raft_snapshot_agent_config" "azure_managed_identity" {
+  name = "%s"
+  interval_seconds = 7200
+  retain = 1
+  path_prefix = "/path/in/bucket"
+  storage_type = "azure-blob"
+  azure_container_name = "my-bucket"
+  azure_account_name = "azure-account-name"
+  azure_blob_environment = "azure-env"
+  autoload_enabled = true
+  azure_auth_mode = "managed"
+  azure_client_id = "test-client-id"
 }`, name)
 }

@@ -56,6 +56,12 @@ func raftSnapshotAgentConfigResource() *schema.Resource {
 			ForceNew:     true,
 			ValidateFunc: storageTypeValidation,
 		},
+		"autoload_enabled": {
+			Type:        schema.TypeBool,
+			Description: "Enables automatic restoration of snapshots on cluster initialization or leadership change.",
+			Optional:    true,
+			Default:     false,
+		},
 		"local_max_space": {
 			Type:        schema.TypeInt,
 			Description: "The maximum space, in bytes, to use for snapshots.",
@@ -148,7 +154,7 @@ func raftSnapshotAgentConfigResource() *schema.Resource {
 		},
 		"azure_account_key": {
 			Type:        schema.TypeString,
-			Description: "Azure account key.",
+			Description: "Azure account key. Required when azure_auth_mode is 'shared'.",
 			Optional:    true,
 		},
 		"azure_blob_environment": {
@@ -159,6 +165,16 @@ func raftSnapshotAgentConfigResource() *schema.Resource {
 		"azure_endpoint": {
 			Type:        schema.TypeString,
 			Description: "Azure blob storage endpoint. This is typically only set when using a non-Azure implementation like Azurite.",
+			Optional:    true,
+		},
+		"azure_client_id": {
+			Type:        schema.TypeString,
+			Description: "Azure client ID for authentication. Required when azure_auth_mode is 'managed'.",
+			Optional:    true,
+		},
+		"azure_auth_mode": {
+			Type:        schema.TypeString,
+			Description: "Azure authentication mode. Required for azure-blob storage. Possible values are 'shared', 'managed', or 'environment'.",
 			Optional:    true,
 		},
 	}
@@ -193,6 +209,11 @@ func buildConfigFromResourceData(d *schema.ResourceData) (map[string]interface{}
 		"path_prefix":  d.Get("path_prefix"),
 		"file_prefix":  d.Get("file_prefix"),
 		"storage_type": d.Get("storage_type"),
+	}
+
+	// Add autoload_enabled if set
+	if v, ok := d.GetOk("autoload_enabled"); ok {
+		data["autoload_enabled"] = v
 	}
 
 	if storageType == "local" {
@@ -278,6 +299,12 @@ func buildConfigFromResourceData(d *schema.ResourceData) (map[string]interface{}
 		if v, ok := d.GetOk("azure_endpoint"); ok {
 			data["azure_endpoint"] = v
 		}
+		if v, ok := d.GetOk("azure_client_id"); ok {
+			data["azure_client_id"] = v
+		}
+		if v, ok := d.GetOk("azure_auth_mode"); ok {
+			data["azure_auth_mode"] = v
+		}
 	}
 	return data, nil
 }
@@ -357,6 +384,12 @@ func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) e
 	if val, ok := resp.Data["storage_type"]; ok {
 		if err := d.Set("storage_type", val); err != nil {
 			return fmt.Errorf("error setting state key 'storage_type': %s", err)
+		}
+	}
+
+	if val, ok := resp.Data["autoload_enabled"]; ok {
+		if err := d.Set("autoload_enabled", val); err != nil {
+			return fmt.Errorf("error setting state key 'autoload_enabled': %s", err)
 		}
 	}
 
@@ -484,6 +517,18 @@ func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) e
 	if val, ok := resp.Data["azure_endpoint"]; ok {
 		if err := d.Set("azure_endpoint", val); err != nil {
 			return fmt.Errorf("error setting state key 'azure_endpoint': %s", err)
+		}
+	}
+
+	if val, ok := resp.Data["azure_client_id"]; ok {
+		if err := d.Set("azure_client_id", val); err != nil {
+			return fmt.Errorf("error setting state key 'azure_client_id': %s", err)
+		}
+	}
+
+	if val, ok := resp.Data["azure_auth_mode"]; ok {
+		if err := d.Set("azure_auth_mode", val); err != nil {
+			return fmt.Errorf("error setting state key 'azure_auth_mode': %s", err)
 		}
 	}
 
