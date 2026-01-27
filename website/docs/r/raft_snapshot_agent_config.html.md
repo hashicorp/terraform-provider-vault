@@ -72,6 +72,7 @@ resource "vault_raft_snapshot_agent_config" "azure_backups" {
   retain           = 7
   path_prefix      = "/"
   storage_type     = "azure-blob"
+  autoload_enabled = true
 
   # Storage Type Configuration
   azure_container_name = "vault-blob"
@@ -109,6 +110,10 @@ The following arguments are supported:
 - `storage_type` `<required>` - One of "local", "azure-blob", "aws-s3",
   or "google-gcs". The remaining parameters described below are all specific to
   the selected `storage_type` and prefixed accordingly.
+
+- `autoload_enabled` - (Optional) Enables automatic restoration of snapshots on
+  cluster initialization or leadership change. Defaults to `false`.
+  **Note:** Not supported with `storage_type = "local"`.
 
 #### storage_type=local
 
@@ -178,9 +183,16 @@ The following arguments are supported:
 - `azure_container_name` `<required>` - Azure container name to write
   snapshots to.
 
-- `azure_account_name` - Azure account name.
+- `azure_account_name` `<required>` - Azure account name.
 
-- `azure_account_key` - Azure account key.
+- `azure_auth_mode` `<required>` - Azure authentication mode. Possible values are:
+  - `shared` - Shared key authentication (requires `azure_account_key`)
+  - `managed` - Managed identity authentication (requires `azure_client_id`)
+  - `environment` - Environment-based credentials using Azure SDK default credential chain
+
+- `azure_account_key` - Azure account key. **Required** when `azure_auth_mode = "shared"`.
+
+- `azure_client_id` - Azure client ID for authentication. **Required** when `azure_auth_mode = "managed"`.
 
 - `azure_blob_environment` - Azure blob environment.
 
