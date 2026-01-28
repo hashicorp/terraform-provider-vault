@@ -163,17 +163,8 @@ func approleAuthBackendRoleSecretIDCreate(ctx context.Context, d *schema.Resourc
 	}
 
 	log.Printf("[DEBUG] Writing AppRole auth backend role SecretID %q", path)
-	iCIDRs := d.Get(consts.FieldCIDRList).(*schema.Set).List()
-	cidrs := make([]string, 0, len(iCIDRs))
-	for _, iCIDR := range iCIDRs {
-		cidrs = append(cidrs, iCIDR.(string))
-	}
-
-	iTokenBoundCIDRs := d.Get(consts.FieldTokenBoundCIDRs).(*schema.Set).List()
-	tokenBoundCIDRs := make([]string, 0, len(iTokenBoundCIDRs))
-	for _, iCIDR := range iTokenBoundCIDRs {
-		tokenBoundCIDRs = append(tokenBoundCIDRs, iCIDR.(string))
-	}
+	cidrs := util.TerraformSetToStringArray(d.Get(consts.FieldCIDRList))
+	tokenBoundCIDRs := util.TerraformSetToStringArray(d.Get(consts.FieldTokenBoundCIDRs))
 
 	data := map[string]interface{}{}
 	if v, ok := d.GetOk(consts.FieldSecretID); ok {
@@ -190,20 +181,20 @@ func approleAuthBackendRoleSecretIDCreate(ctx context.Context, d *schema.Resourc
 		result, err := normalizeDataJSON(v.(string))
 		if err != nil {
 			log.Printf("[ERROR] Failed to normalize JSON data %q, resource=%q, key=%q, err=%s",
-				v, name, "metadata", err)
+				v, name, consts.FieldMetadata, err)
 			return diag.FromErr(err)
 		}
-		data["metadata"] = result
+		data[consts.FieldMetadata] = result
 	} else {
-		data["metadata"] = ""
+		data[consts.FieldMetadata] = ""
 	}
 
 	if v, ok := d.GetOk(consts.FieldTTL); ok {
-		data["ttl"] = v
+		data[consts.FieldTTL] = v
 	}
 
 	if v, ok := d.GetOk(consts.FieldNumUses); ok {
-		data["num_uses"] = v
+		data[consts.FieldNumUses] = v
 	}
 	withWrappedAccessor := d.Get(consts.FieldWithWrappedAccessor).(bool)
 
@@ -321,10 +312,7 @@ func approleAuthBackendRoleSecretIDRead(ctx context.Context, d *schema.ResourceD
 			cidrs = strings.Split(data, ",")
 		}
 	case []interface{}:
-		cidrs = make([]string, 0, len(data))
-		for _, i := range data {
-			cidrs = append(cidrs, i.(string))
-		}
+		cidrs = util.JsonStringArrayToStringArray(data)
 	case nil:
 		cidrs = make([]string, 0)
 	default:
@@ -338,17 +326,14 @@ func approleAuthBackendRoleSecretIDRead(ctx context.Context, d *schema.ResourceD
 			tokenBoundCIDRs = strings.Split(data, ",")
 		}
 	case []interface{}:
-		tokenBoundCIDRs = make([]string, 0, len(data))
-		for _, i := range data {
-			tokenBoundCIDRs = append(tokenBoundCIDRs, i.(string))
-		}
+		tokenBoundCIDRs = util.JsonStringArrayToStringArray(data)
 	case nil:
 		tokenBoundCIDRs = make([]string, 0)
 	default:
 		return diag.Errorf("unknown type %T for token_bound_cidrs in response for SecretID %q", data, accessor)
 	}
 
-	metadata, err := json.Marshal(resp.Data["metadata"])
+	metadata, err := json.Marshal(resp.Data[consts.FieldMetadata])
 	if err != nil {
 		return diag.Errorf("error encoding metadata for SecretID %q to JSON: %s", id, err)
 	}
@@ -367,10 +352,8 @@ func approleAuthBackendRoleSecretIDRead(ctx context.Context, d *schema.ResourceD
 		consts.FieldNumUses:         numUses,
 	}
 
-	for k, v := range fields {
-		if err := d.Set(k, v); err != nil {
-			return diag.Errorf("error setting %q in state; err=%s", k, err)
-		}
+	if err := util.SetResourceData(d, fields); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return nil
