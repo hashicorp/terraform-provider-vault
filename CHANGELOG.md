@@ -2,10 +2,12 @@
 
 FEATURES:
 
-* Add Kubernetes service account token ephemeral resource `vault_kubernetes_service_account_token`: ([#2712](https://github.com/hashicorp/terraform-provider-vault/pull/2712))
+* **New Ephemeral Resource**: `vault_approle_auth_backend_role_secret_id` - Generate AppRole SecretIDs on-demand with automatic cleanup. Requires Terraform 1.10+.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
+* **New Ephemeral Resource**: Add Kubernetes service account token ephemeral resource `vault_kubernetes_service_account_token`: ([#2712](https://github.com/hashicorp/terraform-provider-vault/pull/2712))
 
 IMPROVEMENTS:
 
+* `vault_approle_auth_backend_login`: Add write-only fields `secret_id_wo` and `secret_id_wo_version` to support ephemeral SecretID values without persisting them in state.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
 * `vault_mfa_totp`: Add support for `max_validation_attempts` field to configure the maximum number of consecutive failed validation attempts allowed. ([#2751](https://github.com/hashicorp/terraform-provider-vault/pull/2751))
 * `vault_mongodbatlas_secret_backend`: Add support for write-only private key fields (`private_key_wo`, `private_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2741](https://github.com/hashicorp/terraform-provider-vault/pull/2741))
 * `vault_consul_secret_backend`: Add support for write-only fields (`token_wo`, `token_wo_version`, `client_key_wo`, `client_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2730](https://github.com/hashicorp/terraform-provider-vault/pull/2730))

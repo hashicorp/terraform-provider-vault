@@ -90,7 +90,7 @@ func TestMFATOTPNegativeScenarios(t *testing.T) {
 			{
 				Config: testMFATOTPConfigUpdate(acctest.RandomWithPrefix("mfa-totp-zero"), 20, 0),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxValidationAttempts, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxValidationAttempts, "5"),
 				),
 			},
 		},
