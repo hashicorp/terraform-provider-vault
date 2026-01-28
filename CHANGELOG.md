@@ -7,7 +7,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
-* `resource_saml_auth_backend`: Added missing exported field `accessor`.([FIXME](https://github.com/hashicorp/terraform-provider-vault/pull/FIXME))
+* `resource_saml_auth_backend`: Added missing exported field `accessor`.([#2757](https://github.com/hashicorp/terraform-provider-vault/pull/#2757))
 * `vault_approle_auth_backend_login`: Add write-only fields `secret_id_wo` and `secret_id_wo_version` to support ephemeral SecretID values without persisting them in state.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
 * `vault_mfa_totp`: Add support for `max_validation_attempts` field to configure the maximum number of consecutive failed validation attempts allowed. ([#2751](https://github.com/hashicorp/terraform-provider-vault/pull/2751))
 * `vault_mongodbatlas_secret_backend`: Add support for write-only private key fields (`private_key_wo`, `private_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2741](https://github.com/hashicorp/terraform-provider-vault/pull/2741))
