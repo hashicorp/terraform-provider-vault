@@ -26,6 +26,7 @@ const (
 	fieldACSURLS        = "acs_urls"
 	fieldDefaultRole    = "default_role"
 	fieldVerboseLogging = "verbose_logging"
+	fieldAccessor       = "accessor"
 )
 
 var (
@@ -116,6 +117,11 @@ func samlAuthBackendResource() *schema.Resource {
 				Description: "Log additional, potentially sensitive information " +
 					"during the SAML exchange according to the current logging level. Not " +
 					"recommended for production.",
+			},
+			fieldAccessor: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The accessor of the SAML auth backend, populated at creation.",
 			},
 			consts.FieldTune: authMountTuneSchema(),
 		},
@@ -217,6 +223,22 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 
 	if resp == nil {
 		log.Printf("[WARN] No info found at %q; removing from state.", id)
+		d.SetId("")
+		return nil
+	}
+
+	mounts, err := client.Sys().ListAuth()
+	if err != nil {
+		return diag.Errorf("error listing auth mounts: %s", err)
+	}
+
+	mountPath := id + "/"
+	if mount, ok := mounts[mountPath]; ok {
+		d.Set(fieldAccessor, mount.Accessor)
+	} else if mount, ok := mounts[id]; ok {
+		d.Set(fieldAccessor, mount.Accessor)
+	} else {
+		log.Printf("[WARN] Mount for %q not found in auth list; removing from state.", id)
 		d.SetId("")
 		return nil
 	}
