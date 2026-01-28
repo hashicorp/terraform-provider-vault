@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
-
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
@@ -29,76 +29,80 @@ func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 			{
 				Config: testAccRaftSnapshotAgentConfig_basic(name),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "name", name),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "interval_seconds", "3600"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "retain", "1"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "path_prefix", "/tmp"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "file_prefix", "vault-snapshot"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "storage_type", "local"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "local_max_space", "4096"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldIntervalSeconds, "3600"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldRetain, "1"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldPathPrefix, "/tmp"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldFilePrefix, "vault-snapshot"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldStorageType, "local"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldLocalMaxSpace, "4096"),
 				),
 			},
 			{
 				Config: testAccRaftSnapshotAgentConfig_updated(name),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "name", name),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "interval_seconds", "7200"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "retain", "1"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "path_prefix", "/tmp"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "file_prefix", "vault-snapshot"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "storage_type", "local"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "local_max_space", "4096"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldIntervalSeconds, "7200"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldRetain, "1"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldPathPrefix, "/tmp"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldFilePrefix, "vault-snapshot"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldStorageType, "local"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldLocalMaxSpace, "4096"),
 				),
 			},
 			{
 				Config: testAccRaftSnapshotAgentConfig_aws(name),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "name", name),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "interval_seconds", "7200"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "retain", "1"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "path_prefix", "/path/in/bucket"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "file_prefix", "vault-snapshot"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "aws_s3_bucket", "my-bucket"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "aws_s3_region", "us-east-1"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "aws_access_key_id", "aws-access-key-id"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "aws_secret_access_key", "aws-secret-access-key"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "aws_session_token", "aws-session-token"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "aws_s3_enable_kms", "true"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", "aws_s3_kms_key", "alias/VaultBackupKMS"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldIntervalSeconds, "7200"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldRetain, "1"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldPathPrefix, "/path/in/bucket"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldFilePrefix, "vault-snapshot"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldAWSS3Bucket, "my-bucket"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldAWSS3Region, "us-east-1"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldAWSAccessKeyID, "aws-access-key-id"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldAWSSecretAccessKey, "aws-secret-access-key"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldAWSSessionToken, "aws-session-token"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldAWSS3EnableKMS, "true"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldAWSS3KMSKey, "alias/VaultBackupKMS"),
 				),
 			},
 			{
 				Config: testAccRaftSnapshotAgentConfig_google(name),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", "name", name),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", "interval_seconds", "7200"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", "retain", "1"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", "path_prefix", "/path/in/bucket"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", "file_prefix", "vault-snapshot"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", "storage_type", "google-gcs"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", "google_gcs_bucket", "my-bucket"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", "google_service_account_key", "{}"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldIntervalSeconds, "7200"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldRetain, "1"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldPathPrefix, "/path/in/bucket"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldFilePrefix, "vault-snapshot"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldStorageType, "google-gcs"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldGoogleGCSBucket, "my-bucket"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldGoogleServiceAccountKey, "{}"),
 				),
 			},
 			{
 				Config: testAccRaftSnapshotAgentConfig_azure(name),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", "name", name),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", "interval_seconds", "7200"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", "retain", "1"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", "path_prefix", "/path/in/bucket"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", "file_prefix", "vault-snapshot"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", "storage_type", "azure-blob"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", "azure_container_name", "my-bucket"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", "azure_account_name", "azure-account-name"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", "azure_account_key", "azure-account-key"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", "azure_blob_environment", "azure-env"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldIntervalSeconds, "7200"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldRetain, "1"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldPathPrefix, "/path/in/bucket"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldFilePrefix, "vault-snapshot"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldStorageType, "azure-blob"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldAzureContainerName, "my-bucket"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldAzureAccountName, "azure-account-name"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldAzureAccountKey, "azure-account-key"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldAzureBlobEnvironment, "azure-env"),
 				),
 			},
 		},
 	})
 }
 
+// TestAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload tests Azure Managed Identity
+// authentication with autoload feature.
+// Requires Vault Enterprise 1.21.0+ for autoload_enabled
+// Requires Vault Enterprise 1.18.0+ for azure_auth_mode and azure_client_id
 func TestAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
@@ -106,16 +110,17 @@ func TestAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload(t *testing.
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
 			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion121)
 		},
 		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload(name),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", "name", name),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", "autoload_enabled", "true"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", "azure_client_id", "test-client-id"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", "azure_auth_mode", "managed"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", consts.FieldAutoloadEnabled, "true"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", consts.FieldAzureClientID, "test-client-id"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", consts.FieldAzureAuthMode, "managed"),
 				),
 			},
 		},
@@ -135,13 +140,13 @@ func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 			{
 				Config: testAccRaftSnapshotAgentConfig_basic(name),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "name", name),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "interval_seconds", "3600"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "retain", "1"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "path_prefix", "/tmp"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "file_prefix", "vault-snapshot"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "storage_type", "local"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", "local_max_space", "4096"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldIntervalSeconds, "3600"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldRetain, "1"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldPathPrefix, "/tmp"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldFilePrefix, "vault-snapshot"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldStorageType, "local"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.test", consts.FieldLocalMaxSpace, "4096"),
 				),
 			},
 			{

@@ -114,6 +114,7 @@ The following arguments are supported:
 - `autoload_enabled` - (Optional) Enables automatic restoration of snapshots on
   cluster initialization or leadership change. Defaults to `false`.
   **Note:** Not supported with `storage_type = "local"`.
+  *Requires Vault Enterprise 1.21.0+*.
 
 #### storage_type=local
 
@@ -189,10 +190,12 @@ The following arguments are supported:
   - `shared` - Shared key authentication (requires `azure_account_key`)
   - `managed` - Managed identity authentication (requires `azure_client_id`)
   - `environment` - Environment-based credentials using Azure SDK default credential chain
+  *Requires Vault Enterprise 1.18.0+*.
 
 - `azure_account_key` - Azure account key. **Required** when `azure_auth_mode = "shared"`.
 
 - `azure_client_id` - Azure client ID for authentication. **Required** when `azure_auth_mode = "managed"`.
+  *Requires Vault Enterprise 1.18.0+*.
 
 - `azure_blob_environment` - Azure blob environment.
 
