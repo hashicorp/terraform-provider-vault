@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -37,7 +38,7 @@ func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -74,7 +75,7 @@ func TestAccDatabaseSecretBackendStaticRole_credentialType(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -106,7 +107,7 @@ func TestAccDatabaseSecretBackendStaticRole_credentialConfig(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -148,7 +149,7 @@ func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -194,7 +195,7 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,

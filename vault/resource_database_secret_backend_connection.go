@@ -156,7 +156,7 @@ type dbEngine struct {
 // otherwise return the default plugin name.
 // Return an error if no plugin name can be found.
 func (i *dbEngine) GetPluginName(d *schema.ResourceData, prefix string) (string, error) {
-	if val, ok := d.GetOk(prefix + "plugin_name"); ok {
+	if val, ok := d.GetOk(prefix + consts.FieldPluginName); ok {
 		return val.(string), nil
 	}
 
@@ -220,54 +220,54 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Description: "Connection parameters for the elasticsearch-database-plugin.",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"url": {
+					consts.FieldURL: {
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "The URL for Elasticsearch's API",
 					},
-					"username": {
+					consts.FieldUsername: {
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "The username to be used in the connection URL",
 					},
-					"password": {
+					consts.FieldPassword: {
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "The password to be used in the connection URL",
 						Sensitive:   true,
 					},
-					"ca_cert": {
+					consts.FieldCACert: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity",
 					},
-					"ca_path": {
+					consts.FieldCAPath: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity",
 					},
-					"client_cert": {
+					consts.FieldClientCert: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to the certificate for the Elasticsearch client to present for communication",
 					},
-					"client_key": {
+					consts.FieldClientKey: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to the key for the Elasticsearch client to use for communication",
 					},
-					"tls_server_name": {
+					consts.FieldTLSServerName: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "This, if set, is used to set the SNI host when connecting via TLS",
 					},
-					"insecure": {
+					consts.FieldInsecureTLS: {
 						Type:        schema.TypeBool,
 						Optional:    true,
 						Default:     false,
 						Description: "Whether to disable certificate verification",
 					},
-					"username_template": {
+					consts.FieldUsernameTemplate: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "Template describing how dynamic usernames are generated.",
@@ -734,7 +734,7 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
 	s := setCommonDatabaseSchema(getDatabaseSchema(schema.TypeList))
-	s["backend"] = &schema.Schema{
+	s[consts.FieldBackend] = &schema.Schema{
 		Type:        schema.TypeString,
 		Required:    true,
 		Description: "Unique name of the Vault mount to configure.",
@@ -1034,13 +1034,13 @@ func getDBEngine(d *schema.ResourceData) (*dbEngine, error) {
 }
 
 func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) {
-	pluginName, ok := r.Data["plugin_name"]
+	pluginName, ok := r.Data[consts.FieldPluginName]
 	if !ok {
-		return nil, fmt.Errorf(`invalid response data, missing "plugin_name"`)
+		return nil, fmt.Errorf(`invalid response data, missing %q`, consts.FieldPluginName)
 	}
 
 	if pluginName == "" {
-		return nil, fmt.Errorf(`invalid response data, "plugin_name" is empty`)
+		return nil, fmt.Errorf(`invalid response data, %q is empty`, consts.FieldPluginName)
 	}
 
 	var last int
@@ -1088,7 +1088,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 		return nil, err
 	}
 
-	data["plugin_name"] = pluginName
+	data[consts.FieldPluginName] = pluginName
 	// Allow plugin_version/password_policy to be defined either at the
 	// top-level resource or in the engine-specific nested block (prefix).
 	if v, ok := d.GetOk(pluginPrefix + consts.FieldPluginVersion); ok {
@@ -2081,7 +2081,7 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 	}
 
 	path := databaseSecretBackendConnectionPath(
-		d.Get("backend").(string), d.Get("name").(string))
+		d.Get(consts.FieldBackend).(string), d.Get(consts.FieldName).(string))
 	if err := writeDatabaseSecretConfig(ctx, d, client, engine, 0, false, path, meta); err != nil {
 		return diag.FromErr(err)
 	}
@@ -2105,20 +2105,20 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 		prefix = engine.ResourcePrefix(idx)
 	}
 
-	if v, ok := d.GetOkExists(prefix + "verify_connection"); ok {
-		data["verify_connection"] = v.(bool)
+	if v, ok := d.GetOkExists(prefix + consts.FieldVerifyConnection); ok {
+		data[consts.FieldVerifyConnection] = v.(bool)
 	}
 
-	if v, ok := d.GetOkExists(prefix + "allowed_roles"); ok {
+	if v, ok := d.GetOkExists(prefix + consts.FieldAllowedRoles); ok {
 		var roles []string
 		for _, role := range v.([]interface{}) {
 			roles = append(roles, role.(string))
 		}
-		data["allowed_roles"] = strings.Join(roles, ",")
+		data[consts.FieldAllowedRoles] = strings.Join(roles, ",")
 	}
 
-	if v, ok := d.GetOk("root_rotation_statements"); ok {
-		data["root_rotation_statements"] = v
+	if v, ok := d.GetOk(consts.FieldRootRotationStatements); ok {
+		data[consts.FieldRootRotationStatements] = v
 	}
 
 	if v, ok := d.GetOk(consts.FieldPluginVersion); ok {
@@ -2135,7 +2135,7 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 	}
 
 	log.Printf("[DEBUG] database config payload : %+v", data)
-	if m, ok := d.GetOkExists(prefix + "data"); ok {
+	if m, ok := d.GetOkExists(prefix + consts.FieldData); ok {
 		for k, v := range m.(map[string]interface{}) {
 			// Vault does not return the password in the API. If the root credentials have been rotated, sending
 			// the old password in the update request would break the connection config. Thus we only send it,
@@ -2244,7 +2244,7 @@ func databaseSecretBackendConnectionRead(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set("backend", backend); err != nil {
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -2259,7 +2259,7 @@ func databaseSecretBackendConnectionRead(ctx context.Context, d *schema.Resource
 
 func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngine, idx int, unifiedSchema bool, name string, meta interface{}) map[string]interface{} {
 	var roles []string
-	for _, role := range resp.Data["allowed_roles"].([]interface{}) {
+	for _, role := range resp.Data[consts.FieldAllowedRoles].([]interface{}) {
 		roles = append(roles, role.(string))
 	}
 
@@ -2269,11 +2269,11 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 	}
 
 	result := map[string]interface{}{
-		"name":              name,
-		"allowed_roles":     roles,
-		"data":              d.Get(prefix + "data"),
-		"verify_connection": d.Get(prefix + "verify_connection"),
-		"plugin_name":       resp.Data["plugin_name"],
+		consts.FieldName:             name,
+		consts.FieldAllowedRoles:     roles,
+		consts.FieldData:             d.Get(prefix + consts.FieldData),
+		consts.FieldVerifyConnection: d.Get(prefix + consts.FieldVerifyConnection),
+		consts.FieldPluginName:       resp.Data[consts.FieldPluginName],
 
 		consts.FieldPasswordPolicy: resp.Data[consts.FieldPasswordPolicy],
 	}
@@ -2316,7 +2316,7 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 			result[consts.FieldSkipStaticRoleImportRotation] = false
 		}
 	}
-	result["root_rotation_statements"] = rootRotationStmts
+	result[consts.FieldRootRotationStatements] = rootRotationStmts
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		automatedrotationutil.GetAutomatedRotationFieldsFromResponse(resp, result)

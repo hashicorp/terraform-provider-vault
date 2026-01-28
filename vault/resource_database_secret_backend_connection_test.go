@@ -31,6 +31,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -56,7 +57,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -106,7 +107,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -158,7 +159,7 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -206,7 +207,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra_invalidFields(t *testing.T
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -260,7 +261,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra_customFields(t *testing.T)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -304,7 +305,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra_customFieldsNoTLS(t *testi
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -373,7 +374,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -434,7 +435,7 @@ func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
 	resourceName := testDefaultDatabaseSecretBackendResource
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -478,7 +479,7 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 	usernameTemplate := "{{.DisplayName}}"
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -514,7 +515,7 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -545,7 +546,7 @@ func TestAccDatabaseSecretBackendConnection_mongodb_tls(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
@@ -580,7 +581,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -643,7 +644,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
@@ -690,7 +691,7 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -728,7 +729,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_rds(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -766,7 +767,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_aurora(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -804,7 +805,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_legacy(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -831,9 +832,9 @@ func TestAccDatabaseSecretBackendConnection_mysql_legacy(t *testing.T) {
 
 func testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName string, fs ...resource.TestCheckFunc) resource.TestCheckFunc {
 	funcs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "name", name),
-		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "backend", backend),
-		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_name", pluginName),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldName, name),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldBackend, backend),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPluginName, pluginName),
 	}
 	funcs = append(funcs, fs...)
 
@@ -872,7 +873,7 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -947,7 +948,7 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1017,7 +1018,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 	password := acctest.RandomWithPrefix("password")
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1092,7 +1093,7 @@ func TestAccDatabaseSecretBackendConnection_oracle(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1136,7 +1137,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1192,7 +1193,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_tls(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
@@ -1246,7 +1247,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
@@ -1359,7 +1360,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_password_wo(t *testing.T)
 	pluginName := dbEnginePostgres.DefaultPluginName()
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1407,7 +1408,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1490,7 +1491,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake_userpass(t *testing.T) {
 	config := testAccDatabaseSecretBackendConnectionConfig_snowflake_userpass(name, backend, connURL, username, password, userTempl)
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1527,7 +1528,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
@@ -1584,7 +1585,7 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1646,7 +1647,7 @@ func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1683,7 +1684,7 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1798,7 +1799,7 @@ resource "vault_database_secret_backend_connection" "test" {
 }`, name, name, pluginName)
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -3582,7 +3583,7 @@ func TestAccDatabaseSecretBackendConnection_hana(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -3692,7 +3693,7 @@ func TestAccDatabaseSecretBackendConnection_skipStaticRoleImportRotation(t *test
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 			// skip_static_role_import_rotation is only available in Vault Enterprise
 			meta := testProvider.Meta().(*provider.ProviderMeta)
