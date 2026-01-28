@@ -179,18 +179,17 @@ func certAuthBackendRoleResource() *schema.Resource {
 		consts.FieldOCSPMaxRetries: {
 			Type:     schema.TypeInt,
 			Optional: true,
-			Computed: true,
+			Default:  4,
 			Description: "The number of retries to attempt when connecting to " +
-				"an OCSP server. If not specified, defaults to 4 retries.",
+				"an OCSP server. Defaults to 4 retries. Must be a non-negative value.",
 		},
 		consts.FieldOCSPThisUpdateMaxAge: {
 			Type:     schema.TypeInt,
 			Optional: true,
-			Computed: true,
+			Default:  0,
 			Description: "The maximum age in seconds of the 'thisUpdate' field " +
-				"in an OCSP response before it is considered too old. If not " +
-				"specified, defaults to 0 (disabled). A negative value " +
-				"disables the age check.",
+				"in an OCSP response before it is considered too old. " +
+				"Defaults to 0 (disabled). Must be a non-negative value.",
 		},
 	}
 
