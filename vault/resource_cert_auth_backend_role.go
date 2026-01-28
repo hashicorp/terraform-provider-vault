@@ -312,9 +312,6 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	}
 
 	for _, k := range certAuthIntFields {
-		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
-			continue
-		}
 		if certAuthVault116Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion116) {
 			continue
 		}
