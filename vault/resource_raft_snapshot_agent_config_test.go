@@ -56,7 +56,7 @@ func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldName, name),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldIntervalSeconds, "7200"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldRetain, "1"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldPathPrefix, "/path/in/bucket"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldPathPrefix, "path/in/bucket"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldFilePrefix, "vault-snapshot"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldAWSS3Bucket, "my-bucket"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_backups", consts.FieldAWSS3Region, "us-east-1"),
@@ -73,7 +73,7 @@ func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldName, name),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldIntervalSeconds, "7200"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldRetain, "1"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldPathPrefix, "/path/in/bucket"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldPathPrefix, "path/in/bucket"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldFilePrefix, "vault-snapshot"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldStorageType, "google-gcs"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.google_backups", consts.FieldGoogleGCSBucket, "my-bucket"),
@@ -86,35 +86,48 @@ func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldName, name),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldIntervalSeconds, "7200"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldRetain, "1"),
-					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldPathPrefix, "/path/in/bucket"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldPathPrefix, "path/in/bucket"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldFilePrefix, "vault-snapshot"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldStorageType, "azure-blob"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldAzureContainerName, "my-bucket"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldAzureAccountName, "azure-account-name"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldAzureAccountKey, "azure-account-key"),
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldAzureBlobEnvironment, "azure-env"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_backups", consts.FieldAzureAuthMode, "shared"),
 				),
 			},
 		},
 	})
 }
 
-// TestAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload tests Azure Managed Identity
-// authentication with autoload feature.
-// Requires Vault Enterprise 1.21.0+ for autoload_enabled
-// Requires Vault Enterprise 1.18.0+ for azure_auth_mode and azure_client_id
-func TestAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload(t *testing.T) {
+// TestAccRaftSnapshotAgentConfig_azureManagedIdentity tests Azure Managed Identity
+// authentication with and without autoload feature.
+// Step 1: Tests azure_auth_mode and azure_client_id (Requires Vault Enterprise 1.18.0+)
+// Step 2: Tests autoload_enabled with Azure Managed Identity (Requires Vault Enterprise 1.21.0+)
+func TestAccRaftSnapshotAgentConfig_azureManagedIdentity(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion121)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
+				Config: testAccRaftSnapshotAgentConfig_azureManagedIdentity(name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", consts.FieldAzureClientID, "test-client-id"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", consts.FieldAzureAuthMode, "managed"),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !provider.IsAPISupported(meta, provider.VaultVersion121), nil
+				},
 				Config: testAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload(name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.azure_managed_identity", consts.FieldName, name),
@@ -210,7 +223,7 @@ resource "vault_raft_snapshot_agent_config" "aws_backups" {
   name = "%s"
   interval_seconds = 7200
   retain = 1
-  path_prefix = "/path/in/bucket"
+  path_prefix = "path/in/bucket"
   storage_type = "aws-s3"
   aws_s3_bucket = "my-bucket"
   aws_s3_region = "us-east-1"
@@ -228,7 +241,7 @@ resource "vault_raft_snapshot_agent_config" "google_backups" {
   name = "%s"
   interval_seconds = 7200
   retain = 1
-  path_prefix = "/path/in/bucket"
+  path_prefix = "path/in/bucket"
   storage_type = "google-gcs"
   google_gcs_bucket = "my-bucket"
   google_service_account_key = "{}"
@@ -241,12 +254,29 @@ resource "vault_raft_snapshot_agent_config" "azure_backups" {
   name = "%s"
   interval_seconds = 7200
   retain = 1
-  path_prefix = "/path/in/bucket"
+  path_prefix = "path/in/bucket"
   storage_type = "azure-blob"
   azure_container_name = "my-bucket"
   azure_account_name = "azure-account-name"
   azure_account_key = "azure-account-key"
   azure_blob_environment = "azure-env"
+  azure_auth_mode = "shared"
+}`, name)
+}
+
+func testAccRaftSnapshotAgentConfig_azureManagedIdentity(name string) string {
+	return fmt.Sprintf(`
+resource "vault_raft_snapshot_agent_config" "azure_managed_identity" {
+  name = "%s"
+  interval_seconds = 7200
+  retain = 1
+  path_prefix = "path/in/bucket"
+  storage_type = "azure-blob"
+  azure_container_name = "my-bucket"
+  azure_account_name = "azure-account-name"
+  azure_blob_environment = "azure-env"
+  azure_auth_mode = "managed"
+  azure_client_id = "test-client-id"
 }`, name)
 }
 
@@ -256,7 +286,7 @@ resource "vault_raft_snapshot_agent_config" "azure_managed_identity" {
   name = "%s"
   interval_seconds = 7200
   retain = 1
-  path_prefix = "/path/in/bucket"
+  path_prefix = "path/in/bucket"
   storage_type = "azure-blob"
   azure_container_name = "my-bucket"
   azure_account_name = "azure-account-name"

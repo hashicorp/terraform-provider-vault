@@ -57,10 +57,10 @@ func raftSnapshotAgentConfigResource() *schema.Resource {
 			ValidateFunc: storageTypeValidation,
 		},
 		consts.FieldAutoloadEnabled: {
-			Type:        schema.TypeBool,
-			Description: "Enables automatic restoration of snapshots on cluster initialization or leadership change. Requires Vault Enterprise 1.21.0+. Not supported with local storage.",
-			Optional:    true,
-			Default:     false,
+			Type: schema.TypeBool,
+			Description: "Enables automatic restoration of snapshots on cluster initialization or leadership change. " +
+				"Requires Vault Enterprise 1.21.0+. Not supported with local storage.",
+			Optional: true,
 		},
 		consts.FieldLocalMaxSpace: {
 			Type:        schema.TypeInt,
@@ -168,14 +168,17 @@ func raftSnapshotAgentConfigResource() *schema.Resource {
 			Optional:    true,
 		},
 		consts.FieldAzureClientID: {
-			Type:        schema.TypeString,
-			Description: "Azure client ID for authentication. Required when azure_auth_mode is 'managed'. Requires Vault Enterprise 1.18.0+.",
-			Optional:    true,
+			Type: schema.TypeString,
+			Description: "Azure client ID for authentication. Required when azure_auth_mode is 'managed'. " +
+				"Requires Vault Enterprise 1.18.0+.",
+			Optional: true,
 		},
 		consts.FieldAzureAuthMode: {
-			Type:        schema.TypeString,
-			Description: "Azure authentication mode. Required for azure-blob storage. Possible values are 'shared', 'managed', or 'environment'. Requires Vault Enterprise 1.18.0+.",
-			Optional:    true,
+			Type: schema.TypeString,
+			Description: "Azure authentication mode. Required for azure-blob storage. " +
+				"Possible values are 'shared', 'managed', or 'environment'. " +
+				"Requires Vault Enterprise 1.18.0+.",
+			Optional: true,
 		},
 	}
 	return &schema.Resource{
