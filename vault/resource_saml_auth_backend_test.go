@@ -234,18 +234,18 @@ func TestAccSAMLAuthBackend_booleanFlags(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccSAMLAuthBackendConfig_booleansExplicit(path, true, true),
+				Config: testAccSAMLAuthBackendConfig_booleansExplicit(path, true, true, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldVerboseLogging, "true"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldValidateAssertionSignature, "true"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValidateResponseSignature, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldValidateResponseSignature, "false"),
 				),
 			},
 			{
 				Config: testAccSAMLAuthBackendConfig_booleansDefault(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldVerboseLogging, "false"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValidateAssertionSignature, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVerboseLogging, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldValidateAssertionSignature, "true"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldValidateResponseSignature, "false"),
 				),
 			},
@@ -264,7 +264,7 @@ resource "vault_saml_auth_backend" "test" {
 `, path)
 }
 
-func testAccSAMLAuthBackendConfig_booleansExplicit(path string, verbose, validateSignatures bool) string {
+func testAccSAMLAuthBackendConfig_booleansExplicit(path string, verbose, validateAssertionSignature, validateResponseSignature bool) string {
 	return fmt.Sprintf(`
 resource "vault_saml_auth_backend" "test" {
   path                         = "%s"
@@ -275,7 +275,7 @@ resource "vault_saml_auth_backend" "test" {
   validate_assertion_signature = %t
   validate_response_signature  = %t
 }
-`, path, verbose, validateSignatures, validateSignatures)
+`, path, verbose, validateAssertionSignature, validateResponseSignature)
 }
 
 func TestAccSAMLAuthBackend_fullConfig(t *testing.T) {

@@ -97,7 +97,7 @@ func samlAuthBackendResource() *schema.Resource {
 			consts.FieldVerboseLogging: {
 				Type:     schema.TypeBool,
 				Optional: true,
-				ForceNew: true,
+				Computed: true,
 				Description: "Log additional, potentially sensitive information " +
 					"during the SAML exchange according to the current logging level. Not " +
 					"recommended for production.",
@@ -105,13 +105,13 @@ func samlAuthBackendResource() *schema.Resource {
 			consts.FieldValidateAssertionSignature: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				ForceNew:    true,
+				Computed:    true,
 				Description: "Whether to validate the assertion signature.",
 			},
 			consts.FieldValidateResponseSignature: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				ForceNew:    true,
+				Computed:    true,
 				Description: "Whether to validate the response signature.",
 			},
 			consts.FieldTune: authMountTuneSchema(),
