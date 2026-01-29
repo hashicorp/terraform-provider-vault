@@ -189,9 +189,12 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 
 	data.Policy = types.StringValue(readResp.Policy)
 
-	// Handle entropy_source if supported by API version
+	// Handle entropy_source if supported by API version and present in response
 	if provider.IsAPISupported(r.Meta(), provider.VaultVersion121) {
-		data.EntropySource = types.StringValue(readResp.EntropySource)
+		// Only set entropy_source if it's not empty in the response or if it was previously configured
+		if readResp.EntropySource != "" || !data.EntropySource.IsNull() {
+			data.EntropySource = types.StringValue(readResp.EntropySource)
+		}
 	}
 
 	// write the name to state to support the import command
