@@ -227,7 +227,7 @@ func TestAccPasswordPolicyEntropySourceValidation(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccPasswordPolicyConfigWithEntropySource(policyName, testPolicy, "invalid"),
-				ExpectError: regexp.MustCompile(`Attribute entropy_source value must be one of:`),
+				ExpectError: regexp.MustCompile(`unsupported entropy source invalid`),
 			},
 		},
 	})
