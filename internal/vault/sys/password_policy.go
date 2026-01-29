@@ -49,7 +49,8 @@ type PasswordPolicyModel struct {
 
 // PasswordPolicyAPIModel describes the Vault API data model.
 type PasswordPolicyAPIModel struct {
-	Policy string `json:"policy" mapstructure:"policy"`
+	Policy        string `json:"policy" mapstructure:"policy"`
+	EntropySource string `json:"entropy_source" mapstructure:"entropy_source"`
 }
 
 // Metadata defines the resource name as it would appear in Terraform configurations
@@ -187,6 +188,11 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	data.Policy = types.StringValue(readResp.Policy)
+
+	// Handle entropy_source if supported by API version
+	if provider.IsAPISupported(r.Meta(), provider.VaultVersion121) {
+		data.EntropySource = types.StringValue(readResp.EntropySource)
+	}
 
 	// write the name to state to support the import command
 	data.Name = types.StringValue(name)
