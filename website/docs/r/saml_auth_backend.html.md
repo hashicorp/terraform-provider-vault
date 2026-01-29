@@ -93,7 +93,9 @@ The `tune` block is used to tune the auth backend:
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+In addition to the fields above, the following attributes are exported:
+
+* `accessor` - The accessor of the SAML auth backend, populated at creation.
 
 ## Import
 
