@@ -392,6 +392,7 @@ const (
 	FieldKeyRef                         = "key_ref"
 	FieldPemBundle                      = "pem_bundle"
 	FieldCAChain                        = "ca_chain"
+	FieldRemoveRootsFromChain           = "remove_roots_from_chain"
 	FieldRestrictCAChainToIssuer        = "restrict_ca_chain_to_issuer"
 	FieldCSR                            = "csr"
 	FieldUseCSRValues                   = "use_csr_values"
