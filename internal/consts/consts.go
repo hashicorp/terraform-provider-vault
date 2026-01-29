@@ -642,6 +642,17 @@ const (
 	FieldSupportsDerivation                   = "supports_derivation"
 	FieldSupportsSigning                      = "supports_signing"
 
+	// SAML auth backend fields
+	FieldIDPMetadataURL             = "idp_metadata_url"
+	FieldIDPSSOURL                  = "idp_sso_url"
+	FieldIDPEntityID                = "idp_entity_id"
+	FieldIDPCert                    = "idp_cert"
+	FieldEntityID                   = "entity_id"
+	FieldACSURLs                    = "acs_urls"
+	FieldVerboseLogging             = "verbose_logging"
+	FieldValidateAssertionSignature = "validate_assertion_signature"
+	FieldValidateResponseSignature  = "validate_response_signature"
+
 	/*
 		ephemeral resource constants and write-only attributes
 	*/
