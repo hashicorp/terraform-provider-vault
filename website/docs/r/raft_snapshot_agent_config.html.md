@@ -60,7 +60,7 @@ resource "vault_raft_snapshot_agent_config" "s3_backups" {
 }
 ```
 
-#### Azure BLOB
+#### Azure BLOB (Shared Key Authentication)
 
 ```hcl
 variable "azure_account_name" {}
@@ -78,6 +78,29 @@ resource "vault_raft_snapshot_agent_config" "azure_backups" {
   azure_container_name = "vault-blob"
   azure_account_name   = var.azure_account_name
   azure_account_key    = var.azure_account_key
+  azure_auth_mode      = "shared"
+}
+```
+
+#### Azure BLOB (Managed Identity Authentication)
+
+```hcl
+variable "azure_account_name" {}
+variable "azure_client_id" {}
+
+resource "vault_raft_snapshot_agent_config" "azure_managed_identity" {
+  name             = "azure_managed"
+  interval_seconds = 86400 # 24h
+  retain           = 7
+  path_prefix      = "/"
+  storage_type     = "azure-blob"
+  autoload_enabled = true
+
+  # Storage Type Configuration
+  azure_container_name = "vault-blob"
+  azure_account_name   = var.azure_account_name
+  azure_auth_mode      = "managed"
+  azure_client_id      = var.azure_client_id
 }
 ```
 
@@ -184,9 +207,9 @@ The following arguments are supported:
 - `azure_container_name` `<required>` - Azure container name to write
   snapshots to.
 
-- `azure_account_name` `<required>` - Azure account name.
+- `azure_account_name` - Azure account name.
 
-- `azure_auth_mode` `<required>` - Azure authentication mode. Possible values are:
+- `azure_auth_mode` - Azure authentication mode. **Required by Vault API** when using `storage_type = "azure-blob"`. Possible values are:
   - `shared` - Shared key authentication (requires `azure_account_key`)
   - `managed` - Managed identity authentication (requires `azure_client_id`)
   - `environment` - Environment-based credentials using Azure SDK default credential chain
