@@ -7,12 +7,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -82,9 +80,6 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			consts.FieldEntropySource: schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "Specifies an override to the default source of entropy (randomness) used to generate the passwords. Must be one of: '', 'platform', or 'seal'. Requires Vault 1.21+.",
-				Validators: []validator.String{
-					stringvalidator.OneOf("", "platform", "seal"),
-				},
 			},
 		},
 		MarkdownDescription: "Provides a resource to manage Password Policies.",
