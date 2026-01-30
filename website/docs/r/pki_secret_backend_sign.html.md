@@ -101,6 +101,8 @@ The following arguments are supported:
 
 * `cert_metadata` (Optional) - A base 64 encoded value or an empty string to associate with the certificate's serial number. The role's no_store_metadata must be set to false, otherwise an error is returned when specified.
 
+* `remove_roots_from_chain` (Optional) - If set to `true`, the returned `ca_chain` field will not include any self-signed CA certificates. Useful if end-users already have the root CA in their trust store. Default `false`.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
