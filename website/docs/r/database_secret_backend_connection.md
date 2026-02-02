@@ -95,7 +95,7 @@ The following arguments are supported:
 
 * `password_policy` - (Optional)  The name of the password policy to use when generating passwords for this database. If not specified, this will use a default policy defined as: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.
 
-* `skip_static_role_import_rotation` - (Optional) Specifies if a given static account's password should be rotated on creation of the static roles associated with this database config. This is can be overridden at the role-level by the static role's skip_import_rotation field. The default is false. Requires Vault Enterprise 1.19+.
+* `skip_static_role_import_rotation` - (Optional) Specifies if a given static account's password should be rotated on creation of the static roles associated with this database config. This can be overridden at the role-level by the static role's skip_import_rotation field. The default is false. Requires Vault Enterprise 1.19+.
 
 * `verify_connection` - (Optional) Whether the connection should be verified on
   initial configuration or not.

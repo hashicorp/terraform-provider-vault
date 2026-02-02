@@ -760,7 +760,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Computed:    true,
-		Description: "Optional name of the password policy to use for generated passwords.",
+		Description: "When true, skip automatic rotation of associated static roles when this resource is imported.",
 	}
 
 	return &schema.Resource{
