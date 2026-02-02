@@ -755,10 +755,6 @@ var (
 			Resource:      UpdateSchemaResource(keymgmtKeyRotateResource()),
 			PathInventory: []string{"/keymgmt/key/{name}/rotate"},
 		},
-		"vault_keymgmt_key_delete": {
-			Resource:      UpdateSchemaResource(keymgmtKeyDeleteResource()),
-			PathInventory: []string{"/keymgmt/key/{name}"},
-		},
 		"vault_mongodbatlas_secret_backend": {
 			Resource:      UpdateSchemaResource(mongodbAtlasSecretBackendResource()),
 			PathInventory: []string{"/mongodbatlas/config"},
