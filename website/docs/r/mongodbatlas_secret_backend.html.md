@@ -19,6 +19,8 @@ for more details.
 
 ## Example Usage
 
+### Basic Configuration (Legacy)
+
 ```hcl
 resource "vault_mount" "mongo" {
   path        = "mongodbatlas"
@@ -33,6 +35,25 @@ resource "vault_mongodbatlas_secret_backend" "config" {
 }
 ```
 
+### Recommended Configuration (Write-Only Fields)
+
+~> **Security Note**: Using write-only fields (`private_key_wo`) is recommended as the private key will not be stored in Terraform state.
+
+```hcl
+resource "vault_mount" "mongo" {
+  path        = "mongodbatlas"
+  type        = "mongodbatlas"
+  description = "MongoDB Atlas secret engine mount"
+}
+
+resource "vault_mongodbatlas_secret_backend" "config" {
+  mount                  = vault_mount.mongo.path
+  private_key_wo         = "privateKey" # Never stored in state
+  private_key_wo_version = 1 # Increment to rotate
+  public_key             = "publicKey"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -44,9 +65,21 @@ The following arguments are supported:
 
 * `mount` - (Required) Path where the MongoDB Atlas Secrets Engine is mounted.
 
-* `private_key` - (Required) Specifies the Private API Key used to authenticate with the MongoDB Atlas API.
+* `private_key` - (Required) Specifies the Private API Key used to authenticate with the MongoDB Atlas API. Mutually exclusive
+  with `private_key_wo`. **Note:** This field will be stored in Terraform state. Consider using `private_key_wo` instead for enhanced security.
 
-* `public_key` - (Required) Specifies the Public API Key used to authenticate with the MongoDB Atlas API.
+* `public_key` - (Required) Specifies the Public API Key used to authenticate with the MongoDB Atlas API. 
+
+* `private_key_wo_version` - (Optional) An incrementing version counter. Increment this value to force an update 
+  to the private key. Required when using `private_key_wo`.
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `private_key_wo` - (Optional) Specifies the Private API Key used to authenticate with the MongoDB Atlas API. 
+  This is a write-only field that is not stored in Terraform state, providing enhanced security.
+  Mutually exclusive with `private_key`. Must be used with `private_key_wo_version`. To rotate the secret, update the value and increment `private_key_wo_version`.
 
 ## Attributes Reference
 

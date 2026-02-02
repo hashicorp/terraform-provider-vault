@@ -51,7 +51,7 @@ services:
       "DOCKER_INFLUXDB_INIT_BUCKET": "test"
 
   openldap:
-    image: docker.io/bitnami/openldap:2.6
+    image: osixia/openldap:1.5.0
     ports:
       - '1389:1389'
       - '1636:1636'

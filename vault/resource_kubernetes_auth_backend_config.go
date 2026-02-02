@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -43,12 +44,27 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 			Optional:    true,
 			Computed:    true,
 		},
-		"token_reviewer_jwt": {
-			Type:        schema.TypeString,
-			Description: "A service account JWT (or other token) used as a bearer token to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API.",
-			Default:     "",
-			Optional:    true,
-			Sensitive:   true,
+		consts.FieldTokenReviewerJWT: {
+			Type:          schema.TypeString,
+			Description:   "A service account JWT (or other token) used as a bearer token to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API.",
+			Default:       "",
+			Optional:      true,
+			Sensitive:     true,
+			ConflictsWith: []string{consts.FieldTokenReviewerJWTWO},
+		},
+		consts.FieldTokenReviewerJWTWO: {
+			Type:          schema.TypeString,
+			Description:   "A write-only service account JWT (or other token) used as a bearer token to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API.",
+			Optional:      true,
+			Sensitive:     true,
+			WriteOnly:     true,
+			ConflictsWith: []string{consts.FieldTokenReviewerJWT},
+		},
+		consts.FieldTokenReviewerJWTWOVersion: {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Description:  "The version of token_reviewer_jwt_wo to use during write operations.",
+			RequiredWith: []string{consts.FieldTokenReviewerJWTWO},
 		},
 		consts.FieldPEMKeys: {
 			Type:        schema.TypeList,
@@ -161,8 +177,11 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 		data[consts.FieldKubernetesCACert] = v
 	}
 
-	if v, ok := d.GetOk("token_reviewer_jwt"); ok {
-		data["token_reviewer_jwt"] = v.(string)
+	// Handle token_reviewer_jwt - check both regular and write-only fields
+	if v, ok := d.GetOk(consts.FieldTokenReviewerJWT); ok {
+		data[consts.FieldTokenReviewerJWT] = v.(string)
+	} else if tokenWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldTokenReviewerJWTWO)); !tokenWo.IsNull() {
+		data[consts.FieldTokenReviewerJWT] = tokenWo.AsString()
 	}
 
 	if v, ok := d.GetOkExists(consts.FieldPEMKeys); ok {
@@ -201,8 +220,11 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 	// NOTE: Since reading the auth/<backend>/config does
 	// not return the `token_reviewer_jwt`,
 	// set it from data after successfully storing it in Vault.
-	if err := d.Set("token_reviewer_jwt", data["token_reviewer_jwt"]); err != nil {
-		return err
+	// Only set if using the non-write-only field
+	if _, ok := d.GetOk(consts.FieldTokenReviewerJWT); ok {
+		if err := d.Set(consts.FieldTokenReviewerJWT, data[consts.FieldTokenReviewerJWT]); err != nil {
+			return err
+		}
 	}
 
 	log.Printf("[DEBUG] Wrote Kubernetes auth backend config %q", path)
@@ -296,8 +318,13 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 		setData(consts.FieldKubernetesCACert, v)
 	}
 
-	if v, ok := d.GetOk("token_reviewer_jwt"); ok {
-		setData("token_reviewer_jwt", v.(string))
+	// Handle token_reviewer_jwt - check both regular and write-only fields
+	if v, ok := d.GetOk(consts.FieldTokenReviewerJWT); ok {
+		setData(consts.FieldTokenReviewerJWT, v.(string))
+	} else if d.HasChange(consts.FieldTokenReviewerJWTWOVersion) {
+		if tokenWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldTokenReviewerJWTWO)); !tokenWo.IsNull() {
+			setData(consts.FieldTokenReviewerJWT, tokenWo.AsString())
+		}
 	}
 
 	if v, ok := d.GetOkExists(consts.FieldPEMKeys); ok {

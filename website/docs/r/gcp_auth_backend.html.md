@@ -47,7 +47,11 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
-* `credentials` - A JSON string containing the contents of a GCP credentials file. If this value is empty, Vault will try to use Application Default Credentials from the machine on which the Vault server is running.
+* `credentials` - (Optional) A JSON string containing the contents of a GCP credentials file. If this value is empty, Vault will try to use Application Default Credentials from the machine on which the Vault server is running. Mutually exclusive with `credentials_wo`.
+
+* `credentials_wo_version` - (Optional) A version counter for write-only credentials. Incrementing this value will cause the provider to send the credentials to Vault. Required with `credentials_wo`.
+  For more information about write-only attributes, see
+  [using write-only attributes](/docs/providers/vault/guides/using_write_only_attributes).
 
 * `path` - (Optional) The path to mount the auth method — this defaults to 'gcp'.
 
@@ -139,6 +143,14 @@ The `tune` block is used to tune the auth backend:
 
 
 For more details on the usage of each argument consult the [Vault GCP API documentation](https://www.vaultproject.io/api-docs/auth/gcp#configure).
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `credentials_wo` - (Optional) A JSON string containing the contents of a GCP credentials file. Can be updated. Mutually exclusive with `credentials`.
+  If this value is empty, Vault will try to use Application Default Credentials from the machine on which the Vault server is running.
+  **Note**: This property is write-only and will not be read from the API.
 
 ## Attribute Reference
 
