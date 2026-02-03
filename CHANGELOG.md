@@ -7,6 +7,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_managed_keys`: Add support for `usages` field (common parameter for all key types) and `max_parallel` field (PKCS only). Add support for GCP Cloud KMS managed keys with parameters: `credentials`, `project`, `region`, `key_ring`, `crypto_key`, `crypto_key_version`, and `algorithm`.
 * `vault_saml_auth_backend`: Add support for `validate_assertion_signature` and `validate_response_signature` parameters to control SAML signature validation (Vault 1.19+)
 * `vault_approle_auth_backend_login`: Add write-only fields `secret_id_wo` and `secret_id_wo_version` to support ephemeral SecretID values without persisting them in state.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
 * `vault_mfa_totp`: Add support for `max_validation_attempts` field to configure the maximum number of consecutive failed validation attempts allowed. ([#2751](https://github.com/hashicorp/terraform-provider-vault/pull/2751))
