@@ -270,12 +270,12 @@ func GetTestPKCSCreds(t *testing.T) (string, string, string) {
 }
 
 func GetTestGCPKeyRing(t *testing.T) string {
-	v := SkipTestEnvUnset(t, "GCP_KEY_RING")
+	v := SkipTestEnvUnset(t, "GOOGLE_KEY_RING")
 	return v[0]
 }
 
 func GetTestGCPRegion(t *testing.T) string {
-	v := SkipTestEnvUnset(t, "GCP_REGION")
+	v := SkipTestEnvUnset(t, "GOOGLE_REGION")
 	return v[0]
 }
 

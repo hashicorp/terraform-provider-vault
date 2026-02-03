@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -155,7 +156,6 @@ func TestManagedKeys(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"aws.0.access_key", "aws.0.secret_key",
-					"aws.0.usages.#", "aws.0.usages.0", "aws.0.usages.1",
 				},
 			},
 		},
@@ -208,7 +208,7 @@ func TestManagedKeysPKCS(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"pkcs.0.pin", "pkcs.0.key_id"},
+				ImportStateVerifyIgnore: []string{"pkcs.0.pin", "pkcs.0.key_id", "pkcs.0.max_parallel"},
 			},
 		},
 	})
@@ -289,10 +289,9 @@ resource "vault_managed_keys" "test" {
 
 // The following test requires a GCP Cloud KMS to be set up and needs the following
 // environment variables to operate successfully:
-// * GCP_CREDENTIALS - Path to GCP credentials JSON file
-// * GCP_PROJECT - GCP project ID
-// * GCP_KEY_RING - GCP KMS key ring name
-// * GCP_REGION - GCP region
+// * GOOGLE_CREDENTIALS - Path to GCP credentials JSON file
+// * GOOGLE_KEY_RING - GCP KMS key ring name
+// * GOOGLE_REGION - GCP region
 // * TF_ACC_LOCAL=1
 //
 // The final variable specifies that this test can only be run locally
@@ -307,7 +306,7 @@ func TestManagedKeysGCP(t *testing.T) {
 	region := testutil.GetTestGCPRegion(t)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -319,7 +318,6 @@ func TestManagedKeysGCP(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "gcp.0.key_ring", keyRing),
 					resource.TestCheckResourceAttr(resourceName, "gcp.0.crypto_key", "test-crypto-key"),
 					resource.TestCheckResourceAttr(resourceName, "gcp.0.algorithm", "ec_sign_p256_sha256"),
-					resource.TestCheckResourceAttr(resourceName, "gcp.0.max_parallel", "4"),
 					resource.TestCheckResourceAttr(resourceName, "gcp.0.usages.#", "2"),
 				),
 			},
@@ -327,13 +325,18 @@ func TestManagedKeysGCP(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"gcp.0.credentials", "gcp.0.usages.#", "gcp.0.usages.0", "gcp.0.usages.1"},
+				ImportStateVerifyIgnore: []string{"gcp.0.credentials"},
 			},
 		},
 	})
 }
 
 func testManagedKeysConfig_gcp(name, credentials, project, keyRing, region string) string {
+	// Escape the credentials JSON for use in HCL - replace backslashes first, then quotes
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
   gcp {
@@ -344,9 +347,8 @@ resource "vault_managed_keys" "test" {
     region             = "%s"
     crypto_key         = "test-crypto-key"
     algorithm          = "ec_sign_p256_sha256"
-    max_parallel       = 4
     usages             = ["sign", "verify"]
   }
 }
-`, name, credentials, project, keyRing, region)
+`, name, escapedCreds, project, keyRing, region)
 }

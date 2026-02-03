@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -24,6 +25,41 @@ const (
 	kmsTypeAzure = "azurekeyvault"
 	kmsTypeGCP   = "gcpckms"
 )
+
+// usageCodeToString maps Vault's numeric usage codes to their string representations
+// Vault accepts string values on write but returns numeric codes on read
+var usageCodeToString = map[int]string{
+	1: "encrypt",
+	2: "decrypt",
+	3: "sign",
+	4: "verify",
+	5: "wrap",
+	6: "unwrap",
+}
+
+// convertUsageCodesToStrings converts Vault's numeric usage codes to string values
+func convertUsageCodesToStrings(codes []interface{}) []interface{} {
+	result := make([]interface{}, 0, len(codes))
+	for _, code := range codes {
+		var intCode int
+		switch v := code.(type) {
+		case json.Number:
+			if i, err := v.Int64(); err == nil {
+				intCode = int(i)
+			} else {
+				continue
+			}
+		case float64:
+			intCode = int(v)
+		default:
+			continue
+		}
+		if str, ok := usageCodeToString[intCode]; ok {
+			result = append(result, str)
+		}
+	}
+	return result
+}
 
 type managedKeysConfig struct {
 	providerType string
@@ -177,7 +213,7 @@ func getCommonManagedKeysSchema() schemaMap {
 			Type:        schema.TypeList,
 			Optional:    true,
 			Computed:    true,
-			Description: "A comma-delimited list of allowed uses for this key. Valid values: encrypt, decrypt, sign, verify, wrap, unwrap, mac, random",
+			Description: "A comma-delimited list of allowed uses for this key. Valid values: encrypt, decrypt, sign, verify, wrap, unwrap",
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
@@ -449,12 +485,6 @@ func managedKeysGCPConfigSchema() schemaMap {
 				"rsa_sign_pss_4096_sha512, rsa_sign_pkcs1_2048_sha256, rsa_sign_pkcs1_3072_sha256, " +
 				"rsa_sign_pkcs1_4096_sha256, rsa_sign_pkcs1_4096_sha512",
 		},
-		consts.FieldMaxParallel: {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Computed:    true,
-			Description: "The number of concurrent requests that may be in flight to GCP Cloud KMS at any given time",
-		},
 	}
 
 	return setCommonManagedKeysSchema(s)
@@ -636,6 +666,12 @@ func createUpdateManagedKeys(ctx context.Context, d *schema.ResourceData, meta i
 		}
 	}
 
+	if _, ok := d.GetOk(consts.FieldGCP); ok {
+		if diags := writeManagedKeysData(d, client, consts.FieldGCP); diags != nil {
+			return diags
+		}
+	}
+
 	// set ID to 'default'
 	d.SetId("default")
 
@@ -695,12 +731,6 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 			}
 
 			for k := range config.schemaFunc() {
-				// Skip reading usages field as Vault returns it in an incompatible numeric format
-				// We'll keep using the value from Terraform config
-				if k == consts.FieldUsages {
-					continue
-				}
-
 				// Map TF schema fields to Vault API
 				vaultKey := k
 				if v, ok := sm[k]; ok {
@@ -708,6 +738,14 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 				}
 
 				if v, ok := resp.Data[vaultKey]; ok {
+					// Convert usages from numeric codes to string values
+					if k == consts.FieldUsages {
+						if codes, ok := v.([]interface{}); ok {
+							m[k] = convertUsageCodesToStrings(codes)
+						}
+						continue
+					}
+
 					// log an out-of-band change on UUID
 					if vaultKey == "UUID" {
 						stateKey := fmt.Sprintf("%s.%d.%s", providerType, getHashFromName(name.(string)), k)
@@ -743,10 +781,8 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 
 func readAWSManagedKeys(d *schema.ResourceData, client *api.Client) error {
 	redacted := []string{consts.FieldAccessKey, consts.FieldSecretKey}
-	// usages is also preserved from config since Vault returns it in an incompatible numeric format
-	preservedFields := append(redacted, consts.FieldUsages)
 	if err := readAndSetManagedKeys(d, client, consts.FieldAWS,
-		map[string]string{consts.FieldUUID: "UUID"}, preservedFields); err != nil {
+		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
 
@@ -754,10 +790,9 @@ func readAWSManagedKeys(d *schema.ResourceData, client *api.Client) error {
 }
 
 func readAzureManagedKeys(d *schema.ResourceData, client *api.Client) error {
-	// usages is preserved from config since Vault returns it in an incompatible numeric format
-	preservedFields := []string{consts.FieldUsages}
+	redacted := []string{consts.FieldPin, consts.FieldKeyID}
 	if err := readAndSetManagedKeys(d, client, consts.FieldAzure,
-		map[string]string{consts.FieldUUID: "UUID"}, preservedFields); err != nil {
+		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
 
@@ -765,11 +800,9 @@ func readAzureManagedKeys(d *schema.ResourceData, client *api.Client) error {
 }
 
 func readPKCSManagedKeys(d *schema.ResourceData, client *api.Client) error {
-	redacted := []string{consts.FieldPin, consts.FieldKeyID}
-	// usages is also preserved from config since Vault returns it in an incompatible numeric format
-	preservedFields := append(redacted, consts.FieldUsages)
+	redacted := []string{consts.FieldPin, consts.FieldKeyID, consts.FieldMaxParallel}
 	if err := readAndSetManagedKeys(d, client, consts.FieldPKCS,
-		map[string]string{consts.FieldUUID: "UUID"}, preservedFields); err != nil {
+		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
 
@@ -777,10 +810,10 @@ func readPKCSManagedKeys(d *schema.ResourceData, client *api.Client) error {
 }
 
 func readGCPManagedKeys(d *schema.ResourceData, client *api.Client) error {
-	// credentials and usages are preserved from config
-	preservedFields := []string{consts.FieldCredentials, consts.FieldUsages}
+	// credentials is a sensitive field preserved from config
+	redacted := []string{consts.FieldCredentials}
 	if err := readAndSetManagedKeys(d, client, consts.FieldGCP,
-		map[string]string{consts.FieldUUID: "UUID"}, preservedFields); err != nil {
+		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
 
