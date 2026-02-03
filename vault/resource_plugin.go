@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strings"
 
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -32,7 +33,7 @@ var (
 	// Version regex is intentionally loose, its main purpose is to disallow
 	// slashes so they can be used to delineate from the name. Version segment
 	// is optional.
-	pluginIDRegex = regexp.MustCompile(`^(auth|secret|database)(?:/version/([0-9a-zA-Z.-]+?))?/name/(.+)$`)
+	pluginIDRegex = regexp.MustCompile(`^(auth|secret|database)(?:/version/([0-9a-zA-Z.+-]+?))?/name/(.+)$`)
 )
 
 func pluginFromID(id string) (typ string, name string, version string) {
@@ -62,6 +63,7 @@ func pluginResource() *schema.Resource {
 		UpdateContext: pluginWrite,
 		ReadContext:   pluginRead,
 		DeleteContext: pluginDelete,
+		CustomizeDiff: pluginCustomizeDiff,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -90,7 +92,7 @@ func pluginResource() *schema.Resource {
 			fieldSHA256: {
 				Type:        schema.TypeString,
 				Description: "SHA256 sum of the plugin binary.",
-				Required:    true,
+				Optional:    true,
 			},
 			fieldCommand: {
 				Type:        schema.TypeString,
@@ -208,6 +210,11 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 		return diag.Errorf("error reading plugin %q: %s", d.Id(), err)
 	}
 
+	// Unset SHA256 for enteprise plugin version
+	if strings.HasSuffix(version, "+ent") {
+		resp.SHA256 = ""
+	}
+
 	result := map[string]any{
 		consts.FieldType:    typ,
 		consts.FieldName:    name,
@@ -288,4 +295,18 @@ func diffSuppressEqualSemver(_, oldValue, newValue string, _ *schema.ResourceDat
 		return true
 	}
 	return false
+}
+
+func pluginCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	curVersion := d.Get(consts.FieldVersion).(string)
+	if strings.HasSuffix(curVersion, "+ent") {
+		if d.Get(fieldSHA256).(string) != "" {
+			return fmt.Errorf("field %s needs to be empty for enterprise plugin", fieldSHA256)
+		}
+	} else {
+		if d.Get(fieldSHA256).(string) == "" {
+			return fmt.Errorf("field %s needs to be set for non enterprise plugin", fieldSHA256)
+		}
+	}
+	return nil
 }
