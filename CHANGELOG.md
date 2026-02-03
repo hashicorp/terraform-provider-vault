@@ -10,6 +10,7 @@ IMPROVEMENTS:
 * `vault_managed_keys`: Add support for `usages` field (common parameter for all key types) and `max_parallel` field (PKCS only). Add support for GCP Cloud KMS managed keys with parameters: `credentials`, `project`, `region`, `key_ring`, `crypto_key`, `crypto_key_version`, and `algorithm`.
 * `vault_saml_auth_backend`: Add support for `validate_assertion_signature` and `validate_response_signature` parameters to control SAML signature validation (Vault 1.19+)
 * `vault_approle_auth_backend_login`: Add write-only fields `secret_id_wo` and `secret_id_wo_version` to support ephemeral SecretID values without persisting them in state.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
+* `vault_password_policy`: Add field `entropy_source` field to specify an override to the default source of entropy (randomness) used to generate the passwords.([#2753](https://github.com/hashicorp/terraform-provider-vault/pull/2753))
 * `vault_mfa_totp`: Add support for `max_validation_attempts` field to configure the maximum number of consecutive failed validation attempts allowed. ([#2751](https://github.com/hashicorp/terraform-provider-vault/pull/2751))
 * `vault_mongodbatlas_secret_backend`: Add support for write-only private key fields (`private_key_wo`, `private_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2741](https://github.com/hashicorp/terraform-provider-vault/pull/2741))
 * `vault_consul_secret_backend`: Add support for write-only fields (`token_wo`, `token_wo_version`, `client_key_wo`, `client_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2730](https://github.com/hashicorp/terraform-provider-vault/pull/2730))
@@ -41,6 +42,7 @@ IMPROVEMENTS:
   * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
 * Docs: fix heredoc example for LDAP dynamic role LDIFs ([#2728]https://github.com/hashicorp/terraform-provider-vault/pull/2728)
 * Docs: Update example to use write-only attribute ([#2731]https://github.com/hashicorp/terraform-provider-vault/pull/2731)
+* Add support for `local_secret_ids` which may only be set at role creation. On updates the provider will send the original creation value to Vault to avoid unintentionally attempting to modify this immutable setting.The provider now surfaces Vault's native immutability error when an update attempts to change `local_secret_ids`.([#2723](https://github.com/hashicorp/terraform-provider-vault/pull/2723))
 
 
 BUGS:
