@@ -61,6 +61,12 @@ The following arguments are supported:
   information during the SAML exchange according to the current logging level. Not 
   recommended for production.
 
+* `validate_assertion_signature` - (Optional) If set to `true`, validates the signature of 
+  the SAML assertion. Defaults to `false`. Requires Vault 1.19+.
+
+* `validate_response_signature` - (Optional) If set to `true`, validates the signature of 
+  the SAML response. Defaults to `false`. Requires Vault 1.19+.
+
 * `tune` - (Optional) Extra configuration block. Structure is documented below.
 
 The `tune` block is used to tune the auth backend:
