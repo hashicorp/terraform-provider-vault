@@ -7,6 +7,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* Add support for `delta_crl_distribution_points` in `vault_pki_secret_backend_config_urls` and `vault_pki_secret_backend_issuer` to configure Delta CRL URLs. (Vault 1.20+) ([#2761](https://github.com/hashicorp/terraform-provider-vault/pull/2761))
 * `vault_saml_auth_backend`: Add support for `validate_assertion_signature` and `validate_response_signature` parameters to control SAML signature validation (Vault 1.19+)
 * `vault_approle_auth_backend_login`: Add write-only fields `secret_id_wo` and `secret_id_wo_version` to support ephemeral SecretID values without persisting them in state.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
 * `vault_password_policy`: Add field `entropy_source` field to specify an override to the default source of entropy (randomness) used to generate the passwords.([#2753](https://github.com/hashicorp/terraform-provider-vault/pull/2753))

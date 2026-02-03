@@ -432,6 +432,7 @@ const (
 	FieldRevocationSignatureAlgorithm   = "revocation_signature_algorithm"
 	FieldIssuingCertificates            = "issuing_certificates"
 	FieldCRLDistributionPoints          = "crl_distribution_points"
+	FieldDeltaCRLDistributionPoints     = "delta_crl_distribution_points"
 	FieldOCSPServers                    = "ocsp_servers"
 	FieldEnableAIAURLTemplating         = "enable_aia_url_templating"
 	FieldCredentialConfig               = "credential_config"
