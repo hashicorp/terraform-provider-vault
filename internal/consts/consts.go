@@ -90,6 +90,8 @@ const (
 	FieldLogLevel                       = "log_level"
 	FieldSealWrap                       = "seal_wrap"
 	FieldExternalEntropyAccess          = "external_entropy_access"
+	FieldEntropySource                  = "entropy_source"
+	FieldPolicy                         = "policy"
 	FieldAWS                            = "aws"
 	FieldPKCS                           = "pkcs"
 	FieldAzure                          = "azure"
