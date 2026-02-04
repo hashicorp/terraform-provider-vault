@@ -2290,28 +2290,25 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 		result[consts.FieldPluginVersion] = fmt.Sprintf("%v", pv)
 	}
 
-	// Get skip_static_role_import_rotation: Try API response first (Vault >= 1.19 Enterprise), then fall back to configuration
-	skipStaticRoleImportRotation := false
-	foundInAPI := false
-
+	// Try to get from API response first (for Vault >= 1.19 Enterprise)
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := resp.Data[consts.FieldSkipStaticRoleImportRotation]; ok && v != nil {
-			skipStaticRoleImportRotation = v.(bool)
-			foundInAPI = true
+			result[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
+			goto skipFallback
 		}
 	}
 
-	if !foundInAPI {
-		// Fallback to configuration (for older Vault, non-Enterprise, or when API doesn't return it)
-		// Prefer the engine-specific nested setting if present.
-		if prefV, ok := d.GetOkExists(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); ok {
-			skipStaticRoleImportRotation = prefV.(bool)
-		} else if topV, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
-			skipStaticRoleImportRotation = topV.(bool)
-		}
+	// Fallback: Get from configuration (for older Vault, non-Enterprise, or when API doesn't return it)
+	// Prefer the engine-specific nested setting if present.
+	if prefV, ok := d.GetOkExists(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); ok {
+		result[consts.FieldSkipStaticRoleImportRotation] = prefV.(bool)
+	} else if topV, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
+		result[consts.FieldSkipStaticRoleImportRotation] = topV.(bool)
+	} else {
+		result[consts.FieldSkipStaticRoleImportRotation] = false
 	}
 
-	result[consts.FieldSkipStaticRoleImportRotation] = skipStaticRoleImportRotation
+skipFallback:
 	result[consts.FieldRootRotationStatements] = rootRotationStmts
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
