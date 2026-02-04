@@ -2289,33 +2289,29 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 	if pv, ok := resp.Data[consts.FieldPluginVersion]; ok && pv != nil {
 		result[consts.FieldPluginVersion] = fmt.Sprintf("%v", pv)
 	}
+
+	// Get skip_static_role_import_rotation: Try API response first (Vault >= 1.19 Enterprise), then fall back to configuration
+	skipStaticRoleImportRotation := false
+	foundInAPI := false
+
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := resp.Data[consts.FieldSkipStaticRoleImportRotation]; ok && v != nil {
-			result[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
-		} else {
-			// Vault may not return this attribute in the API response for some
-			// versions. Fall back to the configured value so that import/state
-			// verification succeeds when the value was set in the original
-			// configuration.
-			// Prefer the engine-specific nested setting if present.
-			if prefV, ok := d.GetOkExists(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); ok {
-				result[consts.FieldSkipStaticRoleImportRotation] = prefV.(bool)
-			} else if topV, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
-				result[consts.FieldSkipStaticRoleImportRotation] = topV.(bool)
-			} else {
-				result[consts.FieldSkipStaticRoleImportRotation] = false
-			}
-		}
-	} else {
-		// For Vault < 1.19 or non-Enterprise, preserve the configured value to avoid plan diffs
-		if prefV, ok := d.GetOkExists(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); ok {
-			result[consts.FieldSkipStaticRoleImportRotation] = prefV.(bool)
-		} else if topV, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
-			result[consts.FieldSkipStaticRoleImportRotation] = topV.(bool)
-		} else {
-			result[consts.FieldSkipStaticRoleImportRotation] = false
+			skipStaticRoleImportRotation = v.(bool)
+			foundInAPI = true
 		}
 	}
+
+	if !foundInAPI {
+		// Fallback to configuration (for older Vault, non-Enterprise, or when API doesn't return it)
+		// Prefer the engine-specific nested setting if present.
+		if prefV, ok := d.GetOkExists(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); ok {
+			skipStaticRoleImportRotation = prefV.(bool)
+		} else if topV, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
+			skipStaticRoleImportRotation = topV.(bool)
+		}
+	}
+
+	result[consts.FieldSkipStaticRoleImportRotation] = skipStaticRoleImportRotation
 	result[consts.FieldRootRotationStatements] = rootRotationStmts
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
