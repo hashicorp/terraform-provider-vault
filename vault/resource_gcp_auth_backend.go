@@ -10,6 +10,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -44,11 +45,26 @@ func gcpAuthBackendResource() *schema.Resource {
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema: map[string]*schema.Schema{
 			consts.FieldCredentials: {
-				Type:         schema.TypeString,
-				StateFunc:    NormalizeCredentials,
-				ValidateFunc: ValidateCredentials,
-				Sensitive:    true,
+				Type:          schema.TypeString,
+				StateFunc:     NormalizeCredentials,
+				ValidateFunc:  ValidateCredentials,
+				Sensitive:     true,
+				Optional:      true,
+				ConflictsWith: []string{consts.FieldCredentialsWO},
+			},
+			consts.FieldCredentialsWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "JSON-encoded credentials to use to connect to GCP. This field is write-only and the value cannot be read back.",
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldCredentials},
+			},
+			consts.FieldCredentialsWOVersion: {
+				Type:         schema.TypeInt,
 				Optional:     true,
+				Description:  "A version counter for write-only credentials. Incrementing this value will cause the provider to send the credentials to Vault.",
+				RequiredWith: []string{consts.FieldCredentialsWO},
 			},
 			consts.FieldDescription: {
 				Type:     schema.TypeString,
@@ -301,8 +317,20 @@ func gcpAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 
 	data := map[string]interface{}{}
 
-	if d.HasChange(consts.FieldCredentials) {
-		data[consts.FieldCredentials] = d.Get(consts.FieldCredentials)
+	var credentials string
+	if v, ok := d.GetOk(consts.FieldCredentials); ok {
+		if d.HasChange(consts.FieldCredentials) {
+			credentials = v.(string)
+		}
+	} else if d.HasChange(consts.FieldCredentialsWOVersion) {
+		credWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldCredentialsWO))
+		if !credWo.IsNull() {
+			credentials = credWo.AsString()
+		}
+	}
+
+	if credentials != "" {
+		data[consts.FieldCredentials] = credentials
 	}
 
 	epField := consts.FieldCustomEndpoint

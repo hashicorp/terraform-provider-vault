@@ -40,6 +40,22 @@ resource "vault_consul_secret_backend" "test" {
 }
 ```
 
+#### Using write-only fields for enhanced security (Recommended):
+```hcl
+resource "vault_consul_secret_backend" "test" {
+  path             = "consul"
+  description      = "Manages the Consul backend with write-only token"
+  address          = "127.0.0.1:8500"
+  token_wo         = var.consul_token  # Never stored in state
+  token_wo_version = 1                 # Increment to rotate
+  scheme           = "https"
+  ca_cert          = file("ca.pem")
+  client_cert      = file("client.pem")
+  client_key_wo         = var.consul_client_key  # Never stored in state
+  client_key_wo_version = 1                       # Increment to rotate
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -50,10 +66,14 @@ The following arguments are supported:
    *Available only for Vault Enterprise*.
 
 * `token` - (Optional) The Consul management token this backend should use to issue new tokens. This field is required
-when `bootstrap` is false.
+when `bootstrap` is false. Mutually exclusive with `token_wo`. **Note:** This field will be stored in Terraform state. 
+Consider using `token_wo` instead for enhanced security.
 
 ~> **Important** Because Vault does not support reading the configured token back from the API, Terraform cannot detect
 and correct drift on `token`. Changing the value, however, _will_ overwrite the previously stored values.
+
+* `token_wo_version` - (Optional) Version counter for the write-only token. Increment this value to trigger an update 
+of the token in Vault. Required when using `token_wo`.
 
 * `bootstrap` - (Optional) Denotes that the resource is used to bootstrap the Consul ACL system.
 
@@ -79,7 +99,11 @@ to `consul`.
 this is set you need to also set client_key.
 
 * `client_key` - (Optional) Client key used for Consul's TLS communication, must be x509 PEM encoded and if this is set
-you need to also set client_cert.
+you need to also set client_cert. Mutually exclusive with `client_key_wo`. **Note:** This field will be stored in 
+Terraform state. Consider using `client_key_wo` instead for enhanced security.
+
+* `client_key_wo_version` - (Optional) Version counter for the write-only client key. Increment this value to trigger 
+an update of the client key in Vault. Required when using `client_key_wo`.
 
 ### Common Mount Arguments
 These arguments are common across all resources that mount a secret engine.
@@ -122,6 +146,18 @@ These arguments are common across all resources that mount a secret engine.
 
 * `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
   not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `token_wo` - (Optional) The Consul management token this backend should use to issue new tokens, provided as a 
+write-only field. This value will **never** be stored in Terraform state. Mutually exclusive with `token`. Must be 
+used with `token_wo_version`.
+
+* `client_key_wo` - (Optional) Client key used for Consul's TLS communication, must be x509 PEM encoded, provided as a
+write-only field. This value will **never** be stored in Terraform state. Mutually exclusive with `client_key`. Must be
+used with `client_key_wo_version`.
 
 ## Attributes Reference
 
