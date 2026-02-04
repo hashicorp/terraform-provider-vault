@@ -14,13 +14,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-const (
-	fieldKubernetesNamespace     = "kubernetes_namespace"
-	fieldClusterRoleBinding      = "cluster_role_binding"
-	fieldServiceAccountNamespace = "service_account_namespace"
-	fieldServiceAccountToken     = "service_account_token"
-)
-
 func kubernetesServiceAccountTokenDataSource() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: provider.ReadContextWrapper(readKubernetesServiceAccountToken),
@@ -36,13 +29,13 @@ func kubernetesServiceAccountTokenDataSource() *schema.Resource {
 				Description: "The name of the role.",
 				Required:    true,
 			},
-			fieldKubernetesNamespace: {
+			consts.FieldKubernetesNamespace: {
 				Type: schema.TypeString,
 				Description: "The name of the Kubernetes namespace in which to generate " +
 					"the credentials.",
 				Required: true,
 			},
-			fieldClusterRoleBinding: {
+			consts.FieldClusterRoleBinding: {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
@@ -55,17 +48,17 @@ func kubernetesServiceAccountTokenDataSource() *schema.Resource {
 					"specified in seconds or as a Go duration format string",
 				Optional: true,
 			},
-			fieldServiceAccountName: {
+			consts.FieldServiceAccountName: {
 				Type:        schema.TypeString,
 				Description: "The name of the service account associated with the token.",
 				Computed:    true,
 			},
-			fieldServiceAccountNamespace: {
+			consts.FieldServiceAccountNamespace: {
 				Type:        schema.TypeString,
 				Description: "The Kubernetes namespace that the service account resides in.",
 				Computed:    true,
 			},
-			fieldServiceAccountToken: {
+			consts.FieldServiceAccountToken: {
 				Type:        schema.TypeString,
 				Description: "The Kubernetes service account token.",
 				Computed:    true,
@@ -98,8 +91,8 @@ func readKubernetesServiceAccountToken(ctx context.Context, d *schema.ResourceDa
 
 	data := make(map[string]interface{})
 	inputFields := []string{
-		fieldKubernetesNamespace,
-		fieldClusterRoleBinding,
+		consts.FieldKubernetesNamespace,
+		consts.FieldClusterRoleBinding,
 		consts.FieldTTL,
 	}
 	for _, k := range inputFields {
@@ -119,9 +112,9 @@ func readKubernetesServiceAccountToken(ctx context.Context, d *schema.ResourceDa
 
 	d.SetId(secret.LeaseID)
 	dataFields := []string{
-		fieldServiceAccountName,
-		fieldServiceAccountNamespace,
-		fieldServiceAccountToken,
+		consts.FieldServiceAccountName,
+		consts.FieldServiceAccountNamespace,
+		consts.FieldServiceAccountToken,
 	}
 	for _, k := range dataFields {
 		if err := d.Set(k, secret.Data[k]); err != nil {

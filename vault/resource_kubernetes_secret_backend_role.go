@@ -20,21 +20,6 @@ import (
 
 var kubernetesSecretBackendFromPathRegex = regexp.MustCompile("^(.+)/roles/.+$")
 
-const (
-	fieldAllowedKubernetesNamespaces        = "allowed_kubernetes_namespaces"
-	fieldAllowedKubernetesNamespaceSelector = "allowed_kubernetes_namespace_selector"
-	fieldTokenMaxTTL                        = "token_max_ttl"
-	fieldTokenDefaultTTL                    = "token_default_ttl"
-	fieldTokenDefaultAudiences              = "token_default_audiences"
-	fieldServiceAccountName                 = "service_account_name"
-	fieldKubernetesRoleName                 = "kubernetes_role_name"
-	fieldKubernetesRoleType                 = "kubernetes_role_type"
-	fieldGeneratedRoleRules                 = "generated_role_rules"
-	fieldNameTemplate                       = "name_template"
-	fieldExtraAnnotations                   = "extra_annotations"
-	fieldExtraLabels                        = "extra_labels"
-)
-
 func kubernetesSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(kubernetesSecretBackendRoleCreateUpdate, provider.VaultVersion111),
@@ -60,7 +45,7 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
-			fieldAllowedKubernetesNamespaces: {
+			consts.FieldAllowedKubernetesNamespaces: {
 				Type: schema.TypeList,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -70,26 +55,26 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 					"`allowed_kubernetes_namespace_selector`, the conditions are `OR`ed.",
 				Optional: true,
 			},
-			fieldAllowedKubernetesNamespaceSelector: {
+			consts.FieldAllowedKubernetesNamespaceSelector: {
 				Type: schema.TypeString,
 				Description: "A label selector for Kubernetes namespaces in which credentials can be" +
 					"generated. Accepts either a JSON or YAML object. The value should be of type" +
 					"LabelSelector. If set with `allowed_kubernetes_namespace`, the conditions are `OR`ed.",
 				Optional: true,
 			},
-			fieldTokenMaxTTL: {
+			consts.FieldTokenMaxTTL: {
 				Type:        schema.TypeInt,
 				Description: "The maximum TTL for generated Kubernetes tokens in seconds.",
 				Optional:    true,
 				Default:     0,
 			},
-			fieldTokenDefaultTTL: {
+			consts.FieldTokenDefaultTTL: {
 				Type:        schema.TypeInt,
 				Description: "The default TTL for generated Kubernetes tokens in seconds.",
 				Optional:    true,
 				Default:     0,
 			},
-			fieldTokenDefaultAudiences: {
+			consts.FieldTokenDefaultAudiences: {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -99,15 +84,15 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 					"Requires Vault 1.15+.",
 				Optional: true,
 			},
-			fieldServiceAccountName: {
+			consts.FieldServiceAccountName: {
 				Type: schema.TypeString,
 				Description: "The pre-existing service account to generate tokens for. " +
 					"Mutually exclusive with 'kubernetes_role_name' and 'generated_role_rules'. " +
 					"If set, only a Kubernetes token will be created when credentials are requested.",
 				Optional:     true,
-				ExactlyOneOf: []string{fieldKubernetesRoleName, fieldGeneratedRoleRules},
+				ExactlyOneOf: []string{consts.FieldKubernetesRoleName, consts.FieldGeneratedRoleRules},
 			},
-			fieldKubernetesRoleName: {
+			consts.FieldKubernetesRoleName: {
 				Type: schema.TypeString,
 				Description: "The pre-existing Role or ClusterRole to bind a generated " +
 					"service account to. Mutually exclusive with 'service_account_name' and " +
@@ -115,13 +100,13 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 					"role binding objects will be created when credentials are requested.",
 				Optional: true,
 			},
-			fieldKubernetesRoleType: {
+			consts.FieldKubernetesRoleType: {
 				Type:        schema.TypeString,
 				Description: "Specifies whether the Kubernetes role is a Role or ClusterRole.",
 				Optional:    true,
 				Default:     "Role",
 			},
-			fieldGeneratedRoleRules: {
+			consts.FieldGeneratedRoleRules: {
 				Type: schema.TypeString,
 				Description: "The Role or ClusterRole rules to use when generating a role. " +
 					"Accepts either JSON or YAML formatted rules. Mutually exclusive with " +
@@ -129,13 +114,13 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 					"chain of Kubernetes objects will be generated when credentials are requested.",
 				Optional: true,
 			},
-			fieldNameTemplate: {
+			consts.FieldNameTemplate: {
 				Type: schema.TypeString,
 				Description: "The name template to use when generating service accounts, " +
 					"roles and role bindings. If unset, a default template is used.",
 				Optional: true,
 			},
-			fieldExtraAnnotations: {
+			consts.FieldExtraAnnotations: {
 				Type:        schema.TypeMap,
 				Description: "Additional annotations to apply to all generated Kubernetes objects.",
 				Optional:    true,
@@ -143,7 +128,7 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			fieldExtraLabels: {
+			consts.FieldExtraLabels: {
 				Type:        schema.TypeMap,
 				Description: "Additional labels to apply to all generated Kubernetes objects.",
 				Optional:    true,
@@ -163,29 +148,29 @@ func kubernetesSecretBackendRoleCreateUpdate(ctx context.Context, d *schema.Reso
 
 	data := make(map[string]interface{})
 	fields := []string{
-		fieldAllowedKubernetesNamespaces,
-		fieldAllowedKubernetesNamespaceSelector,
-		fieldTokenMaxTTL,
-		fieldTokenDefaultTTL,
-		fieldTokenDefaultAudiences,
-		fieldServiceAccountName,
-		fieldKubernetesRoleName,
-		fieldKubernetesRoleType,
-		fieldGeneratedRoleRules,
-		fieldNameTemplate,
-		fieldExtraAnnotations,
-		fieldExtraLabels,
+		consts.FieldAllowedKubernetesNamespaces,
+		consts.FieldAllowedKubernetesNamespaceSelector,
+		consts.FieldTokenMaxTTL,
+		consts.FieldTokenDefaultTTL,
+		consts.FieldTokenDefaultAudiences,
+		consts.FieldServiceAccountName,
+		consts.FieldKubernetesRoleName,
+		consts.FieldKubernetesRoleType,
+		consts.FieldGeneratedRoleRules,
+		consts.FieldNameTemplate,
+		consts.FieldExtraAnnotations,
+		consts.FieldExtraLabels,
 	}
 	for _, k := range fields {
-		if k == fieldAllowedKubernetesNamespaceSelector && !provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if k == consts.FieldAllowedKubernetesNamespaceSelector && !provider.IsAPISupported(meta, provider.VaultVersion112) {
 			continue
 		}
-		if k == fieldTokenDefaultAudiences && !provider.IsAPISupported(meta, provider.VaultVersion115) {
+		if k == consts.FieldTokenDefaultAudiences && !provider.IsAPISupported(meta, provider.VaultVersion115) {
 			continue
 		}
 		if d.HasChange(k) {
 			// Handle TypeSet fields by converting to list
-			if k == fieldTokenDefaultAudiences {
+			if k == consts.FieldTokenDefaultAudiences {
 				if set, ok := d.Get(k).(*schema.Set); ok {
 					data[k] = util.TerraformSetToStringArray(set)
 				}
@@ -235,24 +220,24 @@ func kubernetesSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, 
 
 	fields := []string{
 		consts.FieldName,
-		fieldAllowedKubernetesNamespaces,
-		fieldAllowedKubernetesNamespaceSelector,
-		fieldTokenMaxTTL,
-		fieldTokenDefaultTTL,
-		fieldTokenDefaultAudiences,
-		fieldServiceAccountName,
-		fieldKubernetesRoleName,
-		fieldKubernetesRoleType,
-		fieldGeneratedRoleRules,
-		fieldNameTemplate,
-		fieldExtraAnnotations,
-		fieldExtraLabels,
+		consts.FieldAllowedKubernetesNamespaces,
+		consts.FieldAllowedKubernetesNamespaceSelector,
+		consts.FieldTokenMaxTTL,
+		consts.FieldTokenDefaultTTL,
+		consts.FieldTokenDefaultAudiences,
+		consts.FieldServiceAccountName,
+		consts.FieldKubernetesRoleName,
+		consts.FieldKubernetesRoleType,
+		consts.FieldGeneratedRoleRules,
+		consts.FieldNameTemplate,
+		consts.FieldExtraAnnotations,
+		consts.FieldExtraLabels,
 	}
 	for _, k := range fields {
-		if k == fieldAllowedKubernetesNamespaceSelector && !provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if k == consts.FieldAllowedKubernetesNamespaceSelector && !provider.IsAPISupported(meta, provider.VaultVersion112) {
 			continue
 		}
-		if k == fieldTokenDefaultAudiences && !provider.IsAPISupported(meta, provider.VaultVersion115) {
+		if k == consts.FieldTokenDefaultAudiences && !provider.IsAPISupported(meta, provider.VaultVersion115) {
 			continue
 		}
 		if err := d.Set(k, resp.Data[k]); err != nil {
