@@ -2290,25 +2290,27 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 		result[consts.FieldPluginVersion] = fmt.Sprintf("%v", pv)
 	}
 
-	// Try to get from API response first (for Vault >= 1.19 Enterprise)
+	// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		var value bool
 		if v, ok := resp.Data[consts.FieldSkipStaticRoleImportRotation]; ok && v != nil {
-			result[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
-			goto skipFallback
+			value = v.(bool)
+		} else if prefV, ok := d.GetOkExists(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); ok {
+			// Vault may not return this attribute in the API response for some
+			// versions. Fall back to the configured value so that import/state
+			// verification succeeds when the value was set in the original
+			// configuration.
+			// Prefer the engine-specific nested setting if present.
+			value = prefV.(bool)
+		} else if topV, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
+			value = topV.(bool)
 		}
-	}
+		// else: value remains false (zero value)
 
-	// Fallback: Get from configuration (for older Vault, non-Enterprise, or when API doesn't return it)
-	// Prefer the engine-specific nested setting if present.
-	if prefV, ok := d.GetOkExists(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); ok {
-		result[consts.FieldSkipStaticRoleImportRotation] = prefV.(bool)
-	} else if topV, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
-		result[consts.FieldSkipStaticRoleImportRotation] = topV.(bool)
-	} else {
-		result[consts.FieldSkipStaticRoleImportRotation] = false
+		result[consts.FieldSkipStaticRoleImportRotation] = value
 	}
+	// Note: For Vault < 1.19 or non-Enterprise, the field is not supported and not set
 
-skipFallback:
 	result[consts.FieldRootRotationStatements] = rootRotationStmts
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
