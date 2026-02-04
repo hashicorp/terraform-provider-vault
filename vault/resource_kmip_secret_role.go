@@ -13,69 +13,35 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-const (
-	fieldOperationActivate         = "operation_activate"
-	fieldOperationAddAttribute     = "operation_add_attribute"
-	fieldOperationAll              = "operation_all"
-	fieldOperationCreate           = "operation_create"
-	fieldOperationCreateKeyPair    = "operation_create_key_pair"
-	fieldOperationDecrypt          = "operation_decrypt"
-	fieldOperationDeleteAttribute  = "operation_delete_attribute"
-	fieldOperationDestroy          = "operation_destroy"
-	fieldOperationDiscoverVersions = "operation_discover_versions"
-	fieldOperationEncrypt          = "operation_encrypt"
-	fieldOperationGet              = "operation_get"
-	fieldOperationGetAttributeList = "operation_get_attribute_list"
-	fieldOperationGetAttributes    = "operation_get_attributes"
-	fieldOperationImport           = "operation_import"
-	fieldOperationLocate           = "operation_locate"
-	fieldOperationMAC              = "operation_mac"
-	fieldOperationMACVerify        = "operation_mac_verify"
-	fieldOperationModifyAttribute  = "operation_modify_attribute"
-	fieldOperationNone             = "operation_none"
-	fieldOperationQuery            = "operation_query"
-	fieldOperationRegister         = "operation_register"
-	fieldOperationRekey            = "operation_rekey"
-	fieldOperationRekeyKeyPair     = "operation_rekey_key_pair"
-	fieldOperationRevoke           = "operation_revoke"
-	fieldOperationRNGRetrieve      = "operation_rng_retrieve"
-	fieldOperationRNGSeed          = "operation_rng_seed"
-	fieldOperationSign             = "operation_sign"
-	fieldOperationSignatureVerify  = "operation_signature_verify"
-	fieldTLSClientKeyType          = "tls_client_key_type"
-	fieldTLSClientKeyBits          = "tls_client_key_bits"
-	fieldTLSClientTTL              = "tls_client_ttl"
-)
-
 var kmipRoleAPIBooleanFields = []string{
-	fieldOperationActivate,
-	fieldOperationAddAttribute,
-	fieldOperationAll,
-	fieldOperationCreate,
-	fieldOperationCreateKeyPair,
-	fieldOperationDecrypt,
-	fieldOperationDeleteAttribute,
-	fieldOperationDestroy,
-	fieldOperationDiscoverVersions,
-	fieldOperationEncrypt,
-	fieldOperationGet,
-	fieldOperationGetAttributeList,
-	fieldOperationGetAttributes,
-	fieldOperationImport,
-	fieldOperationLocate,
-	fieldOperationMAC,
-	fieldOperationMACVerify,
-	fieldOperationModifyAttribute,
-	fieldOperationNone,
-	fieldOperationQuery,
-	fieldOperationRegister,
-	fieldOperationRekey,
-	fieldOperationRekeyKeyPair,
-	fieldOperationRevoke,
-	fieldOperationRNGRetrieve,
-	fieldOperationRNGSeed,
-	fieldOperationSign,
-	fieldOperationSignatureVerify,
+	consts.FieldOperationActivate,
+	consts.FieldOperationAddAttribute,
+	consts.FieldOperationAll,
+	consts.FieldOperationCreate,
+	consts.FieldOperationCreateKeyPair,
+	consts.FieldOperationDecrypt,
+	consts.FieldOperationDeleteAttribute,
+	consts.FieldOperationDestroy,
+	consts.FieldOperationDiscoverVersions,
+	consts.FieldOperationEncrypt,
+	consts.FieldOperationGet,
+	consts.FieldOperationGetAttributeList,
+	consts.FieldOperationGetAttributes,
+	consts.FieldOperationImport,
+	consts.FieldOperationLocate,
+	consts.FieldOperationMAC,
+	consts.FieldOperationMACVerify,
+	consts.FieldOperationModifyAttribute,
+	consts.FieldOperationNone,
+	consts.FieldOperationQuery,
+	consts.FieldOperationRegister,
+	consts.FieldOperationRekey,
+	consts.FieldOperationRekeyKeyPair,
+	consts.FieldOperationRevoke,
+	consts.FieldOperationRNGRetrieve,
+	consts.FieldOperationRNGSeed,
+	consts.FieldOperationSign,
+	consts.FieldOperationSignatureVerify,
 }
 
 func kmipSecretRoleResource() *schema.Resource {
@@ -107,184 +73,184 @@ func kmipSecretRoleResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Name of the role",
 			},
-			fieldTLSClientKeyType: {
+			consts.FieldTLSClientKeyType: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Client certificate key type, rsa or ec",
 			},
-			fieldTLSClientKeyBits: {
+			consts.FieldTLSClientKeyBits: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Client certificate key bits, valid values depend on key type",
 			},
-			fieldTLSClientTTL: {
+			consts.FieldTLSClientTTL: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Client certificate TTL in seconds",
 			},
-			fieldOperationNone: {
+			consts.FieldOperationNone: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Remove all permissions from this role. May not be specified with any other operation_* params",
 			},
-			fieldOperationAll: {
+			consts.FieldOperationAll: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant all permissions to this role. May not be specified with any other operation_* params",
 			},
-			fieldOperationActivate: {
+			consts.FieldOperationActivate: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Activate operation",
 			},
-			fieldOperationAddAttribute: {
+			consts.FieldOperationAddAttribute: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Add Attribute operation",
 			},
-			fieldOperationCreate: {
+			consts.FieldOperationCreate: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Create operation",
 			},
-			fieldOperationCreateKeyPair: {
+			consts.FieldOperationCreateKeyPair: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Create Key Pair operation",
 			},
-			fieldOperationDecrypt: {
+			consts.FieldOperationDecrypt: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Decrypt operation",
 			},
-			fieldOperationDeleteAttribute: {
+			consts.FieldOperationDeleteAttribute: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Delete Attribute operation",
 			},
-			fieldOperationDestroy: {
+			consts.FieldOperationDestroy: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Destroy operation",
 			},
-			fieldOperationDiscoverVersions: {
+			consts.FieldOperationDiscoverVersions: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Discover Version operation",
 			},
-			fieldOperationEncrypt: {
+			consts.FieldOperationEncrypt: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Encrypt operation",
 			},
-			fieldOperationGet: {
+			consts.FieldOperationGet: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Get operation",
 			},
-			fieldOperationGetAttributeList: {
+			consts.FieldOperationGetAttributeList: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Get Attribute List operation",
 			},
-			fieldOperationGetAttributes: {
+			consts.FieldOperationGetAttributes: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Get Attributes operation",
 			},
-			fieldOperationImport: {
+			consts.FieldOperationImport: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Import operation",
 			},
-			fieldOperationLocate: {
+			consts.FieldOperationLocate: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Locate operation",
 			},
-			fieldOperationMAC: {
+			consts.FieldOperationMAC: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP MAC operation",
 			},
-			fieldOperationMACVerify: {
+			consts.FieldOperationMACVerify: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP MAC Verify operation",
 			},
-			fieldOperationModifyAttribute: {
+			consts.FieldOperationModifyAttribute: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Modify Attribute operation",
 			},
-			fieldOperationQuery: {
+			consts.FieldOperationQuery: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Query operation",
 			},
-			fieldOperationRegister: {
+			consts.FieldOperationRegister: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Register operation",
 			},
-			fieldOperationRekey: {
+			consts.FieldOperationRekey: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Rekey operation",
 			},
-			fieldOperationRekeyKeyPair: {
+			consts.FieldOperationRekeyKeyPair: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Rekey Key Pair operation",
 			},
-			fieldOperationRevoke: {
+			consts.FieldOperationRevoke: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Revoke operation",
 			},
-			fieldOperationRNGRetrieve: {
+			consts.FieldOperationRNGRetrieve: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP RNG Retrieve operation",
 			},
-			fieldOperationRNGSeed: {
+			consts.FieldOperationRNGSeed: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP RNG Seed operation",
 			},
-			fieldOperationSign: {
+			consts.FieldOperationSign: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Sign operation",
 			},
-			fieldOperationSignatureVerify: {
+			consts.FieldOperationSignatureVerify: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
@@ -345,7 +311,7 @@ func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("expected role at %s, no role found", rolePath)
 	}
 
-	for _, k := range []string{fieldTLSClientKeyType, fieldTLSClientKeyBits, fieldTLSClientTTL} {
+	for _, k := range []string{consts.FieldTLSClientKeyType, consts.FieldTLSClientKeyBits, consts.FieldTLSClientTTL} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return err
 		}
@@ -412,7 +378,7 @@ func kmipSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleRequestData(d *schema.ResourceData) map[string]interface{} {
-	nonBooleanfields := []string{fieldTLSClientKeyType, fieldTLSClientKeyBits, fieldTLSClientTTL}
+	nonBooleanfields := []string{consts.FieldTLSClientKeyType, consts.FieldTLSClientKeyBits, consts.FieldTLSClientTTL}
 
 	data := make(map[string]interface{})
 	for _, k := range nonBooleanfields {
