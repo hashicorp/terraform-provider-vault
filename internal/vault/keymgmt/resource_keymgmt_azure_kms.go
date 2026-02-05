@@ -38,7 +38,6 @@ type AzureKMSResourceModel struct {
 	ClientID      types.String `tfsdk:"client_id"`
 	ClientSecret  types.String `tfsdk:"client_secret"`
 	Environment   types.String `tfsdk:"environment"`
-	UUID          types.String `tfsdk:"uuid"`
 }
 
 func NewAzureKMSResource() resource.Resource {
@@ -88,13 +87,6 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 			consts.FieldEnvironment: schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "Azure environment (e.g., AzurePublicCloud, AzureUSGovernment, AzureChinaCloud, AzureGermanCloud)",
-			},
-			consts.FieldUUID: schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "UUID of the KMS provider",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
@@ -202,9 +194,6 @@ func (r *AzureKMSResource) read(ctx context.Context, cli *api.Client, data *Azur
 
 	if v, ok := vaultResp.Data["key_collection"].(string); ok {
 		data.KeyCollection = types.StringValue(v)
-	}
-	if v, ok := vaultResp.Data["uuid"].(string); ok {
-		data.UUID = types.StringValue(v)
 	}
 	if v, ok := vaultResp.Data["tenant_id"].(string); ok {
 		data.TenantID = types.StringValue(v)

@@ -35,9 +35,8 @@ func TestAccKeymgmtKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
 					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "false"),
-					resource.TestCheckResourceAttr(resourceName, "allow_plaintext_backup", "false"),
-					resource.TestCheckResourceAttr(resourceName, "allow_generate_key", "true"),
 					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{
@@ -47,16 +46,11 @@ func TestAccKeymgmtKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
 					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
-					resource.TestCheckResourceAttr(resourceName, "allow_plaintext_backup", "true"),
-					resource.TestCheckResourceAttr(resourceName, "allow_generate_key", "false"),
 				),
 			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"replica_regions"},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldReplicaRegions,
+			),
 		},
 	})
 }
@@ -84,12 +78,10 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path                   = vault_mount.keymgmt.path
-  name                   = %q
-  type                   = "aes256-gcm96"
-  deletion_allowed       = true
-  allow_plaintext_backup = true
-  allow_generate_key     = false
+  path             = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
 }
 `, mount, keyName)
 }

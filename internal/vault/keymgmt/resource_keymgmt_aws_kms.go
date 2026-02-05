@@ -38,8 +38,6 @@ type AWSKMSResourceModel struct {
 	Credentials   types.Map    `tfsdk:"credentials"`
 	AccessKey     types.String `tfsdk:"access_key"`
 	SecretKey     types.String `tfsdk:"secret_key"`
-	Region        types.String `tfsdk:"region"`
-	UUID          types.String `tfsdk:"uuid"`
 }
 
 func NewAWSKMSResource() resource.Resource {
@@ -89,17 +87,6 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Sensitive:           true,
 				MarkdownDescription: "AWS secret access key",
 			},
-			consts.FieldRegion: schema.StringAttribute{
-				Optional:            true,
-				MarkdownDescription: "AWS region (alternative to key_collection)",
-			},
-			consts.FieldUUID: schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "UUID of the KMS provider",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 		},
 	}
 	base.MustAddLegacyBaseSchema(&resp.Schema)
@@ -146,10 +133,6 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		if len(creds) > 0 {
 			writeData["credentials"] = creds
 		}
-	}
-
-	if !data.Region.IsNull() {
-		writeData["region"] = data.Region.ValueString()
 	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
@@ -225,12 +208,6 @@ func (r *AWSKMSResource) read(ctx context.Context, cli *api.Client, data *AWSKMS
 	if v, ok := vaultResp.Data["key_collection"].(string); ok {
 		data.KeyCollection = types.StringValue(v)
 	}
-	if v, ok := vaultResp.Data["uuid"].(string); ok {
-		data.UUID = types.StringValue(v)
-	}
-	if v, ok := vaultResp.Data["region"].(string); ok {
-		data.Region = types.StringValue(v)
-	}
 }
 
 func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -278,11 +255,6 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 			writeData["credentials"] = creds
 			hasChanges = true
 		}
-	}
-
-	if !plan.Region.Equal(state.Region) {
-		writeData["region"] = plan.Region.ValueString()
-		hasChanges = true
 	}
 
 	if hasChanges {

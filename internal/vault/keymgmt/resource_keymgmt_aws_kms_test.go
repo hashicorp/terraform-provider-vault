@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccKeymgmtKms_aws(t *testing.T) {
+func TestAccKeymgmtAWSKMS(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 
 	// Skip if AWS credentials are not available
@@ -40,27 +40,23 @@ func TestAccKeymgmtKms_aws(t *testing.T) {
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtKms_awsConfig(mount, kmsName, awsRegion),
+				Config: testKeymgmtAWSKMSConfig(mount, kmsName, awsRegion),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", awsRegion),
-					resource.TestCheckResourceAttr(resourceName, "region", awsRegion),
-					resource.TestCheckResourceAttrSet(resourceName, "uuid"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				// credentials are not returned by the API
-				ImportStateVerifyIgnore: []string{"access_key", "secret_key"},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldAccessKey,
+				consts.FieldSecretKey,
+			),
 		},
 	})
 }
 
-func testKeymgmtKms_awsConfig(mount, kmsName, region string) string {
+func testKeymgmtAWSKMSConfig(mount, kmsName, region string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "keymgmt" {
   path = %q
@@ -71,10 +67,9 @@ resource "vault_keymgmt_aws_kms" "test" {
   path           = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
-  region         = %q
   
   access_key = "%s"
   secret_key = "%s"
 }
-`, mount, kmsName, region, region, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+`, mount, kmsName, region, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
 }

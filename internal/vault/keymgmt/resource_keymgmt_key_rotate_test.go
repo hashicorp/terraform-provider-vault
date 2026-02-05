@@ -36,11 +36,7 @@ func TestAccKeymgmtKeyRotate_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }

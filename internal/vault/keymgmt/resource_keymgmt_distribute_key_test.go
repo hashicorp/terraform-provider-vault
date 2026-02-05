@@ -62,7 +62,6 @@ resource "vault_keymgmt_aws_kms" "test" {
   path           = vault_mount.test.path
   name           = "%s"
   key_collection = "us-west-1"
-  region         = "us-west-1"
   
   access_key = "AKIAIOSFODNN7EXAMPLE"
   secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"

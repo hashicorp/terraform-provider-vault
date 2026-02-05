@@ -33,10 +33,9 @@ type KeyRotateResource struct {
 
 type KeyRotateResourceModel struct {
 	base.BaseModelLegacy
-	Path              types.String `tfsdk:"path"`
-	Name              types.String `tfsdk:"name"`
-	LatestVersion     types.Int64  `tfsdk:"latest_version"`
-	RotationTimestamp types.String `tfsdk:"rotation_timestamp"`
+	Path          types.String `tfsdk:"path"`
+	Name          types.String `tfsdk:"name"`
+	LatestVersion types.Int64  `tfsdk:"latest_version"`
 }
 
 func NewKeyRotateResource() resource.Resource {
@@ -71,13 +70,6 @@ func (r *KeyRotateResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Latest version of the key after rotation",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
-				},
-			},
-			consts.FieldRotationTimestamp: schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Timestamp when the key was rotated (RFC3339 format)",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -183,10 +175,6 @@ func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *Key
 		case int64:
 			data.LatestVersion = types.Int64Value(version)
 		}
-	}
-
-	if v, ok := vaultResp.Data["updated_time"].(string); ok {
-		data.RotationTimestamp = types.StringValue(v)
 	}
 }
 

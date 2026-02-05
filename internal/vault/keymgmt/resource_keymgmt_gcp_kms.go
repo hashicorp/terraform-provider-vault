@@ -38,7 +38,6 @@ type GCPKMSResourceModel struct {
 	ServiceAccountFile types.String `tfsdk:"service_account_file"`
 	Project            types.String `tfsdk:"project"`
 	Location           types.String `tfsdk:"location"`
-	UUID               types.String `tfsdk:"uuid"`
 }
 
 func NewGCPKMSResource() resource.Resource {
@@ -84,13 +83,6 @@ func (r *GCPKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			consts.FieldLocation: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "GCP location/region (e.g., us-central1, global)",
-			},
-			consts.FieldUUID: schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "UUID of the KMS provider",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
@@ -194,9 +186,6 @@ func (r *GCPKMSResource) read(ctx context.Context, cli *api.Client, data *GCPKMS
 
 	if v, ok := vaultResp.Data["key_collection"].(string); ok {
 		data.KeyCollection = types.StringValue(v)
-	}
-	if v, ok := vaultResp.Data["uuid"].(string); ok {
-		data.UUID = types.StringValue(v)
 	}
 	if v, ok := vaultResp.Data["project"].(string); ok {
 		data.Project = types.StringValue(v)
