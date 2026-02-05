@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -18,17 +17,20 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 )
 
 var _ resource.Resource = &AzureKMSResource{}
 var _ resource.ResourceWithImportState = &AzureKMSResource{}
 
 type AzureKMSResource struct {
-	client *api.Client
+	base.ResourceWithConfigure
+	base.WithImportByID
 }
 
 type AzureKMSResourceModel struct {
-	ID            types.String `tfsdk:"id"`
+	base.BaseModelLegacy
 	Path          types.String `tfsdk:"path"`
 	Name          types.String `tfsdk:"name"`
 	KeyCollection types.String `tfsdk:"key_collection"`
@@ -52,12 +54,6 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 		MarkdownDescription: "Manages an Azure Key Vault provider for Vault Key Management",
 
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			consts.FieldPath: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
@@ -72,28 +68,28 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"key_collection": schema.StringAttribute{
+			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Azure Key Vault name where keys are stored",
 			},
-			"tenant_id": schema.StringAttribute{
+			consts.FieldTenantID: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Azure Active Directory tenant ID",
 			},
-			"client_id": schema.StringAttribute{
+			consts.FieldClientID: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Azure service principal client ID",
 			},
-			"client_secret": schema.StringAttribute{
+			consts.FieldClientSecret: schema.StringAttribute{
 				Required:            true,
 				Sensitive:           true,
 				MarkdownDescription: "Azure service principal client secret",
 			},
-			"environment": schema.StringAttribute{
+			consts.FieldEnvironment: schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "Azure environment (e.g., AzurePublicCloud, AzureUSGovernment, AzureChinaCloud, AzureGermanCloud)",
 			},
-			"uuid": schema.StringAttribute{
+			consts.FieldUUID: schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "UUID of the KMS provider",
 				PlanModifiers: []planmodifier.String{
@@ -102,33 +98,19 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 			},
 		},
 	}
-}
-
-func (r *AzureKMSResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	providerMeta, ok := req.ProviderData.(interface{ Meta() interface{} })
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected provider metadata interface, got: %T", req.ProviderData))
-		return
-	}
-
-	meta := providerMeta.Meta()
-	client, ok := meta.(*api.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Meta Type", fmt.Sprintf("Expected *api.Client, got: %T", meta))
-		return
-	}
-
-	r.client = client
+	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
 func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data AzureKMSResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error getting Vault client", err.Error())
 		return
 	}
 
@@ -148,13 +130,13 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 		writeData["environment"] = data.Environment.ValueString()
 	}
 
-	if _, err := r.client.Logical().Write(apiPath, writeData); err != nil {
+	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 		resp.Diagnostics.AddError("Error creating Azure Key Vault provider", fmt.Sprintf("Error creating Azure Key Vault provider at %s: %s", apiPath, err))
 		return
 	}
 
 	data.ID = types.StringValue(apiPath)
-	r.read(ctx, &data, &resp.Diagnostics)
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -169,7 +151,13 @@ func (r *AzureKMSResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	r.read(ctx, &data, &resp.Diagnostics)
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error getting Vault client", err.Error())
+		return
+	}
+
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -182,9 +170,9 @@ func (r *AzureKMSResource) Read(ctx context.Context, req resource.ReadRequest, r
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *AzureKMSResource) read(ctx context.Context, data *AzureKMSResourceModel, diags *diag.Diagnostics) {
+func (r *AzureKMSResource) read(ctx context.Context, cli *api.Client, data *AzureKMSResourceModel, diags *diag.Diagnostics) {
 	apiPath := data.ID.ValueString()
-	vaultResp, err := r.client.Logical().Read(apiPath)
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
 		diags.AddError("Error reading Azure Key Vault provider", fmt.Sprintf("Error reading Azure Key Vault provider at %s: %s", apiPath, err))
 		return
@@ -237,6 +225,12 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error getting Vault client", err.Error())
+		return
+	}
+
 	apiPath := plan.ID.ValueString()
 	writeData := map[string]interface{}{
 		"provider": "azurekeyvault",
@@ -265,13 +259,13 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	if hasChanges {
-		if _, err := r.client.Logical().Write(apiPath, writeData); err != nil {
+		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 			resp.Diagnostics.AddError("Error updating Azure Key Vault provider", fmt.Sprintf("Error updating Azure Key Vault provider at %s: %s", apiPath, err))
 			return
 		}
 	}
 
-	r.read(ctx, &plan, &resp.Diagnostics)
+	r.read(ctx, cli, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -286,13 +280,15 @@ func (r *AzureKMSResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error getting Vault client", err.Error())
+		return
+	}
+
 	apiPath := data.ID.ValueString()
-	if _, err := r.client.Logical().Delete(apiPath); err != nil {
+	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError("Error deleting Azure Key Vault provider", fmt.Sprintf("Error deleting Azure Key Vault provider at %s: %s", apiPath, err))
 		return
 	}
-}
-
-func (r *AzureKMSResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

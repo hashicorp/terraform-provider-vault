@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -19,17 +18,21 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 )
 
 var _ resource.Resource = &DistributeKeyResource{}
 var _ resource.ResourceWithImportState = &DistributeKeyResource{}
 
 type DistributeKeyResource struct {
-	client *api.Client
+	base.ResourceWithConfigure
+	base.WithImportByID
 }
 
 type DistributeKeyResourceModel struct {
-	ID         types.String `tfsdk:"id"`
+	base.BaseModelLegacy
 	Path       types.String `tfsdk:"path"`
 	KMSName    types.String `tfsdk:"kms_name"`
 	KeyName    types.String `tfsdk:"key_name"`
@@ -52,12 +55,6 @@ func (r *DistributeKeyResource) Schema(ctx context.Context, req resource.SchemaR
 		MarkdownDescription: "Distributes a Key Management key to a KMS provider",
 
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			consts.FieldPath: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
@@ -65,37 +62,37 @@ func (r *DistributeKeyResource) Schema(ctx context.Context, req resource.SchemaR
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"kms_name": schema.StringAttribute{
+			consts.FieldKMSName: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Name of the KMS provider",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"key_name": schema.StringAttribute{
+			consts.FieldKeyName: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Name of the key to distribute",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"purpose": schema.SetAttribute{
+			consts.FieldPurpose: schema.SetAttribute{
 				Required:            true,
 				ElementType:         types.StringType,
 				MarkdownDescription: "Purposes for which the key can be used (e.g., encrypt, decrypt, sign, verify)",
 			},
-			"protection": schema.StringAttribute{
+			consts.FieldProtection: schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "Protection level for the key (e.g., hsm, software)",
 			},
-			"key_id": schema.StringAttribute{
+			consts.FieldKeyID: schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "ID of the key in the KMS provider",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"versions": schema.ListAttribute{
+			consts.FieldVersions: schema.ListAttribute{
 				Computed:            true,
 				ElementType:         types.Int64Type,
 				MarkdownDescription: "Versions of the key distributed to the KMS provider",
@@ -105,33 +102,19 @@ func (r *DistributeKeyResource) Schema(ctx context.Context, req resource.SchemaR
 			},
 		},
 	}
-}
-
-func (r *DistributeKeyResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	providerMeta, ok := req.ProviderData.(interface{ Meta() interface{} })
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected provider metadata interface, got: %T", req.ProviderData))
-		return
-	}
-
-	meta := providerMeta.Meta()
-	client, ok := meta.(*api.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Meta Type", fmt.Sprintf("Expected *api.Client, got: %T", meta))
-		return
-	}
-
-	r.client = client
+	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
 func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data DistributeKeyResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -153,13 +136,13 @@ func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateR
 		writeData["protection"] = data.Protection.ValueString()
 	}
 
-	if _, err := r.client.Logical().Write(apiPath, writeData); err != nil {
+	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 		resp.Diagnostics.AddError("Error distributing Key Management key to KMS", fmt.Sprintf("Error distributing key at %s: %s", apiPath, err))
 		return
 	}
 
 	data.ID = types.StringValue(apiPath)
-	r.read(ctx, &data, &resp.Diagnostics)
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -174,7 +157,13 @@ func (r *DistributeKeyResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	r.read(ctx, &data, &resp.Diagnostics)
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -187,9 +176,9 @@ func (r *DistributeKeyResource) Read(ctx context.Context, req resource.ReadReque
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *DistributeKeyResource) read(ctx context.Context, data *DistributeKeyResourceModel, diags *diag.Diagnostics) {
+func (r *DistributeKeyResource) read(ctx context.Context, cli *api.Client, data *DistributeKeyResourceModel, diags *diag.Diagnostics) {
 	apiPath := data.ID.ValueString()
-	vaultResp, err := r.client.Logical().Read(apiPath)
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
 		diags.AddError("Error reading Key Management key distribution", fmt.Sprintf("Error reading key distribution at %s: %s", apiPath, err))
 		return
@@ -249,6 +238,12 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
 	apiPath := plan.ID.ValueString()
 	writeData := map[string]interface{}{}
 	hasChanges := false
@@ -268,13 +263,13 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	if hasChanges {
-		if _, err := r.client.Logical().Write(apiPath, writeData); err != nil {
+		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 			resp.Diagnostics.AddError("Error updating Key Management key distribution", fmt.Sprintf("Error updating key distribution at %s: %s", apiPath, err))
 			return
 		}
 	}
 
-	r.read(ctx, &plan, &resp.Diagnostics)
+	r.read(ctx, cli, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -289,15 +284,17 @@ func (r *DistributeKeyResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
 	apiPath := data.ID.ValueString()
-	if _, err := r.client.Logical().Delete(apiPath); err != nil {
+	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError("Error deleting Key Management key distribution", fmt.Sprintf("Error deleting key distribution at %s: %s", apiPath, err))
 		return
 	}
-}
-
-func (r *DistributeKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 func buildDistributeKeyPath(mountPath, kmsName, keyName string) string {

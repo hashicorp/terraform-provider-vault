@@ -10,14 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -25,31 +22,29 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 )
 
 var _ resource.Resource = &KeyResource{}
 var _ resource.ResourceWithImportState = &KeyResource{}
 
 type KeyResource struct {
-	client *api.Client
+	base.ResourceWithConfigure
+	base.WithImportByID
 }
 
 type KeyResourceModel struct {
-	ID                   types.String `tfsdk:"id"`
-	Path                 types.String `tfsdk:"path"`
-	Name                 types.String `tfsdk:"name"`
-	Type                 types.String `tfsdk:"type"`
-	DeletionAllowed      types.Bool   `tfsdk:"deletion_allowed"`
-	AllowPlaintextBackup types.Bool   `tfsdk:"allow_plaintext_backup"`
-	AllowGenerateKey     types.Bool   `tfsdk:"allow_generate_key"`
-	ReplicaRegions       types.Set    `tfsdk:"replica_regions"`
-	LatestVersion        types.Int64  `tfsdk:"latest_version"`
-	MinEnabledVersion    types.Int64  `tfsdk:"min_enabled_version"`
-	Distribution         types.List   `tfsdk:"distribution"`
-}
+	base.BaseModelLegacy
 
-type DistributionModel struct {
-	KMS types.String `tfsdk:"kms"`
+	Path              types.String `tfsdk:"path"`
+	Name              types.String `tfsdk:"name"`
+	Type              types.String `tfsdk:"type"`
+	DeletionAllowed   types.Bool   `tfsdk:"deletion_allowed"`
+	ReplicaRegions    types.Set    `tfsdk:"replica_regions"`
+	LatestVersion     types.Int64  `tfsdk:"latest_version"`
+	MinEnabledVersion types.Int64  `tfsdk:"min_enabled_version"`
 }
 
 func NewKeyResource() resource.Resource {
@@ -65,13 +60,6 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 		MarkdownDescription: "Manages a Key Management key in Vault",
 
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Resource identifier",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			consts.FieldPath: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
@@ -94,25 +82,13 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"deletion_allowed": schema.BoolAttribute{
+			consts.FieldDeletionAllowed: schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 				MarkdownDescription: "If set to true, the key can be deleted. Defaults to false",
 			},
-			"allow_plaintext_backup": schema.BoolAttribute{
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-				MarkdownDescription: "If set to true, plaintext backup of the key is allowed. Defaults to false",
-			},
-			"allow_generate_key": schema.BoolAttribute{
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(true),
-				MarkdownDescription: "If set to true, allows generating a new key in supported KMS providers. Defaults to true",
-			},
-			"replica_regions": schema.SetAttribute{
+			consts.FieldReplicaRegions: schema.SetAttribute{
 				Optional:            true,
 				ElementType:         types.StringType,
 				MarkdownDescription: "List of regions where the key should be replicated. AWS KMS only.",
@@ -120,66 +96,23 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 					setplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"latest_version": schema.Int64Attribute{
+			consts.FieldLatestVersion: schema.Int64Attribute{
 				Computed:            true,
 				MarkdownDescription: "Latest version of the key",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
 			},
-			"min_enabled_version": schema.Int64Attribute{
+			consts.FieldMinEnabledVersion: schema.Int64Attribute{
 				Computed:            true,
 				MarkdownDescription: "Minimum enabled version of the key",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
 			},
-			"distribution": schema.ListNestedAttribute{
-				Computed:            true,
-				MarkdownDescription: "List of KMS providers where this key is distributed",
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"kms": schema.StringAttribute{
-							Computed:            true,
-							MarkdownDescription: "Name of the KMS provider",
-						},
-					},
-				},
-			},
 		},
 	}
-}
-
-func (r *KeyResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	providerMeta, ok := req.ProviderData.(interface {
-		Meta() interface{}
-	})
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected provider metadata interface, got: %T", req.ProviderData),
-		)
-		return
-	}
-
-	meta := providerMeta.Meta()
-	client, ok := meta.(*api.Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Meta Type",
-			fmt.Sprintf("Expected *api.Client, got: %T", meta),
-		)
-		return
-	}
-
-	r.client = client
+	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
 func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -187,6 +120,12 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error getting client", err.Error())
 		return
 	}
 
@@ -205,11 +144,11 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 			return
 		}
 		if len(regions) > 0 {
-			writeData["replica_regions"] = strings.Join(regions, ",")
+			writeData[consts.FieldReplicaRegions] = strings.Join(regions, ",")
 		}
 	}
 
-	if _, err := r.client.Logical().Write(apiPath, writeData); err != nil {
+	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 		resp.Diagnostics.AddError("Error creating Key Management key", fmt.Sprintf("Error creating key at %s: %s", apiPath, err))
 		return
 	}
@@ -219,23 +158,17 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	configData := map[string]interface{}{}
 	if !data.DeletionAllowed.IsNull() && !data.DeletionAllowed.IsUnknown() {
-		configData["deletion_allowed"] = data.DeletionAllowed.ValueBool()
-	}
-	if !data.AllowPlaintextBackup.IsNull() && !data.AllowPlaintextBackup.IsUnknown() {
-		configData["allow_plaintext_backup"] = data.AllowPlaintextBackup.ValueBool()
-	}
-	if !data.AllowGenerateKey.IsNull() && !data.AllowGenerateKey.IsUnknown() {
-		configData["allow_generate_key"] = data.AllowGenerateKey.ValueBool()
+		configData[consts.FieldDeletionAllowed] = data.DeletionAllowed.ValueBool()
 	}
 
 	if len(configData) > 0 {
-		if _, err := r.client.Logical().Write(apiPath, configData); err != nil {
+		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, configData); err != nil {
 			resp.Diagnostics.AddError("Error updating Key Management key config", fmt.Sprintf("Error updating key config at %s: %s", apiPath, err))
 			return
 		}
 	}
 
-	r.read(ctx, &data, &resp.Diagnostics)
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -250,7 +183,13 @@ func (r *KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	r.read(ctx, &data, &resp.Diagnostics)
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error getting client", err.Error())
+		return
+	}
+
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -263,9 +202,9 @@ func (r *KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *KeyResource) read(ctx context.Context, data *KeyResourceModel, diags *diag.Diagnostics) {
+func (r *KeyResource) read(ctx context.Context, cli *api.Client, data *KeyResourceModel, diags *diag.Diagnostics) {
 	apiPath := data.ID.ValueString()
-	vaultResp, err := r.client.Logical().Read(apiPath)
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
 		diags.AddError("Error reading Key Management key", fmt.Sprintf("Error reading key at %s: %s", apiPath, err))
 		return
@@ -296,17 +235,11 @@ func (r *KeyResource) read(ctx context.Context, data *KeyResourceModel, diags *d
 	if v, ok := vaultResp.Data["type"].(string); ok {
 		data.Type = types.StringValue(v)
 	}
-	if v, ok := vaultResp.Data["deletion_allowed"].(bool); ok {
+	if v, ok := vaultResp.Data[consts.FieldDeletionAllowed].(bool); ok {
 		data.DeletionAllowed = types.BoolValue(v)
 	}
-	if v, ok := vaultResp.Data["allow_plaintext_backup"].(bool); ok {
-		data.AllowPlaintextBackup = types.BoolValue(v)
-	}
-	if v, ok := vaultResp.Data["allow_generate_key"].(bool); ok {
-		data.AllowGenerateKey = types.BoolValue(v)
-	}
 
-	if v, ok := vaultResp.Data["latest_version"]; ok {
+	if v, ok := vaultResp.Data[consts.FieldLatestVersion]; ok {
 		switch version := v.(type) {
 		case json.Number:
 			if vInt, err := version.Int64(); err == nil {
@@ -321,7 +254,7 @@ func (r *KeyResource) read(ctx context.Context, data *KeyResourceModel, diags *d
 		}
 	}
 
-	if v, ok := vaultResp.Data["min_enabled_version"]; ok {
+	if v, ok := vaultResp.Data[consts.FieldMinEnabledVersion]; ok {
 		switch version := v.(type) {
 		case json.Number:
 			if vInt, err := version.Int64(); err == nil {
@@ -335,24 +268,6 @@ func (r *KeyResource) read(ctx context.Context, data *KeyResourceModel, diags *d
 			data.MinEnabledVersion = types.Int64Value(version)
 		}
 	}
-
-	if v, ok := vaultResp.Data["distribution"].([]interface{}); ok {
-		var distModels []DistributionModel
-		for _, dist := range v {
-			if distMap, ok := dist.(map[string]interface{}); ok {
-				if kms, ok := distMap["kms"].(string); ok {
-					distModels = append(distModels, DistributionModel{KMS: types.StringValue(kms)})
-				}
-			}
-		}
-		listVal, d := types.ListValueFrom(ctx, types.ObjectType{
-			AttrTypes: map[string]attr.Type{"kms": types.StringType},
-		}, distModels)
-		diags.Append(d...)
-		if !diags.HasError() {
-			data.Distribution = listVal
-		}
-	}
 }
 
 func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -363,27 +278,27 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
 	apiPath := plan.ID.ValueString()
 	writeData := map[string]interface{}{}
 
 	if !plan.DeletionAllowed.Equal(state.DeletionAllowed) {
-		writeData["deletion_allowed"] = plan.DeletionAllowed.ValueBool()
-	}
-	if !plan.AllowPlaintextBackup.Equal(state.AllowPlaintextBackup) {
-		writeData["allow_plaintext_backup"] = plan.AllowPlaintextBackup.ValueBool()
-	}
-	if !plan.AllowGenerateKey.Equal(state.AllowGenerateKey) {
-		writeData["allow_generate_key"] = plan.AllowGenerateKey.ValueBool()
+		writeData[consts.FieldDeletionAllowed] = plan.DeletionAllowed.ValueBool()
 	}
 
 	if len(writeData) > 0 {
-		if _, err := r.client.Logical().Write(apiPath, writeData); err != nil {
+		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 			resp.Diagnostics.AddError("Error updating Key Management key", fmt.Sprintf("Error updating key at %s: %s", apiPath, err))
 			return
 		}
 	}
 
-	r.read(ctx, &plan, &resp.Diagnostics)
+	r.read(ctx, cli, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -398,13 +313,15 @@ func (r *KeyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error getting client", err.Error())
+		return
+	}
+
 	apiPath := data.ID.ValueString()
-	if _, err := r.client.Logical().Delete(apiPath); err != nil {
+	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError("Error deleting Key Management key", fmt.Sprintf("Error deleting key at %s: %s", apiPath, err))
 		return
 	}
-}
-
-func (r *KeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

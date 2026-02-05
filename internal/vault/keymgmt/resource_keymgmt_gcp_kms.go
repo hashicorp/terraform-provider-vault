@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -18,17 +17,21 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 )
 
 var _ resource.Resource = &GCPKMSResource{}
 var _ resource.ResourceWithImportState = &GCPKMSResource{}
 
 type GCPKMSResource struct {
-	client *api.Client
+	base.ResourceWithConfigure
+	base.WithImportByID
 }
 
 type GCPKMSResourceModel struct {
-	ID                 types.String `tfsdk:"id"`
+	base.BaseModelLegacy
 	Path               types.String `tfsdk:"path"`
 	Name               types.String `tfsdk:"name"`
 	KeyCollection      types.String `tfsdk:"key_collection"`
@@ -51,12 +54,6 @@ func (r *GCPKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		MarkdownDescription: "Manages a GCP Cloud KMS provider for Vault Key Management",
 
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			consts.FieldPath: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
@@ -71,24 +68,24 @@ func (r *GCPKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"key_collection": schema.StringAttribute{
+			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "GCP Key Ring name where keys are stored",
 			},
-			"service_account_file": schema.StringAttribute{
+			consts.FieldServiceAccountFile: schema.StringAttribute{
 				Required:            true,
 				Sensitive:           true,
 				MarkdownDescription: "GCP service account JSON credentials file content",
 			},
-			"project": schema.StringAttribute{
+			consts.FieldProject: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "GCP project ID",
 			},
-			"location": schema.StringAttribute{
+			consts.FieldLocation: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "GCP location/region (e.g., us-central1, global)",
 			},
-			"uuid": schema.StringAttribute{
+			consts.FieldUUID: schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "UUID of the KMS provider",
 				PlanModifiers: []planmodifier.String{
@@ -97,33 +94,19 @@ func (r *GCPKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 		},
 	}
-}
-
-func (r *GCPKMSResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	providerMeta, ok := req.ProviderData.(interface{ Meta() interface{} })
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected provider metadata interface, got: %T", req.ProviderData))
-		return
-	}
-
-	meta := providerMeta.Meta()
-	client, ok := meta.(*api.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Meta Type", fmt.Sprintf("Expected *api.Client, got: %T", meta))
-		return
-	}
-
-	r.client = client
+	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
 func (r *GCPKMSResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data GCPKMSResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -139,13 +122,13 @@ func (r *GCPKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		"location":             data.Location.ValueString(),
 	}
 
-	if _, err := r.client.Logical().Write(apiPath, writeData); err != nil {
+	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 		resp.Diagnostics.AddError("Error creating GCP Cloud KMS provider", fmt.Sprintf("Error creating GCP Cloud KMS provider at %s: %s", apiPath, err))
 		return
 	}
 
 	data.ID = types.StringValue(apiPath)
-	r.read(ctx, &data, &resp.Diagnostics)
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -160,7 +143,13 @@ func (r *GCPKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	r.read(ctx, &data, &resp.Diagnostics)
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -173,9 +162,9 @@ func (r *GCPKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *GCPKMSResource) read(ctx context.Context, data *GCPKMSResourceModel, diags *diag.Diagnostics) {
+func (r *GCPKMSResource) read(ctx context.Context, cli *api.Client, data *GCPKMSResourceModel, diags *diag.Diagnostics) {
 	apiPath := data.ID.ValueString()
-	vaultResp, err := r.client.Logical().Read(apiPath)
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
 		diags.AddError("Error reading GCP Cloud KMS provider", fmt.Sprintf("Error reading GCP Cloud KMS provider at %s: %s", apiPath, err))
 		return
@@ -225,6 +214,12 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
 	apiPath := plan.ID.ValueString()
 	writeData := map[string]interface{}{
 		"provider": "gcpckms",
@@ -249,13 +244,13 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	if hasChanges {
-		if _, err := r.client.Logical().Write(apiPath, writeData); err != nil {
+		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 			resp.Diagnostics.AddError("Error updating GCP Cloud KMS provider", fmt.Sprintf("Error updating GCP Cloud KMS provider at %s: %s", apiPath, err))
 			return
 		}
 	}
 
-	r.read(ctx, &plan, &resp.Diagnostics)
+	r.read(ctx, cli, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -270,13 +265,15 @@ func (r *GCPKMSResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
 	apiPath := data.ID.ValueString()
-	if _, err := r.client.Logical().Delete(apiPath); err != nil {
+	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError("Error deleting GCP Cloud KMS provider", fmt.Sprintf("Error deleting GCP Cloud KMS provider at %s: %s", apiPath, err))
 		return
 	}
-}
-
-func (r *GCPKMSResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

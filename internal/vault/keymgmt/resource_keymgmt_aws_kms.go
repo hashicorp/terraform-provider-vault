@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -18,17 +17,21 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 )
 
 var _ resource.Resource = &AWSKMSResource{}
 var _ resource.ResourceWithImportState = &AWSKMSResource{}
 
 type AWSKMSResource struct {
-	client *api.Client
+	base.ResourceWithConfigure
+	base.WithImportByID
 }
 
 type AWSKMSResourceModel struct {
-	ID            types.String `tfsdk:"id"`
+	base.BaseModelLegacy
 	Path          types.String `tfsdk:"path"`
 	Name          types.String `tfsdk:"name"`
 	KeyCollection types.String `tfsdk:"key_collection"`
@@ -52,12 +55,6 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		MarkdownDescription: "Manages an AWS KMS provider for Vault Key Management",
 
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			consts.FieldPath: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
@@ -72,31 +69,31 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"key_collection": schema.StringAttribute{
+			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "AWS region where keys are stored (e.g., us-east-1)",
 			},
-			"credentials": schema.MapAttribute{
+			consts.FieldCredentials: schema.MapAttribute{
 				Optional:            true,
 				Sensitive:           true,
 				ElementType:         types.StringType,
 				MarkdownDescription: "Map containing access_key and secret_key for AWS authentication",
 			},
-			"access_key": schema.StringAttribute{
+			consts.FieldAccessKey: schema.StringAttribute{
 				Optional:            true,
 				Sensitive:           true,
 				MarkdownDescription: "AWS access key ID",
 			},
-			"secret_key": schema.StringAttribute{
+			consts.FieldSecretKey: schema.StringAttribute{
 				Optional:            true,
 				Sensitive:           true,
 				MarkdownDescription: "AWS secret access key",
 			},
-			"region": schema.StringAttribute{
+			consts.FieldRegion: schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "AWS region (alternative to key_collection)",
 			},
-			"uuid": schema.StringAttribute{
+			consts.FieldUUID: schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "UUID of the KMS provider",
 				PlanModifiers: []planmodifier.String{
@@ -105,33 +102,19 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 		},
 	}
-}
-
-func (r *AWSKMSResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	providerMeta, ok := req.ProviderData.(interface{ Meta() interface{} })
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected provider metadata interface, got: %T", req.ProviderData))
-		return
-	}
-
-	meta := providerMeta.Meta()
-	client, ok := meta.(*api.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Meta Type", fmt.Sprintf("Expected *api.Client, got: %T", meta))
-		return
-	}
-
-	r.client = client
+	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
 func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data AWSKMSResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -169,13 +152,13 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		writeData["region"] = data.Region.ValueString()
 	}
 
-	if _, err := r.client.Logical().Write(apiPath, writeData); err != nil {
+	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 		resp.Diagnostics.AddError("Error creating AWS KMS provider", fmt.Sprintf("Error creating AWS KMS provider at %s: %s", apiPath, err))
 		return
 	}
 
 	data.ID = types.StringValue(apiPath)
-	r.read(ctx, &data, &resp.Diagnostics)
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -190,7 +173,13 @@ func (r *AWSKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	r.read(ctx, &data, &resp.Diagnostics)
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -203,9 +192,9 @@ func (r *AWSKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *AWSKMSResource) read(ctx context.Context, data *AWSKMSResourceModel, diags *diag.Diagnostics) {
+func (r *AWSKMSResource) read(ctx context.Context, cli *api.Client, data *AWSKMSResourceModel, diags *diag.Diagnostics) {
 	apiPath := data.ID.ValueString()
-	vaultResp, err := r.client.Logical().Read(apiPath)
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
 		diags.AddError("Error reading AWS KMS provider", fmt.Sprintf("Error reading AWS KMS provider at %s: %s", apiPath, err))
 		return
@@ -252,6 +241,12 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
 	apiPath := plan.ID.ValueString()
 	writeData := map[string]interface{}{
 		"provider": "awskms",
@@ -291,13 +286,13 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	if hasChanges {
-		if _, err := r.client.Logical().Write(apiPath, writeData); err != nil {
+		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 			resp.Diagnostics.AddError("Error updating AWS KMS provider", fmt.Sprintf("Error updating AWS KMS provider at %s: %s", apiPath, err))
 			return
 		}
 	}
 
-	r.read(ctx, &plan, &resp.Diagnostics)
+	r.read(ctx, cli, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -312,13 +307,15 @@ func (r *AWSKMSResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
 	apiPath := data.ID.ValueString()
-	if _, err := r.client.Logical().Delete(apiPath); err != nil {
+	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError("Error deleting AWS KMS provider", fmt.Sprintf("Error deleting AWS KMS provider at %s: %s", apiPath, err))
 		return
 	}
-}
-
-func (r *AWSKMSResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

@@ -8,26 +8,28 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 )
 
 var _ resource.Resource = &ReplicateKeyResource{}
 var _ resource.ResourceWithImportState = &ReplicateKeyResource{}
 
 type ReplicateKeyResource struct {
-	client *api.Client
+	base.ResourceWithConfigure
+	base.WithImportByID
 }
 
 type ReplicateKeyResourceModel struct {
-	ID      types.String `tfsdk:"id"`
+	base.BaseModelLegacy
 	Path    types.String `tfsdk:"path"`
 	KMSName types.String `tfsdk:"kms_name"`
 	KeyName types.String `tfsdk:"key_name"`
@@ -46,12 +48,6 @@ func (r *ReplicateKeyResource) Schema(ctx context.Context, req resource.SchemaRe
 		MarkdownDescription: "Replicates a Key Management key to configured regions (AWS KMS only)",
 
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			consts.FieldPath: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
@@ -59,14 +55,14 @@ func (r *ReplicateKeyResource) Schema(ctx context.Context, req resource.SchemaRe
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"kms_name": schema.StringAttribute{
+			consts.FieldKMSName: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Name of the KMS provider",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"key_name": schema.StringAttribute{
+			consts.FieldKeyName: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Name of the key to replicate",
 				PlanModifiers: []planmodifier.String{
@@ -75,27 +71,7 @@ func (r *ReplicateKeyResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 		},
 	}
-}
-
-func (r *ReplicateKeyResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	providerMeta, ok := req.ProviderData.(interface{ Meta() interface{} })
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected provider metadata interface, got: %T", req.ProviderData))
-		return
-	}
-
-	meta := providerMeta.Meta()
-	client, ok := meta.(*api.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Meta Type", fmt.Sprintf("Expected *api.Client, got: %T", meta))
-		return
-	}
-
-	r.client = client
+	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
 func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -105,12 +81,18 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
 	vaultPath := data.Path.ValueString()
 	kmsName := data.KMSName.ValueString()
 	keyName := data.KeyName.ValueString()
 
 	kmsPath := strings.Trim(vaultPath, "/") + "/kms/" + kmsName
-	kmsResp, err := r.client.Logical().Read(kmsPath)
+	kmsResp, err := cli.Logical().ReadWithContext(ctx, kmsPath)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading KMS provider", fmt.Sprintf("Error reading KMS provider at %s: %s", kmsPath, err))
 		return
@@ -132,7 +114,7 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	keyPath := strings.Trim(vaultPath, "/") + "/key/" + keyName
-	keyResp, err := r.client.Logical().Read(keyPath)
+	keyResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading Key Management key", fmt.Sprintf("Error reading Key Management key at %s: %s", keyPath, err))
 		return
@@ -154,7 +136,7 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	apiPath := buildReplicateKeyPath(vaultPath, kmsName, keyName)
-	if _, err := r.client.Logical().Write(apiPath, map[string]interface{}{}); err != nil {
+	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, map[string]interface{}{}); err != nil {
 		resp.Diagnostics.AddError("Error replicating Key Management key", fmt.Sprintf("Error replicating key at %s: %s", apiPath, err))
 		return
 	}
@@ -167,6 +149,12 @@ func (r *ReplicateKeyResource) Read(ctx context.Context, req resource.ReadReques
 	var data ReplicateKeyResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -191,7 +179,7 @@ func (r *ReplicateKeyResource) Read(ctx context.Context, req resource.ReadReques
 	data.KeyName = types.StringValue(parts[keyIndex+1])
 
 	distPath := strings.Join(parts[:len(parts)-1], "/")
-	vaultResp, err := r.client.Logical().Read(distPath)
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, distPath)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading Key Management key distribution", fmt.Sprintf("Error reading key distribution at %s: %s", distPath, err))
 		return
@@ -212,10 +200,6 @@ func (r *ReplicateKeyResource) Update(ctx context.Context, req resource.UpdateRe
 func (r *ReplicateKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Replication is not a physical resource that can be deleted
 	// Removing it from Terraform state is sufficient
-}
-
-func (r *ReplicateKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 func buildReplicateKeyPath(mountPath, kmsName, keyName string) string {

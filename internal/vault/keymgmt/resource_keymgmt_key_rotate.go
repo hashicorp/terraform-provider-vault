@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
@@ -19,17 +18,21 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 )
 
 var _ resource.Resource = &KeyRotateResource{}
 var _ resource.ResourceWithImportState = &KeyRotateResource{}
 
 type KeyRotateResource struct {
-	client *api.Client
+	base.ResourceWithConfigure
+	base.WithImportByID
 }
 
 type KeyRotateResourceModel struct {
-	ID                types.String `tfsdk:"id"`
+	base.BaseModelLegacy
 	Path              types.String `tfsdk:"path"`
 	Name              types.String `tfsdk:"name"`
 	LatestVersion     types.Int64  `tfsdk:"latest_version"`
@@ -49,12 +52,6 @@ func (r *KeyRotateResource) Schema(ctx context.Context, req resource.SchemaReque
 		MarkdownDescription: "Rotates a Key Management key",
 
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			consts.FieldPath: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
@@ -69,14 +66,14 @@ func (r *KeyRotateResource) Schema(ctx context.Context, req resource.SchemaReque
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"latest_version": schema.Int64Attribute{
+			consts.FieldLatestVersion: schema.Int64Attribute{
 				Computed:            true,
 				MarkdownDescription: "Latest version of the key after rotation",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
 			},
-			"rotation_timestamp": schema.StringAttribute{
+			consts.FieldRotationTimestamp: schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "Timestamp when the key was rotated (RFC3339 format)",
 				PlanModifiers: []planmodifier.String{
@@ -85,27 +82,7 @@ func (r *KeyRotateResource) Schema(ctx context.Context, req resource.SchemaReque
 			},
 		},
 	}
-}
-
-func (r *KeyRotateResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	providerMeta, ok := req.ProviderData.(interface{ Meta() interface{} })
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected provider metadata interface, got: %T", req.ProviderData))
-		return
-	}
-
-	meta := providerMeta.Meta()
-	client, ok := meta.(*api.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Meta Type", fmt.Sprintf("Expected *api.Client, got: %T", meta))
-		return
-	}
-
-	r.client = client
+	base.MustAddLegacyBaseSchema(&resp.Schema)
 }
 
 func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -115,11 +92,17 @@ func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
 	vaultPath := data.Path.ValueString()
 	name := data.Name.ValueString()
 	apiPath := buildKeyRotatePath(vaultPath, name)
 
-	if _, err := r.client.Logical().Write(apiPath, map[string]interface{}{}); err != nil {
+	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, map[string]interface{}{}); err != nil {
 		resp.Diagnostics.AddError("Error rotating Key Management key", fmt.Sprintf("Error rotating key at %s: %s", apiPath, err))
 		return
 	}
@@ -127,7 +110,7 @@ func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateReque
 	keyPath := buildKeyPath(vaultPath, name)
 	data.ID = types.StringValue(keyPath)
 
-	r.read(ctx, &data, &resp.Diagnostics)
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -142,7 +125,13 @@ func (r *KeyRotateResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	r.read(ctx, &data, &resp.Diagnostics)
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -155,9 +144,9 @@ func (r *KeyRotateResource) Read(ctx context.Context, req resource.ReadRequest, 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *KeyRotateResource) read(ctx context.Context, data *KeyRotateResourceModel, diags *diag.Diagnostics) {
+func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *KeyRotateResourceModel, diags *diag.Diagnostics) {
 	keyPath := data.ID.ValueString()
-	vaultResp, err := r.client.Logical().Read(keyPath)
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
 		diags.AddError("Error reading Key Management key", fmt.Sprintf("Error reading key at %s: %s", keyPath, err))
 		return
@@ -208,10 +197,6 @@ func (r *KeyRotateResource) Update(ctx context.Context, req resource.UpdateReque
 func (r *KeyRotateResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Key rotation is permanent in Vault
 	// Removing it from Terraform state is sufficient
-}
-
-func (r *KeyRotateResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 func buildKeyRotatePath(mountPath, name string) string {
