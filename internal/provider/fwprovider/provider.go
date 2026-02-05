@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
+	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -233,6 +233,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		sys.NewPasswordPolicyResource,
 		azure.NewAzureStaticRoleResource,
 		pki_external_ca.NewPKIACMEAccountResource,
+		pki_external_ca.NewPKIExternalCARoleResource,
 	}
 }
 
