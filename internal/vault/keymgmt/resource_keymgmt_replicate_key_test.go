@@ -1,10 +1,9 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package vault
+package keymgmt_test
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -12,9 +11,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
 func TestAccKeymgmtReplicateKey(t *testing.T) {
@@ -25,10 +25,10 @@ func TestAccKeymgmtReplicateKey(t *testing.T) {
 	resourceName := "vault_keymgmt_replicate_key.test"
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion111)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -49,10 +49,10 @@ func TestAccKeymgmtReplicateKey_NoReplicaRegions(t *testing.T) {
 	keyName := acctest.RandomWithPrefix("test-key")
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion111)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -77,22 +77,19 @@ resource "vault_keymgmt_key" "test" {
   replica_regions = ["us-east-1", "eu-west-1"]
 }
 
-resource "vault_keymgmt_kms" "test" {
+resource "vault_keymgmt_aws_kms" "test" {
   path           = vault_mount.test.path
   name           = "%s"
-  kms_provider   = "awskms"
   key_collection = "us-west-1"
   region         = "us-west-1"
   
-  credentials = {
-    access_key = "AKIAIOSFODNN7EXAMPLE"
-    secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-  }
+  access_key = "AKIAIOSFODNN7EXAMPLE"
+  secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 }
 
 resource "vault_keymgmt_distribute_key" "test" {
   path       = vault_mount.test.path
-  kms_name   = vault_keymgmt_kms.test.name
+  kms_name   = vault_keymgmt_aws_kms.test.name
   key_name   = vault_keymgmt_key.test.name
   purpose    = ["encrypt", "decrypt"]
   protection = "hsm"
@@ -100,7 +97,7 @@ resource "vault_keymgmt_distribute_key" "test" {
 
 resource "vault_keymgmt_replicate_key" "test" {
   path     = vault_mount.test.path
-  kms_name = vault_keymgmt_kms.test.name
+  kms_name = vault_keymgmt_aws_kms.test.name
   key_name = vault_keymgmt_key.test.name
   
   depends_on = [vault_keymgmt_distribute_key.test]
@@ -122,22 +119,19 @@ resource "vault_keymgmt_key" "test" {
   # No replica_regions specified
 }
 
-resource "vault_keymgmt_kms" "test" {
+resource "vault_keymgmt_aws_kms" "test" {
   path           = vault_mount.test.path
   name           = "%s"
-  kms_provider   = "awskms"
   key_collection = "us-west-1"
   region         = "us-west-1"
   
-  credentials = {
-    access_key = "AKIAIOSFODNN7EXAMPLE"
-    secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-  }
+  access_key = "AKIAIOSFODNN7EXAMPLE"
+  secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 }
 
 resource "vault_keymgmt_distribute_key" "test" {
   path       = vault_mount.test.path
-  kms_name   = vault_keymgmt_kms.test.name
+  kms_name   = vault_keymgmt_aws_kms.test.name
   key_name   = vault_keymgmt_key.test.name
   purpose    = ["encrypt", "decrypt"]
   protection = "hsm"
@@ -145,7 +139,7 @@ resource "vault_keymgmt_distribute_key" "test" {
 
 resource "vault_keymgmt_replicate_key" "test" {
   path     = vault_mount.test.path
-  kms_name = vault_keymgmt_kms.test.name
+  kms_name = vault_keymgmt_aws_kms.test.name
   key_name = vault_keymgmt_key.test.name
   
   depends_on = [vault_keymgmt_distribute_key.test]

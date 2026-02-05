@@ -1,10 +1,9 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package vault
+package keymgmt_test
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -12,7 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -26,7 +27,7 @@ func TestAccKeymgmtKms_aws(t *testing.T) {
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
-	resourceType := "vault_keymgmt_kms"
+	resourceType := "vault_keymgmt_aws_kms"
 	resourceName := resourceType + ".test"
 
 	awsRegion := "us-west-2"
@@ -35,15 +36,14 @@ func TestAccKeymgmtKms_aws(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKeymgmtKms_awsConfig(mount, kmsName, awsRegion),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "kms_provider", "awskms"),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", awsRegion),
 					resource.TestCheckResourceAttr(resourceName, "region", awsRegion),
 					resource.TestCheckResourceAttrSet(resourceName, "uuid"),
@@ -54,7 +54,7 @@ func TestAccKeymgmtKms_aws(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// credentials are not returned by the API
-				ImportStateVerifyIgnore: []string{"credentials"},
+				ImportStateVerifyIgnore: []string{"access_key", "secret_key"},
 			},
 		},
 	})
@@ -67,17 +67,14 @@ resource "vault_mount" "keymgmt" {
   type = "keymgmt"
 }
 
-resource "vault_keymgmt_kms" "test" {
+resource "vault_keymgmt_aws_kms" "test" {
   path           = vault_mount.keymgmt.path
   name           = %q
-  kms_provider   = "awskms"
   key_collection = %q
   region         = %q
   
-  credentials = {
-    access_key = "%s"
-    secret_key = "%s"
-  }
+  access_key = "%s"
+  secret_key = "%s"
 }
 `, mount, kmsName, region, region, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
 }
