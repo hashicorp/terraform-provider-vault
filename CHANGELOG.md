@@ -1,4 +1,4 @@
-## Unreleased
+## 5.7.0 (February 5, 2026)
 
 FEATURES:
 
@@ -38,12 +38,12 @@ IMPROVEMENTS:
 * Add support for configuration parameters (`allowed_ipv4_addresses`,`allowed_ipv6_addresses`,`allowed_ports`,`disable_strict_networking`,`secrets_location`,`environment_name`) in `vault_secrets_sync_gh_destination` resource. Requires Vault 1.18+ for `secrets_location`,`environment_name`.Requires Vault 1.19+ for `allowed_ipv4_addresses`,`allowed_ipv6_addresses`,`allowed_ports`,`disable_strict_networking`.([#2697](https://github.com/hashicorp/terraform-provider-vault/pull/2697)).
 * Add support for `tls_server_name` , `local_datacenter`, `socket_keep_alive`, `consistency` and `username_template`  parameters for Cassandra in `vault_database_secret_backend_connection` resource. ([#2677](https://github.com/hashicorp/terraform-provider-vault/pull/2677))
 * `vault_secrets_sync_aws_destination`: Add support for networking configuration parameters `allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, and `disable_strict_networking` to control outbound connections from Vault to AWS Secrets Manager. Requires Vault 1.19.0+.([#2698](https://github.com/hashicorp/terraform-provider-vault/pull/2698))
+
 * Updated dependencies:
   * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
 * Docs: fix heredoc example for LDAP dynamic role LDIFs ([#2728]https://github.com/hashicorp/terraform-provider-vault/pull/2728)
 * Docs: Update example to use write-only attribute ([#2731]https://github.com/hashicorp/terraform-provider-vault/pull/2731)
 * Add support for `local_secret_ids` which may only be set at role creation. On updates the provider will send the original creation value to Vault to avoid unintentionally attempting to modify this immutable setting.The provider now surfaces Vault's native immutability error when an update attempts to change `local_secret_ids`.([#2723](https://github.com/hashicorp/terraform-provider-vault/pull/2723))
-
 
 BUGS:
 
