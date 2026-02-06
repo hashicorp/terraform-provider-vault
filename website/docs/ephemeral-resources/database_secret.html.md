@@ -53,85 +53,89 @@ ephemeral "vault_database_secret" "db_user_credentials" {
   name = vault_database_secret_backend_role.role.name
   mount_id = vault_mount.db.id
 }
-
-# Access the credentials
-output "db_username" {
-  value = ephemeral.vault_database_secret.db_user_credentials.username
-}
-
-output "db_password" {
-  value = ephemeral.vault_database_secret.db_user_credentials.password
-  sensitive = true
-}
 ```
 
 ### RSA Private Key Credentials
 
 ```hcl
+resource "vault_database_secrets_mount" "snowflake" {
+  path = "snowflake"
+
+  snowflake {
+    name                     = "snowflake-db"
+    connection_url           = "username.account.snowflakecomputing.com"
+    username                 = "VAULT_USER"
+    allowed_roles            = ["*"]
+    username_template        = "vault-{{.DisplayName}}-{{random 20}}"
+    private_key_wo           = file("/path/to/private_key.pem")
+    private_key_wo_version   = "1"
+  }
+}
+
 resource "vault_database_secret_backend_role" "rsa_role" {
-  backend             = vault_mount.db.path
-  name                = "pgx-rsa-role"
-  db_name             = vault_database_secret_backend_connection.postgres.name
+  backend             = vault_database_secrets_mount.snowflake.path
+  name                = "snowflake-rsa-role"
+  db_name             = vault_database_secrets_mount.snowflake.snowflake[0].name
   credential_type     = "rsa_private_key"
   creation_statements = [
-    "CREATE ROLE \"{{name}}\" WITH LOGIN VALID UNTIL '{{expiration}}';",
-    "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"
+    "CREATE USER IF NOT EXISTS \"{{name}}\";",
+    "ALTER USER \"{{name}}\" SET RSA_PUBLIC_KEY='{{public_key}}';"
   ]
+  revocation_statements = [
+    "DROP USER IF EXISTS \"{{name}}\";"
+  ]
+  default_ttl = 300
+  max_ttl     = 600
 }
 
 ephemeral "vault_database_secret" "db_rsa_credentials" {
-  mount = vault_mount.db.path
-  name = vault_database_secret_backend_role.rsa_role.name
-  mount_id = vault_mount.db.id
-}
-
-# Access the RSA credentials
-output "db_rsa_username" {
-  value = ephemeral.vault_database_secret.db_rsa_credentials.username
-}
-
-output "db_rsa_private_key" {
-  value = ephemeral.vault_database_secret.db_rsa_credentials.rsa_private_key
-  sensitive = true
+  mount    = vault_database_secrets_mount.snowflake.path
+  name     = vault_database_secret_backend_role.rsa_role.name
+  mount_id = vault_database_secrets_mount.snowflake.id
 }
 ```
 
 ### Client Certificate Credentials
 
 ```hcl
+resource "vault_database_secrets_mount" "mongodbatlas" {
+  path = "mongodbatlas"
+
+  mongodbatlas {
+    name          = "atlas-db"
+    private_key   = "your-private-key"
+    public_key    = "your-public-key"
+    project_id    = "your-project-id"
+    allowed_roles = ["*"]
+  }
+}
+
 resource "vault_database_secret_backend_role" "cert_role" {
-  backend             = vault_mount.db.path
-  name                = "pgx-cert-role"
-  db_name             = vault_database_secret_backend_connection.postgres.name
+  backend             = vault_database_secrets_mount.mongodbatlas.path
+  name                = "atlas-cert-role"
+  db_name             = vault_database_secrets_mount.mongodbatlas.mongodbatlas[0].name
   credential_type     = "client_certificate"
-  creation_statements = [
-    "CREATE ROLE \"{{name}}\" WITH LOGIN VALID UNTIL '{{expiration}}';",
-    "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"
-  ]
+  default_ttl         = 1800
+  max_ttl             = 3600
+  creation_statements = [jsonencode({
+    database_name : "$external",
+    x509Type : "CUSTOMER",
+    roles : [{ databaseName : "sample_training", roleName : "readWrite" }]
+  })]
+  credential_config = {
+    ca_cert              = file("/path/to/ca_cert.pem")
+    ca_private_key       = file("/path/to/ca_key.pem")
+    key_type             = "rsa"
+    key_bits             = "2048"
+    signature_bits       = "256"
+    common_name_template = "{{.RoleName}}_{{unix_time}}"
+  }
 }
 
 ephemeral "vault_database_secret" "db_cert_credentials" {
-  mount = vault_mount.db.path
-  name = vault_database_secret_backend_role.cert_role.name
-  mount_id = vault_mount.db.id
-}
-
-# Access the certificate credentials
-output "db_cert_username" {
-  value = ephemeral.vault_database_secret.db_cert_credentials.username
-}
-
-output "db_client_certificate" {
-  value = ephemeral.vault_database_secret.db_cert_credentials.client_certificate
-}
-
-output "db_private_key" {
-  value = ephemeral.vault_database_secret.db_cert_credentials.private_key
-  sensitive = true
-}
-
-output "db_private_key_type" {
-  value = ephemeral.vault_database_secret.db_cert_credentials.private_key_type
+  mount    = vault_database_secrets_mount.mongodbatlas.path
+  name     = vault_database_secret_backend_role.cert_role.name
+  mount_id = vault_database_secrets_mount.mongodbatlas.id
 }
 ```
 
