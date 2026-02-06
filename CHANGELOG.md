@@ -7,6 +7,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_pki_secret_backend_root_cert`: Add support for `use_pss` and `key_usage` fields to configure PSS signature scheme and X.509 key usage constraints for root CA certificates. Requires Vault 1.18.0+ and 1.19.2+ respectively. Also added missing default value `30s` for `not_before_duration` field to match Vault API behavior. ([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
+* `vault_pki_secret_backend_root_sign_intermediate`: Add support for  `key_usage` fields to configure X.509 key usage constraints for intermediate CA certificates. Requires Vault 1.19.2+. ([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 * `vault_kmip_secret_role`: Add support for additional KMIP operation fields (`operation_import`, `operation_query`, `operation_encrypt`, `operation_decrypt`, `operation_create_key_pair`, `operation_delete_attribute`, `operation_rng_retrieve`, `operation_mac`, `operation_signature_verify`, `operation_sign`, `operation_rng_seed`, `operation_modify_attribute`, `operation_mac_verify`, `operation_rekey_key_pair`) to grant granular permissions for KMIP operations. ([#2744](https://github.com/hashicorp/terraform-provider-vault/pull/2744))
 * `vault_saml_auth_backend`: Add support for `validate_assertion_signature` and `validate_response_signature` parameters to control SAML signature validation (Vault 1.19+)
 * `vault_approle_auth_backend_login`: Add write-only fields `secret_id_wo` and `secret_id_wo_version` to support ephemeral SecretID values without persisting them in state.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
