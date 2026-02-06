@@ -5,6 +5,7 @@ FEATURES :
 
 IMPROVEMENTS : 
 * `vault_raft_snapshot_agent_config`: Add support for `azure_auth_mode` and `azure_client_id` fields for Azure Managed Identity authentication (Vault Enterprise 1.18.0+), and `autoload_enabled` field for automatic snapshot restoration (Vault Enterprise 1.21.0+). ([#2758](https://github.com/hashicorp/terraform-provider-vault/pull/2758))
+* `vault_database_secret`: Add support for additional credential types (`rsa_private_key`, `client_certificate`, `private_key`, `private_key_type`) in the ephemeral resource to support all database credential types available in Vault's database secrets engine. ([#2767](https://github.com/hashicorp/terraform-provider-vault/pull/2767))
 
 ## 5.7.0 (February 5, 2026)
 
