@@ -378,11 +378,12 @@ func (r *PKIExternalCARoleResource) Delete(ctx context.Context, req resource.Del
 	path := fmt.Sprintf("%s/%s/%s", backend, roleAffix, name)
 
 	// If force is set, add it as a query parameter
+	params := map[string][]string{}
 	if data.Force.ValueBool() {
-		path = fmt.Sprintf("%s?force=true", path)
+		params["force"] = []string{"true"}
 	}
 
-	if _, err := cli.Logical().DeleteWithContext(ctx, path); err != nil {
+	if _, err := cli.Logical().DeleteWithDataWithContext(ctx, path, params); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
 		return
 	}

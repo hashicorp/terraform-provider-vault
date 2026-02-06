@@ -5,7 +5,6 @@ package pki_external_ca_test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -15,8 +14,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 )
 
 func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
@@ -25,20 +22,7 @@ func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("test-role")
 	resourceName := "vault_pki_secret_backend_external_ca_role.test"
 
-	opts := docker.DefaultOptions(t)
-	opts.ImageRepo = "hashicorp/vault-enterprise"
-	opts.NumCores = 1
-	opts.Envs = []string{"VAULT_LICENSE=" + os.Getenv("VAULT_LICENSE")}
-	// TODO remove this once there's a vault-enterprise image that contains pki-external-ca
-	opts.VaultBinary = "/Users/ncc/hc/vault-enterprise/vault.linux"
-	cluster := docker.NewTestDockerCluster(t, opts)
-	ca, _, address := testutil.SetupPebbleAcmeServerWithOption(t, testutil.NewPebbleOptions().SetNetworkName(
-		cluster.Nodes()[0].(*docker.DockerClusterNode).ContainerNetworkName))
-	directoryUrl := fmt.Sprintf("https://%s/dir", address)
-	client := cluster.Nodes()[0].APIClient()
-	os.Setenv(api.EnvVaultAddress, client.Address())
-	os.Setenv(api.EnvVaultToken, client.Token())
-	os.Setenv(api.EnvVaultCACertBytes, string(cluster.CACertPEM))
+	ca, directoryUrl := setupVaultAndPebble(t)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -75,20 +59,7 @@ func TestAccPKIExternalCARoleResource_update(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("test-role")
 	resourceName := "vault_pki_secret_backend_external_ca_role.test"
 
-	opts := docker.DefaultOptions(t)
-	opts.ImageRepo = "hashicorp/vault-enterprise"
-	opts.NumCores = 1
-	opts.Envs = []string{"VAULT_LICENSE=" + os.Getenv("VAULT_LICENSE")}
-	// TODO remove this once there's a vault-enterprise image that contains pki-external-ca
-	opts.VaultBinary = "/Users/ncc/hc/vault-enterprise/vault.linux"
-	cluster := docker.NewTestDockerCluster(t, opts)
-	ca, _, address := testutil.SetupPebbleAcmeServerWithOption(t, testutil.NewPebbleOptions().SetNetworkName(
-		cluster.Nodes()[0].(*docker.DockerClusterNode).ContainerNetworkName))
-	directoryUrl := fmt.Sprintf("https://%s/dir", address)
-	client := cluster.Nodes()[0].APIClient()
-	os.Setenv(api.EnvVaultAddress, client.Address())
-	os.Setenv(api.EnvVaultToken, client.Token())
-	os.Setenv(api.EnvVaultCACertBytes, string(cluster.CACertPEM))
+	ca, directoryUrl := setupVaultAndPebble(t)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,

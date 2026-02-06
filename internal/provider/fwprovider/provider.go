@@ -234,6 +234,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		azure.NewAzureStaticRoleResource,
 		pki_external_ca.NewPKIACMEAccountResource,
 		pki_external_ca.NewPKIExternalCARoleResource,
+		pki_external_ca.NewPKIExternalCAOrderResource,
 	}
 }
 
