@@ -15,13 +15,13 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
-func TestAccPKIExternalCAOrderChallengeFulfilledResource_basic(t *testing.T) {
+func TestAccPKIExternalCAOrderCertificateResource_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	roleName := acctest.RandomWithPrefix("tf-role")
 	accountName := acctest.RandomWithPrefix("tf-acme-account")
-	identifier := "example.com"
+	identifier := "host.docker.internal"
 
-	resourceName := "vault_pki_secret_backend_external_ca_order_challenge_fulfilled.test"
+	resourceName := "vault_pki_secret_backend_external_ca_order_certificate.test"
 
 	ca, directoryUrl := setupVaultAndPebble(t)
 
@@ -39,21 +39,23 @@ func TestAccPKIExternalCAOrderChallengeFulfilledResource_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testPKIExternalCAOrderChallengeFulfilledResource_config(backend, accountName, roleName, identifier, directoryUrl, ca),
+				Config: testPKIExternalCAOrderCertificateResource_config(backend, accountName, roleName, identifier, directoryUrl, ca),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, "role_name", roleName),
-					resource.TestCheckResourceAttr(resourceName, "challenge_type", "http-01"),
-					resource.TestCheckResourceAttr(resourceName, "identifier", identifier),
 					resource.TestCheckResourceAttrSet(resourceName, "order_id"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldID),
+					resource.TestCheckResourceAttrSet(resourceName, "certificate"),
+					resource.TestCheckResourceAttrSet(resourceName, "ca_chain.#"),
+					resource.TestCheckResourceAttrSet(resourceName, "serial_number"),
+					// private_key may or may not be present (ephemeral)
 				),
 			},
 		},
 	})
 }
 
-func testPKIExternalCAOrderChallengeFulfilledResource_config(backend, accountName, roleName, identifier, directoryUrl, ca string) string {
+func testPKIExternalCAOrderCertificateResource_config(backend, accountName, roleName, identifier, directoryUrl, ca string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path        = "%s"
@@ -65,7 +67,7 @@ resource "vault_pki_secret_backend_acme_account" "test" {
   backend        = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
-  email_contacts = ["test@example.com"]
+  email_contacts = ["test@host.docker.internal"]
   key_type       = "ec-256"
   trusted_ca     = <<EOT
 %s
@@ -76,7 +78,7 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
   backend                     = vault_mount.test.path
   name                        = "%s"
   acme_account_name           = vault_pki_secret_backend_acme_account.test.name
-  allowed_domains             = ["example.com", "*.example.com"]
+  allowed_domains             = ["host.docker.internal"]
   allowed_domains_options     = ["bare_domains", "subdomains", "wildcards"]
   allowed_challenge_types     = ["http-01", "dns-01", "tls-alpn-01"]
   csr_generate_key_type       = "ec-256"
@@ -98,8 +100,37 @@ data "vault_pki_secret_backend_external_ca_order_challenge" "test" {
   identifier     = "%s"
 }
 
-// The challenge won't succeed because we're not actually serving the response,
-// see order_certificate_resource_test for the full picture.
+resource "null_resource" "acme_challenge_server" {
+  triggers = {
+    token = data.vault_pki_secret_backend_external_ca_order_challenge.test.token
+    key_authorization = data.vault_pki_secret_backend_external_ca_order_challenge.test.key_authorization
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+(
+      mkdir -p /tmp/acme-challenge/.well-known/acme-challenge
+      /bin/echo -n '${data.vault_pki_secret_backend_external_ca_order_challenge.test.key_authorization}' > /tmp/acme-challenge/.well-known/acme-challenge/${data.vault_pki_secret_backend_external_ca_order_challenge.test.token}
+      cd /tmp/acme-challenge 
+      (nohup python3 -m http.server 5002 >/dev/null 2>&1) & 
+      echo $! > /tmp/acme-challenge-server.pid
+      sleep 2
+) &
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      if [ -f /tmp/acme-challenge-server.pid ]; then
+        kill $(cat /tmp/acme-challenge-server.pid) 2>/dev/null || true
+        rm -f /tmp/acme-challenge-server.pid
+      fi
+      rm -rf /tmp/acme-challenge
+    EOT
+  }
+}
+
 resource "vault_pki_secret_backend_external_ca_order_challenge_fulfilled" "test" {
   backend        = vault_mount.test.path
   role_name      = vault_pki_secret_backend_external_ca_role.test.name
@@ -108,6 +139,14 @@ resource "vault_pki_secret_backend_external_ca_order_challenge_fulfilled" "test"
   identifier     = "%s"
   
   depends_on = [null_resource.acme_challenge_server]
+}
+
+resource "vault_pki_secret_backend_external_ca_order_certificate" "test" {
+  backend   = vault_mount.test.path
+  role_name = vault_pki_secret_backend_external_ca_role.test.name
+  order_id  = vault_pki_secret_backend_external_ca_order.test.order_id
+  
+  depends_on = [vault_pki_secret_backend_external_ca_order_challenge_fulfilled.test]
 }
 `, backend, accountName, directoryUrl, ca, roleName, identifier, identifier, identifier)
 }

@@ -13,6 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -22,7 +24,7 @@ import (
 )
 
 const (
-	maxPollAttempts = 60
+	maxPollAttempts = 5
 	pollInterval    = 2 * time.Second
 )
 
@@ -126,6 +128,57 @@ func (d *PKIExternalCAOrderChallengeDataSource) Schema(_ context.Context, _ data
 	}
 }
 
+func isOrderStatusTerminal(status string) bool {
+	switch status {
+	case "error", "expired", "revoked", "completed":
+		return true
+	}
+	return false
+}
+
+func orderStatus(ctx context.Context, cli *api.Client, backend, roleName, orderID string) (string, error) {
+	statusPath := fmt.Sprintf("%s/role/%s/order/%s/status", backend, roleName, orderID)
+
+	statusResp, err := cli.Logical().ReadWithContext(ctx, statusPath)
+	if err != nil {
+		return "", err
+	}
+
+	if statusResp == nil || statusResp.Data == nil {
+		return "", fmt.Errorf("no status data returned for order %s", orderID)
+	}
+
+	status, ok := statusResp.Data["order_status"].(string)
+	if !ok {
+		return "", fmt.Errorf("bad status data returned for order %s", orderID)
+	}
+
+	return status, nil
+}
+
+func pollOrderStatus(ctx context.Context, cli *api.Client, backend, roleName, orderID string, attempts int, interval time.Duration, desired []string) error {
+	var status string
+	var err error
+	for range attempts {
+		status, err = orderStatus(ctx, cli, backend, roleName, orderID)
+		if err != nil {
+			return err
+		}
+
+		if strutil.StrListContains(desired, status) {
+			return nil
+		}
+		if isOrderStatusTerminal(status) {
+			return fmt.Errorf("order %s is in terminal state '%s'", orderID, status)
+		}
+
+		time.Sleep(interval)
+	}
+
+	return fmt.Errorf("order %s did not reach %s status after %d attempts. Last status: %s",
+		orderID, desired, attempts, status)
+}
+
 func (d *PKIExternalCAOrderChallengeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data PKIExternalCAOrderChallengeModel
 
@@ -148,63 +201,13 @@ func (d *PKIExternalCAOrderChallengeDataSource) Read(ctx context.Context, req da
 	identifier := data.Identifier.ValueString()
 
 	// Poll the order status endpoint until it reaches AwaitingChallengeFulfillment
-	statusPath := fmt.Sprintf("%s/role/%s/order/%s/status", backend, roleName, orderID)
-
-	var orderStatus string
-	for attempt := 0; attempt < maxPollAttempts; attempt++ {
-		statusResp, err := cli.Logical().ReadWithContext(ctx, statusPath)
-		if err != nil {
-			resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-			return
-		}
-
-		if statusResp == nil || statusResp.Data == nil {
-			resp.Diagnostics.AddError(
-				"No Status Data Returned",
-				fmt.Sprintf("No status data returned for order %s", orderID),
-			)
-			return
-		}
-
-		status, ok := statusResp.Data["order_status"].(string)
-		if !ok {
-			resp.Diagnostics.AddError(
-				"Invalid Status Response",
-				"order_status field not found or invalid in response",
-			)
-			return
-		}
-
-		orderStatus = status
-
-		// Check for terminal error states
-		switch orderStatus {
-		case "error", "expired", "revoked", "completed":
-			resp.Diagnostics.AddError(
-				"Order in Terminal State",
-				fmt.Sprintf("Order %s is in terminal state '%s' and cannot provide challenges", orderID, orderStatus),
-			)
-			return
-		case "awaiting-challenge-fulfillment":
-			// Ready to retrieve challenge
-			goto retrieveChallenge
-		}
-
-		// Wait before next poll attempt
-		if attempt < maxPollAttempts-1 {
-			time.Sleep(pollInterval)
-		}
+	if err := pollOrderStatus(ctx, cli, backend, roleName, orderID, maxPollAttempts, pollInterval, []string{"completed", "awaiting-challenge-fulfillment"}); err != nil {
+		resp.Diagnostics.AddError(
+			"Order status not awaiting-challenge-fulfillment",
+			err.Error())
+		return
 	}
 
-	// If we exhausted all attempts without reaching awaiting-challenge-fulfillment
-	resp.Diagnostics.AddError(
-		"Timeout Waiting for Order Status",
-		fmt.Sprintf("Order %s did not reach awaiting-challenge-fulfillment status after %d attempts. Last status: %s",
-			orderID, maxPollAttempts, orderStatus),
-	)
-	return
-
-retrieveChallenge:
 	// Construct the path: role/<rolename>/order/<order-id>/challenge
 	challengePath := fmt.Sprintf("%s/role/%s/order/%s/challenge", backend, roleName, orderID)
 
