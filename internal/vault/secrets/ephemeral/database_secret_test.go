@@ -6,6 +6,7 @@ package ephemeralsecrets_test
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -76,57 +78,67 @@ func TestAccDBSecret(t *testing.T) {
 //
 // Prerequisites:
 // - Snowflake account with API access
+// - VAULT_TEST_USER must have SECURITYADMIN role or equivalent privileges to create users
 // - Set environment variables:
 //   - VAULT_ACC_TEST_SNOWFLAKE_URL: Snowflake connection URL
 //     Format: "username@account.snowflakecomputing.com/database"
-//     Example: "myuser@xy12345.us-east-1.snowflakecomputing.com/TESTDB"
+//     Example: "VAULT_TEST_USER@hashicorp-hashicorp_test.snowflakecomputing.com/TEST_DB"
 //   - VAULT_ACC_TEST_SNOWFLAKE_PRIVATE_KEY: Path to Snowflake private key file (PEM format)
 //     This is the private key for authenticating Vault to Snowflake (not the generated key)
-//   - VAULT_ACC_TEST_CA_CERT: Path to CA certificate file for generating user RSA keys
-//   - VAULT_ACC_TEST_CA_KEY: Path to CA private key file for generating user RSA keys
 //
-// Note: Snowflake uses RSA key pairs for authentication. The SNOWFLAKE_PRIVATE_KEY is used
-// by Vault to connect to Snowflake, while the test verifies that Vault can generate new
-// RSA key pairs for Snowflake users.
+// Note: Snowflake uses RSA key pairs for authentication. The VAULT_ACC_TEST_SNOWFLAKE_PRIVATE_KEY
+// is used by Vault to connect to Snowflake, while the test verifies that Vault can generate new
+// RSA key pairs for Snowflake users using Vault's internal key generation.
 func TestAccDBSecretRSAPrivateKey(t *testing.T) {
 	acctestutil.SkipTestAcc(t)
 
 	// Skip if Snowflake credentials are not provided
 	values := testutil.SkipTestEnvUnset(t,
 		"VAULT_ACC_TEST_SNOWFLAKE_URL",
-		"VAULT_ACC_TEST_SNOWFLAKE_PRIVATE_KEY",
-		"VAULT_ACC_TEST_CA_CERT",
-		"VAULT_ACC_TEST_CA_KEY")
-	if len(values) < 4 {
+		"VAULT_ACC_TEST_SNOWFLAKE_PRIVATE_KEY")
+	if len(values) < 2 {
 		t.Skip("Skipping RSA private key test: Required Snowflake environment variables not set. " +
-			"Need VAULT_ACC_TEST_SNOWFLAKE_URL, VAULT_ACC_TEST_SNOWFLAKE_PRIVATE_KEY, " +
-			"VAULT_ACC_TEST_CA_CERT, and VAULT_ACC_TEST_CA_KEY.")
+			"Need VAULT_ACC_TEST_SNOWFLAKE_URL and VAULT_ACC_TEST_SNOWFLAKE_PRIVATE_KEY.")
 	}
 
 	mount := acctest.RandomWithPrefix("db-snowflake")
 	dbName := acctest.RandomWithPrefix("db")
 	roleName := acctest.RandomWithPrefix("role-rsa")
-	connURL := values[0]
+
+	// Parse VAULT_ACC_TEST_SNOWFLAKE_URL to extract username and connection URL
+	// Expected format: "username@account.snowflakecomputing.com/database"
+	fullURL := values[0]
 	privateKeyPath := values[1]
-	caCert := values[2]
-	caKey := values[3]
+
+	// Extract username from the URL (everything before the first @)
+	atIndex := strings.Index(fullURL, "@")
+	if atIndex == -1 {
+		t.Fatal("VAULT_ACC_TEST_SNOWFLAKE_URL must be in format: username@account.snowflakecomputing.com/database")
+	}
+	username := fullURL[:atIndex]
+	connURL := fullURL[atIndex+1:] // Everything after the @
 
 	expectedUsernameRegex, err := regexp.Compile("^vault-(.+)-(\\w{20})$")
-	expectedRSAKeyRegex, err := regexp.Compile("^-----BEGIN RSA PRIVATE KEY-----")
+	// RSA private keys can be in PKCS#1 or PKCS#8 format
+	expectedRSAKeyRegex, err := regexp.Compile("^-----BEGIN (RSA )?PRIVATE KEY-----")
 	if err != nil {
 		t.Fatal(err)
 	}
 	templ := `{{ printf \"vault-%s-%s\" (.DisplayName) (random 20) }}`
 
 	resource.UnitTest(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			// Skip on Vault < 1.20.0 due to Snowflake plugin bug (fixed in v0.13.0+)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion120)
+		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
 			"echo": echoprovider.NewProviderServer(),
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testDBSecretConfigRSA(mount, dbName, roleName, connURL, templ, privateKeyPath, caCert, caKey),
+				Config: testDBSecretConfigRSA(mount, dbName, roleName, connURL, username, templ, privateKeyPath),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("username"), knownvalue.StringRegexp(expectedUsernameRegex)),
 					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("rsa_private_key"), knownvalue.StringRegexp(expectedRSAKeyRegex)),
@@ -250,17 +262,19 @@ resource "echo" "test_db" {}
 `, mount, dbName, connUrl, templ, roleName, credentialTypeConfig)
 }
 
-func testDBSecretConfigRSA(mount, dbName, roleName, connUrl, templ, privateKeyPath, caCert, caKey string) string {
+func testDBSecretConfigRSA(mount, dbName, roleName, connUrl, username, templ, privateKeyPath string) string {
 	return fmt.Sprintf(`
 resource "vault_database_secrets_mount" "test" {
   path = "%s"
 
   snowflake {
-    name              = "%s"
-    connection_url    = "%s"
-    allowed_roles     = ["*"]
-    username_template = "%s"
-    private_key       = file("%s")
+    name                     = "%s"
+    connection_url           = "%s"
+    username                 = "%s"
+    allowed_roles            = ["*"]
+    username_template        = "%s"
+    private_key_wo           = file("%s")
+    private_key_wo_version   = "1"
   }
 }
 
@@ -269,15 +283,16 @@ resource "vault_database_secret_backend_role" "role" {
   name                = "%s"
   db_name             = vault_database_secrets_mount.test.snowflake.0.name
   credential_type     = "rsa_private_key"
-  credential_config = {
-    ca_cert        = file("%s")
-    ca_private_key = file("%s")
-    key_type       = "rsa"
-    key_bits       = "2048"
-  }
+
   creation_statements = [
-    "ALTER USER {{name}} SET RSA_PUBLIC_KEY='{{public_key}}';"
+    "CREATE USER IF NOT EXISTS \"{{name}}\";",
+    "ALTER USER \"{{name}}\" SET RSA_PUBLIC_KEY='{{public_key}}';"
   ]
+  revocation_statements = [
+    "DROP USER IF EXISTS \"{{name}}\";"
+  ]
+  default_ttl = 300
+  max_ttl = 600
 }
 
 ephemeral "vault_database_secret" "db_secret" {
@@ -291,7 +306,7 @@ provider "echo" {
 }
 
 resource "echo" "test_db" {}
-`, mount, dbName, connUrl, templ, privateKeyPath, roleName, caCert, caKey)
+`, mount, dbName, connUrl, username, templ, privateKeyPath, roleName)
 }
 
 func testDBSecretConfigClientCert(mount, dbName, roleName, publicKey, privateKey, projectID, caCert, caKey string) string {

@@ -207,6 +207,7 @@ func getCommonDatabaseSchema() schemaMap {
 		consts.FieldRootRotationStatements: {
 			Type:        schema.TypeList,
 			Optional:    true,
+			Computed:    true,
 			Description: "A list of database statements to be executed to rotate the root user's credentials.",
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -215,6 +216,7 @@ func getCommonDatabaseSchema() schemaMap {
 		consts.FieldData: {
 			Type:        schema.TypeMap,
 			Optional:    true,
+			Computed:    true,
 			Description: "A map of sensitive data to pass to the endpoint. Useful for templated connection strings.",
 			// TODO: revert to true
 			Sensitive: false,
