@@ -34,22 +34,11 @@ data "vault_gcpkms_verify" "signature_check" {
   name      = vault_gcpkms_secret_backend_key.signing_key.name
   digest    = base64encode("my message digest")
   signature = "BASE64_ENCODED_SIGNATURE"
+  key_version = 1
 }
 
 output "signature_is_valid" {
   value = data.vault_gcpkms_verify.signature_check.valid
-}
-```
-
-### Verification with Specific Key Version
-
-```hcl
-data "vault_gcpkms_verify" "versioned_check" {
-  backend     = vault_gcpkms_secret_backend.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.signing_key.name
-  digest      = base64encode("my message digest")
-  signature   = "BASE64_ENCODED_SIGNATURE"
-  key_version = 1
 }
 ```
 
@@ -97,7 +86,7 @@ The following arguments are supported:
 
 * `signature` - (Required) Base64-encoded signature to verify against the digest.
 
-* `key_version` - (Optional) Specific version of the key to use for verification. If not specified, Vault 
+* `key_version` - (Required) Specific version of the key to use for verification. If not specified, Vault 
   will use the key's primary version.
 
 ## Attributes Reference
