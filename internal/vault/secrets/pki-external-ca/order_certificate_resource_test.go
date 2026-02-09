@@ -41,7 +41,7 @@ func TestAccPKIExternalCAOrderCertificateResource_basic(t *testing.T) {
 			{
 				Config: testPKIExternalCAOrderCertificateResource_config(backend, accountName, roleName, identifier, directoryUrl, ca),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName, "role_name", roleName),
 					resource.TestCheckResourceAttrSet(resourceName, "order_id"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldID),
@@ -64,7 +64,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_acme_account" "test" {
-  backend        = vault_mount.test.path
+  mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
   email_contacts = ["test@host.docker.internal"]
@@ -75,7 +75,7 @@ EOT
 }
 
 resource "vault_pki_secret_backend_external_ca_role" "test" {
-  backend                     = vault_mount.test.path
+  mount                       = vault_mount.test.path
   name                        = "%s"
   acme_account_name           = vault_pki_secret_backend_acme_account.test.name
   allowed_domains             = ["host.docker.internal"]
@@ -87,13 +87,13 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
 }
 
 resource "vault_pki_secret_backend_external_ca_order" "test" {
-  backend     = vault_mount.test.path
+  mount       = vault_mount.test.path
   role_name   = vault_pki_secret_backend_external_ca_role.test.name
   identifiers = ["%s"]
 }
 
 data "vault_pki_secret_backend_external_ca_order_challenge" "test" {
-  backend        = vault_mount.test.path
+  mount          = vault_mount.test.path
   role_name      = vault_pki_secret_backend_external_ca_role.test.name
   order_id       = vault_pki_secret_backend_external_ca_order.test.order_id
   challenge_type = "http-01"
@@ -132,7 +132,7 @@ resource "null_resource" "acme_challenge_server" {
 }
 
 resource "vault_pki_secret_backend_external_ca_order_challenge_fulfilled" "test" {
-  backend        = vault_mount.test.path
+  mount          = vault_mount.test.path
   role_name      = vault_pki_secret_backend_external_ca_role.test.name
   order_id       = vault_pki_secret_backend_external_ca_order.test.order_id
   challenge_type = "http-01"
@@ -142,7 +142,7 @@ resource "vault_pki_secret_backend_external_ca_order_challenge_fulfilled" "test"
 }
 
 resource "vault_pki_secret_backend_external_ca_order_certificate" "test" {
-  backend   = vault_mount.test.path
+  mount     = vault_mount.test.path
   role_name = vault_pki_secret_backend_external_ca_role.test.name
   order_id  = vault_pki_secret_backend_external_ca_order.test.order_id
   

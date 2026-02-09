@@ -46,7 +46,7 @@ type PKIExternalCAOrderCertificateResource struct {
 type PKIExternalCAOrderCertificateModel struct {
 	base.BaseModelLegacy
 
-	Backend  types.String `tfsdk:"backend"`
+	Mount    types.String `tfsdk:"mount"`
 	RoleName types.String `tfsdk:"role_name"`
 	OrderID  types.String `tfsdk:"order_id"`
 
@@ -72,7 +72,7 @@ func (r *PKIExternalCAOrderCertificateResource) Metadata(_ context.Context, req 
 func (r *PKIExternalCAOrderCertificateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "The path where the PKI External CA secret backend is mounted.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
@@ -132,12 +132,12 @@ func (r *PKIExternalCAOrderCertificateResource) Create(ctx context.Context, req 
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	roleName := data.RoleName.ValueString()
 	orderID := data.OrderID.ValueString()
 
 	// Poll the order status endpoint until it reaches Completed
-	if err := pollOrderStatus(ctx, cli, backend, roleName, orderID, 30, 2*time.Second, []string{"completed"}); err != nil {
+	if err := pollOrderStatus(ctx, cli, mount, roleName, orderID, 30, 2*time.Second, []string{"completed"}); err != nil {
 		resp.Diagnostics.AddError(
 			"Order status not awaiting-challenge-fulfillment",
 			err.Error())
@@ -145,7 +145,7 @@ func (r *PKIExternalCAOrderCertificateResource) Create(ctx context.Context, req 
 	}
 
 	// Fetch the certificate
-	certPath := fmt.Sprintf("%s/role/%s/order/%s/fetch-cert", backend, roleName, orderID)
+	certPath := fmt.Sprintf("%s/role/%s/order/%s/fetch-cert", mount, roleName, orderID)
 	certResp, err := cli.Logical().ReadWithContext(ctx, certPath)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
@@ -165,7 +165,7 @@ func (r *PKIExternalCAOrderCertificateResource) Create(ctx context.Context, req 
 	}
 
 	// Set the ID
-	data.ID = types.StringValue(makeCertificateID(backend, roleName, orderID))
+	data.ID = types.StringValue(makeCertificateID(mount, roleName, orderID))
 
 	// Map values to Terraform model
 	var diags diag.Diagnostics
@@ -201,12 +201,12 @@ func (r *PKIExternalCAOrderCertificateResource) Read(ctx context.Context, req re
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	roleName := data.RoleName.ValueString()
 	orderID := data.OrderID.ValueString()
 
 	// Try to fetch the certificate again
-	certPath := fmt.Sprintf("%s/role/%s/order/%s/fetch-cert", backend, roleName, orderID)
+	certPath := fmt.Sprintf("%s/role/%s/order/%s/fetch-cert", mount, roleName, orderID)
 	certResp, err := cli.Logical().ReadWithContext(ctx, certPath)
 	if err != nil {
 		// If we can't read it, just keep the existing state
@@ -269,24 +269,24 @@ func (r *PKIExternalCAOrderCertificateResource) ImportState(ctx context.Context,
 	if len(matches) != 4 {
 		resp.Diagnostics.AddError(
 			"Invalid import ID",
-			fmt.Sprintf("Import ID must be in the format '<backend>/role/<role_name>/order/<order_id>/%s', got: %s",
+			fmt.Sprintf("Import ID must be in the format '<mount>/role/<role_name>/order/<order_id>/%s', got: %s",
 				certificateAffix, req.ID),
 		)
 		return
 	}
 
-	backend := matches[1]
+	mount := matches[1]
 	roleName := matches[2]
 	orderID := matches[3]
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldBackend), backend)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role_name"), roleName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("order_id"), orderID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), req.ID)...)
 }
 
-func makeCertificateID(backend, roleName, orderID string) string {
-	return fmt.Sprintf("%s/role/%s/order/%s/%s", backend, roleName, orderID, certificateAffix)
+func makeCertificateID(mount, roleName, orderID string) string {
+	return fmt.Sprintf("%s/role/%s/order/%s/%s", mount, roleName, orderID, certificateAffix)
 }
 
 // Made with Bob

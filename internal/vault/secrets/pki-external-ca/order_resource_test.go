@@ -39,7 +39,7 @@ func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 			{
 				Config: testAccPKIExternalCAOrderConfig_identifiers(backend, accountName, roleName, directoryUrl, ca),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName, "role_name", roleName),
 					resource.TestCheckResourceAttr(resourceName, "identifiers.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "identifiers.0", "example.com"),
@@ -118,7 +118,7 @@ func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
 			{
 				Config: testAccPKIExternalCAOrderConfig_csr(backend, accountName, roleName, directoryUrl, ca, csrb.CSR),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName, "role_name", roleName),
 					resource.TestCheckResourceAttrSet(resourceName, "csr"),
 					resource.TestCheckResourceAttrSet(resourceName, "order_id"),
@@ -143,7 +143,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_acme_account" "test" {
-  backend        = vault_mount.test.path
+  mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
   email_contacts = ["test@example.com"]
@@ -154,7 +154,7 @@ EOT
 }
 
 resource "vault_pki_secret_backend_external_ca_role" "test" {
-  backend                     = vault_mount.test.path
+  mount                       = vault_mount.test.path
   name                        = "%s"
   acme_account_name           = vault_pki_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "*.example.com"]
@@ -166,7 +166,7 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
 }
 
 resource "vault_pki_secret_backend_external_ca_order" "test" {
-  backend     = vault_mount.test.path
+  mount       = vault_mount.test.path
   role_name   = vault_pki_secret_backend_external_ca_role.test.name
   identifiers = ["example.com", "test.example.com"]
 }
@@ -182,7 +182,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_acme_account" "test" {
-  backend        = vault_mount.test.path
+  mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
   email_contacts = ["test@example.com"]
@@ -193,7 +193,7 @@ EOT
 }
 
 resource "vault_pki_secret_backend_external_ca_role" "test" {
-  backend                     = vault_mount.test.path
+  mount                       = vault_mount.test.path
   name                        = "%s"
   acme_account_name           = vault_pki_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "*.example.com"]
@@ -205,7 +205,7 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
 }
 
 resource "vault_pki_secret_backend_external_ca_order" "test" {
-  backend   = vault_mount.test.path
+  mount     = vault_mount.test.path
   role_name = vault_pki_secret_backend_external_ca_role.test.name
   csr       = <<EOT
 %s

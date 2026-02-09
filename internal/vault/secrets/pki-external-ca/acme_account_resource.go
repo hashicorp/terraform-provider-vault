@@ -54,7 +54,7 @@ type PKIACMEAccountResource struct {
 type PKIACMEAccountModel struct {
 	base.BaseModelLegacy
 
-	Backend          types.String `tfsdk:"backend"`
+	Mount            types.String `tfsdk:"mount"`
 	Name             types.String `tfsdk:"name"`
 	DirectoryURL     types.String `tfsdk:"directory_url"`
 	EmailContacts    types.List   `tfsdk:"email_contacts"`
@@ -90,7 +90,7 @@ func (r *PKIACMEAccountResource) Metadata(_ context.Context, req resource.Metada
 func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "The path where the PKI secret backend is mounted.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
@@ -171,9 +171,9 @@ func (r *PKIACMEAccountResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", backend, acmeAccountAffix, name)
+	path := fmt.Sprintf("%s/%s/%s", mount, acmeAccountAffix, name)
 
 	vaultRequest, diags := buildVaultRequestFromModel(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -187,7 +187,7 @@ func (r *PKIACMEAccountResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	data.ID = types.StringValue(makeACMEAccountID(backend, name))
+	data.ID = types.StringValue(makeACMEAccountID(mount, name))
 	resp.Diagnostics.Append(handleAccountResponseData(ctx, &data, createResp)...)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -211,10 +211,10 @@ func (r *PKIACMEAccountResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", backend, acmeAccountAffix, name)
-	data.ID = types.StringValue(makeACMEAccountID(backend, name))
+	path := fmt.Sprintf("%s/%s/%s", mount, acmeAccountAffix, name)
+	data.ID = types.StringValue(makeACMEAccountID(mount, name))
 
 	readResp, err := cli.Logical().ReadWithContext(ctx, path)
 	if err != nil {
@@ -243,10 +243,10 @@ func (r *PKIACMEAccountResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", backend, acmeAccountAffix, name)
-	data.ID = types.StringValue(makeACMEAccountID(backend, name))
+	path := fmt.Sprintf("%s/%s/%s", mount, acmeAccountAffix, name)
+	data.ID = types.StringValue(makeACMEAccountID(mount, name))
 
 	vaultRequest, diags := buildVaultRequestFromModel(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -343,9 +343,9 @@ func (r *PKIACMEAccountResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", backend, acmeAccountAffix, name)
+	path := fmt.Sprintf("%s/%s/%s", mount, acmeAccountAffix, name)
 
 	// If force is set, add it as a query parameter
 	if data.Force.ValueBool() {
@@ -363,19 +363,19 @@ func (r *PKIACMEAccountResource) ImportState(ctx context.Context, req resource.I
 	if len(matches) != 3 {
 		resp.Diagnostics.AddError(
 			"Invalid import ID",
-			fmt.Sprintf("Import ID must be in the format '<backend>/%s/<name>', got: %s", acmeAccountAffix, req.ID),
+			fmt.Sprintf("Import ID must be in the format '<mount>/%s/<name>', got: %s", acmeAccountAffix, req.ID),
 		)
 		return
 	}
 
-	backend := matches[1]
+	mount := matches[1]
 	name := matches[2]
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldBackend), backend)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), req.ID)...)
 }
 
-func makeACMEAccountID(backend, name string) string {
-	return fmt.Sprintf("%s/%s/%s", backend, acmeAccountAffix, name)
+func makeACMEAccountID(mount, name string) string {
+	return fmt.Sprintf("%s/%s/%s", mount, acmeAccountAffix, name)
 }

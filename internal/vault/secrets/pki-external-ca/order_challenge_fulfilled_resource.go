@@ -45,7 +45,7 @@ type PKIExternalCAOrderChallengeFulfilledResource struct {
 type PKIExternalCAOrderChallengeFulfilledModel struct {
 	base.BaseModelLegacy
 
-	Backend       types.String `tfsdk:"backend"`
+	Mount         types.String `tfsdk:"mount"`
 	RoleName      types.String `tfsdk:"role_name"`
 	OrderID       types.String `tfsdk:"order_id"`
 	ChallengeType types.String `tfsdk:"challenge_type"`
@@ -59,7 +59,7 @@ func (r *PKIExternalCAOrderChallengeFulfilledResource) Metadata(_ context.Contex
 func (r *PKIExternalCAOrderChallengeFulfilledResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "The path where the PKI External CA secret backend is mounted.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
@@ -117,14 +117,14 @@ func (r *PKIExternalCAOrderChallengeFulfilledResource) Create(ctx context.Contex
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	roleName := data.RoleName.ValueString()
 	orderID := data.OrderID.ValueString()
 	challengeType := data.ChallengeType.ValueString()
 	identifier := data.Identifier.ValueString()
 
 	// Construct the path: role/<rolename>/order/<order-id>/fulfilled-challenge
-	path := fmt.Sprintf("%s/role/%s/order/%s/fulfilled-challenge", backend, roleName, orderID)
+	path := fmt.Sprintf("%s/role/%s/order/%s/fulfilled-challenge", mount, roleName, orderID)
 
 	// Prepare request data with challenge type and identifier
 	requestData := map[string]interface{}{
@@ -140,7 +140,7 @@ func (r *PKIExternalCAOrderChallengeFulfilledResource) Create(ctx context.Contex
 	}
 
 	// Set the ID
-	data.ID = types.StringValue(makeChallengeFulfilledID(backend, roleName, orderID, challengeType, identifier))
+	data.ID = types.StringValue(makeChallengeFulfilledID(mount, roleName, orderID, challengeType, identifier))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -178,19 +178,19 @@ func (r *PKIExternalCAOrderChallengeFulfilledResource) ImportState(ctx context.C
 	if len(matches) != 6 {
 		resp.Diagnostics.AddError(
 			"Invalid import ID",
-			fmt.Sprintf("Import ID must be in the format '<backend>/role/<role_name>/order/<order_id>/%s/<challenge_type>/<identifier>', got: %s",
+			fmt.Sprintf("Import ID must be in the format '<mount>/role/<role_name>/order/<order_id>/%s/<challenge_type>/<identifier>', got: %s",
 				challengeFulfilledAffix, req.ID),
 		)
 		return
 	}
 
-	backend := matches[1]
+	mount := matches[1]
 	roleName := matches[2]
 	orderID := matches[3]
 	challengeType := matches[4]
 	identifier := matches[5]
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldBackend), backend)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role_name"), roleName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("order_id"), orderID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("challenge_type"), challengeType)...)
@@ -198,8 +198,8 @@ func (r *PKIExternalCAOrderChallengeFulfilledResource) ImportState(ctx context.C
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), req.ID)...)
 }
 
-func makeChallengeFulfilledID(backend, roleName, orderID, challengeType, identifier string) string {
-	return fmt.Sprintf("%s/role/%s/order/%s/%s/%s/%s", backend, roleName, orderID, challengeFulfilledAffix, challengeType, identifier)
+func makeChallengeFulfilledID(mount, roleName, orderID, challengeType, identifier string) string {
+	return fmt.Sprintf("%s/role/%s/order/%s/%s/%s/%s", mount, roleName, orderID, challengeFulfilledAffix, challengeType, identifier)
 }
 
 // Made with Bob

@@ -49,7 +49,7 @@ type PKIExternalCAOrderResource struct {
 type PKIExternalCAOrderModel struct {
 	base.BaseModelLegacy
 
-	Backend     types.String `tfsdk:"backend"`
+	Mount       types.String `tfsdk:"mount"`
 	RoleName    types.String `tfsdk:"role_name"`
 	OrderID     types.String `tfsdk:"order_id"`
 	Identifiers types.List   `tfsdk:"identifiers"`
@@ -88,7 +88,7 @@ func (r *PKIExternalCAOrderResource) Metadata(_ context.Context, req resource.Me
 func (r *PKIExternalCAOrderResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "The path where the PKI External CA secret backend is mounted.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
@@ -180,9 +180,9 @@ func (r *PKIExternalCAOrderResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	roleName := data.RoleName.ValueString()
-	path := fmt.Sprintf("%s/role/%s/new-order", backend, roleName)
+	path := fmt.Sprintf("%s/role/%s/new-order", mount, roleName)
 
 	vaultRequest, diags := buildOrderVaultRequestFromModel(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -208,7 +208,7 @@ func (r *PKIExternalCAOrderResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	data.OrderID = types.StringValue(orderID)
-	data.ID = types.StringValue(makeOrderID(backend, roleName, orderID))
+	data.ID = types.StringValue(makeOrderID(mount, roleName, orderID))
 
 	// Read the order status to populate computed fields
 	resp.Diagnostics.Append(r.readOrderStatus(ctx, cli, &data)...)
@@ -244,10 +244,10 @@ func (r *PKIExternalCAOrderResource) Read(ctx context.Context, req resource.Read
 func (r *PKIExternalCAOrderResource) readOrderStatus(ctx context.Context, cli *api.Client, data *PKIExternalCAOrderModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	roleName := data.RoleName.ValueString()
 	orderID := data.OrderID.ValueString()
-	path := fmt.Sprintf("%s/role/%s/order/%s/status", backend, roleName, orderID)
+	path := fmt.Sprintf("%s/role/%s/order/%s/status", mount, roleName, orderID)
 
 	readResp, err := cli.Logical().ReadWithContext(ctx, path)
 	if err != nil {
@@ -366,23 +366,23 @@ func (r *PKIExternalCAOrderResource) ImportState(ctx context.Context, req resour
 	if len(matches) != 4 {
 		resp.Diagnostics.AddError(
 			"Invalid import ID",
-			fmt.Sprintf("Import ID must be in the format '<backend>/role/<role_name>/%s/<order_id>', got: %s", orderAffix, req.ID),
+			fmt.Sprintf("Import ID must be in the format '<mount>/role/<role_name>/%s/<order_id>', got: %s", orderAffix, req.ID),
 		)
 		return
 	}
 
-	backend := matches[1]
+	mount := matches[1]
 	roleName := matches[2]
 	orderID := matches[3]
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldBackend), backend)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role_name"), roleName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("order_id"), orderID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), req.ID)...)
 }
 
-func makeOrderID(backend, roleName, orderID string) string {
-	return fmt.Sprintf("%s/role/%s/%s/%s", backend, roleName, orderAffix, orderID)
+func makeOrderID(mount, roleName, orderID string) string {
+	return fmt.Sprintf("%s/role/%s/%s/%s", mount, roleName, orderAffix, orderID)
 }
 
 // Made with Bob

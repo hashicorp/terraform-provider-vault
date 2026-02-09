@@ -34,7 +34,7 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 			{
 				Config: testPKIACMEAccount_initialConfig(backend, accountName, directoryUrl, ca),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
 					resource.TestCheckResourceAttr(resourceName, "directory_url", directoryUrl),
 					resource.TestCheckResourceAttr(resourceName, "email_contacts.#", "1"),
@@ -50,7 +50,7 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 				// Only trusted_ca can be updated without re-creation
 				Config: testPKIACMEAccount_initialConfig(backend, accountName, directoryUrl, "\n"+ca),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
 					resource.TestCheckResourceAttr(resourceName, "directory_url", directoryUrl),
 					resource.TestCheckResourceAttr(resourceName, "email_contacts.#", "1"),
@@ -64,7 +64,7 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 				// Because we change email contacts and key type this will be a re-creation
 				Config: testPKIACMEAccount_updateConfig(backend, accountName, directoryUrl, ca),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
 					resource.TestCheckResourceAttr(resourceName, "directory_url", directoryUrl),
 					resource.TestCheckResourceAttr(resourceName, "email_contacts.#", "2"),
@@ -88,7 +88,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_acme_account" "test" {
-  backend         = vault_mount.test.path
+  mount           = vault_mount.test.path
   name            = "%s"
   directory_url   = "%s"
   email_contacts  = ["test@example.com"]
@@ -110,7 +110,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_acme_account" "test" {
-  backend         = vault_mount.test.path
+  mount           = vault_mount.test.path
   name            = "%s"
   directory_url   = "%s"
   email_contacts  = ["test@example.com", "admin@example.com"]
@@ -140,7 +140,7 @@ func TestAccPKIACMEAccount_withEAB(t *testing.T) {
 			{
 				Config: testPKIACMEAccount_withEABConfig(backend, accountName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
 					resource.TestCheckResourceAttr(resourceName, "directory_url", "https://acme-staging-v02.api.letsencrypt.org/directory"),
 					resource.TestCheckResourceAttr(resourceName, "email_contacts.#", "1"),
@@ -163,7 +163,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_acme_account" "test" {
-  backend         = vault_mount.test.path
+  mount           = vault_mount.test.path
   name            = "%s"
   directory_url   = "https://acme-staging-v02.api.letsencrypt.org/directory"
   email_contacts  = ["test@example.com"]

@@ -45,7 +45,7 @@ type PKIExternalCAOrderChallengeDataSource struct {
 type PKIExternalCAOrderChallengeModel struct {
 	base.BaseModelLegacy
 
-	Backend       types.String `tfsdk:"backend"`
+	Mount         types.String `tfsdk:"mount"`
 	RoleName      types.String `tfsdk:"role_name"`
 	OrderID       types.String `tfsdk:"order_id"`
 	ChallengeType types.String `tfsdk:"challenge_type"`
@@ -73,7 +73,7 @@ func (d *PKIExternalCAOrderChallengeDataSource) Metadata(_ context.Context, req 
 func (d *PKIExternalCAOrderChallengeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "The path where the PKI External CA secret backend is mounted.",
 				Required:            true,
 			},
@@ -136,8 +136,8 @@ func isOrderStatusTerminal(status string) bool {
 	return false
 }
 
-func orderStatus(ctx context.Context, cli *api.Client, backend, roleName, orderID string) (string, error) {
-	statusPath := fmt.Sprintf("%s/role/%s/order/%s/status", backend, roleName, orderID)
+func orderStatus(ctx context.Context, cli *api.Client, mount, roleName, orderID string) (string, error) {
+	statusPath := fmt.Sprintf("%s/role/%s/order/%s/status", mount, roleName, orderID)
 
 	statusResp, err := cli.Logical().ReadWithContext(ctx, statusPath)
 	if err != nil {
@@ -156,11 +156,11 @@ func orderStatus(ctx context.Context, cli *api.Client, backend, roleName, orderI
 	return status, nil
 }
 
-func pollOrderStatus(ctx context.Context, cli *api.Client, backend, roleName, orderID string, attempts int, interval time.Duration, desired []string) error {
+func pollOrderStatus(ctx context.Context, cli *api.Client, mount, roleName, orderID string, attempts int, interval time.Duration, desired []string) error {
 	var status string
 	var err error
 	for range attempts {
-		status, err = orderStatus(ctx, cli, backend, roleName, orderID)
+		status, err = orderStatus(ctx, cli, mount, roleName, orderID)
 		if err != nil {
 			return err
 		}
@@ -194,14 +194,14 @@ func (d *PKIExternalCAOrderChallengeDataSource) Read(ctx context.Context, req da
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	roleName := data.RoleName.ValueString()
 	orderID := data.OrderID.ValueString()
 	challengeType := data.ChallengeType.ValueString()
 	identifier := data.Identifier.ValueString()
 
 	// Poll the order status endpoint until it reaches AwaitingChallengeFulfillment
-	if err := pollOrderStatus(ctx, cli, backend, roleName, orderID, maxPollAttempts, pollInterval, []string{"completed", "awaiting-challenge-fulfillment"}); err != nil {
+	if err := pollOrderStatus(ctx, cli, mount, roleName, orderID, maxPollAttempts, pollInterval, []string{"completed", "awaiting-challenge-fulfillment"}); err != nil {
 		resp.Diagnostics.AddError(
 			"Order status not awaiting-challenge-fulfillment",
 			err.Error())
@@ -209,7 +209,7 @@ func (d *PKIExternalCAOrderChallengeDataSource) Read(ctx context.Context, req da
 	}
 
 	// Construct the path: role/<rolename>/order/<order-id>/challenge
-	challengePath := fmt.Sprintf("%s/role/%s/order/%s/challenge", backend, roleName, orderID)
+	challengePath := fmt.Sprintf("%s/role/%s/order/%s/challenge", mount, roleName, orderID)
 
 	// Prepare request data with challenge type and identifier
 	requestData := map[string][]string{
@@ -246,7 +246,7 @@ func (d *PKIExternalCAOrderChallengeDataSource) Read(ctx context.Context, req da
 	data.Status = types.StringValue(apiModel.Status)
 
 	// Generate a unique ID for this data source read
-	data.ID = types.StringValue(fmt.Sprintf("%s/%s/%s/%s/%s", backend, roleName, orderID, challengeType, identifier))
+	data.ID = types.StringValue(fmt.Sprintf("%s/%s/%s/%s/%s", mount, roleName, orderID, challengeType, identifier))
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

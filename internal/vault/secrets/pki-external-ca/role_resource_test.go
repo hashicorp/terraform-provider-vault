@@ -34,7 +34,7 @@ func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
 			{
 				Config: testAccPKIExternalCARoleConfig_basic(backend, accountName, roleName, directoryUrl, ca),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, roleName),
 					resource.TestCheckResourceAttr(resourceName, "acme_account_name", accountName),
 					resource.TestCheckResourceAttr(resourceName, "allowed_domains.#", "2"),
@@ -100,7 +100,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_acme_account" "test" {
-  backend        = vault_mount.test.path
+  mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
   email_contacts = ["test@example.com"]
@@ -111,7 +111,7 @@ EOT
 }
 
 resource "vault_pki_secret_backend_external_ca_role" "test" {
-  backend                     = vault_mount.test.path
+  mount                       = vault_mount.test.path
   name                        = "%s"
   acme_account_name           = vault_pki_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "test.com"]
@@ -132,7 +132,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_acme_account" "test" {
-  backend        = vault_mount.test.path
+  mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
   email_contacts = ["test@example.com"]
@@ -143,7 +143,7 @@ EOT
 }
 
 resource "vault_pki_secret_backend_external_ca_role" "test" {
-  backend                     = vault_mount.test.path
+  mount                       = vault_mount.test.path
   name                        = "%s"
   acme_account_name           = vault_pki_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "test.com", "updated.com"]

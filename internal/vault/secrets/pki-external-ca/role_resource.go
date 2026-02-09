@@ -54,7 +54,7 @@ type PKIExternalCARoleResource struct {
 type PKIExternalCARoleModel struct {
 	base.BaseModelLegacy
 
-	Backend                 types.String `tfsdk:"backend"`
+	Mount                   types.String `tfsdk:"mount"`
 	Name                    types.String `tfsdk:"name"`
 	AcmeAccountName         types.String `tfsdk:"acme_account_name"`
 	AllowedDomains          types.List   `tfsdk:"allowed_domains"`
@@ -87,7 +87,7 @@ func (r *PKIExternalCARoleResource) Metadata(_ context.Context, req resource.Met
 func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "The path where the PKI External CA secret backend is mounted.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
@@ -178,9 +178,9 @@ func (r *PKIExternalCARoleResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", backend, roleAffix, name)
+	path := fmt.Sprintf("%s/%s/%s", mount, roleAffix, name)
 
 	vaultRequest, diags := buildRoleVaultRequestFromModel(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -194,7 +194,7 @@ func (r *PKIExternalCARoleResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	data.ID = types.StringValue(makeRoleID(backend, name))
+	data.ID = types.StringValue(makeRoleID(mount, name))
 	resp.Diagnostics.Append(handleRoleResponseData(ctx, &data, createResp)...)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -218,10 +218,10 @@ func (r *PKIExternalCARoleResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", backend, roleAffix, name)
-	data.ID = types.StringValue(makeRoleID(backend, name))
+	path := fmt.Sprintf("%s/%s/%s", mount, roleAffix, name)
+	data.ID = types.StringValue(makeRoleID(mount, name))
 
 	readResp, err := cli.Logical().ReadWithContext(ctx, path)
 	if err != nil {
@@ -250,10 +250,10 @@ func (r *PKIExternalCARoleResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", backend, roleAffix, name)
-	data.ID = types.StringValue(makeRoleID(backend, name))
+	path := fmt.Sprintf("%s/%s/%s", mount, roleAffix, name)
+	data.ID = types.StringValue(makeRoleID(mount, name))
 
 	vaultRequest, diags := buildRoleVaultRequestFromModel(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -373,9 +373,9 @@ func (r *PKIExternalCARoleResource) Delete(ctx context.Context, req resource.Del
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", backend, roleAffix, name)
+	path := fmt.Sprintf("%s/%s/%s", mount, roleAffix, name)
 
 	// If force is set, add it as a query parameter
 	params := map[string][]string{}
@@ -394,21 +394,21 @@ func (r *PKIExternalCARoleResource) ImportState(ctx context.Context, req resourc
 	if len(matches) != 3 {
 		resp.Diagnostics.AddError(
 			"Invalid import ID",
-			fmt.Sprintf("Import ID must be in the format '<backend>/%s/<name>', got: %s", roleAffix, req.ID),
+			fmt.Sprintf("Import ID must be in the format '<mount>/%s/<name>', got: %s", roleAffix, req.ID),
 		)
 		return
 	}
 
-	backend := matches[1]
+	mount := matches[1]
 	name := matches[2]
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldBackend), backend)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), req.ID)...)
 }
 
-func makeRoleID(backend, name string) string {
-	return fmt.Sprintf("%s/%s/%s", backend, roleAffix, name)
+func makeRoleID(mount, name string) string {
+	return fmt.Sprintf("%s/%s/%s", mount, roleAffix, name)
 }
 
 // Made with Bob
