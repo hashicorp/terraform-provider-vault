@@ -159,6 +159,12 @@ func tokenResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldEntityAlias: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Entity alias to associate with the token. Requires role_name to be set.",
+			},
 		},
 	}
 }
@@ -221,6 +227,10 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 			d[k] = val.(string)
 		}
 		createRequest.Metadata = d
+	}
+
+	if v, ok := d.GetOk(consts.FieldEntityAlias); ok {
+		createRequest.EntityAlias = v.(string)
 	}
 
 	if v, ok := d.GetOk(consts.FieldWrappingTTL); ok {
@@ -341,6 +351,10 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set(consts.FieldLeaseDuration, int(expireTime.Sub(issueTime).Seconds()))
 
 	d.Set(consts.FieldMetadata, resp.Data["meta"])
+
+	if v, ok := resp.Data[consts.FieldEntityAlias]; ok {
+		d.Set(consts.FieldEntityAlias, v)
+	}
 
 	if d.Get(consts.FieldRenewable).(bool) && tokenCheckLease(d) {
 		if id == "" {

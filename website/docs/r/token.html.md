@@ -80,6 +80,8 @@ The following arguments are supported:
 
 * `metadata` - (Optional) Metadata to be set on this token
 
+* `entity_alias` - (Optional) The entity alias to associate with the token. Must be used with a token role (`role_name` must be set) and the role must have the alias in `allowed_entity_aliases`.
+
 ## Attributes Reference
 
 * `lease_duration` - String containing the token lease duration if present in state file

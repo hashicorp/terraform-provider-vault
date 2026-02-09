@@ -334,6 +334,45 @@ resource "vault_token" "test" {
 	return config
 }
 
+func TestResourceToken_entityAlias(t *testing.T) {
+	resourceName := "vault_token.test"
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testResourceTokenCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceTokenConfig_entityAlias(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEntityAlias, "test-alias"),
+				),
+			},
+		},
+	})
+}
+
+func testResourceTokenConfig_entityAlias() string {
+	return `
+resource "vault_policy" "test" {
+  name   = "test"
+  policy = <<EOT
+path "secret/*" { capabilities = [ "list" ] }
+EOT
+}
+
+resource "vault_token_auth_backend_role" "test" {
+  role_name              = "test-role"
+  allowed_policies       = [vault_policy.test.name]
+  allowed_entity_aliases = ["test-alias"]
+}
+
+resource "vault_token" "test" {
+  role_name    = vault_token_auth_backend_role.test.role_name
+  policies     = [vault_policy.test.name]
+  entity_alias = "test-alias"
+}`
+}
+
 func testResourceTokenLookup(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
