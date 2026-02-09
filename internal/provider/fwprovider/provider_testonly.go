@@ -2,8 +2,13 @@
 
 package fwprovider
 
-import "github.com/hashicorp/terraform-plugin-framework/resource"
+import (
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
+)
 
 func testResources() []func() resource.Resource {
-	return pki_external_ca.NewACMEChallengeServerResource
+	return []func() resource.Resource{
+		pki_external_ca.NewACMEChallengeServerResource,
+	}
 }
