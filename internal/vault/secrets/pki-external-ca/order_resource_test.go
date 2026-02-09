@@ -23,6 +23,8 @@ import (
 )
 
 func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
+	acctestutil.SkipTestAccEnt(t)
+
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")
@@ -82,6 +84,8 @@ func setupVaultAndPebble(t *testing.T) (string, string) {
 }
 
 func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
+	acctestutil.SkipTestAccEnt(t)
+
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")

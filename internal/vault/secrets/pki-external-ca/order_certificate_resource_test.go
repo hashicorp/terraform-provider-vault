@@ -16,6 +16,8 @@ import (
 )
 
 func TestAccPKIExternalCAOrderCertificateResource_basic(t *testing.T) {
+	acctestutil.SkipTestAccEnt(t)
+
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	roleName := acctest.RandomWithPrefix("tf-role")
 	accountName := acctest.RandomWithPrefix("tf-acme-account")

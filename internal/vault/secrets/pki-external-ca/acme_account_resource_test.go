@@ -17,6 +17,8 @@ import (
 )
 
 func TestAccPKIACMEAccount_basic(t *testing.T) {
+	acctestutil.SkipTestAccEnt(t)
+
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	accountName := acctest.RandomWithPrefix("tf-acme-account")
 	resourceType := "vault_pki_secret_backend_acme_account"

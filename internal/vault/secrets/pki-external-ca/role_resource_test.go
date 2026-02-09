@@ -17,6 +17,8 @@ import (
 )
 
 func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
+	acctestutil.SkipTestAccEnt(t)
+
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")
@@ -54,6 +56,8 @@ func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
 }
 
 func TestAccPKIExternalCARoleResource_update(t *testing.T) {
+	acctestutil.SkipTestAccEnt(t)
+
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")
