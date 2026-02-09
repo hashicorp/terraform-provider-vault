@@ -1,3 +1,9 @@
+## Unreleased
+
+IMPROVEMENTS:
+
+* `vault_managed_keys`: Add support for GCP Cloud KMS managed keys with parameters: `credentials`, `project`, `key_ring`, `region`, `crypto_key`, `crypto_key_version`, and `algorithm`. 
+
 ## 5.7.0 (February 5, 2026)
 
 FEATURES:

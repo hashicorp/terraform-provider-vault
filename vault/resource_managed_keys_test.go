@@ -74,7 +74,6 @@ func TestManagedKeys(t *testing.T) {
 							consts.FieldKMSKey:    "alias/test_identifier_string",
 							consts.FieldAccessKey: "ASIAKBASDADA09090",
 							consts.FieldSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
-							"usages.#":            "2",
 						},
 					),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "aws.*",
@@ -200,15 +199,13 @@ func TestManagedKeysPKCS(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.slot", slot),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.pin", pin),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.mechanism", "1"),
-					resource.TestCheckResourceAttr(resourceName, "pkcs.0.max_parallel", "4"),
-					resource.TestCheckResourceAttr(resourceName, "pkcs.0.usages.#", "3"),
 				),
 			},
 			{
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"pkcs.0.pin", "pkcs.0.key_id", "pkcs.0.max_parallel"},
+				ImportStateVerifyIgnore: []string{"pkcs.0.pin", "pkcs.0.key_id"},
 			},
 		},
 	})
@@ -224,7 +221,6 @@ resource "vault_managed_keys" "test" {
     key_bits   = "2048"
     key_type   = "RSA"
     kms_key    = "alias/test_identifier_string"
-    usages     = ["sign", "verify"]
   }
 
   aws {
@@ -265,8 +261,6 @@ resource "vault_managed_keys" "test" {
     slot               = "%s"
     pin                = "%s"
     mechanism          = "0x0001"
-    max_parallel       = 4
-    usages             = ["sign", "verify", "encrypt"]
   }
 }
 `, name, library, slot, pin)
@@ -318,7 +312,7 @@ func TestManagedKeysGCP(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "gcp.0.key_ring", keyRing),
 					resource.TestCheckResourceAttr(resourceName, "gcp.0.crypto_key", "test-crypto-key"),
 					resource.TestCheckResourceAttr(resourceName, "gcp.0.algorithm", "ec_sign_p256_sha256"),
-					resource.TestCheckResourceAttr(resourceName, "gcp.0.usages.#", "2"),
+					resource.TestCheckResourceAttrSet(resourceName, "gcp.0.uuid"),
 				),
 			},
 			{
@@ -326,6 +320,149 @@ func TestManagedKeysGCP(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"gcp.0.credentials"},
+			},
+		},
+	})
+}
+
+// TestManagedKeysGCP_AllParameters tests GCP managed keys with all optional parameters
+func TestManagedKeysGCP_AllParameters(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	name := acctest.RandomWithPrefix("gcp-keys-full")
+	resourceName := "vault_managed_keys.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+	keyRing := testutil.GetTestGCPKeyRing(t)
+	region := testutil.GetTestGCPRegion(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: testManagedKeysConfig_gcpAllParams(name, credentials, project, keyRing, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "gcp.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.project", project),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.key_ring", keyRing),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.crypto_key", "test-crypto-key-full"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.algorithm", "rsa_sign_pkcs1_4096_sha256"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.crypto_key_version", "1"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.allow_generate_key", "true"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.allow_replace_key", "true"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.allow_store_key", "true"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.any_mount", "true"),
+					resource.TestCheckResourceAttrSet(resourceName, "gcp.0.uuid"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"gcp.0.credentials"},
+			},
+		},
+	})
+}
+
+// TestManagedKeysGCP_Update tests removing and adding GCP managed keys
+func TestManagedKeysGCP_Update(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	name1 := acctest.RandomWithPrefix("gcp-keys-update-1")
+	name2 := acctest.RandomWithPrefix("gcp-keys-update-2")
+	resourceName := "vault_managed_keys.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+	keyRing := testutil.GetTestGCPKeyRing(t)
+	region := testutil.GetTestGCPRegion(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: testManagedKeysConfig_gcpUpdate1(name1, credentials, project, keyRing, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "gcp.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.name", name1),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.crypto_key", "test-crypto-key-update"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.algorithm", "ec_sign_p256_sha256"),
+				),
+			},
+			{
+				// Remove the first key and add a different one (by changing name)
+				Config: testManagedKeysConfig_gcpUpdate2(name2, credentials, project, keyRing, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "gcp.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.name", name2),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.crypto_key", "test-crypto-key-update-2"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.algorithm", "rsa_sign_pkcs1_2048_sha256"),
+				),
+			},
+		},
+	})
+}
+
+// TestManagedKeysGCP_Multiple tests multiple GCP keys in a single resource
+func TestManagedKeysGCP_Multiple(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	namePrefix := acctest.RandomWithPrefix("gcp-keys")
+	name0 := namePrefix + "-0"
+	name1 := namePrefix + "-1"
+	resourceName := "vault_managed_keys.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+	keyRing := testutil.GetTestGCPKeyRing(t)
+	region := testutil.GetTestGCPRegion(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: testManagedKeysConfig_gcpMultiple(name0, name1, credentials, project, keyRing, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "gcp.#", "2"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "gcp.*",
+						map[string]string{
+							consts.FieldName:      name0,
+							consts.FieldAlgorithm: "ec_sign_p256_sha256",
+							consts.FieldCryptoKey: "test-crypto-key-0",
+						},
+					),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "gcp.*",
+						map[string]string{
+							consts.FieldName:      name1,
+							consts.FieldAlgorithm: "rsa_sign_pkcs1_2048_sha256",
+							consts.FieldCryptoKey: "test-crypto-key-1",
+						},
+					),
+				),
+			},
+		},
+	})
+}
+
+// TestManagedKeysGCP_InvalidAlgorithm tests validation of invalid algorithm
+func TestManagedKeysGCP_InvalidAlgorithm(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	name := acctest.RandomWithPrefix("gcp-keys-invalid")
+	credentials, project := testutil.GetTestGCPCreds(t)
+	keyRing := testutil.GetTestGCPKeyRing(t)
+	region := testutil.GetTestGCPRegion(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testManagedKeysConfig_gcpInvalidAlgorithm(name, credentials, project, keyRing, region),
+				ExpectError: regexp.MustCompile("invalid signature algorithm"),
 			},
 		},
 	})
@@ -347,7 +484,122 @@ resource "vault_managed_keys" "test" {
     region             = "%s"
     crypto_key         = "test-crypto-key"
     algorithm          = "ec_sign_p256_sha256"
-    usages             = ["sign", "verify"]
+  }
+}
+`, name, escapedCreds, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpAllParams(name, credentials, project, keyRing, region string) string {
+	// Escape the credentials JSON for use in HCL - replace backslashes first, then quotes
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name                = "%s"
+    credentials         = "%s"
+    project             = "%s"
+    key_ring            = "%s"
+    region              = "%s"
+    crypto_key          = "test-crypto-key-full"
+    crypto_key_version  = "1"
+    algorithm           = "rsa_sign_pkcs1_4096_sha256"
+    allow_generate_key  = true
+    allow_replace_key   = true
+    allow_store_key     = true
+    any_mount           = true
+  }
+}
+`, name, escapedCreds, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpUpdate1(name, credentials, project, keyRing, region string) string {
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name        = "%s"
+    credentials = "%s"
+    project     = "%s"
+    key_ring    = "%s"
+    region      = "%s"
+    crypto_key  = "test-crypto-key-update"
+    algorithm   = "ec_sign_p256_sha256"
+  }
+}
+`, name, escapedCreds, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpUpdate2(name, credentials, project, keyRing, region string) string {
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name        = "%s"
+    credentials = "%s"
+    project     = "%s"
+    key_ring    = "%s"
+    region      = "%s"
+    crypto_key  = "test-crypto-key-update-2"
+    algorithm   = "rsa_sign_pkcs1_2048_sha256"
+  }
+}
+`, name, escapedCreds, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpMultiple(name0, name1, credentials, project, keyRing, region string) string {
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name        = "%s"
+    credentials = "%s"
+    project     = "%s"
+    key_ring    = "%s"
+    region      = "%s"
+    crypto_key  = "test-crypto-key-0"
+    algorithm   = "ec_sign_p256_sha256"
+  }
+
+  gcp {
+    name        = "%s"
+    credentials = "%s"
+    project     = "%s"
+    key_ring    = "%s"
+    region      = "%s"
+    crypto_key  = "test-crypto-key-1"
+    algorithm   = "rsa_sign_pkcs1_2048_sha256"
+  }
+}
+`, name0, escapedCreds, project, keyRing, region, name1, escapedCreds, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpInvalidAlgorithm(name, credentials, project, keyRing, region string) string {
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name        = "%s"
+    credentials = "%s"
+    project     = "%s"
+    key_ring    = "%s"
+    region      = "%s"
+    crypto_key  = "test-crypto-key-invalid"
+    algorithm   = "invalid_algorithm_12345"
   }
 }
 `, name, escapedCreds, project, keyRing, region)

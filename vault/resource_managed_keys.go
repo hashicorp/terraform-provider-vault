@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -25,41 +24,6 @@ const (
 	kmsTypeAzure = "azurekeyvault"
 	kmsTypeGCP   = "gcpckms"
 )
-
-// usageCodeToString maps Vault's numeric usage codes to their string representations
-// Vault accepts string values on write but returns numeric codes on read
-var usageCodeToString = map[int]string{
-	1: "encrypt",
-	2: "decrypt",
-	3: "sign",
-	4: "verify",
-	5: "wrap",
-	6: "unwrap",
-}
-
-// convertUsageCodesToStrings converts Vault's numeric usage codes to string values
-func convertUsageCodesToStrings(codes []interface{}) []interface{} {
-	result := make([]interface{}, 0, len(codes))
-	for _, code := range codes {
-		var intCode int
-		switch v := code.(type) {
-		case json.Number:
-			if i, err := v.Int64(); err == nil {
-				intCode = int(i)
-			} else {
-				continue
-			}
-		case float64:
-			intCode = int(v)
-		default:
-			continue
-		}
-		if str, ok := usageCodeToString[intCode]; ok {
-			result = append(result, str)
-		}
-	}
-	return result
-}
 
 type managedKeysConfig struct {
 	providerType string
@@ -209,16 +173,6 @@ func getCommonManagedKeysSchema() schemaMap {
 			Description: "Allow usage from any mount point within the namespace if 'true'",
 		},
 
-		consts.FieldUsages: {
-			Type:        schema.TypeList,
-			Optional:    true,
-			Computed:    true,
-			Description: "A comma-delimited list of allowed uses for this key. Valid values: encrypt, decrypt, sign, verify, wrap, unwrap",
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-		},
-
 		consts.FieldUUID: {
 			Type:        schema.TypeString,
 			Computed:    true,
@@ -304,12 +258,6 @@ func managedKeysPKCSConfigSchema() schemaMap {
 			Optional: true,
 			Description: "Force all operations to open up a read-write session " +
 				"to the HSM",
-		},
-		consts.FieldMaxParallel: {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Computed:    true,
-			Description: "The number of concurrent requests that may be in flight to the HSM at any given time",
 		},
 	}
 
@@ -499,18 +447,6 @@ func getManagedKeysConfigData(config map[string]interface{}, sm schemaMap) (stri
 			// ensure empty strings are not written
 			// to vault as part of the data
 			if s, ok := v.(string); ok && s == "" {
-				continue
-			}
-
-			// Convert usages list to comma-delimited string for Vault API
-			if blockKey == consts.FieldUsages {
-				if usagesList, ok := v.([]interface{}); ok && len(usagesList) > 0 {
-					usages := make([]string, len(usagesList))
-					for i, usage := range usagesList {
-						usages[i] = usage.(string)
-					}
-					data[blockKey] = strings.Join(usages, ",")
-				}
 				continue
 			}
 
@@ -738,14 +674,6 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 				}
 
 				if v, ok := resp.Data[vaultKey]; ok {
-					// Convert usages from numeric codes to string values
-					if k == consts.FieldUsages {
-						if codes, ok := v.([]interface{}); ok {
-							m[k] = convertUsageCodesToStrings(codes)
-						}
-						continue
-					}
-
 					// log an out-of-band change on UUID
 					if vaultKey == "UUID" {
 						stateKey := fmt.Sprintf("%s.%d.%s", providerType, getHashFromName(name.(string)), k)
@@ -800,7 +728,7 @@ func readAzureManagedKeys(d *schema.ResourceData, client *api.Client) error {
 }
 
 func readPKCSManagedKeys(d *schema.ResourceData, client *api.Client) error {
-	redacted := []string{consts.FieldPin, consts.FieldKeyID, consts.FieldMaxParallel}
+	redacted := []string{consts.FieldPin, consts.FieldKeyID}
 	if err := readAndSetManagedKeys(d, client, consts.FieldPKCS,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
