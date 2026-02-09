@@ -47,20 +47,32 @@ The following arguments are supported:
 
 * `description` - (Optional) The description of the auth backend
 
-* `organization` - (Required) The Okta organization. This will be the first part of the url `https://XXX.okta.com`
+* `org_name` - (Optional) The Okta organization. This will be the first part of the url `https://XXX.okta.com`.
+  Exactly one of `org_name` or `organization` must be specified.
 
-* `token` - (Optional) The Okta API token. This is required to query Okta for user group membership.
-If this is not supplied only locally configured groups will be enabled.
+* `organization` - (Optional) **Deprecated: Use `org_name` instead.** The Okta organization. This will be the first part of the url `https://XXX.okta.com`.
+  Exactly one of `org_name` or `organization` must be specified.
+
+* `api_token` - (Optional) The Okta API token. This is required to query Okta for user group membership.
+  If this is not supplied only locally configured groups will be enabled.
+  Conflicts with `token` and `api_token_wo`.
+
+* `token` - (Optional) **Deprecated: Use `api_token` instead.** The Okta API token. This is required to query Okta for user group membership.
+  If this is not supplied only locally configured groups will be enabled.
+  Conflicts with `api_token` and `api_token_wo`.
 
 * `base_url` - (Optional) The Okta url. Examples: oktapreview.com, okta.com
 
 * `bypass_okta_mfa` - (Optional) When true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.
 
+* `api_token_wo_version` - (Optional) Version counter for the write-only `api_token_wo`.
+  Increment this value to trigger an update of the write-only token. Required when using `api_token_wo`.
+
 * `group` - (Optional) Associate Okta groups with policies within Vault.
-[See below for more details](#okta-group). 
+[See below for more details](#okta-group).
 
 * `user` - (Optional) Associate Okta users with groups or policies within Vault.
-[See below for more details](#okta-user). 
+[See below for more details](#okta-user).
 
 ### Okta Group
 
@@ -147,6 +159,14 @@ These arguments are common across several Authentication Token resources since V
 
 * `alias_metadata` - (Optional) The metadata to be tied to generated entity alias.
   This should be a list or map containing the metadata in key value pairs.
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `api_token_wo` - (Optional) Write-only Okta API token. This is required to query Okta for user group membership.
+  Use this for enhanced security when you don't want the token to appear in state files. Requires `api_token_wo_version`. Conflicts with `token` and `api_token`.
+  **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
 
