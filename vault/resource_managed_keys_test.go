@@ -7,11 +7,13 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -25,7 +27,7 @@ func TestManagedKeys(t *testing.T) {
 	resourceName := "vault_managed_keys.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -180,7 +182,7 @@ func TestManagedKeysPKCS(t *testing.T) {
 	library, slot, pin := testutil.GetTestPKCSCreds(t)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -277,4 +279,328 @@ resource "vault_managed_keys" "test" {
   }
 }
 `, name, library, slot, pin)
+}
+
+// The following test requires a GCP Cloud KMS to be set up and needs the following
+// environment variables to operate successfully:
+// * GOOGLE_CREDENTIALS - Path to GCP credentials JSON file
+// * GOOGLE_KEY_RING - GCP KMS key ring name
+// * GOOGLE_REGION - GCP region
+// * TF_ACC_LOCAL=1
+//
+// The final variable specifies that this test can only be run locally
+func TestManagedKeysGCP(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	name := acctest.RandomWithPrefix("gcp-keys")
+	resourceName := "vault_managed_keys.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+	keyRing := testutil.GetTestGCPKeyRing(t)
+	region := testutil.GetTestGCPRegion(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: testManagedKeysConfig_gcp(name, credentials, project, keyRing, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "gcp.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.project", project),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.key_ring", keyRing),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.crypto_key", "test-crypto-key"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.algorithm", "ec_sign_p256_sha256"),
+					resource.TestCheckResourceAttrSet(resourceName, "gcp.0.uuid"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"gcp.0.credentials"},
+			},
+		},
+	})
+}
+
+// TestManagedKeysGCP_AllParameters tests GCP managed keys with all optional parameters
+func TestManagedKeysGCP_AllParameters(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	name := acctest.RandomWithPrefix("gcp-keys-full")
+	resourceName := "vault_managed_keys.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+	keyRing := testutil.GetTestGCPKeyRing(t)
+	region := testutil.GetTestGCPRegion(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: testManagedKeysConfig_gcpAllParams(name, credentials, project, keyRing, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "gcp.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.project", project),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.key_ring", keyRing),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.crypto_key", "test-crypto-key-full"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.algorithm", "rsa_sign_pkcs1_4096_sha256"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.crypto_key_version", "1"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.allow_generate_key", "true"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.allow_replace_key", "true"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.allow_store_key", "true"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.any_mount", "true"),
+					resource.TestCheckResourceAttrSet(resourceName, "gcp.0.uuid"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"gcp.0.credentials"},
+			},
+		},
+	})
+}
+
+// TestManagedKeysGCP_Update tests removing and adding GCP managed keys
+func TestManagedKeysGCP_Update(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	name1 := acctest.RandomWithPrefix("gcp-keys-update-1")
+	name2 := acctest.RandomWithPrefix("gcp-keys-update-2")
+	resourceName := "vault_managed_keys.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+	keyRing := testutil.GetTestGCPKeyRing(t)
+	region := testutil.GetTestGCPRegion(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: testManagedKeysConfig_gcpUpdate1(name1, credentials, project, keyRing, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "gcp.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.name", name1),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.crypto_key", "test-crypto-key-update"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.algorithm", "ec_sign_p256_sha256"),
+				),
+			},
+			{
+				// Remove the first key and add a different one (by changing name)
+				Config: testManagedKeysConfig_gcpUpdate2(name2, credentials, project, keyRing, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "gcp.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.name", name2),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.crypto_key", "test-crypto-key-update-2"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.algorithm", "rsa_sign_pkcs1_2048_sha256"),
+				),
+			},
+		},
+	})
+}
+
+// TestManagedKeysGCP_Multiple tests multiple GCP keys in a single resource
+func TestManagedKeysGCP_Multiple(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	namePrefix := acctest.RandomWithPrefix("gcp-keys")
+	name0 := namePrefix + "-0"
+	name1 := namePrefix + "-1"
+	resourceName := "vault_managed_keys.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+	keyRing := testutil.GetTestGCPKeyRing(t)
+	region := testutil.GetTestGCPRegion(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: testManagedKeysConfig_gcpMultiple(name0, name1, credentials, project, keyRing, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "gcp.#", "2"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "gcp.*",
+						map[string]string{
+							consts.FieldName:      name0,
+							consts.FieldAlgorithm: "ec_sign_p256_sha256",
+							consts.FieldCryptoKey: "test-crypto-key-0",
+						},
+					),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "gcp.*",
+						map[string]string{
+							consts.FieldName:      name1,
+							consts.FieldAlgorithm: "rsa_sign_pkcs1_2048_sha256",
+							consts.FieldCryptoKey: "test-crypto-key-1",
+						},
+					),
+				),
+			},
+		},
+	})
+}
+
+// TestManagedKeysGCP_InvalidAlgorithm tests validation of invalid algorithm
+func TestManagedKeysGCP_InvalidAlgorithm(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	name := acctest.RandomWithPrefix("gcp-keys-invalid")
+	credentials, project := testutil.GetTestGCPCreds(t)
+	keyRing := testutil.GetTestGCPKeyRing(t)
+	region := testutil.GetTestGCPRegion(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testManagedKeysConfig_gcpInvalidAlgorithm(name, credentials, project, keyRing, region),
+				ExpectError: regexp.MustCompile("invalid signature algorithm"),
+			},
+		},
+	})
+}
+
+func testManagedKeysConfig_gcp(name, credentials, project, keyRing, region string) string {
+	// Escape the credentials JSON for use in HCL - replace backslashes first, then quotes
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name               = "%s"
+    credentials        = "%s"
+    project            = "%s"
+    key_ring           = "%s"
+    region             = "%s"
+    crypto_key         = "test-crypto-key"
+    algorithm          = "ec_sign_p256_sha256"
+  }
+}
+`, name, escapedCreds, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpAllParams(name, credentials, project, keyRing, region string) string {
+	// Escape the credentials JSON for use in HCL - replace backslashes first, then quotes
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name                = "%s"
+    credentials         = "%s"
+    project             = "%s"
+    key_ring            = "%s"
+    region              = "%s"
+    crypto_key          = "test-crypto-key-full"
+    crypto_key_version  = "1"
+    algorithm           = "rsa_sign_pkcs1_4096_sha256"
+    allow_generate_key  = true
+    allow_replace_key   = true
+    allow_store_key     = true
+    any_mount           = true
+  }
+}
+`, name, escapedCreds, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpUpdate1(name, credentials, project, keyRing, region string) string {
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name        = "%s"
+    credentials = "%s"
+    project     = "%s"
+    key_ring    = "%s"
+    region      = "%s"
+    crypto_key  = "test-crypto-key-update"
+    algorithm   = "ec_sign_p256_sha256"
+  }
+}
+`, name, escapedCreds, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpUpdate2(name, credentials, project, keyRing, region string) string {
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name        = "%s"
+    credentials = "%s"
+    project     = "%s"
+    key_ring    = "%s"
+    region      = "%s"
+    crypto_key  = "test-crypto-key-update-2"
+    algorithm   = "rsa_sign_pkcs1_2048_sha256"
+  }
+}
+`, name, escapedCreds, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpMultiple(name0, name1, credentials, project, keyRing, region string) string {
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name        = "%s"
+    credentials = "%s"
+    project     = "%s"
+    key_ring    = "%s"
+    region      = "%s"
+    crypto_key  = "test-crypto-key-0"
+    algorithm   = "ec_sign_p256_sha256"
+  }
+
+  gcp {
+    name        = "%s"
+    credentials = "%s"
+    project     = "%s"
+    key_ring    = "%s"
+    region      = "%s"
+    crypto_key  = "test-crypto-key-1"
+    algorithm   = "rsa_sign_pkcs1_2048_sha256"
+  }
+}
+`, name0, escapedCreds, project, keyRing, region, name1, escapedCreds, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpInvalidAlgorithm(name, credentials, project, keyRing, region string) string {
+	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
+	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name        = "%s"
+    credentials = "%s"
+    project     = "%s"
+    key_ring    = "%s"
+    region      = "%s"
+    crypto_key  = "test-crypto-key-invalid"
+    algorithm   = "invalid_algorithm_12345"
+  }
+}
+`, name, escapedCreds, project, keyRing, region)
 }

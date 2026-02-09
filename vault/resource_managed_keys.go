@@ -22,6 +22,7 @@ const (
 	kmsTypePKCS  = "pkcs11"
 	kmsTypeAWS   = "awskms"
 	kmsTypeAzure = "azurekeyvault"
+	kmsTypeGCP   = "gcpckms"
 )
 
 type managedKeysConfig struct {
@@ -49,10 +50,17 @@ var (
 		schemaFunc:   managedKeysPKCSConfigSchema,
 	}
 
+	managedKeysGCPConfig = &managedKeysConfig{
+		providerType: consts.FieldGCP,
+		keyType:      kmsTypeGCP,
+		schemaFunc:   managedKeysGCPConfigSchema,
+	}
+
 	managedKeyProviders = []*managedKeysConfig{
 		managedKeysAWSConfig,
 		managedKeysAzureConfig,
 		managedKeysPKCSConfig,
+		managedKeysGCPConfig,
 	}
 )
 
@@ -101,6 +109,15 @@ func managedKeysResource() *schema.Resource {
 				Description: "Configuration block for Azure Managed Keys",
 				Elem: &schema.Resource{
 					Schema: managedKeysAzureConfig.schemaFunc(),
+				},
+				Set: hashManagedKeys,
+			},
+			managedKeysGCPConfig.providerType: {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "Configuration block for GCP Cloud KMS Managed Keys",
+				Elem: &schema.Resource{
+					Schema: managedKeysGCPConfig.schemaFunc(),
 				},
 				Set: hashManagedKeys,
 			},
@@ -365,6 +382,62 @@ func managedKeysAzureConfigSchema() schemaMap {
 	return setCommonManagedKeysSchema(s)
 }
 
+func managedKeysGCPConfigSchema() schemaMap {
+	s := schemaMap{
+		consts.FieldName: {
+			Type:     schema.TypeString,
+			Required: true,
+			Description: "A unique lowercase name that serves as " +
+				"identifying the key",
+		},
+		consts.FieldCredentials: {
+			Type:     schema.TypeString,
+			Required: true,
+			Description: "The path to the credentials JSON file to use for " +
+				"authenticating to GCP. Alternatively set via the GOOGLE_CREDENTIALS " +
+				"or GOOGLE_APPLICATION_CREDENTIALS environment variables",
+		},
+		consts.FieldProject: {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "The GCP project ID. Can also be provided via the GOOGLE_PROJECT environment variable",
+		},
+		consts.FieldKeyRing: {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "The name of the key ring in GCP Cloud KMS. This needs to be created prior to key creation",
+		},
+		consts.FieldCryptoKey: {
+			Type:     schema.TypeString,
+			Required: true,
+			Description: "The name of the GCP Cloud KMS key. If no existing key " +
+				"exists and allow_generate_key is true, Vault will generate a key with this name",
+		},
+		consts.FieldCryptoKeyVersion: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "The version of the key to use. Default: 1",
+		},
+		consts.FieldRegion: {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "The GCP region where the key ring was created. Can also be provided via the GOOGLE_REGION environment variable",
+		},
+		consts.FieldAlgorithm: {
+			Type:     schema.TypeString,
+			Required: true,
+			Description: "The signature algorithm to be used with the key. " +
+				"Supported values: ec_sign_p256_sha256, ec_sign_p384_sha384, " +
+				"rsa_sign_pss_2048_sha256, rsa_sign_pss_3072_sha256, rsa_sign_pss_4096_sha256, " +
+				"rsa_sign_pss_4096_sha512, rsa_sign_pkcs1_2048_sha256, rsa_sign_pkcs1_3072_sha256, " +
+				"rsa_sign_pkcs1_4096_sha256, rsa_sign_pkcs1_4096_sha512",
+		},
+	}
+
+	return setCommonManagedKeysSchema(s)
+}
+
 func getManagedKeysConfigData(config map[string]interface{}, sm schemaMap) (string, map[string]interface{}) {
 	data := map[string]interface{}{}
 	var name string
@@ -529,6 +602,12 @@ func createUpdateManagedKeys(ctx context.Context, d *schema.ResourceData, meta i
 		}
 	}
 
+	if _, ok := d.GetOk(consts.FieldGCP); ok {
+		if diags := writeManagedKeysData(d, client, consts.FieldGCP); diags != nil {
+			return diags
+		}
+	}
+
 	// set ID to 'default'
 	d.SetId("default")
 
@@ -639,7 +718,7 @@ func readAWSManagedKeys(d *schema.ResourceData, client *api.Client) error {
 }
 
 func readAzureManagedKeys(d *schema.ResourceData, client *api.Client) error {
-	var redacted []string
+	redacted := []string{consts.FieldPin, consts.FieldKeyID}
 	if err := readAndSetManagedKeys(d, client, consts.FieldAzure,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
@@ -651,6 +730,17 @@ func readAzureManagedKeys(d *schema.ResourceData, client *api.Client) error {
 func readPKCSManagedKeys(d *schema.ResourceData, client *api.Client) error {
 	redacted := []string{consts.FieldPin, consts.FieldKeyID}
 	if err := readAndSetManagedKeys(d, client, consts.FieldPKCS,
+		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func readGCPManagedKeys(d *schema.ResourceData, client *api.Client) error {
+	// credentials is a sensitive field preserved from config
+	redacted := []string{consts.FieldCredentials}
+	if err := readAndSetManagedKeys(d, client, consts.FieldGCP,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
@@ -684,6 +774,13 @@ func readManagedKeys(_ context.Context, d *schema.ResourceData, meta interface{}
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read Azure Managed Keys, err=%s", err),
+		})
+	}
+
+	if err := readGCPManagedKeys(d, client); err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed to read GCP Cloud KMS Managed Keys, err=%s", err),
 		})
 	}
 
@@ -744,6 +841,12 @@ func deleteManagedKeys(_ context.Context, d *schema.ResourceData, meta interface
 
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
 		if diags := deleteManagedKeyType(client, kmsTypeAzure); diags != nil {
+			return diags
+		}
+	}
+
+	if _, ok := d.GetOk(consts.FieldGCP); ok {
+		if diags := deleteManagedKeyType(client, kmsTypeGCP); diags != nil {
 			return diags
 		}
 	}

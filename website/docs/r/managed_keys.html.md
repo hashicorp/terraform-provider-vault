@@ -164,6 +164,33 @@ The following arguments are supported:
   the HSM.
 
 
+### GCP Cloud KMS Parameters
+
+**Note** this provider is available only with Vault Enterprise Plus (HSMs).
+
+* `name` - (Required) A unique lowercase name that serves as identifying the key.
+
+* `credentials` - (Required) The GCP service account credentials in JSON format.
+
+* `project` - (Required) The GCP project ID where the Cloud KMS resources are located.
+
+* `region` - (Required) The GCP region where the key ring is located (e.g., `us-east1`).
+
+* `key_ring` - (Required) The name of the Cloud KMS key ring.
+
+* `crypto_key` - (Required) The name of the Cloud KMS crypto key to use.
+
+* `crypto_key_version` - (Optional) The version of the crypto key to use. If not specified,
+  the primary version will be used.
+
+* `algorithm` - (Optional) The algorithm of the Cloud KMS crypto key version. Valid values
+  include `ec_sign_p256_sha256`, `ec_sign_p384_sha384`, `rsa_sign_pss_2048_sha256`,
+  `rsa_sign_pss_3072_sha256`, `rsa_sign_pss_4096_sha256`, `rsa_sign_pss_4096_sha512`,
+  `rsa_sign_pkcs1_2048_sha256`, `rsa_sign_pkcs1_3072_sha256`, `rsa_sign_pkcs1_4096_sha256`,
+  `rsa_sign_pkcs1_4096_sha512`, `rsa_decrypt_oaep_2048_sha256`, `rsa_decrypt_oaep_3072_sha256`,
+  `rsa_decrypt_oaep_4096_sha256`, `rsa_decrypt_oaep_4096_sha512`.
+
+
 ## Import
 
 Mounts can be imported using the `id` of `default`, e.g.
