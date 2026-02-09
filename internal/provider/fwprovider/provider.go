@@ -227,7 +227,7 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 // The resource type name is determined by the Resource implementing
 // the Metadata method. All resources must have unique names.
 func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
+	return append([]func() resource.Resource{
 		spiffe.NewSpiffeAuthConfigResource,
 		spiffe.NewSpiffeAuthRoleResource,
 		sys.NewPasswordPolicyResource,
@@ -237,8 +237,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		pki_external_ca.NewPKIExternalCAOrderResource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeFulfilledResource,
 		pki_external_ca.NewPKIExternalCAOrderCertificateResource,
-		pki_external_ca.NewACMEChallengeServerResource,
-	}
+	}, testResources()...)
 }
 
 func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {

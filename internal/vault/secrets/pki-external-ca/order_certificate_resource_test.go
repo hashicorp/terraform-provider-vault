@@ -100,35 +100,10 @@ data "vault_pki_secret_backend_external_ca_order_challenge" "test" {
   identifier     = "%s"
 }
 
-resource "null_resource" "acme_challenge_server" {
-  triggers = {
-    token = data.vault_pki_secret_backend_external_ca_order_challenge.test.token
-    key_authorization = data.vault_pki_secret_backend_external_ca_order_challenge.test.key_authorization
-  }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-(
-      mkdir -p /tmp/acme-challenge/.well-known/acme-challenge
-      /bin/echo -n '${data.vault_pki_secret_backend_external_ca_order_challenge.test.key_authorization}' > /tmp/acme-challenge/.well-known/acme-challenge/${data.vault_pki_secret_backend_external_ca_order_challenge.test.token}
-      cd /tmp/acme-challenge 
-      (nohup python3 -m http.server 5002 >/dev/null 2>&1) & 
-      echo $! > /tmp/acme-challenge-server.pid
-      sleep 2
-) &
-    EOT
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOT
-      if [ -f /tmp/acme-challenge-server.pid ]; then
-        kill $(cat /tmp/acme-challenge-server.pid) 2>/dev/null || true
-        rm -f /tmp/acme-challenge-server.pid
-      fi
-      rm -rf /tmp/acme-challenge
-    EOT
-  }
+resource "vault_acme_challenge_server" "test" {
+  port = 5002
+  token = data.vault_pki_secret_backend_external_ca_order_challenge.test.token
+  key_authorization = data.vault_pki_secret_backend_external_ca_order_challenge.test.key_authorization
 }
 
 resource "vault_pki_secret_backend_external_ca_order_challenge_fulfilled" "test" {
@@ -138,7 +113,7 @@ resource "vault_pki_secret_backend_external_ca_order_challenge_fulfilled" "test"
   challenge_type = "http-01"
   identifier     = "%s"
   
-  depends_on = [null_resource.acme_challenge_server]
+  depends_on = [vault_acme_challenge_server.test]
 }
 
 resource "vault_pki_secret_backend_external_ca_order_certificate" "test" {
