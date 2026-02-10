@@ -384,5 +384,3 @@ func (r *PKIExternalCAOrderResource) ImportState(ctx context.Context, req resour
 func makeOrderID(mount, roleName, orderID string) string {
 	return fmt.Sprintf("%s/role/%s/%s/%s", mount, roleName, orderAffix, orderID)
 }
-
-// Made with Bob

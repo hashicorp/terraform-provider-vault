@@ -16,9 +16,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,26 +58,31 @@ func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 }
 
 func setupVaultAndPebble(t *testing.T) (string, string) {
-	if os.Getenv("VAULT_ADDR") != "" {
-		ca, port, _ := testutil.SetupPebbleAcmeServerWithOption(t, testutil.NewPebbleOptions())
-		directoryUrl := fmt.Sprintf("https://localhost:%d/dir", port)
-		return ca, directoryUrl
-	}
-	opts := docker.DefaultOptions(t)
-	opts.ImageRepo = "hashicorp/vault-enterprise"
-	opts.NumCores = 1
-	opts.Envs = []string{"VAULT_LICENSE=" + os.Getenv("VAULT_LICENSE")}
-	// TODO remove this once there's a vault-enterprise image that contains pki-external-ca
-	opts.VaultBinary = "/Users/ncc/hc/vault-enterprise/vault.linux"
-	cluster := docker.NewTestDockerCluster(t, opts)
-	ca, _, address := testutil.SetupPebbleAcmeServerWithOption(t, testutil.NewPebbleOptions().SetNetworkName(
-		cluster.Nodes()[0].(*docker.DockerClusterNode).ContainerNetworkName))
-	directoryUrl := fmt.Sprintf("https://%s/dir", address)
-	client := cluster.Nodes()[0].APIClient()
-	os.Setenv(api.EnvVaultAddress, client.Address())
-	os.Setenv(api.EnvVaultToken, client.Token())
-	os.Setenv(api.EnvVaultCACertBytes, string(cluster.CACertPEM))
+	if os.Getenv("VAULT_ADDR") == "" {
+		/*
+				// TODO uncomment this once there's a vault-enterprise image that contains pki-external-ca.
+			    // This is a convenience for devs to save them from having to start a vault instance
+			    // manually.
 
+				opts := docker.DefaultOptions(t)
+				opts.ImageRepo = "hashicorp/vault-enterprise"
+				opts.NumCores = 1
+				opts.Envs = []string{"VAULT_LICENSE=" + os.Getenv("VAULT_LICENSE")}
+				cluster := docker.NewTestDockerCluster(t, opts)
+				ca, _, address := testutil.SetupPebbleAcmeServerWithOption(t, testutil.NewPebbleOptions().SetNetworkName(
+					cluster.Nodes()[0].(*docker.DockerClusterNode).ContainerNetworkName))
+				directoryUrl := fmt.Sprintf("https://%s/dir", address)
+				client := cluster.Nodes()[0].APIClient()
+				os.Setenv(api.EnvVaultAddress, client.Address())
+				os.Setenv(api.EnvVaultToken, client.Token())
+				os.Setenv(api.EnvVaultCACertBytes, string(cluster.CACertPEM))
+
+				return ca, directoryUrl
+		*/
+	}
+
+	ca, port, _ := testutil.SetupPebbleAcmeServerWithOption(t, testutil.NewPebbleOptions())
+	directoryUrl := fmt.Sprintf("https://localhost:%d/dir", port)
 	return ca, directoryUrl
 }
 
@@ -217,5 +220,3 @@ EOT
 }
 `, backend, accountName, directoryUrl, ca, roleName, csrPem)
 }
-
-// Made with Bob

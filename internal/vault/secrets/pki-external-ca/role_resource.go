@@ -410,5 +410,3 @@ func (r *PKIExternalCARoleResource) ImportState(ctx context.Context, req resourc
 func makeRoleID(mount, name string) string {
 	return fmt.Sprintf("%s/%s/%s", mount, roleAffix, name)
 }
-
-// Made with Bob

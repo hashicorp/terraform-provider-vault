@@ -201,5 +201,3 @@ func (r *PKIExternalCAOrderChallengeFulfilledResource) ImportState(ctx context.C
 func makeChallengeFulfilledID(mount, roleName, orderID, challengeType, identifier string) string {
 	return fmt.Sprintf("%s/role/%s/order/%s/%s/%s/%s", mount, roleName, orderID, challengeFulfilledAffix, challengeType, identifier)
 }
-
-// Made with Bob

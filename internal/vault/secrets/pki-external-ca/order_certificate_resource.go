@@ -239,7 +239,6 @@ func (r *PKIExternalCAOrderCertificateResource) Read(ctx context.Context, req re
 	}
 	data.SerialNumber = types.StringValue(apiModel.SerialNumber)
 
-	// Private key may or may not be present (ephemeral)
 	if apiModel.PrivateKey != "" {
 		data.PrivateKey = types.StringValue(apiModel.PrivateKey)
 	} else {
@@ -288,5 +287,3 @@ func (r *PKIExternalCAOrderCertificateResource) ImportState(ctx context.Context,
 func makeCertificateID(mount, roleName, orderID string) string {
 	return fmt.Sprintf("%s/role/%s/order/%s/%s", mount, roleName, orderID, certificateAffix)
 }
-
-// Made with Bob

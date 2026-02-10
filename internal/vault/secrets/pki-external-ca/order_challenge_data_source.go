@@ -251,5 +251,3 @@ func (d *PKIExternalCAOrderChallengeDataSource) Read(ctx context.Context, req da
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
-
-// Made with Bob

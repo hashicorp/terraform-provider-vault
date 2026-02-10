@@ -50,7 +50,6 @@ func TestAccPKIExternalCAOrderCertificateResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "certificate"),
 					resource.TestCheckResourceAttrSet(resourceName, "ca_chain.#"),
 					resource.TestCheckResourceAttrSet(resourceName, "serial_number"),
-					// private_key may or may not be present (ephemeral)
 				),
 			},
 		},
@@ -127,5 +126,3 @@ resource "vault_pki_secret_backend_external_ca_order_certificate" "test" {
 }
 `, backend, accountName, directoryUrl, ca, roleName, identifier, identifier, identifier)
 }
-
-// Made with Bob

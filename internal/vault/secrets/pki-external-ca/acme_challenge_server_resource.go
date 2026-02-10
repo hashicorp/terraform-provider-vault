@@ -156,5 +156,3 @@ func (r *acmeChallengeServerResource) Delete(ctx context.Context, req resource.D
 		delete(r.servers, id)
 	}
 }
-
-// Made with Bob

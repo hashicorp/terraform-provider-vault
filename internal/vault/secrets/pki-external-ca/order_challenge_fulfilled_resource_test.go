@@ -106,8 +106,6 @@ resource "vault_acme_challenge_server" "test" {
   key_authorization = data.vault_pki_secret_backend_external_ca_order_challenge.test.key_authorization
 }
 
-// The challenge won't succeed because we're not actually serving the response,
-// see order_certificate_resource_test for the full picture.
 resource "vault_pki_secret_backend_external_ca_order_challenge_fulfilled" "test" {
   mount          = vault_mount.test.path
   role_name      = vault_pki_secret_backend_external_ca_role.test.name
@@ -118,5 +116,3 @@ resource "vault_pki_secret_backend_external_ca_order_challenge_fulfilled" "test"
 }
 `, backend, accountName, directoryUrl, ca, roleName, identifier, identifier, identifier)
 }
-
-// Made with Bob
