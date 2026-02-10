@@ -1,23 +1,21 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package vault
+package kmip_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccKMIPSecretListener_basic(t *testing.T) {
+func TestAccKMIPListener_basic(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
@@ -37,47 +35,42 @@ func TestAccKMIPSecretListener_basic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy:             testKMIPSecretListenerCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testKMIPSecretListener_initialConfig(path, name, addr1),
+				Config: testKMIPListener_initialConfig(path, name, addr1),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, "ca", "default"),
+					resource.TestCheckResourceAttr(resourceName, "ca", "test-ca"),
 					resource.TestCheckResourceAttr(resourceName, "address", addr1),
 					resource.TestCheckResourceAttr(resourceName, "server_hostnames.#", "1"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "server_hostnames.*", "localhost"),
+					resource.TestCheckResourceAttr(resourceName, "server_hostnames.0", "localhost"),
 					resource.TestCheckResourceAttr(resourceName, "tls_min_version", "tls12"),
 					resource.TestCheckResourceAttr(resourceName, "also_use_legacy_ca", "false"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 			{
-				Config: testKMIPSecretListener_updateConfig(path, name, addr2),
+				Config: testKMIPListener_updateConfig(path, name, addr2),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, "ca", "default"),
+					resource.TestCheckResourceAttr(resourceName, "ca", "test-ca"),
 					resource.TestCheckResourceAttr(resourceName, "address", addr2),
 					resource.TestCheckResourceAttr(resourceName, "server_hostnames.#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "server_hostnames.*", "localhost"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "server_hostnames.*", "example.com"),
+					resource.TestCheckResourceAttr(resourceName, "server_hostnames.0", "localhost"),
+					resource.TestCheckResourceAttr(resourceName, "server_hostnames.1", "example.com"),
 					resource.TestCheckResourceAttr(resourceName, "tls_min_version", "tls13"),
 					resource.TestCheckResourceAttr(resourceName, "also_use_legacy_ca", "true"),
 				),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 		},
 	})
 }
 
-func TestAccKMIPSecretListener_remount(t *testing.T) {
+func TestAccKMIPListener_remount(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
@@ -98,25 +91,24 @@ func TestAccKMIPSecretListener_remount(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy:             testKMIPSecretListenerCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testKMIPSecretListener_initialConfig(path, name, addr1),
+				Config: testKMIPListener_initialConfig(path, name, addr1),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, "ca", "default"),
+					resource.TestCheckResourceAttr(resourceName, "ca", "test-ca"),
 					resource.TestCheckResourceAttr(resourceName, "address", addr1),
 				),
 			},
 			{
-				Config: testKMIPSecretListener_initialConfig(remountPath, name, addr1),
+				Config: testKMIPListener_initialConfig(remountPath, name, addr1),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, remountPath),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, "ca", "default"),
+					resource.TestCheckResourceAttr(resourceName, "ca", "test-ca"),
 					resource.TestCheckResourceAttr(resourceName, "address", addr1),
 				),
 			},
@@ -124,29 +116,7 @@ func TestAccKMIPSecretListener_remount(t *testing.T) {
 	})
 }
 
-func testKMIPSecretListenerCheckDestroy(s *terraform.State) error {
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_kmip_secret_listener" {
-			continue
-		}
-
-		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
-		if e != nil {
-			return e
-		}
-
-		secret, err := client.Logical().Read(rs.Primary.ID)
-		if err != nil {
-			return fmt.Errorf("error checking for KMIP listener %q: %s", rs.Primary.ID, err)
-		}
-		if secret != nil {
-			return fmt.Errorf("KMIP listener %q still exists", rs.Primary.ID)
-		}
-	}
-	return nil
-}
-
-func testKMIPSecretListener_initialConfig(path, name, addr string) string {
+func testKMIPListener_initialConfig(path, name, addr string) string {
 	return fmt.Sprintf(`
 resource "vault_kmip_secret_backend" "test" {
   path                         = "%s"
@@ -160,17 +130,24 @@ resource "vault_kmip_secret_backend" "test" {
   default_tls_client_ttl       = 86400
 }
 
+resource "vault_kmip_secret_ca" "test" {
+  path     = vault_kmip_secret_backend.test.path
+  name     = "test-ca"
+  key_type = "ec"
+  key_bits = 256
+}
+
 resource "vault_kmip_secret_listener" "test" {
   path             = vault_kmip_secret_backend.test.path
   name             = "%s"
-  ca               = "default"
+  ca               = vault_kmip_secret_ca.test.name
   address          = "%s"
   server_hostnames = ["localhost"]
   tls_min_version  = "tls12"
 }`, path, name, addr)
 }
 
-func testKMIPSecretListener_updateConfig(path, name, addr string) string {
+func testKMIPListener_updateConfig(path, name, addr string) string {
 	return fmt.Sprintf(`
 resource "vault_kmip_secret_backend" "test" {
   path                         = "%s"
@@ -184,10 +161,17 @@ resource "vault_kmip_secret_backend" "test" {
   default_tls_client_ttl       = 86400
 }
 
+resource "vault_kmip_secret_ca" "test" {
+  path     = vault_kmip_secret_backend.test.path
+  name     = "test-ca"
+  key_type = "ec"
+  key_bits = 256
+}
+
 resource "vault_kmip_secret_listener" "test" {
   path               = vault_kmip_secret_backend.test.path
   name               = "%s"
-  ca                 = "default"
+  ca                 = vault_kmip_secret_ca.test.name
   address            = "%s"
   server_hostnames   = ["localhost", "example.com"]
   tls_min_version    = "tls13"
