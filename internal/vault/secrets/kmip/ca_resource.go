@@ -80,6 +80,9 @@ func (r *KMIPCAResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			consts.FieldPath: schema.StringAttribute{
 				MarkdownDescription: "Path where KMIP backend is mounted.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			consts.FieldName: schema.StringAttribute{
 				MarkdownDescription: "Name to identify the CA.",

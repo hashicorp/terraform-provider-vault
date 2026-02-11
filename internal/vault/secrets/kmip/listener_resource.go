@@ -81,6 +81,9 @@ func (r *KMIPListenerResource) Schema(_ context.Context, _ resource.SchemaReques
 			consts.FieldPath: schema.StringAttribute{
 				MarkdownDescription: "Path where KMIP backend is mounted.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			consts.FieldName: schema.StringAttribute{
 				MarkdownDescription: "Unique name for the listener.",
