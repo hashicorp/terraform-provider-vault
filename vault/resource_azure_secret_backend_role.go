@@ -217,7 +217,7 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 	} else {
 		if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
 			return diag.Errorf("%q is only supported on Vault Enterprise %s or newer",
-				consts.FieldMetadata, provider.VaultVersion121)
+				consts.FieldMetadata, provider.VaultVersion200)
 		}
 	}
 
@@ -314,8 +314,8 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 		}
 	}
 
-	useAPIVer121Ent := provider.IsAPISupported(meta, provider.VaultVersion121) && provider.IsEnterpriseSupported(meta)
-	if useAPIVer121Ent {
+	useAPIVer200Ent := provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer200Ent {
 		if err := d.Set(consts.FieldMetadata, resp.Data[consts.FieldMetadata]); err != nil {
 			return diag.FromErr(err)
 		}
