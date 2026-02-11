@@ -639,6 +639,7 @@ const (
 	FieldAudience                             = "audience"
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
+	FieldDeferInitialCreds                    = "defer_initial_creds"
 	FieldDeletionAllowed                      = "deletion_allowed"
 	FieldConvergentEncryption                 = "convergent_encryption"
 	FieldDerived                              = "derived"
