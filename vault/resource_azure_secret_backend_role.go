@@ -205,8 +205,8 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		}
 	}
 
-	useAPIVer121Ent := provider.IsAPISupported(meta, provider.VaultVersion121) && provider.IsEnterpriseSupported(meta)
-	if useAPIVer121Ent {
+	useAPIVer200Ent := provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer200Ent {
 		if d.IsNewResource() {
 			if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
 				data[consts.FieldMetadata] = v.(map[string]interface{})

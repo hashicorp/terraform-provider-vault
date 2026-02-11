@@ -245,7 +245,6 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 			} else {
 				secret, readErr = c.Logical().ReadWithContext(ctx, credsPath)
 			}
-			//secret, readErr = c.Logical().ReadWithContext(ctx, credsPath)
 			if readErr != nil {
 				if respErr, ok := readErr.(*api.ResponseError); ok {
 					if respErr.StatusCode == 500 && strings.Contains(respErr.Error(), "concurrent requests being made") {

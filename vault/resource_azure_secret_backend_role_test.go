@@ -75,9 +75,9 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "explicit_max_ttl", "2592000"))
 	}
 
-	isVaultVersion121Ent := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion121) &&
+	isVaultVersion200Ent := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion200) &&
 		testProvider.Meta().(*provider.ProviderMeta).IsEnterpriseSupported()
-	if isVaultVersion121Ent {
+	if isVaultVersion200Ent {
 		azureRoleInitialCheckFuncs = append(azureRoleInitialCheckFuncs,
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "metadata.environment", "test"),
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "metadata.team", "eco"),
