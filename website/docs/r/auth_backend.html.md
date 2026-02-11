@@ -32,7 +32,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
-* `type` - (Required) The name of the auth method type.
+* `type` - (Required) Type of the backend, such as "jwt" or the plugin name.
 
 * `path` - (Optional) The path to mount the auth method — this defaults to the name of the type.
 
@@ -46,6 +46,13 @@ The following arguments are supported:
 * `tune` - (Optional) Extra configuration block. Structure is documented below.
 
 The `tune` block is used to tune the auth backend:
+* `plugin_version` - (Optional) Specifies the semantic version of the external
+  plugin to use, e.g. "v1.0.0". If unspecified, the server will select any
+  matching unversioned plugin that may have been registered, the latest
+  versioned plugin registered, or a built-in plugin in that order of precedence.
+
+* `override_pinned_version` - (Optional) (Vault Enterprise 1.22+ only) Specifies
+  whether to override the pinned version using plugin_version.
 
 * `default_lease_ttl` - (Optional) Specifies the default time-to-live.
   If set, this overrides the global default.

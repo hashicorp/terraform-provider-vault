@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"maps"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -77,6 +78,38 @@ func authMountTuneSchema() *schema.Schema {
 			},
 		},
 	}
+}
+
+// authExternalPluginMountTuneSchema extends authMountTuneSchema with
+// fields that support external plugins.
+func authExternalPluginMountTuneSchema() *schema.Schema {
+	m := map[string]*schema.Schema{
+		consts.FieldPluginVersion: {
+			// plugin_version is only allowed under resource_auth_backend
+			// as it's the only way to enable external plugins via specifying
+			// the plugin type (aka the plugin name).
+			// There is no support currently for specifying the plugin name/type under
+			// auth specific backend resources (e.g. vault_github_auth_backend)
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: `Specifies the semantic version of the external plugin  
+to use. e.g. 'v1.0.0'. If not specified, the server will select any matching 
+unversioned plugin that may have been registered, the latest versioned plugin 
+registered, or a built-in plugin in that order of precedence.`,
+		},
+		consts.FieldOverridePinnedVersion: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Description: `(Enterprise only). Specifies whether to override 
+the pinned version using plugin_version.`,
+		},
+	}
+	s := authMountTuneSchema()
+
+	re := s.Elem.(*schema.Resource)
+	maps.Copy(re.Schema, m)
+
+	return s
 }
 
 func authMountTune(ctx context.Context, client *api.Client, path string, configured interface{}) error {
