@@ -120,14 +120,6 @@ func testKMIPListener_initialConfig(path, name, addr string) string {
 	return fmt.Sprintf(`
 resource "vault_kmip_secret_backend" "test" {
   path                         = "%s"
-  description                  = "test description"
-  listen_addrs                 = ["127.0.0.1:5696"]
-  server_hostnames             = ["localhost"]
-  tls_ca_key_type              = "ec"
-  tls_ca_key_bits              = 256
-  default_tls_client_key_type  = "ec"
-  default_tls_client_key_bits  = 256
-  default_tls_client_ttl       = 86400
 }
 
 resource "vault_kmip_secret_ca" "test" {
@@ -151,14 +143,6 @@ func testKMIPListener_updateConfig(path, name, addr string) string {
 	return fmt.Sprintf(`
 resource "vault_kmip_secret_backend" "test" {
   path                         = "%s"
-  description                  = "test description"
-  listen_addrs                 = ["127.0.0.1:5696"]
-  server_hostnames             = ["localhost"]
-  tls_ca_key_type              = "ec"
-  tls_ca_key_bits              = 256
-  default_tls_client_key_type  = "ec"
-  default_tls_client_key_bits  = 256
-  default_tls_client_ttl       = 86400
 }
 
 resource "vault_kmip_secret_ca" "test" {

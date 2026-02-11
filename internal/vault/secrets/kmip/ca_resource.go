@@ -209,12 +209,23 @@ func (r *KMIPCAResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, vaultRequest); err != nil {
+	writeResp, err := cli.Logical().WriteWithContext(ctx, apiPath, vaultRequest)
+	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
 	}
 
 	data.ID = types.StringValue(makeCAID(backend, name))
+
+	var apiModel KMIPCAAPIModel
+	err = model.ToAPIModel(writeResp.Data, &apiModel)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
+		return
+	}
+
+	// Map API response to Terraform model
+	mapAPIModelToTerraformModel(&apiModel, &data)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -254,26 +265,9 @@ func (r *KMIPCAResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	// Map values back to Terraform model
+	// Map API response to Terraform model
 	// Note: ca_pem is returned from API but we don't update it in state for security
-	if apiModel.KeyType != "" {
-		data.KeyType = types.StringValue(apiModel.KeyType)
-	}
-	if apiModel.KeyBits > 0 {
-		data.KeyBits = types.Int64Value(apiModel.KeyBits)
-	}
-	if apiModel.ScopeName != "" {
-		data.ScopeName = types.StringValue(apiModel.ScopeName)
-	}
-	if apiModel.ScopeField != "" {
-		data.ScopeField = types.StringValue(apiModel.ScopeField)
-	}
-	if apiModel.RoleName != "" {
-		data.RoleName = types.StringValue(apiModel.RoleName)
-	}
-	if apiModel.RoleField != "" {
-		data.RoleField = types.StringValue(apiModel.RoleField)
-	}
+	mapAPIModelToTerraformModel(&apiModel, &data)
 
 	data.ID = types.StringValue(makeCAID(backend, name))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -312,10 +306,21 @@ func (r *KMIPCAResource) Update(ctx context.Context, req resource.UpdateRequest,
 		vaultRequest["role_field"] = data.RoleField.ValueString()
 	}
 
-	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, vaultRequest); err != nil {
+	writeResp, err := cli.Logical().WriteWithContext(ctx, apiPath, vaultRequest)
+	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
 		return
 	}
+
+	var apiModel KMIPCAAPIModel
+	err = model.ToAPIModel(writeResp.Data, &apiModel)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
+		return
+	}
+
+	// Map API response to Terraform model
+	mapAPIModelToTerraformModel(&apiModel, &data)
 
 	data.ID = types.StringValue(makeCAID(backend, name))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -358,6 +363,39 @@ func buildImportRequestFromModel(ctx context.Context, data *KMIPCAModel) (map[st
 	}
 
 	return vaultRequest, diags
+}
+
+// mapAPIModelToTerraformModel maps the API response fields to the Terraform model
+func mapAPIModelToTerraformModel(apiModel *KMIPCAAPIModel, data *KMIPCAModel) {
+	// Map key_type - only set if returned from API
+	if apiModel.KeyType != "" {
+		data.KeyType = types.StringValue(apiModel.KeyType)
+	} else if data.KeyType.IsUnknown() {
+		// For imported CAs, key_type is not returned, set to null
+		data.KeyType = types.StringNull()
+	}
+
+	// Map key_bits - only set if returned from API
+	if apiModel.KeyBits > 0 {
+		data.KeyBits = types.Int64Value(apiModel.KeyBits)
+	} else if data.KeyBits.IsUnknown() {
+		// For imported CAs, key_bits is not returned, set to null
+		data.KeyBits = types.Int64Null()
+	}
+
+	// Map scope and role fields
+	if apiModel.ScopeName != "" {
+		data.ScopeName = types.StringValue(apiModel.ScopeName)
+	}
+	if apiModel.ScopeField != "" {
+		data.ScopeField = types.StringValue(apiModel.ScopeField)
+	}
+	if apiModel.RoleName != "" {
+		data.RoleName = types.StringValue(apiModel.RoleName)
+	}
+	if apiModel.RoleField != "" {
+		data.RoleField = types.StringValue(apiModel.RoleField)
+	}
 }
 
 func (r *KMIPCAResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
