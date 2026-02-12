@@ -116,6 +116,61 @@ func TestAccKMIPListener_remount(t *testing.T) {
 	})
 }
 
+func TestAccKMIPListener_additionalClientCAs(t *testing.T) {
+	testutil.SkipTestAccEnt(t)
+
+	path := acctest.RandomWithPrefix("tf-test-kmip")
+	name := acctest.RandomWithPrefix("listener")
+	resourceType := "vault_kmip_secret_listener"
+	resourceName := resourceType + ".test"
+
+	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	addr1, addr2 := lns[0].Addr().String(), lns[1].Addr().String()
+
+	if err = closer(); err != nil {
+		t.Fatal(err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKMIPListener_additionalClientCAsConfig(path, name, addr1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, "ca", "test-ca"),
+					resource.TestCheckResourceAttr(resourceName, "address", addr1),
+					resource.TestCheckResourceAttr(resourceName, "additional_client_cas.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "additional_client_cas.0", "client-ca-1"),
+					resource.TestCheckResourceAttr(resourceName, "additional_client_cas.1", "client-ca-2"),
+					resource.TestCheckResourceAttr(resourceName, "server_hostnames.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "server_hostnames.0", "localhost"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+			{
+				Config: testKMIPListener_additionalClientCAsUpdateConfig(path, name, addr2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, "ca", "test-ca"),
+					resource.TestCheckResourceAttr(resourceName, "address", addr2),
+					resource.TestCheckResourceAttr(resourceName, "additional_client_cas.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "additional_client_cas.0", "client-ca-1"),
+					resource.TestCheckResourceAttr(resourceName, "server_hostnames.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "server_hostnames.0", "localhost"),
+				),
+			},
+		},
+	})
+}
+
 func testKMIPListener_initialConfig(path, name, addr string) string {
 	return fmt.Sprintf(`
 resource "vault_kmip_secret_backend" "test" {
@@ -164,3 +219,82 @@ resource "vault_kmip_secret_listener" "test" {
 }
 
 // Made with Bob
+
+func testKMIPListener_additionalClientCAsConfig(path, name, addr string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "test" {
+  path = "%s"
+}
+
+resource "vault_kmip_secret_ca" "test" {
+  path     = vault_kmip_secret_backend.test.path
+  name     = "test-ca"
+  key_type = "ec"
+  key_bits = 256
+}
+
+resource "vault_kmip_secret_ca" "client1" {
+  path     = vault_kmip_secret_backend.test.path
+  name     = "client-ca-1"
+  key_type = "ec"
+  key_bits = 256
+}
+
+resource "vault_kmip_secret_ca" "client2" {
+  path     = vault_kmip_secret_backend.test.path
+  name     = "client-ca-2"
+  key_type = "ec"
+  key_bits = 256
+}
+
+resource "vault_kmip_secret_listener" "test" {
+  path                 = vault_kmip_secret_backend.test.path
+  name                 = "%s"
+  ca                   = vault_kmip_secret_ca.test.name
+  address              = "%s"
+  server_hostnames     = ["localhost"]
+  additional_client_cas = [
+    vault_kmip_secret_ca.client1.name,
+    vault_kmip_secret_ca.client2.name,
+  ]
+}`, path, name, addr)
+}
+
+func testKMIPListener_additionalClientCAsUpdateConfig(path, name, addr string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "test" {
+  path = "%s"
+}
+
+resource "vault_kmip_secret_ca" "test" {
+  path     = vault_kmip_secret_backend.test.path
+  name     = "test-ca"
+  key_type = "ec"
+  key_bits = 256
+}
+
+resource "vault_kmip_secret_ca" "client1" {
+  path     = vault_kmip_secret_backend.test.path
+  name     = "client-ca-1"
+  key_type = "ec"
+  key_bits = 256
+}
+
+resource "vault_kmip_secret_ca" "client2" {
+  path     = vault_kmip_secret_backend.test.path
+  name     = "client-ca-2"
+  key_type = "ec"
+  key_bits = 256
+}
+
+resource "vault_kmip_secret_listener" "test" {
+  path                 = vault_kmip_secret_backend.test.path
+  name                 = "%s"
+  ca                   = vault_kmip_secret_ca.test.name
+  address              = "%s"
+  server_hostnames     = ["localhost"]
+  additional_client_cas = [
+    vault_kmip_secret_ca.client1.name,
+  ]
+}`, path, name, addr)
+}
