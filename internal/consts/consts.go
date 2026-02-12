@@ -580,7 +580,7 @@ const (
 	FieldAudience                             = "audience"
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
-
+	DistributedClaimAccessToken               = "distributed_claim_access_token"
 	/*
 		ephemeral resource constants and write-only attributes
 	*/
