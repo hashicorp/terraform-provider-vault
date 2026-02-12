@@ -154,18 +154,18 @@ func (r *GenericEphemeralSecretResource) Open(ctx context.Context, req ephemeral
 	// Extract the actual data from the response
 	// For KV v2, the data is nested: response.Data["data"] contains the actual secret
 	// For KV v1 and other engines, the data is directly in response.Data
-	var secretData map[string]interface{}
+	var secData map[string]interface{}
 	if nestedData, ok := secretResp.Data["data"].(map[string]interface{}); ok {
 		// KV v2 format: data is nested under "data" key
-		secretData = nestedData
+		secData = nestedData
 	} else {
 		// KV v1 or other engines: data is directly in Data
-		secretData = secretResp.Data
+		secData = secretResp.Data
 	}
 
 	// Process secret data
 	dataMap := make(map[string]string)
-	for k, v := range secretData {
+	for k, v := range secData {
 		if vs, ok := v.(string); ok {
 			dataMap[k] = vs
 		} else {
@@ -186,8 +186,8 @@ func (r *GenericEphemeralSecretResource) Open(ctx context.Context, req ephemeral
 	}
 	data.Data = mapValue
 
-	// Marshal entire data to JSON (use the extracted secretData, not the raw response)
-	jsonData, err := json.Marshal(secretData)
+	// Marshal entire data to JSON (use the extracted secData, not the raw response)
+	jsonData, err := json.Marshal(secData)
 	if err != nil {
 		resp.Diagnostics.AddError("Error marshalling data to JSON", err.Error())
 		return
