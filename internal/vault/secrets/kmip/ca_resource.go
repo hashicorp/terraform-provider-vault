@@ -47,7 +47,6 @@ type KMIPCAResource struct {
 type KMIPCAModel struct {
 	base.BaseModel
 
-	ID         types.String `tfsdk:"id"`
 	Path       types.String `tfsdk:"path"`
 	Name       types.String `tfsdk:"name"`
 	CAPem      types.String `tfsdk:"ca_pem"`
@@ -148,12 +147,6 @@ func (r *KMIPCAResource) Metadata(_ context.Context, req resource.MetadataReques
 func (r *KMIPCAResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldID: schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			consts.FieldPath: schema.StringAttribute{
 				MarkdownDescription: "Path where KMIP backend is mounted.",
 				Required:            true,
@@ -300,8 +293,6 @@ func (r *KMIPCAResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	data.ID = types.StringValue(makeCAID(backend, name))
-
 	var apiModel KMIPCAAPIModel
 	err = model.ToAPIModel(writeResp.Data, &apiModel)
 	if err != nil {
@@ -354,7 +345,6 @@ func (r *KMIPCAResource) Read(ctx context.Context, req resource.ReadRequest, res
 	// Note: ca_pem is returned from API but we don't update it in state for security
 	mapAPIModelToTerraformModel(&apiModel, &data)
 
-	data.ID = types.StringValue(makeCAID(backend, name))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -407,7 +397,6 @@ func (r *KMIPCAResource) Update(ctx context.Context, req resource.UpdateRequest,
 	// Map API response to Terraform model
 	mapAPIModelToTerraformModel(&apiModel, &data)
 
-	data.ID = types.StringValue(makeCAID(backend, name))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -524,11 +513,6 @@ func (r *KMIPCAResource) ImportState(ctx context.Context, req resource.ImportSta
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), backend)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), id)...)
-}
-
-func makeCAID(backend, name string) string {
-	return fmt.Sprintf("%s/ca/%s", backend, name)
 }
 
 // Made with Bob

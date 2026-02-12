@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
@@ -51,7 +52,13 @@ func TestAccKMIPListener_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "also_use_legacy_ca", "false"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKMIPListenerImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+			},
 			{
 				Config: testKMIPListener_updateConfig(path, name, addr2),
 				Check: resource.ComposeTestCheckFunc(
@@ -153,7 +160,13 @@ func TestAccKMIPListener_additionalClientCAs(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "server_hostnames.0", "localhost"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKMIPListenerImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+			},
 			{
 				Config: testKMIPListener_additionalClientCAsUpdateConfig(path, name, addr2),
 				Check: resource.ComposeTestCheckFunc(
@@ -169,6 +182,17 @@ func TestAccKMIPListener_additionalClientCAs(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testAccKMIPListenerImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+
+		return fmt.Sprintf("%s/listener/%s", rs.Primary.Attributes[consts.FieldPath], rs.Primary.Attributes[consts.FieldName]), nil
+	}
 }
 
 func testKMIPListener_initialConfig(path, name, addr string) string {

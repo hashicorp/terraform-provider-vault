@@ -18,6 +18,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
@@ -46,7 +47,14 @@ func TestAccKMIPCA_generate(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "ttl", "31536000"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "ttl", "key_type", "key_bits"),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKMIPCAImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIgnore:              []string{"ttl", "key_type", "key_bits"},
+			},
 		},
 	})
 }
@@ -79,7 +87,14 @@ func TestAccKMIPCA_import(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "ca_pem"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "ca_pem", "ttl"),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKMIPCAImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIgnore:              []string{"ca_pem", "ttl"},
+			},
 			{
 				Config: testKMIPCA_importUpdateConfig(path, name, caPem),
 				Check: resource.ComposeTestCheckFunc(
@@ -215,6 +230,16 @@ func generateSelfSignedCert() (string, error) {
 	})
 
 	return string(certPEM), nil
+}
+func testAccKMIPCAImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+
+		return fmt.Sprintf("%s/ca/%s", rs.Primary.Attributes[consts.FieldPath], rs.Primary.Attributes[consts.FieldName]), nil
+	}
 }
 
 func testKMIPCA_generateConfig(path, name string) string {
