@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"regexp"
 	"testing"
 	"time"
 
@@ -87,6 +88,88 @@ func TestAccKMIPCA_import(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "scope_name", "updated-scope"),
 					resource.TestCheckResourceAttr(resourceName, "role_name", "updated-role"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKMIPCA_importValidation(t *testing.T) {
+	testutil.SkipTestAccEnt(t)
+
+	path := acctest.RandomWithPrefix("tf-test-kmip")
+	name := acctest.RandomWithPrefix("ca")
+
+	// Generate a self-signed certificate for testing
+	caPem, err := generateSelfSignedCert()
+	if err != nil {
+		t.Fatalf("Failed to generate self-signed certificate: %v", err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				// Test: imported CA with both scope_name and scope_field should fail
+				Config:      testKMIPCA_importBothScopeFieldsConfig(path, name, caPem),
+				ExpectError: regexp.MustCompile("only one of.*scope_name.*scope_field.*can be specified"),
+			},
+			{
+				// Test: imported CA with neither scope_name nor scope_field should fail
+				Config:      testKMIPCA_importNoScopeFieldsConfig(path, name, caPem),
+				ExpectError: regexp.MustCompile("exactly one of.*scope_name.*scope_field.*must be specified"),
+			},
+			{
+				// Test: imported CA with both role_name and role_field should fail
+				Config:      testKMIPCA_importBothRoleFieldsConfig(path, name, caPem),
+				ExpectError: regexp.MustCompile("only one of.*role_name.*role_field.*can be specified"),
+			},
+			{
+				// Test: imported CA with neither role_name nor role_field should fail
+				Config:      testKMIPCA_importNoRoleFieldsConfig(path, name, caPem),
+				ExpectError: regexp.MustCompile("exactly one of.*role_name.*role_field.*must be specified"),
+			},
+			{
+				// Test: imported CA with scope_field and role_field should succeed
+				Config: testKMIPCA_importScopeAndRoleFieldConfig(path, name, caPem),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kmip_secret_ca.test", "scope_field", "CN"),
+					resource.TestCheckResourceAttr("vault_kmip_secret_ca.test", "role_field", "O"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKMIPCA_generateValidation(t *testing.T) {
+	testutil.SkipTestAccEnt(t)
+
+	path := acctest.RandomWithPrefix("tf-test-kmip")
+	name := acctest.RandomWithPrefix("ca")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				// Test: generated CA with scope_name should fail
+				Config:      testKMIPCA_generateWithScopeNameConfig(path, name),
+				ExpectError: regexp.MustCompile(`Invalid Attribute Configuration`),
+			},
+			{
+				// Test: generated CA with scope_field should fail
+				Config:      testKMIPCA_generateWithScopeFieldConfig(path, name),
+				ExpectError: regexp.MustCompile(`Invalid Attribute Configuration`),
+			},
+			{
+				// Test: generated CA with role_name should fail
+				Config:      testKMIPCA_generateWithRoleNameConfig(path, name),
+				ExpectError: regexp.MustCompile(`Invalid Attribute Configuration`),
+			},
+			{
+				// Test: generated CA with role_field should fail
+				Config:      testKMIPCA_generateWithRoleFieldConfig(path, name),
+				ExpectError: regexp.MustCompile(`Invalid Attribute Configuration`),
 			},
 		},
 	})
@@ -181,6 +264,151 @@ EOT
   scope_name = "updated-scope"
   role_name  = "updated-role"
 }`, path, name, caPem)
+}
+
+func testKMIPCA_importBothScopeFieldsConfig(path, name, caPem string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "test" {
+  path = "%s"
+}
+
+resource "vault_kmip_secret_ca" "test" {
+  path        = vault_kmip_secret_backend.test.path
+  name        = "%s"
+  ca_pem      = <<EOT
+%s
+EOT
+  scope_name  = "test-scope"
+  scope_field = "CN"
+  role_name   = "test-role"
+}`, path, name, caPem)
+}
+
+func testKMIPCA_importNoScopeFieldsConfig(path, name, caPem string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "test" {
+  path = "%s"
+}
+
+resource "vault_kmip_secret_ca" "test" {
+  path      = vault_kmip_secret_backend.test.path
+  name      = "%s"
+  ca_pem    = <<EOT
+%s
+EOT
+  role_name = "test-role"
+}`, path, name, caPem)
+}
+
+func testKMIPCA_importScopeAndRoleFieldConfig(path, name, caPem string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "test" {
+  path = "%s"
+}
+
+resource "vault_kmip_secret_ca" "test" {
+  path        = vault_kmip_secret_backend.test.path
+  name        = "%s"
+  ca_pem      = <<EOT
+%s
+EOT
+  scope_field = "CN"
+  role_field  = "O"
+}`, path, name, caPem)
+}
+
+func testKMIPCA_importBothRoleFieldsConfig(path, name, caPem string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "test" {
+  path = "%s"
+}
+
+resource "vault_kmip_secret_ca" "test" {
+  path       = vault_kmip_secret_backend.test.path
+  name       = "%s"
+  ca_pem     = <<EOT
+%s
+EOT
+  scope_name = "test-scope"
+  role_name  = "test-role"
+  role_field = "CN"
+}`, path, name, caPem)
+}
+
+func testKMIPCA_importNoRoleFieldsConfig(path, name, caPem string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "test" {
+  path = "%s"
+}
+
+resource "vault_kmip_secret_ca" "test" {
+  path       = vault_kmip_secret_backend.test.path
+  name       = "%s"
+  ca_pem     = <<EOT
+%s
+EOT
+  scope_name = "test-scope"
+}`, path, name, caPem)
+}
+
+func testKMIPCA_generateWithScopeNameConfig(path, name string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "test" {
+  path = "%s"
+}
+
+resource "vault_kmip_secret_ca" "test" {
+  path       = vault_kmip_secret_backend.test.path
+  name       = "%s"
+  key_type   = "ec"
+  key_bits   = 256
+  scope_name = "test-scope"
+}`, path, name)
+}
+
+func testKMIPCA_generateWithScopeFieldConfig(path, name string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "test" {
+  path = "%s"
+}
+
+resource "vault_kmip_secret_ca" "test" {
+  path        = vault_kmip_secret_backend.test.path
+  name        = "%s"
+  key_type    = "ec"
+  key_bits    = 256
+  scope_field = "CN"
+}`, path, name)
+}
+
+func testKMIPCA_generateWithRoleNameConfig(path, name string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "test" {
+  path = "%s"
+}
+
+resource "vault_kmip_secret_ca" "test" {
+  path      = vault_kmip_secret_backend.test.path
+  name      = "%s"
+  key_type  = "ec"
+  key_bits  = 256
+  role_name = "test-role"
+}`, path, name)
+}
+
+func testKMIPCA_generateWithRoleFieldConfig(path, name string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "test" {
+  path = "%s"
+}
+
+resource "vault_kmip_secret_ca" "test" {
+  path       = vault_kmip_secret_backend.test.path
+  name       = "%s"
+  key_type   = "ec"
+  key_bits   = 256
+  role_field = "CN"
+}`, path, name)
 }
 
 // Made with Bob

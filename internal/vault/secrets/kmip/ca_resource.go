@@ -70,6 +70,76 @@ type KMIPCAAPIModel struct {
 	RoleField  string `json:"role_field" mapstructure:"role_field"`
 }
 
+// importedCAExactlyOneOfValidator validates that exactly one of two fields is set
+// when ca_pem is specified (imported CA scenario), and that neither field is set
+// when ca_pem is not specified (generated CA scenario)
+type importedCAExactlyOneOfValidator struct {
+	otherField string
+}
+
+func (v importedCAExactlyOneOfValidator) Description(ctx context.Context) string {
+	return fmt.Sprintf("For imported CAs, exactly one of this field or %s must be specified. For generated CAs, neither should be specified.", v.otherField)
+}
+
+func (v importedCAExactlyOneOfValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v importedCAExactlyOneOfValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	// Get the ca_pem value to determine if this is an import
+	var caPem types.String
+	diags := req.Config.GetAttribute(ctx, path.Root("ca_pem"), &caPem)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Check if current field is set
+	currentFieldSet := !req.ConfigValue.IsNull() && req.ConfigValue.ValueString() != ""
+
+	isImport := !caPem.IsNull() && caPem.ValueString() != ""
+
+	if isImport {
+		// For imported CAs, validate exactly one of the two fields is set
+		// Get the other field value
+		var otherFieldValue types.String
+		diags = req.Config.GetAttribute(ctx, path.Root(v.otherField), &otherFieldValue)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		otherFieldSet := !otherFieldValue.IsNull() && otherFieldValue.ValueString() != ""
+
+		// Exactly one must be set
+		if currentFieldSet && otherFieldSet {
+			resp.Diagnostics.AddAttributeError(
+				req.Path,
+				"Conflicting Attribute Configuration",
+				fmt.Sprintf("For imported CAs, only one of %s or %s can be specified, not both.",
+					req.Path.String(), v.otherField),
+			)
+		} else if !currentFieldSet && !otherFieldSet {
+			resp.Diagnostics.AddAttributeError(
+				req.Path,
+				"Missing Attribute Configuration",
+				fmt.Sprintf("For imported CAs, exactly one of %s or %s must be specified.",
+					req.Path.String(), v.otherField),
+			)
+		}
+	} else {
+		// For generated CAs, neither field should be set
+		if currentFieldSet {
+			resp.Diagnostics.AddAttributeError(
+				req.Path,
+				"Invalid Attribute Configuration",
+				fmt.Sprintf("For generated CAs, %s cannot be specified. This field is only valid for imported CAs.",
+					req.Path.String()),
+			)
+		}
+	}
+}
+
 func (r *KMIPCAResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_kmip_secret_ca"
 }
@@ -128,25 +198,33 @@ func (r *KMIPCAResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"scope_name": schema.StringAttribute{
-				MarkdownDescription: "The scope name to associate with this CA. For imported CAs, must specify either scope_name or scope_field.",
+				MarkdownDescription: "The scope name to associate with this CA. For imported CAs, must specify exactly one of scope_name or scope_field.",
 				Optional:            true,
+				Validators: []validator.String{
+					importedCAExactlyOneOfValidator{otherField: "scope_field"},
+				},
 			},
 			"scope_field": schema.StringAttribute{
-				MarkdownDescription: "The field in the certificate to use for the scope (CN, O, OU, or UID). For imported CAs, must specify either scope_name or scope_field.",
+				MarkdownDescription: "The field in the certificate to use for the scope (CN, O, OU, or UID). For imported CAs, must specify exactly one of scope_name or scope_field.",
 				Optional:            true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("CN", "O", "OU", "UID"),
+					importedCAExactlyOneOfValidator{otherField: "scope_name"},
 				},
 			},
 			"role_name": schema.StringAttribute{
-				MarkdownDescription: "The role name to associate with this CA. For imported CAs, must specify either role_name or role_field.",
+				MarkdownDescription: "The role name to associate with this CA. For imported CAs, must specify exactly one of role_name or role_field.",
 				Optional:            true,
+				Validators: []validator.String{
+					importedCAExactlyOneOfValidator{otherField: "role_field"},
+				},
 			},
 			"role_field": schema.StringAttribute{
-				MarkdownDescription: "The field in the certificate to use for the role (CN, O, OU, or UID). For imported CAs, must specify either role_name or role_field.",
+				MarkdownDescription: "The field in the certificate to use for the role (CN, O, OU, or UID). For imported CAs, must specify exactly one of role_name or role_field.",
 				Optional:            true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("CN", "O", "OU", "UID"),
+					importedCAExactlyOneOfValidator{otherField: "role_name"},
 				},
 			},
 		},
