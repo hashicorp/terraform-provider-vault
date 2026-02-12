@@ -43,8 +43,9 @@ type KMIPListenerResource struct {
 // KMIPListenerModel describes the Terraform resource data model to match the
 // resource schema.
 type KMIPListenerModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
+	ID                  types.String `tfsdk:"id"`
 	Path                types.String `tfsdk:"path"`
 	Name                types.String `tfsdk:"name"`
 	CA                  types.String `tfsdk:"ca"`
@@ -78,6 +79,12 @@ func (r *KMIPListenerResource) Metadata(_ context.Context, req resource.Metadata
 func (r *KMIPListenerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			consts.FieldID: schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			consts.FieldPath: schema.StringAttribute{
 				MarkdownDescription: "Path where KMIP backend is mounted.",
 				Required:            true,
@@ -138,7 +145,7 @@ func (r *KMIPListenerResource) Schema(_ context.Context, _ resource.SchemaReques
 		},
 		MarkdownDescription: "Manage KMIP secret engine listeners.",
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 // readListenerFromVault reads the listener configuration from Vault and populates the model
@@ -398,7 +405,7 @@ func (r *KMIPListenerResource) ImportState(ctx context.Context, req resource.Imp
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), backend)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), id)...)
 }
 
 func makeID(backend, name string) string {

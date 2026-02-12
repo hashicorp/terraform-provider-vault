@@ -45,8 +45,9 @@ type KMIPCAResource struct {
 // KMIPCAModel describes the Terraform resource data model to match the
 // resource schema.
 type KMIPCAModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
+	ID         types.String `tfsdk:"id"`
 	Path       types.String `tfsdk:"path"`
 	Name       types.String `tfsdk:"name"`
 	CAPem      types.String `tfsdk:"ca_pem"`
@@ -147,6 +148,12 @@ func (r *KMIPCAResource) Metadata(_ context.Context, req resource.MetadataReques
 func (r *KMIPCAResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			consts.FieldID: schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			consts.FieldPath: schema.StringAttribute{
 				MarkdownDescription: "Path where KMIP backend is mounted.",
 				Required:            true,
@@ -230,7 +237,7 @@ func (r *KMIPCAResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		},
 		MarkdownDescription: "Manage KMIP secret engine CAs. Supports both generating new CAs and importing existing ones.",
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 // Create is called during the terraform apply command.
@@ -517,7 +524,7 @@ func (r *KMIPCAResource) ImportState(ctx context.Context, req resource.ImportSta
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), backend)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), id)...)
 }
 
 func makeCAID(backend, name string) string {
