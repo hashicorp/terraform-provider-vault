@@ -48,6 +48,7 @@ IMPROVEMENTS:
 
 BUGS:
 
+* `ephemeral/vault_kv_secret_v2`: Fix handling of complex nested objects in `data_json` attribute. Previously, nested objects (maps, arrays) caused "cannot use type map[string]interface {} as schema type basetypes.StringType" errors. The resource now correctly serializes nested structures to JSON, matching the behavior of the regular `vault_kv_secret_v2` data source.
 * `provider/auth_login_aws`: Fix issue where AWS authentication with IAM role assumption (`aws_role_arn`) was not working correctly due to incorrect credential handling ([#2679](https://github.com/hashicorp/terraform-provider-vault/pull/2679))
 * Fix plugin_name attribute not correctly use in vault_database_secret_backend_connection. ([#2705](https://github.com/hashicorp/terraform-provider-vault/pull/2705))
 
