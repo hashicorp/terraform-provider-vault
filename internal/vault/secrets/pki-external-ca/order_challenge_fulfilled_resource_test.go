@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -48,8 +49,14 @@ func TestAccPKIExternalCAOrderChallengeFulfilledResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "challenge_type", "http-01"),
 					resource.TestCheckResourceAttr(resourceName, "identifier", identifier),
 					resource.TestCheckResourceAttrSet(resourceName, "order_id"),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldID),
 				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateIdFunc:                    testAccPKIExternalCAOrderChallengeFulfilledImportStateIdFunc(resourceName),
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 			},
 		},
 	})
@@ -115,4 +122,21 @@ resource "vault_pki_secret_backend_external_ca_order_challenge_fulfilled" "test"
   depends_on = [vault_acme_challenge_server.test]
 }
 `, backend, accountName, directoryUrl, ca, roleName, identifier, identifier, identifier)
+}
+
+func testAccPKIExternalCAOrderChallengeFulfilledImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+
+		mount := rs.Primary.Attributes[consts.FieldMount]
+		roleName := rs.Primary.Attributes["role_name"]
+		orderId := rs.Primary.Attributes["order_id"]
+		challengeType := rs.Primary.Attributes["challenge_type"]
+		identifier := rs.Primary.Attributes["identifier"]
+
+		return fmt.Sprintf("%s/role/%s/order/%s/fulfilled-challenge/%s/%s", mount, roleName, orderId, challengeType, identifier), nil
+	}
 }

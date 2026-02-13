@@ -44,7 +44,7 @@ type PKIExternalCAOrderCertificateResource struct {
 
 // PKIExternalCAOrderCertificateModel describes the Terraform resource data model
 type PKIExternalCAOrderCertificateModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Mount    types.String `tfsdk:"mount"`
 	RoleName types.String `tfsdk:"role_name"`
@@ -115,7 +115,7 @@ func (r *PKIExternalCAOrderCertificateResource) Schema(_ context.Context, _ reso
 		},
 		MarkdownDescription: "Polls the order status endpoint until the order is completed, then fetches the certificate.",
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 // Create is called during the terraform apply command.
@@ -163,9 +163,6 @@ func (r *PKIExternalCAOrderCertificateResource) Create(ctx context.Context, req 
 		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
 		return
 	}
-
-	// Set the ID
-	data.ID = types.StringValue(makeCertificateID(mount, roleName, orderID))
 
 	// Map values to Terraform model
 	var diags diag.Diagnostics
@@ -281,9 +278,4 @@ func (r *PKIExternalCAOrderCertificateResource) ImportState(ctx context.Context,
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role_name"), roleName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("order_id"), orderID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), req.ID)...)
-}
-
-func makeCertificateID(mount, roleName, orderID string) string {
-	return fmt.Sprintf("%s/role/%s/order/%s/%s", mount, roleName, orderID, certificateAffix)
 }

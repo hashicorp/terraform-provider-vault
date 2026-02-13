@@ -52,7 +52,7 @@ type PKIExternalCARoleResource struct {
 // PKIExternalCARoleModel describes the Terraform resource data model to match the
 // resource schema.
 type PKIExternalCARoleModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Mount                   types.String `tfsdk:"mount"`
 	Name                    types.String `tfsdk:"name"`
@@ -159,7 +159,7 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 		},
 		MarkdownDescription: "Manage PKI External CA roles for certificate issuance via ACME.",
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 // Create is called during the terraform apply command.
@@ -194,7 +194,6 @@ func (r *PKIExternalCARoleResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	data.ID = types.StringValue(makeRoleID(mount, name))
 	resp.Diagnostics.Append(handleRoleResponseData(ctx, &data, createResp)...)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -221,7 +220,6 @@ func (r *PKIExternalCARoleResource) Read(ctx context.Context, req resource.ReadR
 	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
 	path := fmt.Sprintf("%s/%s/%s", mount, roleAffix, name)
-	data.ID = types.StringValue(makeRoleID(mount, name))
 
 	readResp, err := cli.Logical().ReadWithContext(ctx, path)
 	if err != nil {
@@ -253,7 +251,6 @@ func (r *PKIExternalCARoleResource) Update(ctx context.Context, req resource.Upd
 	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
 	path := fmt.Sprintf("%s/%s/%s", mount, roleAffix, name)
-	data.ID = types.StringValue(makeRoleID(mount, name))
 
 	vaultRequest, diags := buildRoleVaultRequestFromModel(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -404,9 +401,4 @@ func (r *PKIExternalCARoleResource) ImportState(ctx context.Context, req resourc
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), req.ID)...)
-}
-
-func makeRoleID(mount, name string) string {
-	return fmt.Sprintf("%s/%s/%s", mount, roleAffix, name)
 }

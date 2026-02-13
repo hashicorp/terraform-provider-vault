@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -52,9 +53,27 @@ func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "expires"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "expires", "last_update", "next_work_date", "order_status"),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccPKIExternalCAOrderImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore:              []string{"expires", "last_update", "next_work_date", "order_status"},
+			},
 		},
 	})
+}
+
+func testAccPKIExternalCAOrderImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+
+		return fmt.Sprintf("%s/role/%s/order/%s", rs.Primary.Attributes[consts.FieldMount], rs.Primary.Attributes["role_name"], rs.Primary.Attributes["order_id"]), nil
+	}
 }
 
 func setupVaultAndPebble(t *testing.T) (string, string) {
@@ -136,7 +155,14 @@ func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "identifiers.#", "2"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "csr", "expires", "last_update", "next_work_date", "order_status"),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccPKIExternalCAOrderImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore:              []string{"csr", "expires", "last_update", "next_work_date", "order_status"},
+			},
 		},
 	})
 }

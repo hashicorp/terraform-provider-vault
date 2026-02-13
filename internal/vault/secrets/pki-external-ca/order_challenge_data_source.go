@@ -43,8 +43,9 @@ type PKIExternalCAOrderChallengeDataSource struct {
 
 // PKIExternalCAOrderChallengeModel describes the Terraform data source data model
 type PKIExternalCAOrderChallengeModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
+	ID            types.String `tfsdk:"id"`
 	Mount         types.String `tfsdk:"mount"`
 	RoleName      types.String `tfsdk:"role_name"`
 	OrderID       types.String `tfsdk:"order_id"`

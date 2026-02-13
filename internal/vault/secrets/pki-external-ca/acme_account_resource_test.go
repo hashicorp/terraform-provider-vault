@@ -9,11 +9,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccPKIACMEAccount_basic(t *testing.T) {
@@ -47,7 +47,14 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "active_key_version", "0"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "eab_kid", "eab_key", "force"),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccPKIACMEAccountImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore:              []string{"eab_kid", "eab_key", "force"},
+			},
 			{
 				// Only trusted_ca can be updated without re-creation
 				Config: testPKIACMEAccount_initialConfig(backend, accountName, directoryUrl, "\n"+ca),
@@ -176,3 +183,14 @@ resource "vault_pki_secret_backend_acme_account" "test" {
 `, backend, accountName)
 }
 */
+
+func testAccPKIACMEAccountImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+
+		return fmt.Sprintf("%s/config/acme-account/%s", rs.Primary.Attributes[consts.FieldMount], rs.Primary.Attributes[consts.FieldName]), nil
+	}
+}

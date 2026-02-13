@@ -43,7 +43,7 @@ type PKIExternalCAOrderChallengeFulfilledResource struct {
 
 // PKIExternalCAOrderChallengeFulfilledModel describes the Terraform resource data model
 type PKIExternalCAOrderChallengeFulfilledModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Mount         types.String `tfsdk:"mount"`
 	RoleName      types.String `tfsdk:"role_name"`
@@ -100,7 +100,7 @@ func (r *PKIExternalCAOrderChallengeFulfilledResource) Schema(_ context.Context,
 		},
 		MarkdownDescription: "Marks an ACME challenge as fulfilled for a specific identifier in an order.",
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 // Create is called during the terraform apply command.
@@ -138,9 +138,6 @@ func (r *PKIExternalCAOrderChallengeFulfilledResource) Create(ctx context.Contex
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
 	}
-
-	// Set the ID
-	data.ID = types.StringValue(makeChallengeFulfilledID(mount, roleName, orderID, challengeType, identifier))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -195,9 +192,4 @@ func (r *PKIExternalCAOrderChallengeFulfilledResource) ImportState(ctx context.C
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("order_id"), orderID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("challenge_type"), challengeType)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("identifier"), identifier)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), req.ID)...)
-}
-
-func makeChallengeFulfilledID(mount, roleName, orderID, challengeType, identifier string) string {
-	return fmt.Sprintf("%s/role/%s/order/%s/%s/%s/%s", mount, roleName, orderID, challengeFulfilledAffix, challengeType, identifier)
 }

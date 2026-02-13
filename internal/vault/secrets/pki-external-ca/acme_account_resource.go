@@ -52,7 +52,7 @@ type PKIACMEAccountResource struct {
 // PKIACMEAccountModel describes the Terraform resource data model to match the
 // resource schema.
 type PKIACMEAccountModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Mount            types.String `tfsdk:"mount"`
 	Name             types.String `tfsdk:"name"`
@@ -152,7 +152,7 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 		},
 		MarkdownDescription: "Manage PKI ACME accounts for external CA integration.",
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 // Create is called during the terraform apply command.
@@ -187,7 +187,6 @@ func (r *PKIACMEAccountResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	data.ID = types.StringValue(makeACMEAccountID(mount, name))
 	resp.Diagnostics.Append(handleAccountResponseData(ctx, &data, createResp)...)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -214,7 +213,6 @@ func (r *PKIACMEAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
 	path := fmt.Sprintf("%s/%s/%s", mount, acmeAccountAffix, name)
-	data.ID = types.StringValue(makeACMEAccountID(mount, name))
 
 	readResp, err := cli.Logical().ReadWithContext(ctx, path)
 	if err != nil {
@@ -246,7 +244,6 @@ func (r *PKIACMEAccountResource) Update(ctx context.Context, req resource.Update
 	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
 	path := fmt.Sprintf("%s/%s/%s", mount, acmeAccountAffix, name)
-	data.ID = types.StringValue(makeACMEAccountID(mount, name))
 
 	vaultRequest, diags := buildVaultRequestFromModel(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -373,9 +370,4 @@ func (r *PKIACMEAccountResource) ImportState(ctx context.Context, req resource.I
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), req.ID)...)
-}
-
-func makeACMEAccountID(mount, name string) string {
-	return fmt.Sprintf("%s/%s/%s", mount, acmeAccountAffix, name)
 }

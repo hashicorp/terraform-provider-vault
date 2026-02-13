@@ -47,7 +47,7 @@ type PKIExternalCAOrderResource struct {
 // PKIExternalCAOrderModel describes the Terraform resource data model to match the
 // resource schema.
 type PKIExternalCAOrderModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Mount       types.String `tfsdk:"mount"`
 	RoleName    types.String `tfsdk:"role_name"`
@@ -151,7 +151,7 @@ func (r *PKIExternalCAOrderResource) Schema(_ context.Context, _ resource.Schema
 		},
 		MarkdownDescription: "Creates and manages ACME orders for certificate issuance via PKI External CA roles.",
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 // Create is called during the terraform apply command.
@@ -208,7 +208,6 @@ func (r *PKIExternalCAOrderResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	data.OrderID = types.StringValue(orderID)
-	data.ID = types.StringValue(makeOrderID(mount, roleName, orderID))
 
 	// Read the order status to populate computed fields
 	resp.Diagnostics.Append(r.readOrderStatus(ctx, cli, &data)...)
@@ -378,9 +377,4 @@ func (r *PKIExternalCAOrderResource) ImportState(ctx context.Context, req resour
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role_name"), roleName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("order_id"), orderID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), req.ID)...)
-}
-
-func makeOrderID(mount, roleName, orderID string) string {
-	return fmt.Sprintf("%s/role/%s/%s/%s", mount, roleName, orderAffix, orderID)
 }

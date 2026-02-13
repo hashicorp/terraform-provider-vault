@@ -9,11 +9,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
@@ -50,9 +50,27 @@ func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "last_update_date"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "force"),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccPKIExternalCARoleImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore:              []string{"force"},
+			},
 		},
 	})
+}
+
+func testAccPKIExternalCARoleImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+
+		return fmt.Sprintf("%s/role/%s", rs.Primary.Attributes[consts.FieldMount], rs.Primary.Attributes[consts.FieldName]), nil
+	}
 }
 
 func TestAccPKIExternalCARoleResource_update(t *testing.T) {
