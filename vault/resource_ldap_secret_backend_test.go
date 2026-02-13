@@ -6,12 +6,15 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -41,7 +44,7 @@ func TestLDAPSecretBackend(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 		}, PreventPostDestroyRefresh: true,
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -106,6 +109,65 @@ func TestLDAPSecretBackend(t *testing.T) {
 	})
 }
 
+func TestLDAPSecretBackend_bindpassWO(t *testing.T) {
+	var (
+		path                = acctest.RandomWithPrefix("tf-test-ldap-wo")
+		bindDN, bindPass, _ = testutil.GetTestLDAPCreds(t)
+		resourceType        = "vault_ldap_secret_backend"
+		resourceName        = resourceType + ".test"
+	)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPSecretBackendConfig_bindpassWO(path, bindDN, bindPass, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "1"),
+				),
+			},
+			{
+				Config: testLDAPSecretBackendConfig_bindpassWO(path, bindDN, "updated-password", 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldBindPassWO,
+				consts.FieldBindPassWOVersion,
+				consts.FieldConnectionTimeout,
+				consts.FieldDescription,
+				consts.FieldDisableRemount,
+			),
+		},
+	})
+}
+
+func TestLDAPSecretBackend_bindpassConflict(t *testing.T) {
+	t.Parallel()
+
+	path := acctest.RandomWithPrefix("tf-test-ldap-bindpass-conflict")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testLDAPSecretBackendConfig_bindpassConflict(path),
+				ExpectError: regexp.MustCompile("Invalid combination of arguments"),
+				Destroy:     false,
+			},
+		},
+	})
+}
+
 // TestLDAPSecretBackend_SchemaAD tests vault_ldap_secret_backend for the AD
 // schema and tests that the bindpass is not overwritten unless it is
 // explicitly changed in the TF config so that we don't clobber a bindpass that
@@ -132,7 +194,7 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
@@ -336,4 +398,27 @@ resource "vault_ldap_secret_backend" "test" {
   rotation_period           = "%d"
   disable_automated_rotation = %t
 }`, path, bindDN, bindPass, schedule, window, period, disable)
+}
+
+func testLDAPSecretBackendConfig_bindpassWO(path, bindDN, bindPass string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                 = "%s"
+  description          = "test description with write-only bindpass"
+  binddn               = "%s"
+  bindpass_wo          = "%s"
+  bindpass_wo_version  = %d
+}`, path, bindDN, bindPass, version)
+}
+
+func testLDAPSecretBackendConfig_bindpassConflict(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                 = "%s"
+  description          = "test description with conflicting bindpass"
+  binddn               = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
+  bindpass             = "supersecurepassword"
+  bindpass_wo          = "anothersecurepassword"
+  bindpass_wo_version  = 1
+}`, path)
 }

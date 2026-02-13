@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -85,35 +88,35 @@ func TestCertAuthBackend(t *testing.T) {
 
 	resourceName := "vault_cert_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCertAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, "", allowedNames, allowedOrgUnits),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "token_ttl", "300"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "600"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_names.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_organizational_units.#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_organizational_units.*", "foo"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_organizational_units.*", "baz"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenPolicies+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "300"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedNames+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedOrganizationalUnits+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedOrganizationalUnits+".*", "foo"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedOrganizationalUnits+".*", "baz"),
 					testCertAuthBackendCheck_attrs(resourceName, backend, name),
 				),
 			},
 			{
 				Config: testCertAuthBackendConfig_unset(backend, name, testCertificate, allowedNames),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "token_ttl", "0"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "0"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_names.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_organizational_units.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenPolicies+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedNames+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedOrganizationalUnits+".#", "0"),
 					testCertAuthBackendCheck_attrs(resourceName, backend, name),
 				),
 			},
@@ -128,18 +131,18 @@ func TestCertAuthBackend(t *testing.T) {
 				},
 				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, aliasMetadataConfig, allowedNames, allowedOrgUnits),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "token_ttl", "300"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "600"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_names.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_organizational_units.#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_organizational_units.*", "foo"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_organizational_units.*", "baz"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenPolicies+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "300"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedNames+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedOrganizationalUnits+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedOrganizationalUnits+".*", "foo"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedOrganizationalUnits+".*", "baz"),
 					testCertAuthBackendCheck_attrs(resourceName, backend, name),
-					resource.TestCheckResourceAttr(resourceName, "alias_metadata.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "alias_metadata.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, FieldAliasMetadata+".%", "1"),
+					resource.TestCheckResourceAttr(resourceName, FieldAliasMetadata+".foo", "bar"),
 				),
 			},
 		},
@@ -153,7 +156,7 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 	resourceName := "vault_cert_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -161,29 +164,102 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testCertAuthBackendConfig_OCSP_default(backend, name),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPServersOverride+".#", "0"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPCACertificates, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPEnabled, "false"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPFailOpen, "false"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPQueryAllServers, "false"),
-				),
+				Check: func() resource.TestCheckFunc {
+					checks := []resource.TestCheckFunc{
+						resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPServersOverride+".#", "0"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPCACertificates, ""),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPEnabled, "false"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPFailOpen, "false"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPQueryAllServers, "false"),
+					}
+
+					// These fields are only available from Vault 1.16+
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if meta.IsAPISupported(provider.VaultVersion116) {
+						checks = append(checks,
+							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPMaxRetries, "4"),
+							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPThisUpdateMaxAge, "0"),
+						)
+					}
+
+					return resource.ComposeTestCheckFunc(checks...)
+				}(),
 			},
 			{
 				Config: testCertAuthBackendConfig_OCSP_basic(backend, name),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPServersOverride+".#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, fieldOCSPServersOverride+".*", "server1.com"),
-					resource.TestCheckTypeSetElemAttr(resourceName, fieldOCSPServersOverride+".*", "server2.com"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPCACertificates, testBase64PEM),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPEnabled, "true"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPFailOpen, "true"),
-					resource.TestCheckResourceAttr(resourceName, fieldOCSPQueryAllServers, "true"),
-				),
+				Check: func() resource.TestCheckFunc {
+					checks := []resource.TestCheckFunc{
+						resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPServersOverride+".#", "2"),
+						resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldOCSPServersOverride+".*", "server1.com"),
+						resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldOCSPServersOverride+".*", "server2.com"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPCACertificates, testBase64PEM),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPEnabled, "true"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPFailOpen, "true"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPQueryAllServers, "true"),
+					}
+
+					// These fields are only available from Vault 1.16+
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if meta.IsAPISupported(provider.VaultVersion116) {
+						checks = append(checks,
+							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPMaxRetries, "5"),
+							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPThisUpdateMaxAge, "7200"),
+						)
+					}
+
+					return resource.ComposeTestCheckFunc(checks...)
+				}(),
+			},
+			{
+				Config: testCertAuthBackendConfig_OCSP_field_update(backend, name),
+				Check: func() resource.TestCheckFunc {
+					checks := []resource.TestCheckFunc{
+						resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPEnabled, "true"),
+					}
+
+					// These fields are only available from Vault 1.16+
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if meta.IsAPISupported(provider.VaultVersion116) {
+						checks = append(checks,
+							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPMaxRetries, "10"),
+							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPThisUpdateMaxAge, "3600"),
+						)
+					}
+
+					return resource.ComposeTestCheckFunc(checks...)
+				}(),
+			},
+		},
+	})
+}
+
+func TestCertAuthBackend_OCSP_Negative(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
+	name := acctest.RandomWithPrefix("tf-test-cert-name")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCertAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Negative ocsp_max_retries should be rejected by Vault API
+				Config:      testCertAuthBackendConfig_OCSP_negative_fields(backend, name, -1, 7200),
+				ExpectError: regexp.MustCompile("ocsp_max_retries can not be a negative number"),
+			},
+			{
+				// Negative ocsp_this_update_max_age should also be rejected by Vault API
+				Config:      testCertAuthBackendConfig_OCSP_negative_fields(backend, name, 5, -100),
+				ExpectError: regexp.MustCompile("cannot provide negative value"),
 			},
 		},
 	})
@@ -245,14 +321,14 @@ func testCertAuthBackendCheck_attrs(resourceName, backend, name string) resource
 		}
 
 		attrs := map[string]string{
-			"name":                         "display_name",
-			"allowed_names":                "allowed_names",
-			"allowed_dns_sans":             "allowed_dns_sans",
-			"allowed_email_sans":           "allowed_email_sans",
-			"allowed_uri_sans":             "allowed_uri_sans",
-			"allowed_organizational_units": "allowed_organizational_units",
-			"required_extensions":          "required_extensions",
-			"certificate":                  "certificate",
+			consts.FieldName:                       consts.FieldDisplayName,
+			consts.FieldAllowedNames:               consts.FieldAllowedNames,
+			consts.FieldAllowedDNSSans:             consts.FieldAllowedDNSSans,
+			consts.FieldAllowedEmailSans:           consts.FieldAllowedEmailSans,
+			consts.FieldAllowedURISans:             consts.FieldAllowedURISans,
+			consts.FieldAllowedOrganizationalUnits: consts.FieldAllowedOrganizationalUnits,
+			consts.FieldRequiredExtensions:         consts.FieldRequiredExtensions,
+			consts.FieldCertificate:                consts.FieldCertificate,
 		}
 
 		for _, v := range commonTokenFields {
@@ -267,7 +343,7 @@ func testCertAuthBackendCheck_attrs(resourceName, backend, name string) resource
 				VaultAttr:    v,
 			}
 			switch k {
-			case TokenFieldPolicies, "allowed_names", "allowed_organizational_units":
+			case TokenFieldPolicies, consts.FieldAllowedNames, consts.FieldAllowedOrganizationalUnits:
 				ta.AsSet = true
 			}
 
@@ -363,12 +439,66 @@ resource "vault_cert_auth_backend_role" "test" {
     ocsp_fail_open         = true
     ocsp_query_all_servers = true
     ocsp_servers_override  = ["server1.com", "server2.com"]
+	ocsp_max_retries       = 5
+	ocsp_this_update_max_age = 7200
+    certificate = <<EOF
+%s
+EOF
+}
+`, backend, name, testBase64PEM, testCertificate)
+
+	return config
+}
+
+func testCertAuthBackendConfig_OCSP_field_update(backend, name string) string {
+	config := fmt.Sprintf(`
+
+resource "vault_auth_backend" "cert" {
+    path = "%s"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name                      = "%s"
+    backend                   = vault_auth_backend.cert.path
+	ocsp_ca_certificates   = "%s"
+    ocsp_enabled              = true
+	ocsp_fail_open         = true
+    ocsp_query_all_servers = true
+	ocsp_servers_override  = ["server1.com", "server2.com"]
+    ocsp_max_retries          = 10
+    ocsp_this_update_max_age  = 3600
 
     certificate = <<EOF
 %s
 EOF
 }
 `, backend, name, testBase64PEM, testCertificate)
+
+	return config
+}
+
+func testCertAuthBackendConfig_OCSP_negative_fields(backend, name string, maxRetries, maxAge int) string {
+	config := fmt.Sprintf(`
+
+resource "vault_auth_backend" "cert" {
+    path = "%s"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name                      = "%s"
+    backend                   = vault_auth_backend.cert.path
+	ocsp_ca_certificates   = "%s"
+    ocsp_enabled              = true
+    ocsp_max_retries          = %d
+    ocsp_this_update_max_age  = %d
+
+    certificate = <<EOF
+%s
+EOF
+}
+`, backend, name, testBase64PEM, maxRetries, maxAge, testCertificate)
 
 	return config
 }

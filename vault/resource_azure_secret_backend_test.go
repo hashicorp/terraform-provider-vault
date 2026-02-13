@@ -420,3 +420,78 @@ resource "vault_azure_secret_backend" "test" {
 }
 `, path, rotationSchedule, rotationWindow, rotationPeriod, disableRotation)
 }
+
+func TestAccAzureSecretBackend_clientSecretWriteOnly(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
+	path := acctest.RandomWithPrefix("tf-test-azure")
+	resourceType := "vault_azure_secret_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureSecretBackendConfig_clientSecretWO(path, "12345678901234567890", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSubscriptionID, "11111111-2222-3333-4444-111111111111"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, "11111111-2222-3333-4444-222222222222"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "11111111-2222-3333-4444-333333333333"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecretWOVersion, "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEnvironment, "AzurePublicCloud"),
+				),
+			},
+			{
+				Config: testAccAzureSecretBackendConfig_clientSecretWO(path, "098765432109876543214", 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecretWOVersion, "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldClientSecretWO, consts.FieldClientSecretWOVersion, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func testAccAzureSecretBackendConfig_clientSecretWO(path, clientSecret string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "test" {
+  path                     = "%s"
+  subscription_id          = "11111111-2222-3333-4444-111111111111"
+  tenant_id                = "11111111-2222-3333-4444-222222222222"
+  client_id                = "11111111-2222-3333-4444-333333333333"
+  client_secret_wo         = "%s"
+  client_secret_wo_version = %d
+  environment              = "AzurePublicCloud"
+  disable_remount          = true
+}`, path, clientSecret, version)
+}
+
+func TestAccAzureSecretBackend_clientSecretConflicts(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-azure")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "vault_azure_secret_backend" "test" {
+  path                     = "%s"
+  subscription_id          = "11111111-2222-3333-4444-111111111111"
+  tenant_id                = "11111111-2222-3333-4444-222222222222"
+  client_id                = "11111111-2222-3333-4444-333333333333"
+  client_secret            = "test-client-secret"
+  client_secret_wo         = "test-client-secret-wo"
+  client_secret_wo_version = 1
+}`, path),
+				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
+			},
+		},
+	})
+}
