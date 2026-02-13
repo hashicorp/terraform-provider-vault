@@ -164,7 +164,7 @@ func (r *KMIPCAResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"ca_pem": schema.StringAttribute{
 				MarkdownDescription: "CA certificate in PEM format. Required for imported CAs. Conflicts with key_type, key_bits, and ttl.",
 				Optional:            true,
-				Sensitive:           true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -469,6 +469,10 @@ func mapAPIModelToTerraformModel(apiModel *KMIPCAAPIModel, data *KMIPCAModel) {
 	}
 	if apiModel.RoleField != "" {
 		data.RoleField = types.StringValue(apiModel.RoleField)
+	}
+
+	if apiModel.CAPem != "" {
+		data.CAPem = types.StringValue(apiModel.CAPem)
 	}
 }
 
