@@ -3,6 +3,8 @@
 FEATURES : 
 * **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
 
+IMPROVEMENTS : 
+* `vault_raft_snapshot_agent_config`: Add support for `azure_auth_mode` and `azure_client_id` fields for Azure Managed Identity authentication (Vault Enterprise 1.18.0+), and `autoload_enabled` field for automatic snapshot restoration (Vault Enterprise 1.21.0+). ([#2758](https://github.com/hashicorp/terraform-provider-vault/pull/2758))
 
 ## 5.7.0 (February 5, 2026)
 
@@ -18,7 +20,6 @@ IMPROVEMENTS:
 * `vault_saml_auth_backend`: Add support for `validate_assertion_signature` and `validate_response_signature` parameters to control SAML signature validation (Vault 1.19+)
 * `vault_approle_auth_backend_login`: Add write-only fields `secret_id_wo` and `secret_id_wo_version` to support ephemeral SecretID values without persisting them in state.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
 * `vault_password_policy`: Add field `entropy_source` field to specify an override to the default source of entropy (randomness) used to generate the passwords.([#2753](https://github.com/hashicorp/terraform-provider-vault/pull/2753))
-* `vault_raft_snapshot_agent_config`: Add support for `azure_auth_mode` and `azure_client_id` fields for Azure Managed Identity authentication (Vault Enterprise 1.18.0+), and `autoload_enabled` field for automatic snapshot restoration (Vault Enterprise 1.21.0+). ([#2758](https://github.com/hashicorp/terraform-provider-vault/pull/2758))
 * `vault_mfa_totp`: Add support for `max_validation_attempts` field to configure the maximum number of consecutive failed validation attempts allowed. ([#2751](https://github.com/hashicorp/terraform-provider-vault/pull/2751))
 * `vault_mongodbatlas_secret_backend`: Add support for write-only private key fields (`private_key_wo`, `private_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2741](https://github.com/hashicorp/terraform-provider-vault/pull/2741))
 * `vault_consul_secret_backend`: Add support for write-only fields (`token_wo`, `token_wo_version`, `client_key_wo`, `client_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2730](https://github.com/hashicorp/terraform-provider-vault/pull/2730))
