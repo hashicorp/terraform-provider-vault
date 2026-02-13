@@ -22,11 +22,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-var (
-	// Common regexp patterns used across GCP ephemeral resource tests
-	regexpNonEmpty = regexp.MustCompile(`^.+$`)
-)
-
 // TestAccGCPOAuth2AccessToken_basic tests generating OAuth2 access tokens
 // from different GCP credential types (roleset, static account, impersonated account)
 // and demonstrates realistic resource mutation patterns

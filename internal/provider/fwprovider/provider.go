@@ -249,6 +249,10 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewAWSStaticAccessCredentialsEphemeralSecretResource,
 		ephemeralauth.NewApproleAuthBackendRoleSecretIDEphemeralResource,
 		ephemeralsecrets.NewKubernetesServiceAccountTokenEphemeralResource,
+		ephemeralsecrets.NewGCPKMSEncryptEphemeralResource,
+		ephemeralsecrets.NewGCPKMSDecryptEphemeralResource,
+		ephemeralsecrets.NewGCPKMSReencryptEphemeralResource,
+		ephemeralsecrets.NewGCPKMSSignEphemeralResource,
 	}
 
 }
