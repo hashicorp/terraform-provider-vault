@@ -406,7 +406,7 @@ func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) e
 
 	if val, ok := resp.Data[consts.FieldLocalMaxSpace]; ok {
 		if err := d.Set(consts.FieldLocalMaxSpace, val); err != nil {
-			return fmt.Errorf("error setting state key 'storage_type': %s", err)
+			return fmt.Errorf("error setting state key 'local_max_space': %s", err)
 		}
 	}
 

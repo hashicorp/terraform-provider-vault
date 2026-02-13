@@ -135,7 +135,7 @@ The following arguments are supported:
   the selected `storage_type` and prefixed accordingly.
 
 - `autoload_enabled` - (Optional) Enables automatic restoration of snapshots on
-  cluster initialization or leadership change. Defaults to `false`.
+  cluster initialization or leadership change.
   **Note:** Not supported with `storage_type = "local"`.
   *Requires Vault Enterprise 1.21.0+*.
 
