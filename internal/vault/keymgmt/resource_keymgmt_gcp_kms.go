@@ -5,8 +5,6 @@ package keymgmt
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -120,7 +118,7 @@ func (r *GCPKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 	writeData["credentials"] = creds
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-		resp.Diagnostics.AddError("Error creating GCP Cloud KMS provider", fmt.Sprintf("Error creating GCP Cloud KMS provider at %s: %s", apiPath, err))
+		resp.Diagnostics.AddError(errCreating("GCP Cloud KMS provider", apiPath, err))
 		return
 	}
 
@@ -163,7 +161,7 @@ func (r *GCPKMSResource) read(ctx context.Context, cli *api.Client, data *GCPKMS
 	apiPath := data.ID.ValueString()
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		diags.AddError("Error reading GCP Cloud KMS provider", fmt.Sprintf("Error reading GCP Cloud KMS provider at %s: %s", apiPath, err))
+		diags.AddError(errReading("GCP Cloud KMS provider", apiPath, err))
 		return
 	}
 
@@ -172,22 +170,14 @@ func (r *GCPKMSResource) read(ctx context.Context, cli *api.Client, data *GCPKMS
 		return
 	}
 
-	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
-	kmsIndex := -1
-	for i, part := range parts {
-		if part == "kms" {
-			kmsIndex = i
-			break
-		}
-	}
-
-	if kmsIndex == -1 || kmsIndex+1 >= len(parts) {
-		diags.AddError("Invalid path structure", fmt.Sprintf("Invalid KMS path: %s", apiPath))
+	mountPath, kmsName, err := parseKMSPath(apiPath)
+	if err != nil {
+		diags.AddError(errInvalidPathStructure, err.Error())
 		return
 	}
 
-	data.Path = types.StringValue(strings.Join(parts[:kmsIndex], "/"))
-	data.Name = types.StringValue(parts[kmsIndex+1])
+	data.Path = types.StringValue(mountPath)
+	data.Name = types.StringValue(kmsName)
 
 	if v, ok := vaultResp.Data["key_collection"].(string); ok {
 		data.KeyCollection = types.StringValue(v)
@@ -216,7 +206,7 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	apiPath := plan.ID.ValueString()
 	writeData := map[string]interface{}{
-		"provider": "gcpckms",
+		"provider": ProviderGCPCKMS,
 	}
 	hasChanges := false
 
@@ -239,7 +229,7 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	if hasChanges {
 		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-			resp.Diagnostics.AddError("Error updating GCP Cloud KMS provider", fmt.Sprintf("Error updating GCP Cloud KMS provider at %s: %s", apiPath, err))
+			resp.Diagnostics.AddError(errUpdating("GCP Cloud KMS provider", apiPath, err))
 			return
 		}
 	}
@@ -267,7 +257,7 @@ func (r *GCPKMSResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	apiPath := data.ID.ValueString()
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
-		resp.Diagnostics.AddError("Error deleting GCP Cloud KMS provider", fmt.Sprintf("Error deleting GCP Cloud KMS provider at %s: %s", apiPath, err))
+		resp.Diagnostics.AddError(errDeleting("GCP Cloud KMS provider", apiPath, err))
 		return
 	}
 }

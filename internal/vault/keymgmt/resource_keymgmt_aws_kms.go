@@ -5,8 +5,6 @@ package keymgmt
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -114,29 +112,15 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		"key_collection": data.KeyCollection.ValueString(),
 	}
 
-	if !data.Credentials.IsNull() {
-		var creds map[string]string
-		resp.Diagnostics.Append(data.Credentials.ElementsAs(ctx, &creds, false)...)
+	if creds := buildAWSCredentialsMap(ctx, data.Credentials, data.AccessKey, data.SecretKey, &resp.Diagnostics); creds != nil {
 		if resp.Diagnostics.HasError() {
 			return
 		}
 		writeData["credentials"] = creds
-	} else {
-		// Use individual access_key and secret_key if provided
-		creds := make(map[string]string)
-		if !data.AccessKey.IsNull() {
-			creds["access_key"] = data.AccessKey.ValueString()
-		}
-		if !data.SecretKey.IsNull() {
-			creds["secret_key"] = data.SecretKey.ValueString()
-		}
-		if len(creds) > 0 {
-			writeData["credentials"] = creds
-		}
 	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-		resp.Diagnostics.AddError("Error creating AWS KMS provider", fmt.Sprintf("Error creating AWS KMS provider at %s: %s", apiPath, err))
+		resp.Diagnostics.AddError(errCreating("AWS KMS provider", apiPath, err))
 		return
 	}
 
@@ -179,7 +163,7 @@ func (r *AWSKMSResource) read(ctx context.Context, cli *api.Client, data *AWSKMS
 	apiPath := data.ID.ValueString()
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		diags.AddError("Error reading AWS KMS provider", fmt.Sprintf("Error reading AWS KMS provider at %s: %s", apiPath, err))
+		diags.AddError(errReading("AWS KMS provider", apiPath, err))
 		return
 	}
 
@@ -188,22 +172,14 @@ func (r *AWSKMSResource) read(ctx context.Context, cli *api.Client, data *AWSKMS
 		return
 	}
 
-	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
-	kmsIndex := -1
-	for i, part := range parts {
-		if part == "kms" {
-			kmsIndex = i
-			break
-		}
-	}
-
-	if kmsIndex == -1 || kmsIndex+1 >= len(parts) {
-		diags.AddError("Invalid path structure", fmt.Sprintf("Invalid KMS path: %s", apiPath))
+	mountPath, kmsName, err := parseKMSPath(apiPath)
+	if err != nil {
+		diags.AddError(errInvalidPathStructure, err.Error())
 		return
 	}
 
-	data.Path = types.StringValue(strings.Join(parts[:kmsIndex], "/"))
-	data.Name = types.StringValue(parts[kmsIndex+1])
+	data.Path = types.StringValue(mountPath)
+	data.Name = types.StringValue(kmsName)
 
 	if v, ok := vaultResp.Data["key_collection"].(string); ok {
 		data.KeyCollection = types.StringValue(v)
@@ -226,7 +202,7 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	apiPath := plan.ID.ValueString()
 	writeData := map[string]interface{}{
-		"provider": "awskms",
+		"provider": ProviderAWSKMS,
 	}
 	hasChanges := false
 
@@ -235,23 +211,11 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		hasChanges = true
 	}
 
-	if !plan.Credentials.Equal(state.Credentials) {
-		var creds map[string]string
-		resp.Diagnostics.Append(plan.Credentials.ElementsAs(ctx, &creds, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		writeData["credentials"] = creds
-		hasChanges = true
-	} else if !plan.AccessKey.Equal(state.AccessKey) || !plan.SecretKey.Equal(state.SecretKey) {
-		creds := make(map[string]string)
-		if !plan.AccessKey.IsNull() {
-			creds["access_key"] = plan.AccessKey.ValueString()
-		}
-		if !plan.SecretKey.IsNull() {
-			creds["secret_key"] = plan.SecretKey.ValueString()
-		}
-		if len(creds) > 0 {
+	if !plan.Credentials.Equal(state.Credentials) || !plan.AccessKey.Equal(state.AccessKey) || !plan.SecretKey.Equal(state.SecretKey) {
+		if creds := buildAWSCredentialsMap(ctx, plan.Credentials, plan.AccessKey, plan.SecretKey, &resp.Diagnostics); creds != nil {
+			if resp.Diagnostics.HasError() {
+				return
+			}
 			writeData["credentials"] = creds
 			hasChanges = true
 		}
@@ -259,7 +223,7 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	if hasChanges {
 		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-			resp.Diagnostics.AddError("Error updating AWS KMS provider", fmt.Sprintf("Error updating AWS KMS provider at %s: %s", apiPath, err))
+			resp.Diagnostics.AddError(errUpdating("AWS KMS provider", apiPath, err))
 			return
 		}
 	}
@@ -287,7 +251,7 @@ func (r *AWSKMSResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	apiPath := data.ID.ValueString()
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
-		resp.Diagnostics.AddError("Error deleting AWS KMS provider", fmt.Sprintf("Error deleting AWS KMS provider at %s: %s", apiPath, err))
+		resp.Diagnostics.AddError(errDeleting("AWS KMS provider", apiPath, err))
 		return
 	}
 }

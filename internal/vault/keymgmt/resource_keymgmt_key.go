@@ -5,10 +5,7 @@ package keymgmt
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -125,7 +122,7 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error getting client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -137,7 +134,7 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		"type": data.Type.ValueString(),
 	}
 
-	if !data.ReplicaRegions.IsNull() && !data.ReplicaRegions.IsUnknown() {
+	if !data.ReplicaRegions.IsNull() {
 		var regions []string
 		resp.Diagnostics.Append(data.ReplicaRegions.ElementsAs(ctx, &regions, false)...)
 		if resp.Diagnostics.HasError() {
@@ -149,23 +146,19 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-		resp.Diagnostics.AddError("Error creating Key Management key", fmt.Sprintf("Error creating key at %s: %s", apiPath, err))
+		resp.Diagnostics.AddError(errCreating("Key Management key", apiPath, err))
 		return
 	}
 
 	data.ID = types.StringValue(apiPath)
-	time.Sleep(500 * time.Millisecond)
 
-	configData := map[string]interface{}{}
-	if !data.DeletionAllowed.IsNull() && !data.DeletionAllowed.IsUnknown() {
-		configData[consts.FieldDeletionAllowed] = data.DeletionAllowed.ValueBool()
+	// Update deletion_allowed configuration
+	configData := map[string]interface{}{
+		consts.FieldDeletionAllowed: data.DeletionAllowed.ValueBool(),
 	}
-
-	if len(configData) > 0 {
-		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, configData); err != nil {
-			resp.Diagnostics.AddError("Error updating Key Management key config", fmt.Sprintf("Error updating key config at %s: %s", apiPath, err))
-			return
-		}
+	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, configData); err != nil {
+		resp.Diagnostics.AddError(errUpdating("Key Management key config", apiPath, err))
+		return
 	}
 
 	r.read(ctx, cli, &data, &resp.Diagnostics)
@@ -185,7 +178,7 @@ func (r *KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error getting client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -206,7 +199,7 @@ func (r *KeyResource) read(ctx context.Context, cli *api.Client, data *KeyResour
 	apiPath := data.ID.ValueString()
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		diags.AddError("Error reading Key Management key", fmt.Sprintf("Error reading key at %s: %s", apiPath, err))
+		diags.AddError(errReading("Key Management key", apiPath, err))
 		return
 	}
 
@@ -215,22 +208,14 @@ func (r *KeyResource) read(ctx context.Context, cli *api.Client, data *KeyResour
 		return
 	}
 
-	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
-	keyIndex := -1
-	for i, part := range parts {
-		if part == "key" {
-			keyIndex = i
-			break
-		}
-	}
-
-	if keyIndex == -1 || keyIndex+1 >= len(parts) {
-		diags.AddError("Invalid path structure", fmt.Sprintf("Invalid key path: %s", apiPath))
+	mountPath, keyName, err := parseKeyPath(apiPath)
+	if err != nil {
+		diags.AddError(errInvalidPathStructure, err.Error())
 		return
 	}
 
-	data.Path = types.StringValue(strings.Join(parts[:keyIndex], "/"))
-	data.Name = types.StringValue(parts[keyIndex+1])
+	data.Path = types.StringValue(mountPath)
+	data.Name = types.StringValue(keyName)
 
 	if v, ok := vaultResp.Data["type"].(string); ok {
 		data.Type = types.StringValue(v)
@@ -240,33 +225,11 @@ func (r *KeyResource) read(ctx context.Context, cli *api.Client, data *KeyResour
 	}
 
 	if v, ok := vaultResp.Data[consts.FieldLatestVersion]; ok {
-		switch version := v.(type) {
-		case json.Number:
-			if vInt, err := version.Int64(); err == nil {
-				data.LatestVersion = types.Int64Value(vInt)
-			}
-		case float64:
-			data.LatestVersion = types.Int64Value(int64(version))
-		case int:
-			data.LatestVersion = types.Int64Value(int64(version))
-		case int64:
-			data.LatestVersion = types.Int64Value(version)
-		}
+		data.LatestVersion = setInt64FromInterface(v)
 	}
 
 	if v, ok := vaultResp.Data[consts.FieldMinEnabledVersion]; ok {
-		switch version := v.(type) {
-		case json.Number:
-			if vInt, err := version.Int64(); err == nil {
-				data.MinEnabledVersion = types.Int64Value(vInt)
-			}
-		case float64:
-			data.MinEnabledVersion = types.Int64Value(int64(version))
-		case int:
-			data.MinEnabledVersion = types.Int64Value(int64(version))
-		case int64:
-			data.MinEnabledVersion = types.Int64Value(version)
-		}
+		data.MinEnabledVersion = setInt64FromInterface(v)
 	}
 }
 
@@ -293,7 +256,7 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	if len(writeData) > 0 {
 		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-			resp.Diagnostics.AddError("Error updating Key Management key", fmt.Sprintf("Error updating key at %s: %s", apiPath, err))
+			resp.Diagnostics.AddError(errUpdating("Key Management key", apiPath, err))
 			return
 		}
 	}
@@ -315,13 +278,13 @@ func (r *KeyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error getting client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
 	apiPath := data.ID.ValueString()
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
-		resp.Diagnostics.AddError("Error deleting Key Management key", fmt.Sprintf("Error deleting key at %s: %s", apiPath, err))
+		resp.Diagnostics.AddError(errDeleting("Key Management key", apiPath, err))
 		return
 	}
 }

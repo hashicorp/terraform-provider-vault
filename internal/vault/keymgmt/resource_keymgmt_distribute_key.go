@@ -5,8 +5,6 @@ package keymgmt
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -137,7 +135,7 @@ func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-		resp.Diagnostics.AddError("Error distributing Key Management key to KMS", fmt.Sprintf("Error distributing key at %s: %s", apiPath, err))
+		resp.Diagnostics.AddError(errCreating("Key Management key distribution", apiPath, err))
 		return
 	}
 
@@ -180,7 +178,7 @@ func (r *DistributeKeyResource) read(ctx context.Context, cli *api.Client, data 
 	apiPath := data.ID.ValueString()
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		diags.AddError("Error reading Key Management key distribution", fmt.Sprintf("Error reading key distribution at %s: %s", apiPath, err))
+		diags.AddError(errReading("Key Management key distribution", apiPath, err))
 		return
 	}
 
@@ -189,24 +187,15 @@ func (r *DistributeKeyResource) read(ctx context.Context, cli *api.Client, data 
 		return
 	}
 
-	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
-	kmsIndex, keyIndex := -1, -1
-	for i, part := range parts {
-		if part == "kms" {
-			kmsIndex = i
-		} else if part == "key" && i > kmsIndex {
-			keyIndex = i
-		}
-	}
-
-	if kmsIndex == -1 || keyIndex == -1 || kmsIndex+1 >= len(parts) || keyIndex+1 >= len(parts) {
-		diags.AddError("Invalid path structure", fmt.Sprintf("Invalid key distribution path: %s", apiPath))
+	mountPath, kmsName, keyName, err := parseDistributeKeyPath(apiPath)
+	if err != nil {
+		diags.AddError(errInvalidPathStructure, err.Error())
 		return
 	}
 
-	data.Path = types.StringValue(strings.Join(parts[:kmsIndex], "/"))
-	data.KMSName = types.StringValue(parts[kmsIndex+1])
-	data.KeyName = types.StringValue(parts[keyIndex+1])
+	data.Path = types.StringValue(mountPath)
+	data.KMSName = types.StringValue(kmsName)
+	data.KeyName = types.StringValue(keyName)
 
 	if v, ok := vaultResp.Data["purpose"].([]interface{}); ok {
 		purposes, d := types.SetValueFrom(ctx, types.StringType, v)
@@ -220,11 +209,7 @@ func (r *DistributeKeyResource) read(ctx context.Context, cli *api.Client, data 
 	}
 
 	// Always set key_id and versions to ensure they are known after apply
-	if v, ok := vaultResp.Data["key_id"].(string); ok && v != "" {
-		data.KeyID = types.StringValue(v)
-	} else {
-		data.KeyID = types.StringValue("")
-	}
+	data.KeyID = setStringFromInterface(vaultResp.Data["key_id"])
 
 	if v, ok := vaultResp.Data["versions"].([]interface{}); ok && len(v) > 0 {
 		versions, d := types.ListValueFrom(ctx, types.Int64Type, v)
@@ -276,7 +261,7 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 
 	if hasChanges {
 		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-			resp.Diagnostics.AddError("Error updating Key Management key distribution", fmt.Sprintf("Error updating key distribution at %s: %s", apiPath, err))
+			resp.Diagnostics.AddError(errUpdating("Key Management key distribution", apiPath, err))
 			return
 		}
 	}
@@ -304,11 +289,7 @@ func (r *DistributeKeyResource) Delete(ctx context.Context, req resource.DeleteR
 
 	apiPath := data.ID.ValueString()
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
-		resp.Diagnostics.AddError("Error deleting Key Management key distribution", fmt.Sprintf("Error deleting key distribution at %s: %s", apiPath, err))
+		resp.Diagnostics.AddError(errDeleting("Key Management key distribution", apiPath, err))
 		return
 	}
-}
-
-func buildDistributeKeyPath(mountPath, kmsName, keyName string) string {
-	return strings.Trim(mountPath, "/") + "/kms/" + kmsName + "/key/" + keyName
 }

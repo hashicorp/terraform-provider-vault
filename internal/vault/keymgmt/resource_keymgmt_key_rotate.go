@@ -5,8 +5,6 @@ package keymgmt
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -92,7 +90,7 @@ func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateReque
 	apiPath := buildKeyRotatePath(vaultPath, name)
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, map[string]interface{}{}); err != nil {
-		resp.Diagnostics.AddError("Error rotating Key Management key", fmt.Sprintf("Error rotating key at %s: %s", apiPath, err))
+		resp.Diagnostics.AddError(errCreating("Key Management key rotation", apiPath, err))
 		return
 	}
 
@@ -137,7 +135,7 @@ func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *Key
 	keyPath := data.ID.ValueString()
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
-		diags.AddError("Error reading Key Management key", fmt.Sprintf("Error reading key at %s: %s", keyPath, err))
+		diags.AddError(errReading("Key Management key", keyPath, err))
 		return
 	}
 
@@ -156,7 +154,7 @@ func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *Key
 	}
 
 	if keyIndex == -1 || keyIndex >= len(parts)-1 {
-		diags.AddError("Invalid path structure", fmt.Sprintf("Invalid key path: %s", keyPath))
+		diags.AddError(errInvalidPathStructure, "Invalid key path: "+keyPath)
 		return
 	}
 
@@ -164,30 +162,15 @@ func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *Key
 	data.Name = types.StringValue(parts[keyIndex+1])
 
 	// Always set latest_version to ensure it's known after apply
-	latestVersionSet := false
 	if v, ok := vaultResp.Data["latest_version"]; ok && v != nil {
-		switch version := v.(type) {
-		case float64:
-			data.LatestVersion = types.Int64Value(int64(version))
-			latestVersionSet = true
-		case int:
-			data.LatestVersion = types.Int64Value(int64(version))
-			latestVersionSet = true
-		case int64:
-			data.LatestVersion = types.Int64Value(version)
-			latestVersionSet = true
-		case json.Number:
-			if i, err := version.Int64(); err == nil {
-				data.LatestVersion = types.Int64Value(i)
-				latestVersionSet = true
-			}
+		if result := setInt64FromInterface(v); !result.IsNull() {
+			data.LatestVersion = result
+			return
 		}
 	}
 
 	// If latest_version was not successfully set, use a default value
-	if !latestVersionSet {
-		data.LatestVersion = types.Int64Value(1)
-	}
+	data.LatestVersion = types.Int64Value(1)
 }
 
 func (r *KeyRotateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -197,8 +180,4 @@ func (r *KeyRotateResource) Update(ctx context.Context, req resource.UpdateReque
 func (r *KeyRotateResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Key rotation is permanent in Vault
 	// Removing it from Terraform state is sufficient
-}
-
-func buildKeyRotatePath(mountPath, name string) string {
-	return strings.Trim(mountPath, "/") + "/key/" + name + "/rotate"
 }

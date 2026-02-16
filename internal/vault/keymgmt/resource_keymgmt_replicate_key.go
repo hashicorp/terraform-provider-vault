@@ -159,24 +159,22 @@ func (r *ReplicateKeyResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	apiPath := data.ID.ValueString()
+	// Parse the path - note: replicate path has extra /replicate suffix, so we need to handle it
 	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
-	kmsIndex, keyIndex := -1, -1
-	for i, part := range parts {
-		if part == "kms" {
-			kmsIndex = i
-		} else if part == "key" && i > kmsIndex {
-			keyIndex = i
-		}
+	// Remove the "replicate" suffix to use parseDistributeKeyPath
+	if len(parts) > 0 && parts[len(parts)-1] == "replicate" {
+		parts = parts[:len(parts)-1]
 	}
-
-	if kmsIndex == -1 || keyIndex == -1 || kmsIndex+1 >= len(parts) || keyIndex+1 >= len(parts) {
-		resp.Diagnostics.AddError("Invalid path structure", fmt.Sprintf("Invalid replication path structure: %s", apiPath))
+	basePath := strings.Join(parts, "/")
+	mountPath, kmsName, keyName, err := parseDistributeKeyPath(basePath)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid path structure", err.Error())
 		return
 	}
 
-	data.Path = types.StringValue(strings.Join(parts[:kmsIndex], "/"))
-	data.KMSName = types.StringValue(parts[kmsIndex+1])
-	data.KeyName = types.StringValue(parts[keyIndex+1])
+	data.Path = types.StringValue(mountPath)
+	data.KMSName = types.StringValue(kmsName)
+	data.KeyName = types.StringValue(keyName)
 
 	distPath := strings.Join(parts[:len(parts)-1], "/")
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, distPath)
@@ -200,8 +198,4 @@ func (r *ReplicateKeyResource) Update(ctx context.Context, req resource.UpdateRe
 func (r *ReplicateKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Replication is not a physical resource that can be deleted
 	// Removing it from Terraform state is sufficient
-}
-
-func buildReplicateKeyPath(mountPath, kmsName, keyName string) string {
-	return strings.Trim(mountPath, "/") + "/kms/" + kmsName + "/key/" + keyName + "/replicate"
 }

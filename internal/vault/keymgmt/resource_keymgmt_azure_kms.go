@@ -5,8 +5,6 @@ package keymgmt
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -19,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 )
 
 var _ resource.Resource = &AzureKMSResource{}
@@ -128,7 +127,7 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 	writeData["credentials"] = creds
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-		resp.Diagnostics.AddError("Error creating Azure Key Vault provider", fmt.Sprintf("Error creating Azure Key Vault provider at %s: %s", apiPath, err))
+		resp.Diagnostics.AddError(errCreating("Azure Key Vault provider", apiPath, err))
 		return
 	}
 
@@ -150,7 +149,7 @@ func (r *AzureKMSResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error getting Vault client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -171,7 +170,7 @@ func (r *AzureKMSResource) read(ctx context.Context, cli *api.Client, data *Azur
 	apiPath := data.ID.ValueString()
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		diags.AddError("Error reading Azure Key Vault provider", fmt.Sprintf("Error reading Azure Key Vault provider at %s: %s", apiPath, err))
+		diags.AddError(errReading("Azure Key Vault provider", apiPath, err))
 		return
 	}
 
@@ -180,22 +179,14 @@ func (r *AzureKMSResource) read(ctx context.Context, cli *api.Client, data *Azur
 		return
 	}
 
-	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
-	kmsIndex := -1
-	for i, part := range parts {
-		if part == "kms" {
-			kmsIndex = i
-			break
-		}
-	}
-
-	if kmsIndex == -1 || kmsIndex+1 >= len(parts) {
-		diags.AddError("Invalid path structure", fmt.Sprintf("Invalid KMS path: %s", apiPath))
+	mountPath, kmsName, err := parseKMSPath(apiPath)
+	if err != nil {
+		diags.AddError(errInvalidPathStructure, err.Error())
 		return
 	}
 
-	data.Path = types.StringValue(strings.Join(parts[:kmsIndex], "/"))
-	data.Name = types.StringValue(parts[kmsIndex+1])
+	data.Path = types.StringValue(mountPath)
+	data.Name = types.StringValue(kmsName)
 
 	if v, ok := vaultResp.Data["key_collection"].(string); ok {
 		data.KeyCollection = types.StringValue(v)
@@ -221,13 +212,13 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 
 	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error getting Vault client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
 	apiPath := plan.ID.ValueString()
 	writeData := map[string]interface{}{
-		"provider": "azurekeyvault",
+		"provider": ProviderAzureKV,
 	}
 	hasChanges := false
 
@@ -254,7 +245,7 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 
 	if hasChanges {
 		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-			resp.Diagnostics.AddError("Error updating Azure Key Vault provider", fmt.Sprintf("Error updating Azure Key Vault provider at %s: %s", apiPath, err))
+			resp.Diagnostics.AddError(errUpdating("Azure Key Vault provider", apiPath, err))
 			return
 		}
 	}
@@ -282,7 +273,7 @@ func (r *AzureKMSResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	apiPath := data.ID.ValueString()
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
-		resp.Diagnostics.AddError("Error deleting Azure Key Vault provider", fmt.Sprintf("Error deleting Azure Key Vault provider at %s: %s", apiPath, err))
+		resp.Diagnostics.AddError(errDeleting("Azure Key Vault provider", apiPath, err))
 		return
 	}
 }
