@@ -166,7 +166,7 @@ func (r *KMIPCAResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"key_type": schema.StringAttribute{
@@ -177,7 +177,7 @@ func (r *KMIPCAResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					stringvalidator.OneOf("rsa", "ec"),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"key_bits": schema.Int64Attribute{
@@ -185,7 +185,7 @@ func (r *KMIPCAResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					int64planmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"ttl": schema.Int64Attribute{
@@ -194,7 +194,7 @@ func (r *KMIPCAResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Computed:            true,
 				Default:             int64default.StaticInt64(31536000),
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					int64planmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"scope_name": schema.StringAttribute{
@@ -342,7 +342,6 @@ func (r *KMIPCAResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	// Map API response to Terraform model
-	// Note: ca_pem is returned from API but we don't update it in state for security
 	mapAPIModelToTerraformModel(&apiModel, &data)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
