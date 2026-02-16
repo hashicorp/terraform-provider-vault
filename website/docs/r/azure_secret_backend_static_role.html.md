@@ -59,17 +59,19 @@ The following arguments are supported:
 * `application_object_id` - (Required) The Azure AD Application Object ID associated with the existing application whose
   credentials Vault will manage.
 * `ttl` – (Optional) Duration that defines the validity period of the managed credential. Defaults to 2 years. Must be
-  at least 1 year.
+  at least 1 month.
   Accepts an integer number of seconds (31536000). Defaults to the system/engine default TTL time.
 * `metadata` – (Optional) A map of string key-value pairs that are stored alongside the role and returned with generated
   credentials.
 * `secret_id` - (Optional) When importing an existing credential, specifies the Azure secret’s key ID.
 * `client_secret` - (Optional, Sensitive) When importing an existing credential, provides the existing client secret
   value.
-* `expiration` - (Optional) - Expiration timestamp (UTC, RFC3339 format) of the existing credential being imported. If
-  not set, Vault uses the value provided by Azure.
+* `expiration` - (Optional) **Deprecated** - Expiration timestamp (UTC, RFC3339 format) of the existing credential being imported. 
+  Vault reads expiration from Azure.
 * `skip_import_rotation` - (Optional, Bool) - If true, Vault will import the provided credential without performing
   rotation. Valid only during creation. Defaults to `false`.
+* `defer_initial_creds` - (Optional, Bool) - If true, the initial credential generation will be deferred until the
+  first read of credentials from this role. Defaults to `false`.
 
 ## Attributes Reference
 
