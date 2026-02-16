@@ -2,6 +2,9 @@
 
 FEATURES : 
 * **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
+
+IMPROVEMENTS:
+
 * `vault_okta_auth_backend`: Add support for write-only field api_token_wo with version counters to prevent sensitive credentials from being stored in Terraform state. Deprecate `organization` and `token` and replace with `org_name` and `api_token` respectively in `vault_okta_auth_backend` resource. ([#2736](https://github.com/hashicorp/terraform-provider-vault/pull/2736))
 * `vault_kubernetes_secret_backend_role`: Add support for `token_default_audiences` field to configure default audiences for generated Kubernetes tokens. Requires Vault 1.15+. ([#2722](https://github.com/hashicorp/terraform-provider-vault/pull/2722))
 
