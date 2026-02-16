@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/alicloud"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
 
@@ -231,6 +232,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffe.NewSpiffeAuthRoleResource,
 		sys.NewPasswordPolicyResource,
 		azure.NewAzureStaticRoleResource,
+		alicloud.NewAliCloudSecretBackendResource,
+		alicloud.NewAliCloudSecretBackendRoleResource,
 	}
 }
 
@@ -246,6 +249,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewAWSStaticAccessCredentialsEphemeralSecretResource,
 		ephemeralauth.NewApproleAuthBackendRoleSecretIDEphemeralResource,
 		ephemeralsecrets.NewKubernetesServiceAccountTokenEphemeralResource,
+		ephemeralsecrets.NewAliCloudAccessCredentialsEphemeralResource,
 	}
 
 }
