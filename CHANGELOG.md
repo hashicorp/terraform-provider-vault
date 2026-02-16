@@ -1,3 +1,9 @@
+## Unrealeased 
+
+FEATURES : 
+* **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
+
+
 ## 5.7.0 (February 5, 2026)
 
 FEATURES:

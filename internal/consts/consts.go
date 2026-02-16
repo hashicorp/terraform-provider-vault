@@ -272,6 +272,7 @@ const (
 	FieldRenewIncrement                     = "renew_increment"
 	FieldLeaseStarted                       = "lease_started"
 	FieldLeaseStartTime                     = "lease_start_time"
+	FieldWithLeaseStartTime                 = "with_lease_start_time"
 	FieldClientToken                        = "client_token"
 	FieldWrappedToken                       = "wrapped_token"
 	FieldOrphan                             = "orphan"
