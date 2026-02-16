@@ -710,6 +710,37 @@ const (
 	FieldValidateResponseSignature  = "validate_response_signature"
 
 	/*
+		raft snapshot agent config fields
+	*/
+	FieldInterval                  = "interval"
+	FieldIntervalSeconds           = "interval_seconds"
+	FieldRetain                    = "retain"
+	FieldPathPrefix                = "path_prefix"
+	FieldFilePrefix                = "file_prefix"
+	FieldStorageType               = "storage_type"
+	FieldAutoloadEnabled           = "autoload_enabled"
+	FieldLocalMaxSpace             = "local_max_space"
+	FieldAWSS3Bucket               = "aws_s3_bucket"
+	FieldAWSS3Region               = "aws_s3_region"
+	FieldAWSS3Endpoint             = "aws_s3_endpoint"
+	FieldAWSS3DisableTLS           = "aws_s3_disable_tls"
+	FieldAWSS3ForcePathStyle       = "aws_s3_force_path_style"
+	FieldAWSS3EnableKMS            = "aws_s3_enable_kms"
+	FieldAWSS3ServerSideEncryption = "aws_s3_server_side_encryption"
+	FieldAWSS3KMSKey               = "aws_s3_kms_key"
+	FieldGoogleGCSBucket           = "google_gcs_bucket"
+	FieldGoogleServiceAccountKey   = "google_service_account_key"
+	FieldGoogleEndpoint            = "google_endpoint"
+	FieldGoogleDisableTLS          = "google_disable_tls"
+	FieldAzureContainerName        = "azure_container_name"
+	FieldAzureAccountName          = "azure_account_name"
+	FieldAzureAccountKey           = "azure_account_key"
+	FieldAzureBlobEnvironment      = "azure_blob_environment"
+	FieldAzureEndpoint             = "azure_endpoint"
+	FieldAzureClientID             = "azure_client_id"
+	FieldAzureAuthMode             = "azure_auth_mode"
+
+	/*
 		ephemeral resource constants and write-only attributes
 	*/
 

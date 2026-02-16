@@ -3,6 +3,8 @@
 FEATURES : 
 * **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
 
+IMPROVEMENTS : 
+* `vault_raft_snapshot_agent_config`: Add support for `azure_auth_mode` and `azure_client_id` fields for Azure Managed Identity authentication (Vault Enterprise 1.18.0+), and `autoload_enabled` field for automatic snapshot restoration (Vault Enterprise 1.21.0+). ([#2758](https://github.com/hashicorp/terraform-provider-vault/pull/2758))
 
 ## 5.7.0 (February 5, 2026)
 
