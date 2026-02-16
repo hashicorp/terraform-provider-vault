@@ -218,14 +218,26 @@ func (r *DistributeKeyResource) read(ctx context.Context, cli *api.Client, data 
 	if v, ok := vaultResp.Data["protection"].(string); ok {
 		data.Protection = types.StringValue(v)
 	}
-	if v, ok := vaultResp.Data["key_id"].(string); ok {
+
+	// Always set key_id and versions to ensure they are known after apply
+	if v, ok := vaultResp.Data["key_id"].(string); ok && v != "" {
 		data.KeyID = types.StringValue(v)
+	} else {
+		data.KeyID = types.StringValue("")
 	}
-	if v, ok := vaultResp.Data["versions"].([]interface{}); ok {
+
+	if v, ok := vaultResp.Data["versions"].([]interface{}); ok && len(v) > 0 {
 		versions, d := types.ListValueFrom(ctx, types.Int64Type, v)
 		diags.Append(d...)
 		if !diags.HasError() {
 			data.Versions = versions
+		}
+	} else {
+		// Set to empty list instead of leaving unknown
+		emptyList, d := types.ListValueFrom(ctx, types.Int64Type, []int64{})
+		diags.Append(d...)
+		if !diags.HasError() {
+			data.Versions = emptyList
 		}
 	}
 }

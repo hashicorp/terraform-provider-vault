@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_keymgmt_gcp_kms resource"
-sidebar_current: "docs-vault-resource-keymgmt-gcp-kms"
+
 description: |-
   Manages GCP Cloud KMS provider in the Vault Key Management secrets engine
 ---

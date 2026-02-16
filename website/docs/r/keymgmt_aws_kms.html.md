@@ -1,7 +1,6 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_keymgmt_aws_kms resource"
-sidebar_current: "docs-vault-resource-keymgmt-aws-kms"
 description: |-
   Manages AWS KMS provider in the Vault Key Management secrets engine
 ---

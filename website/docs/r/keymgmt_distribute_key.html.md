@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_keymgmt_distribute_key resource"
-sidebar_current: "docs-vault-resource-keymgmt-distribute-key"
+
 description: |-
   Distributes keys from Vault to external KMS providers
 ---

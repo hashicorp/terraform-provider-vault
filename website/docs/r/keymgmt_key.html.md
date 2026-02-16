@@ -1,7 +1,6 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_keymgmt_key resource"
-sidebar_current: "docs-vault-resource-keymgmt-key"
 description: |-
   Manages keys in the Vault Key Management secrets engine
 ---

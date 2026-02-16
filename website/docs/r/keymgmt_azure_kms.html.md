@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_keymgmt_azure_kms resource"
-sidebar_current: "docs-vault-resource-keymgmt-azure-kms"
+
 description: |-
   Manages Azure Key Vault provider in the Vault Key Management secrets engine
 ---

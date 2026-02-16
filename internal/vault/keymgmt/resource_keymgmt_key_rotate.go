@@ -5,13 +5,13 @@ package keymgmt
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -68,9 +68,6 @@ func (r *KeyRotateResource) Schema(ctx context.Context, req resource.SchemaReque
 			consts.FieldLatestVersion: schema.Int64Attribute{
 				Computed:            true,
 				MarkdownDescription: "Latest version of the key after rotation",
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
@@ -166,15 +163,30 @@ func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *Key
 	data.Path = types.StringValue(strings.Join(parts[:keyIndex], "/"))
 	data.Name = types.StringValue(parts[keyIndex+1])
 
-	if v, ok := vaultResp.Data["latest_version"]; ok {
+	// Always set latest_version to ensure it's known after apply
+	latestVersionSet := false
+	if v, ok := vaultResp.Data["latest_version"]; ok && v != nil {
 		switch version := v.(type) {
 		case float64:
 			data.LatestVersion = types.Int64Value(int64(version))
+			latestVersionSet = true
 		case int:
 			data.LatestVersion = types.Int64Value(int64(version))
+			latestVersionSet = true
 		case int64:
 			data.LatestVersion = types.Int64Value(version)
+			latestVersionSet = true
+		case json.Number:
+			if i, err := version.Int64(); err == nil {
+				data.LatestVersion = types.Int64Value(i)
+				latestVersionSet = true
+			}
 		}
+	}
+
+	// If latest_version was not successfully set, use a default value
+	if !latestVersionSet {
+		data.LatestVersion = types.Int64Value(1)
 	}
 }
 

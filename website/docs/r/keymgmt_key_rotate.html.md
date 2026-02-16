@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_keymgmt_key_rotate resource"
-sidebar_current: "docs-vault-resource-keymgmt-key-rotate"
+
 description: |-
   Rotates keys in the Vault Key Management secrets engine
 ---
