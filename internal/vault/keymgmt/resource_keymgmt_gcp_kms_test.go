@@ -61,13 +61,23 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				"credentials",
+				"service_account_file",
 			),
 		},
 	})
 }
 
 func testKeymgmtGCPKMSConfig(mount, kmsName, keyCollection string) string {
+	gcpProject := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	if gcpProject == "" {
+		gcpProject = "test-project"
+	}
+
+	gcpLocation := os.Getenv("GOOGLE_CLOUD_LOCATION")
+	if gcpLocation == "" {
+		gcpLocation = "us-central1"
+	}
+
 	return fmt.Sprintf(`
 resource "vault_mount" "keymgmt" {
   path = %q
@@ -75,10 +85,12 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_gcp_kms" "test" {
-  path           = vault_mount.keymgmt.path
-  name           = %q
-  key_collection = %q
-  credentials    = "%s"
+  path                 = vault_mount.keymgmt.path
+  name                 = %q
+  key_collection       = %q
+  service_account_file = %q
+  project              = %q
+  location             = %q
 }
-`, mount, kmsName, keyCollection, os.Getenv("GOOGLE_CREDENTIALS"))
+`, mount, kmsName, keyCollection, os.Getenv("GOOGLE_CREDENTIALS"), gcpProject, gcpLocation)
 }

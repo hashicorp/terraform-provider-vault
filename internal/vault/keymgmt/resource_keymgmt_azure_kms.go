@@ -113,14 +113,19 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 	writeData := map[string]interface{}{
 		"provider":       "azurekeyvault",
 		"key_collection": data.KeyCollection.ValueString(),
-		"tenant_id":      data.TenantID.ValueString(),
-		"client_id":      data.ClientID.ValueString(),
-		"client_secret":  data.ClientSecret.ValueString(),
 	}
 
+	// Azure credentials must be sent as a nested credentials object
+	creds := make(map[string]string)
+	creds["tenant_id"] = data.TenantID.ValueString()
+	creds["client_id"] = data.ClientID.ValueString()
+	creds["client_secret"] = data.ClientSecret.ValueString()
+
 	if !data.Environment.IsNull() {
-		writeData["environment"] = data.Environment.ValueString()
+		creds["environment"] = data.Environment.ValueString()
 	}
+
+	writeData["credentials"] = creds
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 		resp.Diagnostics.AddError("Error creating Azure Key Vault provider", fmt.Sprintf("Error creating Azure Key Vault provider at %s: %s", apiPath, err))

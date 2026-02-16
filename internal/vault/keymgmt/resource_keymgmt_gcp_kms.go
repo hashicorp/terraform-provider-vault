@@ -107,12 +107,17 @@ func (r *GCPKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 	apiPath := buildKMSPath(vaultPath, name)
 
 	writeData := map[string]interface{}{
-		"provider":             "gcpckms",
-		"key_collection":       data.KeyCollection.ValueString(),
-		"service_account_file": data.ServiceAccountFile.ValueString(),
-		"project":              data.Project.ValueString(),
-		"location":             data.Location.ValueString(),
+		"provider":       "gcpckms",
+		"key_collection": data.KeyCollection.ValueString(),
 	}
+
+	// GCP credentials must be sent as a nested credentials object
+	creds := make(map[string]string)
+	creds["service_account_file"] = data.ServiceAccountFile.ValueString()
+	creds["project"] = data.Project.ValueString()
+	creds["location"] = data.Location.ValueString()
+
+	writeData["credentials"] = creds
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 		resp.Diagnostics.AddError("Error creating GCP Cloud KMS provider", fmt.Sprintf("Error creating GCP Cloud KMS provider at %s: %s", apiPath, err))
