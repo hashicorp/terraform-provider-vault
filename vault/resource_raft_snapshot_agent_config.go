@@ -58,8 +58,9 @@ func raftSnapshotAgentConfigResource() *schema.Resource {
 		},
 		consts.FieldAutoloadEnabled: {
 			Type: schema.TypeBool,
-			Description: "Enables automatic restoration of snapshots on cluster initialization or leadership change. " +
-				"Requires Vault Enterprise 1.21.0+. Not supported with local storage.",
+			Description: "Have Vault automatically load the latest snapshot after it is written. This will replace the previously loaded snapshot. " +
+				"Note that this does not mean the snapshot is automatically applied to the cluster, it is just loaded and available for recovery operations. " +
+				"Requires Vault Enterprise 1.21.0+. Not supported with storage_type = \"local\".",
 			Optional: true,
 		},
 		consts.FieldLocalMaxSpace: {

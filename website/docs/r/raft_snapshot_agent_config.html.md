@@ -134,9 +134,9 @@ The following arguments are supported:
   or "google-gcs". The remaining parameters described below are all specific to
   the selected `storage_type` and prefixed accordingly.
 
-- `autoload_enabled` - (Optional) Enables automatic restoration of snapshots on
-  cluster initialization or leadership change.
+- `autoload_enabled` - (Optional) Have Vault automatically load the latest snapshot after it is written. This will replace the previously loaded snapshot. Note that this does not mean the snapshot is automatically applied to the cluster, it is just loaded and available for recovery operations.
   **Note:** Not supported with `storage_type = "local"`.
+  
   *Requires Vault Enterprise 1.21.0+*.
 
 #### storage_type=local
@@ -212,7 +212,8 @@ The following arguments are supported:
 - `azure_auth_mode` - Azure authentication mode. **Required by Vault API** when using `storage_type = "azure-blob"`. Possible values are:
   - `shared` - Shared key authentication (requires `azure_account_key`)
   - `managed` - Managed identity authentication (requires `azure_client_id`)
-  - `environment` - Environment-based credentials using Azure SDK default credential chain
+  - `environment` - Environment-based credentials using Azure SDK default credential chain. If `environment` is set, Azure authentication details are retrieved from the environment variables: `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
+  
   *Requires Vault Enterprise 1.18.0+*.
 
 - `azure_account_key` - Azure account key. **Required** when `azure_auth_mode = "shared"`.
