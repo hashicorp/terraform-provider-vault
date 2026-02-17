@@ -311,6 +311,8 @@ const (
 	FieldPublicKey                          = "public_key"
 	FieldPrivateKey                         = "private_key"
 	FieldPrivateKeyData                     = "private_key_data"
+	FieldRSAPrivateKey                      = "rsa_private_key"
+	FieldClientCertificate                  = "client_certificate"
 	FieldImpersonatedAccount                = "impersonated_account"
 	FieldRoleset                            = "roleset"
 	FieldStaticAccount                      = "static_account"

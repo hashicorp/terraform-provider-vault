@@ -107,6 +107,7 @@ func databaseSecretBackendRoleResource() *schema.Resource {
 			consts.FieldCredentialConfig: {
 				Type:        schema.TypeMap,
 				Optional:    true,
+				Computed:    true,
 				Description: "Specifies the configuration for the given credential_type.",
 			},
 		},
@@ -196,6 +197,14 @@ func databaseSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, 
 		if v, ok := secret.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return diag.FromErr(err)
+			}
+		} else {
+			// For computed fields, explicitly set to nil if not returned by Vault
+			// This prevents Terraform from showing "known after apply" in plans
+			if k == consts.FieldCredentialConfig {
+				if err := d.Set(k, nil); err != nil {
+					return diag.FromErr(err)
+				}
 			}
 		}
 	}
