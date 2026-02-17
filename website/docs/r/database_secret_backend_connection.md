@@ -60,7 +60,6 @@ resource "vault_database_secret_backend_connection" "oracle" {
   oracle {
     connection_url = "{{username}}/{{password}}@//host:port/service"
     self_managed   = true
-    plugin_name    = "vault-plugin-database-oracle"
   }
 }
 
