@@ -75,6 +75,19 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "explicit_max_ttl", "2592000"))
 	}
 
+	isVaultVersion200Ent := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion200) &&
+		testProvider.Meta().(*provider.ProviderMeta).IsEnterpriseSupported()
+	if isVaultVersion200Ent {
+		azureRoleInitialCheckFuncs = append(azureRoleInitialCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "metadata.environment", "test"),
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "metadata.team", "eco"),
+		)
+		azureRoleUpdatedCheckFuncs = append(azureRoleUpdatedCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "metadata.environment", "development"),
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "metadata.team", "platform"),
+		)
+	}
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
@@ -276,6 +289,10 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
  description	  = "Test for Vault Provider"
  sign_in_audience = "AzureADMyOrg"
  tags             = ["team:engineering"]
+ metadata = {
+    environment = "test"
+    team        = "eco"
+  }
 
  azure_roles {
    role_name = "Reader"
@@ -328,6 +345,10 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
   description 	   = "Test for Vault Provider"
   sign_in_audience = "AzureADMultipleOrgs"
   tags       	   = ["environment:development","project:vault_testing"]
+  metadata = {
+    environment = "development"
+    team        = "platform"
+  }
 
   azure_roles {
     role_name = "Reader"
