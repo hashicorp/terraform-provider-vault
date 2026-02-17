@@ -655,6 +655,7 @@ const (
 	FieldSupportsSigning                      = "supports_signing"
 
 	// KMIP Secret Role fields
+	FieldCA                        = "ca"
 	FieldOperationActivate         = "operation_activate"
 	FieldOperationAddAttribute     = "operation_add_attribute"
 	FieldOperationAll              = "operation_all"
