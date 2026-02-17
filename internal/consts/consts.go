@@ -398,6 +398,7 @@ const (
 	FieldOtherSans                          = "other_sans"
 	FieldMaxPathLength                      = "max_path_length"
 	FieldExcludeCNFromSans                  = "exclude_cn_from_sans"
+	FieldRemoveRootsFromChain               = "remove_roots_from_chain"
 	FieldPermittedDNSDomains                = "permitted_dns_domains"
 	FieldExcludedDNSDomains                 = "excluded_dns_domains"
 	FieldPermittedIPRanges                  = "permitted_ip_ranges"
