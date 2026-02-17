@@ -233,7 +233,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		sys.NewPasswordPolicyResource,
 		azure.NewAzureStaticRoleResource,
 		kmip.NewKMIPListenerResource,
-		kmip.NewKMIPCAResource,
+		kmip.NewKMIPCAGeneratedResource,
+		kmip.NewKMIPCAImportedResource,
 	}
 }
 
