@@ -66,6 +66,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "foo-pol"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_open_connections", "2"),
@@ -681,6 +682,7 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "foo-pol"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.username", username),
@@ -716,6 +718,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_rds(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "foo-pol"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.username", username),
@@ -751,6 +754,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_aurora(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "foo-pol"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.username", username),
@@ -786,6 +790,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_legacy(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "foo-pol"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.username", username),
@@ -1089,6 +1094,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "password_policy", "foo-pol"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.connection_url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password_authentication", "password"),
@@ -1944,6 +1950,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "foo-pol"
 
   postgresql {
 	  connection_url = "%s"
@@ -2179,6 +2186,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "foo-pol"
 
   mysql {
 	  connection_url = "%s"
@@ -2310,6 +2318,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "foo-pol"
 
   mysql_rds {
 	  connection_url = "%s"
@@ -2332,6 +2341,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "foo-pol"
 
   mysql_aurora {
 	  connection_url = "%s"
@@ -2354,6 +2364,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "foo-pol"
 
   mysql_legacy {
 	  connection_url = "%s"
@@ -2448,6 +2459,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "foo-pol"
 
   postgresql {
       connection_url          = "%s"
@@ -2475,6 +2487,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "foo-pol"
 
   postgresql {
 	  connection_url    = "%s"
