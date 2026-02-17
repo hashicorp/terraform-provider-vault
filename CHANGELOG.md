@@ -15,6 +15,7 @@ IMPROVEMENTS:
   * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
 * Docs: fix heredoc example for LDAP dynamic role LDIFs ([#2728]https://github.com/hashicorp/terraform-provider-vault/pull/2728)
 * Docs: Update example to use write-only attribute ([#2731]https://github.com/hashicorp/terraform-provider-vault/pull/2731)
+* provider: Add support for `distributed_claim_access_token` field in the `auth_login_jwt` configuration block. ([#2781](https://github.com/hashicorp/terraform-provider-vault/pull/2781))
 
 
 BUGS:
