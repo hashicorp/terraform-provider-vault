@@ -74,7 +74,7 @@ The following arguments are supported:
 
 * `name` - (Required) Name of the key. This cannot be changed after creation.
 
-* `type` - (Required) Type of cryptographic key to create. Valid values are:
+* `type` - (Required) Type of cryptographic key to create. Cannot be changed after creation. Valid values are:
   - `aes256-gcm96` - AES-256 wrapped with GCM using a 96-bit nonce (symmetric)
   - `rsa-2048` - RSA with 2048 bits (asymmetric)
   - `rsa-3072` - RSA with 3072 bits (asymmetric)
@@ -82,10 +82,12 @@ The following arguments are supported:
   - `ecdsa-p256` - ECDSA using curve P-256 (asymmetric)
   - `ecdsa-p384` - ECDSA using curve P-384 (asymmetric)
   - `ecdsa-p521` - ECDSA using curve P-521 (asymmetric)
+  - `ed25519` - Ed25519 signature algorithm (asymmetric)
+  - `hmac` - HMAC key for message authentication
 
-* `deletion_allowed` - (Optional) If set to `true`, the key can be deleted. Defaults to `false`.
+* `deletion_allowed` - (Optional) If set to `true`, the key can be deleted. Defaults to `false`. Once enabled, the key can be destroyed using Terraform.
 
-* `replica_regions` - (Optional) Set of regions where the key should be replicated. This is used when distributing keys to multi-region KMS providers.
+* `replica_regions` - (Optional) Set of AWS regions where the key should be replicated. This is only applicable when distributing keys to AWS KMS and enables multi-region key replication. Example: `["us-west-1", "us-east-1", "eu-west-1"]`.
 
 ## Attributes Reference
 

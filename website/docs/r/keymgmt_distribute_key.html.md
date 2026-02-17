@@ -52,6 +52,26 @@ resource "vault_keymgmt_distribute_key" "aws_dist" {
 }
 ```
 
+### Distribute to AWS KMS (Using Environment Variables)
+
+```hcl
+# When AWS credentials are configured via environment variables or IAM roles
+# on the Vault server, you can omit access_key and secret_key
+resource "vault_keymgmt_aws_kms" "aws" {
+  path           = vault_mount.keymgmt.path
+  name           = "aws-kms"
+  key_collection = "us-west-2"
+  # No credentials - Vault uses AWS SDK credential chain
+}
+
+resource "vault_keymgmt_distribute_key" "aws_dist" {
+  path     = vault_mount.keymgmt.path
+  kms_name = vault_keymgmt_aws_kms.aws.name
+  key_name = vault_keymgmt_key.encryption_key.name
+  purpose  = ["encrypt", "decrypt"]
+}
+```
+
 ### Distribute to Azure Key Vault
 
 ```hcl

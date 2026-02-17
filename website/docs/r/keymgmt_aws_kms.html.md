@@ -40,16 +40,21 @@ resource "vault_keymgmt_aws_kms" "us_west" {
 }
 ```
 
-### Using AWS Credentials from Environment
+### Using AWS Environment Variables or IAM Roles
 
 ```hcl
+# When credentials are not provided, Vault will use AWS SDK's credential chain:
+# 1. Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN)
+# 2. Shared credentials file (~/.aws/credentials)
+# 3. IAM instance profile (when running on EC2)
+# 4. ECS task credentials (when running on ECS)
+
 resource "vault_keymgmt_aws_kms" "production" {
   path           = vault_mount.keymgmt.path
   name           = "aws-production"
   key_collection = "us-east-1"
   
-  access_key = var.aws_access_key_id
-  secret_key = var.aws_secret_access_key
+  # No access_key or secret_key - Vault uses AWS credential chain
 }
 
 # Distribute a key to AWS KMS
@@ -67,6 +72,32 @@ resource "vault_keymgmt_distribute_key" "aws_dist" {
 }
 ```
 
+### Using Multiple Credential Methods
+
+```hcl
+# Option 1: Map-based credentials
+resource "vault_keymgmt_aws_kms" "map_creds" {
+  path           = vault_mount.keymgmt.path
+  name           = "aws-map-creds"
+  key_collection = "us-west-2"
+  
+  credentials = {
+    access_key = var.aws_access_key_id
+    secret_key = var.aws_secret_access_key
+  }
+}
+
+# Option 2: Individual credential fields
+resource "vault_keymgmt_aws_kms" "individual_creds" {
+  path           = vault_mount.keymgmt.path
+  name           = "aws-individual-creds"
+  key_collection = "eu-west-1"
+  
+  access_key = var.aws_access_key_id
+  secret_key = var.aws_secret_access_key
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -81,11 +112,13 @@ The following arguments are supported:
 
 * `name` - (Required) Unique name for this AWS KMS provider. This cannot be changed after creation.
 
-* `key_collection` - (Required) AWS region where keys will be created. This defines the region for the KMS keys. Examples: `us-west-2`, `us-east-1`, `eu-west-1`.
+* `key_collection` - (Required) AWS region where keys will be created. This defines the region for the KMS keys. Examples: `us-west-2`, `us-east-1`, `eu-west-1`. Cannot be changed after creation.
 
-* `access_key` - (Required, Sensitive) AWS access key ID with permissions to manage KMS keys.
+* `credentials` - (Optional, Sensitive) Map containing AWS credentials with keys `access_key` and `secret_key`. Mutually exclusive with `access_key` and `secret_key` fields. If not provided, Vault will use the AWS SDK credential chain (environment variables, IAM roles, etc.).
 
-* `secret_key` - (Required, Sensitive) AWS secret access key.
+* `access_key` - (Optional, Sensitive) AWS access key ID with permissions to manage KMS keys. May also be specified by the `AWS_ACCESS_KEY_ID` environment variable on the Vault server. Mutually exclusive with `credentials` map.
+
+* `secret_key` - (Optional, Sensitive) AWS secret access key. May also be specified by the `AWS_SECRET_ACCESS_KEY` environment variable on the Vault server. Mutually exclusive with `credentials` map.
 
 ## Attributes Reference
 
@@ -101,7 +134,19 @@ AWS KMS providers can be imported using the format `{path}/kms/{name}`, e.g.
 $ terraform import vault_keymgmt_aws_kms.us_west keymgmt/kms/aws-us-west-2
 ```
 
-~> **Note:** When importing, the `access_key` and `secret_key` fields will not be populated as they are write-only and not returned by the Vault API.
+~> **Note:** When importing, the `credentials`, `access_key`, and `secret_key` fields will not be populated as they are write-only and not returned by the Vault API.
+
+## Authentication Methods
+
+This resource supports multiple authentication methods for AWS:
+
+1. **Explicit credentials in Terraform** - Provide `access_key` and `secret_key` (or `credentials` map) directly
+2. **Environment variables** - Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and optionally `AWS_SESSION_TOKEN` on the Vault server
+3. **Shared credentials file** - Configure `~/.aws/credentials` on the Vault server
+4. **IAM instance profile** - When Vault runs on EC2, it can use the instance's IAM role
+5. **ECS task credentials** - When Vault runs on ECS, it can use the task's IAM role
+
+Credentials provided explicitly in Terraform take precedence over environment variables and IAM roles.
 
 ## Required AWS Permissions
 
