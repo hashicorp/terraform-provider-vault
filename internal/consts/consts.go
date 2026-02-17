@@ -664,6 +664,7 @@ const (
 	FieldSupportsDecryption                   = "supports_decryption"
 	FieldSupportsDerivation                   = "supports_derivation"
 	FieldSupportsSigning                      = "supports_signing"
+	FieldDistributedClaimAccessToken          = "distributed_claim_access_token"
 
 	// KMIP Secret Role fields
 	FieldOperationActivate         = "operation_activate"
@@ -801,6 +802,10 @@ const (
 	// EnvVarVaultConfigPath to override where the Vault configuration is in tests.
 	// Note: only used in tests. not used by the provider to read the Vault config.
 	EnvVarVaultConfigPath = "VAULT_CONFIG_PATH"
+	// EnvVarVaultAuthDistributedClaimAccessToken is used to provide an access token to
+	// fetch group memberships for distributed claims. Supported for Azure/Entra ID
+	// with Vault 1.18+.
+	EnvVarVaultAuthDistributedClaimAccessToken = "TERRAFORM_VAULT_AUTH_DISTRIBUTED_CLAIM_ACCESS_TOKEN"
 	/*
 		common mount types
 	*/
