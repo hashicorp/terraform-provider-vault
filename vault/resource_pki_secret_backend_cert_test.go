@@ -204,14 +204,16 @@ resource "vault_pki_secret_backend_cert" "test" {
 `
 
 		if notAfter != "" {
-			withCertBlock += fmt.Sprintf(`  not_after  = "%s"`, notAfter)
+			withCertBlock += fmt.Sprintf(`  not_after             = "%s"
+`, notAfter)
 		}
 
 		if revokeWithKey {
-			withCertBlock += `revoke_with_key  = true
-        `
+			withCertBlock += `  revoke_with_key       = true
+`
 		} else {
-			withCertBlock += fmt.Sprintf(`revoke  = %t`, revoke)
+			withCertBlock += fmt.Sprintf(`  revoke                = %t
+`, revoke)
 		}
 
 		withCertBlock += "}"
