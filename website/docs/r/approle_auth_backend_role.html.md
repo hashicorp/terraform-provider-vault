@@ -50,6 +50,8 @@ The following arguments are supported:
   can be used to fetch a token from this AppRole, after which the SecretID will
   expire. A value of zero will allow unlimited uses.
 
+  * `local_secret_ids` (bool: false) - If set, the secret IDs generated using this role will be cluster local. This can only be set during role creation and once set, it can't be reset later.
+
 * `secret_id_ttl` - (Optional) The number of seconds after which any SecretID
   expires.
 
