@@ -63,6 +63,31 @@ func TestAuthLoginJWT_Init(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:      "distributed-claim-access_token-with-env",
+			authField: consts.FieldAuthLoginJWT,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginJWT: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "ns1",
+						consts.FieldRole:      "alice",
+					},
+				},
+			},
+			envVars: map[string]string{
+				consts.EnvVarVaultAuthJWT:                         "jwt1",
+				consts.EnvVarVaultAuthDistributedClaimAccessToken: "token1",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:                   "ns1",
+				consts.FieldUseRootNamespace:            false,
+				consts.FieldMount:                       consts.MountTypeJWT,
+				consts.FieldRole:                        "alice",
+				consts.FieldJWT:                         "jwt1",
+				consts.FieldDistributedClaimAccessToken: "token1",
+			},
+			wantErr: false,
+		},
+		{
 			name:         "error-missing-resource",
 			authField:    consts.FieldAuthLoginJWT,
 			expectParams: nil,
@@ -84,6 +109,29 @@ func TestAuthLoginJWT_Init(t *testing.T) {
 			expectErr: fmt.Errorf("required fields are unset: %v", []string{
 				consts.FieldJWT,
 			}),
+		},
+		{
+			name:      "with-distributed-claim-access-token",
+			authField: consts.FieldAuthLoginJWT,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginJWT: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace:                   "ns1",
+						consts.FieldRole:                        "azure-role",
+						consts.FieldJWT:                         "jwt1",
+						consts.FieldDistributedClaimAccessToken: "access-token-123",
+					},
+				},
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:                   "ns1",
+				consts.FieldUseRootNamespace:            false,
+				consts.FieldMount:                       consts.MountTypeJWT,
+				consts.FieldRole:                        "azure-role",
+				consts.FieldJWT:                         "jwt1",
+				consts.FieldDistributedClaimAccessToken: "access-token-123",
+			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -112,6 +160,19 @@ func TestAuthLoginJWT_LoginPath(t *testing.T) {
 					params: map[string]interface{}{
 						consts.FieldRole: "alice",
 						consts.FieldJWT:  "jwt1",
+					},
+				},
+			},
+			want: "auth/jwt/login",
+		},
+		{
+			name: "default-with-distributed-claim-access-token",
+			fields: fields{
+				AuthLoginCommon: AuthLoginCommon{
+					params: map[string]interface{}{
+						consts.FieldRole:                        "alice",
+						consts.FieldJWT:                         "jwt1",
+						consts.FieldDistributedClaimAccessToken: "access-token-123",
 					},
 				},
 			},
@@ -215,6 +276,38 @@ func TestAuthLoginJWT_Login(t *testing.T) {
 			want:           nil,
 			wantErr:        true,
 			expectErr:      authLoginInitCheckError,
+		},
+		{
+			name: "with-distributed-claim-access-token",
+			authLogin: &AuthLoginJWT{
+				AuthLoginCommon: AuthLoginCommon{
+					authField: consts.FieldAuthLoginJWT,
+					params: map[string]interface{}{
+						consts.FieldRole:                        "alice",
+						consts.FieldJWT:                         "jwt1",
+						consts.FieldDistributedClaimAccessToken: "token1",
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			expectReqCount: 1,
+			expectReqPaths: []string{"/v1/auth/jwt/login"},
+			expectReqParams: []map[string]interface{}{
+				{
+					consts.FieldRole:                        "alice",
+					consts.FieldJWT:                         "jwt1",
+					consts.FieldDistributedClaimAccessToken: "token1",
+				},
+			},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "jwt",
+				},
+			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {

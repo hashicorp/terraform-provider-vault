@@ -23,9 +23,9 @@ func AuthLoginJWTSchema() schema.Block {
 					Optional:    true,
 					Description: "A signed JSON Web Token.",
 				},
-				consts.DistributedClaimAccessToken: schema.StringAttribute{
+				consts.FieldDistributedClaimAccessToken: schema.StringAttribute{
 					Optional:    true,
-					Description: "An optional token used to fetch group memberships specified by the distributed claim source in the jwt. This is supported only on Azure/Entra ID",
+					Description: "An optional token used to fetch group memberships specified by the distributed claim source in the jwt. This is supported only on Azure/Entra ID. Requires Vault 1.18+.",
 				},
 			},
 		},

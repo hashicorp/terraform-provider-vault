@@ -580,7 +580,7 @@ const (
 	FieldAudience                             = "audience"
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
-	DistributedClaimAccessToken               = "distributed_claim_access_token"
+	FieldDistributedClaimAccessToken          = "distributed_claim_access_token"
 	/*
 		ephemeral resource constants and write-only attributes
 	*/
@@ -614,6 +614,11 @@ const (
 	EnvVarVaultAuthJWT = "TERRAFORM_VAULT_AUTH_JWT"
 	// EnvVarAzureAuthJWT to login into Vault's azure auth engine.
 	EnvVarAzureAuthJWT = "TERRAFORM_VAULT_AZURE_AUTH_JWT"
+
+	// EnvVarVaultAuthDistributedClaimAccessToken is used to provide an access token to
+	// fetch group memberships for distributed claims. Supported for Azure/Entra ID
+	// with Vault 1.18+.
+	EnvVarVaultAuthDistributedClaimAccessToken = "TERRAFORM_VAULT_AUTH_DISTRIBUTED_CLAIM_ACCESS_TOKEN"
 
 	EnvVarGoogleApplicationCreds = "GOOGLE_APPLICATION_CREDENTIALS"
 
