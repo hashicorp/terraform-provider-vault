@@ -242,6 +242,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 	return []func() ephemeral.EphemeralResource{
 		ephemeralsecrets.NewKVV2EphemeralSecretResource,
 		ephemeralsecrets.NewDBEphemeralSecretResource,
+		ephemeralsecrets.NewGenericEphemeralSecretResource,
 		ephemeralsecrets.NewAzureStaticCredsEphemeralSecretResource,
 		ephemeralsecrets.NewAzureAccessCredentialsEphemeralResource,
 		ephemeralsecrets.NewGCPServiceAccountKeyEphemeralResource,
