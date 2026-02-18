@@ -1089,18 +1089,6 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	}
 
 	data[consts.FieldPluginName] = pluginName
-	// Allow plugin_version/password_policy to be defined either at the
-	// top-level resource or in the engine-specific nested block (prefix).
-	if v, ok := d.GetOk(pluginPrefix + consts.FieldPluginVersion); ok {
-		data[consts.FieldPluginVersion] = v.(string)
-	} else if v, ok := d.GetOk(consts.FieldPluginVersion); ok {
-		data[consts.FieldPluginVersion] = v.(string)
-	}
-	if v, ok := d.GetOk(pluginPrefix + consts.FieldPasswordPolicy); ok {
-		data[consts.FieldPasswordPolicy] = v.(string)
-	} else if v, ok := d.GetOk(consts.FieldPasswordPolicy); ok {
-		data[consts.FieldPasswordPolicy] = v.(string)
-	}
 
 	switch engine {
 	case dbEngineCassandra:
@@ -2105,6 +2093,25 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 		prefix = engine.ResourcePrefix(idx)
 	}
 
+	// Allow plugin_version/password_policy to be defined either at the
+	// top-level resource or in the engine-specific nested block (prefix).
+	if v, ok := d.GetOk(prefix + consts.FieldPluginVersion); ok {
+		data[consts.FieldPluginVersion] = v.(string)
+	} else if v, ok := d.GetOk(consts.FieldPluginVersion); ok {
+		data[consts.FieldPluginVersion] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + consts.FieldPasswordPolicy); ok {
+		data[consts.FieldPasswordPolicy] = v.(string)
+	} else if v, ok := d.GetOk(consts.FieldPasswordPolicy); ok {
+		data[consts.FieldPasswordPolicy] = v.(string)
+	}
+	// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOkExists(prefix + consts.FieldSkipStaticRoleImportRotation); ok {
+			data[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
+		}
+	}
+
 	if v, ok := d.GetOkExists(prefix + consts.FieldVerifyConnection); ok {
 		data[consts.FieldVerifyConnection] = v.(bool)
 	}
@@ -2119,19 +2126,6 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 
 	if v, ok := d.GetOk(consts.FieldRootRotationStatements); ok {
 		data[consts.FieldRootRotationStatements] = v
-	}
-
-	if v, ok := d.GetOk(consts.FieldPluginVersion); ok {
-		data[consts.FieldPluginVersion] = v.(string)
-	}
-	if v, ok := d.GetOkExists(consts.FieldPasswordPolicy); ok {
-		data[consts.FieldPasswordPolicy] = v.(string)
-	}
-	// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
-	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
-		if v, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
-			data[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
-		}
 	}
 
 	log.Printf("[DEBUG] database config payload : %+v", data)
@@ -2295,17 +2289,7 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 		var value bool
 		if v, ok := resp.Data[consts.FieldSkipStaticRoleImportRotation]; ok && v != nil {
 			value = v.(bool)
-		} else if prefV, ok := d.GetOkExists(engine.ResourcePrefix(idx) + consts.FieldSkipStaticRoleImportRotation); ok {
-			// Vault may not return this attribute in the API response for some
-			// versions. Fall back to the configured value so that import/state
-			// verification succeeds when the value was set in the original
-			// configuration.
-			// Prefer the engine-specific nested setting if present.
-			value = prefV.(bool)
-		} else if topV, ok := d.GetOkExists(consts.FieldSkipStaticRoleImportRotation); ok {
-			value = topV.(bool)
 		}
-		// else: value remains false (zero value)
 
 		result[consts.FieldSkipStaticRoleImportRotation] = value
 	}
