@@ -42,6 +42,15 @@ func buildGCPSyncWriteFields(meta interface{}) []string {
 		}...)
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion122) {
+		fields = append(fields,
+			consts.FieldIdentityTokenAudience,
+			consts.FieldIdentityTokenTTL,
+			consts.FieldServiceAccountEmail,
+			consts.FieldIdentityTokenKey,
+		)
+	}
+
 	return fields
 }
 
@@ -66,6 +75,15 @@ func buildGCPSyncReadFields(meta interface{}) []string {
 			consts.FieldLocationalKmsKeys,
 			consts.FieldGlobalKmsKey,
 		}...)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion122) {
+		fields = append(fields,
+			consts.FieldIdentityTokenAudience,
+			consts.FieldIdentityTokenTTL,
+			consts.FieldServiceAccountEmail,
+			consts.FieldIdentityTokenKey,
+		)
 	}
 
 	return fields
@@ -93,6 +111,26 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				Sensitive:   true,
 				Description: "JSON-encoded credentials to use to connect to GCP.",
+			},
+			consts.FieldIdentityTokenKey: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The key to use for signing identity tokens.",
+			},
+			consts.FieldIdentityTokenAudience: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The audience claim value for identity tokens.",
+			},
+			consts.FieldIdentityTokenTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The TTL of generated tokens.",
+			},
+			consts.FieldServiceAccountEmail: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Service Account to impersonate for workload identity federation.",
 			},
 			consts.FieldProjectID: {
 				Type:        schema.TypeString,
