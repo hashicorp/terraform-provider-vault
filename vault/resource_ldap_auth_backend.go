@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -85,10 +86,25 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed: true,
 		},
 		consts.FieldBindPass: {
-			Type:      schema.TypeString,
-			Optional:  true,
-			Computed:  true,
-			Sensitive: true,
+			Type:          schema.TypeString,
+			Optional:      true,
+			Computed:      true,
+			Sensitive:     true,
+			ConflictsWith: []string{consts.FieldBindPassWO},
+		},
+		consts.FieldBindPassWO: {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Description:   "Write-only bind password to use for LDAP authentication.",
+			Sensitive:     true,
+			WriteOnly:     true,
+			ConflictsWith: []string{consts.FieldBindPass},
+		},
+		consts.FieldBindPassWOVersion: {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Description:  "Version counter for write-only bind password.",
+			RequiredWith: []string{consts.FieldBindPassWO},
 		},
 		consts.FieldCaseSensitiveNames: {
 			Type:     schema.TypeBool,
@@ -348,8 +364,19 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
+	// Handle bindpass - check for regular field first, then write-only field
+	var bindpass string
 	if v, ok := d.GetOk(consts.FieldBindPass); ok {
-		data[consts.FieldBindPass] = v.(string)
+		bindpass = v.(string)
+	} else if d.IsNewResource() || d.HasChange(consts.FieldBindPassWOVersion) {
+		p := cty.GetAttrPath(consts.FieldBindPassWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			bindpass = woVal.AsString()
+		}
+	}
+	if bindpass != "" {
+		data[consts.FieldBindPass] = bindpass
 	}
 
 	if v, ok := d.GetOk(consts.FieldClientTLSCert); ok {

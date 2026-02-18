@@ -683,7 +683,6 @@ const (
 	FieldAllowedUserKeyLengths                = "allowed_user_key_lengths"
 	FieldAlgorithmSigner                      = "algorithm_signer"
 	FieldKeyIDFormat                          = "key_id_format"
-
 	// SSH Secret Backend Key Types
 	SSHKeyTypeCA              = "ca"
 	FieldAllowEmptyPrincipals = "allow_empty_principals"
