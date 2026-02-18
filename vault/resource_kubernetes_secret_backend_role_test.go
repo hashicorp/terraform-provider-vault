@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -26,7 +27,7 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccKubernetesSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -34,11 +35,11 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, fieldAllowedKubernetesNamespaces+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, fieldAllowedKubernetesNamespaces+".0", "*"),
-					resource.TestCheckResourceAttr(resourceName, fieldServiceAccountName, "test-service-account-with-generated-token"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenMaxTTL, "86400"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultTTL, "43200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedKubernetesNamespaces+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedKubernetesNamespaces+".0", "*"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountName, "test-service-account-with-generated-token"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenDefaultTTL, "43200"),
 				),
 			},
 			{
@@ -46,20 +47,20 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, fieldAllowedKubernetesNamespaces+".#", "2"),
-					resource.TestCheckResourceAttr(resourceName, fieldAllowedKubernetesNamespaces+".0", "dev"),
-					resource.TestCheckResourceAttr(resourceName, fieldAllowedKubernetesNamespaces+".1", "int"),
-					resource.TestCheckResourceAttr(resourceName, fieldKubernetesRoleType, "Role"),
-					resource.TestCheckResourceAttr(resourceName, fieldGeneratedRoleRules, "rules:\n- apiGroups: [\"\"]\n  resources: [\"pods\"]\n  verbs: [\"list\"]\n"),
-					resource.TestCheckResourceAttr(resourceName, fieldServiceAccountName, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenMaxTTL, "43200"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultTTL, "21600"),
-					resource.TestCheckResourceAttr(resourceName, fieldExtraLabels+".%", "2"),
-					resource.TestCheckResourceAttr(resourceName, fieldExtraLabels+".id", "abc123"),
-					resource.TestCheckResourceAttr(resourceName, fieldExtraLabels+".name", "some_name"),
-					resource.TestCheckResourceAttr(resourceName, fieldExtraAnnotations+".%", "2"),
-					resource.TestCheckResourceAttr(resourceName, fieldExtraAnnotations+".env", "development"),
-					resource.TestCheckResourceAttr(resourceName, fieldExtraAnnotations+".location", "earth"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedKubernetesNamespaces+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedKubernetesNamespaces+".0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedKubernetesNamespaces+".1", "int"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesRoleType, "Role"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGeneratedRoleRules, "rules:\n- apiGroups: [\"\"]\n  resources: [\"pods\"]\n  verbs: [\"list\"]\n"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountName, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "43200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenDefaultTTL, "21600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExtraLabels+".%", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExtraLabels+".id", "abc123"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExtraLabels+".name", "some_name"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExtraAnnotations+".%", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExtraAnnotations+".env", "development"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExtraAnnotations+".location", "earth"),
 				),
 			},
 			{
@@ -67,16 +68,16 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, fieldAllowedKubernetesNamespaces+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, fieldAllowedKubernetesNamespaces+".0", "*"),
-					resource.TestCheckResourceAttr(resourceName, fieldGeneratedRoleRules, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldServiceAccountName, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldKubernetesRoleType, "Role"),
-					resource.TestCheckResourceAttr(resourceName, fieldKubernetesRoleName, "existing_role"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenMaxTTL, "0"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultTTL, "0"),
-					resource.TestCheckResourceAttr(resourceName, fieldExtraLabels+".%", "0"),
-					resource.TestCheckResourceAttr(resourceName, fieldExtraAnnotations+".%", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedKubernetesNamespaces+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedKubernetesNamespaces+".0", "*"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGeneratedRoleRules, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountName, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesRoleType, "Role"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesRoleName, "existing_role"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenDefaultTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExtraLabels+".%", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExtraAnnotations+".%", "0"),
 				),
 			},
 			{
@@ -88,18 +89,59 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, fieldAllowedKubernetesNamespaceSelector, "{\"matchLabels\":{\"team\":\"hades\"}}"),
-					resource.TestCheckResourceAttr(resourceName, fieldGeneratedRoleRules, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldServiceAccountName, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldKubernetesRoleType, "Role"),
-					resource.TestCheckResourceAttr(resourceName, fieldKubernetesRoleName, "existing_role"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenMaxTTL, "0"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultTTL, "0"),
-					resource.TestCheckResourceAttr(resourceName, fieldExtraLabels+".%", "0"),
-					resource.TestCheckResourceAttr(resourceName, fieldExtraAnnotations+".%", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedKubernetesNamespaceSelector, "{\"matchLabels\":{\"team\":\"hades\"}}"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGeneratedRoleRules, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountName, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesRoleType, "Role"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKubernetesRoleName, "existing_role"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenDefaultTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExtraLabels+".%", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExtraAnnotations+".%", "0"),
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldServiceAccountJWT},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesSecretBackendRole_TokenDefaultAudiences(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
+	resourceName := "vault_kubernetes_secret_backend_role.test"
+	backend := acctest.RandomWithPrefix("tf-test-kubernetes")
+	name := acctest.RandomWithPrefix("tf-test-role")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccKubernetesSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion115), nil
+				},
+				Config: testKubernetesSecretBackendRole_TokenDefaultAudiencesConfig(backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenDefaultAudiences+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenDefaultAudiences+".*", "https://kubernetes.default.svc"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenDefaultAudiences+".*", "https://api.example.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountName, "test-service-account"),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion115), nil
+				},
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -202,6 +244,24 @@ resource "vault_kubernetes_secret_backend_role" "test" {
   name                                  = "%s"
   allowed_kubernetes_namespace_selector = "{\"matchLabels\":{\"team\":\"hades\"}}"
   kubernetes_role_name                  = "existing_role"
+}
+`, backend, name)
+}
+
+func testKubernetesSecretBackendRole_TokenDefaultAudiencesConfig(backend, name string) string {
+	return fmt.Sprintf(`
+resource "vault_kubernetes_secret_backend" "backend" {
+  path = "%s"
+}
+
+resource "vault_kubernetes_secret_backend_role" "test" {
+  backend                       = vault_kubernetes_secret_backend.backend.path
+  name                          = "%s"
+  allowed_kubernetes_namespaces = ["*"]
+  service_account_name          = "test-service-account"
+  token_default_audiences       = ["https://kubernetes.default.svc", "https://api.example.com"]
+  token_max_ttl                 = 86400
+  token_default_ttl             = 43200
 }
 `, backend, name)
 }
