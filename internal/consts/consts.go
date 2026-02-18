@@ -538,6 +538,7 @@ const (
 	FieldPluginName                         = "plugin_name"
 	FieldPluginVersion                      = "plugin_version"
 	FieldRootRotationStatements             = "root_rotation_statements"
+	FieldEngineCount                        = "engine_count"
 	FieldEnabled                            = "enabled"
 	FieldDefaultMount                       = "default_mount"
 	FieldDefaultPathPolicy                  = "default_path_policy"
