@@ -61,8 +61,52 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),
 				),
 			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion122) && meta.IsEnterpriseSupported()), nil
+				},
+				Config: testGCPSecretsSyncDestinationWIFConfig_initial(destName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, "gcp-project-id-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, "test"),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldCredentials),
+		},
+	})
+}
+
+func TestGCPSecretsSyncDestinationWIF(t *testing.T) {
+	destName := acctest.RandomWithPrefix("tf-sync-dest-gcp-wif")
+
+	resourceName := "vault_secrets_sync_gcp_destination.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
+		}, PreventPostDestroyRefresh: true,
+		Steps: []resource.TestStep{
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion122) && meta.IsEnterpriseSupported()), nil
+				},
+				Config: testGCPSecretsSyncDestinationWIFConfig_initial(destName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, "gcp-project-id-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, "test"),
+				),
+			},
 		},
 	})
 }
@@ -79,6 +123,17 @@ resource "vault_secrets_sync_gcp_destination" "test" {
 `, destName, credentials, testSecretsSyncDestinationCommonConfig(templ, false, true, false))
 
 	return ret
+}
+
+func testGCPSecretsSyncDestinationWIFConfig_initial(destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                    = "%s"
+  project_id				= "gcp-project-id"
+  service_account_email   = "test"
+  identity_token_audience = "test"
+  identity_token_ttl      = 30
+}`, destName)
 }
 
 func testGCPSecretsSyncDestinationConfig_updated(credentials, destName, templ string) string {
