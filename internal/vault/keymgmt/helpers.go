@@ -48,27 +48,27 @@ func errDeleting(resourceType string, path string, err error) (string, string) {
 
 // buildKMSPath constructs the Vault API path for KMS provider operations
 func buildKMSPath(mountPath, name string) string {
-	return strings.Trim(mountPath, "/") + "/kms/" + name
+	return fmt.Sprintf("%s/kms/%s", strings.Trim(mountPath, "/"), name)
 }
 
 // buildKeyPath constructs the Vault API path for key operations
 func buildKeyPath(mountPath, name string) string {
-	return strings.Trim(mountPath, "/") + "/key/" + name
+	return fmt.Sprintf("%s/key/%s", strings.Trim(mountPath, "/"), name)
 }
 
 // buildDistributeKeyPath constructs the Vault API path for key distribution operations
 func buildDistributeKeyPath(mountPath, kmsName, keyName string) string {
-	return strings.Trim(mountPath, "/") + "/kms/" + kmsName + "/key/" + keyName
+	return fmt.Sprintf("%s/kms/%s/key/%s", strings.Trim(mountPath, "/"), kmsName, keyName)
 }
 
 // buildReplicateKeyPath constructs the Vault API path for key replication operations
 func buildReplicateKeyPath(mountPath, kmsName, keyName string) string {
-	return strings.Trim(mountPath, "/") + "/kms/" + kmsName + "/key/" + keyName + "/replicate"
+	return fmt.Sprintf("%s/kms/%s/key/%s/replicate", strings.Trim(mountPath, "/"), kmsName, keyName)
 }
 
 // buildKeyRotatePath constructs the Vault API path for key rotation operations
 func buildKeyRotatePath(mountPath, name string) string {
-	return strings.Trim(mountPath, "/") + "/key/" + name + "/rotate"
+	return fmt.Sprintf("%s/key/%s/rotate", strings.Trim(mountPath, "/"), name)
 }
 
 // parseKeyPath extracts the mount path and key name from a key API path
