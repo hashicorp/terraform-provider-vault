@@ -75,15 +75,17 @@ func buildKeyRotatePath(mountPath, name string) string {
 // Expected format: <mount_path>/key/<key_name>
 func parseKeyPath(apiPath string) (mountPath, keyName string, err error) {
 	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
-	keyIndex := -1
-	for i, part := range parts {
-		if part == "key" {
-			keyIndex = i
-			break
-		}
+
+	// Minimum required: 1 mount segment + 2 fixed segments (key/<name>)
+	if len(parts) < 3 {
+		return "", "", fmt.Errorf("invalid key path structure: %s", apiPath)
 	}
 
-	if keyIndex == -1 || keyIndex+1 >= len(parts) {
+	// Use direct indexing from the end since the format is fixed
+	keyIndex := len(parts) - 2
+
+	// Validate the expected segment is in the correct position
+	if parts[keyIndex] != "key" {
 		return "", "", fmt.Errorf("invalid key path structure: %s", apiPath)
 	}
 
@@ -96,15 +98,17 @@ func parseKeyPath(apiPath string) (mountPath, keyName string, err error) {
 // Expected format: <mount_path>/kms/<kms_name>
 func parseKMSPath(apiPath string) (mountPath, kmsName string, err error) {
 	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
-	kmsIndex := -1
-	for i, part := range parts {
-		if part == "kms" {
-			kmsIndex = i
-			break
-		}
+
+	// Minimum required: 1 mount segment + 2 fixed segments (kms/<name>)
+	if len(parts) < 3 {
+		return "", "", fmt.Errorf("invalid KMS path structure: %s", apiPath)
 	}
 
-	if kmsIndex == -1 || kmsIndex+1 >= len(parts) {
+	// Use direct indexing from the end since the format is fixed
+	kmsIndex := len(parts) - 2
+
+	// Validate the expected segment is in the correct position
+	if parts[kmsIndex] != "kms" {
 		return "", "", fmt.Errorf("invalid KMS path structure: %s", apiPath)
 	}
 
@@ -117,16 +121,18 @@ func parseKMSPath(apiPath string) (mountPath, kmsName string, err error) {
 // Expected format: <mount_path>/kms/<kms_name>/key/<key_name>
 func parseDistributeKeyPath(apiPath string) (mountPath, kmsName, keyName string, err error) {
 	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
-	kmsIndex, keyIndex := -1, -1
-	for i, part := range parts {
-		if part == "kms" {
-			kmsIndex = i
-		} else if part == "key" && i > kmsIndex {
-			keyIndex = i
-		}
+
+	// Minimum required: 1 mount segment + 4 fixed segments (kms/<name>/key/<name>)
+	if len(parts) < 5 {
+		return "", "", "", fmt.Errorf("invalid key distribution path structure: %s", apiPath)
 	}
 
-	if kmsIndex == -1 || keyIndex == -1 || kmsIndex+1 >= len(parts) || keyIndex+1 >= len(parts) {
+	// Use direct indexing from the end since the format is fixed
+	kmsIndex := len(parts) - 4
+	keyIndex := len(parts) - 2
+
+	// Validate the expected segments are in the correct positions
+	if parts[kmsIndex] != "kms" || parts[keyIndex] != "key" {
 		return "", "", "", fmt.Errorf("invalid key distribution path structure: %s", apiPath)
 	}
 
