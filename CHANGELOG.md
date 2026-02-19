@@ -55,7 +55,14 @@ IMPROVEMENTS:
   * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
 * Docs: fix heredoc example for LDAP dynamic role LDIFs ([#2728]https://github.com/hashicorp/terraform-provider-vault/pull/2728)
 * Docs: Update example to use write-only attribute ([#2731]https://github.com/hashicorp/terraform-provider-vault/pull/2731)
+
+* `vault_database_secret_backend_connection`: Add support for top-level `plugin_version` and `password_policy` fields to allow configuration at the resource level in addition to engine-specific blocks. ([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+* `vault_database_secret_backend_connection`: Add support for `skip_static_role_import_rotation` field to skip initial password rotation when creating static roles. This value is inherited by static roles that do not explicitly set `skip_import_rotation`. Requires Vault 1.19+ Enterprise. ([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+* `vault_database_secret_backend_static_role`: The `skip_import_rotation` field now correctly reads Vault's computed value into state. When not set in config, it inherits from the connection's `skip_static_role_import_rotation` setting. Requires Vault 1.19+ Enterprise. ([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+* `vault_database_secret_mount`: Added `plugin_version`,`skip_static_role_import_rotation` and `password_policy` fields to allow configuration at the resource level([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+
 * Add support for `local_secret_ids` which may only be set at role creation. On updates the provider will send the original creation value to Vault to avoid unintentionally attempting to modify this immutable setting.The provider now surfaces Vault's native immutability error when an update attempts to change `local_secret_ids`.([#2723](https://github.com/hashicorp/terraform-provider-vault/pull/2723))
+
 
 BUGS:
 
