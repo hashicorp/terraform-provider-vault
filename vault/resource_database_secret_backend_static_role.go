@@ -276,21 +276,16 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
-		// Debug: Log Vault's response for skip_import_rotation
-		if v, ok := role.Data[consts.FieldSkipImportRotation]; ok {
-			log.Printf("[DEBUG] Vault returned skip_import_rotation: %v (type: %T)", v, v)
-		} else {
-			log.Printf("[DEBUG] Vault response does not contain skip_import_rotation")
-		}
-
 		// Always read skip_import_rotation from Vault's response.
 		// When not set in config, Vault computes this value based on
 		// the connection's skip_static_role_import_rotation setting.
 		if v, ok := role.Data[consts.FieldSkipImportRotation]; ok && v != nil {
+			log.Printf("[DEBUG] Vault returned skip_import_rotation: %v (type: %T)", v, v)
 			if err := d.Set(consts.FieldSkipImportRotation, v); err != nil {
 				return diag.FromErr(err)
 			}
 		}
+		log.Printf("[DEBUG] Vault response does not contain skip_import_rotation")
 	}
 
 	// Note: password_wo_version is not explicitly set in Read function.

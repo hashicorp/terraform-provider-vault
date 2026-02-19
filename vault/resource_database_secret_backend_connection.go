@@ -747,20 +747,20 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 	s[consts.FieldPluginVersion] = &schema.Schema{
 		Type:        schema.TypeString,
 		Optional:    true,
-		Description: "Optional plugin version to use for this connection",
+		Description: "Specifies the semantic version of the plugin to use for this connection",
 	}
 
 	s[consts.FieldPasswordPolicy] = &schema.Schema{
 		Type:        schema.TypeString,
 		Optional:    true,
-		Description: "Optional name of the password policy to use for generated passwords.",
+		Description: "The name of the password policy to use when generating passwords for this database. If not specified, this will use a default policy defined as: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.",
 	}
 
 	s[consts.FieldSkipStaticRoleImportRotation] = &schema.Schema{
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Computed:    true,
-		Description: "When true, skip automatic rotation of associated static roles when this resource is imported.",
+		Description: "Specifies if a given static account's password should be rotated on creation of the static roles associated with this database config. This is can be overridden at the role-level by the static role's skip_import_rotation field. The default is false",
 	}
 
 	return &schema.Resource{
@@ -2268,8 +2268,7 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 		consts.FieldData:             d.Get(prefix + consts.FieldData),
 		consts.FieldVerifyConnection: d.Get(prefix + consts.FieldVerifyConnection),
 		consts.FieldPluginName:       resp.Data[consts.FieldPluginName],
-
-		consts.FieldPasswordPolicy: resp.Data[consts.FieldPasswordPolicy],
+		consts.FieldPasswordPolicy:   resp.Data[consts.FieldPasswordPolicy],
 	}
 
 	//"root_rotation_statements": resp.Data["root_credentials_rotate_statements"],
@@ -2285,15 +2284,12 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 	}
 
 	// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
-	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
-		var value bool
-		if v, ok := resp.Data[consts.FieldSkipStaticRoleImportRotation]; ok && v != nil {
-			value = v.(bool)
-		}
-
-		result[consts.FieldSkipStaticRoleImportRotation] = value
-	}
 	// Note: For Vault < 1.19 or non-Enterprise, the field is not supported and not set
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := resp.Data[consts.FieldSkipStaticRoleImportRotation]; ok && v != nil {
+			result[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
+		}
+	}
 
 	result[consts.FieldRootRotationStatements] = rootRotationStmts
 
