@@ -56,6 +56,10 @@ resource "vault_database_secret_backend_connection" "oracle" {
   backend       = vault_mount.db.path
   name          = "oracle"
   allowed_roles = ["my-role"]
+  plugin_version = "v0.20.0"
+  skip_static_role_import_rotation = true
+  password_policy = "default"
+  skip
 
   oracle {
     connection_url = "{{username}}/{{password}}@//host:port/service"

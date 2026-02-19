@@ -37,6 +37,9 @@ resource "vault_database_secrets_mount" "db" {
     allowed_roles = [
       "dev1",
     ]
+    plugin_version = "v0.20.0"
+    skip_static_role_import_rotation = true
+    password_policy = "default"
     rotation_schedule = "0 * * * SAT"
     rotation_window   = 3600
   }
@@ -50,6 +53,9 @@ resource "vault_database_secrets_mount" "db" {
     allowed_roles = [
       "dev2",
     ]
+    plugin_version = "v0.19.0"
+    skip_static_role_import_rotation = true
+    password_policy = "default"
     rotation_schedule = "0 * * * SAT"
     rotation_window   = 3600
   }
