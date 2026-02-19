@@ -245,14 +245,14 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
   backend = vault_rabbitmq_secret_backend.test.path
   name = "%s"
   tags = %q
-    
+
   vhost_topic {
     vhost {
 		topic = "amq.topic"
 		read = ".*"
 		write = ""
 	}
-	
+
 	host = "/"
   }
 }
@@ -281,9 +281,41 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
 		read = ""
 		write = ".*"
 	}
-	
+
 	host = "/"
   }
 }
 `, path, connectionUri, username, password, name, testAccRabbitMQSecretBackendRoleTags_updated)
+}
+
+func TestFlattenRabbitMQSecretBackendRoleVhost_Order(t *testing.T) {
+	input := map[string]interface{}{
+		"b-vhost": map[string]interface{}{
+			"configure": "c1",
+			"read":      "r1",
+			"write":     "w1",
+		},
+		"a-vhost": map[string]interface{}{
+			"configure": "c2",
+			"read":      "r2",
+			"write":     "w2",
+		},
+		"c-vhost": map[string]interface{}{
+			"configure": "c3",
+			"read":      "r3",
+			"write":     "w3",
+		},
+	}
+
+	result := flattenRabbitMQSecretBackendRoleVhost(input)
+
+	expectedOrder := []string{"a-vhost", "b-vhost", "c-vhost"}
+	if len(result) != len(expectedOrder) {
+		t.Fatalf("expected %d vhosts, got %d", len(expectedOrder), len(result))
+	}
+	for i, expectedHost := range expectedOrder {
+		if result[i]["host"] != expectedHost {
+			t.Errorf("expected host at index %d to be %q, got %q", i, expectedHost, result[i]["host"])
+		}
+	}
 }
