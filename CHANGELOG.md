@@ -8,6 +8,9 @@ IMPROVEMENTS:
 * `vault_okta_auth_backend`: Add support for write-only field api_token_wo with version counters to prevent sensitive credentials from being stored in Terraform state. Deprecate `organization` and `token` and replace with `org_name` and `api_token` respectively in `vault_okta_auth_backend` resource. ([#2736](https://github.com/hashicorp/terraform-provider-vault/pull/2736))
 * `vault_kubernetes_secret_backend_role`: Add support for `token_default_audiences` field to configure default audiences for generated Kubernetes tokens. Requires Vault 1.15+. ([#2722](https://github.com/hashicorp/terraform-provider-vault/pull/2722))
 * `vault_raft_snapshot_agent_config`: Add support for `azure_auth_mode` and `azure_client_id` fields for Azure Managed Identity authentication (Vault Enterprise 1.18.0+), and `autoload_enabled` field for automatic snapshot restoration (Vault Enterprise 1.21.0+). ([#2758](https://github.com/hashicorp/terraform-provider-vault/pull/2758))
+* `vault_ssh_secret_backend_role`: Add support for fields (`default_extensions_template`, `exclude_cidr_list`, `port`) and improve handling of key-type-specific fields (`default_extensions`, `default_extensions_template`, `exclude_cidr_list`, `port`) to prevent drift. Fields that are not applicable to a role's key type (CA or OTP) are now conditionally set in state only when returned by Vault, preventing perpetual drift when users configure fields that Vault ignores. CA key type supports: `default_extensions`, `default_extensions_template`. OTP key type supports: `port`, `exclude_cidr_list`. ([#2747](https://github.com/hashicorp/terraform-provider-vault/pull/2747))
+* `vault_pki_secret_backend_root_cert`: Add support for `use_pss` and `key_usage` fields to configure PSS signature scheme and X.509 key usage constraints for root CA certificates. Requires Vault 1.18.0+ and 1.19.2+ respectively.([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
+* `vault_pki_secret_backend_root_sign_intermediate`: Add version check for `key_usage` field to ensure compatibility with Vault 1.19.2+ for configuring X.509 key usage constraints on intermediate CA certificates. ([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 
 ## 5.7.0 (February 5, 2026)
 
@@ -54,7 +57,14 @@ IMPROVEMENTS:
   * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
 * Docs: fix heredoc example for LDAP dynamic role LDIFs ([#2728]https://github.com/hashicorp/terraform-provider-vault/pull/2728)
 * Docs: Update example to use write-only attribute ([#2731]https://github.com/hashicorp/terraform-provider-vault/pull/2731)
+
+* `vault_database_secret_backend_connection`: Add support for top-level `plugin_version` and `password_policy` fields to allow configuration at the resource level in addition to engine-specific blocks. ([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+* `vault_database_secret_backend_connection`: Add support for `skip_static_role_import_rotation` field to skip initial password rotation when creating static roles. This value is inherited by static roles that do not explicitly set `skip_import_rotation`. Requires Vault 1.19+ Enterprise. ([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+* `vault_database_secret_backend_static_role`: The `skip_import_rotation` field now correctly reads Vault's computed value into state. When not set in config, it inherits from the connection's `skip_static_role_import_rotation` setting. Requires Vault 1.19+ Enterprise. ([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+* `vault_database_secret_mount`: Added `plugin_version`,`skip_static_role_import_rotation` and `password_policy` fields to allow configuration at the resource level([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+
 * Add support for `local_secret_ids` which may only be set at role creation. On updates the provider will send the original creation value to Vault to avoid unintentionally attempting to modify this immutable setting.The provider now surfaces Vault's native immutability error when an update attempts to change `local_secret_ids`.([#2723](https://github.com/hashicorp/terraform-provider-vault/pull/2723))
+
 
 BUGS:
 
