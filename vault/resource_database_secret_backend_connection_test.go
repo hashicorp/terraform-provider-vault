@@ -1091,6 +1091,22 @@ func TestAccDatabaseSecretBackendConnection_oracle(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.connection_url", connURL),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.username", username),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.password", password),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "oracle-policy"),
+		testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
+	}
+
+	// Only check plugin version when installing the plugin
+	if pluginInstall == "true" {
+		checks = append(checks, resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPluginVersion, pluginVersion))
+	}
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -1098,17 +1114,7 @@ func TestAccDatabaseSecretBackendConnection_oracle(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_oracle(name, backend, pluginName, connURL, username, password, "*", pluginInstall, pluginVersion, pluginSHA, false),
-				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.connection_url", connURL),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.username", username),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.password", password),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "oracle-policy"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPluginVersion, "v0.10.2"),
-					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
-				),
+				Check:  testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName, checks...),
 			},
 		},
 	})
@@ -1630,6 +1636,66 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"verify_connection", "redis.0.password"},
+			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_redis_externalPlugin(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineRedis)
+
+	// REDIS_PLUGIN_NAME is required as not built-in plugin (already installed or installed during test, cf below)
+	//  if REDIS_PLUGIN_INSTALL=true
+	//    plugin REDIS_PLUGIN_NAME will be add to the catalog using vault_plugin resources:
+	//    resource "vault_plugin" "plugin" {
+	//       type    = "database"
+	//       name    = "$REDIS_PLUGIN_NAME"
+	//       command = "$REDIS_PLUGIN_NAME"
+	//       version = "$REDIS_PLUGIN_VERSION"
+	//       sha256  = "$REDIS_PLUGIN_SHA"
+	//    }
+	//
+	//  To work, it requires the redis binary plugin in Vault plugin directory
+	//
+	values := testutil.SkipTestEnvUnset(t, "REDIS_HOST", "REDIS_PORT", "REDIS_USERNAME", "REDIS_PASSWORD", "REDIS_PLUGIN_NAME", "REDIS_PLUGIN_INSTALL")
+	host, port, username, password, pluginName, pluginInstall := values[0], values[1], values[2], values[3], values[4], values[5]
+
+	var pluginVersion, pluginSHA string
+	if pluginInstall == "true" {
+		values2 := testutil.SkipTestEnvUnset(t, "REDIS_PLUGIN_VERSION", "REDIS_PLUGIN_SHA")
+		pluginVersion, pluginSHA = values2[0], values2[1]
+	}
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.host", host),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.port", port),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.username", username),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.password", password),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.tls", "false"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure_tls", "false"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "redis-policy"),
+		testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
+	}
+
+	// Only check plugin version when installing the plugin
+	if pluginInstall == "true" {
+		checks = append(checks, resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPluginVersion, pluginVersion))
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis_externalPlugin(name, backend, pluginName, host, port, username, password, "*", pluginInstall, pluginVersion, pluginSHA, false),
+				Check:  testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName, checks...),
 			},
 		},
 	})
@@ -2555,6 +2621,7 @@ resource "vault_plugin" "plugin" {
 resource "vault_database_secret_backend_connection" "test" {
   backend = vault_mount.db.path
   plugin_name = vault_plugin.plugin.name
+  plugin_version = "%s"
   name = "%s"
   allowed_roles = [%q]
   password_policy = "oracle-policy"
@@ -2565,7 +2632,7 @@ resource "vault_database_secret_backend_connection" "test" {
 		password = "%s"
   }
 }
-`, pluginName, pluginName, pluginVersion, pluginSHA, name, allowedRoles, skipStaticLine, connURL, username, password)
+`, pluginName, pluginName, pluginVersion, pluginSHA, pluginVersion, name, allowedRoles, skipStaticLine, connURL, username, password)
 
 	} else {
 
@@ -2853,6 +2920,67 @@ resource "vault_database_secret_backend_connection" "test" {
 		password = "%s"
   }
 }`, name, allowedRoles, skipStaticLine, host, port, username, password)
+
+	return config
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_redis_externalPlugin(name, path, pluginName, host, port, username, password, allowedRoles, pluginInstall, pluginVersion, pluginSHA string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
+	config := fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+`, path)
+
+	if pluginInstall == "true" {
+		config += fmt.Sprintf(`
+resource "vault_plugin" "plugin" {
+  type    = "database"
+  name    = "%s"
+  command = "%s"
+  version = "%s"
+  sha256  = "%s"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  plugin_name = vault_plugin.plugin.name
+  plugin_version = "%s"
+  name = "%s"
+  allowed_roles = [%q]
+  password_policy = "redis-policy"
+  %s
+  redis {
+    	host = "%s"
+    	port = "%s"
+		username = "%s"
+		password = "%s"
+  }
+}
+`, pluginName, pluginName, pluginVersion, pluginSHA, pluginVersion, name, allowedRoles, skipStaticLine, host, port, username, password)
+
+	} else {
+
+		config += fmt.Sprintf(`
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  plugin_name = "%s"
+  name = "%s"
+  allowed_roles = [%q]
+  password_policy = "redis-policy"
+  %s
+  redis {
+    	host = "%s"
+    	port = "%s"
+		username = "%s"
+		password = "%s"
+  }
+}`, pluginName, name, allowedRoles, skipStaticLine, host, port, username, password)
+	}
 
 	return config
 }
