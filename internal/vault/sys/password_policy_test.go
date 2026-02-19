@@ -5,10 +5,14 @@ package sys_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -21,21 +25,21 @@ func TestAccPasswordPolicy(t *testing.T) {
 	updatedConfig := testAccPasswordPolicyConfig(policyName, testPolicyUpdated)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPasswordPolicyConfig(policyName, testPolicy),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", policyName),
-					resource.TestCheckResourceAttrSet(resourceName, "policy"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldPolicy),
 				),
 			},
 			{
 				Config: updatedConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", policyName),
-					resource.TestCheckResourceAttrSet(resourceName, "policy"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldPolicy),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),
@@ -53,25 +57,25 @@ func TestAccPasswordPolicyNS(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPasswordPolicyConfigNS(ns, policyName, testPolicy),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
-					resource.TestCheckResourceAttr(resourceName, "name", policyName),
-					resource.TestCheckResourceAttrSet(resourceName, "policy"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ns),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldPolicy),
 				),
 			},
 			{
 				Config: updatedConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
-					resource.TestCheckResourceAttr(resourceName, "name", policyName),
-					resource.TestCheckResourceAttrSet(resourceName, "policy"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ns),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldPolicy),
 				),
 			},
 			testutil.GetImportTestStepNS(t, ns, resourceName, updatedConfig),
@@ -89,8 +93,8 @@ func TestAccPasswordPolicy_Muxing(t *testing.T) {
 	updatedConfig := testAccPasswordPolicyConfig(policyNameUpdated, testPolicyUpdated)
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -103,8 +107,8 @@ func TestAccPasswordPolicy_Muxing(t *testing.T) {
 				},
 				Config: testAccPasswordPolicyConfig(policyName, testPolicy),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", policyName),
-					resource.TestCheckResourceAttrSet(resourceName, "policy"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldPolicy),
 				),
 			},
 			// upgrade to new Muxed TFVP, ensure plan is seamless
@@ -118,8 +122,8 @@ func TestAccPasswordPolicy_Muxing(t *testing.T) {
 				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 				Config:                   updatedConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", policyNameUpdated),
-					resource.TestCheckResourceAttrSet(resourceName, "policy"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyNameUpdated),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldPolicy),
 				),
 			},
 		},
@@ -149,4 +153,93 @@ resource "vault_password_policy" "test" {
 %s
 EOT
 }`, ns, policyName, policy)
+}
+
+func TestAccPasswordPolicyEntropySource(t *testing.T) {
+	policyName := acctest.RandomWithPrefix("test-policy")
+	resourceName := "vault_password_policy.test"
+	testPolicy := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPasswordPolicyConfigWithEntropySource(policyName, testPolicy, "platform"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEntropySource, "platform"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldPolicy),
+				),
+			},
+			{
+				Config: testAccPasswordPolicyConfigWithEntropySource(policyName, testPolicy, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEntropySource, ""),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldPolicy),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldEntropySource),
+		},
+	})
+}
+
+func TestAccPasswordPolicyEntropySourceSeal(t *testing.T) {
+	policyName := acctest.RandomWithPrefix("test-policy")
+	resourceName := "vault_password_policy.test"
+	testPolicy := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t) // Only run this test on enterprise
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPasswordPolicyConfigWithEntropySource(policyName, testPolicy, "seal"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEntropySource, "seal"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldPolicy),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldEntropySource),
+		},
+	})
+}
+
+func TestAccPasswordPolicyEntropySourceValidation(t *testing.T) {
+	policyName := acctest.RandomWithPrefix("test-policy")
+	testPolicy := "length = 20\nrule \"charset\" {\n  charset = \"abcde\"\n}\n"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccPasswordPolicyConfigWithEntropySource(policyName, testPolicy, "invalid"),
+				ExpectError: regexp.MustCompile(`unsupported entropy source invalid`),
+			},
+		},
+	})
+}
+
+func testAccPasswordPolicyConfigWithEntropySource(policyName, policy, entropySource string) string {
+	return fmt.Sprintf(`
+resource "vault_password_policy" "test" {
+  name = "%s"
+  entropy_source = "%s"
+  policy = <<EOT
+%s
+EOT
+}`, policyName, entropySource, policy)
 }

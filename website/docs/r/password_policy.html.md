@@ -40,6 +40,8 @@ The following arguments are supported:
 
 * `policy` - (Required) String containing a password policy.
 
+* `entropy_source` - (Optional) Specifies an override to the default source of entropy (randomness) used to generate the passwords. Must be one of: `""`, `"platform"`, or `"seal"` (Vault Enterprise only). Requires Vault 1.21+.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
