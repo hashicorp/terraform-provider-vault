@@ -73,7 +73,16 @@ The following arguments are supported:
 
 * `default_extensions` - (Optional) Specifies a map of extensions that certificates have when signed.
 
+* `default_extensions_template` - (Optional) Specifies if the `default_extensions` field supports templating.
+  When set to `true`, the extension values can use identity template policies. Defaults to `false`.
+
 * `default_critical_options` - (Optional) Specifies a map of critical options that certificates have when signed.
+
+* `exclude_cidr_list` - (Optional) Specifies a comma-separated list of CIDR blocks for which credentials cannot be created.
+  This is particularly useful for OTP key types to restrict credential generation to specific network ranges.
+
+* `port` - (Optional) Specifies the port number for SSH connections. Defaults to `22`.
+  This is primarily used with OTP key types to specify the SSH port on target hosts.
 
 * `allowed_users_template` - (Optional) Specifies if `allowed_users` can be declared using identity template policies. Non-templated users are also permitted.
 
