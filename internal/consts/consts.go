@@ -683,11 +683,10 @@ const (
 	FieldAllowedUserKeyLengths                = "allowed_user_key_lengths"
 	FieldAlgorithmSigner                      = "algorithm_signer"
 	FieldKeyIDFormat                          = "key_id_format"
-  FieldDistributedClaimAccessToken          = "distributed_claim_access_token"
+	FieldDistributedClaimAccessToken          = "distributed_claim_access_token"
 	// SSH Secret Backend Key Types
 	SSHKeyTypeCA              = "ca"
 	FieldAllowEmptyPrincipals = "allow_empty_principals"
-
 
 	// KMIP Secret Role fields
 	FieldOperationActivate         = "operation_activate"
