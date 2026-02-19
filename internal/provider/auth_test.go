@@ -263,10 +263,6 @@ func assertAuthLoginInit(t *testing.T, tt authLoginInitTest, s map[string]*schem
 		t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
 	}
 
-	//normalize the distributed_claim_access_token, when it is optional  & not set
-	if l.Params()["distributed_claim_access_token"] != nil {
-		tt.expectParams["distributed_claim_access_token"] = l.Params()["distributed_claim_access_token"]
-	}
 	if !reflect.DeepEqual(tt.expectParams, l.Params()) {
 		t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.Params())
 	}
