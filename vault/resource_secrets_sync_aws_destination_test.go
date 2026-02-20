@@ -314,6 +314,75 @@ resource "vault_secrets_sync_aws_destination" "test" {
 `, destName, accessKey, secretKey, region)
 }
 
+// TestAWSSecretsSyncDestinationWIF tests WIF (Workload Identity Federation)
+// fields for the AWS secrets sync destination.
+//
+// This test requires IDENTITY_TOKEN_AUDIENCE and ROLE_ARN environment variables
+// to be set. It will be skipped if they are not present. To run locally:
+//
+//	TF_ACC=1 VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root \
+//	  AWS_DEFAULT_REGION=us-east-1 \
+//	  IDENTITY_TOKEN_AUDIENCE=<audience> ROLE_ARN=<role-arn> \
+//	  go test ./vault/ -run 'TestAWSSecretsSyncDestinationWIF' -v -count=1
+func TestAWSSecretsSyncDestinationWIF(t *testing.T) {
+	destName := acctest.RandomWithPrefix("tf-sync-dest-aws-wif")
+	resourceName := "vault_secrets_sync_aws_destination.test"
+	region := testutil.GetTestAWSRegion(t)
+	values := testutil.SkipTestEnvUnset(t, "IDENTITY_TOKEN_AUDIENCE", "ROLE_ARN")
+	audience := values[0]
+	roleArn := values[1]
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion122)
+		},
+		PreventPostDestroyRefresh: true,
+		Steps: []resource.TestStep{
+			{
+				Config: testAWSSecretsSyncDestinationWIFConfig(destName, region, audience, 30, roleArn),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, region),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, roleArn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
+				),
+			},
+			{
+				Config: testAWSSecretsSyncDestinationWIFConfig(destName, region, audience, 60, roleArn),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, region),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, roleArn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "60"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				fieldAccessKeyID,
+				fieldSecretAccessKey,
+				consts.FieldIdentityTokenAudience,
+				consts.FieldIdentityTokenKey,
+				consts.FieldDisableStrictNetworking,
+			),
+		},
+	})
+}
+
+func testAWSSecretsSyncDestinationWIFConfig(destName, region, audience string, ttl int, roleArn string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_aws_destination" "test" {
+  name                    = "%s"
+  region                  = "%s"
+  role_arn                = "%s"
+  identity_token_audience = "%s"
+  identity_token_ttl      = %d
+  granularity             = "secret-path"
+}`, destName, region, roleArn, audience, ttl)
+}
+
 func testSecretsSyncDestinationCommonConfig(templ string, withTemplate, withTags, update bool) string {
 	ret := ""
 	if withTemplate {
