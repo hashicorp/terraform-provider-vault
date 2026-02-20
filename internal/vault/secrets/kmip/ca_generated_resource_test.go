@@ -18,8 +18,6 @@ import (
 )
 
 func TestAccKMIPCAGenerated_basic(t *testing.T) {
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("ca")
 	resourceType := "vault_kmip_secret_ca_generated"
@@ -27,7 +25,10 @@ func TestAccKMIPCAGenerated_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPCAGenerated_basicConfig(path, name),
@@ -53,8 +54,6 @@ func TestAccKMIPCAGenerated_basic(t *testing.T) {
 }
 
 func TestAccKMIPCAGenerated_rsa(t *testing.T) {
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("ca")
 	resourceType := "vault_kmip_secret_ca_generated"
@@ -62,7 +61,10 @@ func TestAccKMIPCAGenerated_rsa(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			acctestutil.TestEntPreCheck(t)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPCAGenerated_rsaConfig(path, name),
@@ -79,8 +81,6 @@ func TestAccKMIPCAGenerated_rsa(t *testing.T) {
 }
 
 func TestAccKMIPCAGenerated_customTTL(t *testing.T) {
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("ca")
 	resourceType := "vault_kmip_secret_ca_generated"
@@ -88,7 +88,10 @@ func TestAccKMIPCAGenerated_customTTL(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			acctestutil.TestEntPreCheck(t)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPCAGenerated_customTTLConfig(path, name),

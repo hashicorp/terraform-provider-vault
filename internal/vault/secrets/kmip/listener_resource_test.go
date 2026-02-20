@@ -19,8 +19,6 @@ import (
 )
 
 func TestAccKMIPListener_basic(t *testing.T) {
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("listener")
 	resourceType := "vault_kmip_secret_listener"
@@ -39,7 +37,10 @@ func TestAccKMIPListener_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			acctestutil.TestEntPreCheck(t)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPListener_initialConfig(path, name, addr1),
@@ -80,8 +81,6 @@ func TestAccKMIPListener_basic(t *testing.T) {
 }
 
 func TestAccKMIPListener_remount(t *testing.T) {
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	remountPath := acctest.RandomWithPrefix("tf-test-kmip-updated")
 	name := acctest.RandomWithPrefix("listener")
@@ -101,7 +100,10 @@ func TestAccKMIPListener_remount(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			acctestutil.TestEntPreCheck(t)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPListener_initialConfig(path, name, addr1),
@@ -126,8 +128,6 @@ func TestAccKMIPListener_remount(t *testing.T) {
 }
 
 func TestAccKMIPListener_additionalClientCAs(t *testing.T) {
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("listener")
 	resourceType := "vault_kmip_secret_listener"
@@ -146,7 +146,10 @@ func TestAccKMIPListener_additionalClientCAs(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPListener_additionalClientCAsConfig(path, name, addr1),

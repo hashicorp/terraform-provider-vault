@@ -19,8 +19,6 @@ import (
 )
 
 func TestAccKMIPCAImported_basic(t *testing.T) {
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("ca")
 	resourceType := "vault_kmip_secret_ca_imported"
@@ -34,7 +32,10 @@ func TestAccKMIPCAImported_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			acctestutil.TestEntPreCheck(t)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPCAImported_basicConfig(path, name, caPem),
@@ -59,8 +60,6 @@ func TestAccKMIPCAImported_basic(t *testing.T) {
 }
 
 func TestAccKMIPCAImported_update(t *testing.T) {
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("ca")
 	resourceType := "vault_kmip_secret_ca_imported"
@@ -74,7 +73,10 @@ func TestAccKMIPCAImported_update(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			acctestutil.TestEntPreCheck(t)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPCAImported_basicConfig(path, name, caPem),
@@ -99,8 +101,6 @@ func TestAccKMIPCAImported_update(t *testing.T) {
 }
 
 func TestAccKMIPCAImported_withFields(t *testing.T) {
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("ca")
 	resourceType := "vault_kmip_secret_ca_imported"
@@ -114,7 +114,10 @@ func TestAccKMIPCAImported_withFields(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			acctestutil.TestEntPreCheck(t)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPCAImported_withFieldsConfig(path, name, caPem),
@@ -130,8 +133,6 @@ func TestAccKMIPCAImported_withFields(t *testing.T) {
 }
 
 func TestAccKMIPCAImported_validation(t *testing.T) {
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("ca")
 
@@ -143,7 +144,10 @@ func TestAccKMIPCAImported_validation(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+		},
 		Steps: []resource.TestStep{
 			{
 				// Test: both scope_name and scope_field should fail

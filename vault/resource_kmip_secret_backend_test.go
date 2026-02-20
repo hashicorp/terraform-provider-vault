@@ -143,8 +143,6 @@ func TestAccKMIPSecretBackend_remount(t *testing.T) {
 }
 
 func TestAccKMIPSecretBackend_migrateToCAAndListener(t *testing.T) {
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	resourceType := "vault_kmip_secret_backend"
 	resourceName := resourceType + ".test"
@@ -164,8 +162,11 @@ func TestAccKMIPSecretBackend_migrateToCAAndListener(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
-		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				// Step 1: Start with minimal config using listen_addrs
