@@ -10,14 +10,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKMIPCAGenerated_basic(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
+	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("ca")
@@ -26,7 +27,7 @@ func TestAccKMIPCAGenerated_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPCAGenerated_basicConfig(path, name),
@@ -52,7 +53,7 @@ func TestAccKMIPCAGenerated_basic(t *testing.T) {
 }
 
 func TestAccKMIPCAGenerated_rsa(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
+	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("ca")
@@ -61,7 +62,7 @@ func TestAccKMIPCAGenerated_rsa(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPCAGenerated_rsaConfig(path, name),
@@ -78,7 +79,7 @@ func TestAccKMIPCAGenerated_rsa(t *testing.T) {
 }
 
 func TestAccKMIPCAGenerated_customTTL(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
+	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("ca")
@@ -87,7 +88,7 @@ func TestAccKMIPCAGenerated_customTTL(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPCAGenerated_customTTLConfig(path, name),

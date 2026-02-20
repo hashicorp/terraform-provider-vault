@@ -11,7 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -141,7 +143,7 @@ func TestAccKMIPSecretBackend_remount(t *testing.T) {
 }
 
 func TestAccKMIPSecretBackend_migrateToCAAndListener(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
+	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	resourceType := "vault_kmip_secret_backend"
@@ -162,7 +164,7 @@ func TestAccKMIPSecretBackend_migrateToCAAndListener(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{

@@ -11,13 +11,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKMIPListener_basic(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
+	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("listener")
@@ -37,7 +39,7 @@ func TestAccKMIPListener_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPListener_initialConfig(path, name, addr1),
@@ -78,7 +80,7 @@ func TestAccKMIPListener_basic(t *testing.T) {
 }
 
 func TestAccKMIPListener_remount(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
+	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	remountPath := acctest.RandomWithPrefix("tf-test-kmip-updated")
@@ -99,7 +101,7 @@ func TestAccKMIPListener_remount(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPListener_initialConfig(path, name, addr1),
@@ -124,7 +126,7 @@ func TestAccKMIPListener_remount(t *testing.T) {
 }
 
 func TestAccKMIPListener_additionalClientCAs(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
+	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	name := acctest.RandomWithPrefix("listener")
@@ -144,7 +146,7 @@ func TestAccKMIPListener_additionalClientCAs(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPListener_additionalClientCAsConfig(path, name, addr1),
