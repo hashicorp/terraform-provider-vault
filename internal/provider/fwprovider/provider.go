@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -232,6 +233,9 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffe.NewSpiffeAuthRoleResource,
 		sys.NewPasswordPolicyResource,
 		azure.NewAzureStaticRoleResource,
+		kmip.NewKMIPListenerResource,
+		kmip.NewKMIPCAGeneratedResource,
+		kmip.NewKMIPCAImportedResource,
 		pki_external_ca.NewPKIACMEAccountResource,
 		pki_external_ca.NewPKIExternalCARoleResource,
 		pki_external_ca.NewPKIExternalCAOrderResource,
@@ -244,6 +248,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 	return []func() ephemeral.EphemeralResource{
 		ephemeralsecrets.NewKVV2EphemeralSecretResource,
 		ephemeralsecrets.NewDBEphemeralSecretResource,
+		ephemeralsecrets.NewGenericEphemeralSecretResource,
 		ephemeralsecrets.NewAzureStaticCredsEphemeralSecretResource,
 		ephemeralsecrets.NewAzureAccessCredentialsEphemeralResource,
 		ephemeralsecrets.NewGCPServiceAccountKeyEphemeralResource,
