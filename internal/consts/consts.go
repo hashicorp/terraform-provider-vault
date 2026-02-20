@@ -856,6 +856,7 @@ const (
 	MountTypeSAML         = "saml"
 	MountTypeOkta         = "okta"
 	MountTypeTransit      = "transit"
+	MountTypeAliCloud     = "alicloud"
 
 	/*
 		Vault version constants
