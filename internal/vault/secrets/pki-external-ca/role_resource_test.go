@@ -17,8 +17,6 @@ import (
 )
 
 func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
-	acctestutil.SkipTestAccEnt(t)
-
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")
@@ -74,8 +72,6 @@ func testAccPKIExternalCARoleImportStateIdFunc(resourceName string) resource.Imp
 }
 
 func TestAccPKIExternalCARoleResource_update(t *testing.T) {
-	acctestutil.SkipTestAccEnt(t)
-
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")
@@ -86,8 +82,8 @@ func TestAccPKIExternalCARoleResource_update(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			acctestutil.PreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion118)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
 			{

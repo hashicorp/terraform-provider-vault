@@ -17,8 +17,6 @@ import (
 )
 
 func TestAccPKIACMEAccount_basic(t *testing.T) {
-	acctestutil.SkipTestAccEnt(t)
-
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	accountName := acctest.RandomWithPrefix("tf-acme-account")
 	resourceType := "vault_pki_secret_backend_acme_account"
@@ -29,8 +27,8 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			acctestutil.PreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion118)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -143,7 +141,7 @@ func TestAccPKIACMEAccount_withEAB(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion118)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
 			{

@@ -16,8 +16,6 @@ import (
 )
 
 func TestAccPKIExternalCAOrderChallengeDataSource_basic(t *testing.T) {
-	acctestutil.SkipTestAccEnt(t)
-
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	roleName := acctest.RandomWithPrefix("tf-role")
 	accountName := acctest.RandomWithPrefix("tf-acme-account")
@@ -31,8 +29,8 @@ func TestAccPKIExternalCAOrderChallengeDataSource_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			acctestutil.PreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion118)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
 			{
