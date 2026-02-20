@@ -32,7 +32,7 @@ func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.PreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion118)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
 			{
