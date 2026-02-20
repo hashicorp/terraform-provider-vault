@@ -56,6 +56,10 @@ resource "vault_database_secret_backend_connection" "oracle" {
   backend       = vault_mount.db.path
   name          = "oracle"
   allowed_roles = ["my-role"]
+  plugin_version = "v0.20.0"
+  skip_static_role_import_rotation = true
+  password_policy = "default"
+  skip
 
   oracle {
     connection_url = "{{username}}/{{password}}@//host:port/service"
@@ -90,6 +94,12 @@ The following arguments are supported:
 * `backend` - (Required) The unique name of the Vault mount to configure.
 
 * `plugin_name` - (Optional) Specifies the name of the plugin to use.
+
+* `plugin_version` - (Optional) Specifies the semantic version of the plugin to use for this connection.
+
+* `password_policy` - (Optional)  The name of the password policy to use when generating passwords for this database. If not specified, this will use a default policy defined as: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.
+
+* `skip_static_role_import_rotation` - (Optional) Specifies if a given static account's password should be rotated on creation of the static roles associated with this database config. This can be overridden at the role-level by the static role's skip_import_rotation field. The default is false. Requires Vault Enterprise 1.19+.
 
 * `verify_connection` - (Optional) Whether the connection should be verified on
   initial configuration or not.
