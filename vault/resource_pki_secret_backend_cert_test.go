@@ -60,7 +60,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevoke, "false"),
@@ -71,7 +71,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// revoke the cert, expect a new one is re-issued
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, true, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, true, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevoke, "true"),
@@ -82,7 +82,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// remove the cert to test revocation flow (expect no revocation)
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", false, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", false, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					testPKICertRevocation(intermediatePath, store),
 				),
@@ -92,14 +92,14 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion113), nil
 				},
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserIds+".0", "foo"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserIds+".1", "bar"),
 				),
 			},
 			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, notAfter, true, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, notAfter, true, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNotAfter, notAfter),
 					testCapturePKICert(resourceName, store),
@@ -107,7 +107,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// revoke the cert with key
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, true, true),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, true, true, false),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevokeWithKey, "true"),
@@ -116,11 +116,27 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					)...,
 				),
 			},
+			{
+				// test remove_roots_from_chain = false
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRemoveRootsFromChain, "false"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCAChain),
+				),
+			},
+			{
+				// test remove_roots_from_chain = true
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRemoveRootsFromChain, "true"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCAChain),
+				),
+			},
 		},
 	})
 }
 
-func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, notAfter string, withCert, revoke bool, revokeWithKey bool) string {
+func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, notAfter string, withCert, revoke bool, revokeWithKey bool, removeRootsFromChain bool) string {
 	fragments := []string{
 		fmt.Sprintf(`
 resource "vault_mount" "test-root" {
@@ -214,6 +230,11 @@ resource "vault_pki_secret_backend_cert" "test" {
 		} else {
 			withCertBlock += fmt.Sprintf(`  revoke                = %t
 `, revoke)
+		}
+
+		if removeRootsFromChain {
+			withCertBlock += `  remove_roots_from_chain = true
+`
 		}
 
 		withCertBlock += "}"
@@ -488,113 +509,4 @@ func testPKICertReIssued(resourceName string, store *testPKICertStore) resource.
 
 		return nil
 	}
-}
-
-func TestPkiSecretBackendCert_removeRootsFromChain(t *testing.T) {
-	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
-	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
-
-	resourceName := "vault_pki_secret_backend_cert.test"
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
-		Steps: []resource.TestStep{
-			{
-				Config: testPkiSecretBackendCertConfig_removeRootsFromChain(rootPath, intermediatePath, false),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, intermediatePath),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRemoveRootsFromChain, "false"),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCAChain),
-				),
-			},
-			{
-				Config: testPkiSecretBackendCertConfig_removeRootsFromChain(rootPath, intermediatePath, true),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, intermediatePath),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRemoveRootsFromChain, "true"),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCAChain),
-				),
-			},
-		},
-	})
-}
-
-func testPkiSecretBackendCertConfig_removeRootsFromChain(rootPath, intermediatePath string, removeRoots bool) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test-root" {
-  path                      = "%s"
-  type                      = "pki"
-  description               = "test root"
-  default_lease_ttl_seconds = "8640000"
-  max_lease_ttl_seconds     = "8640000"
-}
-
-resource "vault_mount" "test-intermediate" {
-  path                      = "%s"
-  type                      = "pki"
-  description               = "test intermediate"
-  default_lease_ttl_seconds = "86400"
-  max_lease_ttl_seconds     = "86400"
-}
-
-resource "vault_pki_secret_backend_root_cert" "test" {
-  backend            = vault_mount.test-root.path
-  type               = "internal"
-  common_name        = "my.domain"
-  ttl                = "86400"
-  format             = "pem"
-  private_key_format = "der"
-  key_type           = "rsa"
-  key_bits           = 4096
-  ou                 = "test"
-  organization       = "test"
-  country            = "test"
-  locality           = "test"
-  province           = "test"
-}
-
-resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  backend     = vault_mount.test-intermediate.path
-  type        = vault_pki_secret_backend_root_cert.test.type
-  common_name = "test.my.domain"
-}
-
-resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
-  backend               = vault_mount.test-root.path
-  csr                   = vault_pki_secret_backend_intermediate_cert_request.test.csr
-  common_name           = "test.my.domain"
-  permitted_dns_domains = [".test.my.domain"]
-  ou                    = "test"
-  organization          = "test"
-  country               = "test"
-  locality              = "test"
-  province              = "test"
-}
-
-resource "vault_pki_secret_backend_intermediate_set_signed" "test" {
-  backend     = vault_mount.test-intermediate.path
-  certificate = vault_pki_secret_backend_root_sign_intermediate.test.certificate
-}
-
-resource "vault_pki_secret_backend_role" "test" {
-  backend          = vault_pki_secret_backend_intermediate_set_signed.test.backend
-  name             = "test"
-  allowed_domains  = ["test.my.domain"]
-  allow_subdomains = true
-  max_ttl          = "3600"
-  key_usage        = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
-}
-
-resource "vault_pki_secret_backend_cert" "test" {
-  backend                 = vault_pki_secret_backend_role.test.backend
-  name                    = vault_pki_secret_backend_role.test.name
-  common_name             = "cert.test.my.domain"
-  ttl                     = "720h"
-  remove_roots_from_chain = %t
-}
-`, rootPath, intermediatePath, removeRoots)
 }
