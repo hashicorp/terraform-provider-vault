@@ -146,7 +146,7 @@ func TestAccKMIPSecretBackend_migrateToCAAndListener(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	resourceType := "vault_kmip_secret_backend"
 	resourceName := resourceType + ".test"
-	caResourceName := "vault_kmip_secret_ca.test"
+	caResourceName := "vault_kmip_secret_ca_generated.test"
 	listenerResourceName := "vault_kmip_secret_listener.test"
 
 	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
@@ -256,7 +256,7 @@ resource "vault_kmip_secret_backend" "test" {
   path         = "%s"
 }
 
-resource "vault_kmip_secret_ca" "test" {
+resource "vault_kmip_secret_ca_generated" "test" {
   path     = vault_kmip_secret_backend.test.path
   name     = "test-ca"
   key_type = "ec"
@@ -266,7 +266,7 @@ resource "vault_kmip_secret_ca" "test" {
 resource "vault_kmip_secret_listener" "test" {
   path             = vault_kmip_secret_backend.test.path
   name             = "test-listener"
-  ca               = vault_kmip_secret_ca.test.name
+  ca               = vault_kmip_secret_ca_generated.test.name
   address          = "%s"
   server_hostnames = ["localhost"]
 }`, path, addr)

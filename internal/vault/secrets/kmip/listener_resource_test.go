@@ -201,7 +201,7 @@ resource "vault_kmip_secret_backend" "test" {
   path                         = "%s"
 }
 
-resource "vault_kmip_secret_ca" "test" {
+resource "vault_kmip_secret_ca_generated" "test" {
   path     = vault_kmip_secret_backend.test.path
   name     = "test-ca"
   key_type = "ec"
@@ -211,7 +211,7 @@ resource "vault_kmip_secret_ca" "test" {
 resource "vault_kmip_secret_listener" "test" {
   path             = vault_kmip_secret_backend.test.path
   name             = "%s"
-  ca               = vault_kmip_secret_ca.test.name
+  ca               = vault_kmip_secret_ca_generated.test.name
   address          = "%s"
   server_hostnames = ["localhost"]
   tls_min_version  = "tls12"
@@ -224,7 +224,7 @@ resource "vault_kmip_secret_backend" "test" {
   path                         = "%s"
 }
 
-resource "vault_kmip_secret_ca" "test" {
+resource "vault_kmip_secret_ca_generated" "test" {
   path     = vault_kmip_secret_backend.test.path
   name     = "test-ca"
   key_type = "ec"
@@ -234,7 +234,7 @@ resource "vault_kmip_secret_ca" "test" {
 resource "vault_kmip_secret_listener" "test" {
   path               = vault_kmip_secret_backend.test.path
   name               = "%s"
-  ca                 = vault_kmip_secret_ca.test.name
+  ca                 = vault_kmip_secret_ca_generated.test.name
   address            = "%s"
   server_hostnames   = ["localhost", "example.com"]
   tls_min_version    = "tls13"
@@ -250,21 +250,21 @@ resource "vault_kmip_secret_backend" "test" {
   path = "%s"
 }
 
-resource "vault_kmip_secret_ca" "test" {
+resource "vault_kmip_secret_ca_generated" "test" {
   path     = vault_kmip_secret_backend.test.path
   name     = "test-ca"
   key_type = "ec"
   key_bits = 256
 }
 
-resource "vault_kmip_secret_ca" "client1" {
+resource "vault_kmip_secret_ca_generated" "client1" {
   path     = vault_kmip_secret_backend.test.path
   name     = "client-ca-1"
   key_type = "ec"
   key_bits = 256
 }
 
-resource "vault_kmip_secret_ca" "client2" {
+resource "vault_kmip_secret_ca_generated" "client2" {
   path     = vault_kmip_secret_backend.test.path
   name     = "client-ca-2"
   key_type = "ec"
@@ -274,12 +274,12 @@ resource "vault_kmip_secret_ca" "client2" {
 resource "vault_kmip_secret_listener" "test" {
   path                 = vault_kmip_secret_backend.test.path
   name                 = "%s"
-  ca                   = vault_kmip_secret_ca.test.name
+  ca                   = vault_kmip_secret_ca_generated.test.name
   address              = "%s"
   server_hostnames     = ["localhost"]
   additional_client_cas = [
-    vault_kmip_secret_ca.client1.name,
-    vault_kmip_secret_ca.client2.name,
+    vault_kmip_secret_ca_generated.client1.name,
+    vault_kmip_secret_ca_generated.client2.name,
   ]
 }`, path, name, addr)
 }
@@ -290,21 +290,21 @@ resource "vault_kmip_secret_backend" "test" {
   path = "%s"
 }
 
-resource "vault_kmip_secret_ca" "test" {
+resource "vault_kmip_secret_ca_generated" "test" {
   path     = vault_kmip_secret_backend.test.path
   name     = "test-ca"
   key_type = "ec"
   key_bits = 256
 }
 
-resource "vault_kmip_secret_ca" "client1" {
+resource "vault_kmip_secret_ca_generated" "client1" {
   path     = vault_kmip_secret_backend.test.path
   name     = "client-ca-1"
   key_type = "ec"
   key_bits = 256
 }
 
-resource "vault_kmip_secret_ca" "client2" {
+resource "vault_kmip_secret_ca_generated" "client2" {
   path     = vault_kmip_secret_backend.test.path
   name     = "client-ca-2"
   key_type = "ec"
@@ -314,11 +314,11 @@ resource "vault_kmip_secret_ca" "client2" {
 resource "vault_kmip_secret_listener" "test" {
   path                 = vault_kmip_secret_backend.test.path
   name                 = "%s"
-  ca                   = vault_kmip_secret_ca.test.name
+  ca                   = vault_kmip_secret_ca_generated.test.name
   address              = "%s"
   server_hostnames     = ["localhost"]
   additional_client_cas = [
-    vault_kmip_secret_ca.client1.name,
+    vault_kmip_secret_ca_generated.client1.name,
   ]
 }`, path, name, addr)
 }

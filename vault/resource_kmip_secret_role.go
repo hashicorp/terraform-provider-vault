@@ -270,6 +270,14 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	if e != nil {
 		return e
 	}
+
+	// Check if a named CA is being used (requires Vault 2.0.0+)
+	if ca, ok := d.GetOk(consts.FieldCA); ok && ca.(string) != "" {
+		if !provider.IsAPISupported(meta, provider.VaultVersion200) {
+			return fmt.Errorf("named KMIP CAs require Vault version 2.0.0 or later")
+		}
+	}
+
 	scope := d.Get(consts.FieldScope).(string)
 	role := d.Get(consts.FieldRole).(string)
 
@@ -336,6 +344,16 @@ func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	if e != nil {
 		return e
 	}
+
+	// Check if a named CA is being used (requires Vault 2.0.0+)
+	if d.HasChange(consts.FieldCA) {
+		if ca, ok := d.GetOk(consts.FieldCA); ok && ca.(string) != "" {
+			if !provider.IsAPISupported(meta, provider.VaultVersion200) {
+				return fmt.Errorf("named KMIP CAs require Vault version 2.0.0 or later")
+			}
+		}
+	}
+
 	rolePath := d.Id()
 
 	if d.HasChange(consts.FieldPath) {

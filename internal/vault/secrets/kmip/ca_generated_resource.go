@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var caGeneratedIDRe = regexp.MustCompile(`^([^/]+)/ca/([^/]+)$`)
@@ -130,6 +131,16 @@ func (r *KMIPCAGeneratedResource) Create(ctx context.Context, req resource.Creat
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	// Check if Vault version supports named CAs (requires 2.0.0+)
+	if !r.Meta().IsAPISupported(provider.VaultVersion200) {
+		resp.Diagnostics.AddError(
+			"Feature Not Supported",
+			"Named KMIP CAs require Vault version 2.0.0 or later. "+
+				"Current Vault version: "+r.Meta().GetVaultVersion().String(),
+		)
 		return
 	}
 

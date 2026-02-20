@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var idRe = regexp.MustCompile(`^([^/]+)/listener/([^/]+)$`)
@@ -218,6 +219,16 @@ func (r *KMIPListenerResource) Create(ctx context.Context, req resource.CreateRe
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	// Check if Vault version supports named listeners (requires 2.0.0+)
+	if !r.Meta().IsAPISupported(provider.VaultVersion200) {
+		resp.Diagnostics.AddError(
+			"Feature Not Supported",
+			"Named KMIP listeners require Vault version 2.0.0 or later. "+
+				"Current Vault version: "+r.Meta().GetVaultVersion().String(),
+		)
 		return
 	}
 
