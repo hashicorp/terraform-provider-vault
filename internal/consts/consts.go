@@ -692,6 +692,7 @@ const (
 	FieldAllowEmptyPrincipals = "allow_empty_principals"
 
 	// KMIP Secret Role fields
+	FieldCA                        = "ca"
 	FieldOperationActivate         = "operation_activate"
 	FieldOperationAddAttribute     = "operation_add_attribute"
 	FieldOperationAll              = "operation_all"
@@ -875,6 +876,7 @@ const (
 	VaultVersion1192 = "1.19.2"
 	VaultVersion120  = "1.20.0"
 	VaultVersion121  = "1.21.0"
+	VaultVersion200  = "2.0.0"
 
 	/*
 		Vault auth methods
