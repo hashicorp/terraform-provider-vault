@@ -162,6 +162,12 @@ func (r *PKIExternalCAOrderResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
+	// Check Vault version
+	if err := checkVaultVersion(r.Meta()); err != nil {
+		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
+		return
+	}
+
 	// Validate that exactly one of identifiers or csr is provided
 	hasIdentifiers := !data.Identifiers.IsNull() && !data.Identifiers.IsUnknown()
 	hasCSR := !data.CSR.IsNull() && !data.CSR.IsUnknown() && data.CSR.ValueString() != ""

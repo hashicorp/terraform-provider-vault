@@ -126,6 +126,12 @@ func (r *PKIExternalCAOrderCertificateResource) Create(ctx context.Context, req 
 		return
 	}
 
+	// Check Vault version
+	if err := checkVaultVersion(r.Meta()); err != nil {
+		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
+		return
+	}
+
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))

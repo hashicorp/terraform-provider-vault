@@ -189,6 +189,12 @@ func (d *PKIExternalCAOrderChallengeDataSource) Read(ctx context.Context, req da
 		return
 	}
 
+	// Check Vault version
+	if err := checkVaultVersion(d.Meta()); err != nil {
+		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
+		return
+	}
+
 	cli, err := client.GetClient(ctx, d.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
