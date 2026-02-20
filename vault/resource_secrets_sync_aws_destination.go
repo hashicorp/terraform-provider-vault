@@ -96,6 +96,21 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				Description: "Extra protection that must match the trust policy granting access to the AWS IAM role ARN.",
 			},
+			consts.FieldIdentityTokenKey: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The key to use for signing identity tokens.",
+			},
+			consts.FieldIdentityTokenAudience: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The audience claim value for identity tokens.",
+			},
+			consts.FieldIdentityTokenTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The TTL of generated tokens.",
+			},
 			consts.FieldAllowedIPv4Addresses: {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -133,6 +148,19 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 	})
 }
 
+// awsSync122WriteFields contains WIF fields sent to Vault on write (Vault 1.22+).
+var awsSync122WriteFields = []string{
+	consts.FieldIdentityTokenAudience,
+	consts.FieldIdentityTokenTTL,
+	consts.FieldIdentityTokenKey,
+}
+
+// awsSync122ReadFields contains WIF fields that Vault returns unmasked on read (Vault 1.22+).
+// Note: identity_token_audience and identity_token_key are masked by Vault on read.
+var awsSync122ReadFields = []string{
+	consts.FieldIdentityTokenTTL,
+}
+
 func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	readFields := awsSyncReadFields
 	writeFields := awsSyncWriteFields
@@ -142,6 +170,11 @@ func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Resour
 	if isVaultVersion119 {
 		writeFields = append(writeFields, awsSync119Fields...)
 		readFields = append(readFields, awsSync119Fields...)
+	}
+
+	// Add Vault 1.22+ fields if supported
+	if provider.IsAPISupported(meta, provider.VaultVersion122) {
+		writeFields = append(writeFields, awsSync122WriteFields...)
 	}
 
 	// Fields that need TypeSet to List conversion for JSON serialization
@@ -162,6 +195,11 @@ func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, 
 	// Add Vault 1.19+ fields only if version is supported
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
 		readFields = append(readFields, awsSync119Fields...)
+	}
+
+	// Add Vault 1.22+ fields only if version is supported
+	if provider.IsAPISupported(meta, provider.VaultVersion122) {
+		readFields = append(readFields, awsSync122ReadFields...)
 	}
 
 	// since other fields come back as '******', we only set the non-sensitive region fields
