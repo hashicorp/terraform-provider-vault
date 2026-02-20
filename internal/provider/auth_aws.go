@@ -502,10 +502,47 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 		region = v
 	}
 
-	awsConfig, err := awsutil.RetrieveCreds(ctx, accessKey, secretKey, sessionToken, logger,
-		awsutil.WithRegion(region))
+	// Resolve region from environment/IMDS before passing to NewCredentialsConfig.
+	// This ensures EC2 instances use their actual region instead of
+	// defaulting to us-east-1, which would cause cross-region API calls.
+	if region == "" {
+		var err error
+		region, err = awsutil.GetRegion(ctx, region)
+		if err != nil {
+			logger.Warn(fmt.Sprintf("defaulting region to %q due to %s", awsutil.DefaultRegion, err.Error()))
+			region = awsutil.DefaultRegion
+		}
+	}
+
+	// Build credentials config using awsutil.CredentialsConfig
+	var opts []awsutil.Option
+
+	if accessKey != "" {
+		opts = append(opts, awsutil.WithAccessKey(accessKey))
+	}
+	if secretKey != "" {
+		opts = append(opts, awsutil.WithSecretKey(secretKey))
+	}
+	if region != "" {
+		opts = append(opts, awsutil.WithRegion(region))
+	}
+
+	opts = append(opts, awsutil.WithLogger(logger))
+
+	credConfig, err := awsutil.NewCredentialsConfig(opts...)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve AWS credentials: %s", err)
+		return fmt.Errorf("failed to create AWS credentials config: %s", err)
+	}
+
+	// Set session token directly on the config since it's not available as an option
+	if sessionToken != "" {
+		credConfig.SessionToken = sessionToken
+	}
+
+	// Generate the credential chain - this properly handles region and all credential sources
+	awsConfig, err := credConfig.GenerateCredentialChain(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to generate AWS credential chain: %s", err)
 	}
 
 	var headerValue string
