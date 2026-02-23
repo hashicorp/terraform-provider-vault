@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -61,7 +60,6 @@ type PKIACMEAccountModel struct {
 	KeyType          types.String `tfsdk:"key_type"`
 	EABKid           types.String `tfsdk:"eab_kid"`
 	EABKey           types.String `tfsdk:"eab_key"`
-	Force            types.Bool   `tfsdk:"force"`
 	TrustedCA        types.String `tfsdk:"trusted_ca"`
 	ActiveKeyVersion types.Int64  `tfsdk:"active_key_version"`
 }
@@ -112,12 +110,12 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				PlanModifiers:       []planmodifier.List{listplanmodifier.RequiresReplace()},
 			},
 			"key_type": schema.StringAttribute{
-				MarkdownDescription: "Key type to generate for the account key. Valid values are `ec-256`, `ec-384`, `rsa-2048`, `rsa-4096`, `rsa-8192`.",
+				MarkdownDescription: "Key type to generate for the account key. Valid values are `ec-256`, `ec-384`, `ec-521`, `rsa-2048`, `rsa-4096`, `rsa-8192`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("ec-256"),
 				Validators: []validator.String{
-					stringvalidator.OneOf("ec-256", "ec-384", "rsa-2048", "rsa-4096", "rsa-8192"),
+					stringvalidator.OneOf("ec-256", "ec-384", "ec-521", "rsa-2048", "rsa-4096", "rsa-8192"),
 				},
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -134,12 +132,6 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Sensitive:           true,
 				WriteOnly:           true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-			},
-			"force": schema.BoolAttribute{
-				MarkdownDescription: "Force the deletion of an account if orders are still pending.",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
 			},
 			"trusted_ca": schema.StringAttribute{
 				MarkdownDescription: "Trusted CA certificates for the ACME server.",
@@ -349,11 +341,6 @@ func (r *PKIACMEAccountResource) Delete(ctx context.Context, req resource.Delete
 	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
 	path := fmt.Sprintf("%s/%s/%s", mount, acmeAccountAffix, name)
-
-	// If force is set, add it as a query parameter
-	if data.Force.ValueBool() {
-		path = fmt.Sprintf("%s?force=true", path)
-	}
 
 	if _, err := cli.Logical().DeleteWithContext(ctx, path); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))

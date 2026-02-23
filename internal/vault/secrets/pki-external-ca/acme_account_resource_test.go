@@ -40,7 +40,6 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "email_contacts.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "email_contacts.0", "test@example.com"),
 					resource.TestCheckResourceAttr(resourceName, "key_type", "ec-256"),
-					resource.TestCheckResourceAttr(resourceName, "force", "false"),
 					resource.TestCheckResourceAttr(resourceName, "trusted_ca", ca+"\n"),
 					resource.TestCheckResourceAttr(resourceName, "active_key_version", "0"),
 				),
@@ -51,7 +50,7 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIACMEAccountImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{"eab_kid", "eab_key", "force"},
+				ImportStateVerifyIgnore:              []string{"eab_kid", "eab_key"},
 			},
 			{
 				// Only trusted_ca can be updated without re-creation
@@ -100,7 +99,6 @@ resource "vault_pki_secret_backend_acme_account" "test" {
   directory_url   = "%s"
   email_contacts  = ["test@example.com"]
   key_type        = "ec-256"
-  force           = false
   trusted_ca      = <<EOT
 %s
 EOT
