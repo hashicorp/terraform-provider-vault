@@ -21,6 +21,7 @@ const (
 	FieldCertificate                        = "certificate"
 	FieldCACert                             = "ca_cert"
 	FieldClientCert                         = "client_cert"
+	FieldCAPath                             = "ca_path"
 	FieldClientKey                          = "client_key"
 	FieldAllowedCommonNames                 = "allowed_common_names"
 	FieldAllowedDNSSans                     = "allowed_dns_sans"
@@ -534,7 +535,10 @@ const (
 	FieldPassthroughRequestHeaders          = "passthrough_request_headers"
 	FieldAllowedResponseHeaders             = "allowed_response_headers"
 	FieldDelegatedAuthAccessors             = "delegated_auth_accessors"
+	FieldPluginName                         = "plugin_name"
 	FieldPluginVersion                      = "plugin_version"
+	FieldRootRotationStatements             = "root_rotation_statements"
+	FieldEngineCount                        = "engine_count"
 	FieldEnabled                            = "enabled"
 	FieldDefaultMount                       = "default_mount"
 	FieldDefaultPathPolicy                  = "default_path_policy"
@@ -689,6 +693,7 @@ const (
 	FieldAllowEmptyPrincipals = "allow_empty_principals"
 
 	// KMIP Secret Role fields
+	FieldCA                        = "ca"
 	FieldOperationActivate         = "operation_activate"
 	FieldOperationAddAttribute     = "operation_add_attribute"
 	FieldOperationAll              = "operation_all"
@@ -873,8 +878,10 @@ const (
 	VaultVersion118  = "1.18.0"
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
+	VaultVersion1192 = "1.19.2"
 	VaultVersion120  = "1.20.0"
 	VaultVersion121  = "1.21.0"
+	VaultVersion200  = "2.0.0"
 
 	/*
 		Vault auth methods

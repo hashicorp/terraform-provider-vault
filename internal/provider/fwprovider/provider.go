@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -231,6 +232,9 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffe.NewSpiffeAuthRoleResource,
 		sys.NewPasswordPolicyResource,
 		azure.NewAzureStaticRoleResource,
+		kmip.NewKMIPListenerResource,
+		kmip.NewKMIPCAGeneratedResource,
+		kmip.NewKMIPCAImportedResource,
 	}
 }
 
