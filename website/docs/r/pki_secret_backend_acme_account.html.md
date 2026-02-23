@@ -84,7 +84,7 @@ The following arguments are supported:
 
 * `email_contacts` - (Required) List of email addresses for the ACME account. These will be used for important notifications from the CA.
 
-* `key_type` - (Optional) Key type to generate for the account key. Valid values are `ec-256`, `ec-384`, `rsa-2048`, `rsa-4096`, `rsa-8192`. Defaults to `ec-256`.
+* `key_type` - (Optional) Key type to generate for the account key. Valid values are `ec-256`, `ec-384`, `ec-521`, `rsa-2048`, `rsa-4096`, `rsa-8192`. Defaults to `ec-256`.
 
 * `eab_kid` - (Optional) The external account binding key ID to create the initial account. Required by some CAs for account registration. This is a write-only field.
 
