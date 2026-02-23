@@ -505,7 +505,6 @@ const (
 	FieldRadiusNASPort                      = "nas_port"
 	FieldRadiusNASIdentifier                = "nas_identifier"
 	FieldHost                               = "host"
-	FieldPort                               = "port"
 	FieldWrappingToken                      = "wrapping_token"
 	FieldWithWrappedAccessor                = "with_wrapped_accessor"
 	FieldExternalID                         = "external_id"
