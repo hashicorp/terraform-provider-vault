@@ -90,8 +90,6 @@ The following arguments are supported:
 
 * `eab_key` - (Optional) The external account binding HMAC key to create the initial account. Required by some CAs for account registration. This is a write-only field.
 
-* `force` - (Optional) Force the deletion of an account even if orders are still pending. Defaults to `false`.
-
 * `trusted_ca` - (Optional) PEM-encoded trusted CA certificates for the ACME server. Use this when connecting to an ACME server with a custom or self-signed certificate.
 
 ## Attributes Reference
