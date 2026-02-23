@@ -129,7 +129,7 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"eab_key": schema.StringAttribute{
-				MarkdownDescription: "The external binding token to create the initial account.",
+				MarkdownDescription: "A standard base64 encoded external binding token to create the initial account.",
 				Optional:            true,
 				Sensitive:           true,
 				WriteOnly:           true,
