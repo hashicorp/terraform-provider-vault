@@ -148,16 +148,16 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 	})
 }
 
-// awsSync122WriteFields contains WIF fields sent to Vault on write (Vault 1.22+).
-var awsSync122WriteFields = []string{
+// awsSync200WriteFields contains WIF fields sent to Vault on write (Vault 2.0.0+).
+var awsSync200WriteFields = []string{
 	consts.FieldIdentityTokenAudience,
 	consts.FieldIdentityTokenTTL,
 	consts.FieldIdentityTokenKey,
 }
 
-// awsSync122ReadFields contains WIF fields that Vault returns unmasked on read (Vault 1.22+).
+// awsSync200ReadFields contains WIF fields that Vault returns unmasked on read (Vault 2.0.0+).
 // Note: identity_token_audience and identity_token_key are masked by Vault on read.
-var awsSync122ReadFields = []string{
+var awsSync200ReadFields = []string{
 	consts.FieldIdentityTokenTTL,
 }
 
@@ -172,9 +172,9 @@ func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Resour
 		readFields = append(readFields, awsSync119Fields...)
 	}
 
-	// Add Vault 1.22+ fields if supported
-	if provider.IsAPISupported(meta, provider.VaultVersion122) {
-		writeFields = append(writeFields, awsSync122WriteFields...)
+	// Add Vault 2.0.0+ WIF fields if supported
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
+		writeFields = append(writeFields, awsSync200WriteFields...)
 	}
 
 	// Fields that need TypeSet to List conversion for JSON serialization
@@ -197,9 +197,9 @@ func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, 
 		readFields = append(readFields, awsSync119Fields...)
 	}
 
-	// Add Vault 1.22+ fields only if version is supported
-	if provider.IsAPISupported(meta, provider.VaultVersion122) {
-		readFields = append(readFields, awsSync122ReadFields...)
+	// Add Vault 2.0.0+ WIF fields only if version is supported
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
+		readFields = append(readFields, awsSync200ReadFields...)
 	}
 
 	// since other fields come back as '******', we only set the non-sensitive region fields

@@ -336,7 +336,7 @@ func TestAWSSecretsSyncDestinationWIF(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion122)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion200)
 		},
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{

@@ -53,6 +53,20 @@ resource "vault_secrets_sync_aws_destination" "aws_restricted" {
 }
 ```
 
+### Using Workload Identity Federation (Vault 2.0.0+)
+
+```hcl
+resource "vault_secrets_sync_aws_destination" "aws_wif" {
+  name                    = "aws-dest-wif"
+  region                  = "us-east-1"
+  role_arn                = var.role_arn
+  identity_token_audience = var.identity_token_audience
+  identity_token_ttl      = 3600
+  identity_token_key      = "my-key"
+  granularity             = "secret-path"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -110,6 +124,17 @@ The following arguments are supported:
 * `disable_strict_networking` - (Optional) Disable strict networking mode. When set to `true`, Vault will not enforce
   allowed IP addresses and ports. Defaults to `false`.
   **Requires Vault 1.19.0+**.
+
+### Workload Identity Federation (Vault 2.0.0+)
+
+* `identity_token_audience` - (Optional) The audience claim value for identity tokens.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_key` - (Optional) The key to use for signing identity tokens.
+  **Requires Vault 2.0.0+**.
 
 ## Attributes Reference
 
