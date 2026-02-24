@@ -58,7 +58,7 @@ type CFAuthBackendConfigModel struct {
 	CFApiTrustedCertificates types.List   `tfsdk:"cf_api_trusted_certificates"`
 	LoginMaxSecsNotBefore    types.Int64  `tfsdk:"login_max_seconds_not_before"`
 	LoginMaxSecsNotAfter     types.Int64  `tfsdk:"login_max_seconds_not_after"`
-	CFTimeout                types.String `tfsdk:"cf_timeout"`
+	CFTimeout                types.Int64  `tfsdk:"cf_timeout"`
 }
 
 // CFConfigAPIModel describes the Vault API data model.
@@ -70,7 +70,7 @@ type CFConfigAPIModel struct {
 	CFApiTrustedCertificates []string `json:"cf_api_trusted_certificates" mapstructure:"cf_api_trusted_certificates"`
 	LoginMaxSecsNotBefore    int64    `json:"login_max_seconds_not_before" mapstructure:"login_max_seconds_not_before"`
 	LoginMaxSecsNotAfter     int64    `json:"login_max_seconds_not_after" mapstructure:"login_max_seconds_not_after"`
-	CFTimeout                string   `json:"cf_timeout" mapstructure:"cf_timeout"`
+	CFTimeout                int64    `json:"cf_timeout" mapstructure:"cf_timeout"`
 }
 
 func (r *CFAuthBackendConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -123,8 +123,8 @@ func (r *CFAuthBackendConfigResource) Schema(_ context.Context, _ resource.Schem
 				Optional:            true,
 				Computed:            true,
 			},
-			"cf_timeout": schema.StringAttribute{
-				MarkdownDescription: "The timeout for the CF API. If not set, defaults to 0 (no timeout).",
+			"cf_timeout": schema.Int64Attribute{
+				MarkdownDescription: "The timeout for the CF API in seconds. If not set, defaults to 0 (no timeout).",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -162,6 +162,7 @@ func (r *CFAuthBackendConfigResource) Create(ctx context.Context, req resource.C
 	}
 
 	mountPath := r.path(data.Mount.ValueString())
+	tflog.Debug(ctx, "Writing CF auth backend config", map[string]any{"vaultRequest": vaultRequest})
 	if _, err := vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
@@ -320,7 +321,7 @@ func (r *CFAuthBackendConfigResource) getAPIModel(ctx context.Context, data *CFA
 		CFUsername:            data.CFUsername.ValueString(),
 		LoginMaxSecsNotBefore: data.LoginMaxSecsNotBefore.ValueInt64(),
 		LoginMaxSecsNotAfter:  data.LoginMaxSecsNotAfter.ValueInt64(),
-		CFTimeout:             data.CFTimeout.ValueString(),
+		CFTimeout:             data.CFTimeout.ValueInt64(),
 	}
 	if cfPassword != nil {
 		apiModel.CFPassword = *cfPassword
@@ -380,10 +381,10 @@ func (r *CFAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Conte
 		data.LoginMaxSecsNotAfter = types.Int64Null()
 	}
 
-	if readResp.CFTimeout != "" {
-		data.CFTimeout = types.StringValue(readResp.CFTimeout)
+	if readResp.CFTimeout != 0 {
+		data.CFTimeout = types.Int64Value(readResp.CFTimeout)
 	} else {
-		data.CFTimeout = types.StringNull()
+		data.CFTimeout = types.Int64Null()
 	}
 
 	identityCACerts, listErr := types.ListValueFrom(ctx, types.StringType, readResp.IdentityCACertificates)
@@ -392,11 +393,15 @@ func (r *CFAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Conte
 	}
 	data.IdentityCACertificates = identityCACerts
 
-	trustedCerts, listErr := types.ListValueFrom(ctx, types.StringType, readResp.CFApiTrustedCertificates)
-	if listErr.HasError() {
-		return listErr
+	if len(readResp.CFApiTrustedCertificates) == 0 {
+		data.CFApiTrustedCertificates = types.ListNull(types.StringType)
+	} else {
+		trustedCerts, listErr := types.ListValueFrom(ctx, types.StringType, readResp.CFApiTrustedCertificates)
+		if listErr.HasError() {
+			return listErr
+		}
+		data.CFApiTrustedCertificates = trustedCerts
 	}
-	data.CFApiTrustedCertificates = trustedCerts
 
 	return diag.Diagnostics{}
 }

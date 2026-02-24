@@ -138,9 +138,16 @@ func (r *CFAuthBackendRoleResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	roleResp, err := vaultClient.Logical().WriteWithContext(ctx, rolePath, vaultRequest)
+	_, err = vaultClient.Logical().WriteWithContext(ctx, rolePath, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
+		return
+	}
+
+	// Vault returns HTTP 204 with no body for role writes; read back the role to populate state.
+	roleResp, err := vaultClient.Logical().ReadWithContext(ctx, rolePath)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
 	if roleResp == nil {
@@ -218,9 +225,16 @@ func (r *CFAuthBackendRoleResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	roleResp, err := vaultClient.Logical().WriteWithContext(ctx, rolePath, vaultRequest)
+	_, err = vaultClient.Logical().WriteWithContext(ctx, rolePath, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
+		return
+	}
+
+	// Vault returns HTTP 204 with no body for role writes; read back the role to populate state.
+	roleResp, err := vaultClient.Logical().ReadWithContext(ctx, rolePath)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
 	if roleResp == nil {
@@ -351,29 +365,45 @@ func (r *CFAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Context
 
 	data.DisableIPMatching = types.BoolValue(readResp.DisableIPMatching)
 
-	boundAppIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundApplicationIDs)
-	if listErr.HasError() {
-		return listErr
+	if len(readResp.BoundApplicationIDs) == 0 {
+		data.BoundApplicationIDs = types.ListNull(types.StringType)
+	} else {
+		boundAppIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundApplicationIDs)
+		if listErr.HasError() {
+			return listErr
+		}
+		data.BoundApplicationIDs = boundAppIDs
 	}
-	data.BoundApplicationIDs = boundAppIDs
 
-	boundSpaceIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundSpaceIDs)
-	if listErr.HasError() {
-		return listErr
+	if len(readResp.BoundSpaceIDs) == 0 {
+		data.BoundSpaceIDs = types.ListNull(types.StringType)
+	} else {
+		boundSpaceIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundSpaceIDs)
+		if listErr.HasError() {
+			return listErr
+		}
+		data.BoundSpaceIDs = boundSpaceIDs
 	}
-	data.BoundSpaceIDs = boundSpaceIDs
 
-	boundOrgIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundOrganizationIDs)
-	if listErr.HasError() {
-		return listErr
+	if len(readResp.BoundOrganizationIDs) == 0 {
+		data.BoundOrganizationIDs = types.ListNull(types.StringType)
+	} else {
+		boundOrgIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundOrganizationIDs)
+		if listErr.HasError() {
+			return listErr
+		}
+		data.BoundOrganizationIDs = boundOrgIDs
 	}
-	data.BoundOrganizationIDs = boundOrgIDs
 
-	boundInstanceIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundInstanceIDs)
-	if listErr.HasError() {
-		return listErr
+	if len(readResp.BoundInstanceIDs) == 0 {
+		data.BoundInstanceIDs = types.ListNull(types.StringType)
+	} else {
+		boundInstanceIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundInstanceIDs)
+		if listErr.HasError() {
+			return listErr
+		}
+		data.BoundInstanceIDs = boundInstanceIDs
 	}
-	data.BoundInstanceIDs = boundInstanceIDs
 
 	return token.PopulateTokenModelFromAPI(ctx, &data.TokenModel, &readResp.TokenAPIModel)
 }
