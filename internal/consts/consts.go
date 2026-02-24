@@ -687,11 +687,13 @@ const (
 	FieldAllowedUserKeyLengths                = "allowed_user_key_lengths"
 	FieldAlgorithmSigner                      = "algorithm_signer"
 	FieldKeyIDFormat                          = "key_id_format"
+	FieldDistributedClaimAccessToken          = "distributed_claim_access_token"
 	// SSH Secret Backend Key Types
 	SSHKeyTypeCA              = "ca"
 	FieldAllowEmptyPrincipals = "allow_empty_principals"
 
 	// KMIP Secret Role fields
+	FieldCA                        = "ca"
 	FieldOperationActivate         = "operation_activate"
 	FieldOperationAddAttribute     = "operation_add_attribute"
 	FieldOperationAll              = "operation_all"
@@ -827,6 +829,10 @@ const (
 	// EnvVarVaultConfigPath to override where the Vault configuration is in tests.
 	// Note: only used in tests. not used by the provider to read the Vault config.
 	EnvVarVaultConfigPath = "VAULT_CONFIG_PATH"
+	// EnvVarVaultAuthDistributedClaimAccessToken is used to provide an access token to
+	// fetch group memberships for distributed claims. Supported for Azure/Entra ID
+	// with Vault 1.18+.
+	EnvVarVaultAuthDistributedClaimAccessToken = "TERRAFORM_VAULT_AUTH_DISTRIBUTED_CLAIM_ACCESS_TOKEN"
 	/*
 		common mount types
 	*/
@@ -872,8 +878,10 @@ const (
 	VaultVersion118  = "1.18.0"
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
+	VaultVersion1192 = "1.19.2"
 	VaultVersion120  = "1.20.0"
 	VaultVersion121  = "1.21.0"
+	VaultVersion200  = "2.0.0"
 	VaultVersion122  = "1.22.0"
 
 	/*

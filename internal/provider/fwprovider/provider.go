@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
+	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -226,12 +228,20 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 // The resource type name is determined by the Resource implementing
 // the Metadata method. All resources must have unique names.
 func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
+	return append([]func() resource.Resource{
 		spiffe.NewSpiffeAuthConfigResource,
 		spiffe.NewSpiffeAuthRoleResource,
 		sys.NewPasswordPolicyResource,
 		azure.NewAzureStaticRoleResource,
-	}
+		kmip.NewKMIPListenerResource,
+		kmip.NewKMIPCAGeneratedResource,
+		kmip.NewKMIPCAImportedResource,
+		pki_external_ca.NewPKIACMEAccountResource,
+		pki_external_ca.NewPKIExternalCARoleResource,
+		pki_external_ca.NewPKIExternalCAOrderResource,
+		pki_external_ca.NewPKIExternalCAOrderChallengeFulfilledResource,
+		pki_external_ca.NewPKIExternalCAOrderCertificateResource,
+	}, testResources()...)
 }
 
 func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
@@ -257,5 +267,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 // The data source type name is determined by the DataSource implementing
 // the Metadata method. All data sources must have unique names.
 func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
+	}
 }
