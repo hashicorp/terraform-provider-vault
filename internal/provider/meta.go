@@ -349,6 +349,9 @@ func (p *ProviderMeta) setClient() error {
 		client.SetToken(token)
 	}
 
+	// namespaceFromToken tracks whether the namespace was derived from the
+	// auth token rather than being explicitly configured by the user.
+	var namespaceFromToken bool
 	if namespace == "" && tokenNamespace != "" {
 		// set the provider namespace to the token's namespace
 		// this is here to ensure that do not break any configurations that are relying on the
@@ -360,6 +363,7 @@ func (p *ProviderMeta) setClient() error {
 			"Future releases may not support this type of configuration.", tokenNamespace)
 
 		namespace = tokenNamespace
+		namespaceFromToken = true
 		// set the namespace on the provider to ensure that all child
 		// namespace paths are properly honoured.
 		setTokenFromNamespace := GetResourceDataBool(d, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true)
@@ -371,11 +375,17 @@ func (p *ProviderMeta) setClient() error {
 	}
 
 	if namespace != "" {
-		// set the namespace on the provider to ensure that all child
-		// namespace paths are properly honoured.
-		log.Printf("[DEBUG] Setting namespace on provider to %q", namespace)
-		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
-			return fmt.Errorf("failed to set namespace on provider: %w", err)
+		// Only set the namespace on the provider ResourceData if the namespace
+		// was NOT derived from the token, or if set_namespace_from_token is true.
+		// When set_namespace_from_token is false and the namespace came from the
+		// token, writing it to ResourceData would cause GetNSClient to prepend
+		// the provider namespace to the resource namespace, producing doubled
+		// paths (e.g. "ns/ns" instead of "ns").
+		if !namespaceFromToken {
+			log.Printf("[DEBUG] Setting namespace on provider to %q", namespace)
+			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
+				return fmt.Errorf("failed to set namespace on provider: %w", err)
+			}
 		}
 
 		// set the namespace on the parent client
