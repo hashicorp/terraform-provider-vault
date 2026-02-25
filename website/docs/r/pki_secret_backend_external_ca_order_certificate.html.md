@@ -121,7 +121,6 @@ resource "vault_pki_secret_backend_external_ca_order_certificate" "example" {
 # Use the certificate
 output "certificate" {
   value     = vault_pki_secret_backend_external_ca_order_certificate.example.certificate
-  sensitive = true
 }
 
 output "private_key" {
