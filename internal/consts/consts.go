@@ -790,6 +790,10 @@ const (
 	FieldServiceAccountJWTWOVersion = "service_account_jwt_wo_version"
 	FieldBindPassWO                 = "bindpass_wo"
 	FieldBindPassWOVersion          = "bindpass_wo_version"
+	FieldKeytab                     = "keytab"
+	FieldClientTLSKeyWO             = "client_tls_key_wo"
+	FieldClientTLSKeyWOVersion      = "client_tls_key_wo_version"
+	FieldAddGroupAliases            = "add_group_aliases"
 
 	/*
 		common environment variables
