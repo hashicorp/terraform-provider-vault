@@ -47,7 +47,7 @@ type GCPKMSSecretBackendKeyResource struct {
 type GCPKMSSecretBackendKeyModel struct {
 	base.BaseModelLegacy
 
-	Backend         types.String `tfsdk:"backend"`
+	Mount           types.String `tfsdk:"mount"`
 	Name            types.String `tfsdk:"name"`
 	KeyRing         types.String `tfsdk:"key_ring"`
 	CryptoKey       types.String `tfsdk:"crypto_key"`
@@ -67,7 +67,7 @@ func (r *GCPKMSSecretBackendKeyResource) Metadata(_ context.Context, req resourc
 func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Path where the GCP KMS secrets engine is mounted.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
@@ -80,7 +80,8 @@ func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.Sc
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-			}, consts.FieldKeyRing: schema.StringAttribute{
+			},
+			consts.FieldKeyRing: schema.StringAttribute{
 				MarkdownDescription: "GCP KMS key ring resource ID (e.g., 'projects/my-project/locations/us-central1/keyRings/my-ring'). Required.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
@@ -88,8 +89,9 @@ func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.Sc
 				},
 			},
 			consts.FieldCryptoKey: schema.StringAttribute{
-				MarkdownDescription: "Name of the crypto key to use in GCP KMS. If the crypto key does not exist, Vault will try to create it. This defaults to the Vault key name if unspecified.",
-				Optional:            true,
+				MarkdownDescription: "Name of the crypto key to use in GCP KMS. If the crypto key does not exist," +
+					"Vault will try to create it. This defaults to the Vault key name if unspecified.",
+				Optional: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -122,7 +124,8 @@ func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.Sc
 				ElementType:         types.StringType,
 				MarkdownDescription: "Labels to apply to the key.",
 				Optional:            true,
-			}, consts.FieldRotationPeriod: schema.StringAttribute{
+			},
+			consts.FieldRotationPeriod: schema.StringAttribute{
 				MarkdownDescription: "Rotation period for the key (e.g., '2592000s' for 30 days). Can be updated after creation.",
 				Optional:            true,
 			},
@@ -159,9 +162,9 @@ func (r *GCPKMSSecretBackendKeyResource) Create(ctx context.Context, req resourc
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	backend := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	keyPath := fmt.Sprintf("%s/keys/%s", backend, name)
+	keyPath := buildKeyPath(backend, name)
 
 	// Build the key configuration from the model
 	keyData, diags := buildKeyConfigFromModel(ctx, &data)
@@ -178,9 +181,6 @@ func (r *GCPKMSSecretBackendKeyResource) Create(ctx context.Context, req resourc
 		)
 		return
 	}
-
-	// Set ID
-	data.ID = types.StringValue(fmt.Sprintf("%s/keys/%s", backend, name))
 
 	// Set initial state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -209,9 +209,9 @@ func (r *GCPKMSSecretBackendKeyResource) Read(ctx context.Context, req resource.
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	backend := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	keyPath := fmt.Sprintf("%s/keys/%s", backend, name)
+	keyPath := buildKeyPath(backend, name)
 
 	// Set ID
 	data.ID = types.StringValue(keyPath)
@@ -309,9 +309,9 @@ func (r *GCPKMSSecretBackendKeyResource) Update(ctx context.Context, req resourc
 		return
 	}
 
-	backend := plan.Backend.ValueString()
+	backend := plan.Mount.ValueString()
 	name := plan.Name.ValueString()
-	keyPath := fmt.Sprintf("%s/keys/%s", backend, name)
+	keyPath := buildKeyPath(backend, name)
 
 	// Check what fields have changed
 	rotationChanged := !plan.RotationPeriod.Equal(state.RotationPeriod)
@@ -385,9 +385,9 @@ func (r *GCPKMSSecretBackendKeyResource) Delete(ctx context.Context, req resourc
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	backend := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	keyPath := fmt.Sprintf("%s/keys/%s", backend, name)
+	keyPath := buildKeyPath(backend, name)
 
 	log.Printf("[DEBUG] Deleting GCP KMS key at %q", keyPath)
 	if _, err := cli.Logical().DeleteWithContext(ctx, keyPath); err != nil {
@@ -425,8 +425,13 @@ func (r *GCPKMSSecretBackendKeyResource) ImportState(ctx context.Context, req re
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldBackend), matches[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), matches[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), matches[2])...)
+}
+
+// buildKeyPath constructs the Vault API path for a GCP KMS key
+func buildKeyPath(backend, name string) string {
+	return fmt.Sprintf("%s/keys/%s", backend, name)
 }
 
 // buildKeyConfigFromModel extracts the key configuration data from the model

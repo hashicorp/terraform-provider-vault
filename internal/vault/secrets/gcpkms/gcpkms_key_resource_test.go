@@ -35,7 +35,7 @@ func TestGCPKMSSecretBackendKey_basic(t *testing.T) {
 			{
 				Config: testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyRing, keyRing),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPurpose, "encrypt_decrypt"),
@@ -73,7 +73,7 @@ func TestGCPKMSSecretBackendKey_update(t *testing.T) {
 			{
 				Config: testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "2592000s"),
 				),
@@ -81,7 +81,7 @@ func TestGCPKMSSecretBackendKey_update(t *testing.T) {
 			{
 				Config: testGCPKMSSecretBackendKey_updateConfig(path, keyName, keyRing),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "3600000s"),
 				),
@@ -110,7 +110,7 @@ func TestGCPKMSSecretBackendKey_withCryptoKey(t *testing.T) {
 			{
 				Config: testGCPKMSSecretBackendKey_cryptoKeyConfig(path, keyName, keyRing, cryptoKeyName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyRing, keyRing),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCryptoKey, cryptoKeyName),
@@ -141,7 +141,7 @@ func TestGCPKMSSecretBackendKey_signingKey(t *testing.T) {
 			{
 				Config: testGCPKMSSecretBackendKey_signingConfig(path, keyName, keyRing),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyRing, keyRing),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPurpose, "asymmetric_sign"),
@@ -198,14 +198,15 @@ func TestGCPKMSSecretBackendKey_validation(t *testing.T) {
 func testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = <<-EOT
+  path                   = "%s"
+  credentials_wo         = <<-EOT
 %s
 EOT
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  backend          = vault_gcpkms_secret_backend.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -219,14 +220,15 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 func testGCPKMSSecretBackendKey_updateConfig(path, keyName, keyRing string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = <<-EOT
+  path                   = "%s"
+  credentials_wo         = <<-EOT
 %s
 EOT
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  backend          = vault_gcpkms_secret_backend.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -241,13 +243,14 @@ func testGCPKMSSecretBackendKey_cryptoKeyConfig(path, keyName, keyRing, cryptoKe
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path        = "%s"
-  credentials = <<-EOT
+  credentials_wo = <<-EOT
 %s
 EOT
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  backend          = vault_gcpkms_secret_backend.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   name             = "%s"
   key_ring         = "%s"
   crypto_key       = "%s"
@@ -261,14 +264,15 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 func testGCPKMSSecretBackendKey_signingConfig(path, keyName, keyRing string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = <<-EOT
+  path                   = "%s"
+  credentials_wo         = <<-EOT
 %s
 EOT
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  backend          = vault_gcpkms_secret_backend.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
@@ -281,14 +285,15 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 func testGCPKMSSecretBackendKey_labelsConfig(path, keyName, keyRing string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = <<-EOT
+  path                   = "%s"
+  credentials_wo         = <<-EOT
 %s
 EOT
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  backend          = vault_gcpkms_secret_backend.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -302,19 +307,41 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 `, path, getMockGCPCredentials(), keyName, keyRing)
 }
 
-func testGCPKMSSecretBackendKey_missingRequiredConfig(path, keyName string) string {
+func testGCPKMSSecretBackendKey_conflictConfig(path, keyName, keyRing, cryptoKey string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = <<-EOT
+  path                   = "%s"
+  credentials_wo         = <<-EOT
 %s
 EOT
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  backend = vault_gcpkms_secret_backend.test.path
+  mount      = vault_gcpkms_secret_backend.test.path
+  name       = "%s"
+  key_ring   = "%s"
+  crypto_key = "%s"
+  purpose    = "encrypt_decrypt"
+  algorithm  = "symmetric_encryption"
+}
+`, path, getMockGCPCredentials(), keyName, keyRing, cryptoKey)
+}
+
+func testGCPKMSSecretBackendKey_missingRequiredConfig(path, keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_gcpkms_secret_backend" "test" {
+  path                   = "%s"
+  credentials_wo         = <<-EOT
+%s
+EOT
+  credentials_wo_version = 1
+}
+
+resource "vault_gcpkms_secret_backend_key" "test" {
+  mount = vault_gcpkms_secret_backend.test.path
   name    = "%s"
-  # Missing key_ring
+  # Missing both key_ring and crypto_key
 }
 `, path, getMockGCPCredentials(), keyName)
 }

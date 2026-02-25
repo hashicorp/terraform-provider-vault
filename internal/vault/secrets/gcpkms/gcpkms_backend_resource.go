@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -42,10 +43,9 @@ type GCPKMSSecretBackendModel struct {
 	base.BaseModelLegacy
 
 	Path                 types.String `tfsdk:"path"`
-	Credentials          types.String `tfsdk:"credentials"`
 	CredentialsWO        types.String `tfsdk:"credentials_wo"`
 	CredentialsWOVersion types.Int64  `tfsdk:"credentials_wo_version"`
-	Scopes               types.List   `tfsdk:"scopes"`
+	Scopes               types.Set    `tfsdk:"scopes"`
 }
 
 func (r *GCPKMSSecretBackendResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -62,21 +62,23 @@ func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.Schem
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			consts.FieldCredentials: schema.StringAttribute{
-				MarkdownDescription: "JSON-encoded GCP service account credentials. Cannot be used with `credentials_wo`.",
-				Optional:            true,
-				Sensitive:           true,
-			},
 			consts.FieldCredentialsWO: schema.StringAttribute{
-				MarkdownDescription: "Write-only JSON-encoded GCP service account credentials. Cannot be used with `credentials`.",
-				Optional:            true,
+				MarkdownDescription: "JSON-encoded GCP service account credentials. This value is write-only and will not be stored in Terraform state. Requires Terraform 1.11+.",
+				Required:            true,
 				Sensitive:           true,
+				WriteOnly:           true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
-				MarkdownDescription: "Version number for the write-only credentials. Increment this to force credential rotation.",
-				Optional:            true,
+				MarkdownDescription: "Version number for the write-only credentials. Increment this value to trigger a credential rotation. Changing this value will cause the credentials to be re-sent to Vault during the next apply.",
+				Required:            true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
-			consts.FieldScopes: schema.ListAttribute{
+			consts.FieldScopes: schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "OAuth scopes to use for GCP API requests. Defaults to ['https://www.googleapis.com/auth/cloudkms'].",
 				Optional:            true,
@@ -95,22 +97,25 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	// Validate that exactly one of credentials or credentials_wo is provided
-	hasCredentials := !data.Credentials.IsNull() && data.Credentials.ValueString() != ""
-	hasCredentialsWO := !data.CredentialsWO.IsNull() && data.CredentialsWO.ValueString() != ""
-
-	if !hasCredentials && !hasCredentialsWO {
-		resp.Diagnostics.AddError(
-			"Missing required field",
-			"Either 'credentials' or 'credentials_wo' must be provided",
-		)
+	var configModel GCPKMSSecretBackendModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if hasCredentials && hasCredentialsWO {
+	// Copy the write-only credential value from Config into our data model.
+	// This is the only way to access write-only field values.
+	data.CredentialsWO = configModel.CredentialsWO
+
+	log.Printf("[DEBUG] Create: credentials_wo from Config - is_null: %v, is_unknown: %v, length: %d",
+		data.CredentialsWO.IsNull(), data.CredentialsWO.IsUnknown(), len(data.CredentialsWO.ValueString()))
+
+	// Validate that credentials are actually present
+	if data.CredentialsWO.IsNull() || data.CredentialsWO.IsUnknown() || data.CredentialsWO.ValueString() == "" {
 		resp.Diagnostics.AddError(
-			"Conflicting fields",
-			"Only one of 'credentials' or 'credentials_wo' can be provided, not both",
+			"Missing credentials",
+			"The credentials_wo field is required but was empty or null. "+
+				"Ensure you are providing valid GCP service account credentials.",
 		)
 		return
 	}
@@ -137,16 +142,18 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	// Configure the backend
+	// Configure the backend with credentials
 	configPath := fmt.Sprintf("%s/config", mountPath)
 
-	configData, diags := buildBackendConfigFromModel(ctx, &data, hasCredentials)
+	// Always include credentials during Create
+	configData, diags := buildBackendConfigFromModel(ctx, &data, true)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	log.Printf("[DEBUG] Configuring GCP KMS backend at %q", configPath)
+	log.Printf("[DEBUG] Configuring GCP KMS backend at %q (credentials included: true, credentials length: %d)",
+		configPath, len(data.CredentialsWO.ValueString()))
 	if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
 		resp.Diagnostics.AddError(
 			"Error configuring GCP KMS backend",
@@ -155,20 +162,15 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	// Set ID
-	data.ID = types.StringValue(mountPath)
-
 	// Read back the state from Vault to ensure all computed values are set
-	readReq := resource.ReadRequest{State: resp.State}
-	readResp := resource.ReadResponse{State: resp.State}
-
-	// Set the ID in state first so Read can use it
+	// Set the data in state first so Read can use it
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	readReq.State = resp.State
+	readReq := resource.ReadRequest{State: resp.State}
+	readResp := resource.ReadResponse{State: resp.State}
 	r.Read(ctx, readReq, &readResp)
 	resp.Diagnostics.Append(readResp.Diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -215,7 +217,7 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 		for i, s := range scopes {
 			scopeList[i] = s.(string)
 		}
-		scopeTypes, diags := types.ListValueFrom(ctx, types.StringType, scopeList)
+		scopeTypes, diags := types.SetValueFrom(ctx, types.StringType, scopeList)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -223,7 +225,7 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 		data.Scopes = scopeTypes
 	} else {
 		// Set to null if not in response
-		data.Scopes = types.ListNull(types.StringType)
+		data.Scopes = types.SetNull(types.StringType)
 	}
 
 	// Set ID to the mount path
@@ -236,48 +238,60 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 }
 
 func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data GCPKMSSecretBackendModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	var plan, state GCPKMSSecretBackendModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Validate that exactly one of credentials or credentials_wo is provided
-	hasCredentials := !data.Credentials.IsNull() && data.Credentials.ValueString() != ""
-	hasCredentialsWO := !data.CredentialsWO.IsNull() && data.CredentialsWO.ValueString() != ""
+	// Only include credentials if the version changed
+	includeCredentials := !plan.CredentialsWOVersion.Equal(state.CredentialsWOVersion)
 
-	if !hasCredentials && !hasCredentialsWO {
-		resp.Diagnostics.AddError(
-			"Missing required field",
-			"Either 'credentials' or 'credentials_wo' must be provided",
-		)
-		return
+	if includeCredentials {
+		var configModel GCPKMSSecretBackendModel
+		resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		// Copy the write-only credential value from Config into our plan model
+		plan.CredentialsWO = configModel.CredentialsWO
+
+		log.Printf("[DEBUG] Update: credentials version changed (%v -> %v), including credentials (length: %d)",
+			state.CredentialsWOVersion.ValueInt64(), plan.CredentialsWOVersion.ValueInt64(),
+			len(plan.CredentialsWO.ValueString()))
+
+		// Validate that credentials are actually present
+		if plan.CredentialsWO.IsNull() || plan.CredentialsWO.IsUnknown() || plan.CredentialsWO.ValueString() == "" {
+			resp.Diagnostics.AddError(
+				"Missing credentials",
+				"The credentials_wo field is required when credentials_wo_version changes, "+
+					"but was empty or null. Ensure you are providing valid GCP service account credentials.",
+			)
+			return
+		}
+	} else {
+		log.Printf("[DEBUG] Update: credentials version unchanged (%v), not sending credentials to Vault",
+			state.CredentialsWOVersion.ValueInt64())
 	}
 
-	if hasCredentials && hasCredentialsWO {
-		resp.Diagnostics.AddError(
-			"Conflicting fields",
-			"Only one of 'credentials' or 'credentials_wo' can be provided, not both",
-		)
-		return
-	}
-
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
-	mountPath := data.Path.ValueString()
+	mountPath := plan.Path.ValueString()
 	configPath := fmt.Sprintf("%s/config", mountPath)
 
-	configData, diags := buildBackendConfigFromModel(ctx, &data, hasCredentials)
+	configData, diags := buildBackendConfigFromModel(ctx, &plan, includeCredentials)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	log.Printf("[DEBUG] Updating GCP KMS backend config at %q", configPath)
+	log.Printf("[DEBUG] Updating GCP KMS backend config at %q (credentials included: %v)",
+		configPath, includeCredentials)
 	if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating GCP KMS backend config",
@@ -286,17 +300,15 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	// Read back the state from Vault to ensure all computed values are set
-	readReq := resource.ReadRequest{State: resp.State}
-	readResp := resource.ReadResponse{State: resp.State}
-
-	// Set the current state first so Read can use it
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	// Set the current plan in state first so Read can use it
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	readReq.State = resp.State
+	// Read back the state from Vault to ensure all computed values are set
+	readReq := resource.ReadRequest{State: resp.State}
+	readResp := resource.ReadResponse{State: resp.State}
 	r.Read(ctx, readReq, &readResp)
 	resp.Diagnostics.Append(readResp.Diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -337,16 +349,26 @@ func (r *GCPKMSSecretBackendResource) ImportState(ctx context.Context, req resou
 // buildBackendConfigFromModel extracts the configuration data from the model
 // and returns a map suitable for writing to Vault's GCP KMS backend config endpoint.
 // This helper reduces code duplication between Create and Update methods.
-func buildBackendConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendModel, hasCredentials bool) (map[string]interface{}, diag.Diagnostics) {
+func buildBackendConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendModel, includeCredentials bool) (map[string]interface{}, diag.Diagnostics) {
 	var diags diag.Diagnostics
-
 	configData := make(map[string]interface{})
 
-	// Add credentials (either read-write or write-only)
-	if hasCredentials {
-		configData["credentials"] = data.Credentials.ValueString()
+	// Only include credentials when explicitly requested
+	if includeCredentials {
+		creds := data.CredentialsWO.ValueString()
+		if creds == "" {
+			diags.AddError(
+				"Missing credentials",
+				"Credentials are required but the value was empty. "+
+					"This may indicate that the write-only field was not properly read from the configuration. "+
+					"Ensure you are providing valid GCP service account credentials via the credentials_wo field.",
+			)
+			return nil, diags
+		}
+		configData["credentials"] = creds
+		log.Printf("[DEBUG] buildBackendConfigFromModel: credentials included (length: %d)", len(creds))
 	} else {
-		configData["credentials"] = data.CredentialsWO.ValueString()
+		log.Printf("[DEBUG] buildBackendConfigFromModel: credentials NOT included (version unchanged)")
 	}
 
 	// Add scopes if provided

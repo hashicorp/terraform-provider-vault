@@ -27,12 +27,13 @@ for more details.
 
 ```hcl
 resource "vault_gcpkms_secret_backend" "gcpkms" {
-  path        = "gcpkms"
-  credentials = file("gcp-credentials.json")
+  path               = "gcpkms"
+  credentials_wo         = file("gcp-credentials.json")
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "encryption_key" {
-  backend          = vault_gcpkms_secret_backend.gcpkms.path
+  mount            = vault_gcpkms_secret_backend.gcpkms.path
   name             = "my-encryption-key"
   key_ring         = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose          = "ENCRYPT_DECRYPT"
@@ -51,7 +52,7 @@ resource "vault_gcpkms_secret_backend_key" "encryption_key" {
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "signing_key" {
-  backend   = vault_gcpkms_secret_backend.gcpkms.path
+  mount     = vault_gcpkms_secret_backend.gcpkms.path
   name      = "my-signing-key"
   key_ring  = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose   = "ASYMMETRIC_SIGN"
@@ -65,7 +66,7 @@ By default, the crypto key in GCP KMS will have the same name as the Vault key. 
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "custom_name" {
-  backend    = vault_gcpkms_secret_backend.gcpkms.path
+  mount      = vault_gcpkms_secret_backend.gcpkms.path
   name       = "vault-key-name"
   key_ring   = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   crypto_key = "different-gcp-key-name"  # Optional: Use a different name in GCP KMS
@@ -78,7 +79,7 @@ resource "vault_gcpkms_secret_backend_key" "custom_name" {
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "hsm_key" {
-  backend          = vault_gcpkms_secret_backend.gcpkms.path
+  mount            = vault_gcpkms_secret_backend.gcpkms.path
   name             = "hsm-protected-key"
   key_ring         = "projects/my-project/locations/us-central1/keyRings/hsm-keyring"
   purpose          = "ENCRYPT_DECRYPT"
@@ -97,7 +98,7 @@ The following arguments are supported:
   configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `backend` - (Required) Path where the GCP KMS secrets engine is mounted.
+* `mount` - (Required) Path where the GCP KMS secrets engine is mounted.
 
 * `name` - (Required) Name of the key in Vault. This is the name used to reference the key for 
   cryptographic operations.
@@ -151,7 +152,7 @@ When creating a new GCP KMS key, the following field is required:
 
 In addition to the arguments above, the following attributes are exported:
 
-* `id` - The unique identifier for the key resource in Vault. Format: `{backend}/keys/{name}`
+* `id` - The unique identifier for the key resource in Vault. Format: `{mount}/keys/{name}`
 
 * `latest_version` - The latest version number of the GCP KMS key.
 
@@ -159,7 +160,7 @@ In addition to the arguments above, the following attributes are exported:
 
 ## Import
 
-GCP KMS keys can be imported using the format `{backend}/keys/{name}`, e.g.
+GCP KMS keys can be imported using the format `{mount}/keys/{name}`, e.g.
 
 ```
 $ terraform import vault_gcpkms_secret_backend_key.encryption_key gcpkms/keys/my-encryption-key

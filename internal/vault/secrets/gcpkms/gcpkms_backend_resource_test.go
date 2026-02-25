@@ -31,7 +31,6 @@ func TestGCPKMSSecretBackend_basic(t *testing.T) {
 				Config: testGCPKMSSecretBackend_initialConfig(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentials, "{\"test\":\"credentials\"}"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
@@ -43,8 +42,8 @@ func TestGCPKMSSecretBackend_basic(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				consts.FieldCredentials,
 				consts.FieldCredentialsWO,
+				consts.FieldCredentialsWOVersion,
 			),
 		},
 	})
@@ -64,7 +63,6 @@ func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
 				Config: testGCPKMSSecretBackend_writeOnlyConfig(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWO, "{\"test\":\"credentials_wo\"}"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
@@ -72,7 +70,7 @@ func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
 			{
 				Config: testGCPKMSSecretBackend_writeOnlyUpdateConfig(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWO, "{\"test\":\"updated_credentials\"}"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "2"),
 				),
 			},
@@ -89,11 +87,22 @@ func TestGCPKMSSecretBackend_validation(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testGCPKMSSecretBackend_noCredentialsConfig(path),
-				ExpectError: regexp.MustCompile("Missing required field"),
+				ExpectError: regexp.MustCompile(`(Missing required argument|Missing required attribute)`),
 			},
+		},
+	})
+}
+
+func TestGCPKMSSecretBackend_emptyCredentials(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-gcpkms")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
 			{
-				Config:      testGCPKMSSecretBackend_conflictingCredentialsConfig(path),
-				ExpectError: regexp.MustCompile("Conflicting fields"),
+				Config:      testGCPKMSSecretBackend_emptyCredentialsConfig(path),
+				ExpectError: regexp.MustCompile(`Missing credentials`),
 			},
 		},
 	})
@@ -102,43 +111,53 @@ func TestGCPKMSSecretBackend_validation(t *testing.T) {
 func testGCPKMSSecretBackend_initialConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = "{\"test\":\"credentials\"}"
+  path                   = "%s"
+  credentials_wo         = <<-EOT
+%s
+EOT
+  credentials_wo_version = 1
 }
-`, path)
+`, path, getMockGCPCredentials())
 }
 
 func testGCPKMSSecretBackend_updateConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = "{\"test\":\"credentials\"}"
-  scopes      = [
+  path                   = "%s"
+  credentials_wo         = <<-EOT
+%s
+EOT
+  credentials_wo_version = 1
+  scopes = [
     "https://www.googleapis.com/auth/cloud-platform",
     "https://www.googleapis.com/auth/cloudkms"
   ]
 }
-`, path)
+`, path, getMockGCPCredentials())
 }
 
 func testGCPKMSSecretBackend_writeOnlyConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path           = "%s"
-  credentials_wo = "{\"test\":\"credentials_wo\"}"
+  path                   = "%s"
+  credentials_wo         = <<-EOT
+%s
+EOT
   credentials_wo_version = 1
 }
-`, path)
+`, path, getMockGCPCredentials())
 }
 
 func testGCPKMSSecretBackend_writeOnlyUpdateConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path           = "%s"
-  credentials_wo = "{\"test\":\"updated_credentials\"}"
+  path                   = "%s"
+  credentials_wo         = <<-EOT
+%s
+EOT
   credentials_wo_version = 2
 }
-`, path)
+`, path, getMockGCPCredentials())
 }
 
 func testGCPKMSSecretBackend_noCredentialsConfig(path string) string {
@@ -149,12 +168,12 @@ resource "vault_gcpkms_secret_backend" "test" {
 `, path)
 }
 
-func testGCPKMSSecretBackend_conflictingCredentialsConfig(path string) string {
+func testGCPKMSSecretBackend_emptyCredentialsConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path           = "%s"
-  credentials    = "{\"test\":\"credentials\"}"
-  credentials_wo = "{\"test\":\"credentials_wo\"}"
+  path                   = "%s"
+  credentials_wo         = ""
+  credentials_wo_version = 1
 }
 `, path)
 }
