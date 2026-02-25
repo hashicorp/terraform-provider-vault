@@ -626,6 +626,7 @@ const (
 	FieldTokenBoundCIDRs          = "token_bound_cidrs"
 	FieldLocalSecretIDs           = "local_secret_ids"
 	FieldTokenNumUses             = "token_num_uses"
+	FieldTokenNoDefaultPolicy     = "token_no_default_policy"
 
 	FieldIntervalDuration                     = "interval_duration"
 	FieldMaintainStoredCertificateCounts      = "maintain_stored_certificate_counts"

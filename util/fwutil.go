@@ -30,27 +30,6 @@ func SetToCommaSeparatedString(ctx context.Context, set types.Set) (string, diag
 	return strings.Join(elements, ","), diags
 }
 
-// CommaSeparatedStringToSet converts a comma-separated string to a Terraform Set of strings.
-// This is useful when Vault API returns comma-separated strings but Terraform uses Set.
-// Returns null Set if the input string is empty.
-func CommaSeparatedStringToSet(ctx context.Context, s string) (types.Set, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	if s == "" {
-		return types.SetNull(types.StringType), diags
-	}
-
-	elements := strings.Split(s, ",")
-	// Trim whitespace from each element
-	for i, e := range elements {
-		elements[i] = strings.TrimSpace(e)
-	}
-
-	set, setDiags := types.SetValueFrom(ctx, types.StringType, elements)
-	diags.Append(setDiags...)
-	return set, diags
-}
-
 // StringSliceToSet converts a slice of strings to a Terraform Set of strings.
 // Returns null Set if the slice is nil or empty.
 func StringSliceToSet(ctx context.Context, slice []string) (types.Set, diag.Diagnostics) {
@@ -63,18 +42,4 @@ func StringSliceToSet(ctx context.Context, slice []string) (types.Set, diag.Diag
 	set, setDiags := types.SetValueFrom(ctx, types.StringType, slice)
 	diags.Append(setDiags...)
 	return set, diags
-}
-
-// SetToStringSlice converts a Terraform Set of strings to a slice of strings.
-// Returns nil if the set is null or unknown.
-func SetToStringSlice(ctx context.Context, set types.Set) ([]string, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	if set.IsNull() || set.IsUnknown() {
-		return nil, diags
-	}
-
-	var elements []string
-	diags.Append(set.ElementsAs(ctx, &elements, false)...)
-	return elements, diags
 }

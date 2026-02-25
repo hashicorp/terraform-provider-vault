@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccRadiusAuthBackend_basic(t *testing.T) {
@@ -23,32 +22,32 @@ func TestAccRadiusAuthBackend_basic(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "host", "127.0.0.1"),
-					resource.TestCheckResourceAttr(resourceName, "port", "1812"),
-					resource.TestCheckResourceAttr(resourceName, "dial_timeout", "10"),
-					resource.TestCheckResourceAttr(resourceName, "nas_port", "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "1812"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusDialTimeout, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusNASPort, "10"),
 				),
 			},
 			{
 				Config: testAccRadiusAuthBackendConfig_updated(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "host", "radius.example.com"),
-					resource.TestCheckResourceAttr(resourceName, "port", "1813"),
-					resource.TestCheckResourceAttr(resourceName, "dial_timeout", "15"),
-					resource.TestCheckResourceAttr(resourceName, "nas_port", "20"),
-					resource.TestCheckResourceAttr(resourceName, "unregistered_user_policies.#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "unregistered_user_policies.*", "default"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "unregistered_user_policies.*", "dev"),
-					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "radius.example.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "1813"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusDialTimeout, "15"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusNASPort, "20"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".*", "default"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".*", "dev"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "1200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "3000"),
 				),
 			},
 			{
@@ -57,7 +56,7 @@ func TestAccRadiusAuthBackend_basic(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateId:                        path,
 				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
-				ImportStateVerifyIgnore:              []string{"secret_wo", "secret_wo_version"},
+				ImportStateVerifyIgnore:              []string{consts.FieldRadiusSecretWO, consts.FieldRadiusSecretWOVersion},
 			},
 		},
 	})
@@ -69,15 +68,15 @@ func TestAccRadiusAuthBackend_secretWO(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_secretWO(path, "testsecret", 1),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "host", "127.0.0.1"),
-					resource.TestCheckResourceAttr(resourceName, "secret_wo_version", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusSecretWOVersion, "1"),
 					// Verify secret is not returned/stored in state
 					resource.TestCheckNoResourceAttr(resourceName, "secret"),
 				),
@@ -87,8 +86,8 @@ func TestAccRadiusAuthBackend_secretWO(t *testing.T) {
 				Config: testAccRadiusAuthBackendConfig_secretWO(path, "updatedsecret", 2),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "host", "127.0.0.1"),
-					resource.TestCheckResourceAttr(resourceName, "secret_wo_version", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusSecretWOVersion, "2"),
 				),
 			},
 			{
@@ -97,7 +96,7 @@ func TestAccRadiusAuthBackend_secretWO(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateId:                        path,
 				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
-				ImportStateVerifyIgnore:              []string{"secret_wo", "secret_wo_version"},
+				ImportStateVerifyIgnore:              []string{consts.FieldRadiusSecretWO, consts.FieldRadiusSecretWOVersion},
 			},
 		},
 	})
@@ -147,7 +146,7 @@ func TestAccRadiusAuthBackend_invalid(t *testing.T) {
 	path := acctest.RandomWithPrefix("radius-invalid")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			// Missing required host field
@@ -372,14 +371,14 @@ func TestAccRadiusAuthBackend_customDialTimeout(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_customDialTimeout(path, 30),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "dial_timeout", "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusDialTimeout, "30"),
 				),
 			},
 		},
@@ -392,14 +391,14 @@ func TestAccRadiusAuthBackend_customNASPort(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_customNASPort(path, 50),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "nas_port", "50"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusNASPort, "50"),
 				),
 			},
 		},
@@ -412,15 +411,15 @@ func TestAccRadiusAuthBackend_tokenTTL(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_tokenTTL(path, 3600, 14400),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "token_ttl", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "14400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "14400"),
 				),
 			},
 		},
@@ -433,17 +432,17 @@ func TestAccRadiusAuthBackend_tokenPolicies(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_tokenPolicies(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "3"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "token_policies.*", "policy1"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "token_policies.*", "policy2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "token_policies.*", "policy3"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenPolicies+".#", "3"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenPolicies+".*", "policy1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenPolicies+".*", "policy2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenPolicies+".*", "policy3"),
 				),
 			},
 		},
@@ -456,17 +455,17 @@ func TestAccRadiusAuthBackend_tokenBoundCIDRs(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_tokenBoundCIDRs(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "token_bound_cidrs.#", "3"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "token_bound_cidrs.*", "10.0.0.0/8"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "token_bound_cidrs.*", "172.16.0.0/12"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "token_bound_cidrs.*", "192.168.0.0/16"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenBoundCIDRs+".#", "3"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenBoundCIDRs+".*", "10.0.0.0/8"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenBoundCIDRs+".*", "172.16.0.0/12"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenBoundCIDRs+".*", "192.168.0.0/16"),
 				),
 			},
 		},
@@ -479,21 +478,21 @@ func TestAccRadiusAuthBackend_tokenNoDefaultPolicy(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_tokenNoDefaultPolicy(path, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "token_no_default_policy", "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNoDefaultPolicy, "true"),
 				),
 			},
 			{
 				Config: testAccRadiusAuthBackendConfig_tokenNoDefaultPolicy(path, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "token_no_default_policy", "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNoDefaultPolicy, "false"),
 				),
 			},
 		},
@@ -506,14 +505,14 @@ func TestAccRadiusAuthBackend_tokenNumUses(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_tokenNumUses(path, 10),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "token_num_uses", "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNumUses, "10"),
 				),
 			},
 		},
@@ -526,14 +525,14 @@ func TestAccRadiusAuthBackend_tokenPeriod(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_tokenPeriod(path, 3600),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "token_period", "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenPeriod, "3600"),
 				),
 			},
 		},
@@ -546,7 +545,7 @@ func TestAccRadiusAuthBackend_tokenType(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			// Test service token type
@@ -554,7 +553,7 @@ func TestAccRadiusAuthBackend_tokenType(t *testing.T) {
 				Config: testAccRadiusAuthBackendConfig_tokenType(path, "service"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "token_type", "service"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenType, "service"),
 				),
 			},
 			// Test batch token type
@@ -562,7 +561,7 @@ func TestAccRadiusAuthBackend_tokenType(t *testing.T) {
 				Config: testAccRadiusAuthBackendConfig_tokenType(path, "batch"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "token_type", "batch"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenType, "batch"),
 				),
 			},
 			// Test default token type
@@ -570,7 +569,7 @@ func TestAccRadiusAuthBackend_tokenType(t *testing.T) {
 				Config: testAccRadiusAuthBackendConfig_tokenType(path, "default"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "token_type", "default"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenType, "default"),
 				),
 			},
 		},
@@ -583,16 +582,16 @@ func TestAccRadiusAuthBackend_emptyUnregisteredUserPolicies(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_emptyUnregisteredUserPolicies(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "host", "127.0.0.1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
 					// Verify unregistered_user_policies is empty (not set)
-					resource.TestCheckResourceAttr(resourceName, "unregistered_user_policies.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".#", "0"),
 				),
 			},
 		},
@@ -605,18 +604,18 @@ func TestAccRadiusAuthBackend_zeroValues(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_zeroValues(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "host", "127.0.0.1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
 					// Verify zero values are accepted (meaning unlimited/default behavior)
-					resource.TestCheckResourceAttr(resourceName, "token_ttl", "0"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "0"),
-					resource.TestCheckResourceAttr(resourceName, "token_num_uses", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNumUses, "0"),
 				),
 			},
 		},
@@ -629,17 +628,17 @@ func TestAccRadiusAuthBackend_multiplePolicies(t *testing.T) {
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRadiusAuthBackendConfig_multiplePolicies(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "unregistered_user_policies.#", "3"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "unregistered_user_policies.*", "default"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "unregistered_user_policies.*", "readonly"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "unregistered_user_policies.*", "audit"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".#", "3"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".*", "default"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".*", "readonly"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".*", "audit"),
 				),
 			},
 		},
@@ -659,18 +658,18 @@ func TestAccRadiusAuthBackend_fullConfig(t *testing.T) {
 				Config: testAccRadiusAuthBackendConfig_full(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "host", "radius.example.com"),
-					resource.TestCheckResourceAttr(resourceName, "port", "1812"),
-					resource.TestCheckResourceAttr(resourceName, "dial_timeout", "30"),
-					resource.TestCheckResourceAttr(resourceName, "nas_port", "50"),
-					resource.TestCheckResourceAttr(resourceName, "unregistered_user_policies.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "token_ttl", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "7200"),
-					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "token_bound_cidrs.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "token_no_default_policy", "true"),
-					resource.TestCheckResourceAttr(resourceName, "token_num_uses", "5"),
-					resource.TestCheckResourceAttr(resourceName, "token_type", "service"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "radius.example.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "1812"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusDialTimeout, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusNASPort, "50"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "7200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenPolicies+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenBoundCIDRs+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNoDefaultPolicy, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNumUses, "5"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenType, "service"),
 				),
 			},
 			{
@@ -679,7 +678,7 @@ func TestAccRadiusAuthBackend_fullConfig(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateId:                        path,
 				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
-				ImportStateVerifyIgnore:              []string{"secret_wo", "secret_wo_version"},
+				ImportStateVerifyIgnore:              []string{consts.FieldRadiusSecretWO, consts.FieldRadiusSecretWOVersion},
 			},
 		},
 	})
