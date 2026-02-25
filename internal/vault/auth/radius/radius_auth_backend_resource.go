@@ -123,7 +123,6 @@ func (r *RadiusAuthBackendResource) Schema(ctx context.Context, req resource.Sch
 				ElementType:         types.StringType,
 				MarkdownDescription: "A set of policies to be granted to unregistered users.",
 				Optional:            true,
-				Computed:            true,
 			},
 			consts.FieldRadiusDialTimeout: schema.Int64Attribute{
 				MarkdownDescription: "Number of seconds to wait for a backend connection before timing out. Defaults to `10`.",
@@ -225,20 +224,12 @@ func (r *RadiusAuthBackendResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	// Save planned token values before populating from API.
-	// The shared token.PopulateTokenModelFromAPI treats 0/false as null,
-	// but we need to preserve explicit zero/false values from the plan.
-	plannedTokenModel := data.TokenModel
-
 	// Populate model from API response
 	populateDiags := r.populateDataModelFromApi(ctx, &data, configResp)
 	resp.Diagnostics.Append(populateDiags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// Restore explicit zero/false token values from the plan
-	r.preserveExplicitTokenValues(&data.TokenModel, &plannedTokenModel)
 
 	// Set path (used as resource identifier)
 	data.Path = types.StringValue(mountPath)
@@ -283,20 +274,12 @@ func (r *RadiusAuthBackendResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
-	// Save prior state token values before populating from API.
-	// The shared token.PopulateTokenModelFromAPI treats 0/false as null,
-	// but we need to preserve explicit zero/false values from the prior state.
-	priorTokenModel := data.TokenModel
-
 	// Populate model from API response
 	populateDiags := r.populateDataModelFromApi(ctx, &data, configResp)
 	resp.Diagnostics.Append(populateDiags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// Restore explicit zero/false token values from prior state
-	r.preserveExplicitTokenValues(&data.TokenModel, &priorTokenModel)
 
 	// Update state
 	data.Path = types.StringValue(mountPath)
@@ -360,20 +343,12 @@ func (r *RadiusAuthBackendResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	// Save planned token values before populating from API.
-	// The shared token.PopulateTokenModelFromAPI treats 0/false as null,
-	// but we need to preserve explicit zero/false values from the plan.
-	plannedTokenModel := data.TokenModel
-
 	// Populate model from API response
 	populateDiags := r.populateDataModelFromApi(ctx, &data, configResp)
 	resp.Diagnostics.Append(populateDiags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// Restore explicit zero/false token values from the plan
-	r.preserveExplicitTokenValues(&data.TokenModel, &plannedTokenModel)
 
 	data.Path = types.StringValue(mountPath)
 
@@ -484,10 +459,9 @@ func (r *RadiusAuthBackendResource) getApiModel(ctx context.Context, data *Radiu
 		vaultRequest[consts.FieldRadiusNASPort] = data.NASPort.ValueInt64()
 	}
 
-	// Add unregistered_user_policies as comma-separated string (Vault API requirement)
-	if policiesStr != "" {
-		vaultRequest[consts.FieldRadiusUnregisteredUserPolicies] = policiesStr
-	}
+	// Always send unregistered_user_policies as comma-separated string (Vault API requirement)
+	// Empty string clears policies, non-empty string sets them
+	vaultRequest[consts.FieldRadiusUnregisteredUserPolicies] = policiesStr
 
 	return vaultRequest, diags
 }
@@ -527,39 +501,4 @@ func (r *RadiusAuthBackendResource) populateDataModelFromApi(ctx context.Context
 	diags.Append(tokenDiags...)
 
 	return diags
-}
-
-// preserveExplicitTokenValues restores explicit zero/false token values from the source model.
-// The shared token.PopulateTokenModelFromAPI function treats 0/false as "not set" and returns null,
-// but when users explicitly set token_ttl=0, token_no_default_policy=false, etc., we need to
-// preserve those values to avoid "inconsistent result after apply" errors.
-//
-// This function checks: if the source had an explicit value (not null) and the current became null
-// (because the API returned 0/false which was converted to null), restore the source value.
-func (r *RadiusAuthBackendResource) preserveExplicitTokenValues(current *token.TokenModel, source *token.TokenModel) {
-	if source == nil || current == nil {
-		return
-	}
-
-	// Int64 fields: preserve explicit zero values
-	if !source.TokenTTL.IsNull() && current.TokenTTL.IsNull() {
-		current.TokenTTL = source.TokenTTL
-	}
-	if !source.TokenMaxTTL.IsNull() && current.TokenMaxTTL.IsNull() {
-		current.TokenMaxTTL = source.TokenMaxTTL
-	}
-	if !source.TokenExplicitMaxTTL.IsNull() && current.TokenExplicitMaxTTL.IsNull() {
-		current.TokenExplicitMaxTTL = source.TokenExplicitMaxTTL
-	}
-	if !source.TokenNumUses.IsNull() && current.TokenNumUses.IsNull() {
-		current.TokenNumUses = source.TokenNumUses
-	}
-	if !source.TokenPeriod.IsNull() && current.TokenPeriod.IsNull() {
-		current.TokenPeriod = source.TokenPeriod
-	}
-
-	// Bool fields: preserve explicit false values
-	if !source.TokenNoDefaultPolicy.IsNull() && current.TokenNoDefaultPolicy.IsNull() {
-		current.TokenNoDefaultPolicy = source.TokenNoDefaultPolicy
-	}
 }
