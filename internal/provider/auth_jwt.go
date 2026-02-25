@@ -47,6 +47,12 @@ func GetJWTLoginSchemaResource(authField string) *schema.Resource {
 				Optional:    true,
 				Description: "A signed JSON Web Token.",
 			},
+			consts.FieldDistributedClaimAccessToken: {
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
+				Description: "An optional token used to fetch group memberships specified by the distributed claim source in the jwt. This is supported only on Azure/Entra ID. Requires Vault 1.18+.",
+			},
 		},
 	}, authField, consts.MountTypeJWT)
 }
@@ -75,6 +81,11 @@ func (l *AuthLoginJWT) Init(d *schema.ResourceData, authField string) (AuthLogin
 		{
 			field:      consts.FieldJWT,
 			envVars:    []string{consts.EnvVarVaultAuthJWT},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldDistributedClaimAccessToken,
+			envVars:    []string{consts.EnvVarVaultAuthDistributedClaimAccessToken},
 			defaultVal: "",
 		},
 	}
