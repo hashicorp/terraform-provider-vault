@@ -19,6 +19,7 @@ import (
 
 func TestGCPKMSSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
+	credentials, _ := testutil.GetTestGCPKMSCreds(t)
 
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
@@ -28,14 +29,14 @@ func TestGCPKMSSecretBackend_basic(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPKMSSecretBackend_initialConfig(path),
+				Config: testGCPKMSSecretBackend_initialConfig(path, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{
-				Config: testGCPKMSSecretBackend_updateConfig(path),
+				Config: testGCPKMSSecretBackend_updateConfig(path, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldScopes+".#", "2"),
@@ -51,6 +52,7 @@ func TestGCPKMSSecretBackend_basic(t *testing.T) {
 
 func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
+	credentials, _ := testutil.GetTestGCPKMSCreds(t)
 
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
@@ -60,7 +62,7 @@ func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPKMSSecretBackend_writeOnlyConfig(path),
+				Config: testGCPKMSSecretBackend_writeOnlyConfig(path, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "1"),
@@ -68,7 +70,7 @@ func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
 				),
 			},
 			{
-				Config: testGCPKMSSecretBackend_writeOnlyUpdateConfig(path),
+				Config: testGCPKMSSecretBackend_writeOnlyUpdateConfig(path, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "2"),
@@ -108,7 +110,7 @@ func TestGCPKMSSecretBackend_emptyCredentials(t *testing.T) {
 	})
 }
 
-func testGCPKMSSecretBackend_initialConfig(path string) string {
+func testGCPKMSSecretBackend_initialConfig(path, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path                   = "%s"
@@ -117,10 +119,10 @@ resource "vault_gcpkms_secret_backend" "test" {
 EOT
   credentials_wo_version = 1
 }
-`, path, getMockGCPCredentials())
+`, path, credentials)
 }
 
-func testGCPKMSSecretBackend_updateConfig(path string) string {
+func testGCPKMSSecretBackend_updateConfig(path, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path                   = "%s"
@@ -133,10 +135,10 @@ EOT
     "https://www.googleapis.com/auth/cloudkms"
   ]
 }
-`, path, getMockGCPCredentials())
+`, path, credentials)
 }
 
-func testGCPKMSSecretBackend_writeOnlyConfig(path string) string {
+func testGCPKMSSecretBackend_writeOnlyConfig(path, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path                   = "%s"
@@ -145,10 +147,10 @@ resource "vault_gcpkms_secret_backend" "test" {
 EOT
   credentials_wo_version = 1
 }
-`, path, getMockGCPCredentials())
+`, path, credentials)
 }
 
-func testGCPKMSSecretBackend_writeOnlyUpdateConfig(path string) string {
+func testGCPKMSSecretBackend_writeOnlyUpdateConfig(path, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path                   = "%s"
@@ -157,7 +159,7 @@ resource "vault_gcpkms_secret_backend" "test" {
 EOT
   credentials_wo_version = 2
 }
-`, path, getMockGCPCredentials())
+`, path, credentials)
 }
 
 func testGCPKMSSecretBackend_noCredentialsConfig(path string) string {

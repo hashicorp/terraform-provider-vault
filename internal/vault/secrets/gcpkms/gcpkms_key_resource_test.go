@@ -18,12 +18,10 @@ import (
 )
 
 func TestGCPKMSSecretBackendKey_basic(t *testing.T) {
-	// Skip if environment variables are not set
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
-	keyRing := getMockKeyRing()
 
 	resourceType := "vault_gcpkms_secret_backend_key"
 	resourceName := resourceType + ".test"
@@ -33,7 +31,7 @@ func TestGCPKMSSecretBackendKey_basic(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing),
+				Config: testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
@@ -56,12 +54,10 @@ func TestGCPKMSSecretBackendKey_basic(t *testing.T) {
 }
 
 func TestGCPKMSSecretBackendKey_update(t *testing.T) {
-	// Skip if environment variables are not set
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
-	keyRing := getMockKeyRing()
 
 	resourceType := "vault_gcpkms_secret_backend_key"
 	resourceName := resourceType + ".test"
@@ -71,7 +67,7 @@ func TestGCPKMSSecretBackendKey_update(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing),
+				Config: testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
@@ -79,7 +75,7 @@ func TestGCPKMSSecretBackendKey_update(t *testing.T) {
 				),
 			},
 			{
-				Config: testGCPKMSSecretBackendKey_updateConfig(path, keyName, keyRing),
+				Config: testGCPKMSSecretBackendKey_updateConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
@@ -91,12 +87,10 @@ func TestGCPKMSSecretBackendKey_update(t *testing.T) {
 }
 
 func TestGCPKMSSecretBackendKey_withCryptoKey(t *testing.T) {
-	// Test using a custom crypto_key name instead of defaulting to the Vault key name
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
-	keyRing := getMockKeyRing()
 	// Use a unique crypto key name to avoid conflicts
 	cryptoKeyName := acctest.RandomWithPrefix("crypto-key")
 
@@ -108,7 +102,7 @@ func TestGCPKMSSecretBackendKey_withCryptoKey(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPKMSSecretBackendKey_cryptoKeyConfig(path, keyName, keyRing, cryptoKeyName),
+				Config: testGCPKMSSecretBackendKey_cryptoKeyConfig(path, keyName, keyRing, cryptoKeyName, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
@@ -124,12 +118,10 @@ func TestGCPKMSSecretBackendKey_withCryptoKey(t *testing.T) {
 }
 
 func TestGCPKMSSecretBackendKey_signingKey(t *testing.T) {
-	// Skip if environment variables are not set
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-sign-key")
-	keyRing := getMockKeyRing()
 
 	resourceType := "vault_gcpkms_secret_backend_key"
 	resourceName := resourceType + ".test"
@@ -139,7 +131,7 @@ func TestGCPKMSSecretBackendKey_signingKey(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPKMSSecretBackendKey_signingConfig(path, keyName, keyRing),
+				Config: testGCPKMSSecretBackendKey_signingConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
@@ -153,12 +145,10 @@ func TestGCPKMSSecretBackendKey_signingKey(t *testing.T) {
 }
 
 func TestGCPKMSSecretBackendKey_labels(t *testing.T) {
-	// Skip if environment variables are not set
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
-	keyRing := getMockKeyRing()
 
 	resourceType := "vault_gcpkms_secret_backend_key"
 	resourceName := resourceType + ".test"
@@ -168,7 +158,7 @@ func TestGCPKMSSecretBackendKey_labels(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPKMSSecretBackendKey_labelsConfig(path, keyName, keyRing),
+				Config: testGCPKMSSecretBackendKey_labelsConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLabels+".%", "2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLabels+".env", "test"),
@@ -180,6 +170,8 @@ func TestGCPKMSSecretBackendKey_labels(t *testing.T) {
 }
 
 func TestGCPKMSSecretBackendKey_validation(t *testing.T) {
+	credentials, _ := testutil.GetTestGCPKMSCreds(t)
+
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
 
@@ -188,14 +180,14 @@ func TestGCPKMSSecretBackendKey_validation(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testGCPKMSSecretBackendKey_missingRequiredConfig(path, keyName),
+				Config:      testGCPKMSSecretBackendKey_missingRequiredConfig(path, keyName, credentials),
 				ExpectError: regexp.MustCompile(`The argument "key_ring" is required`),
 			},
 		},
 	})
 }
 
-func testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing string) string {
+func testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path                   = "%s"
@@ -214,10 +206,10 @@ resource "vault_gcpkms_secret_backend_key" "test" {
   protection_level = "software"
   rotation_period  = "2592000s"
 }
-`, path, getMockGCPCredentials(), keyName, keyRing)
+`, path, credentials, keyName, keyRing)
 }
 
-func testGCPKMSSecretBackendKey_updateConfig(path, keyName, keyRing string) string {
+func testGCPKMSSecretBackendKey_updateConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path                   = "%s"
@@ -236,10 +228,10 @@ resource "vault_gcpkms_secret_backend_key" "test" {
   protection_level = "software"
   rotation_period  = "3600000s"
 }
-`, path, getMockGCPCredentials(), keyName, keyRing)
+`, path, credentials, keyName, keyRing)
 }
 
-func testGCPKMSSecretBackendKey_cryptoKeyConfig(path, keyName, keyRing, cryptoKeyName string) string {
+func testGCPKMSSecretBackendKey_cryptoKeyConfig(path, keyName, keyRing, cryptoKeyName, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path        = "%s"
@@ -258,10 +250,10 @@ resource "vault_gcpkms_secret_backend_key" "test" {
   algorithm        = "symmetric_encryption"
   protection_level = "software"
 }
-`, path, getMockGCPCredentials(), keyName, keyRing, cryptoKeyName)
+`, path, credentials, keyName, keyRing, cryptoKeyName)
 }
 
-func testGCPKMSSecretBackendKey_signingConfig(path, keyName, keyRing string) string {
+func testGCPKMSSecretBackendKey_signingConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path                   = "%s"
@@ -279,10 +271,10 @@ resource "vault_gcpkms_secret_backend_key" "test" {
   algorithm        = "rsa_sign_pss_2048_sha256"
   protection_level = "software"
 }
-`, path, getMockGCPCredentials(), keyName, keyRing)
+`, path, credentials, keyName, keyRing)
 }
 
-func testGCPKMSSecretBackendKey_labelsConfig(path, keyName, keyRing string) string {
+func testGCPKMSSecretBackendKey_labelsConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path                   = "%s"
@@ -304,10 +296,10 @@ resource "vault_gcpkms_secret_backend_key" "test" {
     managed-by = "terraform"
   }
 }
-`, path, getMockGCPCredentials(), keyName, keyRing)
+`, path, credentials, keyName, keyRing)
 }
 
-func testGCPKMSSecretBackendKey_conflictConfig(path, keyName, keyRing, cryptoKey string) string {
+func testGCPKMSSecretBackendKey_conflictConfig(path, keyName, keyRing, cryptoKey, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path                   = "%s"
@@ -325,10 +317,10 @@ resource "vault_gcpkms_secret_backend_key" "test" {
   purpose    = "encrypt_decrypt"
   algorithm  = "symmetric_encryption"
 }
-`, path, getMockGCPCredentials(), keyName, keyRing, cryptoKey)
+`, path, credentials, keyName, keyRing, cryptoKey)
 }
 
-func testGCPKMSSecretBackendKey_missingRequiredConfig(path, keyName string) string {
+func testGCPKMSSecretBackendKey_missingRequiredConfig(path, keyName, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
   path                   = "%s"
@@ -343,5 +335,5 @@ resource "vault_gcpkms_secret_backend_key" "test" {
   name    = "%s"
   # Missing both key_ring and crypto_key
 }
-`, path, getMockGCPCredentials(), keyName)
+`, path, credentials, keyName)
 }
