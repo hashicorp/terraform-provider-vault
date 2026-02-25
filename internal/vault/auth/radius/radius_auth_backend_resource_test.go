@@ -472,7 +472,8 @@ func TestAccRadiusAuthBackend_tokenBoundCIDRs(t *testing.T) {
 	})
 }
 
-// TestAccRadiusAuthBackend_tokenNoDefaultPolicy tests token_no_default_policy configuration
+// TestAccRadiusAuthBackend_tokenNoDefaultPolicy tests token_no_default_policy configuration.
+// Step 1 sets token_no_default_policy = true, Step 2 removes it from config to reset to default.
 func TestAccRadiusAuthBackend_tokenNoDefaultPolicy(t *testing.T) {
 	path := acctest.RandomWithPrefix("radius-nodefault")
 	resourceName := "vault_radius_auth_backend.test"
@@ -482,17 +483,17 @@ func TestAccRadiusAuthBackend_tokenNoDefaultPolicy(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRadiusAuthBackendConfig_tokenNoDefaultPolicy(path, true),
+				Config: testAccRadiusAuthBackendConfig_withTokenNoDefaultPolicy(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNoDefaultPolicy, "true"),
 				),
 			},
 			{
-				Config: testAccRadiusAuthBackendConfig_tokenNoDefaultPolicy(path, false),
+				Config: testAccRadiusAuthBackendConfig_withoutTokenNoDefaultPolicy(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNoDefaultPolicy, "false"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldTokenNoDefaultPolicy),
 				),
 			},
 		},
@@ -734,16 +735,27 @@ resource "vault_radius_auth_backend" "test" {
 `, path)
 }
 
-func testAccRadiusAuthBackendConfig_tokenNoDefaultPolicy(path string, noDefault bool) string {
+func testAccRadiusAuthBackendConfig_withTokenNoDefaultPolicy(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
   path                    = "%s"
   host                    = "127.0.0.1"
   secret_wo               = "testsecret"
   secret_wo_version       = 1
-  token_no_default_policy = %t
+  token_no_default_policy = true
 }
-`, path, noDefault)
+`, path)
+}
+
+func testAccRadiusAuthBackendConfig_withoutTokenNoDefaultPolicy(path string) string {
+	return fmt.Sprintf(`
+resource "vault_radius_auth_backend" "test" {
+  path              = "%s"
+  host              = "127.0.0.1"
+  secret_wo         = "testsecret"
+  secret_wo_version = 1
+}
+`, path)
 }
 
 func testAccRadiusAuthBackendConfig_tokenNumUses(path string, numUses int) string {
