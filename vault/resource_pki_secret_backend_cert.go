@@ -207,6 +207,13 @@ func pkiSecretBackendCertResource() *schema.Resource {
 					"serial number. The role's no_store_metadata must be set to false, " +
 					"otherwise an error is returned when specified.",
 			},
+			consts.FieldRemoveRootsFromChain: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				ForceNew:    true,
+				Description: "If true, the returned ca_chain field will not include any self-signed CA certificates. Useful if end-users already have the root CA in their trust store.",
+			},
 		},
 	}
 }
@@ -234,6 +241,7 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 
 	certBooleanAPIFields := []string{
 		consts.FieldExcludeCNFromSans,
+		consts.FieldRemoveRootsFromChain,
 	}
 
 	certStringArrayAPIFields := []string{
