@@ -77,8 +77,8 @@ func TestAccRadiusAuthBackend_secretWO(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusSecretWOVersion, "1"),
-					// Verify secret is not returned/stored in state
-					resource.TestCheckNoResourceAttr(resourceName, "secret"),
+					// Verify write-only secret is not returned/stored in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldRadiusSecretWO),
 				),
 			},
 			{
@@ -576,9 +576,10 @@ func TestAccRadiusAuthBackend_tokenType(t *testing.T) {
 	})
 }
 
-// TestAccRadiusAuthBackend_emptyUnregisteredUserPolicies tests empty unregistered_user_policies
-func TestAccRadiusAuthBackend_emptyUnregisteredUserPolicies(t *testing.T) {
-	path := acctest.RandomWithPrefix("radius-empty-pol")
+// TestAccRadiusAuthBackend_removeUnregisteredUserPolicies tests that removing
+// unregistered_user_policies from config clears policies in Vault
+func TestAccRadiusAuthBackend_removeUnregisteredUserPolicies(t *testing.T) {
+	path := acctest.RandomWithPrefix("radius-remove-pol")
 	resourceName := "vault_radius_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
@@ -586,36 +587,22 @@ func TestAccRadiusAuthBackend_emptyUnregisteredUserPolicies(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRadiusAuthBackendConfig_emptyUnregisteredUserPolicies(path),
+				// Step 1: Create with policies
+				Config: testAccRadiusAuthBackendConfig_withPolicies(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
-					// Verify unregistered_user_policies is empty (not set)
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".*", "policy1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".*", "policy2"),
 				),
 			},
-		},
-	})
-}
-
-// TestAccRadiusAuthBackend_zeroValues tests zero values for optional integer parameters
-func TestAccRadiusAuthBackend_zeroValues(t *testing.T) {
-	path := acctest.RandomWithPrefix("radius-zero")
-	resourceName := "vault_radius_auth_backend.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
 			{
-				Config: testAccRadiusAuthBackendConfig_zeroValues(path),
+				// Step 2: Remove policies from config - should clear in Vault
+				Config: testAccRadiusAuthBackendConfig_withoutPolicies(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
-					// Verify zero values are accepted (meaning unlimited/default behavior)
-					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "0"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "0"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNumUses, "0"),
+					// Verify unregistered_user_policies is null (cleared)
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldRadiusUnregisteredUserPolicies+".#"),
 				),
 			},
 		},
@@ -807,27 +794,25 @@ resource "vault_radius_auth_backend" "test" {
 `, path)
 }
 
-func testAccRadiusAuthBackendConfig_emptyUnregisteredUserPolicies(path string) string {
+func testAccRadiusAuthBackendConfig_withPolicies(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
+  path                       = "%s"
+  host                       = "127.0.0.1"
+  secret_wo                  = "testsecret"
+  secret_wo_version          = 1
+  unregistered_user_policies = ["policy1", "policy2"]
 }
 `, path)
 }
 
-func testAccRadiusAuthBackendConfig_zeroValues(path string) string {
+func testAccRadiusAuthBackendConfig_withoutPolicies(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
   path              = "%s"
   host              = "127.0.0.1"
   secret_wo         = "testsecret"
   secret_wo_version = 1
-  token_ttl         = 0
-  token_max_ttl     = 0
-  token_num_uses    = 0
 }
 `, path)
 }

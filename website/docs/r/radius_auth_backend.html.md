@@ -33,7 +33,7 @@ resource "vault_radius_auth_backend" "example" {
   port                       = 1812
   secret_wo                  = "supersecretpassword"
   secret_wo_version          = 1
-  unregistered_user_policies = "default,guest"
+  unregistered_user_policies = ["default", "guest"]
   dial_timeout               = 10
   nas_port                   = 10
 
