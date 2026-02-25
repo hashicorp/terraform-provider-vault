@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cloudfoundry"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
+	kerberosauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/kerberos"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/userpass"
 	ephemeralgeneric "github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
@@ -281,6 +282,9 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		keymgmt.NewReplicateKeyResource,
 		alicloud.NewAliCloudSecretBackendResource,
 		alicloud.NewAliCloudSecretBackendRoleResource,
+		kerberosauth.NewKerberosAuthBackendConfigResource,
+		//kerberosauth.NewKerberosAuthBackendLDAPConfigResource,
+		//kerberosauth.NewKerberosAuthBackendGroupResource,
 	}, testResources()...)
 }
 
@@ -305,6 +309,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
 		ephemeralauth.NewTokenEphemeralResource,
 		ephemeralgeneric.NewGenericEndpointEphemeralResource,
+		//ephemeralauth.NewKerberosAuthBackendLoginEphemeralResource,
 	}
 }
 
@@ -319,5 +324,9 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,
+		//kerberosauth.NewKerberosAuthBackendConfigDataSource,
+		//kerberosauth.NewKerberosAuthBackendLDAPConfigDataSource,
+		//kerberosauth.NewKerberosAuthBackendGroupDataSource,
+		//kerberosauth.NewKerberosAuthBackendGroupsDataSource,
 	}
 }
