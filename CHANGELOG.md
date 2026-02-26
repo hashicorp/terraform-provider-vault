@@ -2,6 +2,7 @@
 
 FEATURES : 
 * **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
+* `vault_secrets_sync_aws_destination`: Add support for Workload Identity Federation (WIF) fields `identity_token_audience`, `identity_token_ttl`, and `identity_token_key` to enable token-based authentication with AWS. Requires Vault 2.0.0+. ([#2792](https://github.com/hashicorp/terraform-provider-vault/pull/2792))
 
 IMPROVEMENTS:
 
