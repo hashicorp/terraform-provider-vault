@@ -150,6 +150,10 @@ BUGS:
   * `vault_saml_auth_backend` resource ([#2566](https://github.com/hashicorp/terraform-provider-vault/pull/2566))
   * `vault_gcp_auth_backend` and `vault_oci_auth_backend` resources ([#2596](https://github.com/hashicorp/terraform-provider-vault/pull/2596))
 
+BUGS:
+
+* Fix panic when creating `vault_kv_secret_v2` resource without specifying either `data_json` or `data_json_wo`. The provider now returns a proper validation error instead of crashing.
+
 ## 5.3.0 (Sep 4, 2025)
 
 FEATURES:
