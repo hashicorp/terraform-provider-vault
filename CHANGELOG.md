@@ -13,6 +13,10 @@ IMPROVEMENTS:
 * `vault_pki_secret_backend_root_sign_intermediate`: Add version check for `key_usage` field to ensure compatibility with Vault 1.19.2+ for configuring X.509 key usage constraints on intermediate CA certificates. ([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 * `provider/auth_jwt`: Add support for `distributed_claim_access_token` field in the `auth_login_jwt` configuration block. ([#2782](https://github.com/hashicorp/terraform-provider-vault/pull/2782))
 
+BUG FIXES:
+
+* `provider/auth_login`: Fix "Missing Region" error when using generic `auth_login` block for AWS authentication without explicit `sts_region` parameter. The provider now properly resolves AWS region from environment variables (`AWS_REGION`, `AWS_DEFAULT_REGION`) and EC2 instance metadata service (IMDS), consistent with `auth_login_aws` behavior. ([#2786](https://github.com/hashicorp/terraform-provider-vault/issues/2786))
+
 ## 5.7.0 (February 5, 2026)
 
 FEATURES:
