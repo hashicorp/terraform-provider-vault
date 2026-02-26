@@ -42,7 +42,7 @@ func buildGCPSyncWriteFields(meta interface{}) []string {
 		}...)
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion122) {
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
 		fields = append(fields,
 			consts.FieldIdentityTokenAudience,
 			consts.FieldIdentityTokenTTL,
@@ -77,12 +77,10 @@ func buildGCPSyncReadFields(meta interface{}) []string {
 		}...)
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion122) {
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
 		fields = append(fields,
-			consts.FieldIdentityTokenAudience,
 			consts.FieldIdentityTokenTTL,
 			consts.FieldServiceAccountEmail,
-			consts.FieldIdentityTokenKey,
 		)
 	}
 

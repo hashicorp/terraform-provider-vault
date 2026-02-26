@@ -82,6 +82,20 @@ resource "vault_secrets_sync_gcp_destination" "gcp_replication_encryption" {
 }
 ```
 
+### Using Workload Identity Federation (Vault 2.0.0+)
+
+```hcl
+resource "vault_secrets_sync_gcp_destination" "gcp_wif" {
+  name                    = "gcp-dest-wif"
+  service_account_email   = var.service_account_email
+  identity_token_audience = var.identity_token_audience
+  identity_token_ttl      = 3600
+  identity_token_key      = "my-key"
+  granularity             = "secret-path"
+}
+```
+
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -108,6 +122,19 @@ The following arguments are supported:
   overrides the project ID derived from the service account JSON credentials or application
   default credentials. The service account must be [authorized](https://cloud.google.com/iam/docs/service-account-overview#locations)
   to perform Secret Manager actions in the target project.
+
+### Workload Identity Federation (Vault 2.0.0+)
+
+* `service_account_email` – (Optional) Service Account to impersonate for secrets sync workload identity federation.
+  Required with `identity_token_audience`. Requires Vault 2.0.0+. *Available only for Vault Enterprise*.
+
+* `identity_token_audience` - (Optional) The audience claim value for secrets sync identity
+  tokens. Must match an allowed audience configured for the target [Workload Identity Pool](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#prepare).
+  Mutually exclusive with `credentials`.  Requires Vault 2.0.0+. *Available only for Vault Enterprise*.
+
+* `identity_token_ttl` - (Optional) The TTL of generated tokens. Defaults to
+  1 hour. Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
+  Requires Vault 2.0.0+. *Available only for Vault Enterprise*.
 
 ### Networking Configuration (Vault 1.19+)
 
