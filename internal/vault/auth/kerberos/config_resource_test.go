@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/vault/api"
 )
 
 const (
@@ -228,6 +229,49 @@ func TestAccKerberosAuthBackendConfig_runtimeErrors(t *testing.T) {
 			{
 				Config:      testAccKerberosAuthBackendConfigConfig_nonExistentBackend(nonExistentPath, serviceAccount),
 				ExpectError: regexp.MustCompile(`error writing|no handler for route|unsupported path`),
+			},
+		},
+	})
+}
+
+// TestAccKerberosAuthBackendConfig_configNotFound tests the config not found scenario
+func TestAccKerberosAuthBackendConfig_configNotFound(t *testing.T) {
+	path := acctest.RandomWithPrefix("kerberos")
+	serviceAccount := "vault/localhost@EXAMPLE.COM"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create a valid configuration
+			{
+				Config: testAccKerberosAuthBackendConfigConfig_basic(path, serviceAccount),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldPath, path),
+				),
+			},
+			// Step 2: Test config not found (lines 195-200)
+			// Delete the config but keep the backend, then try to refresh
+			{
+				PreConfig: func() {
+					// Get a Vault client and recreate backend without config
+					client, err := api.NewClient(api.DefaultConfig())
+					if err != nil {
+						t.Fatalf("failed to create client: %v", err)
+					}
+					// Disable the auth backend
+					if err := client.Sys().DisableAuth(path); err != nil {
+						t.Logf("Warning: failed to disable auth mount: %v", err)
+					}
+					// Re-enable it without configuration
+					if err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
+						Type: "kerberos",
+					}); err != nil {
+						t.Fatalf("failed to enable auth mount: %v", err)
+					}
+				},
+				Config:      testAccKerberosAuthBackendConfigConfig_basic(path, serviceAccount),
+				ExpectError: regexp.MustCompile(`Kerberos auth backend config not found`),
 			},
 		},
 	})
