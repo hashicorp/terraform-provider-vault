@@ -11,6 +11,7 @@ IMPROVEMENTS:
 * `vault_ssh_secret_backend_role`: Add support for fields (`default_extensions_template`, `exclude_cidr_list`, `port`) and improve handling of key-type-specific fields (`default_extensions`, `default_extensions_template`, `exclude_cidr_list`, `port`) to prevent drift. Fields that are not applicable to a role's key type (CA or OTP) are now conditionally set in state only when returned by Vault, preventing perpetual drift when users configure fields that Vault ignores. CA key type supports: `default_extensions`, `default_extensions_template`. OTP key type supports: `port`, `exclude_cidr_list`. ([#2747](https://github.com/hashicorp/terraform-provider-vault/pull/2747))
 * `vault_pki_secret_backend_root_cert`: Add support for `use_pss` and `key_usage` fields to configure PSS signature scheme and X.509 key usage constraints for root CA certificates. Requires Vault 1.18.0+ and 1.19.2+ respectively.([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 * `vault_pki_secret_backend_root_sign_intermediate`: Add version check for `key_usage` field to ensure compatibility with Vault 1.19.2+ for configuring X.509 key usage constraints on intermediate CA certificates. ([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
+* `provider/auth_jwt`: Add support for `distributed_claim_access_token` field in the `auth_login_jwt` configuration block. ([#2782](https://github.com/hashicorp/terraform-provider-vault/pull/2782))
 
 ## 5.7.0 (February 5, 2026)
 
