@@ -67,6 +67,42 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 	})
 }
 
+func TestGCPSecretsSyncDestinationWIF(t *testing.T) {
+
+	resourceName := "vault_secrets_sync_gcp_destination.test"
+
+	values := testutil.SkipTestEnvUnset(t, "IDENTITY_TOKEN_AUDIENCE", "GCP_SERVICE_ACCOUNT_EMAIL", "GCP_PROJECT_ID", "GCP_DESTINATION_NAME")
+	audience := values[0]
+	service_account_email := values[1]
+	project_id := values[2]
+	destName := values[3]
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion200)
+		}, PreventPostDestroyRefresh: true,
+		Steps: []resource.TestStep{
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
+				},
+				Config: testGCPSecretsSyncDestinationWIFConfig_initial(destName, project_id, service_account_email, audience),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project_id),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, audience),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, service_account_email),
+				),
+			},
+		},
+	})
+}
+
 func testGCPSecretsSyncDestinationConfig_initial(credentials, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_gcp_destination" "test" {
@@ -79,6 +115,18 @@ resource "vault_secrets_sync_gcp_destination" "test" {
 `, destName, credentials, testSecretsSyncDestinationCommonConfig(templ, false, true, false))
 
 	return ret
+}
+
+func testGCPSecretsSyncDestinationWIFConfig_initial(destName, project_id, service_account_email, audience string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                    = "%s"
+  granularity			   = "secret-path"
+  project_id				= "%s"
+  service_account_email   = "%s"
+  identity_token_audience = "%s"
+  identity_token_ttl      = 30
+}`, destName, project_id, service_account_email, audience)
 }
 
 func testGCPSecretsSyncDestinationConfig_updated(credentials, destName, templ string) string {
