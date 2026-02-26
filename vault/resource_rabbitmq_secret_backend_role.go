@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -289,8 +290,17 @@ func expandRabbitMQSecretBackendRoleVhostTopic(vhost []interface{}) (string, err
 
 func flattenRabbitMQSecretBackendRoleVhost(vhost map[string]interface{}) []map[string]interface{} {
 	var vhosts []map[string]interface{}
-	for id, val := range vhost {
-		vals := val.(map[string]interface{})
+
+	// Get sorted keys
+	keys := make([]string, 0, len(vhost))
+	for k := range vhost {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// Process in sorted order
+	for _, id := range keys {
+		vals := vhost[id].(map[string]interface{})
 		vhosts = append(vhosts, map[string]interface{}{
 			"host":      id,
 			"configure": vals["configure"],
