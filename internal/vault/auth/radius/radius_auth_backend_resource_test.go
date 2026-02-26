@@ -5,6 +5,7 @@ package radius_test
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 
@@ -56,47 +57,7 @@ func TestAccRadiusAuthBackend_basic(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateId:                        path,
 				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
-				ImportStateVerifyIgnore:              []string{consts.FieldRadiusSecretWO, consts.FieldRadiusSecretWOVersion},
-			},
-		},
-	})
-}
-
-func TestAccRadiusAuthBackend_secretWO(t *testing.T) {
-	path := acctest.RandomWithPrefix("radius-wo")
-	resourceType := "vault_radius_auth_backend"
-	resourceName := resourceType + ".test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccRadiusAuthBackendConfig_secretWO(path, "testsecret", 1),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusSecretWOVersion, "1"),
-					// Verify write-only secret is not returned/stored in state
-					resource.TestCheckNoResourceAttr(resourceName, consts.FieldRadiusSecretWO),
-				),
-			},
-			{
-				// Update write-only secret by changing version
-				Config: testAccRadiusAuthBackendConfig_secretWO(path, "updatedsecret", 2),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRadiusSecretWOVersion, "2"),
-				),
-			},
-			{
-				ResourceName:                         resourceName,
-				ImportState:                          true,
-				ImportStateVerify:                    true,
-				ImportStateId:                        path,
-				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
-				ImportStateVerifyIgnore:              []string{consts.FieldRadiusSecretWO, consts.FieldRadiusSecretWOVersion},
+				ImportStateVerifyIgnore:              []string{consts.FieldRadiusSecretWO},
 			},
 		},
 	})
@@ -105,10 +66,9 @@ func TestAccRadiusAuthBackend_secretWO(t *testing.T) {
 func testAccRadiusAuthBackendConfig_basic(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
+  path      = "%s"
+  host      = "127.0.0.1"
+  secret_wo = "testsecret"
 }
 `, path)
 }
@@ -120,7 +80,6 @@ resource "vault_radius_auth_backend" "test" {
   host                       = "radius.example.com"
   port                       = 1813
   secret_wo                  = "updatedsecret"
-  secret_wo_version          = 2
   unregistered_user_policies = ["default", "dev"]
   dial_timeout               = 15
   nas_port                   = 20
@@ -130,15 +89,26 @@ resource "vault_radius_auth_backend" "test" {
 `, path)
 }
 
-func testAccRadiusAuthBackendConfig_secretWO(path, secret string, version int) string {
-	return fmt.Sprintf(`
-resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "%s"
-  secret_wo_version = %d
-}
-`, path, secret, version)
+// TestAccRadiusAuthBackend_secretWO tests that the write-only secret_wo attribute is not stored in state
+func TestAccRadiusAuthBackend_secretWO(t *testing.T) {
+	path := acctest.RandomWithPrefix("radius-wo")
+	resourceName := "vault_radius_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRadiusAuthBackendConfig_basic(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
+					// Verify write-only secret is not stored in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldRadiusSecretWO),
+				),
+			},
+		},
+	})
 }
 
 // TestAccRadiusAuthBackend_invalid tests error cases for the RADIUS auth backend
@@ -239,10 +209,9 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_emptyHost(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = ""
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
+  path      = "%s"
+  host      = ""
+  secret_wo = "testsecret"
 }
 `, path)
 }
@@ -250,10 +219,9 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_emptySecret(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = ""
-  secret_wo_version = 1
+  path      = "%s"
+  host      = "127.0.0.1"
+  secret_wo = ""
 }
 `, path)
 }
@@ -261,11 +229,10 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_invalidPortType(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  port              = "abc"
+  path      = "%s"
+  host      = "127.0.0.1"
+  secret_wo = "testsecret"
+  port      = "abc"
 }
 `, path)
 }
@@ -273,11 +240,10 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_negativeDialTimeout(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  dial_timeout      = -1
+  path         = "%s"
+  host         = "127.0.0.1"
+  secret_wo    = "testsecret"
+  dial_timeout = -1
 }
 `, path)
 }
@@ -285,11 +251,10 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_negativeTokenTTL(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  token_ttl         = -1
+  path      = "%s"
+  host      = "127.0.0.1"
+  secret_wo = "testsecret"
+  token_ttl = -1
 }
 `, path)
 }
@@ -297,11 +262,10 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_malformedTokenTTL(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  token_ttl         = "abc"
+  path      = "%s"
+  host      = "127.0.0.1"
+  secret_wo = "testsecret"
+  token_ttl = "abc"
 }
 `, path)
 }
@@ -312,7 +276,6 @@ resource "vault_radius_auth_backend" "test" {
   path              = "%s"
   host              = "127.0.0.1"
   secret_wo         = "testsecret"
-  secret_wo_version = 1
   token_bound_cidrs = ["invalid-cidr"]
 }
 `, path)
@@ -321,11 +284,10 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_invalidTokenType(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  token_type        = "invalid"
+  path       = "%s"
+  host       = "127.0.0.1"
+  secret_wo  = "testsecret"
+  token_type = "invalid"
 }
 `, path)
 }
@@ -336,7 +298,6 @@ resource "vault_radius_auth_backend" "test" {
   path                    = "%s"
   host                    = "127.0.0.1"
   secret_wo               = "testsecret"
-  secret_wo_version       = 1
   token_no_default_policy = "invalid"
 }
 `, path)
@@ -345,11 +306,10 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_unknownParameter(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  unknown_param     = "value"
+  path          = "%s"
+  host          = "127.0.0.1"
+  secret_wo     = "testsecret"
+  unknown_param = "value"
 }
 `, path)
 }
@@ -357,10 +317,9 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_nullHost(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = null
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
+  path      = "%s"
+  host      = null
+  secret_wo = "testsecret"
 }
 `, path)
 }
@@ -666,7 +625,7 @@ func TestAccRadiusAuthBackend_fullConfig(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateId:                        path,
 				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
-				ImportStateVerifyIgnore:              []string{consts.FieldRadiusSecretWO, consts.FieldRadiusSecretWOVersion},
+				ImportStateVerifyIgnore:              []string{consts.FieldRadiusSecretWO},
 			},
 		},
 	})
@@ -677,11 +636,10 @@ func TestAccRadiusAuthBackend_fullConfig(t *testing.T) {
 func testAccRadiusAuthBackendConfig_customDialTimeout(path string, timeout int) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  dial_timeout      = %d
+  path         = "%s"
+  host         = "127.0.0.1"
+  secret_wo    = "testsecret"
+  dial_timeout = %d
 }
 `, path, timeout)
 }
@@ -689,11 +647,10 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_customNASPort(path string, nasPort int) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  nas_port          = %d
+  path      = "%s"
+  host      = "127.0.0.1"
+  secret_wo = "testsecret"
+  nas_port  = %d
 }
 `, path, nasPort)
 }
@@ -701,12 +658,11 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_tokenTTL(path string, ttl, maxTTL int) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  token_ttl         = %d
-  token_max_ttl     = %d
+  path          = "%s"
+  host          = "127.0.0.1"
+  secret_wo     = "testsecret"
+  token_ttl     = %d
+  token_max_ttl = %d
 }
 `, path, ttl, maxTTL)
 }
@@ -714,11 +670,10 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_tokenPolicies(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  token_policies    = ["policy1", "policy2", "policy3"]
+  path           = "%s"
+  host           = "127.0.0.1"
+  secret_wo      = "testsecret"
+  token_policies = ["policy1", "policy2", "policy3"]
 }
 `, path)
 }
@@ -729,7 +684,6 @@ resource "vault_radius_auth_backend" "test" {
   path              = "%s"
   host              = "127.0.0.1"
   secret_wo         = "testsecret"
-  secret_wo_version = 1
   token_bound_cidrs = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
 }
 `, path)
@@ -741,7 +695,6 @@ resource "vault_radius_auth_backend" "test" {
   path                    = "%s"
   host                    = "127.0.0.1"
   secret_wo               = "testsecret"
-  secret_wo_version       = 1
   token_no_default_policy = true
 }
 `, path)
@@ -750,10 +703,9 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_withoutTokenNoDefaultPolicy(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
+  path      = "%s"
+  host      = "127.0.0.1"
+  secret_wo = "testsecret"
 }
 `, path)
 }
@@ -761,11 +713,10 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_tokenNumUses(path string, numUses int) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  token_num_uses    = %d
+  path           = "%s"
+  host           = "127.0.0.1"
+  secret_wo      = "testsecret"
+  token_num_uses = %d
 }
 `, path, numUses)
 }
@@ -773,11 +724,10 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_tokenPeriod(path string, period int) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  token_period      = %d
+  path         = "%s"
+  host         = "127.0.0.1"
+  secret_wo    = "testsecret"
+  token_period = %d
 }
 `, path, period)
 }
@@ -785,11 +735,10 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_tokenType(path, tokenType string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
-  token_type        = "%s"
+  path       = "%s"
+  host       = "127.0.0.1"
+  secret_wo  = "testsecret"
+  token_type = "%s"
 }
 `, path, tokenType)
 }
@@ -800,7 +749,6 @@ resource "vault_radius_auth_backend" "test" {
   path                       = "%s"
   host                       = "127.0.0.1"
   secret_wo                  = "testsecret"
-  secret_wo_version          = 1
   unregistered_user_policies = ["default", "readonly", "audit"]
 }
 `, path)
@@ -812,7 +760,6 @@ resource "vault_radius_auth_backend" "test" {
   path                       = "%s"
   host                       = "127.0.0.1"
   secret_wo                  = "testsecret"
-  secret_wo_version          = 1
   unregistered_user_policies = ["policy1", "policy2"]
 }
 `, path)
@@ -821,10 +768,9 @@ resource "vault_radius_auth_backend" "test" {
 func testAccRadiusAuthBackendConfig_withoutPolicies(path string) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-  path              = "%s"
-  host              = "127.0.0.1"
-  secret_wo         = "testsecret"
-  secret_wo_version = 1
+  path      = "%s"
+  host      = "127.0.0.1"
+  secret_wo = "testsecret"
 }
 `, path)
 }
@@ -836,7 +782,6 @@ resource "vault_radius_auth_backend" "test" {
   host                       = "radius.example.com"
   port                       = 1812
   secret_wo                  = "testsecret"
-  secret_wo_version          = 1
   dial_timeout               = 30
   nas_port                   = 50
   unregistered_user_policies = ["default", "dev"]
@@ -847,6 +792,93 @@ resource "vault_radius_auth_backend" "test" {
   token_no_default_policy    = true
   token_num_uses             = 5
   token_type                 = "service"
+}
+`, path)
+}
+
+// TestAccRadiusAuthBackend_namespace tests RADIUS auth backend creation within a namespace.
+// This test requires Vault Enterprise as namespaces are an enterprise feature.
+func TestAccRadiusAuthBackend_namespace(t *testing.T) {
+	ns := acctest.RandomWithPrefix("test-ns")
+	path := acctest.RandomWithPrefix("radius-ns")
+	resourceName := "vault_radius_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRadiusAuthBackendConfig_namespace(ns, path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ns),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, "127.0.0.1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "1812"),
+				),
+			},
+			{
+				// Set namespace via environment variable for import
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, ns)
+				},
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateId:                        path,
+				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIgnore:              []string{consts.FieldRadiusSecretWO},
+			},
+			{
+				// Clean up the environment variable
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
+				Config:   testAccRadiusAuthBackendConfig_namespace(ns, path),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccRadiusAuthBackend_invalidNamespace tests error handling for non-existent namespace.
+// This test requires Vault Enterprise as namespaces are an enterprise feature.
+func TestAccRadiusAuthBackend_invalidNamespace(t *testing.T) {
+	path := acctest.RandomWithPrefix("radius-invalid-ns")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccRadiusAuthBackendConfig_invalidNamespace(path),
+				ExpectError: regexp.MustCompile(`no handler for route`),
+			},
+		},
+	})
+}
+
+func testAccRadiusAuthBackendConfig_namespace(ns, path string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+
+resource "vault_radius_auth_backend" "test" {
+  namespace = vault_namespace.test.path
+  path      = "%s"
+  host      = "127.0.0.1"
+  secret_wo = "testsecret"
+}
+`, ns, path)
+}
+
+func testAccRadiusAuthBackendConfig_invalidNamespace(path string) string {
+	return fmt.Sprintf(`
+resource "vault_radius_auth_backend" "test" {
+  namespace = "nonexistent-namespace"
+  path      = "%s"
+  host      = "127.0.0.1"
+  secret_wo = "testsecret"
 }
 `, path)
 }
