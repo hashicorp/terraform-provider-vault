@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	fieldPath               = consts.FieldPath
+	fieldMount              = consts.FieldMount
 	fieldKeytab             = consts.FieldKeytab
 	fieldServiceAccount     = consts.FieldServiceAccount
 	fieldRemoveInstanceName = consts.FieldRemoveInstanceName
@@ -53,7 +53,7 @@ type kerberosAuthBackendConfigResource struct {
 
 type kerberosAuthBackendConfigModel struct {
 	base.BaseModel
-	Path               types.String `tfsdk:"path"`
+	Mount              types.String `tfsdk:"mount"`
 	Keytab             types.String `tfsdk:"keytab"`
 	ServiceAccount     types.String `tfsdk:"service_account"`
 	RemoveInstanceName types.Bool   `tfsdk:"remove_instance_name"`
@@ -68,11 +68,11 @@ func (r *kerberosAuthBackendConfigResource) Schema(_ context.Context, _ resource
 	resp.Schema = schema.Schema{
 		Description: "Manages the Kerberos authentication method configuration in Vault.\n\n" +
 			"**Note:** Vault does not support deleting auth backend configurations via the API. " +
-			"When this resource is destroyed or replaced (e.g., when changing the `path`), " +
+			"When this resource is destroyed or replaced (e.g., when changing the `mount`), " +
 			"it is only removed from Terraform state. The configuration remains in Vault until " +
 			"the auth mount itself is deleted.",
 		Attributes: map[string]schema.Attribute{
-			fieldPath: schema.StringAttribute{
+			fieldMount: schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("kerberos"),
@@ -134,8 +134,8 @@ func (r *kerberosAuthBackendConfigResource) writeConfig(ctx context.Context, pla
 		return diags
 	}
 
-	path := plan.Path.ValueString()
-	configPath := fmt.Sprintf("/auth/%s/config", path)
+	mount := plan.Mount.ValueString()
+	configPath := fmt.Sprintf("/auth/%s/config", mount)
 
 	data := map[string]interface{}{
 		fieldKeytab:         config.Keytab.ValueString(),
@@ -184,8 +184,8 @@ func (r *kerberosAuthBackendConfigResource) read(ctx context.Context, model *ker
 		return diags
 	}
 
-	path := model.Path.ValueString()
-	configPath := fmt.Sprintf("/auth/%s/config", path)
+	mount := model.Mount.ValueString()
+	configPath := fmt.Sprintf("/auth/%s/config", mount)
 
 	log.Printf("[DEBUG] Reading Kerberos auth backend config from %q", configPath)
 	resp, err := vaultClient.Logical().ReadWithContext(ctx, configPath)
@@ -250,8 +250,8 @@ func (r *kerberosAuthBackendConfigResource) Delete(ctx context.Context, req reso
 		return
 	}
 
-	path := state.Path.ValueString()
-	configPath := fmt.Sprintf("/auth/%s/config", path)
+	mount := state.Mount.ValueString()
+	configPath := fmt.Sprintf("/auth/%s/config", mount)
 
 	// Configuration endpoints cannot be deleted from Vault, only the auth mount itself can be deleted.
 	// This function only removes the resource from Terraform state.
@@ -265,9 +265,9 @@ func (r *kerberosAuthBackendConfigResource) Delete(ctx context.Context, req reso
 }
 
 func (r *kerberosAuthBackendConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldPath), req, resp)
+	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldMount), req, resp)
 
-	authPath, err := extractKerberosConfigPathFromID(req.ID)
+	authMount, err := extractKerberosConfigPathFromID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing import identifier",
@@ -275,7 +275,7 @@ func (r *kerberosAuthBackendConfigResource) ImportState(ctx context.Context, req
 		)
 		return
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(fieldPath), authPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(fieldMount), authMount)...)
 
 	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
 	if ns != "" {
