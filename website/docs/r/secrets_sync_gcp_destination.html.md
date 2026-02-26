@@ -136,6 +136,9 @@ The following arguments are supported:
   1 hour. Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
   Requires Vault 2.0.0+. *Available only for Vault Enterprise*.
 
+* `identity_token_key` - (Optional) Name of the identity token key to be used for signing the tokens. Requires Vault 2.0.0+. 
+  *Available only for Vault Enterprise*.
+
 
 ### Networking Configuration (Vault 1.19+)
 
