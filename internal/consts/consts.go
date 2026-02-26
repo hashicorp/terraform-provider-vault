@@ -620,6 +620,8 @@ const (
 	FieldLabels                      = "labels"
 	FieldMinVersion                  = "min_version"
 	FieldMaxVersion                  = "max_version"
+	FieldRotationScheduleSeconds     = "rotation_schedule_seconds"
+	FieldNextRotationTimeSeconds     = "next_rotation_time_seconds"
 	FieldPrimaryVersion              = "primary_version"
 	FieldAdditionalAuthenticatedData = "additional_authenticated_data"
 	FieldBindSecretID                = "bind_secret_id"

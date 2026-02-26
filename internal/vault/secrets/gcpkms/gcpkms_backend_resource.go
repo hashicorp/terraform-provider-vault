@@ -65,7 +65,6 @@ func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.Schem
 			consts.FieldCredentialsWO: schema.StringAttribute{
 				MarkdownDescription: "JSON-encoded GCP service account credentials. This value is write-only and will not be stored in Terraform state. Requires Terraform 1.11+.",
 				Required:            true,
-				Sensitive:           true,
 				WriteOnly:           true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
