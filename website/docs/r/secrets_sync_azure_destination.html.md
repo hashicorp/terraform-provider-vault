@@ -36,20 +36,35 @@ resource "vault_secrets_sync_azure_destination" "az" {
     "192.168.1.1/24",   # Allow private network
     "10.0.0.1/8"        # Allow corporate network
   ]
-  
+
   allowed_ipv6_addresses = [
     "2001:db9::/32"     # Allow IPv6 range
   ]
-  
+
   allowed_ports = [
     443,                # HTTPS
     9443                # Alternative HTTPS port
   ]
-  
+
   disable_strict_networking = false  # Enforce networking restrictions
   custom_tags = {
     "foo" = "bar"
   }
+}
+```
+
+### Using Workload Identity Federation (Vault 2.0.0+)
+
+```hcl
+resource "vault_secrets_sync_azure_destination" "az_wif" {
+  name                    = "az-dest-wif"
+  key_vault_uri           = var.key_vault_uri
+  client_id               = var.client_id
+  tenant_id               = var.tenant_id
+  identity_token_audience = var.identity_token_audience
+  identity_token_ttl      = 3600
+  identity_token_key      = "my-key"
+  granularity             = "secret-path"
 }
 ```
 
@@ -100,6 +115,18 @@ The following arguments are supported:
 
 * `disable_strict_networking` - (Optional) When set to `true`, disables strict enforcement of networking
   restrictions. Defaults to `false`. Requires Vault 1.19+.
+
+
+### Workload Identity Federation (Vault 2.0.0+)
+
+* `identity_token_audience` - (Optional) The audience claim value for identity tokens.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_key` - (Optional) The key to use for signing identity tokens.
+  **Requires Vault 2.0.0+**.
 
 ## Attributes Reference
 

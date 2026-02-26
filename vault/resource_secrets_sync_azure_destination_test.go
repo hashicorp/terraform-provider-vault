@@ -74,6 +74,21 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),
 				),
 			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
+				},
+				Config: testAzureSecretsSyncDestinationWIFConfig_initial(keyVaultURI, tenantID, "test", "test", destName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", destName),
+					resource.TestCheckResourceAttr(resourceName, fieldKeyVaultURI, keyVaultURI),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, tenantID),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "*****"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "test"),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldClientSecret,
 			),
@@ -94,6 +109,19 @@ resource "vault_secrets_sync_azure_destination" "test" {
 `, destName, keyVaultURI, clientID, clientSecret, tenantID, testSecretsSyncDestinationCommonConfig(templ, true, true, false))
 
 	return ret
+}
+
+func testAzureSecretsSyncDestinationWIFConfig_initial(keyVaultURI, tenantID, clientID, identityTokenAudience, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_azure_destination" "test" {
+  granularity			  = "secret-path"
+  name                    = "%s"
+  key_vault_uri           = "%s"
+  tenant_id               = "%s"
+  client_id               = "%s"
+  identity_token_audience = "%s"
+  identity_token_ttl      = 30
+}`, destName, keyVaultURI, tenantID, clientID, identityTokenAudience)
 }
 
 func testAzureSecretsSyncDestinationConfig_updated(keyVaultURI, clientID, clientSecret, tenantID, destName, templ string) string {
@@ -333,4 +361,47 @@ resource "vault_secrets_sync_azure_destination" "test" {
 }
 `
 	return config
+}
+
+func TestAzureSecretsSyncDestinationWIF(t *testing.T) {
+	destName := "my-azure-1"
+
+	resourceName := "vault_secrets_sync_azure_destination.test"
+
+	values := testutil.SkipTestEnvUnset(t,
+		"AZURE_KEY_VAULT_URI",
+		"AZURE_TENANT_ID",
+		"AZURE_CLIENT_ID",
+		"IDENTITY_TOKEN_AUDIENCE",
+	)
+	keyVaultURI := values[0]
+	tenantID := values[1]
+	clientID := values[2]
+	identityTokenAudience := values[3]
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+		},
+		PreventPostDestroyRefresh: true,
+		Steps: []resource.TestStep{
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
+				},
+				Config: testAzureSecretsSyncDestinationWIFConfig_initial(keyVaultURI, tenantID, clientID, identityTokenAudience, destName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
+					resource.TestCheckResourceAttr(resourceName, fieldKeyVaultURI, keyVaultURI),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, tenantID),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, clientID),
+				),
+			},
+		},
+	})
 }
