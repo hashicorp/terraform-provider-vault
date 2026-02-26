@@ -42,7 +42,7 @@ resource "vault_pki_secret_backend_external_ca_role" "example" {
   acme_account_name = vault_pki_secret_backend_acme_account.example.name
   
   allowed_domains = ["example.com"]
-  allowed_domains_options = ["bare_domains", "subdomains"]
+  allowed_domain_options = ["bare_domains", "subdomains"]
 }
 
 resource "vault_pki_secret_backend_external_ca_order" "example" {
