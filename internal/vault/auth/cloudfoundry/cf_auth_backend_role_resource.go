@@ -48,10 +48,10 @@ type CFAuthBackendRoleModel struct {
 
 	Mount                types.String `tfsdk:"mount"`
 	Name                 types.String `tfsdk:"name"`
-	BoundApplicationIDs  types.List   `tfsdk:"bound_application_ids"`
-	BoundSpaceIDs        types.List   `tfsdk:"bound_space_ids"`
-	BoundOrganizationIDs types.List   `tfsdk:"bound_organization_ids"`
-	BoundInstanceIDs     types.List   `tfsdk:"bound_instance_ids"`
+	BoundApplicationIDs  types.Set    `tfsdk:"bound_application_ids"`
+	BoundSpaceIDs        types.Set    `tfsdk:"bound_space_ids"`
+	BoundOrganizationIDs types.Set    `tfsdk:"bound_organization_ids"`
+	BoundInstanceIDs     types.Set    `tfsdk:"bound_instance_ids"`
 	DisableIPMatching    types.Bool   `tfsdk:"disable_ip_matching"`
 }
 
@@ -82,30 +82,29 @@ func (r *CFAuthBackendRoleResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "Name of the CF auth role.",
 				Required:            true,
 			},
-			"bound_application_ids": schema.ListAttribute{
+			"bound_application_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "An optional list of application IDs an instance must be a member of to qualify for this role.",
+				MarkdownDescription: "An optional set of application IDs an instance must be a member of to qualify for this role.",
 				Optional:            true,
 			},
-			"bound_space_ids": schema.ListAttribute{
+			"bound_space_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "An optional list of space IDs an instance must be a member of to qualify for this role.",
+				MarkdownDescription: "An optional set of space IDs an instance must be a member of to qualify for this role.",
 				Optional:            true,
 			},
-			"bound_organization_ids": schema.ListAttribute{
+			"bound_organization_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "An optional list of organization IDs an instance must be a member of to qualify for this role.",
+				MarkdownDescription: "An optional set of organization IDs an instance must be a member of to qualify for this role.",
 				Optional:            true,
 			},
-			"bound_instance_ids": schema.ListAttribute{
+			"bound_instance_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "An optional list of instance IDs an instance must be a member of to qualify for this role.",
+				MarkdownDescription: "An optional set of instance IDs an instance must be a member of to qualify for this role.",
 				Optional:            true,
 			},
 			"disable_ip_matching": schema.BoolAttribute{
 				MarkdownDescription: "If set to true, disables the default behavior that logging in must be performed from an acceptable IP address described by the presented certificate.",
 				Optional:            true,
-				Computed:            true,
 			},
 		},
 	}
@@ -363,44 +362,48 @@ func (r *CFAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Context
 		}
 	}
 
-	data.DisableIPMatching = types.BoolValue(readResp.DisableIPMatching)
+	if readResp.DisableIPMatching {
+		data.DisableIPMatching = types.BoolValue(true)
+	} else {
+		data.DisableIPMatching = types.BoolNull()
+	}
 
 	if len(readResp.BoundApplicationIDs) == 0 {
-		data.BoundApplicationIDs = types.ListNull(types.StringType)
+		data.BoundApplicationIDs = types.SetNull(types.StringType)
 	} else {
-		boundAppIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundApplicationIDs)
-		if listErr.HasError() {
-			return listErr
+		boundAppIDs, setErr := types.SetValueFrom(ctx, types.StringType, readResp.BoundApplicationIDs)
+		if setErr.HasError() {
+			return setErr
 		}
 		data.BoundApplicationIDs = boundAppIDs
 	}
 
 	if len(readResp.BoundSpaceIDs) == 0 {
-		data.BoundSpaceIDs = types.ListNull(types.StringType)
+		data.BoundSpaceIDs = types.SetNull(types.StringType)
 	} else {
-		boundSpaceIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundSpaceIDs)
-		if listErr.HasError() {
-			return listErr
+		boundSpaceIDs, setErr := types.SetValueFrom(ctx, types.StringType, readResp.BoundSpaceIDs)
+		if setErr.HasError() {
+			return setErr
 		}
 		data.BoundSpaceIDs = boundSpaceIDs
 	}
 
 	if len(readResp.BoundOrganizationIDs) == 0 {
-		data.BoundOrganizationIDs = types.ListNull(types.StringType)
+		data.BoundOrganizationIDs = types.SetNull(types.StringType)
 	} else {
-		boundOrgIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundOrganizationIDs)
-		if listErr.HasError() {
-			return listErr
+		boundOrgIDs, setErr := types.SetValueFrom(ctx, types.StringType, readResp.BoundOrganizationIDs)
+		if setErr.HasError() {
+			return setErr
 		}
 		data.BoundOrganizationIDs = boundOrgIDs
 	}
 
 	if len(readResp.BoundInstanceIDs) == 0 {
-		data.BoundInstanceIDs = types.ListNull(types.StringType)
+		data.BoundInstanceIDs = types.SetNull(types.StringType)
 	} else {
-		boundInstanceIDs, listErr := types.ListValueFrom(ctx, types.StringType, readResp.BoundInstanceIDs)
-		if listErr.HasError() {
-			return listErr
+		boundInstanceIDs, setErr := types.SetValueFrom(ctx, types.StringType, readResp.BoundInstanceIDs)
+		if setErr.HasError() {
+			return setErr
 		}
 		data.BoundInstanceIDs = boundInstanceIDs
 	}

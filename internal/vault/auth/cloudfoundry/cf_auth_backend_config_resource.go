@@ -126,7 +126,6 @@ func (r *CFAuthBackendConfigResource) Schema(_ context.Context, _ resource.Schem
 			"cf_timeout": schema.Int64Attribute{
 				MarkdownDescription: "The timeout for the CF API in seconds. If not set, defaults to 0 (no timeout).",
 				Optional:            true,
-				Computed:            true,
 			},
 		},
 	}

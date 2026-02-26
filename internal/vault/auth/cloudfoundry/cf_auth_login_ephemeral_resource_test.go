@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
@@ -29,18 +30,17 @@ const cfSigningTimeFormat = "2006-01-02T15:04:05Z"
 // needed to generate a valid login signature.
 type cfLoginParams struct {
 	cfTestParams
-	instanceCert    string // PEM contents of the instance certificate
-	instanceKeyPath string // filesystem path to the PKCS#1 RSA private key
+	instanceCert string // PEM contents of the instance certificate
+	instanceKey  string // PEM contents of the PKCS#1 RSA private key
 }
 
 // cfLoginParamsFromEnv builds cfLoginParams from environment variables.
-// Instance cert and key default to the fake-certificates shipped with
-// vault-plugin-auth-cf; override with:
+// Both files must be provided via environment variables:
 //
 //	CF_TEST_INSTANCE_CERT_FILE - path to the CF instance certificate (PEM)
 //	CF_TEST_INSTANCE_KEY_FILE  - path to the PKCS#1 RSA private key (PEM)
 //
-// The test is skipped if either file cannot be read.
+// The test is skipped if either variable is unset or the file cannot be read.
 func cfLoginParamsFromEnv(t *testing.T) cfLoginParams {
 	t.Helper()
 
@@ -48,25 +48,26 @@ func cfLoginParamsFromEnv(t *testing.T) cfLoginParams {
 
 	certFile := os.Getenv("CF_TEST_INSTANCE_CERT_FILE")
 	if certFile == "" {
-		certFile = "/Users/siyer/git/vault-plugin-auth-cf/testdata/fake-certificates/instance.crt"
+		t.Skip("CF_TEST_INSTANCE_CERT_FILE not set: skipping CF login test")
 	}
 	keyFile := os.Getenv("CF_TEST_INSTANCE_KEY_FILE")
 	if keyFile == "" {
-		keyFile = "/Users/siyer/git/vault-plugin-auth-cf/testdata/fake-certificates/instance.key"
+		t.Skip("CF_TEST_INSTANCE_KEY_FILE not set: skipping CF login test")
 	}
 
 	certPEM, err := os.ReadFile(certFile)
 	if err != nil {
 		t.Skipf("skipping CF login test: cannot read instance cert %s: %v", certFile, err)
 	}
-	if _, err := os.Stat(keyFile); err != nil {
-		t.Skipf("skipping CF login test: instance key not found %s: %v", keyFile, err)
+	keyPEM, err := os.ReadFile(keyFile)
+	if err != nil {
+		t.Skipf("skipping CF login test: cannot read instance key %s: %v", keyFile, err)
 	}
 
 	return cfLoginParams{
-		cfTestParams:    base,
-		instanceCert:    string(certPEM),
-		instanceKeyPath: keyFile,
+		cfTestParams: base,
+		instanceCert: string(certPEM),
+		instanceKey:  string(keyPEM),
 	}
 }
 
@@ -77,14 +78,10 @@ func cfLoginParamsFromEnv(t *testing.T) cfLoginParams {
 //
 // The CF backend default LoginMaxSecNotBefore is 300 s, so credentials generated
 // at test startup stay valid for the entire test run.
-func generateCFSignature(t *testing.T, instanceKeyPath, instanceCert, roleName string) (signingTime, signature string) {
+func generateCFSignature(t *testing.T, instanceKeyPEM, instanceCert, roleName string) (signingTime, signature string) {
 	t.Helper()
 
-	keyPEM, err := os.ReadFile(instanceKeyPath)
-	if err != nil {
-		t.Fatalf("reading instance key %s: %v", instanceKeyPath, err)
-	}
-	block, _ := pem.Decode(keyPEM)
+	block, _ := pem.Decode([]byte(instanceKeyPEM))
 	if block == nil {
 		t.Fatal("failed to PEM-decode instance key")
 	}
@@ -126,7 +123,7 @@ func TestAccCFAuthLogin(t *testing.T) {
 
 	// Generate signing credentials once. The CF backend default
 	// LoginMaxSecNotBefore window (300 s) covers the full test duration.
-	signingTime, sig := generateCFSignature(t, p.instanceKeyPath, p.instanceCert, roleName)
+	signingTime, sig := generateCFSignature(t, p.instanceKey, p.instanceCert, roleName)
 
 	loginVars := config.Variables{
 		"cf_instance_cert": config.StringVariable(p.instanceCert),
@@ -145,6 +142,11 @@ func TestAccCFAuthLogin(t *testing.T) {
 			// before the login resource is introduced in step 2.
 			{
 				Config: testAccCFAuthInfraConfig(mount, roleName, p),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 			// Step 2: Add the ephemeral login resource on top of the existing
 			// infrastructure. A successful apply proves Vault accepted the
@@ -152,6 +154,11 @@ func TestAccCFAuthLogin(t *testing.T) {
 			{
 				Config:          testAccCFAuthLoginConfig(mount, roleName, p),
 				ConfigVariables: loginVars,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 			// Step 3: Forward client_token to a provider alias and call
 			// auth/token/lookup-self. Non-empty data proves the token is
@@ -165,6 +172,23 @@ func TestAccCFAuthLogin(t *testing.T) {
 					resource.TestCheckResourceAttrSet(
 						"data.vault_generic_secret.token_self", "data.%"),
 				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 4: Destroy all CF resources (keep only the mount).
+			{
+				Config: testAccCFAuthBackendConfigMountOnly(mount),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectNonEmptyPlan(),
+						plancheck.ExpectResourceAction("vault_cf_auth_backend_config.test", plancheck.ResourceActionDestroy),
+						plancheck.ExpectResourceAction("vault_cf_auth_backend_role.test", plancheck.ResourceActionDestroy),
+						plancheck.ExpectResourceAction("vault_policy.cf_test", plancheck.ResourceActionDestroy),
+					},
+				},
 			},
 		},
 	})
