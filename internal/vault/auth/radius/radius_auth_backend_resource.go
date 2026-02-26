@@ -6,6 +6,7 @@ package radius
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -56,7 +57,6 @@ type RadiusAuthBackendModel struct {
 	Host                     types.String `tfsdk:"host"`
 	Port                     types.Int64  `tfsdk:"port"`
 	SecretWO                 types.String `tfsdk:"secret_wo"`
-	SecretWOVersion          types.Int64  `tfsdk:"secret_wo_version"`
 	UnregisteredUserPolicies types.Set    `tfsdk:"unregistered_user_policies"`
 	DialTimeout              types.Int64  `tfsdk:"dial_timeout"`
 	ReadTimeout              types.Int64  `tfsdk:"read_timeout"`
@@ -112,12 +112,7 @@ func (r *RadiusAuthBackendResource) Schema(ctx context.Context, req resource.Sch
 			consts.FieldRadiusSecretWO: schema.StringAttribute{
 				MarkdownDescription: "The RADIUS shared secret. This is a write-only field and will not be read back from Vault.",
 				Required:            true,
-				Sensitive:           true,
 				WriteOnly:           true,
-			},
-			consts.FieldRadiusSecretWOVersion: schema.Int64Attribute{
-				MarkdownDescription: "The version of the write-only secret. Changing this will cause the resource to be updated.",
-				Optional:            true,
 			},
 			consts.FieldRadiusUnregisteredUserPolicies: schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -392,6 +387,20 @@ func (r *RadiusAuthBackendResource) ImportState(ctx context.Context, req resourc
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mountPath)...)
+
+	// Handle namespace import via environment variable
+	// See: https://registry.terraform.io/providers/hashicorp/vault/latest/docs#namespace-support
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		resp.Diagnostics.Append(
+			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
+		)
+	}
 }
 
 // configPath returns the Vault API path for RADIUS config
