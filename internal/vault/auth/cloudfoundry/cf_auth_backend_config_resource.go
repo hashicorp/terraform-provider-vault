@@ -50,11 +50,11 @@ type CFAuthBackendConfigModel struct {
 	base.BaseModel
 
 	Mount                    types.String `tfsdk:"mount"`
-	IdentityCACertificates   types.List   `tfsdk:"identity_ca_certificates"`
+	IdentityCACertificates   types.Set    `tfsdk:"identity_ca_certificates"`
 	CFApiAddr                types.String `tfsdk:"cf_api_addr"`
 	CFUsername               types.String `tfsdk:"cf_username"`
 	CFPasswordWO             types.String `tfsdk:"cf_password_wo"`
-	CFApiTrustedCertificates types.List   `tfsdk:"cf_api_trusted_certificates"`
+	CFApiTrustedCertificates types.Set    `tfsdk:"cf_api_trusted_certificates"`
 	LoginMaxSecsNotBefore    types.Int64  `tfsdk:"login_max_seconds_not_before"`
 	LoginMaxSecsNotAfter     types.Int64  `tfsdk:"login_max_seconds_not_after"`
 	CFTimeout                types.Int64  `tfsdk:"cf_timeout"`
@@ -84,7 +84,7 @@ func (r *CFAuthBackendConfigResource) Schema(_ context.Context, _ resource.Schem
 				MarkdownDescription: "Mount path for the CF auth engine in Vault.",
 				Required:            true,
 			},
-			consts.FieldIdentityCACertificates: schema.ListAttribute{
+			consts.FieldIdentityCACertificates: schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "The root CA certificate(s) to be used for verifying that the `CF_INSTANCE_CERT` presented for logging in was issued by the proper authority.",
 				Required:            true,
@@ -103,7 +103,7 @@ func (r *CFAuthBackendConfigResource) Schema(_ context.Context, _ resource.Schem
 				Sensitive:           true,
 				WriteOnly:           true,
 			},
-			consts.FieldCFApiTrustedCertificates: schema.ListAttribute{
+			consts.FieldCFApiTrustedCertificates: schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "The certificate(s) presented by the CF API. Configures Vault to trust these certificates when making API calls.",
 				Optional:            true,
@@ -370,18 +370,18 @@ func (r *CFAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Conte
 		data.CFTimeout = types.Int64Null()
 	}
 
-	identityCACerts, listErr := types.ListValueFrom(ctx, types.StringType, readResp.IdentityCACertificates)
-	if listErr.HasError() {
-		return listErr
+	identityCACerts, setErr := types.SetValueFrom(ctx, types.StringType, readResp.IdentityCACertificates)
+	if setErr.HasError() {
+		return setErr
 	}
 	data.IdentityCACertificates = identityCACerts
 
 	if len(readResp.CFApiTrustedCertificates) == 0 {
-		data.CFApiTrustedCertificates = types.ListNull(types.StringType)
+		data.CFApiTrustedCertificates = types.SetNull(types.StringType)
 	} else {
-		trustedCerts, listErr := types.ListValueFrom(ctx, types.StringType, readResp.CFApiTrustedCertificates)
-		if listErr.HasError() {
-			return listErr
+		trustedCerts, setErr := types.SetValueFrom(ctx, types.StringType, readResp.CFApiTrustedCertificates)
+		if setErr.HasError() {
+			return setErr
 		}
 		data.CFApiTrustedCertificates = trustedCerts
 	}
