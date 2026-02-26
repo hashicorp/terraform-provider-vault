@@ -35,8 +35,8 @@ func TestAccKerberosAuthBackendConfig_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldPath, path),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldRemoveInstanceName, "false"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldAddGroupAliases, "false"),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldRemoveInstanceName),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldAddGroupAliases),
 				),
 			},
 		},
@@ -123,7 +123,7 @@ func TestAccKerberosAuthBackendConfig_import(t *testing.T) {
 				ImportStateId:                        fmt.Sprintf("auth/%s/config", path),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
-				ImportStateVerifyIgnore:              []string{consts.FieldKeytab},
+				ImportStateVerifyIgnore:              []string{consts.FieldKeytab, consts.FieldRemoveInstanceName, consts.FieldAddGroupAliases},
 			},
 		},
 	})
@@ -142,8 +142,8 @@ func TestAccKerberosAuthBackendConfig_defaultCheck(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldPath, "kerberos"),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldRemoveInstanceName, "false"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldAddGroupAliases, "false"),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldRemoveInstanceName),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldAddGroupAliases),
 				),
 			},
 		},
@@ -290,7 +290,7 @@ func TestAccKerberosAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "invalid-import-id",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Expected import ID format: auth/\{path\}/config`),
+				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
 			},
 			// Test import ID missing /config suffix
 			{
@@ -299,7 +299,7 @@ func TestAccKerberosAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "auth/kerberos",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Expected import ID format: auth/\{path\}/config`),
+				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
 			},
 			// Test import ID missing auth/ prefix
 			{
@@ -308,7 +308,7 @@ func TestAccKerberosAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "kerberos/config",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Expected import ID format: auth/\{path\}/config`),
+				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
 			},
 			// Test import ID with empty path between prefix and suffix
 			{
@@ -317,7 +317,74 @@ func TestAccKerberosAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "auth//config",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Expected import ID format: auth/\{path\}/config`),
+				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+			},
+		},
+	})
+}
+
+// TestAccKerberosAuthBackendConfig_namespace tests configuration with namespace (Enterprise only)
+// Note: This test is currently skipped as vault_auth_backend resource doesn't properly support
+// namespaces in the Plugin Framework. This test serves as documentation for the namespace field.
+func TestAccKerberosAuthBackendConfig_namespace(t *testing.T) {
+
+	namespace := acctest.RandomWithPrefix("tf-ns")
+	path := acctest.RandomWithPrefix("kerberos")
+	serviceAccount := "vault/localhost@EXAMPLE.COM"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKerberosAuthBackendConfigConfig_namespace(namespace, path, serviceAccount),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldNamespace, namespace),
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldPath, path),
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldRemoveInstanceName),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldAddGroupAliases),
+				),
+			},
+		},
+	})
+}
+
+// TestAccKerberosAuthBackendConfig_importWithNamespace tests importing with namespace (Enterprise only)
+func TestAccKerberosAuthBackendConfig_importWithNamespace(t *testing.T) {
+	namespace := acctest.RandomWithPrefix("tf-ns")
+	path := acctest.RandomWithPrefix("kerberos")
+	serviceAccount := "vault/localhost@EXAMPLE.COM"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKerberosAuthBackendConfigConfig_namespace(namespace, path, serviceAccount),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldNamespace, namespace),
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldPath, path),
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
+				),
+			},
+			{
+				ResourceName:                         "vault_kerberos_auth_backend_config.config",
+				ImportState:                          true,
+				ImportStateId:                        fmt.Sprintf("auth/%s/config", path),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIgnore:              []string{consts.FieldKeytab, consts.FieldRemoveInstanceName, consts.FieldAddGroupAliases},
+				PreConfig: func() {
+					// Set the namespace environment variable for import
+					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
+				},
 			},
 		},
 	})
@@ -469,36 +536,6 @@ resource "vault_kerberos_auth_backend_config" "config" {
   depends_on      = [vault_auth_backend.kerberos]
 }
 `, testKeytab, serviceAccount)
-}
-
-// TestAccKerberosAuthBackendConfig_namespace tests configuration with namespace (Enterprise only)
-// Note: This test is currently skipped as vault_auth_backend resource doesn't properly support
-// namespaces in the Plugin Framework. This test serves as documentation for the namespace field.
-func TestAccKerberosAuthBackendConfig_namespace(t *testing.T) {
-
-	namespace := acctest.RandomWithPrefix("tf-ns")
-	path := acctest.RandomWithPrefix("kerberos")
-	serviceAccount := "vault/localhost@EXAMPLE.COM"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKerberosAuthBackendConfigConfig_namespace(namespace, path, serviceAccount),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldNamespace, namespace),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldPath, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldRemoveInstanceName, "false"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldAddGroupAliases, "false"),
-				),
-			},
-		},
-	})
 }
 
 func testAccKerberosAuthBackendConfigConfig_namespace(namespace, path, serviceAccount string) string {

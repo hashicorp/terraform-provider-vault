@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
 	"strings"
 
@@ -17,10 +18,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
 )
 
 const (
@@ -77,6 +80,9 @@ func (r *kerberosAuthBackendConfigResource) Schema(_ context.Context, _ resource
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					validators.PathValidator(),
+				},
 			},
 			fieldKeytab: schema.StringAttribute{
 				Required:    true,
@@ -89,12 +95,10 @@ func (r *kerberosAuthBackendConfigResource) Schema(_ context.Context, _ resource
 			},
 			fieldRemoveInstanceName: schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "Removes instance names from Kerberos service principal names. Default: false.",
 			},
 			fieldAddGroupAliases: schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "Adds group aliases during authentication. Default: false.",
 			},
 		},
@@ -135,10 +139,11 @@ func (r *kerberosAuthBackendConfigResource) writeConfig(ctx context.Context, pla
 
 	data := map[string]interface{}{
 		fieldKeytab:         config.Keytab.ValueString(),
-		fieldServiceAccount: plan.ServiceAccount.ValueString(),
+		fieldServiceAccount: config.ServiceAccount.ValueString(),
 	}
-	data[fieldRemoveInstanceName] = plan.RemoveInstanceName.ValueBool()
-	data[fieldAddGroupAliases] = plan.AddGroupAliases.ValueBool()
+
+	data[fieldRemoveInstanceName] = config.RemoveInstanceName.ValueBool()
+	data[fieldAddGroupAliases] = config.AddGroupAliases.ValueBool()
 
 	log.Printf("[DEBUG] Writing Kerberos auth backend config to %q", configPath)
 	_, err = vaultClient.Logical().Write(configPath, data)
@@ -183,7 +188,7 @@ func (r *kerberosAuthBackendConfigResource) read(ctx context.Context, model *ker
 	configPath := fmt.Sprintf("/auth/%s/config", path)
 
 	log.Printf("[DEBUG] Reading Kerberos auth backend config from %q", configPath)
-	kconfig, err := vaultClient.Logical().Read(configPath)
+	resp, err := vaultClient.Logical().ReadWithContext(ctx, configPath)
 	if err != nil {
 		diags.AddError(
 			fmt.Sprintf("Error reading Kerberos auth backend config from %q", configPath),
@@ -192,7 +197,7 @@ func (r *kerberosAuthBackendConfigResource) read(ctx context.Context, model *ker
 		return diags
 	}
 
-	if kconfig == nil {
+	if resp == nil {
 		diags.AddError(
 			"Kerberos auth backend config not found",
 			fmt.Sprintf("No configuration found at %q", configPath),
@@ -201,22 +206,20 @@ func (r *kerberosAuthBackendConfigResource) read(ctx context.Context, model *ker
 	}
 
 	// Read service_account
-	if v, ok := kconfig.Data[fieldServiceAccount].(string); ok {
+	if v, ok := resp.Data[fieldServiceAccount].(string); ok {
 		model.ServiceAccount = types.StringValue(v)
 	}
 
-	// Read remove_instance_name
-	if v, ok := kconfig.Data[fieldRemoveInstanceName].(bool); ok {
-		model.RemoveInstanceName = types.BoolValue(v)
-	} else {
-		model.RemoveInstanceName = types.BoolValue(false)
+	// Only update optional boolean fields if they were set in the config (not null)
+	if !model.RemoveInstanceName.IsNull() {
+		if v, ok := resp.Data[fieldRemoveInstanceName].(bool); ok {
+			model.RemoveInstanceName = types.BoolValue(v)
+		}
 	}
-
-	// Read add_group_aliases
-	if v, ok := kconfig.Data[fieldAddGroupAliases].(bool); ok {
-		model.AddGroupAliases = types.BoolValue(v)
-	} else {
-		model.AddGroupAliases = types.BoolValue(false)
+	if !model.AddGroupAliases.IsNull() {
+		if v, ok := resp.Data[fieldAddGroupAliases].(bool); ok {
+			model.AddGroupAliases = types.BoolValue(v)
+		}
 	}
 
 	return diags
@@ -267,26 +270,20 @@ func (r *kerberosAuthBackendConfigResource) ImportState(ctx context.Context, req
 	authPath, err := extractKerberosConfigPathFromID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Invalid import identifier",
-			err.Error(),
+			"Error parsing import identifier",
+			fmt.Sprintf("The import identifier '%s' is not valid: %s", req.ID, err.Error()),
 		)
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(fieldPath), authPath)...)
 
-	// Create a model with the extracted path
-	model := kerberosAuthBackendConfigModel{
-		Path: types.StringValue(authPath),
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		log.Printf("[DEBUG] Environment variable %s set, attempting TF state import with namespace: %s", consts.EnvVarVaultNamespaceImport, ns)
+		resp.Diagnostics.Append(
+			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
+		)
 	}
-
-	// Read the configuration from Vault
-	resp.Diagnostics.Append(r.read(ctx, &model)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Set the state with the populated model
-	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
 // extractKerberosConfigPathFromID extracts the auth backend path from the import identifier provided
