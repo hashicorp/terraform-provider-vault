@@ -12,6 +12,7 @@ IMPROVEMENTS:
 * `vault_pki_secret_backend_root_cert`: Add support for `use_pss` and `key_usage` fields to configure PSS signature scheme and X.509 key usage constraints for root CA certificates. Requires Vault 1.18.0+ and 1.19.2+ respectively.([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 * `vault_pki_secret_backend_root_sign_intermediate`: Add version check for `key_usage` field to ensure compatibility with Vault 1.19.2+ for configuring X.509 key usage constraints on intermediate CA certificates. ([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 * `provider/auth_jwt`: Add support for `distributed_claim_access_token` field in the `auth_login_jwt` configuration block. ([#2782](https://github.com/hashicorp/terraform-provider-vault/pull/2782))
+* `vault_secrets_sync_gcp_destination`: Add support for Workload Identity Federation (WIF) fields `identity_token_audience`, `identity_token_ttl`, `identity_token_key`, and `service_account_email` to enable token-based authentication with GCP. Requires Vault 2.0.0+. ([#2798](https://github.com/hashicorp/terraform-provider-vault/pull/2798))
 
 ## 5.7.0 (February 5, 2026)
 
