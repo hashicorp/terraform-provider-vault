@@ -51,6 +51,8 @@ resource "vault_kubernetes_auth_backend_config" "example" {
 
 The following arguments are supported:
 
+* `backend` - (Optional) Unique name of the kubernetes backend to configure. If no backend is specified, 'kubernetes' will be used as the default backend.
+
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
