@@ -105,14 +105,13 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 			{
 				Config: testAccCFAuthBackendConfigBasic(mount, params),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
-					resource.TestCheckResourceAttr(resourceAddress, "identity_ca_certificates.#", "1"),
-					resource.TestCheckResourceAttr(resourceAddress, "identity_ca_certificates.0", params.ca),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_api_addr", params.apiAddr),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_username", params.username),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_password_wo_version", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldIdentityCACertificates+".#", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldIdentityCACertificates+".0", params.ca),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFApiAddr, params.apiAddr),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFUsername, params.username),
 					// Write-only field must never be stored in state.
-					resource.TestCheckNoResourceAttr(resourceAddress, "cf_password_wo"),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCFPasswordWO),
 				),
 				// Idempotency: re-applying the same config must produce no diff.
 				ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -125,16 +124,15 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 			{
 				Config: testAccCFAuthBackendConfigFull(mount, params),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
-					resource.TestCheckResourceAttr(resourceAddress, "identity_ca_certificates.#", "1"),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_api_addr", params.apiAddr),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_username", params.username),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_password_wo_version", "1"),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_api_trusted_certificates.#", "1"),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_api_trusted_certificates.0", params.ca),
-					resource.TestCheckResourceAttr(resourceAddress, "login_max_seconds_not_before", "60"),
-					resource.TestCheckResourceAttr(resourceAddress, "login_max_seconds_not_after", "30"),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_timeout", "10"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldIdentityCACertificates+".#", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFApiAddr, params.apiAddr),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFUsername, params.username),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFApiTrustedCertificates+".#", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFApiTrustedCertificates+".0", params.ca),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotBefore, "60"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotAfter, "30"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFTimeout, "10"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -142,19 +140,18 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 					},
 				},
 			},
-			// Step 3: Update write-only password by bumping cf_password_wo_version.
+			// Step 3: Update write-only password.
 			{
 				Config: testAccCFAuthBackendConfigUpdatePassword(mount, params),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_username", params.username),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_password_wo_version", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFUsername, params.username),
 					// Optional fields from the previous step should persist since
 					// they are still in the config.
-					resource.TestCheckResourceAttr(resourceAddress, "cf_api_trusted_certificates.#", "1"),
-					resource.TestCheckResourceAttr(resourceAddress, "login_max_seconds_not_before", "60"),
-					resource.TestCheckResourceAttr(resourceAddress, "login_max_seconds_not_after", "30"),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_timeout", "10"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFApiTrustedCertificates+".#", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotBefore, "60"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotAfter, "30"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFTimeout, "10"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -166,13 +163,12 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 			{
 				Config: testAccCFAuthBackendConfigUpdateOptional(mount, params),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_api_addr", params.apiAddr),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_username", params.username),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_password_wo_version", "2"),
-					resource.TestCheckResourceAttr(resourceAddress, "login_max_seconds_not_before", "120"),
-					resource.TestCheckResourceAttr(resourceAddress, "login_max_seconds_not_after", "60"),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_timeout", "30"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFApiAddr, params.apiAddr),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFUsername, params.username),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotBefore, "120"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotAfter, "60"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFTimeout, "30"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -182,19 +178,17 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 			},
 			// Step 5: Remove optional fields, revert to basic config.
 			{
-				Config: testAccCFAuthBackendConfigBasicV2(mount, params),
+				Config: testAccCFAuthBackendConfigBasic(mount, params),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_api_addr", params.apiAddr),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_username", params.username),
-					// Stay at version 2 so no spurious password update is triggered.
-					resource.TestCheckResourceAttr(resourceAddress, "cf_password_wo_version", "2"),
-					resource.TestCheckResourceAttr(resourceAddress, "identity_ca_certificates.#", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFApiAddr, params.apiAddr),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFUsername, params.username),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldIdentityCACertificates+".#", "1"),
 					// All optional fields must be cleared after reverting to basic config.
-					resource.TestCheckNoResourceAttr(resourceAddress, "cf_api_trusted_certificates.#"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "login_max_seconds_not_before"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "login_max_seconds_not_after"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "cf_timeout"),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCFApiTrustedCertificates+".#"),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotBefore),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotAfter),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCFTimeout),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -209,7 +203,7 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 				ImportStateIdFunc:                    testAccCFAuthBackendConfigImportStateIdFunc(resourceAddress),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: "mount",
-				ImportStateVerifyIgnore:              []string{"cf_password_wo", "cf_password_wo_version"},
+				ImportStateVerifyIgnore:              []string{consts.FieldCFPasswordWO},
 			},
 			// Step 7: Destroy the config resource (keep the mount).
 			{
@@ -237,7 +231,7 @@ func TestAccCFAuthBackendConfigNamespace(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -246,10 +240,10 @@ func TestAccCFAuthBackendConfigNamespace(t *testing.T) {
 				Config: testAccCFAuthBackendConfigNamespace(ns, mount, params),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldNamespace, ns),
-					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_api_addr", params.apiAddr),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_username", params.username),
-					resource.TestCheckNoResourceAttr(resourceAddress, "cf_password_wo"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFApiAddr, params.apiAddr),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFUsername, params.username),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCFPasswordWO),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -287,8 +281,8 @@ func TestAccCFAuthBackendConfigMultipleCerts(t *testing.T) {
 			{
 				Config: testAccCFAuthBackendConfigMultipleCerts(mount, params, ca2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "identity_ca_certificates.#", "2"),
-					resource.TestCheckResourceAttr(resourceAddress, "cf_api_trusted_certificates.#", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldIdentityCACertificates+".#", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFApiTrustedCertificates+".#", "2"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -331,24 +325,6 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr              = "%s"
   cf_username              = "%s"
   cf_password_wo           = "%s"
-  cf_password_wo_version   = 1
-}
-`, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.username, p.password)
-}
-
-// testAccCFAuthBackendConfigBasicV2 is the same as Basic but keeps version=2,
-// used to revert to minimal config without triggering a spurious password update.
-func testAccCFAuthBackendConfigBasicV2(mount string, p cfTestParams) string {
-	return fmt.Sprintf(`
-%s
-
-resource "vault_cf_auth_backend_config" "test" {
-  mount                    = vault_auth_backend.cf.path
-  identity_ca_certificates = ["%s"]
-  cf_api_addr              = "%s"
-  cf_username              = "%s"
-  cf_password_wo           = "%s"
-  cf_password_wo_version   = 2
 }
 `, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.username, p.password)
 }
@@ -364,7 +340,6 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr                  = "%s"
   cf_username                  = "%s"
   cf_password_wo               = "%s"
-  cf_password_wo_version       = 1
   cf_api_trusted_certificates  = ["%s"]
   login_max_seconds_not_before = 60
   login_max_seconds_not_after  = 30
@@ -384,7 +359,6 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr                  = "%s"
   cf_username                  = "%s"
   cf_password_wo               = "%s"
-  cf_password_wo_version       = 2
   cf_api_trusted_certificates  = ["%s"]
   login_max_seconds_not_before = 60
   login_max_seconds_not_after  = 30
@@ -405,7 +379,6 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr                  = "%s"
   cf_username                  = "%s"
   cf_password_wo               = "%s"
-  cf_password_wo_version       = 2
   login_max_seconds_not_before = 120
   login_max_seconds_not_after  = 60
   cf_timeout                   = 30
@@ -434,7 +407,6 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr              = "%s"
   cf_username              = "%s"
   cf_password_wo           = "%s"
-  cf_password_wo_version   = 1
 }
 `, ns, mount, escapeHCL(p.ca), p.apiAddr, p.username, p.password)
 }
@@ -451,7 +423,6 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr                 = "%s"
   cf_username                 = "%s"
   cf_password_wo              = "%s"
-  cf_password_wo_version      = 1
   cf_api_trusted_certificates = ["%s", "%s"]
 }
 `, testAccCFAuthBackendConfigMountOnly(mount),

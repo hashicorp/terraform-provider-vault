@@ -69,39 +69,39 @@ func (r *CFAuthLoginEphemeralResource) Schema(_ context.Context, _ ephemeral.Sch
 				MarkdownDescription: "Name of the CF auth role to log in with.",
 				Required:            true,
 			},
-			"cf_instance_cert": schema.StringAttribute{
+			consts.FieldCFInstanceCert: schema.StringAttribute{
 				MarkdownDescription: "The full body of the file available at the path denoted by `CF_INSTANCE_CERT`.",
 				Required:            true,
 				Sensitive:           true,
 			},
-			"signing_time": schema.StringAttribute{
+			consts.FieldSigningTime: schema.StringAttribute{
 				MarkdownDescription: "The date and time used to construct the signature (e.g. `2006-01-02T15:04:05Z`).",
 				Required:            true,
 			},
-			"signature": schema.StringAttribute{
+			consts.FieldSignature: schema.StringAttribute{
 				MarkdownDescription: "The RSA-PSS/SHA256 signature generated using `CF_INSTANCE_KEY` over the concatenation of signing_time, cf_instance_cert, and role.",
 				Required:            true,
 				Sensitive:           true,
 			},
-			"client_token": schema.StringAttribute{
+			consts.FieldClientToken: schema.StringAttribute{
 				MarkdownDescription: "The Vault client token issued after a successful login.",
 				Computed:            true,
 				Sensitive:           true,
 			},
-			"accessor": schema.StringAttribute{
+			consts.FieldAccessor: schema.StringAttribute{
 				MarkdownDescription: "The accessor for the client token.",
 				Computed:            true,
 			},
-			"policies": schema.ListAttribute{
+			consts.FieldPolicies: schema.ListAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "The list of policies attached to the client token.",
 				Computed:            true,
 			},
-			"lease_duration": schema.Int64Attribute{
+			consts.FieldLeaseDuration: schema.Int64Attribute{
 				MarkdownDescription: "The lease duration of the client token in seconds.",
 				Computed:            true,
 			},
-			"renewable": schema.BoolAttribute{
+			consts.FieldRenewable: schema.BoolAttribute{
 				MarkdownDescription: "Whether the client token is renewable.",
 				Computed:            true,
 			},
@@ -132,10 +132,10 @@ func (r *CFAuthLoginEphemeralResource) Open(ctx context.Context, req ephemeral.O
 	loginPath := fmt.Sprintf("auth/%s/%s", data.Mount.ValueString(), cfLoginPath)
 
 	requestData := map[string]any{
-		consts.FieldRole:   data.Role.ValueString(),
-		"cf_instance_cert": data.CFInstanceCert.ValueString(),
-		"signing_time":     data.SigningTime.ValueString(),
-		"signature":        data.Signature.ValueString(),
+		consts.FieldRole:           data.Role.ValueString(),
+		consts.FieldCFInstanceCert: data.CFInstanceCert.ValueString(),
+		consts.FieldSigningTime:    data.SigningTime.ValueString(),
+		consts.FieldSignature:      data.Signature.ValueString(),
 	}
 
 	loginResp, err := vaultClient.Logical().WriteWithContext(ctx, loginPath, requestData)

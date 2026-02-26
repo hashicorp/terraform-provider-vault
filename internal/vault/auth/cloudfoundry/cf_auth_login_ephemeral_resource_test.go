@@ -216,7 +216,6 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr              = "%s"
   cf_username              = "%s"
   cf_password_wo           = "%s"
-  cf_password_wo_version   = 1
   login_max_seconds_not_before = 300
 }
 
@@ -262,7 +261,6 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr              = "%s"
   cf_username              = "%s"
   cf_password_wo           = "%s"
-  cf_password_wo_version   = 1
   login_max_seconds_not_before = 300
 }
 
@@ -322,7 +320,6 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr              = "%s"
   cf_username              = "%s"
   cf_password_wo           = "%s"
-  cf_password_wo_version   = 1
   login_max_seconds_not_before = 300
 }
 

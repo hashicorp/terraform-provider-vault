@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/token"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var cfRoleRegexp = regexp.MustCompile(`^auth/(.+)/roles/(.+)$`)
@@ -82,27 +83,27 @@ func (r *CFAuthBackendRoleResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "Name of the CF auth role.",
 				Required:            true,
 			},
-			"bound_application_ids": schema.SetAttribute{
+			consts.FieldBoundApplicationIDs: schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "An optional set of application IDs an instance must be a member of to qualify for this role.",
 				Optional:            true,
 			},
-			"bound_space_ids": schema.SetAttribute{
+			consts.FieldBoundSpaceIDs: schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "An optional set of space IDs an instance must be a member of to qualify for this role.",
 				Optional:            true,
 			},
-			"bound_organization_ids": schema.SetAttribute{
+			consts.FieldBoundOrganizationIDs: schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "An optional set of organization IDs an instance must be a member of to qualify for this role.",
 				Optional:            true,
 			},
-			"bound_instance_ids": schema.SetAttribute{
+			consts.FieldBoundInstanceIDs: schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "An optional set of instance IDs an instance must be a member of to qualify for this role.",
 				Optional:            true,
 			},
-			"disable_ip_matching": schema.BoolAttribute{
+			consts.FieldDisableIPMatching: schema.BoolAttribute{
 				MarkdownDescription: "If set to true, disables the default behavior that logging in must be performed from an acceptable IP address described by the presented certificate.",
 				Optional:            true,
 			},
@@ -345,6 +346,14 @@ func (r *CFAuthBackendRoleResource) getAPIModel(ctx context.Context, data *CFAut
 		}
 	}
 
+	// alias_metadata was added to the CF auth plugin in Vault 1.21.
+	// On older Vault versions the field is silently dropped on write and
+	// absent on read, which causes a provider-inconsistency error. Omit it
+	// from the request when the connected Vault does not support it.
+	if r.Meta() == nil || !r.Meta().IsAPISupported(provider.VaultVersion121) {
+		delete(vaultRequest, "alias_metadata")
+	}
+
 	return vaultRequest, nil
 }
 
@@ -408,7 +417,22 @@ func (r *CFAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Context
 		data.BoundInstanceIDs = boundInstanceIDs
 	}
 
-	return token.PopulateTokenModelFromAPI(ctx, &data.TokenModel, &readResp.TokenAPIModel)
+	// Save the current alias_metadata value before PopulateTokenModelFromAPI
+	// overwrites it. On Vault versions prior to 1.21, the CF auth plugin does
+	// not support alias_metadata: it is silently dropped on write and absent
+	// on read. Restoring the value preserves plan/state consistency and avoids
+	// a "provider produced inconsistent result" error.
+	savedAliasMetadata := data.AliasMetadata
+
+	if diagErr := token.PopulateTokenModelFromAPI(ctx, &data.TokenModel, &readResp.TokenAPIModel); diagErr.HasError() {
+		return diagErr
+	}
+
+	if r.Meta() == nil || !r.Meta().IsAPISupported(provider.VaultVersion121) {
+		data.AliasMetadata = savedAliasMetadata
+	}
+
+	return diag.Diagnostics{}
 }
 
 func extractCFRoleIdentifiers(id string) (string, string, error) {

@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 // TestAccCFAuthBackendRole tests full CRUD lifecycle and import for
@@ -39,13 +38,13 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 			{
 				Config: testAccCFAuthBackendRoleMinimal(mount),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
-					resource.TestCheckResourceAttr(resourceAddress, "name", "test-role"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "disable_ip_matching"),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_application_ids.#", "0"),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_space_ids.#", "0"),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_organization_ids.#", "0"),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_instance_ids.#", "0"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldName, "test-role"),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldDisableIPMatching),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundApplicationIDs+".#", "0"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundSpaceIDs+".#", "0"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundOrganizationIDs+".#", "0"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundInstanceIDs+".#", "0"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -57,17 +56,17 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 			{
 				Config: testAccCFAuthBackendRoleWithBoundIDs(mount, appIDs, spaceIDs, orgIDs, instanceIDs),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
-					resource.TestCheckResourceAttr(resourceAddress, "name", "test-role"),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_application_ids.#", "1"),
-					resource.TestCheckTypeSetElemAttr(resourceAddress, "bound_application_ids.*", appIDs[0]),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_space_ids.#", "1"),
-					resource.TestCheckTypeSetElemAttr(resourceAddress, "bound_space_ids.*", spaceIDs[0]),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_organization_ids.#", "1"),
-					resource.TestCheckTypeSetElemAttr(resourceAddress, "bound_organization_ids.*", orgIDs[0]),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_instance_ids.#", "1"),
-					resource.TestCheckTypeSetElemAttr(resourceAddress, "bound_instance_ids.*", instanceIDs[0]),
-					resource.TestCheckNoResourceAttr(resourceAddress, "disable_ip_matching"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldName, "test-role"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundApplicationIDs+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldBoundApplicationIDs+".*", appIDs[0]),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundSpaceIDs+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldBoundSpaceIDs+".*", spaceIDs[0]),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundOrganizationIDs+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldBoundOrganizationIDs+".*", orgIDs[0]),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundInstanceIDs+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldBoundInstanceIDs+".*", instanceIDs[0]),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldDisableIPMatching),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -82,10 +81,10 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 					spaceIDs, orgIDs, instanceIDs,
 				),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "disable_ip_matching", "true"),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_application_ids.#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceAddress, "bound_application_ids.*", appIDs[0]),
-					resource.TestCheckTypeSetElemAttr(resourceAddress, "bound_application_ids.*", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldDisableIPMatching, "true"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundApplicationIDs+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldBoundApplicationIDs+".*", appIDs[0]),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldBoundApplicationIDs+".*", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -97,24 +96,24 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 			{
 				Config: testAccCFAuthBackendRoleWithTokenFields(mount, appIDs, spaceIDs, orgIDs, instanceIDs),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
-					resource.TestCheckResourceAttr(resourceAddress, "name", "test-role"),
-					resource.TestCheckResourceAttr(resourceAddress, "disable_ip_matching", "true"),
-					resource.TestCheckResourceAttr(resourceAddress, "token_ttl", "3600"),
-					resource.TestCheckResourceAttr(resourceAddress, "token_max_ttl", "7200"),
-					resource.TestCheckResourceAttr(resourceAddress, "token_policies.#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceAddress, "token_policies.*", "policy-a"),
-					resource.TestCheckTypeSetElemAttr(resourceAddress, "token_policies.*", "policy-b"),
-					resource.TestCheckResourceAttr(resourceAddress, "token_bound_cidrs.#", "1"),
-					resource.TestCheckTypeSetElemAttr(resourceAddress, "token_bound_cidrs.*", "10.0.0.0/8"),
-					resource.TestCheckResourceAttr(resourceAddress, "token_explicit_max_ttl", "10800"),
-					resource.TestCheckResourceAttr(resourceAddress, "token_no_default_policy", "true"),
-					resource.TestCheckResourceAttr(resourceAddress, "token_num_uses", "5"),
-					resource.TestCheckResourceAttr(resourceAddress, "token_period", "600"),
-					resource.TestCheckResourceAttr(resourceAddress, "token_type", "service"),
-					resource.TestCheckResourceAttr(resourceAddress, "alias_metadata.%", "2"),
-					resource.TestCheckResourceAttr(resourceAddress, "alias_metadata.org_id", "my-org"),
-					resource.TestCheckResourceAttr(resourceAddress, "alias_metadata.space_id", "my-space"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldName, "test-role"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldDisableIPMatching, "true"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenMaxTTL, "7200"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenPolicies+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldTokenPolicies+".*", "policy-a"),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldTokenPolicies+".*", "policy-b"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenBoundCIDRs+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldTokenBoundCIDRs+".*", "10.0.0.0/8"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenExplicitMaxTTL, "10800"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenNoDefaultPolicy, "true"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenNumUses, "5"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenPeriod, "600"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenType, "service"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".%", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".org_id", "my-org"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".space_id", "my-space"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -126,20 +125,20 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 			{
 				Config: testAccCFAuthBackendRoleMinimal(mount),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
-					resource.TestCheckResourceAttr(resourceAddress, "name", "test-role"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "disable_ip_matching"),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_application_ids.#", "0"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "token_ttl"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "token_max_ttl"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "token_policies.#"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "token_bound_cidrs.#"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "token_explicit_max_ttl"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "token_no_default_policy"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "token_num_uses"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "token_period"),
-					resource.TestCheckResourceAttr(resourceAddress, "token_type", "default"),
-					resource.TestCheckNoResourceAttr(resourceAddress, "alias_metadata.%"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldName, "test-role"),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldDisableIPMatching),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundApplicationIDs+".#", "0"),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenTTL),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenMaxTTL),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenPolicies+".#"),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenBoundCIDRs+".#"),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenExplicitMaxTTL),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenNoDefaultPolicy),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenNumUses),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenPeriod),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenType, "default"),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldAliasMetadata+".%"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -285,10 +284,10 @@ func TestAccCFAuthBackendRoleMultipleBoundIDs(t *testing.T) {
 			{
 				Config: testAccCFAuthBackendRoleWithBoundIDs(mount, appIDs, spaceIDs, orgIDs, instanceIDs),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, "bound_application_ids.#", "2"),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_space_ids.#", "2"),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_organization_ids.#", "2"),
-					resource.TestCheckResourceAttr(resourceAddress, "bound_instance_ids.#", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundApplicationIDs+".#", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundSpaceIDs+".#", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundOrganizationIDs+".#", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundInstanceIDs+".#", "2"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -310,7 +309,7 @@ func TestAccCFAuthBackendRoleNamespace(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -319,8 +318,8 @@ func TestAccCFAuthBackendRoleNamespace(t *testing.T) {
 				Config: testAccCFAuthBackendRoleNamespace(ns, mount),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldNamespace, ns),
-					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
-					resource.TestCheckResourceAttr(resourceAddress, "name", "test-role"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldName, "test-role"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
