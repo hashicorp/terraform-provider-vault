@@ -147,6 +147,14 @@ func azureSecretBackendRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "If true, persists the created service principal and application for the lifetime of the role.",
 			},
+			consts.FieldMetadata: {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "A map of string key/value pairs that will be stored as metadata on the secret.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -194,6 +202,22 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 	for _, k := range azureSecretFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v.(string)
+		}
+	}
+
+	useAPIVer200Ent := provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer200Ent {
+		if d.IsNewResource() {
+			if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+				data[consts.FieldMetadata] = v.(map[string]interface{})
+			}
+		} else if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
+	} else {
+		if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+			return diag.Errorf("%q is only supported on Vault Enterprise %s or newer",
+				consts.FieldMetadata, provider.VaultVersion200)
 		}
 	}
 
@@ -287,6 +311,13 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 	if v, ok := resp.Data[consts.FieldPermanentlyDelete]; ok {
 		if err := d.Set(consts.FieldPermanentlyDelete, v); err != nil {
 			return diag.Errorf("error setting permanently delete field: %s", err)
+		}
+	}
+
+	useAPIVer200Ent := provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer200Ent {
+		if err := d.Set(consts.FieldMetadata, resp.Data[consts.FieldMetadata]); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 
