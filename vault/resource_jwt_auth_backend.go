@@ -348,7 +348,14 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			continue
 		}
 
-		d.Set(configOption, config.Data[configOption])
+		// Normalize provider_config values from Vault API (bool/int) to strings
+		// to match the Terraform schema definition and prevent drift
+		if configOption == consts.FieldProviderConfig {
+			normalized := normalizeProviderConfigFromVault(config.Data[configOption])
+			d.Set(configOption, normalized)
+		} else {
+			d.Set(configOption, config.Data[configOption])
+		}
 	}
 
 	log.Printf("[DEBUG] Reading jwt auth tune from %q", path+"/tune")
@@ -394,6 +401,51 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 		}
 	}
 	return newConfig, nil
+}
+
+func normalizeProviderConfigFromVault(input interface{}) map[string]interface{} {
+	if input == nil {
+		return nil
+	}
+
+	inputMap, ok := input.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	normalized := make(map[string]interface{})
+	for k, v := range inputMap {
+		switch k {
+		case "fetch_groups", "fetch_user_info":
+			// Convert bool to string
+			if boolVal, ok := v.(bool); ok {
+				normalized[k] = strconv.FormatBool(boolVal)
+			} else {
+				normalized[k] = fmt.Sprintf("%v", v)
+			}
+		case "groups_recurse_max_depth":
+			// Convert int to string
+			switch val := v.(type) {
+			case int:
+				normalized[k] = strconv.Itoa(val)
+			case int64:
+				normalized[k] = strconv.FormatInt(val, 10)
+			case float64:
+				// JSON numbers are float64
+				normalized[k] = strconv.FormatInt(int64(val), 10)
+			default:
+				normalized[k] = fmt.Sprintf("%v", v)
+			}
+		default:
+			// Keep strings as-is
+			if strVal, ok := v.(string); ok {
+				normalized[k] = strVal
+			} else {
+				normalized[k] = fmt.Sprintf("%v", v)
+			}
+		}
+	}
+	return normalized
 }
 
 func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
