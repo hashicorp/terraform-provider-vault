@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -94,8 +93,7 @@ func (r *RadiusAuthBackendResource) Schema(ctx context.Context, req resource.Sch
 			consts.FieldPath: schema.StringAttribute{
 				MarkdownDescription: "Path to mount the RADIUS auth backend. Defaults to `radius`.",
 				Optional:            true,
-				Computed:            true,
-				Default:             stringdefault.StaticString(defaultMountPath),
+				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
