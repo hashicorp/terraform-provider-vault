@@ -3,6 +3,8 @@
 FEATURES : 
 * **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
 
+* `vault_radius_auth_backend`: Add resource for radius auth backend. ([#2791]https://github.com/hashicorp/terraform-provider-vault/pull/2791)
+
 IMPROVEMENTS:
 
 * `vault_okta_auth_backend`: Add support for write-only field api_token_wo with version counters to prevent sensitive credentials from being stored in Terraform state. Deprecate `organization` and `token` and replace with `org_name` and `api_token` respectively in `vault_okta_auth_backend` resource. ([#2736](https://github.com/hashicorp/terraform-provider-vault/pull/2736))

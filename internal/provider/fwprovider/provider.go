@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
@@ -229,6 +230,7 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 // the Metadata method. All resources must have unique names.
 func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 	return append([]func() resource.Resource{
+		radius.NewRadiusAuthBackendResource,
 		spiffe.NewSpiffeAuthConfigResource,
 		spiffe.NewSpiffeAuthRoleResource,
 		sys.NewPasswordPolicyResource,
