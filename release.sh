@@ -38,7 +38,7 @@
 set -e
 
 BOB_PRODUCT="terraform-provider-vault"
-BOB_ENVIRONMENT="tf-provider-vault"
+BOB_ENVIRONMENT="tf-provider-vault-oss"
 # SLACK_CHANNEL code is duplicated in ./release/ci.hcl
 SLACK_CHANNEL="C09LD1XT5MX"
 # BRANCH allow override of default branch with an optional argument
