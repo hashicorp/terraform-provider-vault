@@ -40,7 +40,7 @@ func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_domains.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_domains.0", "example.com"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_domains.1", "test.com"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_domains_options.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_domain_options.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_challenge_types.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "csr_generate_key_type", "ec-256"),
 					resource.TestCheckResourceAttr(resourceName, "csr_identifier_population", "cn_first"),
@@ -133,7 +133,7 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
   name                        = "%s"
   acme_account_name           = vault_pki_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "test.com"]
-  allowed_domains_options     = ["bare_domains", "subdomains"]
+  allowed_domain_options      = ["bare_domains", "subdomains"]
   allowed_challenge_types     = ["http-01", "dns-01", "tls-alpn-01"]
   csr_generate_key_type       = "ec-256"
   csr_identifier_population   = "cn_first"
@@ -165,7 +165,7 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
   name                        = "%s"
   acme_account_name           = vault_pki_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "test.com", "updated.com"]
-  allowed_domains_options     = ["bare_domains", "subdomains", "wildcards"]
+  allowed_domain_options      = ["bare_domains", "subdomains", "wildcards"]
   allowed_challenge_types     = ["http-01", "dns-01"]
   csr_generate_key_type       = "rsa-2048"
   csr_identifier_population   = "sans_only"
