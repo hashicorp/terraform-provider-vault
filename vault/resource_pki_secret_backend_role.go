@@ -488,7 +488,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		diag.FromErr(e)
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get(consts.FieldBackend).(string)
