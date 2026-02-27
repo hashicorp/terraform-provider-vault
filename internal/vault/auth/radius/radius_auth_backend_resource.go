@@ -92,7 +92,6 @@ func (r *RadiusAuthBackendResource) Schema(ctx context.Context, req resource.Sch
 		Attributes: map[string]schema.Attribute{
 			consts.FieldPath: schema.StringAttribute{
 				MarkdownDescription: "Path to mount the RADIUS auth backend. Defaults to `radius`.",
-				Optional:            true,
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
