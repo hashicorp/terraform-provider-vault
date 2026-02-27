@@ -444,6 +444,7 @@ FEATURES:
 
 BUGS:
 * fix `vault_kv_secret_v2` drift when "data" is in secret name/path ([#2104](https://github.com/hashicorp/terraform-provider-vault/pull/2104))
+* Fix `bound_claims` Set bound_claims values as per Vault format ([#2102](https://github.com/hashicorp/terraform-provider-vault/pull/2102))
 * fix `vault_database_secret_backend_connection`: allow mysql_rds,mysql_aurora,mysql_legacy options of vault_database_secret_backend_connection terraform resource to allow specifying tls_ca and tls_certificate_key ([#2106](https://github.com/hashicorp/terraform-provider-vault/pull/2106))
 * Fix ignored `description` updates for `aws_secret_backend` resource ([#2057](https://github.com/hashicorp/terraform-provider-vault/pull/2057))
 
