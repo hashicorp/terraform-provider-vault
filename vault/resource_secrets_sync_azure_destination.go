@@ -74,7 +74,6 @@ func buildAzureSyncReadFields(meta interface{}) []string {
 	if provider.IsAPISupported(meta, provider.VaultVersion200) {
 		fields = append(fields,
 			consts.FieldIdentityTokenTTL,
-			consts.FieldIdentityTokenKey,
 		)
 	}
 
