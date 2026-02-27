@@ -131,6 +131,69 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 	}
 }
 
+func TestAccDataSourceAWSAccessCredentials_sts_role_session_name(t *testing.T) {
+	mountPath := acctest.RandomWithPrefix("tf-test-aws")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	region := testutil.GetTestAWSRegion(t)
+	role_session_name := "test_session_name"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDataSourceAWSAccessCredentialsConfig_sts_basic(mountPath, accessKey, secretKey, region),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
+					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_id"),
+					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
+				),
+			},
+			{
+				Config: testAccDataSourceAWSAccessCredentialsConfig_sts_role_session_name(mountPath, accessKey, secretKey, region, role_session_name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
+					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
+					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "role_session_name", role_session_name),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_id"),
+					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
+				),
+			},
+		},
+	})
+}
+
+func testAccDataSourceAWSAccessCredentialsConfig_sts_role_session_name(mountPath, accessKey, secretKey, region, role_session_name string) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "aws" {
+	path = "%s"
+	description = "Obtain AWS credentials."
+	access_key = "%s"
+	secret_key = "%s"
+	region = "%s"
+}
+
+resource "vault_aws_secret_backend_role" "role" {
+	backend = vault_aws_secret_backend.aws.path
+	name = "test"
+	credential_type = "federation_token"
+	policy_document = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
+}
+
+data "vault_aws_access_credentials" "test" {
+	backend = vault_aws_secret_backend.aws.path
+	role = vault_aws_secret_backend_role.role.name
+	type = "sts"
+	role_session_name = "%s"
+	region = vault_aws_secret_backend.aws.region
+}`, mountPath, accessKey, secretKey, region, role_session_name)
+}
+
 func TestAccDataSourceAWSAccessCredentials_sts_ttl(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
