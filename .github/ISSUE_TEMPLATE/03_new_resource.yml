@@ -1,8 +1,8 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-name: "Request a New Resource or Data Source"
-description: "Choose this option to request an entirely new resource or data source be added to the provider."
+name: "Request a New Resource, Ephemeral Resource, or Data Source"
+description: "Choose this option to request an entirely new resource, Ephemeral Resource, or data source be added to the provider."
 title: "[New]: "
 body:
   - type: markdown
@@ -10,11 +10,12 @@ body:
       value: |
         # Thank you for opening a request!
 
-        This form is intended to be used when requesting an entirely new resource, data source, or service be added to the provider. If you're looking for a change to be made to an existing resource or data source, consider submitting either the "Request an Enhancement" or Report a Bug" forms instead.
+        This form is intended to be used when requesting an entirely new resource, ephemeral resource, data source, or service be added to the provider. If you're looking for a change to be made to an existing resource or data source, consider submitting either the "Request an Enhancement" or Report a Bug" forms instead.
 
         Please update the title to match what you're requesting, e.g.:
 
         - `[New Resource]:` - for new resource requests
+        - `[New Ephemeral Resource]:` - for new ephemeral resource requests
         - `[New Data Source]:` - for new data source requests
 
   - type: textarea
