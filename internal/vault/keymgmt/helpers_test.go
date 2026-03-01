@@ -46,7 +46,7 @@ func TestParseKeyPath(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:          "invalid: path with /key/ but no key name (Comment 3 scenario)",
+			name:          "invalid: nested mount /key/ with no key name",
 			apiPath:       "/kms/key/",
 			wantMount:     "",
 			wantKeyName:   "",
