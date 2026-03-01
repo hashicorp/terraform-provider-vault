@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/keymgmt"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
@@ -241,6 +242,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		pki_external_ca.NewPKIExternalCAOrderResource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeFulfilledResource,
 		pki_external_ca.NewPKIExternalCAOrderCertificateResource,
+		keymgmt.NewKeyResource,
 	}, testResources()...)
 }
 

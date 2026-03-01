@@ -1,0 +1,87 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+package keymgmt_test
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
+)
+
+func TestAccKeymgmtKey_basic(t *testing.T) {
+	testutil.SkipTestAccEnt(t)
+
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	keyName := acctest.RandomWithPrefix("key")
+	resourceType := "vault_keymgmt_key"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtKey_initialConfig(mount, keyName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
+					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "false"),
+					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				Config: testKeymgmtKey_updatedConfig(mount, keyName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
+					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldReplicaRegions,
+			),
+		},
+	})
+}
+
+func testKeymgmtKey_initialConfig(mount, keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test" {
+  path = vault_mount.keymgmt.path
+  name = %q
+  type = "aes256-gcm96"
+}
+`, mount, keyName)
+}
+
+func testKeymgmtKey_updatedConfig(mount, keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test" {
+  path             = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
+}
+`, mount, keyName)
+}
