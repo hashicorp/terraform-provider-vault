@@ -356,6 +356,95 @@ func TestPkiSecretBackendRootSignIntermediate_signature_bits(t *testing.T) {
 		},
 	})
 }
+func TestPkiSecretBackendRootSignIntermediate_key_usage(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+	format := "pem"
+	commonName := "SubOrg Intermediate CA"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			// Skip if Vault version is less than 1.19.2 (when key_usage validation was improved)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion1192)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				// Test with valid key_usage values
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(
+					rootPath,
+					intermediatePath,
+					false,
+					`key_usage = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]`,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, "", x509.SHA256WithRSA, false),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "key_usage.#", "3"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "key_usage.0", "DigitalSignature"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "key_usage.1", "KeyAgreement"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "key_usage.2", "KeyEncipherment"),
+					// Verify actual certificate key usage
+					testPKICert("vault_pki_secret_backend_root_sign_intermediate.test", func(cert *x509.Certificate) error {
+						expectedUsage := x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement | x509.KeyUsageKeyEncipherment
+						if 0 == cert.KeyUsage&expectedUsage {
+							return fmt.Errorf("Certificate KeyUsage expected to include %b, got %b", expectedUsage, cert.KeyUsage)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				// Test without key_usage (not passed) - should use defaults
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(
+					rootPath,
+					intermediatePath,
+					false,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, "", x509.SHA256WithRSA, false),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "key_usage.#", "0"),
+					// Verify certificate gets default CA key usages
+					testPKICert("vault_pki_secret_backend_root_sign_intermediate.test", func(cert *x509.Certificate) error {
+						// Default key usages for CA certificates include CertSign and CRLSign
+						if 0 == cert.KeyUsage&x509.KeyUsageCertSign {
+							return fmt.Errorf("Default certificate KeyUsage should include CertSign, got %b", cert.KeyUsage)
+						}
+						if 0 == cert.KeyUsage&x509.KeyUsageCRLSign {
+							return fmt.Errorf("Default certificate KeyUsage should include CRLSign, got %b", cert.KeyUsage)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				// Test with explicitly empty key_usage array - Vault should still apply defaults
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(
+					rootPath,
+					intermediatePath,
+					false,
+					`key_usage = []`,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format, "", x509.SHA256WithRSA, false),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "key_usage.#", "0"),
+					// Verify certificate gets default CA key usages even with empty array
+					testPKICert("vault_pki_secret_backend_root_sign_intermediate.test", func(cert *x509.Certificate) error {
+						// Default key usages for CA certificates include CertSign and CRLSign
+						if 0 == cert.KeyUsage&x509.KeyUsageCertSign {
+							return fmt.Errorf("Default certificate KeyUsage should include CertSign, got %b", cert.KeyUsage)
+						}
+						if 0 == cert.KeyUsage&x509.KeyUsageCRLSign {
+							return fmt.Errorf("Default certificate KeyUsage should include CRLSign, got %b", cert.KeyUsage)
+						}
+						return nil
+					}),
+				),
+			},
+		},
+	})
+}
 
 func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle_multiple_intermediates(t *testing.T) {
 	t.Skip("Skip until VAULT-6700 is resolved")

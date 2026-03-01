@@ -9,12 +9,14 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/go-test/deep"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"log"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/go-test/deep"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -45,6 +47,9 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
 		assertCertificateAttributes(resourceName, "", x509.SHA512WithRSA),
+		// Validate default key usages when key_usage is not explicitly specified
+		// Per Vault API docs: default key_usage for root certs is ["CertSign", "CRLSign"]
+		assertCertificateKeyUsage(resourceName, []string{"CertSign", "CRLSign"}),
 	}
 
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, nil)
@@ -79,6 +84,187 @@ func TestPkiSecretBackendRootCertificate_notAfter(t *testing.T) {
 	}
 
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, nil)
+}
+
+// TestPkiSecretBackendRootCertificate_usePSS tests the use_pss field
+func TestPkiSecretBackendRootCertificate_usePSS(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+
+	// Test with use_pss = true
+	configWithPSS := testPkiSecretBackendRootCertificateConfig_usePSS(path, true)
+	checksWithPSS := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA with PSS"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "2048"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldUsePSS, "true"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+		assertCertificateSignatureAlgorithm(resourceName, "PSS"),
+	}
+
+	// Test with use_pss = false
+	configWithoutPSS := testPkiSecretBackendRootCertificateConfig_usePSS(path, false)
+	checksWithoutPSS := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA without PSS"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "2048"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldUsePSS, "false"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+		assertCertificateSignatureAlgorithm(resourceName, "PKCS1"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: configWithPSS,
+				Check:  resource.ComposeTestCheckFunc(checksWithPSS...),
+			},
+			{
+				Config: configWithoutPSS,
+				Check:  resource.ComposeTestCheckFunc(checksWithoutPSS...),
+			},
+		},
+	})
+}
+
+// TestPkiSecretBackendRootCertificate_keyUsage tests the key_usage field
+func TestPkiSecretBackendRootCertificate_keyUsage(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+
+	config := testPkiSecretBackendRootCertificateConfig_keyUsage(path)
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA with Key Usage"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "2048"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "3"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "DigitalSignature"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".1", "CertSign"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".2", "CRLSign"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+		assertCertificateKeyUsage(resourceName, []string{"DigitalSignature", "CertSign", "CRLSign"}),
+	}
+
+	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, func(t *testing.T) {
+		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion1192)
+	})
+}
+
+// TestPkiSecretBackendRootCertificate_usePSSAndKeyUsage tests both fields together
+func TestPkiSecretBackendRootCertificate_usePSSAndKeyUsage(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+
+	config := testPkiSecretBackendRootCertificateConfig_usePSSAndKeyUsage(path)
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA with PSS and Key Usage"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "4096"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldUsePSS, "true"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "3"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".0", "DigitalSignature"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".1", "CertSign"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".2", "CRLSign"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+		assertCertificateSignatureAlgorithm(resourceName, "PSS"),
+		assertCertificateKeyUsage(resourceName, []string{"DigitalSignature", "CertSign", "CRLSign"}),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check:  resource.ComposeTestCheckFunc(checks...),
+			},
+		},
+	})
+}
+
+// TestPkiSecretBackendRootCertificate_usePSSWithECKey tests that use_pss is ignored for EC keys
+func TestPkiSecretBackendRootCertificate_usePSSWithECKey(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+
+	config := testPkiSecretBackendRootCertificateConfig_usePSSWithECKey(path)
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA EC with PSS"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ec"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "256"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldUsePSS, "true"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+		// PSS should be ignored for EC keys, should use ECDSA
+		assertCertificateSignatureAlgorithm(resourceName, "ECDSA"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check:  resource.ComposeTestCheckFunc(checks...),
+			},
+		},
+	})
+}
+
+// TestPkiSecretBackendRootCertificate_keyUsageEmpty tests empty key_usage array
+func TestPkiSecretBackendRootCertificate_keyUsageEmpty(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+
+	config := testPkiSecretBackendRootCertificateConfig_keyUsageEmpty(path)
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA with empty key usage"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsage+".#", "0"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+		// Even with empty key_usage=[] in Terraform state, Vault still applies default key usages to the certificate
+		// This validates that Vault's behavior is to always ensure root CAs have proper key usage
+		assertCertificateKeyUsage(resourceName, []string{"CertSign", "CRLSign"}),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check:  resource.ComposeTestCheckFunc(checks...),
+			},
+		},
+	})
 }
 
 // TestPkiSecretBackendRootCertificate_name_constraints is just like TestPkiSecretBackendRootCertificate_basic,
@@ -606,5 +792,235 @@ func Test_pkiSecretSerialNumberUpgradeV0(t *testing.T) {
 				t.Errorf("pkiSecretSerialNumberUpgradeV0() got = %#v, want %#v", got, tt.want)
 			}
 		})
+	}
+}
+
+// Helper config functions for use_pss and key_usage tests
+
+func testPkiSecretBackendRootCertificateConfig_usePSS(path string, usePSS bool) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend            = vault_mount.test.path
+  type               = "internal"
+  common_name        = "test Root CA %s PSS"
+  key_type           = "rsa"
+  key_bits           = 2048
+  use_pss            = %t
+}
+`, path, map[bool]string{true: "with", false: "without"}[usePSS], usePSS)
+}
+
+func testPkiSecretBackendRootCertificateConfig_keyUsage(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend            = vault_mount.test.path
+  type               = "internal"
+  common_name        = "test Root CA with Key Usage"
+  key_type           = "rsa"
+  key_bits           = 2048
+  key_usage          = ["DigitalSignature", "CertSign", "CRLSign"]
+}
+`, path)
+}
+
+func testPkiSecretBackendRootCertificateConfig_usePSSAndKeyUsage(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend            = vault_mount.test.path
+  type               = "internal"
+  common_name        = "test Root CA with PSS and Key Usage"
+  key_type           = "rsa"
+  key_bits           = 4096
+  use_pss            = true
+  key_usage          = ["DigitalSignature", "CertSign", "CRLSign"]
+}
+`, path)
+}
+
+func testPkiSecretBackendRootCertificateConfig_usePSSWithECKey(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend            = vault_mount.test.path
+  type               = "internal"
+  common_name        = "test Root CA EC with PSS"
+  key_type           = "ec"
+  key_bits           = 256
+  use_pss            = true
+}
+`, path)
+}
+
+func testPkiSecretBackendRootCertificateConfig_keyUsageEmpty(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend            = vault_mount.test.path
+  type               = "internal"
+  common_name        = "test Root CA with empty key usage"
+  key_type           = "rsa"
+  key_bits           = 2048
+  key_usage          = []
+}
+`, path)
+}
+
+// Helper assertion functions for certificate validation
+
+func assertCertificateSignatureAlgorithm(resourceName, expectedAlgo string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		certPEM := rs.Primary.Attributes[consts.FieldCertificate]
+		if certPEM == "" {
+			return fmt.Errorf("certificate is empty")
+		}
+
+		block, _ := pem.Decode([]byte(certPEM))
+		if block == nil {
+			return fmt.Errorf("failed to decode PEM certificate")
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return fmt.Errorf("failed to parse certificate: %w", err)
+		}
+
+		var actualAlgo string
+		switch cert.SignatureAlgorithm {
+		case x509.SHA256WithRSAPSS, x509.SHA384WithRSAPSS, x509.SHA512WithRSAPSS:
+			actualAlgo = "PSS"
+		case x509.SHA256WithRSA, x509.SHA384WithRSA, x509.SHA512WithRSA:
+			actualAlgo = "PKCS1"
+		case x509.ECDSAWithSHA256, x509.ECDSAWithSHA384, x509.ECDSAWithSHA512:
+			actualAlgo = "ECDSA"
+		default:
+			actualAlgo = cert.SignatureAlgorithm.String()
+		}
+
+		if actualAlgo != expectedAlgo {
+			return fmt.Errorf("expected signature algorithm %s, got %s (actual: %s)",
+				expectedAlgo, actualAlgo, cert.SignatureAlgorithm.String())
+		}
+
+		return nil
+	}
+}
+
+func assertCertificateKeyUsage(resourceName string, expectedUsages []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		// Skip the check for versions < 1.19.2
+		if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion1192) {
+			log.Printf("[INFO] Skipping key_usage assertion for Vault version < 1.19.2 (key_usage parameter support was fixed in 1.19.2)")
+			return nil
+		}
+
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		certPEM := rs.Primary.Attributes[consts.FieldCertificate]
+		if certPEM == "" {
+			return fmt.Errorf("certificate is empty")
+		}
+
+		block, _ := pem.Decode([]byte(certPEM))
+		if block == nil {
+			return fmt.Errorf("failed to decode PEM certificate")
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return fmt.Errorf("failed to parse certificate: %w", err)
+		}
+
+		// Map x509.KeyUsage bits to string names
+		actualUsages := []string{}
+		if cert.KeyUsage&x509.KeyUsageDigitalSignature != 0 {
+			actualUsages = append(actualUsages, "DigitalSignature")
+		}
+		if cert.KeyUsage&x509.KeyUsageContentCommitment != 0 {
+			actualUsages = append(actualUsages, "ContentCommitment")
+		}
+		if cert.KeyUsage&x509.KeyUsageKeyEncipherment != 0 {
+			actualUsages = append(actualUsages, "KeyEncipherment")
+		}
+		if cert.KeyUsage&x509.KeyUsageDataEncipherment != 0 {
+			actualUsages = append(actualUsages, "DataEncipherment")
+		}
+		if cert.KeyUsage&x509.KeyUsageKeyAgreement != 0 {
+			actualUsages = append(actualUsages, "KeyAgreement")
+		}
+		if cert.KeyUsage&x509.KeyUsageCertSign != 0 {
+			actualUsages = append(actualUsages, "CertSign")
+		}
+		if cert.KeyUsage&x509.KeyUsageCRLSign != 0 {
+			actualUsages = append(actualUsages, "CRLSign")
+		}
+		if cert.KeyUsage&x509.KeyUsageEncipherOnly != 0 {
+			actualUsages = append(actualUsages, "EncipherOnly")
+		}
+		if cert.KeyUsage&x509.KeyUsageDecipherOnly != 0 {
+			actualUsages = append(actualUsages, "DecipherOnly")
+		}
+
+		// Check if all expected usages are present
+		for _, expected := range expectedUsages {
+			found := false
+			for _, actual := range actualUsages {
+				if actual == expected {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("expected key usage %s not found in certificate. Actual usages: %v",
+					expected, actualUsages)
+			}
+		}
+
+		return nil
 	}
 }

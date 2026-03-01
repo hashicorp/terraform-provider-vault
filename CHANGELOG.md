@@ -1,4 +1,19 @@
-## Unreleased
+## Unrealeased 
+
+FEATURES : 
+* **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
+
+IMPROVEMENTS:
+
+* `vault_okta_auth_backend`: Add support for write-only field api_token_wo with version counters to prevent sensitive credentials from being stored in Terraform state. Deprecate `organization` and `token` and replace with `org_name` and `api_token` respectively in `vault_okta_auth_backend` resource. ([#2736](https://github.com/hashicorp/terraform-provider-vault/pull/2736))
+* `vault_kubernetes_secret_backend_role`: Add support for `token_default_audiences` field to configure default audiences for generated Kubernetes tokens. Requires Vault 1.15+. ([#2722](https://github.com/hashicorp/terraform-provider-vault/pull/2722))
+* `vault_raft_snapshot_agent_config`: Add support for `azure_auth_mode` and `azure_client_id` fields for Azure Managed Identity authentication (Vault Enterprise 1.18.0+), and `autoload_enabled` field for automatic snapshot restoration (Vault Enterprise 1.21.0+). ([#2758](https://github.com/hashicorp/terraform-provider-vault/pull/2758))
+* `vault_ssh_secret_backend_role`: Add support for fields (`default_extensions_template`, `exclude_cidr_list`, `port`) and improve handling of key-type-specific fields (`default_extensions`, `default_extensions_template`, `exclude_cidr_list`, `port`) to prevent drift. Fields that are not applicable to a role's key type (CA or OTP) are now conditionally set in state only when returned by Vault, preventing perpetual drift when users configure fields that Vault ignores. CA key type supports: `default_extensions`, `default_extensions_template`. OTP key type supports: `port`, `exclude_cidr_list`. ([#2747](https://github.com/hashicorp/terraform-provider-vault/pull/2747))
+* `vault_pki_secret_backend_root_cert`: Add support for `use_pss` and `key_usage` fields to configure PSS signature scheme and X.509 key usage constraints for root CA certificates. Requires Vault 1.18.0+ and 1.19.2+ respectively.([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
+* `vault_pki_secret_backend_root_sign_intermediate`: Add version check for `key_usage` field to ensure compatibility with Vault 1.19.2+ for configuring X.509 key usage constraints on intermediate CA certificates. ([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
+* `provider/auth_jwt`: Add support for `distributed_claim_access_token` field in the `auth_login_jwt` configuration block. ([#2782](https://github.com/hashicorp/terraform-provider-vault/pull/2782))
+
+## 5.7.0 (February 5, 2026)
 
 FEATURES:
 
@@ -8,8 +23,10 @@ FEATURES:
 IMPROVEMENTS:
 
 * Add support for `delta_crl_distribution_points` in `vault_pki_secret_backend_config_urls` and `vault_pki_secret_backend_issuer` to configure Delta CRL URLs. (Vault 1.20+) ([#2761](https://github.com/hashicorp/terraform-provider-vault/pull/2761))
+* `vault_kmip_secret_role`: Add support for additional KMIP operation fields (`operation_import`, `operation_query`, `operation_encrypt`, `operation_decrypt`, `operation_create_key_pair`, `operation_delete_attribute`, `operation_rng_retrieve`, `operation_mac`, `operation_signature_verify`, `operation_sign`, `operation_rng_seed`, `operation_modify_attribute`, `operation_mac_verify`, `operation_rekey_key_pair`) to grant granular permissions for KMIP operations. ([#2744](https://github.com/hashicorp/terraform-provider-vault/pull/2744))
 * `vault_saml_auth_backend`: Add support for `validate_assertion_signature` and `validate_response_signature` parameters to control SAML signature validation (Vault 1.19+)
 * `vault_approle_auth_backend_login`: Add write-only fields `secret_id_wo` and `secret_id_wo_version` to support ephemeral SecretID values without persisting them in state.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
+* `vault_password_policy`: Add field `entropy_source` field to specify an override to the default source of entropy (randomness) used to generate the passwords.([#2753](https://github.com/hashicorp/terraform-provider-vault/pull/2753))
 * `vault_mfa_totp`: Add support for `max_validation_attempts` field to configure the maximum number of consecutive failed validation attempts allowed. ([#2751](https://github.com/hashicorp/terraform-provider-vault/pull/2751))
 * `vault_mongodbatlas_secret_backend`: Add support for write-only private key fields (`private_key_wo`, `private_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2741](https://github.com/hashicorp/terraform-provider-vault/pull/2741))
 * `vault_consul_secret_backend`: Add support for write-only fields (`token_wo`, `token_wo_version`, `client_key_wo`, `client_key_wo_version`) to prevent sensitive credentials from being stored in Terraform state. ([#2730](https://github.com/hashicorp/terraform-provider-vault/pull/2730))
@@ -25,7 +42,7 @@ IMPROVEMENTS:
 * `vault_kubernetes_auth_backend_config`: Add support for write-only `token_reviewer_jwt_wo` field with `token_reviewer_jwt_wo_version` to prevent sensitive JWT token from being stored in Terraform state ([#2715](https://github.com/hashicorp/terraform-provider-vault/pull/2715))
 * `vault_kubernetes_secret_backend`: Add write-only fields `service_account_jwt_wo` and `service_account_jwt_wo_version` for managing service account JWT credentials without storing them in state.([#2720](https://github.com/hashicorp/terraform-provider-vault/pull/2720))
 * `vault_nomad_secret_backend`: Add support for write-only fields `token_wo` and `client_key_wo` with version counters to prevent sensitive credentials from being stored in Terraform state. ([#2729](https://github.com/hashicorp/terraform-provider-vault/pull/2729))
-* Add support for fields: `context`,`managed_key_name`,`managed_key_id` in `vault_transit_secret_backend_key` resource. ([#2743](https://github.com/hashicorp/terraform-provider-vault/pull/2743)) 
+* Add support for fields: `context`,`managed_key_name`,`managed_key_id` in `vault_transit_secret_backend_key` resource. ([#2743](https://github.com/hashicorp/terraform-provider-vault/pull/2743))
 * `vault_rabbitmq_secret_backend`: Add support for write-only `password_wo` and `password_wo_version` fields to configure the password without storing it in state. Requires Terraform 1.11+. ([#2733](https://github.com/hashicorp/terraform-provider-vault/pull/2733))
 * `vault_approle_auth_backend_role_secret_id`: Add support for `token_bound_cidrs` parameter to specify blocks of IP addresses which can use the auth tokens generated by a SecretID. ([#2718](https://github.com/hashicorp/terraform-provider-vault/pull/2718))
 * `vault_secrets_sync_gcp_destination`: Add support for replication field (`replication_locations`; Vault 1.18+), networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`; Vault 1.19+), and encryption fields (`global_kms_key`, `locational_kms_keys`; Vault 1.19+) in `vault_secrets_sync_gcp_destination` resource. ([#2699](https://github.com/hashicorp/terraform-provider-vault/pull/2699))
@@ -37,10 +54,18 @@ IMPROVEMENTS:
 * Add support for configuration parameters (`allowed_ipv4_addresses`,`allowed_ipv6_addresses`,`allowed_ports`,`disable_strict_networking`,`secrets_location`,`environment_name`) in `vault_secrets_sync_gh_destination` resource. Requires Vault 1.18+ for `secrets_location`,`environment_name`.Requires Vault 1.19+ for `allowed_ipv4_addresses`,`allowed_ipv6_addresses`,`allowed_ports`,`disable_strict_networking`.([#2697](https://github.com/hashicorp/terraform-provider-vault/pull/2697)).
 * Add support for `tls_server_name` , `local_datacenter`, `socket_keep_alive`, `consistency` and `username_template`  parameters for Cassandra in `vault_database_secret_backend_connection` resource. ([#2677](https://github.com/hashicorp/terraform-provider-vault/pull/2677))
 * `vault_secrets_sync_aws_destination`: Add support for networking configuration parameters `allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, and `disable_strict_networking` to control outbound connections from Vault to AWS Secrets Manager. Requires Vault 1.19.0+.([#2698](https://github.com/hashicorp/terraform-provider-vault/pull/2698))
+
 * Updated dependencies:
   * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
 * Docs: fix heredoc example for LDAP dynamic role LDIFs ([#2728]https://github.com/hashicorp/terraform-provider-vault/pull/2728)
 * Docs: Update example to use write-only attribute ([#2731]https://github.com/hashicorp/terraform-provider-vault/pull/2731)
+
+* `vault_database_secret_backend_connection`: Add support for top-level `plugin_version` and `password_policy` fields to allow configuration at the resource level in addition to engine-specific blocks. ([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+* `vault_database_secret_backend_connection`: Add support for `skip_static_role_import_rotation` field to skip initial password rotation when creating static roles. This value is inherited by static roles that do not explicitly set `skip_import_rotation`. Requires Vault 1.19+ Enterprise. ([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+* `vault_database_secret_backend_static_role`: The `skip_import_rotation` field now correctly reads Vault's computed value into state. When not set in config, it inherits from the connection's `skip_static_role_import_rotation` setting. Requires Vault 1.19+ Enterprise. ([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+* `vault_database_secret_mount`: Added `plugin_version`,`skip_static_role_import_rotation` and `password_policy` fields to allow configuration at the resource level([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
+
+* Add support for `local_secret_ids` which may only be set at role creation. On updates the provider will send the original creation value to Vault to avoid unintentionally attempting to modify this immutable setting.The provider now surfaces Vault's native immutability error when an update attempts to change `local_secret_ids`.([#2723](https://github.com/hashicorp/terraform-provider-vault/pull/2723))
 
 
 BUGS:
