@@ -30,10 +30,12 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_gcp_kms" "production" {
-  path           = vault_mount.keymgmt.path
-  name           = "gcp-production"
-  key_collection = "projects/my-project/locations/us-central1/keyRings/my-keyring"
-  credentials    = file("gcp-credentials.json")
+  path                 = vault_mount.keymgmt.path
+  name                 = "gcp-production"
+  key_collection       = "projects/my-project/locations/us-central1/keyRings/my-keyring"
+  service_account_file = file("gcp-credentials.json")
+  project              = "my-project"
+  location             = "us-central1"
 }
 ```
 
@@ -53,7 +55,11 @@ The following arguments are supported:
 
 * `key_collection` - (Required) Full resource name of the GCP KMS key ring where keys will be created. Format: `projects/{project}/locations/{location}/keyRings/{keyring}`
 
-* `credentials` - (Required, Sensitive) JSON-encoded GCP service account credentials with permissions to manage Cloud KMS keys.
+* `service_account_file` - (Required, Sensitive) JSON-encoded GCP service account credentials with permissions to manage Cloud KMS keys.
+
+* `project` - (Required) GCP project ID where the Cloud KMS key ring is located.
+
+* `location` - (Required) GCP location/region for the Cloud KMS key ring (e.g., `us-central1`, `global`).
 
 ## Attributes Reference
 

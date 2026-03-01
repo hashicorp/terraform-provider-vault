@@ -127,14 +127,14 @@ resource "vault_keymgmt_key" "test" {
   type = "aes256-gcm96"
 }
 
-# First rotation
 resource "vault_keymgmt_key_rotate" "test" {
   path = vault_mount.keymgmt.path
   name = vault_keymgmt_key.test.name
 }
 
-# Second rotation (triggers when we update the resource)
-# In practice, users would update this to trigger another rotation
-# This demonstrates the capability to rotate multiple times
+resource "vault_keymgmt_key_rotate" "second" {
+  path = vault_mount.keymgmt.path
+  name = vault_keymgmt_key.test.name
+}
 `, mount, keyName)
 }

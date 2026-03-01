@@ -5,7 +5,6 @@ package keymgmt
 
 import (
 	"context"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -141,7 +140,7 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 			return
 		}
 		if len(regions) > 0 {
-			writeData[consts.FieldReplicaRegions] = strings.Join(regions, ",")
+			writeData[consts.FieldReplicaRegions] = regions
 		}
 	}
 
@@ -252,6 +251,16 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	if !plan.DeletionAllowed.Equal(state.DeletionAllowed) {
 		writeData[consts.FieldDeletionAllowed] = plan.DeletionAllowed.ValueBool()
+	}
+
+	if !plan.ReplicaRegions.Equal(state.ReplicaRegions) {
+		var replicaRegions []string
+		diag := plan.ReplicaRegions.ElementsAs(ctx, &replicaRegions, false)
+		resp.Diagnostics.Append(diag...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		writeData[consts.FieldReplicaRegions] = replicaRegions
 	}
 
 	if len(writeData) > 0 {

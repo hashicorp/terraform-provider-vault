@@ -6,11 +6,15 @@ package keymgmt
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/vault/api"
 
@@ -73,17 +77,33 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Optional:            true,
 				Sensitive:           true,
 				ElementType:         types.StringType,
-				MarkdownDescription: "Map containing access_key and secret_key for AWS authentication",
+				MarkdownDescription: "Map containing access_key and secret_key for AWS authentication. Conflicts with `access_key` and `secret_key`.",
+				Validators: []validator.Map{
+					mapvalidator.ConflictsWith(
+						path.MatchRoot(consts.FieldAccessKey),
+						path.MatchRoot(consts.FieldSecretKey),
+					),
+				},
 			},
 			consts.FieldAccessKey: schema.StringAttribute{
 				Optional:            true,
 				Sensitive:           true,
-				MarkdownDescription: "AWS access key ID",
+				MarkdownDescription: "AWS access key ID. Conflicts with `credentials`.",
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.MatchRoot(consts.FieldCredentials),
+					),
+				},
 			},
 			consts.FieldSecretKey: schema.StringAttribute{
 				Optional:            true,
 				Sensitive:           true,
-				MarkdownDescription: "AWS secret access key",
+				MarkdownDescription: "AWS secret access key. Conflicts with `credentials`.",
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.MatchRoot(consts.FieldCredentials),
+					),
+				},
 			},
 		},
 	}

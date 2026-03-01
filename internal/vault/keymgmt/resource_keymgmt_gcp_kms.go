@@ -214,16 +214,29 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		writeData["key_collection"] = plan.KeyCollection.ValueString()
 		hasChanges = true
 	}
+
+	credentials := map[string]interface{}{}
+	credentialsChanged := false
+
 	if !plan.ServiceAccountFile.Equal(state.ServiceAccountFile) {
-		writeData["service_account_file"] = plan.ServiceAccountFile.ValueString()
-		hasChanges = true
+		credentials["service_account_file"] = plan.ServiceAccountFile.ValueString()
+		credentialsChanged = true
 	}
 	if !plan.Project.Equal(state.Project) {
-		writeData["project"] = plan.Project.ValueString()
-		hasChanges = true
+		credentials["project"] = plan.Project.ValueString()
+		credentialsChanged = true
 	}
 	if !plan.Location.Equal(state.Location) {
-		writeData["location"] = plan.Location.ValueString()
+		credentials["location"] = plan.Location.ValueString()
+		credentialsChanged = true
+	}
+
+	if credentialsChanged {
+		// Re-send all credential fields together under the nested credentials object
+		credentials["service_account_file"] = plan.ServiceAccountFile.ValueString()
+		credentials["project"] = plan.Project.ValueString()
+		credentials["location"] = plan.Location.ValueString()
+		writeData["credentials"] = credentials
 		hasChanges = true
 	}
 

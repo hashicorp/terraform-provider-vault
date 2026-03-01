@@ -176,10 +176,9 @@ func (r *ReplicateKeyResource) Read(ctx context.Context, req resource.ReadReques
 	data.KMSName = types.StringValue(kmsName)
 	data.KeyName = types.StringValue(keyName)
 
-	distPath := strings.Join(parts[:len(parts)-1], "/")
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, distPath)
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, basePath)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Key Management key distribution", fmt.Sprintf("Error reading key distribution at %s: %s", distPath, err))
+		resp.Diagnostics.AddError("Error reading Key Management key distribution", fmt.Sprintf("Error reading key distribution at %s: %s", basePath, err))
 		return
 	}
 

@@ -61,7 +61,7 @@ The following arguments are supported:
 
 In addition to the arguments above, the following attributes are exported:
 
-* `id` - The unique identifier for the key rotation operation. Format: `{path}/key/{name}/rotate`
+* `id` - The unique identifier for the key rotation resource. Format: `{path}/key/{name}/rotate`
 
 * `latest_version` - The latest version number of the key after rotation.
 

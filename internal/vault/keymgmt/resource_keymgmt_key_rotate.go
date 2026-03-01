@@ -94,8 +94,8 @@ func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	keyPath := buildKeyPath(vaultPath, name)
-	data.ID = types.StringValue(keyPath)
+	// Store the rotate path as the resource ID to align with the documented import format
+	data.ID = types.StringValue(apiPath)
 
 	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
@@ -132,7 +132,11 @@ func (r *KeyRotateResource) Read(ctx context.Context, req resource.ReadRequest, 
 }
 
 func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *KeyRotateResourceModel, diags *diag.Diagnostics) {
-	keyPath := data.ID.ValueString()
+	rotatePath := data.ID.ValueString()
+
+	// Strip the /rotate suffix to get the key path for reading key metadata
+	keyPath := strings.TrimSuffix(rotatePath, "/rotate")
+
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
 		diags.AddError(errReading("Key Management key", keyPath, err))

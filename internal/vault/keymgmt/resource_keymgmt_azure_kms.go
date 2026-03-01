@@ -226,20 +226,24 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 		writeData["key_collection"] = plan.KeyCollection.ValueString()
 		hasChanges = true
 	}
-	if !plan.TenantID.Equal(state.TenantID) {
-		writeData["tenant_id"] = plan.TenantID.ValueString()
-		hasChanges = true
-	}
-	if !plan.ClientID.Equal(state.ClientID) {
-		writeData["client_id"] = plan.ClientID.ValueString()
-		hasChanges = true
-	}
-	if !plan.ClientSecret.Equal(state.ClientSecret) {
-		writeData["client_secret"] = plan.ClientSecret.ValueString()
-		hasChanges = true
-	}
-	if !plan.Environment.Equal(state.Environment) {
-		writeData["environment"] = plan.Environment.ValueString()
+
+	credentialsChanged := !plan.TenantID.Equal(state.TenantID) ||
+		!plan.ClientID.Equal(state.ClientID) ||
+		!plan.ClientSecret.Equal(state.ClientSecret) ||
+		!plan.Environment.Equal(state.Environment)
+
+	if credentialsChanged {
+		// Re-send all credential fields together under the nested credentials object,
+		// consistent with how Create() sends them to the Vault API.
+		creds := map[string]interface{}{
+			"tenant_id":     plan.TenantID.ValueString(),
+			"client_id":     plan.ClientID.ValueString(),
+			"client_secret": plan.ClientSecret.ValueString(),
+		}
+		if !plan.Environment.IsNull() {
+			creds["environment"] = plan.Environment.ValueString()
+		}
+		writeData["credentials"] = creds
 		hasChanges = true
 	}
 
