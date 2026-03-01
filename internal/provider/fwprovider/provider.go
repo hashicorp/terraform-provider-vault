@@ -247,6 +247,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		keymgmt.NewAzureKMSResource,
 		keymgmt.NewGCPKMSResource,
 		keymgmt.NewKeyRotateResource,
+		keymgmt.NewDistributeKeyResource,
+		keymgmt.NewReplicateKeyResource,
 	}, testResources()...)
 }
 
