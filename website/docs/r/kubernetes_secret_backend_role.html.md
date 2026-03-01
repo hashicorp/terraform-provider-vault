@@ -41,6 +41,7 @@ resource "vault_kubernetes_secret_backend_role" "sa-example" {
   allowed_kubernetes_namespaces = ["*"]
   token_max_ttl                 = 43200
   token_default_ttl             = 21600
+  token_default_audiences       = ["https://kubernetes.default.svc"]
   service_account_name          = "test-service-account-with-generated-token"
 
   extra_labels = {
@@ -151,6 +152,10 @@ The following arguments are supported:
 * `token_max_ttl` - (Optional) The maximum TTL for generated Kubernetes tokens in seconds.
 
 * `token_default_ttl` - (Optional) The default TTL for generated Kubernetes tokens in seconds.
+
+* `token_default_audiences` - (Optional) The default audiences for generated Kubernetes tokens.
+  If not set, defaults to the Kubernetes cluster's default audiences. This field requires 
+  Vault 1.15 or later.
 
 * `service_account_name` - (Optional) The pre-existing service account to generate tokens for.
   Mutually exclusive with `kubernetes_role_name` and `generated_role_rules`. If set, only a
