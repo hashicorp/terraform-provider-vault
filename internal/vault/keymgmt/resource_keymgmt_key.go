@@ -87,9 +87,9 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			consts.FieldReplicaRegions: schema.SetAttribute{
 				Optional:            true,
 				ElementType:         types.StringType,
-				MarkdownDescription: "List of regions where the key should be replicated. AWS KMS only.",
+				MarkdownDescription: "List of regions where the key should be replicated. AWS KMS only. Changing this value requires resource replacement.",
 				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.UseStateForUnknown(),
+					setplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldLatestVersion: schema.Int64Attribute{
@@ -230,6 +230,19 @@ func (r *KeyResource) read(ctx context.Context, cli *api.Client, data *KeyResour
 	if v, ok := vaultResp.Data[consts.FieldMinEnabledVersion]; ok {
 		data.MinEnabledVersion = setInt64FromInterface(v)
 	}
+
+	if v, ok := vaultResp.Data[consts.FieldReplicaRegions].([]interface{}); ok {
+		regions := make([]string, 0, len(v))
+		for _, r := range v {
+			if s, ok := r.(string); ok {
+				regions = append(regions, s)
+			}
+		}
+		setValue, diags := types.SetValueFrom(ctx, types.StringType, regions)
+		if !diags.HasError() {
+			data.ReplicaRegions = setValue
+		}
+	}
 }
 
 func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -251,16 +264,6 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	if !plan.DeletionAllowed.Equal(state.DeletionAllowed) {
 		writeData[consts.FieldDeletionAllowed] = plan.DeletionAllowed.ValueBool()
-	}
-
-	if !plan.ReplicaRegions.Equal(state.ReplicaRegions) {
-		var replicaRegions []string
-		diag := plan.ReplicaRegions.ElementsAs(ctx, &replicaRegions, false)
-		resp.Diagnostics.Append(diag...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		writeData[consts.FieldReplicaRegions] = replicaRegions
 	}
 
 	if len(writeData) > 0 {
