@@ -282,7 +282,8 @@ resource "vault_managed_keys" "test" {
 
 // The following test requires a GCP Cloud KMS to be set up and needs the following
 // environment variables to operate successfully:
-// * GOOGLE_CREDENTIALS - Path to GCP credentials JSON file
+// * GOOGLE_CREDENTIALS       - GCP credentials JSON contents OR
+// * GOOGLE_CREDENTIALS_FILE  - Path to GCP credentials JSON file
 // * GOOGLE_KEY_RING - GCP KMS key ring name
 // * GOOGLE_REGION - GCP region
 // * TF_ACC_LOCAL=1
