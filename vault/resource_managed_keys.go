@@ -391,16 +391,16 @@ func managedKeysGCPConfigSchema() schemaMap {
 				"identifying the key",
 		},
 		consts.FieldCredentials: {
-			Type:     schema.TypeString,
-			Required: true,
-			Description: "The path to the credentials JSON file to use for " +
-				"authenticating to GCP. Alternatively set via the GOOGLE_CREDENTIALS " +
-				"or GOOGLE_APPLICATION_CREDENTIALS environment variables",
+			Type:         schema.TypeString,
+			Required:     true,
+			Description:  "The GCP service account credentials JSON to use for authenticating to GCP.",
+			StateFunc:    NormalizeCredentials,
+			ValidateFunc: ValidateCredentials,
 		},
 		consts.FieldProject: {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The GCP project ID. Can also be provided via the GOOGLE_PROJECT environment variable",
+			Description: "The GCP project ID.",
 		},
 		consts.FieldKeyRing: {
 			Type:        schema.TypeString,
@@ -422,7 +422,7 @@ func managedKeysGCPConfigSchema() schemaMap {
 		consts.FieldRegion: {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The GCP region where the key ring was created. Can also be provided via the GOOGLE_REGION environment variable",
+			Description: "The GCP region where the key ring was created.",
 		},
 		consts.FieldAlgorithm: {
 			Type:     schema.TypeString,
@@ -718,7 +718,7 @@ func readAWSManagedKeys(d *schema.ResourceData, client *api.Client) error {
 }
 
 func readAzureManagedKeys(d *schema.ResourceData, client *api.Client) error {
-	redacted := []string{consts.FieldPin, consts.FieldKeyID}
+	var redacted []string
 	if err := readAndSetManagedKeys(d, client, consts.FieldAzure,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err

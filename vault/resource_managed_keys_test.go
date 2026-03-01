@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -316,10 +315,99 @@ func TestManagedKeysGCP(t *testing.T) {
 				),
 			},
 			{
+				// Re-apply identical config: verifies credentials are preserved in state
+				// during reads (the redacted-field mechanism in readGCPManagedKeys).
+				// A broken redaction would silently empty credentials, causing a non-empty plan.
+				Config:   testManagedKeysConfig_gcp(name, credentials, project, keyRing, region),
+				PlanOnly: true,
+			},
+			{
+				// Simulate out-of-band drift: delete and recreate the key directly in Vault,
+				// which causes Vault to assign a new UUID. Verify Terraform reconciles cleanly.
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					p := getManagedKeysPath(kmsTypeGCP, name)
+					if _, err := client.Logical().Delete(p); err != nil {
+						t.Fatalf("manual cleanup required, failed to delete GCP managed key %q: %s", p, err)
+					}
+					data := map[string]interface{}{
+						consts.FieldCredentials: credentials,
+						consts.FieldProject:     project,
+						consts.FieldKeyRing:     keyRing,
+						consts.FieldRegion:      region,
+						consts.FieldCryptoKey:   "test-crypto-key",
+						consts.FieldAlgorithm:   "ec_sign_p256_sha256",
+					}
+					if _, err := client.Logical().Write(p, data); err != nil {
+						t.Fatalf("failed to recreate GCP managed key %q: %s", p, err)
+					}
+				},
+				Config: testManagedKeysConfig_gcp(name, credentials, project, keyRing, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "gcp.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "gcp.0.uuid"),
+				),
+			},
+			{
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"gcp.0.credentials"},
+			},
+		},
+	})
+}
+
+// TestManagedKeysGCP_PreExistingConflict tests that applying when a GCP managed key already
+// exists in Vault out-of-band returns the expected error, consistent with AWS behaviour.
+func TestManagedKeysGCP_PreExistingConflict(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	name := acctest.RandomWithPrefix("gcp-keys-conflict")
+	resourceName := "vault_managed_keys.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+	keyRing := testutil.GetTestGCPKeyRing(t)
+	region := testutil.GetTestGCPRegion(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					p := getManagedKeysPath(kmsTypeGCP, name)
+					data := map[string]interface{}{
+						consts.FieldCredentials: credentials,
+						consts.FieldProject:     project,
+						consts.FieldKeyRing:     keyRing,
+						consts.FieldRegion:      region,
+						consts.FieldCryptoKey:   "existing-key",
+						consts.FieldAlgorithm:   "ec_sign_p256_sha256",
+					}
+					if _, err := client.Logical().Write(p, data); err != nil {
+						t.Fatalf("failed to pre-create GCP managed key %q: %s", p, err)
+					}
+				},
+				Config:      testManagedKeysConfig_gcp(name, credentials, project, keyRing, region),
+				ExpectError: regexp.MustCompile("managed keys already exist in Vault; use 'terraform import' instead"),
+			},
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					p := getManagedKeysPath(kmsTypeGCP, name)
+					if _, err := client.Logical().Delete(p); err != nil {
+						t.Fatalf("manual cleanup required, failed to delete GCP managed key %q: %s", p, err)
+					}
+				},
+				Config: testManagedKeysConfig_gcp(name, credentials, project, keyRing, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "gcp.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "gcp.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "gcp.0.uuid"),
+				),
 			},
 		},
 	})
@@ -469,62 +557,54 @@ func TestManagedKeysGCP_InvalidAlgorithm(t *testing.T) {
 }
 
 func testManagedKeysConfig_gcp(name, credentials, project, keyRing, region string) string {
-	// Escape the credentials JSON for use in HCL - replace backslashes first, then quotes
-	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
-
-	return fmt.Sprintf(`
-resource "vault_managed_keys" "test" {
-  gcp {
-    name               = "%s"
-    credentials        = "%s"
-    project            = "%s"
-    key_ring           = "%s"
-    region             = "%s"
-    crypto_key         = "test-crypto-key"
-    algorithm          = "ec_sign_p256_sha256"
-  }
-}
-`, name, escapedCreds, project, keyRing, region)
-}
-
-func testManagedKeysConfig_gcpAllParams(name, credentials, project, keyRing, region string) string {
-	// Escape the credentials JSON for use in HCL - replace backslashes first, then quotes
-	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
-
-	return fmt.Sprintf(`
-resource "vault_managed_keys" "test" {
-  gcp {
-    name                = "%s"
-    credentials         = "%s"
-    project             = "%s"
-    key_ring            = "%s"
-    region              = "%s"
-    crypto_key          = "test-crypto-key-full"
-    crypto_key_version  = "1"
-    algorithm           = "rsa_sign_pkcs1_4096_sha256"
-    allow_generate_key  = true
-    allow_replace_key   = true
-    allow_store_key     = true
-    any_mount           = true
-  }
-}
-`, name, escapedCreds, project, keyRing, region)
-}
-
-func testManagedKeysConfig_gcpUpdate1(name, credentials, project, keyRing, region string) string {
-	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
-
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
   gcp {
     name        = "%s"
-    credentials = "%s"
+    credentials = <<GCPCREDS
+%s
+GCPCREDS
+    project     = "%s"
+    key_ring    = "%s"
+    region      = "%s"
+    crypto_key  = "test-crypto-key"
+    algorithm   = "ec_sign_p256_sha256"
+  }
+}
+`, name, credentials, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpAllParams(name, credentials, project, keyRing, region string) string {
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name               = "%s"
+    credentials        = <<GCPCREDS
+%s
+GCPCREDS
+    project            = "%s"
+    key_ring           = "%s"
+    region             = "%s"
+    crypto_key         = "test-crypto-key-full"
+    crypto_key_version = "1"
+    algorithm          = "rsa_sign_pkcs1_4096_sha256"
+    allow_generate_key = true
+    allow_replace_key  = true
+    allow_store_key    = true
+    any_mount          = true
+  }
+}
+`, name, credentials, project, keyRing, region)
+}
+
+func testManagedKeysConfig_gcpUpdate1(name, credentials, project, keyRing, region string) string {
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  gcp {
+    name        = "%s"
+    credentials = <<GCPCREDS
+%s
+GCPCREDS
     project     = "%s"
     key_ring    = "%s"
     region      = "%s"
@@ -532,19 +612,17 @@ resource "vault_managed_keys" "test" {
     algorithm   = "ec_sign_p256_sha256"
   }
 }
-`, name, escapedCreds, project, keyRing, region)
+`, name, credentials, project, keyRing, region)
 }
 
 func testManagedKeysConfig_gcpUpdate2(name, credentials, project, keyRing, region string) string {
-	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
-
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
   gcp {
     name        = "%s"
-    credentials = "%s"
+    credentials = <<GCPCREDS
+%s
+GCPCREDS
     project     = "%s"
     key_ring    = "%s"
     region      = "%s"
@@ -552,19 +630,17 @@ resource "vault_managed_keys" "test" {
     algorithm   = "rsa_sign_pkcs1_2048_sha256"
   }
 }
-`, name, escapedCreds, project, keyRing, region)
+`, name, credentials, project, keyRing, region)
 }
 
 func testManagedKeysConfig_gcpMultiple(name0, name1, credentials, project, keyRing, region string) string {
-	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
-
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
   gcp {
     name        = "%s"
-    credentials = "%s"
+    credentials = <<GCPCREDS
+%s
+GCPCREDS
     project     = "%s"
     key_ring    = "%s"
     region      = "%s"
@@ -574,7 +650,9 @@ resource "vault_managed_keys" "test" {
 
   gcp {
     name        = "%s"
-    credentials = "%s"
+    credentials = <<GCPCREDS
+%s
+GCPCREDS
     project     = "%s"
     key_ring    = "%s"
     region      = "%s"
@@ -582,19 +660,17 @@ resource "vault_managed_keys" "test" {
     algorithm   = "rsa_sign_pkcs1_2048_sha256"
   }
 }
-`, name0, escapedCreds, project, keyRing, region, name1, escapedCreds, project, keyRing, region)
+`, name0, credentials, project, keyRing, region, name1, credentials, project, keyRing, region)
 }
 
 func testManagedKeysConfig_gcpInvalidAlgorithm(name, credentials, project, keyRing, region string) string {
-	escapedCreds := strings.ReplaceAll(credentials, "\\", "\\\\")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\n", "\\n")
-	escapedCreds = strings.ReplaceAll(escapedCreds, "\"", "\\\"")
-
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
   gcp {
     name        = "%s"
-    credentials = "%s"
+    credentials = <<GCPCREDS
+%s
+GCPCREDS
     project     = "%s"
     key_ring    = "%s"
     region      = "%s"
@@ -602,5 +678,5 @@ resource "vault_managed_keys" "test" {
     algorithm   = "invalid_algorithm_12345"
   }
 }
-`, name, escapedCreds, project, keyRing, region)
+`, name, credentials, project, keyRing, region)
 }

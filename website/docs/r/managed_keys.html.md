@@ -14,6 +14,8 @@ A resource that manages the lifecycle of all [Managed Keys](https://www.vaultpro
 
 ## Example Usage
 
+### AWS
+
 ```hcl
 resource "vault_managed_keys" "keys" {
 
@@ -45,6 +47,34 @@ resource "vault_mount" "pki" {
   allowed_managed_keys      = [
     tolist(vault_managed_keys.keys.aws)[0].name,
     tolist(vault_managed_keys.keys.aws)[1].name
+  ]
+}
+```
+
+### GCP Cloud KMS
+
+```hcl
+resource "vault_managed_keys" "gcp_keys" {
+
+  gcp {
+    name        = "gcp-key-1"
+    credentials = file("sa-credentials.json")
+    project     = var.gcp_project
+    region      = "us-east1"
+    key_ring    = "vault-keyring"
+    crypto_key  = "vault-key"
+    algorithm   = "rsa_sign_pkcs1_2048_sha256"
+  }
+}
+
+resource "vault_mount" "pki" {
+  path                      = "pki"
+  type                      = "pki"
+  description               = "Example PKI mount using GCP Cloud KMS managed key"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds     = 36000
+  allowed_managed_keys      = [
+    tolist(vault_managed_keys.gcp_keys.gcp)[0].name
   ]
 }
 ```
@@ -170,7 +200,8 @@ The following arguments are supported:
 
 * `name` - (Required) A unique lowercase name that serves as identifying the key.
 
-* `credentials` - (Required) The GCP service account credentials in JSON format.
+* `credentials` - (Required) The GCP service account credentials JSON contents (the raw JSON
+   key data), not a path to a credentials file.
 
 * `project` - (Required) The GCP project ID where the Cloud KMS resources are located.
 
@@ -183,7 +214,7 @@ The following arguments are supported:
 * `crypto_key_version` - (Optional) The version of the crypto key to use. If not specified,
   the primary version will be used.
 
-* `algorithm` - (Optional) The algorithm of the Cloud KMS crypto key version. Valid values
+* `algorithm` - (Required) The algorithm of the Cloud KMS crypto key version. Valid values
   include `ec_sign_p256_sha256`, `ec_sign_p384_sha384`, `rsa_sign_pss_2048_sha256`,
   `rsa_sign_pss_3072_sha256`, `rsa_sign_pss_4096_sha256`, `rsa_sign_pss_4096_sha512`,
   `rsa_sign_pkcs1_2048_sha256`, `rsa_sign_pkcs1_3072_sha256`, `rsa_sign_pkcs1_4096_sha256`,
