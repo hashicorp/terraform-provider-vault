@@ -90,9 +90,7 @@ The following write-only attributes are supported:
 
 ## Attributes Reference
 
-In addition to the arguments above, the following attributes are exported:
-
-* `id` - The path where the GCP KMS secrets engine is mounted.
+No additional attributes are exported beyond the arguments above.
 
 ## Import
 

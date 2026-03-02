@@ -40,12 +40,11 @@ func NewGCPKMSSecretBackendKeyResource() resource.Resource {
 // GCPKMSSecretBackendKeyResource implements the methods that define this resource
 type GCPKMSSecretBackendKeyResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 // GCPKMSSecretBackendKeyModel describes the Terraform resource data model
 type GCPKMSSecretBackendKeyModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Mount                   types.String `tfsdk:"mount"`
 	Name                    types.String `tfsdk:"name"`
@@ -158,7 +157,7 @@ func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.Sc
 		},
 		MarkdownDescription: "Manages a GCP KMS key in Vault.",
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 func (r *GCPKMSSecretBackendKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -224,9 +223,6 @@ func (r *GCPKMSSecretBackendKeyResource) Read(ctx context.Context, req resource.
 	backend := data.Mount.ValueString()
 	name := data.Name.ValueString()
 	keyPath := buildKeyPath(backend, name)
-
-	// Set ID
-	data.ID = types.StringValue(keyPath)
 
 	log.Printf("[DEBUG] Reading GCP KMS key from %q", keyPath)
 	secret, err := cli.Logical().ReadWithContext(ctx, keyPath)

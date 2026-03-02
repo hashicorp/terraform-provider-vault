@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -32,7 +33,6 @@ func TestGCPKMSSecretBackend_basic(t *testing.T) {
 				Config: testGCPKMSSecretBackend_initialConfig(path, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{
@@ -42,10 +42,17 @@ func TestGCPKMSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldScopes+".#", "2"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil,
-				consts.FieldCredentialsWO,
-				consts.FieldCredentialsWOVersion,
-			),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccGCPKMSSecretBackendImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldCredentialsWO,
+					consts.FieldCredentialsWOVersion,
+				},
+			},
 		},
 	})
 }
@@ -66,7 +73,6 @@ func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "1"),
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{
@@ -178,4 +184,14 @@ resource "vault_gcpkms_secret_backend" "test" {
   credentials_wo_version = 1
 }
 `, path)
+}
+
+func testAccGCPKMSSecretBackendImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+		return rs.Primary.Attributes[consts.FieldPath], nil
+	}
 }

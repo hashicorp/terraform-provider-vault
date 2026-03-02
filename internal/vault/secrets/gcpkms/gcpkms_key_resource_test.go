@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -42,13 +43,19 @@ func TestGCPKMSSecretBackendKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "2592000s"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLatestVersion),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldPrimaryVersion),
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil,
-				consts.FieldCryptoKey,
-				consts.FieldKeyRing, // key_ring is not returned by Vault API after import
-			),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccGCPKMSSecretBackendKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldCryptoKey,
+					consts.FieldKeyRing,
+				},
+			},
 		},
 	})
 }
@@ -336,4 +343,16 @@ resource "vault_gcpkms_secret_backend_key" "test" {
   # Missing both key_ring and crypto_key
 }
 `, path, credentials, keyName)
+}
+
+func testAccGCPKMSSecretBackendKeyImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+		mount := rs.Primary.Attributes[consts.FieldMount]
+		name := rs.Primary.Attributes[consts.FieldName]
+		return fmt.Sprintf("%s/keys/%s", mount, name), nil
+	}
 }

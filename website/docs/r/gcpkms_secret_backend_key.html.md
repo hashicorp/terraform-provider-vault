@@ -182,8 +182,6 @@ The following arguments are supported:
 
 In addition to the arguments above, the following attributes are exported:
 
-* `id` - The Vault path for the key. Format: `{mount}/keys/{name}`
-
 * `primary_version` - The primary version number of the GCP KMS crypto key used for new
   cryptographic operations. Increments only when a key rotation occurs in GCP.
 

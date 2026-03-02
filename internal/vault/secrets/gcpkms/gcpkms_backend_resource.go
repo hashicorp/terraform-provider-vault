@@ -35,12 +35,11 @@ func NewGCPKMSSecretBackendResource() resource.Resource {
 // GCPKMSSecretBackendResource implements the methods that define this resource
 type GCPKMSSecretBackendResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 // GCPKMSSecretBackendModel describes the Terraform resource data model
 type GCPKMSSecretBackendModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Path                 types.String `tfsdk:"path"`
 	CredentialsWO        types.String `tfsdk:"credentials_wo"`
@@ -86,7 +85,7 @@ func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.Schem
 		},
 		MarkdownDescription: "Manages a GCP KMS secrets engine backend in Vault.",
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -226,9 +225,6 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 		// Set to null if not in response
 		data.Scopes = types.SetNull(types.StringType)
 	}
-
-	// Set ID to the mount path
-	data.ID = types.StringValue(mountPath)
 
 	// Note: credentials are write-only and won't be returned by the API
 	// We keep the values from state
