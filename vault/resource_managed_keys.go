@@ -428,10 +428,10 @@ func managedKeysGCPConfigSchema() schemaMap {
 			Type:     schema.TypeString,
 			Required: true,
 			Description: "The signature algorithm to be used with the key. " +
-				"Supported values: EC_SIGN_P256_SHA256, EC_SIGN_P384_SHA384, " +
-				"RSA_SIGN_PSS_2048_SHA256, RSA_SIGN_PSS_3072_SHA256, RSA_SIGN_PSS_4096_SHA256, " +
-				"RSA_SIGN_PSS_4096_SHA512, RSA_SIGN_PKCS1_2048_SHA256, RSA_SIGN_PKCS1_3072_SHA256, " +
-				"RSA_SIGN_PKCS1_4096_SHA256, RSA_SIGN_PKCS1_4096_SHA512",
+				"Supported values: ec_sign_p256_sha256, ec_sign_p384_sha384, " +
+				"rsa_sign_pss_2048_sha256, rsa_sign_pss_3072_sha256, rsa_sign_pss_4096_sha256, " +
+				"rsa_sign_pss_4096_sha512, rsa_sign_pkcs1_2048_sha256, rsa_sign_pkcs1_3072_sha256, " +
+				"rsa_sign_pkcs1_4096_sha256, rsa_sign_pkcs1_4096_sha512",
 		},
 	}
 
