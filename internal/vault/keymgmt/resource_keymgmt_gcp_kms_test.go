@@ -52,7 +52,7 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtGCPKMSConfig(mount, kmsName, keyCollection),
+				Config: testKeymgmtGCPKMSConfig(mount, kmsName, keyCollection, gcpProject, gcpLocation),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
@@ -67,17 +67,7 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 	})
 }
 
-func testKeymgmtGCPKMSConfig(mount, kmsName, keyCollection string) string {
-	gcpProject := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	if gcpProject == "" {
-		gcpProject = "test-project"
-	}
-
-	gcpLocation := os.Getenv("GOOGLE_CLOUD_LOCATION")
-	if gcpLocation == "" {
-		gcpLocation = "us-central1"
-	}
-
+func testKeymgmtGCPKMSConfig(mount, kmsName, keyCollection, gcpProject, gcpLocation string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "keymgmt" {
   path = %q

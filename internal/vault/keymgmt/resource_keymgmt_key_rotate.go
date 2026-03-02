@@ -148,33 +148,21 @@ func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *Key
 		return
 	}
 
-	parts := strings.Split(strings.Trim(keyPath, "/"), "/")
-	keyIndex := -1
-	for i, part := range parts {
-		if part == "key" {
-			keyIndex = i
-			break
-		}
-	}
-
-	if keyIndex == -1 || keyIndex >= len(parts)-1 {
-		diags.AddError(errInvalidPathStructure, "Invalid key path: "+keyPath)
+	mountPath, keyName, err := parseKeyPath(keyPath)
+	if err != nil {
+		diags.AddError(errInvalidPathStructure, err.Error())
 		return
 	}
 
-	data.Path = types.StringValue(strings.Join(parts[:keyIndex], "/"))
-	data.Name = types.StringValue(parts[keyIndex+1])
+	data.Path = types.StringValue(mountPath)
+	data.Name = types.StringValue(keyName)
 
-	// Always set latest_version to ensure it's known after apply
+	// Only set latest_version when it is returned and can be parsed from the API response.
 	if v, ok := vaultResp.Data["latest_version"]; ok && v != nil {
 		if result := setInt64FromInterface(v); !result.IsNull() {
 			data.LatestVersion = result
-			return
 		}
 	}
-
-	// If latest_version was not successfully set, use a default value
-	data.LatestVersion = types.Int64Value(1)
 }
 
 func (r *KeyRotateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
