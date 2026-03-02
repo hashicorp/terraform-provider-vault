@@ -16,16 +16,11 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKeymgmtReplicateKey(t *testing.T) {
-	// Skip if AWS credentials are not available
-	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		t.Skip("AWS_ACCESS_KEY_ID not set, skipping AWS KMS test")
-	}
-	if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		t.Skip("AWS_SECRET_ACCESS_KEY not set, skipping AWS KMS test")
-	}
+	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -53,13 +48,7 @@ func TestAccKeymgmtReplicateKey(t *testing.T) {
 }
 
 func TestAccKeymgmtReplicateKey_NoReplicaRegions(t *testing.T) {
-	// Skip if AWS credentials are not available
-	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		t.Skip("AWS_ACCESS_KEY_ID not set, skipping AWS KMS test")
-	}
-	if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		t.Skip("AWS_SECRET_ACCESS_KEY not set, skipping AWS KMS test")
-	}
+	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")

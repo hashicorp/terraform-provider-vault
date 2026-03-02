@@ -15,16 +15,11 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKeymgmtDistributeKey(t *testing.T) {
-	// Skip if AWS credentials are not available
-	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		t.Skip("AWS_ACCESS_KEY_ID not set, skipping AWS KMS test")
-	}
-	if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		t.Skip("AWS_SECRET_ACCESS_KEY not set, skipping AWS KMS test")
-	}
+	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -45,8 +40,8 @@ func TestAccKeymgmtDistributeKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "kms_name", kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_name", keyName),
-					resource.TestCheckResourceAttr(resourceName, "purpose.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "protection", "hsm"),
+					resource.TestCheckResourceAttr(resourceName, "purpose.#", "2"), resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "encrypt"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "decrypt"), resource.TestCheckResourceAttr(resourceName, "protection", "hsm"),
 					resource.TestCheckResourceAttrSet(resourceName, "key_id"),
 				),
 			},
