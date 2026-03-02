@@ -873,6 +873,7 @@ const (
 	MountTypeSAML         = "saml"
 	MountTypeOkta         = "okta"
 	MountTypeTransit      = "transit"
+	MountTypeKeyMgmt      = "keymgmt"
 
 	/*
 		Vault version constants
