@@ -67,8 +67,6 @@ In addition to the arguments above, the following attributes are exported:
 
 * `id` - The unique identifier for the GCP Cloud KMS provider. Format: `{path}/kms/{name}`
 
-* `type` - The type of the KMS provider (`azurekeyvault`, `awskms`, or `gcpckms`).
-
 ## Import
 
 GCP Cloud KMS providers can be imported using the format `{path}/kms/{name}`, e.g.
