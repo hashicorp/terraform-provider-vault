@@ -17,8 +17,6 @@ import (
 )
 
 func TestAccKeymgmtKeyRotate_basic(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
-
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	keyName := acctest.RandomWithPrefix("key")
 	resourceType := "vault_keymgmt_key_rotate"
@@ -42,8 +40,6 @@ func TestAccKeymgmtKeyRotate_basic(t *testing.T) {
 }
 
 func TestAccKeymgmtKeyRotate_multiple(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
-
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	keyName := acctest.RandomWithPrefix("key")
 	resourceType := "vault_keymgmt_key_rotate"
@@ -135,6 +131,8 @@ resource "vault_keymgmt_key_rotate" "test" {
 resource "vault_keymgmt_key_rotate" "second" {
   path = vault_mount.keymgmt.path
   name = vault_keymgmt_key.test.name
+  
+  depends_on = [vault_keymgmt_key_rotate.test]
 }
 `, mount, keyName)
 }

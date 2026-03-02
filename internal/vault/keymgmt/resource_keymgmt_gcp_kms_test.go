@@ -18,12 +18,7 @@ import (
 )
 
 func TestAccKeymgmtGCPKMS(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
-
-	// Skip if GCP credentials are not available
-	if os.Getenv("GOOGLE_CREDENTIALS") == "" {
-		t.Skip("GOOGLE_CREDENTIALS not set, skipping GCP KMS test")
-	}
+	testutil.SkipTestEnvUnset(t, "GOOGLE_CREDENTIALS")
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("gcpkms")
@@ -46,17 +41,20 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 	}
 
 	keyCollection := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", gcpProject, gcpLocation, gcpKeyRing)
+	gcpCredentials := os.Getenv("GOOGLE_CREDENTIALS")
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtGCPKMSConfig(mount, kmsName, keyCollection, gcpProject, gcpLocation),
+				Config: testKeymgmtGCPKMSConfig(mount, kmsName, keyCollection, gcpProject, gcpLocation, gcpCredentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", keyCollection),
+					resource.TestCheckResourceAttr(resourceName, "project", gcpProject),
+					resource.TestCheckResourceAttr(resourceName, "location", gcpLocation),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
@@ -67,7 +65,7 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 	})
 }
 
-func testKeymgmtGCPKMSConfig(mount, kmsName, keyCollection, gcpProject, gcpLocation string) string {
+func testKeymgmtGCPKMSConfig(mount, kmsName, keyCollection, gcpProject, gcpLocation, gcpCredentials string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "keymgmt" {
   path = %q
@@ -82,5 +80,5 @@ resource "vault_keymgmt_gcp_kms" "test" {
   project              = %q
   location             = %q
 }
-`, mount, kmsName, keyCollection, os.Getenv("GOOGLE_CREDENTIALS"), gcpProject, gcpLocation)
+`, mount, kmsName, keyCollection, gcpCredentials, gcpProject, gcpLocation)
 }
