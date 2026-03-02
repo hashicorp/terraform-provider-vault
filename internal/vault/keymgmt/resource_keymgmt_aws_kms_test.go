@@ -18,12 +18,7 @@ import (
 )
 
 func TestAccKeymgmtAWSKMS(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
-
-	// Skip if AWS credentials are not available
-	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		t.Skip("AWS_ACCESS_KEY_ID not set, skipping AWS KMS test")
-	}
+	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")

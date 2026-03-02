@@ -128,7 +128,7 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 	apiPath := buildKMSPath(vaultPath, name)
 
 	writeData := map[string]interface{}{
-		"provider":       "awskms",
+		"provider":       ProviderAWSKMS,
 		"key_collection": data.KeyCollection.ValueString(),
 	}
 

@@ -85,7 +85,7 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 			},
 			consts.FieldEnvironment: schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "Azure environment (e.g., AzurePublicCloud, AzureUSGovernment, AzureChinaCloud, AzureGermanCloud)",
+				MarkdownDescription: "Azure environment (e.g., AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud, AzureGermanCloud)",
 			},
 		},
 	}
@@ -101,7 +101,7 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error getting Vault client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -110,7 +110,7 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 	apiPath := buildKMSPath(vaultPath, name)
 
 	writeData := map[string]interface{}{
-		"provider":       "azurekeyvault",
+		"provider":       ProviderAzureKV,
 		"key_collection": data.KeyCollection.ValueString(),
 	}
 
@@ -271,7 +271,7 @@ func (r *AzureKMSResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error getting Vault client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 

@@ -18,12 +18,7 @@ import (
 )
 
 func TestAccKeymgmtAzureKMS(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
-
-	// Skip if Azure credentials are not available
-	if os.Getenv("AZURE_TENANT_ID") == "" {
-		t.Skip("AZURE_TENANT_ID not set, skipping Azure KMS test")
-	}
+	testutil.SkipTestEnvUnset(t, "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_KEYVAULT_NAME")
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("azurekms")
@@ -31,9 +26,6 @@ func TestAccKeymgmtAzureKMS(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	keyVaultName := os.Getenv("AZURE_KEYVAULT_NAME")
-	if keyVaultName == "" {
-		keyVaultName = "test-keyvault"
-	}
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
