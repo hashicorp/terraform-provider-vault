@@ -664,6 +664,7 @@ const (
 	FieldEnableSamaccountnameLogin            = "enable_samaccountname_login"
 	FieldAnonymousGroupSearch                 = "anonymous_group_search"
 	FieldAliasNameSource                      = "alias_name_source"
+	FieldAliasMetadata                        = "alias_metadata"
 	FieldBoundServiceAccountNames             = "bound_service_account_names"
 	FieldBoundServiceAccountNamespaces        = "bound_service_account_namespaces"
 	FieldBoundServiceAccountNamespaceSelector = "bound_service_account_namespace_selector"

@@ -40,6 +40,11 @@ resource "vault_radius_auth_backend" "example" {
   token_ttl                  = 3600
   token_max_ttl              = 7200
   token_policies             = ["default", "radius-users"]
+
+  # Requires Vault Enterprise 1.21+
+  alias_metadata = {
+    "username" = "name"
+  }
 }
 ```
 
@@ -107,6 +112,9 @@ documentation for more information.
 * `token_type` - (Optional) The type of tokens to generate. Valid values are 
   `default`, `service`, and `batch`. If not set, uses the mount's tuned default 
   (which unless changed will be `service` tokens).
+
+* `alias_metadata` - (Optional) A map of string to string that will be set as 
+  metadata on the identity alias. **Requires Vault Enterprise 1.21+**.
 
 ## Attributes Reference
 

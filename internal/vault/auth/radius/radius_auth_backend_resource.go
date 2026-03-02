@@ -26,7 +26,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/token"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -71,14 +71,14 @@ type RadiusAuthBackendModel struct {
 type RadiusAuthBackendAPIModel struct {
 	token.TokenAPIModel `mapstructure:",squash"`
 
-	Host                     string   `json:"host,omitempty" mapstructure:"host,omitempty"`
+	Host                     string   `json:"host" mapstructure:"host"`
 	Port                     int64    `json:"port,omitempty" mapstructure:"port,omitempty"`
-	Secret                   string   `json:"secret,omitempty" mapstructure:"secret,omitempty"`
-	UnregisteredUserPolicies []string `json:"unregistered_user_policies,omitempty" mapstructure:"unregistered_user_policies,omitempty"`
+	Secret                   string   `json:"secret" mapstructure:"secret"`
+	UnregisteredUserPolicies []string `json:"unregistered_user_policies" mapstructure:"unregistered_user_policies"`
 	DialTimeout              int64    `json:"dial_timeout,omitempty" mapstructure:"dial_timeout,omitempty"`
-	ReadTimeout              int64    `json:"read_timeout,omitempty" mapstructure:"read_timeout,omitempty"`
+	ReadTimeout              int64    `json:"read_timeout" mapstructure:"read_timeout"`
 	NASPort                  int64    `json:"nas_port,omitempty" mapstructure:"nas_port,omitempty"`
-	NASIdentifier            string   `json:"nas_identifier,omitempty" mapstructure:"nas_identifier,omitempty"`
+	NASIdentifier            string   `json:"nas_identifier" mapstructure:"nas_identifier"`
 }
 
 // Metadata defines the resource name as it would appear in Terraform configurations
@@ -434,11 +434,9 @@ func (r *RadiusAuthBackendResource) getApiModel(ctx context.Context, data *Radiu
 
 	// Convert Set to comma-separated string for Vault API
 	// Note: Vault RADIUS API accepts comma-separated string but returns array
-	policiesStr, policyDiags := util.SetToCommaSeparatedString(ctx, data.UnregisteredUserPolicies)
-	diags.Append(policyDiags...)
-	if diags.HasError() {
-		return nil, diags
-	}
+	var elements []string
+	_ = data.UnregisteredUserPolicies.ElementsAs(ctx, &elements, false)
+	policiesStr := strings.Join(elements, ",")
 
 	// Build API model without UnregisteredUserPolicies (we'll add it manually as string)
 	// Note: DialTimeout and NASPort are set to 0 here; we'll add non-zero values manually
@@ -469,6 +467,12 @@ func (r *RadiusAuthBackendResource) getApiModel(ctx context.Context, data *Radiu
 	// Empty string clears policies, non-empty string sets them
 	vaultRequest[consts.FieldRadiusUnregisteredUserPolicies] = policiesStr
 
+	// alias_metadata requires Vault Enterprise 1.21+
+	meta := r.Meta()
+	if meta == nil || !meta.IsAPISupported(provider.VaultVersion121) || !meta.IsEnterpriseSupported() {
+		delete(vaultRequest, consts.FieldAliasMetadata)
+	}
+
 	return vaultRequest, diags
 }
 
@@ -491,20 +495,33 @@ func (r *RadiusAuthBackendResource) populateDataModelFromApi(ctx context.Context
 	data.Host = types.StringValue(apiModel.Host)
 	data.Port = types.Int64Value(apiModel.Port)
 	// Convert []string from API to Set for Terraform
-	policies, policyDiags := util.StringSliceToSet(ctx, apiModel.UnregisteredUserPolicies)
-	diags.Append(policyDiags...)
-	if diags.HasError() {
-		return diags
+	if len(apiModel.UnregisteredUserPolicies) == 0 {
+		data.UnregisteredUserPolicies = types.SetNull(types.StringType)
+	} else {
+		policies, setDiags := types.SetValueFrom(ctx, types.StringType, apiModel.UnregisteredUserPolicies)
+		if setDiags.HasError() {
+			return setDiags
+		}
+		data.UnregisteredUserPolicies = policies
 	}
-	data.UnregisteredUserPolicies = policies
 	data.DialTimeout = types.Int64Value(apiModel.DialTimeout)
 	data.ReadTimeout = types.Int64Value(apiModel.ReadTimeout)
 	data.NASPort = types.Int64Value(apiModel.NASPort)
 	data.NASIdentifier = types.StringValue(apiModel.NASIdentifier)
 
+	// Save alias_metadata before populating token fields, as Vault CE doesn't return it
+	savedAliasMetadata := data.TokenModel.AliasMetadata
+
 	// Populate token fields
 	tokenDiags := token.PopulateTokenModelFromAPI(ctx, &data.TokenModel, &apiModel.TokenAPIModel)
 	diags.Append(tokenDiags...)
+
+	// Restore alias_metadata if Vault doesn't support it (CE or < 1.21)
+	// This prevents state inconsistency when user configures alias_metadata on unsupported Vault
+	meta := r.Meta()
+	if meta == nil || !meta.IsAPISupported(provider.VaultVersion121) || !meta.IsEnterpriseSupported() {
+		data.TokenModel.AliasMetadata = savedAliasMetadata
+	}
 
 	return diags
 }
