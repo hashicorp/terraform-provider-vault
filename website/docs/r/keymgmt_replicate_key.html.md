@@ -1,6 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_keymgmt_replicate_key resource"
+sidebar_current: "docs-vault-resource-keymgmt-replicate-key"
 description: |-
   Replicates keys across regions in AWS KMS (AWS KMS only)
 ---
