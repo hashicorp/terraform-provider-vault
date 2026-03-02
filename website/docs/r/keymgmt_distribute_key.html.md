@@ -155,6 +155,8 @@ In addition to the arguments above, the following attributes are exported:
 
 * `key_id` - The ID of the distributed key in the external KMS.
 
+* `versions` - List of key version numbers that have been distributed to the KMS provider. Each time a key is rotated in Vault and redistributed, a new version number is added to this list.
+
 ## Import
 
 Key distributions can be imported using the format `{path}/kms/{kms_name}/key/{key_name}`, e.g.

@@ -255,8 +255,10 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 		hasChanges = true
 	}
 	if !plan.Protection.Equal(state.Protection) {
-		writeData["protection"] = plan.Protection.ValueString()
-		hasChanges = true
+		if !plan.Protection.IsNull() && !plan.Protection.IsUnknown() {
+			writeData["protection"] = plan.Protection.ValueString()
+			hasChanges = true
+		}
 	}
 
 	if hasChanges {

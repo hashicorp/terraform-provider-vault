@@ -91,10 +91,10 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 	kmsName := data.KMSName.ValueString()
 	keyName := data.KeyName.ValueString()
 
-	kmsPath := strings.Trim(vaultPath, "/") + "/kms/" + kmsName
+	kmsPath := buildKMSPath(vaultPath, kmsName)
 	kmsResp, err := cli.Logical().ReadWithContext(ctx, kmsPath)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading KMS provider", fmt.Sprintf("Error reading KMS provider at %s: %s", kmsPath, err))
+		resp.Diagnostics.AddError(errReading("KMS provider", kmsPath, err))
 		return
 	}
 
@@ -113,10 +113,10 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	keyPath := strings.Trim(vaultPath, "/") + "/key/" + keyName
+	keyPath := buildKeyPath(vaultPath, keyName)
 	keyResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Key Management key", fmt.Sprintf("Error reading Key Management key at %s: %s", keyPath, err))
+		resp.Diagnostics.AddError(errReading("Key Management key", keyPath, err))
 		return
 	}
 
@@ -159,12 +159,17 @@ func (r *ReplicateKeyResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	apiPath := data.ID.ValueString()
-	// Parse the path - note: replicate path has extra /replicate suffix, so we need to handle it
+	// Ensure the path ends with "replicate"; otherwise, the ID format is invalid.
 	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
-	// Remove the "replicate" suffix to use parseDistributeKeyPath
-	if len(parts) > 0 && parts[len(parts)-1] == "replicate" {
-		parts = parts[:len(parts)-1]
+	if len(parts) == 0 || parts[len(parts)-1] != "replicate" {
+		resp.Diagnostics.AddError(
+			"Invalid path structure",
+			fmt.Sprintf("Invalid import ID %q: expected path to end with /replicate", apiPath),
+		)
+		return
 	}
+	// Remove the "replicate" suffix to use parseDistributeKeyPath
+	parts = parts[:len(parts)-1]
 	basePath := strings.Join(parts, "/")
 	mountPath, kmsName, keyName, err := parseDistributeKeyPath(basePath)
 	if err != nil {
@@ -178,7 +183,7 @@ func (r *ReplicateKeyResource) Read(ctx context.Context, req resource.ReadReques
 
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, basePath)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Key Management key distribution", fmt.Sprintf("Error reading key distribution at %s: %s", basePath, err))
+		resp.Diagnostics.AddError(errReading("Key Management key distribution", basePath, err))
 		return
 	}
 
