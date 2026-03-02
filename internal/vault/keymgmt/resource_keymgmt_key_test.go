@@ -17,8 +17,6 @@ import (
 )
 
 func TestAccKeymgmtKey_basic(t *testing.T) {
-	testutil.SkipTestAccEnt(t)
-
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	keyName := acctest.RandomWithPrefix("key")
 	resourceType := "vault_keymgmt_key"
