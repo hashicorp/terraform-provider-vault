@@ -211,15 +211,19 @@ The following arguments are supported:
 
 * `crypto_key` - (Required) The name of the Cloud KMS crypto key to use.
 
-* `crypto_key_version` - (Optional) The version of the crypto key to use. If not specified,
-  the primary version will be used.
+* `crypto_key_version` - (Optional) The version of the key to use. (Default: 1)
 
-* `algorithm` - (Required) The algorithm of the Cloud KMS crypto key version. Valid values
-  include `ec_sign_p256_sha256`, `ec_sign_p384_sha384`, `rsa_sign_pss_2048_sha256`,
-  `rsa_sign_pss_3072_sha256`, `rsa_sign_pss_4096_sha256`, `rsa_sign_pss_4096_sha512`,
-  `rsa_sign_pkcs1_2048_sha256`, `rsa_sign_pkcs1_3072_sha256`, `rsa_sign_pkcs1_4096_sha256`,
-  `rsa_sign_pkcs1_4096_sha512`, `rsa_decrypt_oaep_2048_sha256`, `rsa_decrypt_oaep_3072_sha256`,
-  `rsa_decrypt_oaep_4096_sha256`, `rsa_decrypt_oaep_4096_sha512`.
+* `algorithm` - (Required) The signature algorithm to be used with the key. Supported values are:
+  - `EC_SIGN_P256_SHA256`
+  - `EC_SIGN_P384_SHA384`
+  - `RSA_SIGN_PSS_2048_SHA256`
+  - `RSA_SIGN_PSS_3072_SHA256`
+  - `RSA_SIGN_PSS_4096_SHA256`
+  - `RSA_SIGN_PSS_4096_SHA512`
+  - `RSA_SIGN_PKCS1_2048_SHA256`
+  - `RSA_SIGN_PKCS1_3072_SHA256`
+  - `RSA_SIGN_PKCS1_4096_SHA256`
+  - `RSA_SIGN_PKCS1_4096_SHA512`
 
 
 ## Import
