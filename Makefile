@@ -3,7 +3,7 @@ GOFMT_FILES ?= $$(find . -name '*.go')
 WEBSITE_REPO = github.com/hashicorp/terraform-website
 PKG_NAME = vault
 TF_ACC_TERRAFORM_VERSION ?= 1.2.2
-TESTARGS ?= -test.v
+TESTARGS ?= -tags testonly -test.v
 TEST_PATH ?= ./...
 
 go-version-check: ## Check go version

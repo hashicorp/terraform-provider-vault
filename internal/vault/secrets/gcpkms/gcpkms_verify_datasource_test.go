@@ -16,17 +16,11 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-// Note: These tests use environment variables defined in gcpkms_key_resource_test.go:
-// - GOOGLE_CREDENTIALS: GCP service account JSON
-// - GOOGLE_KMS_KEY_RING: GCP KMS key ring path
-
 func TestGCPKMSVerifyDataSource_basic(t *testing.T) {
-	// Skip if environment variables are not set
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
-	keyRing := getMockKeyRing()
 
 	dataSourceType := "vault_gcpkms_verify"
 	dataSourceName := "data." + dataSourceType + ".test"
@@ -36,14 +30,13 @@ func TestGCPKMSVerifyDataSource_basic(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPKMSVerifyDataSource_basicConfig(path, keyName, keyRing),
+				Config: testGCPKMSVerifyDataSource_basicConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(dataSourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldDigest),
 					resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldSignature),
 					resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldValid),
-					resource.TestCheckResourceAttrSet(dataSourceName, "id"),
 				),
 			},
 		},
@@ -51,12 +44,10 @@ func TestGCPKMSVerifyDataSource_basic(t *testing.T) {
 }
 
 func TestGCPKMSVerifyDataSource_withKeyVersion(t *testing.T) {
-	// Skip if environment variables are not set
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
-	keyRing := getMockKeyRing()
 
 	dataSourceType := "vault_gcpkms_verify"
 	dataSourceName := "data." + dataSourceType + ".test"
@@ -66,9 +57,9 @@ func TestGCPKMSVerifyDataSource_withKeyVersion(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPKMSVerifyDataSource_withKeyVersionConfig(path, keyName, keyRing),
+				Config: testGCPKMSVerifyDataSource_withKeyVersionConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(dataSourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldKeyVersion, "1"),
 					resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldValid),
@@ -79,12 +70,10 @@ func TestGCPKMSVerifyDataSource_withKeyVersion(t *testing.T) {
 }
 
 func TestGCPKMSVerifyDataSource_invalidSignature(t *testing.T) {
-	// Skip if environment variables are not set
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
-	keyRing := getMockKeyRing()
 
 	dataSourceType := "vault_gcpkms_verify"
 	dataSourceName := "data." + dataSourceType + ".test"
@@ -94,9 +83,9 @@ func TestGCPKMSVerifyDataSource_invalidSignature(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPKMSVerifyDataSource_invalidSignatureConfig(path, keyName, keyRing),
+				Config: testGCPKMSVerifyDataSource_invalidSignatureConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(dataSourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldValid, "false"),
 				),
@@ -105,17 +94,18 @@ func TestGCPKMSVerifyDataSource_invalidSignature(t *testing.T) {
 	})
 }
 
-func testGCPKMSVerifyDataSource_basicConfig(path, keyName, keyRing string) string {
+func testGCPKMSVerifyDataSource_basicConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = <<-EOT
+  path                   = "%s"
+  credentials_wo         = <<-EOT
 %s
 EOT
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  backend          = vault_gcpkms_secret_backend.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
@@ -124,26 +114,27 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  backend     = vault_gcpkms_secret_backend.test.path
+  mount       = vault_gcpkms_secret_backend.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   key_version = 1
   digest      = "dGVzdC1kaWdlc3Q="
   signature   = "dGVzdC1zaWduYXR1cmU="
 }
-`, path, getMockGCPCredentials(), keyName, keyRing)
+`, path, credentials, keyName, keyRing)
 }
 
-func testGCPKMSVerifyDataSource_withKeyVersionConfig(path, keyName, keyRing string) string {
+func testGCPKMSVerifyDataSource_withKeyVersionConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = <<-EOT
+  path                   = "%s"
+  credentials_wo         = <<-EOT
 %s
 EOT
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  backend          = vault_gcpkms_secret_backend.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
@@ -152,26 +143,27 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  backend     = vault_gcpkms_secret_backend.test.path
+  mount       = vault_gcpkms_secret_backend.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   digest      = "dGVzdC1kaWdlc3Q="
   signature   = "dGVzdC1zaWduYXR1cmU="
   key_version = 1
 }
-`, path, getMockGCPCredentials(), keyName, keyRing)
+`, path, credentials, keyName, keyRing)
 }
 
-func testGCPKMSVerifyDataSource_invalidSignatureConfig(path, keyName, keyRing string) string {
+func testGCPKMSVerifyDataSource_invalidSignatureConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = <<-EOT
+  path                   = "%s"
+  credentials_wo         = <<-EOT
 %s
 EOT
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  backend          = vault_gcpkms_secret_backend.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
@@ -180,11 +172,11 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  backend     = vault_gcpkms_secret_backend.test.path
+  mount       = vault_gcpkms_secret_backend.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   key_version = 1
   digest      = "dGVzdC1kaWdlc3Q="
   signature   = "aW52YWxpZC1zaWduYXR1cmU="
 }
-`, path, getMockGCPCredentials(), keyName, keyRing)
+`, path, credentials, keyName, keyRing)
 }
