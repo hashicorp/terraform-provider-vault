@@ -70,8 +70,8 @@ type CFConfigAPIModel struct {
 	CFUsername               string   `json:"cf_username" mapstructure:"cf_username"`
 	CFPassword               string   `json:"cf_password" mapstructure:"cf_password"`
 	CFApiTrustedCertificates []string `json:"cf_api_trusted_certificates" mapstructure:"cf_api_trusted_certificates"`
-	LoginMaxSecsNotBefore    int64    `json:"login_max_seconds_not_before" mapstructure:"login_max_seconds_not_before"`
-	LoginMaxSecsNotAfter     int64    `json:"login_max_seconds_not_after" mapstructure:"login_max_seconds_not_after"`
+	LoginMaxSecsNotBefore    int64    `json:"login_max_seconds_not_before,omitempty" mapstructure:"login_max_seconds_not_before,omitempty"`
+	LoginMaxSecsNotAfter     int64    `json:"login_max_seconds_not_after,omitempty" mapstructure:"login_max_seconds_not_after,omitempty"`
 	CFTimeout                int64    `json:"cf_timeout" mapstructure:"cf_timeout"`
 }
 
@@ -380,23 +380,79 @@ func (r *CFAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Conte
 		data.CFTimeout = types.Int64Null()
 	}
 
-	identityCACerts, setErr := types.SetValueFrom(ctx, types.StringType, readResp.IdentityCACertificates)
-	if setErr.HasError() {
-		return setErr
-	}
-	data.IdentityCACertificates = identityCACerts
+	// identity_ca_certificates: Vault strips trailing whitespace from PEM certs.
+	// If the existing data value (from plan/state) matches Vault's response when
+	// both are trimmed, keep the existing value so the user's original formatting
+	// (e.g. trailing newline from file()) is preserved and never causes a diff.
+	data.IdentityCACertificates = reconcileCertSet(ctx, readResp.IdentityCACertificates, data.IdentityCACertificates)
 
+	// cf_api_trusted_certificates: same reconciliation.
 	if len(readResp.CFApiTrustedCertificates) == 0 {
 		data.CFApiTrustedCertificates = types.SetNull(types.StringType)
 	} else {
-		trustedCerts, setErr := types.SetValueFrom(ctx, types.StringType, readResp.CFApiTrustedCertificates)
-		if setErr.HasError() {
-			return setErr
-		}
-		data.CFApiTrustedCertificates = trustedCerts
+		data.CFApiTrustedCertificates = reconcileCertSet(ctx, readResp.CFApiTrustedCertificates, data.CFApiTrustedCertificates)
 	}
 
 	return diag.Diagnostics{}
+}
+
+// reconcileCertSet compares vaultCerts (as returned by Vault, possibly trimmed)
+// against current (the existing plan/state value). If the two sets are equal
+// when both sides are whitespace-trimmed, current is returned unchanged — this
+// preserves the user's original cert formatting (e.g. a trailing newline from
+// file()) so that Vault's cosmetic stripping never produces a plan/state diff.
+// If the sets differ semantically (a cert was actually added, removed, or
+// replaced), the trimmed Vault values are returned instead.
+func reconcileCertSet(ctx context.Context, vaultCerts []string, current types.Set) types.Set {
+	// Trim the Vault certs.
+	trimmed := make([]string, len(vaultCerts))
+	for i, c := range vaultCerts {
+		trimmed[i] = strings.TrimSpace(c)
+	}
+
+	// If current is null/unknown (e.g. during import with no prior state),
+	// just use the trimmed Vault values.
+	if current.IsNull() || current.IsUnknown() {
+		v, _ := types.SetValueFrom(ctx, types.StringType, trimmed)
+		return v
+	}
+
+	// Extract current cert strings and trim them for comparison only.
+	var currentRaw []string
+	current.ElementsAs(ctx, &currentRaw, false)
+	trimmedCurrent := make([]string, len(currentRaw))
+	for i, c := range currentRaw {
+		trimmedCurrent[i] = strings.TrimSpace(c)
+	}
+
+	// Compare the two trimmed sets. If they contain the same elements, the certs
+	// haven't actually changed — return current as-is to preserve formatting.
+	if stringSetsEqual(trimmed, trimmedCurrent) {
+		return current
+	}
+
+	// The certs actually changed; use the trimmed Vault values.
+	v, _ := types.SetValueFrom(ctx, types.StringType, trimmed)
+	return v
+}
+
+// stringSetsEqual returns true when a and b contain the same strings,
+// regardless of order.
+func stringSetsEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	seen := make(map[string]int, len(a))
+	for _, s := range a {
+		seen[s]++
+	}
+	for _, s := range b {
+		if seen[s] == 0 {
+			return false
+		}
+		seen[s]--
+	}
+	return true
 }
 
 func extractCFConfigMountFromID(id string) (string, error) {
