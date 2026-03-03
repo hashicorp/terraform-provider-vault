@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -40,24 +41,25 @@ func NewGCPKMSSecretBackendKeyResource() resource.Resource {
 // GCPKMSSecretBackendKeyResource implements the methods that define this resource
 type GCPKMSSecretBackendKeyResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 // GCPKMSSecretBackendKeyModel describes the Terraform resource data model
 type GCPKMSSecretBackendKeyModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
-	Backend         types.String `tfsdk:"backend"`
-	Name            types.String `tfsdk:"name"`
-	KeyRing         types.String `tfsdk:"key_ring"`
-	CryptoKey       types.String `tfsdk:"crypto_key"`
-	Purpose         types.String `tfsdk:"purpose"`
-	Algorithm       types.String `tfsdk:"algorithm"`
-	ProtectionLevel types.String `tfsdk:"protection_level"`
-	Labels          types.Map    `tfsdk:"labels"`
-	RotationPeriod  types.String `tfsdk:"rotation_period"`
-	LatestVersion   types.Int64  `tfsdk:"latest_version"`
-	PrimaryVersion  types.Int64  `tfsdk:"primary_version"`
+	Mount                   types.String `tfsdk:"mount"`
+	Name                    types.String `tfsdk:"name"`
+	KeyRing                 types.String `tfsdk:"key_ring"`
+	CryptoKey               types.String `tfsdk:"crypto_key"`
+	Purpose                 types.String `tfsdk:"purpose"`
+	Algorithm               types.String `tfsdk:"algorithm"`
+	ProtectionLevel         types.String `tfsdk:"protection_level"`
+	Labels                  types.Map    `tfsdk:"labels"`
+	RotationPeriod          types.String `tfsdk:"rotation_period"`
+	RotationScheduleSeconds types.Int64  `tfsdk:"rotation_schedule_seconds"`
+	LatestVersion           types.Int64  `tfsdk:"latest_version"`
+	PrimaryVersion          types.Int64  `tfsdk:"primary_version"`
+	NextRotationTimeSeconds types.Int64  `tfsdk:"next_rotation_time_seconds"`
 }
 
 func (r *GCPKMSSecretBackendKeyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -67,7 +69,7 @@ func (r *GCPKMSSecretBackendKeyResource) Metadata(_ context.Context, req resourc
 func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Path where the GCP KMS secrets engine is mounted.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
@@ -80,7 +82,8 @@ func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.Sc
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-			}, consts.FieldKeyRing: schema.StringAttribute{
+			},
+			consts.FieldKeyRing: schema.StringAttribute{
 				MarkdownDescription: "GCP KMS key ring resource ID (e.g., 'projects/my-project/locations/us-central1/keyRings/my-ring'). Required.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
@@ -88,8 +91,9 @@ func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.Sc
 				},
 			},
 			consts.FieldCryptoKey: schema.StringAttribute{
-				MarkdownDescription: "Name of the crypto key to use in GCP KMS. If the crypto key does not exist, Vault will try to create it. This defaults to the Vault key name if unspecified.",
-				Optional:            true,
+				MarkdownDescription: "Name of the crypto key to use in GCP KMS. If the crypto key does not exist," +
+					"Vault will try to create it. This defaults to the Vault key name if unspecified.",
+				Optional: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -122,9 +126,16 @@ func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.Sc
 				ElementType:         types.StringType,
 				MarkdownDescription: "Labels to apply to the key.",
 				Optional:            true,
-			}, consts.FieldRotationPeriod: schema.StringAttribute{
-				MarkdownDescription: "Rotation period for the key (e.g., '2592000s' for 30 days). Can be updated after creation.",
-				Optional:            true,
+			},
+			consts.FieldRotationPeriod: schema.StringAttribute{
+				MarkdownDescription: "Rotation period for the key as a duration string (e.g., '72h', '2592000s' for 30 days). " +
+					"Can be updated after creation.",
+				Optional: true,
+			},
+			consts.FieldRotationScheduleSeconds: schema.Int64Attribute{
+				MarkdownDescription: "Rotation period in seconds as returned by the Vault API. Populated from the API response; " +
+					"use rotation_period to configure the desired rotation schedule.",
+				Computed: true,
 			},
 			consts.FieldLatestVersion: schema.Int64Attribute{
 				MarkdownDescription: "Latest version of the crypto key.",
@@ -140,10 +151,14 @@ func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.Sc
 					int64planmodifier.UseStateForUnknown(),
 				},
 			},
+			consts.FieldNextRotationTimeSeconds: schema.Int64Attribute{
+				MarkdownDescription: "Unix timestamp of the next scheduled rotation of the crypto key. Only set for symmetric keys with a rotation_period.",
+				Computed:            true,
+			},
 		},
 		MarkdownDescription: "Manages a GCP KMS key in Vault.",
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 func (r *GCPKMSSecretBackendKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -159,9 +174,9 @@ func (r *GCPKMSSecretBackendKeyResource) Create(ctx context.Context, req resourc
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	backend := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	keyPath := fmt.Sprintf("%s/keys/%s", backend, name)
+	keyPath := buildKeyPath(backend, name)
 
 	// Build the key configuration from the model
 	keyData, diags := buildKeyConfigFromModel(ctx, &data)
@@ -178,9 +193,6 @@ func (r *GCPKMSSecretBackendKeyResource) Create(ctx context.Context, req resourc
 		)
 		return
 	}
-
-	// Set ID
-	data.ID = types.StringValue(fmt.Sprintf("%s/keys/%s", backend, name))
 
 	// Set initial state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -209,12 +221,9 @@ func (r *GCPKMSSecretBackendKeyResource) Read(ctx context.Context, req resource.
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	backend := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	keyPath := fmt.Sprintf("%s/keys/%s", backend, name)
-
-	// Set ID
-	data.ID = types.StringValue(keyPath)
+	keyPath := buildKeyPath(backend, name)
 
 	log.Printf("[DEBUG] Reading GCP KMS key from %q", keyPath)
 	secret, err := cli.Logical().ReadWithContext(ctx, keyPath)
@@ -233,62 +242,63 @@ func (r *GCPKMSSecretBackendKeyResource) Read(ctx context.Context, req resource.
 	}
 
 	// Update model from API response
-	if v, ok := secret.Data["purpose"].(string); ok {
+	if v, ok := secret.Data[consts.FieldPurpose].(string); ok {
 		data.Purpose = types.StringValue(v)
 	}
-	if v, ok := secret.Data["algorithm"].(string); ok {
+	if v, ok := secret.Data[consts.FieldAlgorithm].(string); ok {
 		data.Algorithm = types.StringValue(v)
 	}
-	if v, ok := secret.Data["protection_level"].(string); ok {
+	if v, ok := secret.Data[consts.FieldProtectionLevel].(string); ok {
 		data.ProtectionLevel = types.StringValue(v)
 	}
 
-	// Check if this is an asymmetric key (which doesn't support rotation or version tracking)
+	// Vault returns purpose in lowercase (e.g. "asymmetric_sign"), but users may configure
+	// it in any case (e.g. "ASYMMETRIC_SIGN"). Use case-insensitive comparison throughout.
 	isAsymmetric := false
-	if purpose, ok := secret.Data["purpose"].(string); ok {
-		isAsymmetric = purpose == "asymmetric_sign" || purpose == "asymmetric_decrypt"
+	if purpose, ok := secret.Data[consts.FieldPurpose].(string); ok {
+		p := strings.ToLower(purpose)
+		isAsymmetric = p == "asymmetric_sign" || p == "asymmetric_decrypt"
 	}
 
 	if isAsymmetric {
-		// Asymmetric keys don't return version information or rotation_schedule_seconds
-		// Set default values for version fields
-		data.PrimaryVersion = types.Int64Value(1)
-		data.LatestVersion = types.Int64Value(1)
-		// rotation_period should remain null/unset for asymmetric keys
-		data.RotationPeriod = types.StringNull()
+		// Asymmetric keys do not support rotation, so these fields are always null.
+		data.RotationScheduleSeconds = types.Int64Null()
+		data.NextRotationTimeSeconds = types.Int64Null()
+		// primary_version is returned by the API as a string (e.g. "1").
+		if version, ok := getInt64FromData(secret.Data, consts.FieldPrimaryVersion); ok {
+			data.PrimaryVersion = types.Int64Value(version)
+			data.LatestVersion = types.Int64Value(version)
+		} else if data.PrimaryVersion.IsNull() || data.PrimaryVersion.IsUnknown() {
+			data.PrimaryVersion = types.Int64Value(1)
+			data.LatestVersion = types.Int64Value(1)
+		}
 	} else {
-		// Handle rotation period for symmetric keys
-		if v, ok := secret.Data["rotation_schedule_seconds"].(float64); ok {
-			// Convert seconds back to duration string format
-			data.RotationPeriod = types.StringValue(fmt.Sprintf("%ds", int64(v)))
-		} else if v, ok := secret.Data["rotation_schedule_seconds"].(int64); ok {
-			data.RotationPeriod = types.StringValue(fmt.Sprintf("%ds", v))
-		} else if v, ok := secret.Data["rotation_schedule_seconds"].(json.Number); ok {
-			if i, err := v.Int64(); err == nil {
-				data.RotationPeriod = types.StringValue(fmt.Sprintf("%ds", i))
+		// rotation_period: preserve the user's configured value exactly (e.g. "72h").
+		// Only populate from the API when state is null/unknown (i.e. during import).
+		if data.RotationPeriod.IsNull() || data.RotationPeriod.IsUnknown() {
+			if seconds, ok := getInt64FromData(secret.Data, consts.FieldRotationScheduleSeconds); ok && seconds > 0 {
+				data.RotationPeriod = types.StringValue(fmt.Sprintf("%ds", seconds))
 			}
 		}
 
-		// Handle version fields for symmetric keys
-		// The value comes back as a string from Vault
-		if v, ok := secret.Data["primary_version"].(string); ok {
-			// Parse string to int64
-			if version, err := strconv.ParseInt(v, 10, 64); err == nil {
-				data.PrimaryVersion = types.Int64Value(version)
-				// Also set latest_version to the same value since it's not separately returned
-				data.LatestVersion = types.Int64Value(version)
-			}
-		} else if v, ok := secret.Data["primary_version"].(float64); ok {
-			data.PrimaryVersion = types.Int64Value(int64(v))
-			data.LatestVersion = types.Int64Value(int64(v))
-		} else if v, ok := secret.Data["primary_version"].(int64); ok {
-			data.PrimaryVersion = types.Int64Value(v)
-			data.LatestVersion = types.Int64Value(v)
-		} else if v, ok := secret.Data["primary_version"].(json.Number); ok {
-			if i, err := v.Int64(); err == nil {
-				data.PrimaryVersion = types.Int64Value(i)
-				data.LatestVersion = types.Int64Value(i)
-			}
+		// rotation_schedule_seconds: always reflect the canonical seconds value from Vault.
+		if seconds, ok := getInt64FromData(secret.Data, consts.FieldRotationScheduleSeconds); ok {
+			data.RotationScheduleSeconds = types.Int64Value(seconds)
+		} else {
+			data.RotationScheduleSeconds = types.Int64Null()
+		}
+
+		// next_rotation_time_seconds: always refresh from API for symmetric keys.
+		if ts, ok := getInt64FromData(secret.Data, consts.FieldNextRotationTimeSeconds); ok {
+			data.NextRotationTimeSeconds = types.Int64Value(ts)
+		} else {
+			data.NextRotationTimeSeconds = types.Int64Null()
+		}
+
+		// primary_version / latest_version
+		if version, ok := getInt64FromData(secret.Data, consts.FieldPrimaryVersion); ok {
+			data.PrimaryVersion = types.Int64Value(version)
+			data.LatestVersion = types.Int64Value(version)
 		}
 	}
 
@@ -309,9 +319,9 @@ func (r *GCPKMSSecretBackendKeyResource) Update(ctx context.Context, req resourc
 		return
 	}
 
-	backend := plan.Backend.ValueString()
+	backend := plan.Mount.ValueString()
 	name := plan.Name.ValueString()
-	keyPath := fmt.Sprintf("%s/keys/%s", backend, name)
+	keyPath := buildKeyPath(backend, name)
 
 	// Check what fields have changed
 	rotationChanged := !plan.RotationPeriod.Equal(state.RotationPeriod)
@@ -324,12 +334,12 @@ func (r *GCPKMSSecretBackendKeyResource) Update(ctx context.Context, req resourc
 
 	// Include key_ring from state (required by Vault for validation)
 	if !state.KeyRing.IsNull() && !state.KeyRing.IsUnknown() {
-		updateData["key_ring"] = state.KeyRing.ValueString()
+		updateData[consts.FieldKeyRing] = state.KeyRing.ValueString()
 	}
 
 	// Only include mutable fields
 	if !plan.RotationPeriod.IsNull() && !plan.RotationPeriod.IsUnknown() {
-		updateData["rotation_period"] = plan.RotationPeriod.ValueString()
+		updateData[consts.FieldRotationPeriod] = plan.RotationPeriod.ValueString()
 	}
 
 	if !plan.Labels.IsNull() && !plan.Labels.IsUnknown() {
@@ -338,10 +348,10 @@ func (r *GCPKMSSecretBackendKeyResource) Update(ctx context.Context, req resourc
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		updateData["labels"] = labels
+		updateData[consts.FieldLabels] = labels
 	} else if plan.Labels.IsNull() {
 		// If labels is explicitly set to null, send empty map to clear labels
-		updateData["labels"] = map[string]string{}
+		updateData[consts.FieldLabels] = map[string]string{}
 	}
 
 	// Only perform update if there are actual changes to mutable fields
@@ -385,9 +395,9 @@ func (r *GCPKMSSecretBackendKeyResource) Delete(ctx context.Context, req resourc
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	backend := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	keyPath := fmt.Sprintf("%s/keys/%s", backend, name)
+	keyPath := buildKeyPath(backend, name)
 
 	log.Printf("[DEBUG] Deleting GCP KMS key at %q", keyPath)
 	if _, err := cli.Logical().DeleteWithContext(ctx, keyPath); err != nil {
@@ -425,8 +435,17 @@ func (r *GCPKMSSecretBackendKeyResource) ImportState(ctx context.Context, req re
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldBackend), matches[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), matches[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), matches[2])...)
+
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
+}
+
+// buildKeyPath constructs the Vault API path for a GCP KMS key
+func buildKeyPath(backend, name string) string {
+	return fmt.Sprintf("%s/keys/%s", backend, name)
 }
 
 // buildKeyConfigFromModel extracts the key configuration data from the model
@@ -448,27 +467,27 @@ func buildKeyConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendKeyMo
 		return nil, diags
 	}
 
-	keyData["key_ring"] = data.KeyRing.ValueString()
+	keyData[consts.FieldKeyRing] = data.KeyRing.ValueString()
 	log.Printf("[DEBUG] buildKeyConfigFromModel - Using key_ring: %s", data.KeyRing.ValueString())
 
 	// crypto_key is optional - if not specified, defaults to the Vault key name
 	if !data.CryptoKey.IsNull() && data.CryptoKey.ValueString() != "" {
-		keyData["crypto_key"] = data.CryptoKey.ValueString()
+		keyData[consts.FieldCryptoKey] = data.CryptoKey.ValueString()
 		log.Printf("[DEBUG] buildKeyConfigFromModel - Using custom crypto_key name: %s", data.CryptoKey.ValueString())
 	}
 
 	// Add optional fields for key creation
 	if !data.Purpose.IsNull() && data.Purpose.ValueString() != "" {
-		keyData["purpose"] = data.Purpose.ValueString()
+		keyData[consts.FieldPurpose] = data.Purpose.ValueString()
 	}
 	if !data.Algorithm.IsNull() && data.Algorithm.ValueString() != "" {
-		keyData["algorithm"] = data.Algorithm.ValueString()
+		keyData[consts.FieldAlgorithm] = data.Algorithm.ValueString()
 	}
 	if !data.ProtectionLevel.IsNull() && data.ProtectionLevel.ValueString() != "" {
-		keyData["protection_level"] = data.ProtectionLevel.ValueString()
+		keyData[consts.FieldProtectionLevel] = data.ProtectionLevel.ValueString()
 	}
 	if !data.RotationPeriod.IsNull() && data.RotationPeriod.ValueString() != "" {
-		keyData["rotation_period"] = data.RotationPeriod.ValueString()
+		keyData[consts.FieldRotationPeriod] = data.RotationPeriod.ValueString()
 	}
 	if !data.Labels.IsNull() {
 		var labels map[string]string
@@ -477,9 +496,37 @@ func buildKeyConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendKeyMo
 			return nil, diags
 		}
 		if len(labels) > 0 {
-			keyData["labels"] = labels
+			keyData[consts.FieldLabels] = labels
 		}
 	}
 
 	return keyData, diags
+}
+
+// getInt64FromData extracts an int64 value from a Vault API response map.
+// Vault can return numeric values as float64 (JSON default), int64, or string.
+func getInt64FromData(data map[string]interface{}, key string) (int64, bool) {
+	v, exists := data[key]
+	if !exists || v == nil {
+		return 0, false
+	}
+	switch val := v.(type) {
+	case float64:
+		return int64(val), true
+	case int64:
+		return val, true
+	case int:
+		return int64(val), true
+	case json.Number:
+		i, err := val.Int64()
+		return i, err == nil
+	case string:
+		if val == "" {
+			return 0, false
+		}
+		i, err := strconv.ParseInt(val, 10, 64)
+		return i, err == nil
+	default:
+		return 0, false
+	}
 }
