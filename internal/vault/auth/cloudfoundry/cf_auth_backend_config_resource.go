@@ -15,6 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
@@ -49,6 +51,7 @@ type CFAuthBackendConfigResource struct {
 type CFAuthBackendConfigModel struct {
 	base.BaseModel
 
+	Path                     types.String `tfsdk:"path"`
 	Mount                    types.String `tfsdk:"mount"`
 	IdentityCACertificates   types.Set    `tfsdk:"identity_ca_certificates"`
 	CFApiAddr                types.String `tfsdk:"cf_api_addr"`
@@ -122,6 +125,13 @@ func (r *CFAuthBackendConfigResource) Schema(_ context.Context, _ resource.Schem
 				MarkdownDescription: "The timeout for the CF API in seconds. If not set, defaults to 0 (no timeout).",
 				Optional:            true,
 			},
+			consts.FieldPath: schema.StringAttribute{
+				MarkdownDescription: "The full Vault API path to the CF auth backend config. Computed after creation.",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 		},
 	}
 
@@ -167,6 +177,7 @@ func (r *CFAuthBackendConfigResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
+	data.Path = types.StringValue(r.path(data.Mount.ValueString()))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -198,6 +209,7 @@ func (r *CFAuthBackendConfigResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
+	data.Path = types.StringValue(r.path(data.Mount.ValueString()))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -357,13 +369,11 @@ func (r *CFAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Conte
 	} else {
 		data.LoginMaxSecsNotBefore = types.Int64Null()
 	}
-
 	if readResp.LoginMaxSecsNotAfter != 0 {
 		data.LoginMaxSecsNotAfter = types.Int64Value(readResp.LoginMaxSecsNotAfter)
 	} else {
 		data.LoginMaxSecsNotAfter = types.Int64Null()
 	}
-
 	if readResp.CFTimeout != 0 {
 		data.CFTimeout = types.Int64Value(readResp.CFTimeout)
 	} else {
