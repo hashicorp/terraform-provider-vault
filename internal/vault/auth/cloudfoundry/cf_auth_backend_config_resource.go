@@ -166,7 +166,6 @@ func (r *CFAuthBackendConfigResource) Create(ctx context.Context, req resource.C
 	}
 
 	mountPath := r.path(data.Mount.ValueString())
-	tflog.Debug(ctx, "Writing CF auth backend config", map[string]any{"vaultRequest": vaultRequest})
 	if _, err := vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
