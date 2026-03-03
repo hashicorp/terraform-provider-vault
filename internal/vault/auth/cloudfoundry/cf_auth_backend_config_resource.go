@@ -103,7 +103,6 @@ func (r *CFAuthBackendConfigResource) Schema(_ context.Context, _ resource.Schem
 			consts.FieldCFPasswordWO: schema.StringAttribute{
 				MarkdownDescription: "The password for authenticating to the CF API. This is a write-only field and will not be read back from Vault.",
 				Required:            true,
-				Sensitive:           true,
 				WriteOnly:           true,
 			},
 			consts.FieldCFApiTrustedCertificates: schema.SetAttribute{
@@ -383,13 +382,20 @@ func (r *CFAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Conte
 	// If the existing data value (from plan/state) matches Vault's response when
 	// both are trimmed, keep the existing value so the user's original formatting
 	// (e.g. trailing newline from file()) is preserved and never causes a diff.
-	data.IdentityCACertificates = reconcileCertSet(ctx, readResp.IdentityCACertificates, data.IdentityCACertificates)
+	var diags diag.Diagnostics
+	data.IdentityCACertificates, diags = reconcileCertSet(ctx, readResp.IdentityCACertificates, data.IdentityCACertificates)
+	if diags.HasError() {
+		return diags
+	}
 
 	// cf_api_trusted_certificates: same reconciliation.
 	if len(readResp.CFApiTrustedCertificates) == 0 {
 		data.CFApiTrustedCertificates = types.SetNull(types.StringType)
 	} else {
-		data.CFApiTrustedCertificates = reconcileCertSet(ctx, readResp.CFApiTrustedCertificates, data.CFApiTrustedCertificates)
+		data.CFApiTrustedCertificates, diags = reconcileCertSet(ctx, readResp.CFApiTrustedCertificates, data.CFApiTrustedCertificates)
+		if diags.HasError() {
+			return diags
+		}
 	}
 
 	return diag.Diagnostics{}
@@ -402,7 +408,7 @@ func (r *CFAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Conte
 // file()) so that Vault's cosmetic stripping never produces a plan/state diff.
 // If the sets differ semantically (a cert was actually added, removed, or
 // replaced), the trimmed Vault values are returned instead.
-func reconcileCertSet(ctx context.Context, vaultCerts []string, current types.Set) types.Set {
+func reconcileCertSet(ctx context.Context, vaultCerts []string, current types.Set) (types.Set, diag.Diagnostics) {
 	// Trim the Vault certs.
 	trimmed := make([]string, len(vaultCerts))
 	for i, c := range vaultCerts {
@@ -412,13 +418,15 @@ func reconcileCertSet(ctx context.Context, vaultCerts []string, current types.Se
 	// If current is null/unknown (e.g. during import with no prior state),
 	// just use the trimmed Vault values.
 	if current.IsNull() || current.IsUnknown() {
-		v, _ := types.SetValueFrom(ctx, types.StringType, trimmed)
-		return v
+		v, diags := types.SetValueFrom(ctx, types.StringType, trimmed)
+		return v, diags
 	}
 
 	// Extract current cert strings and trim them for comparison only.
 	var currentRaw []string
-	current.ElementsAs(ctx, &currentRaw, false)
+	if diags := current.ElementsAs(ctx, &currentRaw, false); diags.HasError() {
+		return types.SetNull(types.StringType), diags
+	}
 	trimmedCurrent := make([]string, len(currentRaw))
 	for i, c := range currentRaw {
 		trimmedCurrent[i] = strings.TrimSpace(c)
@@ -427,12 +435,12 @@ func reconcileCertSet(ctx context.Context, vaultCerts []string, current types.Se
 	// Compare the two trimmed sets. If they contain the same elements, the certs
 	// haven't actually changed — return current as-is to preserve formatting.
 	if stringSetsEqual(trimmed, trimmedCurrent) {
-		return current
+		return current, nil
 	}
 
 	// The certs actually changed; use the trimmed Vault values.
-	v, _ := types.SetValueFrom(ctx, types.StringType, trimmed)
-	return v
+	v, diags := types.SetValueFrom(ctx, types.StringType, trimmed)
+	return v, diags
 }
 
 // stringSetsEqual returns true when a and b contain the same strings,

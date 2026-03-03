@@ -314,7 +314,7 @@ resource "vault_auth_backend" "cf" {
 `, mount)
 }
 
-// testAccCFAuthBackendConfigBasic uses version=1.
+// testAccCFAuthBackendConfigBasic creates a config with only the required fields.
 func testAccCFAuthBackendConfigBasic(mount string, p cfTestParams) string {
 	return fmt.Sprintf(`
 %s
@@ -329,7 +329,7 @@ resource "vault_cf_auth_backend_config" "test" {
 `, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.username, p.password)
 }
 
-// testAccCFAuthBackendConfigFull adds all optional fields at version=1.
+// testAccCFAuthBackendConfigFull creates a config with all optional fields set.
 func testAccCFAuthBackendConfigFull(mount string, p cfTestParams) string {
 	return fmt.Sprintf(`
 %s
@@ -348,7 +348,8 @@ resource "vault_cf_auth_backend_config" "test" {
 `, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.username, p.password, escapeHCL(p.ca))
 }
 
-// testAccCFAuthBackendConfigUpdatePassword bumps the write-only version to 2.
+// testAccCFAuthBackendConfigUpdatePassword updates the write-only password. Because
+// cf_password_wo is required, it is always sent to Vault on every apply.
 func testAccCFAuthBackendConfigUpdatePassword(mount string, p cfTestParams) string {
 	return fmt.Sprintf(`
 %s
@@ -368,7 +369,7 @@ resource "vault_cf_auth_backend_config" "test" {
 }
 
 // testAccCFAuthBackendConfigUpdateOptional changes optional timing/timeout
-// fields while keeping the same credentials (version stays at 2).
+// fields while keeping the same credentials.
 func testAccCFAuthBackendConfigUpdateOptional(mount string, p cfTestParams) string {
 	return fmt.Sprintf(`
 %s

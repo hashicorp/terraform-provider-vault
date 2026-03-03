@@ -32,8 +32,8 @@ EOT
 resource "vault_cf_auth_backend_role" "role" {
   mount               = vault_auth_backend.cf.path
   name                = "my-role"
-  bound_space_ids     = ["space-uuid-1"]
-  bound_org_ids       = ["org-uuid-1"]
+  bound_space_ids         = ["space-uuid-1"]
+  bound_organization_ids = ["org-uuid-1"]
   disable_ip_matching = true
   token_ttl           = 3600
   token_policies      = [vault_policy.cf_policy.name]
@@ -108,6 +108,10 @@ These arguments are common across several Authentication Token resources since V
 * `token_type` - (Optional) The type of token that should be generated. Can be
   `service`, `batch`, or `default` to use the mount's tuned default (which unless
   changed will be `service` tokens).
+
+* `alias_metadata` - (Optional) A map of metadata key/value pairs to attach to
+  the token alias. Requires Vault 1.21+. On older Vault versions the CF auth
+  plugin does not support this field and will silently ignore it.
 
 ## Attributes Reference
 
