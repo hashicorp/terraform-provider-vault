@@ -32,7 +32,7 @@ func TestGCPKMSVerifyDataSource_basic(t *testing.T) {
 			{
 				Config: testGCPKMSVerifyDataSource_basicConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(dataSourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldDigest),
 					resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldSignature),
@@ -59,7 +59,7 @@ func TestGCPKMSVerifyDataSource_withKeyVersion(t *testing.T) {
 			{
 				Config: testGCPKMSVerifyDataSource_withKeyVersionConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(dataSourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldKeyVersion, "1"),
 					resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldValid),
@@ -85,7 +85,7 @@ func TestGCPKMSVerifyDataSource_invalidSignature(t *testing.T) {
 			{
 				Config: testGCPKMSVerifyDataSource_invalidSignatureConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(dataSourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldValid, "false"),
 				),
@@ -114,7 +114,7 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  backend     = vault_gcpkms_secret_backend.test.path
+  mount       = vault_gcpkms_secret_backend.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   key_version = 1
   digest      = "dGVzdC1kaWdlc3Q="
@@ -143,7 +143,7 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  backend     = vault_gcpkms_secret_backend.test.path
+  mount       = vault_gcpkms_secret_backend.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   digest      = "dGVzdC1kaWdlc3Q="
   signature   = "dGVzdC1zaWduYXR1cmU="
@@ -172,7 +172,7 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  backend     = vault_gcpkms_secret_backend.test.path
+  mount       = vault_gcpkms_secret_backend.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   key_version = 1
   digest      = "dGVzdC1kaWdlc3Q="

@@ -33,9 +33,9 @@ type GCPKMSVerifyDataSource struct {
 
 // GCPKMSVerifyModel describes the Terraform data source data model
 type GCPKMSVerifyModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
-	Backend    types.String `tfsdk:"backend"`
+	Mount      types.String `tfsdk:"mount"`
 	Name       types.String `tfsdk:"name"`
 	Digest     types.String `tfsdk:"digest"`
 	Signature  types.String `tfsdk:"signature"`
@@ -54,8 +54,8 @@ func (d *GCPKMSVerifyDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				MarkdownDescription: "Target namespace.",
 				Optional:            true,
 			},
-			consts.FieldBackend: schema.StringAttribute{
-				MarkdownDescription: "Path where GCP KMS backend is mounted.",
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Path where the GCP KMS secrets engine is mounted.",
 				Required:            true,
 			},
 			consts.FieldName: schema.StringAttribute{
@@ -78,10 +78,6 @@ func (d *GCPKMSVerifyDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				MarkdownDescription: "Whether the signature is valid.",
 				Computed:            true,
 			},
-			consts.FieldID: schema.StringAttribute{
-				MarkdownDescription: "Unique identifier for this data source.",
-				Computed:            true,
-			},
 		},
 		MarkdownDescription: "Verifies a signature using a GCP KMS key in Vault.",
 	}
@@ -100,9 +96,9 @@ func (d *GCPKMSVerifyDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	backend := data.Backend.ValueString()
+	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	verifyPath := fmt.Sprintf("%s/verify/%s", backend, name)
+	verifyPath := fmt.Sprintf("%s/verify/%s", mount, name)
 
 	requestData := map[string]interface{}{
 		"digest":    data.Digest.ValueString(),
@@ -137,7 +133,6 @@ func (d *GCPKMSVerifyDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	data.Valid = types.BoolValue(valid)
-	data.ID = types.StringValue(fmt.Sprintf("%s/%s/verify", backend, name))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
