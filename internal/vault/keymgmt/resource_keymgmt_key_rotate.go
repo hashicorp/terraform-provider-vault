@@ -5,14 +5,18 @@ package keymgmt
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -26,11 +30,10 @@ var _ resource.ResourceWithImportState = &KeyRotateResource{}
 
 type KeyRotateResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 type KeyRotateResourceModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 	Path          types.String `tfsdk:"path"`
 	Name          types.String `tfsdk:"name"`
 	LatestVersion types.Int64  `tfsdk:"latest_version"`
@@ -69,7 +72,7 @@ func (r *KeyRotateResource) Schema(ctx context.Context, req resource.SchemaReque
 			},
 		},
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -93,9 +96,6 @@ func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateReque
 		resp.Diagnostics.AddError(errCreating("Key Management key rotation", apiPath, err))
 		return
 	}
-
-	// Store the rotate path as the resource ID to align with the documented import format
-	data.ID = types.StringValue(apiPath)
 
 	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
@@ -123,7 +123,8 @@ func (r *KeyRotateResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	if data.ID.IsNull() {
+	// Check if resource still exists by verifying the key was found
+	if data.LatestVersion.IsNull() {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -132,10 +133,8 @@ func (r *KeyRotateResource) Read(ctx context.Context, req resource.ReadRequest, 
 }
 
 func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *KeyRotateResourceModel, diags *diag.Diagnostics) {
-	rotatePath := data.ID.ValueString()
-
-	// Strip the /rotate suffix to get the key path for reading key metadata
-	keyPath := strings.TrimSuffix(rotatePath, "/rotate")
+	// Build the key path from the data fields to read key metadata
+	keyPath := buildKeyPath(data.Path.ValueString(), data.Name.ValueString())
 
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
@@ -144,18 +143,9 @@ func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *Key
 	}
 
 	if vaultResp == nil {
-		data.ID = types.StringNull()
+		// Resource has been deleted outside Terraform
 		return
 	}
-
-	mountPath, keyName, err := parseKeyPath(keyPath)
-	if err != nil {
-		diags.AddError(errInvalidPathStructure, err.Error())
-		return
-	}
-
-	data.Path = types.StringValue(mountPath)
-	data.Name = types.StringValue(keyName)
 
 	// Only set latest_version when it is returned and can be parsed from the API response.
 	if v, ok := vaultResp.Data["latest_version"]; ok && v != nil {
@@ -172,4 +162,59 @@ func (r *KeyRotateResource) Update(ctx context.Context, req resource.UpdateReque
 func (r *KeyRotateResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Key rotation is permanent in Vault
 	// Removing it from Terraform state is sufficient
+}
+
+func (r *KeyRotateResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Validate import ID is not empty
+	if req.ID == "" {
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			"Import identifier cannot be empty. Expected format: '<mount_path>/key/<name>/rotate', "+
+				"namespace can be specified using the env var "+consts.EnvVarVaultNamespaceImport,
+		)
+		return
+	}
+
+	// Parse the import ID - expect format: <mount_path>/key/<name>/rotate
+	importID := req.ID
+	// Ensure the path ends with "rotate"
+	parts := strings.Split(strings.Trim(importID, "/"), "/")
+	if len(parts) == 0 || parts[len(parts)-1] != "rotate" {
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			fmt.Sprintf("The import identifier %q must end with /rotate. Expected format: '<mount_path>/key/<name>/rotate', "+
+				"namespace can be specified using the env var %s", importID, consts.EnvVarVaultNamespaceImport),
+		)
+		return
+	}
+
+	// Remove the "rotate" suffix to parse the base key path
+	parts = parts[:len(parts)-1]
+	keyPath := strings.Join(parts, "/")
+	mountPath, keyName, err := parseKeyPath(keyPath)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			fmt.Sprintf("The import identifier %q is not valid: %s. Expected format: '<mount_path>/key/<name>/rotate', "+
+				"namespace can be specified using the env var %s", importID, err.Error(), consts.EnvVarVaultNamespaceImport),
+		)
+		return
+	}
+
+	// Set the individual fields in state
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mountPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), keyName)...)
+
+	// Handle namespace if needed
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		resp.Diagnostics.Append(
+			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
+		)
+	}
 }
