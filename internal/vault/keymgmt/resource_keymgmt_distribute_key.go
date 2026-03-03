@@ -5,14 +5,18 @@ package keymgmt
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -26,11 +30,10 @@ var _ resource.ResourceWithImportState = &DistributeKeyResource{}
 
 type DistributeKeyResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 type DistributeKeyResourceModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 	Path       types.String `tfsdk:"path"`
 	KMSName    types.String `tfsdk:"kms_name"`
 	KeyName    types.String `tfsdk:"key_name"`
@@ -100,7 +103,7 @@ func (r *DistributeKeyResource) Schema(ctx context.Context, req resource.SchemaR
 			},
 		},
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -139,7 +142,6 @@ func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	data.ID = types.StringValue(apiPath)
 	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -166,7 +168,8 @@ func (r *DistributeKeyResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	if data.ID.IsNull() {
+	// Check if resource still exists by verifying computed fields were populated
+	if data.KeyID.IsNull() {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -175,7 +178,8 @@ func (r *DistributeKeyResource) Read(ctx context.Context, req resource.ReadReque
 }
 
 func (r *DistributeKeyResource) read(ctx context.Context, cli *api.Client, data *DistributeKeyResourceModel, diags *diag.Diagnostics) {
-	apiPath := data.ID.ValueString()
+	// Build API path from data fields
+	apiPath := buildDistributeKeyPath(data.Path.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
 		diags.AddError(errReading("Key Management key distribution", apiPath, err))
@@ -183,19 +187,9 @@ func (r *DistributeKeyResource) read(ctx context.Context, cli *api.Client, data 
 	}
 
 	if vaultResp == nil {
-		data.ID = types.StringNull()
+		// Resource has been deleted outside Terraform
 		return
 	}
-
-	mountPath, kmsName, keyName, err := parseDistributeKeyPath(apiPath)
-	if err != nil {
-		diags.AddError(errInvalidPathStructure, err.Error())
-		return
-	}
-
-	data.Path = types.StringValue(mountPath)
-	data.KMSName = types.StringValue(kmsName)
-	data.KeyName = types.StringValue(keyName)
 
 	if v, ok := vaultResp.Data["purpose"].([]interface{}); ok {
 		purposes, d := types.SetValueFrom(ctx, types.StringType, v)
@@ -241,7 +235,8 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	apiPath := plan.ID.ValueString()
+	// Build API path from fields
+	apiPath := buildDistributeKeyPath(plan.Path.ValueString(), plan.KMSName.ValueString(), plan.KeyName.ValueString())
 	writeData := map[string]interface{}{}
 	hasChanges := false
 
@@ -289,9 +284,51 @@ func (r *DistributeKeyResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	apiPath := data.ID.ValueString()
+	// Build API path from fields
+	apiPath := buildDistributeKeyPath(data.Path.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError(errDeleting("Key Management key distribution", apiPath, err))
 		return
+	}
+}
+
+func (r *DistributeKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Validate import ID is not empty
+	if req.ID == "" {
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			"Import identifier cannot be empty. Expected format: '<mount_path>/kms/<kms_name>/key/<key_name>', "+
+				"namespace can be specified using the env var "+consts.EnvVarVaultNamespaceImport,
+		)
+		return
+	}
+
+	// Parse the import ID to extract path, kms_name, key_name
+	mountPath, kmsName, keyName, err := parseDistributeKeyPath(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			fmt.Sprintf("The import identifier %q is not valid: %s. Expected format: '<mount_path>/kms/<kms_name>/key/<key_name>', "+
+				"namespace can be specified using the env var %s", req.ID, err.Error(), consts.EnvVarVaultNamespaceImport),
+		)
+		return
+	}
+
+	// Set the individual fields in state
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mountPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldKMSName), kmsName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldKeyName), keyName)...)
+
+	// Handle namespace if needed
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		resp.Diagnostics.Append(
+			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
+		)
 	}
 }
