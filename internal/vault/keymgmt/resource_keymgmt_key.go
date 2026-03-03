@@ -5,8 +5,11 @@ package keymgmt
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -15,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -28,11 +32,10 @@ var _ resource.ResourceWithImportState = &KeyResource{}
 
 type KeyResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 type KeyResourceModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Path              types.String `tfsdk:"path"`
 	Name              types.String `tfsdk:"name"`
@@ -108,7 +111,42 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			},
 		},
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
+}
+
+func (r *KeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resp.Diagnostics.AddError(
+			"Empty Import ID",
+			"Import ID cannot be empty. Expected format: <mount>/key/<name>",
+		)
+		return
+	}
+
+	mount, name, err := parseKeyPath(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Unable to parse import ID: %s\n\nExpected format: <mount>/key/<name>\nExample: keymgmt/key/my-key\n\nError: %s", req.ID, err.Error()),
+		)
+		return
+	}
+
+	if mount == "" || name == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Import ID contains empty fields. Expected format: <mount>/key/<name>\nExample: keymgmt/key/my-key\n\nParsed mount: %q, name: %q", mount, name),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		tflog.Debug(ctx, fmt.Sprintf("Setting namespace from %s: %s", consts.EnvVarVaultNamespaceImport, ns))
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
 }
 
 func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -149,8 +187,6 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	data.ID = types.StringValue(apiPath)
-
 	// Update deletion_allowed configuration only when it differs from the default.
 	if data.DeletionAllowed.ValueBool() {
 		configData := map[string]interface{}{
@@ -188,7 +224,7 @@ func (r *KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	if data.ID.IsNull() {
+	if data.LatestVersion.IsNull() {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -197,7 +233,7 @@ func (r *KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 }
 
 func (r *KeyResource) read(ctx context.Context, cli *api.Client, data *KeyResourceModel, diags *diag.Diagnostics) {
-	apiPath := data.ID.ValueString()
+	apiPath := buildKeyPath(data.Path.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
 		diags.AddError(errReading("Key Management key", apiPath, err))
@@ -205,18 +241,9 @@ func (r *KeyResource) read(ctx context.Context, cli *api.Client, data *KeyResour
 	}
 
 	if vaultResp == nil {
-		data.ID = types.StringNull()
+		data.LatestVersion = types.Int64Null()
 		return
 	}
-
-	mountPath, keyName, err := parseKeyPath(apiPath)
-	if err != nil {
-		diags.AddError(errInvalidPathStructure, err.Error())
-		return
-	}
-
-	data.Path = types.StringValue(mountPath)
-	data.Name = types.StringValue(keyName)
 
 	if v, ok := vaultResp.Data["type"].(string); ok {
 		data.Type = types.StringValue(v)
@@ -261,7 +288,7 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	apiPath := plan.ID.ValueString()
+	apiPath := buildKeyPath(plan.Path.ValueString(), plan.Name.ValueString())
 	writeData := map[string]interface{}{}
 
 	if !plan.DeletionAllowed.Equal(state.DeletionAllowed) {
@@ -296,7 +323,7 @@ func (r *KeyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		return
 	}
 
-	apiPath := data.ID.ValueString()
+	apiPath := buildKeyPath(data.Path.ValueString(), data.Name.ValueString())
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError(errDeleting("Key Management key", apiPath, err))
 		return
