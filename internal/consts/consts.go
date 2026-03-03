@@ -820,7 +820,12 @@ const (
 	FieldKeytab                     = "keytab"
 	FieldClientTLSKeyWO             = "client_tls_key_wo"
 	FieldClientTLSKeyWOVersion      = "client_tls_key_wo_version"
+	FieldClientTLSCertWO            = "client_tls_cert_wo"
+	FieldClientTLSCertWOVersion     = "client_tls_cert_wo_version"
 	FieldAddGroupAliases            = "add_group_aliases"
+	FieldTokenExplicitMaxTTL        = "token_explicit_max_ttl"
+	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
+	FieldAliasMetadata              = "alias_metadata"
 
 	/*
 		common environment variables
