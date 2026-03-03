@@ -126,18 +126,16 @@ The following arguments are supported:
 ### Workload Identity Federation (Vault 2.0.0+)
 
 * `service_account_email` – (Optional) Service Account to impersonate for secrets sync workload identity federation.
-  Required with `identity_token_audience`. Requires Vault 2.0.0+. *Available only for Vault Enterprise*.
+  Required with `identity_token_audience`. **Requires Vault 2.0.0+**.
 
-* `identity_token_audience` - (Optional) The audience claim value for secrets sync identity
-  tokens. Must match an allowed audience configured for the target [Workload Identity Pool](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#prepare).
-  Mutually exclusive with `credentials`.  Requires Vault 2.0.0+. *Available only for Vault Enterprise*.
+* `identity_token_audience` - (Optional) The audience claim value for identity tokens.
+  **Requires Vault 2.0.0+**.
 
-* `identity_token_ttl` - (Optional) The TTL of generated tokens. Defaults to
-  1 hour. Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
-  Requires Vault 2.0.0+. *Available only for Vault Enterprise*.
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds.
+  **Requires Vault 2.0.0+**.
 
-* `identity_token_key` - (Optional) Name of the identity token key to be used for signing the tokens. Requires Vault 2.0.0+. 
-  *Available only for Vault Enterprise*.
+* `identity_token_key` - (Optional) The key to use for signing identity tokens.
+  **Requires Vault 2.0.0+**.
 
 
 ### Networking Configuration (Vault 1.19+)
