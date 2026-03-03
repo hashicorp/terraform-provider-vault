@@ -5,13 +5,17 @@ package keymgmt
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -25,11 +29,10 @@ var _ resource.ResourceWithImportState = &AzureKMSResource{}
 
 type AzureKMSResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 type AzureKMSResourceModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 	Path          types.String `tfsdk:"path"`
 	Name          types.String `tfsdk:"name"`
 	KeyCollection types.String `tfsdk:"key_collection"`
@@ -89,7 +92,42 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 			},
 		},
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
+}
+
+func (r *AzureKMSResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resp.Diagnostics.AddError(
+			"Empty Import ID",
+			"Import ID cannot be empty. Expected format: <mount>/kms/<name>",
+		)
+		return
+	}
+
+	mount, name, err := parseKMSPath(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Unable to parse import ID: %s\n\nExpected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-azure-kms\n\nError: %s", req.ID, err.Error()),
+		)
+		return
+	}
+
+	if mount == "" || name == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Import ID contains empty fields. Expected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-azure-kms\n\nParsed mount: %q, name: %q", mount, name),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		tflog.Debug(ctx, fmt.Sprintf("Setting namespace from %s: %s", consts.EnvVarVaultNamespaceImport, ns))
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
 }
 
 func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -131,7 +169,6 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	data.ID = types.StringValue(apiPath)
 	r.read(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -158,7 +195,7 @@ func (r *AzureKMSResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	if data.ID.IsNull() {
+	if data.KeyCollection.IsNull() {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -167,7 +204,7 @@ func (r *AzureKMSResource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 func (r *AzureKMSResource) read(ctx context.Context, cli *api.Client, data *AzureKMSResourceModel, diags *diag.Diagnostics) {
-	apiPath := data.ID.ValueString()
+	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
 		diags.AddError(errReading("Azure Key Vault provider", apiPath, err))
@@ -175,18 +212,9 @@ func (r *AzureKMSResource) read(ctx context.Context, cli *api.Client, data *Azur
 	}
 
 	if vaultResp == nil {
-		data.ID = types.StringNull()
+		data.KeyCollection = types.StringNull()
 		return
 	}
-
-	mountPath, kmsName, err := parseKMSPath(apiPath)
-	if err != nil {
-		diags.AddError(errInvalidPathStructure, err.Error())
-		return
-	}
-
-	data.Path = types.StringValue(mountPath)
-	data.Name = types.StringValue(kmsName)
 
 	if v, ok := vaultResp.Data["key_collection"].(string); ok {
 		data.KeyCollection = types.StringValue(v)
@@ -216,7 +244,7 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	apiPath := plan.ID.ValueString()
+	apiPath := buildKMSPath(plan.Path.ValueString(), plan.Name.ValueString())
 	writeData := map[string]interface{}{
 		"provider": ProviderAzureKV,
 	}
@@ -275,7 +303,7 @@ func (r *AzureKMSResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	apiPath := data.ID.ValueString()
+	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError(errDeleting("Azure Key Vault provider", apiPath, err))
 		return
