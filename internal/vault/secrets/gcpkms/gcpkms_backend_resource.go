@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -338,7 +339,11 @@ func (r *GCPKMSSecretBackendResource) Delete(ctx context.Context, req resource.D
 }
 
 func (r *GCPKMSSecretBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldPath), req, resp)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), req.ID)...)
+
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
 }
 
 // buildBackendConfigFromModel extracts the configuration data from the model

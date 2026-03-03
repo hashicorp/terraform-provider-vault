@@ -5,6 +5,7 @@ package gcpkms_test
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 
@@ -194,6 +195,85 @@ func TestGCPKMSSecretBackendKey_validation(t *testing.T) {
 	})
 }
 
+func TestGCPKMSSecretBackendKey_namespace(t *testing.T) {
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
+
+	resourceType := "vault_gcpkms_secret_backend_key"
+	resourceName := resourceType + ".test"
+
+	getSteps := func(path, keyName, ns string) []resource.TestStep {
+		var commonChecks []resource.TestCheckFunc
+		commonChecks = append(commonChecks,
+			resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+			resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+			resource.TestCheckResourceAttr(resourceName, consts.FieldPurpose, "encrypt_decrypt"),
+			resource.TestCheckResourceAttr(resourceName, consts.FieldAlgorithm, "symmetric_encryption"),
+			resource.TestCheckResourceAttr(resourceName, consts.FieldProtectionLevel, "software"),
+			resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "2592000s"),
+			resource.TestCheckResourceAttrSet(resourceName, consts.FieldLatestVersion),
+			resource.TestCheckResourceAttrSet(resourceName, consts.FieldPrimaryVersion),
+		)
+		if ns != "" {
+			commonChecks = append(commonChecks,
+				resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ns),
+			)
+		}
+
+		steps := []resource.TestStep{
+			{
+				Config: testGCPKMSSecretBackendKey_nsConfig(path, keyName, keyRing, credentials, ns),
+				Check:  resource.ComposeTestCheckFunc(commonChecks...),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccGCPKMSSecretBackendKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldCryptoKey,
+					consts.FieldKeyRing,
+				},
+				PreConfig: func() {
+					if ns != "" {
+						t.Setenv(consts.EnvVarVaultNamespaceImport, ns)
+					}
+				},
+			},
+			{
+				// Cleanup step: unset the env var and verify no drift
+				Config:   testGCPKMSSecretBackendKey_nsConfig(path, keyName, keyRing, credentials, ns),
+				PlanOnly: true,
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
+			},
+		}
+		return steps
+	}
+
+	t.Run("basic", func(t *testing.T) {
+		path := acctest.RandomWithPrefix("tf-test-gcpkms")
+		keyName := acctest.RandomWithPrefix("test-key")
+		resource.Test(t, resource.TestCase{
+			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+			Steps:                    getSteps(path, keyName, ""),
+		})
+	})
+
+	t.Run("ns", func(t *testing.T) {
+		path := acctest.RandomWithPrefix("tf-test-gcpkms")
+		keyName := acctest.RandomWithPrefix("test-key")
+		ns := acctest.RandomWithPrefix("tf-test-ns")
+		resource.Test(t, resource.TestCase{
+			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+			Steps:                    getSteps(path, keyName, ns),
+		})
+	})
+}
+
 func testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
@@ -355,4 +435,42 @@ func testAccGCPKMSSecretBackendKeyImportStateIdFunc(resourceName string) resourc
 		name := rs.Primary.Attributes[consts.FieldName]
 		return fmt.Sprintf("%s/keys/%s", mount, name), nil
 	}
+}
+
+// testGCPKMSSecretBackendKey_nsConfig generates a config for a backend + key
+// inside a namespace when ns is non-empty, or at root when ns is "".
+func testGCPKMSSecretBackendKey_nsConfig(path, keyName, keyRing, credentials, ns string) string {
+	nsBlock := ""
+	namespaceAttr := ""
+	if ns != "" {
+		nsBlock = fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+`, ns)
+		namespaceAttr = `  namespace = vault_namespace.test.path`
+	}
+
+	return fmt.Sprintf(`
+%s
+resource "vault_gcpkms_secret_backend" "test" {
+  path                   = "%s"
+  credentials_wo         = <<-EOT
+%s
+EOT
+  credentials_wo_version = 1
+%s
+}
+
+resource "vault_gcpkms_secret_backend_key" "test" {
+  mount            = vault_gcpkms_secret_backend.test.path
+  name             = "%s"
+  key_ring         = "%s"
+  purpose          = "encrypt_decrypt"
+  algorithm        = "symmetric_encryption"
+  protection_level = "software"
+  rotation_period  = "2592000s"
+%s
+}
+`, nsBlock, path, credentials, namespaceAttr, keyName, keyRing, namespaceAttr)
 }

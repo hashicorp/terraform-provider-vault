@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -436,6 +437,10 @@ func (r *GCPKMSSecretBackendKeyResource) ImportState(ctx context.Context, req re
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), matches[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), matches[2])...)
+
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
 }
 
 // buildKeyPath constructs the Vault API path for a GCP KMS key
