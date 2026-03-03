@@ -5,6 +5,7 @@ package kerberos_test
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 
@@ -375,16 +376,24 @@ func TestAccKerberosAuthBackendConfig_importWithNamespace(t *testing.T) {
 				),
 			},
 			{
+				PreConfig: func() {
+					// Set the namespace environment variable for import
+					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
+				},
 				ResourceName:                         "vault_kerberos_auth_backend_config.config",
 				ImportState:                          true,
 				ImportStateId:                        fmt.Sprintf("auth/%s/config", path),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore:              []string{consts.FieldKeytab, consts.FieldRemoveInstanceName, consts.FieldAddGroupAliases},
+			},
+			{
+				// Cleanup step needed for the import step above
+				Config: testAccKerberosAuthBackendConfigConfig_namespace(namespace, path, serviceAccount),
 				PreConfig: func() {
-					// Set the namespace environment variable for import
-					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
 				},
+				PlanOnly: true,
 			},
 		},
 	})
