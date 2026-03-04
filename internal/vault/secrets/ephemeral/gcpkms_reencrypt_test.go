@@ -107,6 +107,105 @@ func TestAccGCPKMSReencrypt_withKeyVersion(t *testing.T) {
 	})
 }
 
+func TestAccGCPKMSReencrypt_namespace(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+
+	getSteps := func(backend, keyName, ns string) []resource.TestStep {
+		return []resource.TestStep{
+			{
+				Config: testAccGCPKMSReencryptNsConfig(backend, keyName, ns),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(regexpBase64)),
+					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(regexpNonEmpty)),
+				},
+			},
+		}
+	}
+
+	t.Run("basic", func(t *testing.T) {
+		backend := acctest.RandomWithPrefix("tf-test-gcpkms")
+		keyName := acctest.RandomWithPrefix("test-key")
+		resource.Test(t, resource.TestCase{
+			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+			ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+				"echo": echoprovider.NewProviderServer(),
+			},
+			Steps: getSteps(backend, keyName, ""),
+		})
+	})
+
+	t.Run("ns", func(t *testing.T) {
+		backend := acctest.RandomWithPrefix("tf-test-gcpkms")
+		keyName := acctest.RandomWithPrefix("test-key")
+		ns := acctest.RandomWithPrefix("tf-test-ns")
+		resource.Test(t, resource.TestCase{
+			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+			ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+				"echo": echoprovider.NewProviderServer(),
+			},
+			Steps: getSteps(backend, keyName, ns),
+		})
+	})
+}
+
+func testAccGCPKMSReencryptNsConfig(backend, keyName, ns string) string {
+	nsBlock := ""
+	namespaceAttr := ""
+	if ns != "" {
+		nsBlock = fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+`, ns)
+		namespaceAttr = `  namespace = vault_namespace.test.path`
+	}
+
+	return fmt.Sprintf(`
+%s
+resource "vault_gcpkms_secret_backend" "test" {
+  path                   = "%s"
+  credentials_wo         = <<-EOT
+%s
+EOT
+  credentials_wo_version = 1
+%s
+}
+
+resource "vault_gcpkms_secret_backend_key" "test" {
+  mount            = vault_gcpkms_secret_backend.test.path
+  name             = "%s"
+  key_ring         = "%s"
+  purpose          = "encrypt_decrypt"
+  algorithm        = "symmetric_encryption"
+  protection_level = "software"
+%s
+}
+
+ephemeral "vault_gcpkms_encrypt" "test" {
+  mount_id  = tostring(vault_gcpkms_secret_backend_key.test.latest_version)
+  mount     = vault_gcpkms_secret_backend.test.path
+  name      = vault_gcpkms_secret_backend_key.test.name
+  plaintext = base64encode("test plaintext data")
+%s
+}
+
+ephemeral "vault_gcpkms_reencrypt" "test" {
+  mount      = vault_gcpkms_secret_backend.test.path
+  name       = vault_gcpkms_secret_backend_key.test.name
+  ciphertext = ephemeral.vault_gcpkms_encrypt.test.ciphertext
+%s
+}
+
+provider "echo" {
+  data = ephemeral.vault_gcpkms_reencrypt.test
+}
+
+resource "echo" "new_ciphertext" {}
+`, nsBlock, backend, getMockGCPCredentials(), namespaceAttr, keyName, getMockKeyRing(), namespaceAttr, namespaceAttr, namespaceAttr)
+}
+
 func testAccGCPKMSReencryptConfig(backend, keyName string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
