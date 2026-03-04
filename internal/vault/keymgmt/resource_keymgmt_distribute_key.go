@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -144,7 +143,7 @@ func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateR
 
 	// Parse the write response to extract all fields including computed ones
 	if writeResp != nil && writeResp.Data != nil {
-		r.parseVaultResponse(ctx, writeResp.Data, &data, &resp.Diagnostics)
+		parseDistributeKeyResponse(ctx, writeResp.Data, &data, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -191,49 +190,12 @@ func (r *DistributeKeyResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	// Parse response data
-	r.parseVaultResponse(ctx, vaultResp.Data, &data, &resp.Diagnostics)
+	parseDistributeKeyResponse(ctx, vaultResp.Data, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-}
-
-// parseVaultResponse extracts data from Vault API response data into the model
-// This works with both write responses and read responses
-func (r *DistributeKeyResource) parseVaultResponse(ctx context.Context, responseData map[string]interface{}, data *DistributeKeyResourceModel, diags *diag.Diagnostics) {
-	if v, ok := responseData["purpose"].([]interface{}); ok {
-		purposes, d := types.SetValueFrom(ctx, types.StringType, v)
-		diags.Append(d...)
-		if !diags.HasError() {
-			data.Purpose = purposes
-		}
-	}
-	if v, ok := responseData["protection"].(string); ok {
-		data.Protection = types.StringValue(v)
-	}
-
-	// Set key_id - always to a known value (never Unknown)
-	if keyID := setStringFromInterface(responseData["key_id"]); !keyID.IsNull() {
-		data.KeyID = keyID
-	} else if data.KeyID.IsUnknown() {
-		data.KeyID = types.StringNull()
-	}
-
-	// Set versions - always to a known value (never Unknown)
-	if v, ok := responseData["versions"].([]interface{}); ok && len(v) > 0 {
-		versions, d := types.ListValueFrom(ctx, types.Int64Type, v)
-		diags.Append(d...)
-		if !diags.HasError() {
-			data.Versions = versions
-		}
-	} else if data.Versions.IsUnknown() {
-		emptyList, d := types.ListValueFrom(ctx, types.Int64Type, []int64{})
-		diags.Append(d...)
-		if !diags.HasError() {
-			data.Versions = emptyList
-		}
-	}
 }
 
 func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -280,7 +242,7 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 
 		// Parse the write response to extract updated fields
 		if writeResp != nil && writeResp.Data != nil {
-			r.parseVaultResponse(ctx, writeResp.Data, &plan, &resp.Diagnostics)
+			parseDistributeKeyResponse(ctx, writeResp.Data, &plan, &resp.Diagnostics)
 			if resp.Diagnostics.HasError() {
 				return
 			}
