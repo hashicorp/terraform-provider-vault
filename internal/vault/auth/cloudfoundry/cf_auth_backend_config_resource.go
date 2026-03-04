@@ -100,6 +100,7 @@ func (r *CFAuthBackendConfigResource) Schema(_ context.Context, _ resource.Schem
 			consts.FieldCFPasswordWO: schema.StringAttribute{
 				MarkdownDescription: "The password for authenticating to the CF API. This is a write-only field and will not be read back from Vault.",
 				Required:            true,
+				Sensitive:           true,
 				WriteOnly:           true,
 			},
 			consts.FieldCFApiTrustedCertificates: schema.SetAttribute{

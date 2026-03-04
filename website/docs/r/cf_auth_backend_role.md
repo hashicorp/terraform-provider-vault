@@ -12,6 +12,10 @@ Manages a role for the [CloudFoundry (CF) auth method](https://developer.hashico
 Roles define the constraints that must be satisfied by a CF instance certificate
 at login time, and the token parameters issued on a successful login.
 
+~> **Note** Roles can be created independently of the backend configuration,
+but a [`vault_cf_auth_backend_config`](cf_auth_backend_config.html) must be
+in place before any login attempt will succeed.
+
 ## Example Usage
 
 ```hcl
