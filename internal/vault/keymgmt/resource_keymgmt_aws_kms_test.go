@@ -5,7 +5,6 @@ package keymgmt_test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -19,24 +18,20 @@ import (
 )
 
 func TestAccKeymgmtAWSKMS(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	awsRegion := testutil.GetTestAWSRegion(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
 	resourceType := "vault_keymgmt_aws_kms"
 	resourceName := resourceType + ".test"
 
-	awsRegion := "us-west-2"
-	if region := os.Getenv("AWS_DEFAULT_REGION"); region != "" {
-		awsRegion = region
-	}
-
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtAWSKMSConfig(mount, kmsName, awsRegion),
+				Config: testKeymgmtAWSKMSConfig(mount, kmsName, awsRegion, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
@@ -59,7 +54,7 @@ func TestAccKeymgmtAWSKMS(t *testing.T) {
 }
 
 func TestAccKeymgmtAWSKMS_keyCollectionChange(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -71,7 +66,7 @@ func TestAccKeymgmtAWSKMS_keyCollectionChange(t *testing.T) {
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtAWSKMSConfig(mount, kmsName, "us-west-2"),
+				Config: testKeymgmtAWSKMSConfig(mount, kmsName, "us-west-2", accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
@@ -79,7 +74,7 @@ func TestAccKeymgmtAWSKMS_keyCollectionChange(t *testing.T) {
 				),
 			},
 			{
-				Config: testKeymgmtAWSKMSConfig(mount, kmsName, "us-east-1"),
+				Config: testKeymgmtAWSKMSConfig(mount, kmsName, "us-east-1", accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
@@ -91,7 +86,7 @@ func TestAccKeymgmtAWSKMS_keyCollectionChange(t *testing.T) {
 }
 
 func TestAccKeymgmtAWSKMS_credentialsMap(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -103,7 +98,7 @@ func TestAccKeymgmtAWSKMS_credentialsMap(t *testing.T) {
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtAWSKMSConfigWithCredentialsMap(mount, kmsName, "us-west-2"),
+				Config: testKeymgmtAWSKMSConfigWithCredentialsMap(mount, kmsName, "us-west-2", accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
@@ -125,7 +120,7 @@ func TestAccKeymgmtAWSKMS_credentialsMap(t *testing.T) {
 }
 
 func TestAccKeymgmtAWSKMS_multiple(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName1 := acctest.RandomWithPrefix("awskms-1")
@@ -138,7 +133,7 @@ func TestAccKeymgmtAWSKMS_multiple(t *testing.T) {
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtAWSKMSConfigMultiple(mount, kmsName1, kmsName2),
+				Config: testKeymgmtAWSKMSConfigMultiple(mount, kmsName1, kmsName2, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldPath, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, kmsName1),
@@ -164,7 +159,7 @@ func testAccKeymgmtAWSKMSImportStateIdFunc(resourceName string) resource.ImportS
 	}
 }
 
-func testKeymgmtAWSKMSConfig(mount, kmsName, region string) string {
+func testKeymgmtAWSKMSConfig(mount, kmsName, region, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "keymgmt" {
   path = %q
@@ -179,10 +174,10 @@ resource "vault_keymgmt_aws_kms" "test" {
   access_key = "%s"
   secret_key = "%s"
 }
-`, mount, kmsName, region, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+`, mount, kmsName, region, accessKey, secretKey)
 }
 
-func testKeymgmtAWSKMSConfigWithCredentialsMap(mount, kmsName, region string) string {
+func testKeymgmtAWSKMSConfigWithCredentialsMap(mount, kmsName, region, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "keymgmt" {
   path = %q
@@ -199,10 +194,10 @@ resource "vault_keymgmt_aws_kms" "test" {
     secret_key = "%s"
   }
 }
-`, mount, kmsName, region, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+`, mount, kmsName, region, accessKey, secretKey)
 }
 
-func testKeymgmtAWSKMSConfigMultiple(mount, kmsName1, kmsName2 string) string {
+func testKeymgmtAWSKMSConfigMultiple(mount, kmsName1, kmsName2, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "keymgmt" {
   path = %q
@@ -226,6 +221,6 @@ resource "vault_keymgmt_aws_kms" "test2" {
   access_key = "%s"
   secret_key = "%s"
 }
-`, mount, kmsName1, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		kmsName2, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+`, mount, kmsName1, accessKey, secretKey,
+		kmsName2, accessKey, secretKey)
 }
