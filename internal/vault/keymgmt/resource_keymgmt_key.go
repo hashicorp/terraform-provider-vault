@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -114,41 +113,6 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 	base.MustAddBaseSchema(&resp.Schema)
 }
 
-func (r *KeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	if req.ID == "" {
-		resp.Diagnostics.AddError(
-			"Empty Import ID",
-			"Import ID cannot be empty. Expected format: <mount>/key/<name>",
-		)
-		return
-	}
-
-	mount, name, err := parseKeyPath(req.ID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Invalid Import ID",
-			fmt.Sprintf("Unable to parse import ID: %s\n\nExpected format: <mount>/key/<name>\nExample: keymgmt/key/my-key\n\nError: %s", req.ID, err.Error()),
-		)
-		return
-	}
-
-	if mount == "" || name == "" {
-		resp.Diagnostics.AddError(
-			"Invalid Import ID",
-			fmt.Sprintf("Import ID contains empty fields. Expected format: <mount>/key/<name>\nExample: keymgmt/key/my-key\n\nParsed mount: %q, name: %q", mount, name),
-		)
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
-
-	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
-		tflog.Debug(ctx, fmt.Sprintf("Setting namespace from %s: %s", consts.EnvVarVaultNamespaceImport, ns))
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
-	}
-}
-
 func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data KeyResourceModel
 
@@ -198,10 +162,23 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the state from Vault
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("Key Management key", apiPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after creating Key Management key",
+			fmt.Sprintf("Key Management key not found at path %q immediately after creation", apiPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseKeyResponse(ctx, vaultResp.Data, &data, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -219,59 +196,26 @@ func (r *KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if data.LatestVersion.IsNull() {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-}
-
-func (r *KeyResource) read(ctx context.Context, cli *api.Client, data *KeyResourceModel, diags *diag.Diagnostics) {
+	// Build API path and read from Vault
 	apiPath := buildKeyPath(data.Path.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		diags.AddError(errReading("Key Management key", apiPath, err))
+		resp.Diagnostics.AddError(errReading("Key Management key", apiPath, err))
 		return
 	}
 
 	if vaultResp == nil {
-		data.LatestVersion = types.Int64Null()
+		tflog.Warn(ctx, "Key Management key not found, removing from state", map[string]interface{}{
+			"path": apiPath,
+		})
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	if v, ok := vaultResp.Data["type"].(string); ok {
-		data.Type = types.StringValue(v)
-	}
-	if v, ok := vaultResp.Data[consts.FieldDeletionAllowed].(bool); ok {
-		data.DeletionAllowed = types.BoolValue(v)
-	}
+	// Parse response data
+	r.parseKeyResponse(ctx, vaultResp.Data, &data, &resp.Diagnostics)
 
-	if v, ok := vaultResp.Data[consts.FieldLatestVersion]; ok {
-		data.LatestVersion = setInt64FromInterface(v)
-	}
-
-	if v, ok := vaultResp.Data[consts.FieldMinEnabledVersion]; ok {
-		data.MinEnabledVersion = setInt64FromInterface(v)
-	}
-
-	if v, ok := vaultResp.Data[consts.FieldReplicaRegions].([]interface{}); ok {
-		regions := make([]string, 0, len(v))
-		for _, r := range v {
-			if s, ok := r.(string); ok {
-				regions = append(regions, s)
-			}
-		}
-		setValue, diags := types.SetValueFrom(ctx, types.StringType, regions)
-		if !diags.HasError() {
-			data.ReplicaRegions = setValue
-		}
-	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -302,10 +246,23 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		}
 	}
 
-	r.read(ctx, cli, &plan, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the state from Vault
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("Key Management key", apiPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after updating Key Management key",
+			fmt.Sprintf("Key Management key not found at path %q immediately after update", apiPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseKeyResponse(ctx, vaultResp.Data, &plan, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -327,5 +284,71 @@ func (r *KeyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError(errDeleting("Key Management key", apiPath, err))
 		return
+	}
+}
+
+func (r *KeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resp.Diagnostics.AddError(
+			"Empty Import ID",
+			"Import ID cannot be empty. Expected format: <mount>/key/<name>",
+		)
+		return
+	}
+
+	mount, name, err := parseKeyPath(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Unable to parse import ID: %s\n\nExpected format: <mount>/key/<name>\nExample: keymgmt/key/my-key\n\nError: %s", req.ID, err.Error()),
+		)
+		return
+	}
+
+	if mount == "" || name == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Import ID contains empty fields. Expected format: <mount>/key/<name>\nExample: keymgmt/key/my-key\n\nParsed mount: %q, name: %q", mount, name),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		tflog.Debug(ctx, fmt.Sprintf("Setting namespace from %s: %s", consts.EnvVarVaultNamespaceImport, ns))
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
+}
+
+// parseKeyResponse parses the Vault API response data into the resource model
+func (r *KeyResource) parseKeyResponse(ctx context.Context, responseData map[string]interface{}, data *KeyResourceModel, diags *diag.Diagnostics) {
+	if v, ok := responseData["type"].(string); ok {
+		data.Type = types.StringValue(v)
+	}
+	if v, ok := responseData[consts.FieldDeletionAllowed].(bool); ok {
+		data.DeletionAllowed = types.BoolValue(v)
+	}
+
+	if v, ok := responseData[consts.FieldLatestVersion]; ok {
+		data.LatestVersion = setInt64FromInterface(v)
+	}
+
+	if v, ok := responseData[consts.FieldMinEnabledVersion]; ok {
+		data.MinEnabledVersion = setInt64FromInterface(v)
+	}
+
+	if v, ok := responseData[consts.FieldReplicaRegions].([]interface{}); ok {
+		regions := make([]string, 0, len(v))
+		for _, r := range v {
+			if s, ok := r.(string); ok {
+				regions = append(regions, s)
+			}
+		}
+		setValue, diagsResult := types.SetValueFrom(ctx, types.StringType, regions)
+		if !diagsResult.HasError() {
+			data.ReplicaRegions = setValue
+		}
 	}
 }
