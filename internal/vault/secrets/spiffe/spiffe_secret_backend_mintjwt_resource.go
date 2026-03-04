@@ -69,7 +69,7 @@ func (s *SpiffeSecretBackendMintJwtResource) Schema(_ context.Context, _ ephemer
 				Required:    true,
 			},
 			"token": schema.StringAttribute{
-				Description: "The SPIFFE trust domain for this backend.",
+				Description: "The minted JWT token.",
 				Computed:    true,
 			},
 		},
