@@ -143,6 +143,7 @@ func TestAccDBSecretRSAPrivateKey(t *testing.T) {
 					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("username"), knownvalue.StringRegexp(expectedUsernameRegex)),
 					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("rsa_private_key"), knownvalue.StringRegexp(expectedRSAKeyRegex)),
 				},
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
