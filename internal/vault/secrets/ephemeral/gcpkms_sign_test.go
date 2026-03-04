@@ -35,7 +35,6 @@ import (
 // Note: These tests create real GCP KMS keys and perform actual signing operations.
 
 func TestAccGCPKMSSign_basic(t *testing.T) {
-	// Skip if environment variables are not set
 	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
 
 	backend := acctest.RandomWithPrefix("tf-test-gcpkms")
@@ -64,7 +63,6 @@ func TestAccGCPKMSSign_basic(t *testing.T) {
 }
 
 func TestAccGCPKMSSign_differentAlgorithms(t *testing.T) {
-	// Skip if environment variables are not set
 	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
 
 	backend := acctest.RandomWithPrefix("tf-test-gcpkms")
@@ -97,7 +95,6 @@ func TestAccGCPKMSSign_differentAlgorithms(t *testing.T) {
 }
 
 func TestAccGCPKMSSign_differentDigests(t *testing.T) {
-	// Skip if environment variables are not set
 	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
 
 	backend := acctest.RandomWithPrefix("tf-test-gcpkms")
@@ -134,14 +131,15 @@ func TestAccGCPKMSSign_differentDigests(t *testing.T) {
 func testAccGCPKMSSignConfig(backend, keyName, digest, keyVersion string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = <<-EOT
+  path                   = "%s"
+  credentials_wo         = <<-EOT
 %s
 EOT
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  backend          = vault_gcpkms_secret_backend.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
@@ -150,11 +148,11 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 ephemeral "vault_gcpkms_sign" "test" {
-  backend     = vault_gcpkms_secret_backend.test.path
+  mount_id    = tostring(vault_gcpkms_secret_backend_key.test.latest_version)
+  mount       = vault_gcpkms_secret_backend.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   digest      = "%s"
   key_version = %s
-  mount_id    = vault_gcpkms_secret_backend.test.id
 }
 
 provider "echo" {
@@ -168,14 +166,15 @@ resource "echo" "signature" {}
 func testAccGCPKMSSignWithBothAlgorithmsConfig(backend, keyNameP256, keyNameP384, digestSHA256, digestSHA384, keyVersion string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
-  path        = "%s"
-  credentials = <<-EOT
+  path                   = "%s"
+  credentials_wo         = <<-EOT
 %s
 EOT
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test_p256" {
-  backend          = vault_gcpkms_secret_backend.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
@@ -184,7 +183,7 @@ resource "vault_gcpkms_secret_backend_key" "test_p256" {
 }
 
 resource "vault_gcpkms_secret_backend_key" "test_p384" {
-  backend          = vault_gcpkms_secret_backend.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
@@ -193,19 +192,19 @@ resource "vault_gcpkms_secret_backend_key" "test_p384" {
 }
 
 ephemeral "vault_gcpkms_sign" "test_p256" {
-  backend     = vault_gcpkms_secret_backend.test.path
+  mount_id    = tostring(vault_gcpkms_secret_backend_key.test_p256.latest_version)
+  mount       = vault_gcpkms_secret_backend.test.path
   name        = vault_gcpkms_secret_backend_key.test_p256.name
   digest      = "%s"
   key_version = %s
-  mount_id    = vault_gcpkms_secret_backend.test.id
 }
 
 ephemeral "vault_gcpkms_sign" "test_p384" {
-  backend     = vault_gcpkms_secret_backend.test.path
+  mount_id    = tostring(vault_gcpkms_secret_backend_key.test_p384.latest_version)
+  mount       = vault_gcpkms_secret_backend.test.path
   name        = vault_gcpkms_secret_backend_key.test_p384.name
   digest      = "%s"
   key_version = %s
-  mount_id    = vault_gcpkms_secret_backend.test.id
 }
 
 provider "echo" {

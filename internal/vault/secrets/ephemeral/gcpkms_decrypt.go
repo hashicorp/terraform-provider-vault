@@ -30,7 +30,7 @@ type GCPKMSDecryptEphemeralResource struct {
 type GCPKMSDecryptModel struct {
 	base.BaseModelEphemeral
 
-	Backend                     types.String `tfsdk:"backend"`
+	Mount                       types.String `tfsdk:"mount"`
 	Name                        types.String `tfsdk:"name"`
 	Ciphertext                  types.String `tfsdk:"ciphertext"`
 	AdditionalAuthenticatedData types.String `tfsdk:"additional_authenticated_data"`
@@ -43,10 +43,11 @@ type GCPKMSDecryptModel struct {
 func (r *GCPKMSDecryptEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
-				MarkdownDescription: "Path where GCP KMS backend is mounted",
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Path where the GCP KMS secrets engine is mounted.",
 				Required:            true,
-			}, consts.FieldName: schema.StringAttribute{
+			},
+			consts.FieldName: schema.StringAttribute{
 				MarkdownDescription: "Name of the key to use for decryption",
 				Required:            true,
 			},
@@ -91,7 +92,7 @@ func (r *GCPKMSDecryptEphemeralResource) Open(ctx context.Context, req ephemeral
 		return
 	}
 
-	path := fmt.Sprintf("%s/decrypt/%s", data.Backend.ValueString(), data.Name.ValueString())
+	path := fmt.Sprintf("%s/decrypt/%s", data.Mount.ValueString(), data.Name.ValueString())
 
 	requestData := map[string]interface{}{
 		consts.FieldCiphertext: data.Ciphertext.ValueString(),

@@ -30,7 +30,7 @@ type GCPKMSSignEphemeralResource struct {
 type GCPKMSSignModel struct {
 	base.BaseModelEphemeral
 
-	Backend    types.String `tfsdk:"backend"`
+	Mount      types.String `tfsdk:"mount"`
 	Name       types.String `tfsdk:"name"`
 	Digest     types.String `tfsdk:"digest"`
 	KeyVersion types.Int64  `tfsdk:"key_version"`
@@ -42,8 +42,8 @@ type GCPKMSSignModel struct {
 func (r *GCPKMSSignEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
-				MarkdownDescription: "Path where GCP KMS backend is mounted",
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Path where the GCP KMS secrets engine is mounted.",
 				Required:            true,
 			},
 			consts.FieldName: schema.StringAttribute{
@@ -85,7 +85,7 @@ func (r *GCPKMSSignEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 		return
 	}
 
-	path := fmt.Sprintf("%s/sign/%s", data.Backend.ValueString(), data.Name.ValueString())
+	path := fmt.Sprintf("%s/sign/%s", data.Mount.ValueString(), data.Name.ValueString())
 
 	requestData := map[string]interface{}{
 		"digest": data.Digest.ValueString(),

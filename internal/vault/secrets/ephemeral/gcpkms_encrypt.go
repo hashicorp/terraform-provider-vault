@@ -34,7 +34,7 @@ type GCPKMSEncryptEphemeralResource struct {
 type GCPKMSEncryptModel struct {
 	base.BaseModelEphemeral
 
-	Backend                     types.String `tfsdk:"backend"`
+	Mount                       types.String `tfsdk:"mount"`
 	Name                        types.String `tfsdk:"name"`
 	Plaintext                   types.String `tfsdk:"plaintext"`
 	AdditionalAuthenticatedData types.String `tfsdk:"additional_authenticated_data"`
@@ -47,8 +47,8 @@ type GCPKMSEncryptModel struct {
 func (r *GCPKMSEncryptEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
-				MarkdownDescription: "Path where GCP KMS backend is mounted",
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Path where the GCP KMS secrets engine is mounted.",
 				Required:            true,
 			},
 			consts.FieldName: schema.StringAttribute{
@@ -96,7 +96,7 @@ func (r *GCPKMSEncryptEphemeralResource) Open(ctx context.Context, req ephemeral
 		return
 	}
 
-	path := fmt.Sprintf("%s/encrypt/%s", data.Backend.ValueString(), data.Name.ValueString())
+	path := fmt.Sprintf("%s/encrypt/%s", data.Mount.ValueString(), data.Name.ValueString())
 
 	requestData := map[string]interface{}{
 		consts.FieldPlaintext: data.Plaintext.ValueString(),

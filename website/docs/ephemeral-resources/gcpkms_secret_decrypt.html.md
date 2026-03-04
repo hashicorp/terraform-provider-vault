@@ -1,18 +1,15 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_gcpkms_secret_decrypt ephemeral resource"
-sidebar_current: "docs-vault-ephemeral-resource-gcpkms-secret-decrypt"
+page_title: "Vault: vault_gcpkms_decrypt ephemeral resource"
+sidebar_current: "docs-vault-ephemeral-resource-gcpkms-decrypt"
 description: |-
   Decrypts ciphertext using GCP KMS through Vault
 ---
 
 # vault\_gcpkms\_decrypt
 
-Decrypts ciphertext that was encrypted using a GCP KMS encryption key through Vault. This is an ephemeral 
-resource that performs decryption operations without storing the resulting plaintext in state.
-
-Ephemeral resources are ideal for cryptographic operations as they don't persist sensitive data in 
-Terraform state files.
+Decrypts ciphertext that was encrypted using a GCP KMS encryption key through Vault. This is an ephemeral
+resource that performs decryption operations without storing the resulting plaintext in Terraform state.
 
 ## Example Usage
 
@@ -20,12 +17,13 @@ Terraform state files.
 
 ```hcl
 resource "vault_gcpkms_secret_backend" "gcpkms" {
-  path        = "gcpkms"
-  credentials = file("gcp-credentials.json")
+  path                   = "gcpkms"
+  credentials_wo         = file("gcp-credentials.json")
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "encryption_key" {
-  backend          = vault_gcpkms_secret_backend.gcpkms.path
+  mount            = vault_gcpkms_secret_backend.gcpkms.path
   name             = "my-key"
   key_ring         = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose          = "encrypt_decrypt"
@@ -34,33 +32,36 @@ resource "vault_gcpkms_secret_backend_key" "encryption_key" {
 }
 
 ephemeral "vault_gcpkms_decrypt" "data" {
-  backend    = vault_gcpkms_secret_backend.gcpkms.path
+  mount      = vault_gcpkms_secret_backend.gcpkms.path
   name       = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext = var.encrypted_data
-  mount_id   = vault_gcpkms_secret_backend.gcpkms.id
 }
 
-# Use the decrypted plaintext
 output "decrypted_secret" {
-  value     = base64decode(ephemeral.vault_gcpkms_decrypt.data.plaintext)
+  value     = ephemeral.vault_gcpkms_decrypt.data.plaintext
   sensitive = true
-  ephemeral = true
 }
 ```
 
-### Decryption with Specific Key Version
-
-~> **Note:** The `key_version` parameter is optional and rarely needed for decryption. GCP KMS automatically 
-determines the correct key version from the ciphertext metadata. Only specify this if you need to enforce 
-decryption with a specific version.
+### Complete Encrypt-Decrypt Workflow
 
 ```hcl
-ephemeral "vault_gcpkms_decrypt" "versioned" {
-  backend     = vault_gcpkms_secret_backend.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.encryption_key.name
-  ciphertext  = var.encrypted_data
-  key_version = 1
-  mount_id    = vault_gcpkms_secret_backend.gcpkms.id
+ephemeral "vault_gcpkms_encrypt" "secret" {
+  mount_id  = tostring(vault_gcpkms_secret_backend_key.encryption_key.latest_version)
+  mount     = vault_gcpkms_secret_backend.gcpkms.path
+  name      = vault_gcpkms_secret_backend_key.encryption_key.name
+  plaintext = base64encode("my secret message")
+}
+
+ephemeral "vault_gcpkms_decrypt" "recovered" {
+  mount      = vault_gcpkms_secret_backend.gcpkms.path
+  name       = vault_gcpkms_secret_backend_key.encryption_key.name
+  ciphertext = ephemeral.vault_gcpkms_encrypt.secret.ciphertext
+}
+
+output "decrypted_value" {
+  value     = ephemeral.vault_gcpkms_decrypt.recovered.plaintext
+  sensitive = true
 }
 ```
 
@@ -68,57 +69,21 @@ ephemeral "vault_gcpkms_decrypt" "versioned" {
 
 ```hcl
 ephemeral "vault_gcpkms_decrypt" "with_aad" {
-  backend                       = vault_gcpkms_secret_backend.gcpkms.path
+  mount                         = vault_gcpkms_secret_backend.gcpkms.path
   name                          = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext                    = var.encrypted_data
   additional_authenticated_data = base64encode("context-info")
-  mount_id                      = vault_gcpkms_secret_backend.gcpkms.id
 }
 ```
 
-### Complete Encrypt-Decrypt Example
+### Decryption with Specific Key Version
 
 ```hcl
-ephemeral "vault_gcpkms_encrypt" "secret" {
-  backend   = vault_gcpkms_secret_backend.gcpkms.path
-  name      = vault_gcpkms_secret_backend_key.encryption_key.name
-  plaintext = base64encode("my secret message")
-  mount_id  = vault_gcpkms_secret_backend.gcpkms.id
-}
-
-ephemeral "vault_gcpkms_decrypt" "recovered" {
-  backend    = vault_gcpkms_secret_backend.gcpkms.path
-  name       = vault_gcpkms_secret_backend_key.encryption_key.name
-  ciphertext = ephemeral.vault_gcpkms_encrypt.secret.ciphertext
-  mount_id   = vault_gcpkms_secret_backend.gcpkms.id
-}
-
-# Will output: "my secret message"
-output "decrypted_value" {
-  value     = base64decode(ephemeral.vault_gcpkms_decrypt.recovered.plaintext)
-  sensitive = true
-  ephemeral = true
-}
-```
-
-### Decrypting Data from SSM Parameter
-
-```hcl
-data "aws_ssm_parameter" "encrypted_secret" {
-  name = "/myapp/encrypted-data"
-}
-
-ephemeral "vault_gcpkms_decrypt" "from_ssm" {
-  backend    = vault_gcpkms_secret_backend.gcpkms.path
-  name       = vault_gcpkms_secret_backend_key.encryption_key.name
-  ciphertext = data.aws_ssm_parameter.encrypted_secret.value
-  mount_id   = vault_gcpkms_secret_backend.gcpkms.id
-}
-
-output "secret_value" {
-  value     = base64decode(ephemeral.vault_gcpkms_decrypt.from_ssm.plaintext)
-  sensitive = true
-  ephemeral = true
+ephemeral "vault_gcpkms_decrypt" "versioned" {
+  mount       = vault_gcpkms_secret_backend.gcpkms.path
+  name        = vault_gcpkms_secret_backend_key.encryption_key.name
+  ciphertext  = var.encrypted_data
+  key_version = 1
 }
 ```
 
@@ -128,31 +93,34 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace of the target resource.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's
-  configured [namespace](/docs/providers/vault/index.html#namespace).
+  The `namespace` is always relative to the provider's configured
+  [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `backend` - (Required) Path where the GCP KMS secrets engine is mounted.
+* `mount_id` - (Optional) Terraform ID of the mount resource. Used to defer the provisioning of the
+  ephemeral resource until the apply stage, after the GCP KMS secrets engine mount and key have been
+  created. Set this to `tostring(vault_gcpkms_secret_backend_key.<name>.latest_version)` to establish
+  the correct dependency ordering.
 
-* `name` - (Required) Name of the encryption key that was used to encrypt the data. This must reference a key 
-  with purpose `encrypt_decrypt`.
+* `mount` - (Required) Path where the GCP KMS secrets engine is mounted.
 
-* `ciphertext` - (Required) The base64-encoded ciphertext to decrypt. This should be the output from a previous 
-  `vault_gcpkms_encrypt` operation.
+* `name` - (Required) Name of the encryption key that was used to encrypt the data. The key must have
+  purpose `encrypt_decrypt`.
 
-* `key_version` - (Optional) Specific version of the key to use for decryption. **Note:** This is rarely needed 
-  as GCP KMS automatically determines the correct version from the ciphertext metadata. Only specify this if you 
-  need to enforce decryption with a specific version.
+* `ciphertext` - (Required, Sensitive) Base64-encoded ciphertext to decrypt. This should be the output
+  from a previous [`vault_gcpkms_encrypt`](/docs/providers/vault/ephemeral-resources/gcpkms_secret_encrypt.html)
+  operation.
 
-* `additional_authenticated_data` - (Optional) Additional authenticated data (AAD) that was used during encryption,
-  base64-encoded. This must match exactly the AAD used during encryption, or decryption will fail.
+* `additional_authenticated_data` - (Optional) Base64-encoded additional authenticated data (AAD) that
+  was used during encryption. This must match exactly the AAD used during encryption, or decryption
+  will fail.
 
-* `mount_id` - (Required) The unique identifier for the Vault mount. This forces Terraform to wait until the mount
-  is fully configured before performing decryption operations.
+* `key_version` - (Optional) Specific version of the key to use for decryption. If not specified, GCP
+  KMS will automatically use the version that was used to encrypt the data.
 
 ## Attributes Reference
 
 The following attributes are exported:
 
-* `plaintext` - The decrypted plaintext data, base64-encoded. This value is marked as sensitive and will not 
-  appear in console output. Use `base64decode()` to get the original plaintext.
+* `plaintext` - The base64-encoded decrypted plaintext. This value is marked as sensitive and will not
+  appear in console output.

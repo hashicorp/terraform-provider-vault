@@ -1,18 +1,16 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_gcpkms_secret_sign ephemeral resource"
-sidebar_current: "docs-vault-ephemeral-resource-gcpkms-secret-sign"
+page_title: "Vault: vault_gcpkms_sign ephemeral resource"
+sidebar_current: "docs-vault-ephemeral-resource-gcpkms-sign"
 description: |-
   Creates a digital signature using GCP KMS through Vault
 ---
 
 # vault\_gcpkms\_sign
 
-Creates a digital signature for a message digest using a GCP KMS signing key through Vault. This is an 
-ephemeral resource that performs signing operations without storing the signature in state.
-
-Ephemeral resources are ideal for cryptographic operations as they generate fresh signatures each time 
-without persisting sensitive data.
+Creates a digital signature for a message digest using a GCP KMS asymmetric signing key through Vault.
+This is an ephemeral resource that performs signing operations without storing the signature in Terraform
+state.
 
 ## Example Usage
 
@@ -20,16 +18,17 @@ without persisting sensitive data.
 
 ```hcl
 resource "vault_gcpkms_secret_backend" "gcpkms" {
-  path        = "gcpkms"
-  credentials = file("gcp-credentials.json")
+  path                   = "gcpkms"
+  credentials_wo         = file("gcp-credentials.json")
+  credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "signing_key" {
-  backend          = vault_gcpkms_secret_backend.gcpkms.path
+  mount            = vault_gcpkms_secret_backend.gcpkms.path
   name             = "signing-key"
   key_ring         = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose          = "asymmetric_sign"
-  algorithm        = "rsa_sign_pss_2048_sha256"
+  algorithm        = "ec_sign_p256_sha256"
   protection_level = "software"
 }
 
@@ -39,33 +38,29 @@ locals {
 }
 
 ephemeral "vault_gcpkms_sign" "signature" {
-  backend     = vault_gcpkms_secret_backend.gcpkms.path
+  mount_id    = tostring(vault_gcpkms_secret_backend_key.signing_key.latest_version)
+  mount       = vault_gcpkms_secret_backend.gcpkms.path
   name        = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = local.digest
   key_version = 1
-  mount_id    = vault_gcpkms_secret_backend.gcpkms.id
 }
 
-output "signature" {
-  value     = ephemeral.vault_gcpkms_sign.signature.signature
-  sensitive = true
-  ephemeral = true
-}
-```
-
-### Signing with Specific Key Version
-
-```hcl
-ephemeral "vault_gcpkms_sign" "versioned" {
-  backend     = vault_gcpkms_secret_backend.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.signing_key.name
-  digest      = base64encode(sha256("message"))
-  key_version = 1
-  mount_id    = vault_gcpkms_secret_backend.gcpkms.id
+# Ephemeral values cannot be used in output blocks — use a check block instead.
+check "signature_produced" {
+  assert {
+    condition     = length(ephemeral.vault_gcpkms_sign.signature.signature) > 0
+    error_message = "Signing did not produce a signature"
+  }
 }
 ```
 
 ### Sign and Verify Workflow
+
+Sign a digest during apply, then verify it in a subsequent plan using
+`vault_gcpkms_verify`. Because `vault_gcpkms_verify` is a data source (runs
+at plan time), it cannot directly reference an ephemeral output. Capture the
+signature via `local_sensitive_file` or pass it in as a variable on the next
+run.
 
 ```hcl
 locals {
@@ -74,60 +69,85 @@ locals {
 }
 
 ephemeral "vault_gcpkms_sign" "create_signature" {
-  backend     = vault_gcpkms_secret_backend.gcpkms.path
+  mount_id    = tostring(vault_gcpkms_secret_backend_key.signing_key.latest_version)
+  mount       = vault_gcpkms_secret_backend.gcpkms.path
   name        = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = local.digest
   key_version = 1
-  mount_id    = vault_gcpkms_secret_backend.gcpkms.id
 }
 
+# Write signature to a local file so it can be read back on the next plan.
+resource "local_sensitive_file" "signature" {
+  filename = "${path.module}/signature.b64"
+  content  = ephemeral.vault_gcpkms_sign.create_signature.signature
+}
+
+# On a subsequent plan, verify using the captured signature file.
 data "vault_gcpkms_verify" "check_signature" {
-  backend     = vault_gcpkms_secret_backend.gcpkms.path
+  mount       = vault_gcpkms_secret_backend.gcpkms.path
   name        = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = local.digest
-  signature   = ephemeral.vault_gcpkms_sign.create_signature.signature
+  signature   = trimspace(file("${path.module}/signature.b64"))
   key_version = 1
 }
 
-# Will output: true
 output "signature_valid" {
   value = data.vault_gcpkms_verify.check_signature.valid
 }
 ```
 
-### JWT Token Signing Example
+### JWT Token Signing
+
+Signs a JWT header+payload digest using a GCP KMS EC P-256 key. The resulting
+signature can be appended to form a complete ES256 JWT.
 
 ```hcl
 locals {
-  jwt_header = jsonencode({
-    alg = "RS256"
-    typ = "JWT"
-  })
-  
-  jwt_payload = jsonencode({
-    sub  = "user123"
-    name = "John Doe"
-    iat  = 1516239022
-    exp  = 1516242622
-  })
-  
-  jwt_unsigned = "${base64encode(local.jwt_header)}.${base64encode(local.jwt_payload)}"
-  jwt_digest   = base64encode(sha256(local.jwt_unsigned))
+  jwt_header  = base64encode(jsonencode({ alg = "ES256", typ = "JWT" }))
+  jwt_payload = base64encode(jsonencode({
+    sub = "user-123"
+    iss = "my-service"
+    iat = 1700000000
+    exp = 1700003600
+  }))
+
+  # JWT signing input is "header.payload"; digest is its SHA-256
+  jwt_signing_input = "${local.jwt_header}.${local.jwt_payload}"
+  jwt_digest        = base64encode(sha256(local.jwt_signing_input))
 }
 
-ephemeral "vault_gcpkms_sign" "jwt" {
-  backend     = vault_gcpkms_secret_backend.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.signing_key.name
+resource "vault_gcpkms_secret_backend_key" "jwt_key" {
+  mount            = vault_gcpkms_secret_backend.gcpkms.path
+  name             = "jwt-signing-key"
+  key_ring         = "projects/my-project/locations/us-central1/keyRings/my-keyring"
+  purpose          = "asymmetric_sign"
+  algorithm        = "ec_sign_p256_sha256"
+  protection_level = "software"
+}
+
+ephemeral "vault_gcpkms_sign" "jwt_signature" {
+  mount_id    = tostring(vault_gcpkms_secret_backend_key.jwt_key.latest_version)
+  mount       = vault_gcpkms_secret_backend.gcpkms.path
+  name        = vault_gcpkms_secret_backend_key.jwt_key.name
   digest      = local.jwt_digest
   key_version = 1
-  mount_id    = vault_gcpkms_secret_backend.gcpkms.id
 }
 
-output "signed_jwt" {
-  value     = "${local.jwt_unsigned}.${ephemeral.vault_gcpkms_sign.jwt.signature}"
-  sensitive = true
-  ephemeral = true
+check "jwt_signature_produced" {
+  assert {
+    condition     = length(ephemeral.vault_gcpkms_sign.jwt_signature.signature) > 0
+    error_message = "JWT signing did not produce a signature"
+  }
 }
+
+# The assembled JWT is: "${local.jwt_signing_input}.${signature}"
+# Reference ephemeral.vault_gcpkms_sign.jwt_signature.signature directly
+# in any resource that consumes it within the same apply, e.g.:
+#
+#   resource "local_sensitive_file" "jwt" {
+#     filename = "${path.module}/token.jwt"
+#     content  = "${local.jwt_signing_input}.${ephemeral.vault_gcpkms_sign.jwt_signature.signature}"
+#   }
 ```
 
 ## Argument Reference
@@ -136,26 +156,28 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace of the target resource.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's
-  configured [namespace](/docs/providers/vault/index.html#namespace).
+  The `namespace` is always relative to the provider's configured
+  [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `backend` - (Required) Path where the GCP KMS secrets engine is mounted.
+* `mount_id` - (Optional) Terraform ID of the mount resource. Used to defer the provisioning of the
+  ephemeral resource until the apply stage, after the GCP KMS secrets engine mount and key have been
+  created. Set this to `tostring(vault_gcpkms_secret_backend_key.<name>.latest_version)` to establish
+  the correct dependency ordering.
 
-* `name` - (Required) Name of the signing key to use. This must reference a key with purpose `asymmetric_sign`.
+* `mount` - (Required) Path where the GCP KMS secrets engine is mounted.
 
-* `digest` - (Required) Base64-encoded digest to sign. The digest must be created using the hash 
-  algorithm that matches the key's algorithm (e.g., SHA-256 for `rsa_sign_pss_2048_sha256`).
+* `name` - (Required) Name of the signing key to use. The key must have purpose `asymmetric_sign`.
 
-* `key_version` - (Required) Specific version of the key to use for signing.
+* `digest` - (Required) Base64-encoded digest of the message to sign. The digest algorithm must match
+  the key's configured algorithm (e.g., SHA-256 for `ec_sign_p256_sha256`).
 
-* `mount_id` - (Required) The unique identifier for the Vault mount. This forces Terraform to wait until the mount
-  is fully configured before performing signing operations.
+* `key_version` - (Required) Version of the key to use for signing.
 
 ## Attributes Reference
 
 The following attributes are exported:
 
-* `signature` - The base64-encoded digital signature. This can be verified using the `vault_gcpkms_verify` 
-  data source.
+* `signature` - The base64-encoded digital signature. This can be verified using the
+  [`vault_gcpkms_verify`](/docs/providers/vault/d/gcpkms_verify.html) data source.
 
