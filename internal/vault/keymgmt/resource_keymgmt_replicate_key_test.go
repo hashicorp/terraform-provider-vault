@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -43,6 +44,13 @@ func TestAccKeymgmtReplicateKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "key_name", keyName),
 				),
 			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKeymgmtReplicateKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+			},
 		},
 	})
 }
@@ -64,6 +72,39 @@ func TestAccKeymgmtReplicateKey_NoReplicaRegions(t *testing.T) {
 			{
 				Config:      testKeymgmtReplicateKeyConfig_NoReplicaRegions(backend, kmsName, keyName),
 				ExpectError: regexp.MustCompile("replica_regions must be configured"),
+			},
+		},
+	})
+}
+
+func TestAccKeymgmtReplicateKey_multiple(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+
+	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
+	kmsName := acctest.RandomWithPrefix("awskms")
+	keyName1 := acctest.RandomWithPrefix("test-key1")
+	keyName2 := acctest.RandomWithPrefix("test-key2")
+
+	resourceName1 := "vault_keymgmt_replicate_key.test1"
+	resourceName2 := "vault_keymgmt_replicate_key.test2"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion111)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtReplicateKeyConfigMultiple(backend, kmsName, keyName1, keyName2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName1, "kms_name", kmsName),
+					resource.TestCheckResourceAttr(resourceName1, "key_name", keyName1),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName2, "kms_name", kmsName),
+					resource.TestCheckResourceAttr(resourceName2, "key_name", keyName2),
+				),
 			},
 		},
 	})
@@ -149,4 +190,81 @@ resource "vault_keymgmt_replicate_key" "test" {
   depends_on = [vault_keymgmt_distribute_key.test]
 }
 `, path, keyName, kmsName, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+}
+
+func testAccKeymgmtReplicateKeyImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+		path := rs.Primary.Attributes[consts.FieldPath]
+		kmsName := rs.Primary.Attributes["kms_name"]
+		keyName := rs.Primary.Attributes["key_name"]
+		return fmt.Sprintf("%s/kms/%s/key/%s/replicate", path, kmsName, keyName), nil
+	}
+}
+
+func testKeymgmtReplicateKeyConfigMultiple(path, kmsName, keyName1, keyName2 string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test1" {
+  path            = vault_mount.test.path
+  name            = "%s"
+  type            = "aes256-gcm96"
+  replica_regions = ["us-east-1", "eu-west-1"]
+}
+
+resource "vault_keymgmt_key" "test2" {
+  path            = vault_mount.test.path
+  name            = "%s"
+  type            = "aes256-gcm96"
+  replica_regions = ["ap-southeast-1", "ap-northeast-1"]
+}
+
+resource "vault_keymgmt_aws_kms" "test" {
+  path           = vault_mount.test.path
+  name           = "%s"
+  key_collection = "us-west-1"
+
+  access_key = %q
+  secret_key = %q
+}
+
+resource "vault_keymgmt_distribute_key" "test1" {
+  path       = vault_mount.test.path
+  kms_name   = vault_keymgmt_aws_kms.test.name
+  key_name   = vault_keymgmt_key.test1.name
+  purpose    = ["encrypt", "decrypt"]
+  protection = "hsm"
+}
+
+resource "vault_keymgmt_distribute_key" "test2" {
+  path       = vault_mount.test.path
+  kms_name   = vault_keymgmt_aws_kms.test.name
+  key_name   = vault_keymgmt_key.test2.name
+  purpose    = ["encrypt", "decrypt"]
+  protection = "hsm"
+}
+
+resource "vault_keymgmt_replicate_key" "test1" {
+  path     = vault_mount.test.path
+  kms_name = vault_keymgmt_aws_kms.test.name
+  key_name = vault_keymgmt_key.test1.name
+  
+  depends_on = [vault_keymgmt_distribute_key.test1]
+}
+
+resource "vault_keymgmt_replicate_key" "test2" {
+  path     = vault_mount.test.path
+  kms_name = vault_keymgmt_aws_kms.test.name
+  key_name = vault_keymgmt_key.test2.name
+  
+  depends_on = [vault_keymgmt_distribute_key.test2]
+}
+`, path, keyName1, keyName2, kmsName, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
 }
