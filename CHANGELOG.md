@@ -2,6 +2,9 @@
 
 FEATURES:
 
+* **New Resource**: `vault_cf_auth_backend_config` - Manage the Cloud Foundry auth backend configuration.
+* **New Resource**: `vault_cf_auth_backend_role` - Manage roles for the Cloud Foundry auth backend.
+* **New Ephemeral Resource**: `vault_cf_auth_login` - Authenticate against a Cloud Foundry auth backend and obtain a short-lived Vault token.
 * **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
 
 IMPROVEMENTS:
