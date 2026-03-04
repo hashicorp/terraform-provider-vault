@@ -143,7 +143,6 @@ func TestAccDBSecretRSAPrivateKey(t *testing.T) {
 					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("username"), knownvalue.StringRegexp(expectedUsernameRegex)),
 					statecheck.ExpectKnownValue("echo.test_db", tfjsonpath.New("data").AtMapKey("rsa_private_key"), knownvalue.StringRegexp(expectedRSAKeyRegex)),
 				},
-				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
@@ -276,6 +275,10 @@ resource "vault_database_secrets_mount" "test" {
     username_template        = "%s"
     private_key_wo           = file("%s")
     private_key_wo_version   = "1"
+    data                     = {
+      "test_key" = "test_value"
+    }
+    root_rotation_statements = []
   }
 }
 
@@ -284,6 +287,10 @@ resource "vault_database_secret_backend_role" "role" {
   name                = "%s"
   db_name             = vault_database_secrets_mount.test.snowflake.0.name
   credential_type     = "rsa_private_key"
+  credential_config = {
+	"format" = "pkcs8"
+    "key_bits" = "2048"
+  }
 
   creation_statements = [
     "CREATE USER IF NOT EXISTS \"{{name}}\";",
