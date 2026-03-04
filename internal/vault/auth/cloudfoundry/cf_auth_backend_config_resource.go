@@ -108,18 +108,23 @@ func (r *CFAuthBackendConfigResource) Schema(_ context.Context, _ resource.Schem
 				Optional:            true,
 			},
 			consts.FieldLoginMaxSecsNotBefore: schema.Int64Attribute{
-				MarkdownDescription: "The maximum number of seconds in the past when a signature could have been created.",
-				Optional:            true,
-				Computed:            true,
+				MarkdownDescription: "The maximum number of seconds in the past when a signature could have been created. " +
+					"Defaults to `300`. This field is `Computed`: if removed from config, " +
+					"Vault retains the previously set value.",
+				Optional: true,
+				Computed: true,
 			},
 			consts.FieldLoginMaxSecsNotAfter: schema.Int64Attribute{
-				MarkdownDescription: "The maximum number of seconds in the future when a signature could have been created.",
-				Optional:            true,
-				Computed:            true,
+				MarkdownDescription: "The maximum number of seconds in the future when a signature could have been created. " +
+					"Defaults to `60`. This field is `Computed`: if removed from config, " +
+					"Vault retains the previously set value.",
+				Optional: true,
+				Computed: true,
 			},
 			consts.FieldCFTimeout: schema.Int64Attribute{
-				MarkdownDescription: "The timeout for the CF API in seconds. If not set, defaults to 0 (no timeout).",
-				Optional:            true,
+				MarkdownDescription: "The timeout for the CF API in seconds. " +
+					"Defaults to `0` (no timeout). Removing this field from config resets the value to `0` in Vault.",
+				Optional: true,
 			},
 		},
 	}

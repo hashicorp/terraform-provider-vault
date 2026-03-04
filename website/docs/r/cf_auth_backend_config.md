@@ -56,14 +56,21 @@ The following arguments are supported:
   presented by the CF API. Configures Vault to trust these certificates when
   making API calls.
 
-* `login_max_seconds_not_before` - (Optional) The maximum number of seconds in
-  the past when a login signature could have been created. Defaults to `300`.
+* `login_max_seconds_not_before` - (Optional, Computed) The maximum number of
+  seconds in the past when a login signature could have been created. Defaults
+  to `300`. Because this field is `Computed`, removing it from your configuration
+  does **not** reset the value in Vault — Vault retains whatever was previously
+  set. To reset to the default, set the field explicitly to `300`.
 
-* `login_max_seconds_not_after` - (Optional) The maximum number of seconds in the
-  future when a login signature could have been created. Defaults to `60`.
+* `login_max_seconds_not_after` - (Optional, Computed) The maximum number of
+  seconds in the future when a login signature could have been created. Defaults
+  to `60`. Because this field is `Computed`, removing it from your configuration
+  does **not** reset the value in Vault — Vault retains whatever was previously
+  set. To reset to the default, set the field explicitly to `60`.
 
 * `cf_timeout` - (Optional) The timeout for CF API calls in seconds. Defaults to
-  `0` (no timeout).
+  `0` (no timeout). Removing this field from your configuration resets the value
+  to `0` in Vault.
 
 ## Ephemeral Attributes Reference
 

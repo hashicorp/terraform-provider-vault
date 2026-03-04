@@ -104,8 +104,10 @@ func (r *CFAuthBackendRoleResource) Schema(_ context.Context, _ resource.SchemaR
 				Optional:            true,
 			},
 			consts.FieldDisableIPMatching: schema.BoolAttribute{
-				MarkdownDescription: "If set to true, disables the default behavior that logging in must be performed from an acceptable IP address described by the presented certificate.",
-				Optional:            true,
+				MarkdownDescription: "If set to `true`, disables the default behavior that logging in must be performed " +
+					"from an acceptable IP address described by the presented certificate. " +
+					"Defaults to `false`. Removing this field from config resets the value to `false` in Vault.",
+				Optional: true,
 			},
 		},
 	}

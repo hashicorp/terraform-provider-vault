@@ -68,7 +68,8 @@ The following arguments are supported:
 * `disable_ip_matching` - (Optional) If `true`, disables the default behavior
   that requires login requests to originate from an IP address listed in the
   instance certificate. Useful when CF instances sit behind a load balancer or
-  NAT. Defaults to `false`.
+  NAT. Defaults to `false`. Removing this field from your configuration resets
+  the value to `false` in Vault.
 
 ### Common Token Arguments
 

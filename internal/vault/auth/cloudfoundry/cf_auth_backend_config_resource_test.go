@@ -140,9 +140,12 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 					},
 				},
 			},
-			// Step 3: Update write-only password.
+			// Step 3: Re-apply the full config to assert idempotency with the
+			// write-only required attribute (cf_password_wo). Because the field is
+			// write-only, Vault never returns it; the provider must not produce a
+			// diff when the same password value is supplied again.
 			{
-				Config: testAccCFAuthBackendConfigUpdatePassword(mount, params),
+				Config: testAccCFAuthBackendConfigIdempotentPassword(mount, params),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFUsername, params.username),
@@ -177,6 +180,13 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 				},
 			},
 			// Step 5: Remove optional fields, revert to basic config.
+			// cf_api_trusted_certificates is cleared because Vault accepts an empty
+			// list as an explicit reset.
+			// login_max_seconds_not_before/after are Optional+Computed: Vault treats
+			// the zero value sent as "keep existing", so their Step-4 values are
+			// retained; Terraform accepts this because the fields are Computed.
+			// cf_timeout is Optional-only: its zero value means "no timeout" in
+			// Vault, which resets the field, and the read path maps 0 → null.
 			{
 				Config: testAccCFAuthBackendConfigBasic(mount, params),
 				Check: resource.ComposeTestCheckFunc(
@@ -184,10 +194,14 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFApiAddr, params.apiAddr),
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFUsername, params.username),
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldIdentityCACertificates+".#", "1"),
-					// All optional fields must be cleared after reverting to basic config.
+					// cf_api_trusted_certificates is explicitly cleared (empty list sent).
 					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCFApiTrustedCertificates+".#"),
-					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotBefore),
-					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotAfter),
+					// login_max_seconds_not_before/after are Computed: Vault retains the
+					// previously set values (120/60) because it treats 0 as "no change".
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotBefore, "120"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotAfter, "60"),
+					// cf_timeout defaults to 0 (no timeout); Vault resets it when 0 is
+					// sent, so removing it from config clears it from state.
 					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCFTimeout),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -348,9 +362,10 @@ resource "vault_cf_auth_backend_config" "test" {
 `, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.username, p.password, escapeHCL(p.ca))
 }
 
-// testAccCFAuthBackendConfigUpdatePassword updates the write-only password. Because
-// cf_password_wo is required, it is always sent to Vault on every apply.
-func testAccCFAuthBackendConfigUpdatePassword(mount string, p cfTestParams) string {
+// testAccCFAuthBackendConfigIdempotentPassword re-applies the same full config
+// (including the write-only cf_password_wo) to assert that the provider does
+// not produce a spurious diff when a write-only required attribute is unchanged.
+func testAccCFAuthBackendConfigIdempotentPassword(mount string, p cfTestParams) string {
 	return fmt.Sprintf(`
 %s
 
