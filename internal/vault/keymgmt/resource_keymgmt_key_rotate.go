@@ -5,15 +5,17 @@ package keymgmt
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -26,11 +28,10 @@ var _ resource.ResourceWithImportState = &KeyRotateResource{}
 
 type KeyRotateResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 type KeyRotateResourceModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 	Path          types.String `tfsdk:"path"`
 	Name          types.String `tfsdk:"name"`
 	LatestVersion types.Int64  `tfsdk:"latest_version"`
@@ -69,7 +70,7 @@ func (r *KeyRotateResource) Schema(ctx context.Context, req resource.SchemaReque
 			},
 		},
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -94,13 +95,24 @@ func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	// Store the rotate path as the resource ID to align with the documented import format
-	data.ID = types.StringValue(apiPath)
-
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the key metadata to get latest_version
+	keyPath := buildKeyPath(vaultPath, name)
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("Key Management key", keyPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after rotating Key Management key",
+			fmt.Sprintf("Key Management key not found at path %q immediately after rotation", keyPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseKeyRotateResponse(vaultResp.Data, &data)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -118,63 +130,26 @@ func (r *KeyRotateResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if data.ID.IsNull() {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-}
-
-func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *KeyRotateResourceModel, diags *diag.Diagnostics) {
-	rotatePath := data.ID.ValueString()
-
-	// Strip the /rotate suffix to get the key path for reading key metadata
-	keyPath := strings.TrimSuffix(rotatePath, "/rotate")
-
+	// Build the key path and read key metadata
+	keyPath := buildKeyPath(data.Path.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
-		diags.AddError(errReading("Key Management key", keyPath, err))
+		resp.Diagnostics.AddError(errReading("Key Management key", keyPath, err))
 		return
 	}
 
 	if vaultResp == nil {
-		data.ID = types.StringNull()
+		tflog.Warn(ctx, "Key Management key not found, removing from state", map[string]interface{}{
+			"path": keyPath,
+		})
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	parts := strings.Split(strings.Trim(keyPath, "/"), "/")
-	keyIndex := -1
-	for i, part := range parts {
-		if part == "key" {
-			keyIndex = i
-			break
-		}
-	}
+	// Parse response data
+	r.parseKeyRotateResponse(vaultResp.Data, &data)
 
-	if keyIndex == -1 || keyIndex >= len(parts)-1 {
-		diags.AddError(errInvalidPathStructure, "Invalid key path: "+keyPath)
-		return
-	}
-
-	data.Path = types.StringValue(strings.Join(parts[:keyIndex], "/"))
-	data.Name = types.StringValue(parts[keyIndex+1])
-
-	// Always set latest_version to ensure it's known after apply
-	if v, ok := vaultResp.Data["latest_version"]; ok && v != nil {
-		if result := setInt64FromInterface(v); !result.IsNull() {
-			data.LatestVersion = result
-			return
-		}
-	}
-
-	// If latest_version was not successfully set, use a default value
-	data.LatestVersion = types.Int64Value(1)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *KeyRotateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -184,4 +159,69 @@ func (r *KeyRotateResource) Update(ctx context.Context, req resource.UpdateReque
 func (r *KeyRotateResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Key rotation is permanent in Vault
 	// Removing it from Terraform state is sufficient
+}
+
+func (r *KeyRotateResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Validate import ID is not empty
+	if req.ID == "" {
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			"Import identifier cannot be empty. Expected format: '<mount_path>/key/<name>/rotate', "+
+				"namespace can be specified using the env var "+consts.EnvVarVaultNamespaceImport,
+		)
+		return
+	}
+
+	// Parse the import ID - expect format: <mount_path>/key/<name>/rotate
+	importID := req.ID
+	// Ensure the path ends with "rotate"
+	parts := strings.Split(strings.Trim(importID, "/"), "/")
+	if len(parts) == 0 || parts[len(parts)-1] != "rotate" {
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			fmt.Sprintf("The import identifier %q must end with /rotate. Expected format: '<mount_path>/key/<name>/rotate', "+
+				"namespace can be specified using the env var %s", importID, consts.EnvVarVaultNamespaceImport),
+		)
+		return
+	}
+
+	// Remove the "rotate" suffix to parse the base key path
+	parts = parts[:len(parts)-1]
+	keyPath := strings.Join(parts, "/")
+	mountPath, keyName, err := parseKeyPath(keyPath)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			fmt.Sprintf("The import identifier %q is not valid: %s. Expected format: '<mount_path>/key/<name>/rotate', "+
+				"namespace can be specified using the env var %s", importID, err.Error(), consts.EnvVarVaultNamespaceImport),
+		)
+		return
+	}
+
+	// Set the individual fields in state
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mountPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), keyName)...)
+
+	// Handle namespace if needed
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		resp.Diagnostics.Append(
+			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
+		)
+	}
+}
+
+// parseKeyRotateResponse parses the Vault API response data into the resource model
+func (r *KeyRotateResource) parseKeyRotateResponse(responseData map[string]interface{}, data *KeyRotateResourceModel) {
+	// Only set latest_version when it is returned and can be parsed from the API response.
+	if v, ok := responseData["latest_version"]; ok && v != nil {
+		if result := setInt64FromInterface(v); !result.IsNull() {
+			data.LatestVersion = result
+		}
+	}
 }

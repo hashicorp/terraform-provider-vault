@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_keymgmt_gcp_kms resource"
-
+sidebar_current: "docs-vault-resource-keymgmt-gcp-kms"
 description: |-
   Manages GCP Cloud KMS provider in the Vault Key Management secrets engine
 ---
@@ -67,8 +67,6 @@ In addition to the arguments above, the following attributes are exported:
 
 * `id` - The unique identifier for the GCP Cloud KMS provider. Format: `{path}/kms/{name}`
 
-* `type` - The type of the KMS provider (`azurekeyvault`, `awskms`, or `gcpckms`).
-
 ## Import
 
 GCP Cloud KMS providers can be imported using the format `{path}/kms/{name}`, e.g.
@@ -77,4 +75,4 @@ GCP Cloud KMS providers can be imported using the format `{path}/kms/{name}`, e.
 $ terraform import vault_keymgmt_gcp_kms.production keymgmt/kms/gcp-production
 ```
 
-~> **Note:** When importing, the `credentials` field will not be populated as it is write-only and not returned by the Vault API.
+~> **Note:** When importing, the `service_account_file` field will not be populated as it is write-only and not returned by the Vault API.
