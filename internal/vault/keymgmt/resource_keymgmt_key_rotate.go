@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -17,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -97,10 +95,24 @@ func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the key metadata to get latest_version
+	keyPath := buildKeyPath(vaultPath, name)
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("Key Management key", keyPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after rotating Key Management key",
+			fmt.Sprintf("Key Management key not found at path %q immediately after rotation", keyPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseKeyRotateResponse(vaultResp.Data, &data)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -118,41 +130,26 @@ func (r *KeyRotateResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Check if resource still exists by verifying the key was found
-	if data.LatestVersion.IsNull() {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-}
-
-func (r *KeyRotateResource) read(ctx context.Context, cli *api.Client, data *KeyRotateResourceModel, diags *diag.Diagnostics) {
-	// Build the key path from the data fields to read key metadata
+	// Build the key path and read key metadata
 	keyPath := buildKeyPath(data.Path.ValueString(), data.Name.ValueString())
-
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
-		diags.AddError(errReading("Key Management key", keyPath, err))
+		resp.Diagnostics.AddError(errReading("Key Management key", keyPath, err))
 		return
 	}
 
 	if vaultResp == nil {
-		// Resource has been deleted outside Terraform
+		tflog.Warn(ctx, "Key Management key not found, removing from state", map[string]interface{}{
+			"path": keyPath,
+		})
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	// Only set latest_version when it is returned and can be parsed from the API response.
-	if v, ok := vaultResp.Data["latest_version"]; ok && v != nil {
-		if result := setInt64FromInterface(v); !result.IsNull() {
-			data.LatestVersion = result
-		}
-	}
+	// Parse response data
+	r.parseKeyRotateResponse(vaultResp.Data, &data)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *KeyRotateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -216,5 +213,15 @@ func (r *KeyRotateResource) ImportState(ctx context.Context, req resource.Import
 		resp.Diagnostics.Append(
 			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
 		)
+	}
+}
+
+// parseKeyRotateResponse parses the Vault API response data into the resource model
+func (r *KeyRotateResource) parseKeyRotateResponse(responseData map[string]interface{}, data *KeyRotateResourceModel) {
+	// Only set latest_version when it is returned and can be parsed from the API response.
+	if v, ok := responseData["latest_version"]; ok && v != nil {
+		if result := setInt64FromInterface(v); !result.IsNull() {
+			data.LatestVersion = result
+		}
 	}
 }

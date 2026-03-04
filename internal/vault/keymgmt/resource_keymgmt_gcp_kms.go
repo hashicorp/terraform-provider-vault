@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -125,10 +123,23 @@ func (r *GCPKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the state from Vault
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("GCP Cloud KMS provider", apiPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after creating GCP Cloud KMS provider",
+			fmt.Sprintf("GCP Cloud KMS provider not found at path %q immediately after creation", apiPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseGCPKMSResponse(vaultResp.Data, &data)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -146,43 +157,26 @@ func (r *GCPKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Check if resource still exists by verifying required fields were populated
-	if data.KeyCollection.IsNull() {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-}
-
-func (r *GCPKMSResource) read(ctx context.Context, cli *api.Client, data *GCPKMSResourceModel, diags *diag.Diagnostics) {
-	// Build API path from data fields
+	// Build API path and read from Vault
 	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		diags.AddError(errReading("GCP Cloud KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(errReading("GCP Cloud KMS provider", apiPath, err))
 		return
 	}
 
 	if vaultResp == nil {
-		// Resource has been deleted outside Terraform
+		tflog.Warn(ctx, "GCP Cloud KMS provider not found, removing from state", map[string]interface{}{
+			"path": apiPath,
+		})
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	if v, ok := vaultResp.Data["key_collection"].(string); ok {
-		data.KeyCollection = types.StringValue(v)
-	}
-	if v, ok := vaultResp.Data["project"].(string); ok {
-		data.Project = types.StringValue(v)
-	}
-	if v, ok := vaultResp.Data["location"].(string); ok {
-		data.Location = types.StringValue(v)
-	}
+	// Parse response data
+	r.parseGCPKMSResponse(vaultResp.Data, &data)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -243,10 +237,23 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		}
 	}
 
-	r.read(ctx, cli, &plan, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the state from Vault
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("GCP Cloud KMS provider", apiPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after updating GCP Cloud KMS provider",
+			fmt.Sprintf("GCP Cloud KMS provider not found at path %q immediately after update", apiPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseGCPKMSResponse(vaultResp.Data, &plan)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -309,5 +316,18 @@ func (r *GCPKMSResource) ImportState(ctx context.Context, req resource.ImportSta
 		resp.Diagnostics.Append(
 			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
 		)
+	}
+}
+
+// parseGCPKMSResponse parses the Vault API response data into the resource model
+func (r *GCPKMSResource) parseGCPKMSResponse(responseData map[string]interface{}, data *GCPKMSResourceModel) {
+	if v, ok := responseData["key_collection"].(string); ok {
+		data.KeyCollection = types.StringValue(v)
+	}
+	if v, ok := responseData["project"].(string); ok {
+		data.Project = types.StringValue(v)
+	}
+	if v, ok := responseData["location"].(string); ok {
+		data.Location = types.StringValue(v)
 	}
 }
