@@ -99,7 +99,6 @@ func TestGCPSecretsSyncDestinationWIF(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, service_account_email),
 				),
 			},
-
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
@@ -156,7 +155,7 @@ resource "vault_secrets_sync_gcp_destination" "test" {
   granularity			             = "secret-path"
   project_id				         = "%s"
   identity_token_audience            = "%s"
-  identity_token_audience_wo_version = 1
+  identity_token_audience_wo_version = 2
   identity_token_ttl                 = 30
 }`, destName, project_id, audience)
 }
@@ -169,7 +168,7 @@ resource "vault_secrets_sync_gcp_destination" "test" {
   project_id				         = "%s"
   service_account_email              = "123"
   identity_token_audience            = "%s"
-  identity_token_audience_wo_version = 1
+  identity_token_audience_wo_version = 3
   identity_token_ttl                 = 30
 }`, destName, project_id, audience)
 }
