@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -137,14 +136,26 @@ func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateR
 		writeData["protection"] = data.Protection.ValueString()
 	}
 
-	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
+	writeResp, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData)
+	if err != nil {
 		resp.Diagnostics.AddError(errCreating("Key Management key distribution", apiPath, err))
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
+	// Parse the write response to extract all fields including computed ones
+	if writeResp != nil && writeResp.Data != nil {
+		r.parseVaultResponse(ctx, writeResp.Data, &data, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		// Ensure computed fields are set to known values even if write response is empty
+		if data.KeyID.IsUnknown() {
+			data.KeyID = types.StringNull()
+		}
+		if data.Versions.IsUnknown() {
+			data.Versions, _ = types.ListValueFrom(ctx, types.Int64Type, []int64{})
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -163,56 +174,60 @@ func (r *DistributeKeyResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Build API path from data fields
+	apiPath := buildDistributeKeyPath(data.Path.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("Key Management key distribution", apiPath, err))
 		return
 	}
 
-	// Check if resource still exists by verifying computed fields were populated
-	if data.KeyID.IsNull() {
+	if vaultResp == nil {
+		tflog.Warn(ctx, "key distribution not found, removing from state", map[string]interface{}{
+			"path": apiPath,
+		})
 		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	// Parse response data
+	r.parseVaultResponse(ctx, vaultResp.Data, &data, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *DistributeKeyResource) read(ctx context.Context, cli *api.Client, data *DistributeKeyResourceModel, diags *diag.Diagnostics) {
-	// Build API path from data fields
-	apiPath := buildDistributeKeyPath(data.Path.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
-	if err != nil {
-		diags.AddError(errReading("Key Management key distribution", apiPath, err))
-		return
-	}
-
-	if vaultResp == nil {
-		// Resource has been deleted outside Terraform
-		return
-	}
-
-	if v, ok := vaultResp.Data["purpose"].([]interface{}); ok {
+// parseVaultResponse extracts data from Vault API response data into the model
+// This works with both write responses and read responses
+func (r *DistributeKeyResource) parseVaultResponse(ctx context.Context, responseData map[string]interface{}, data *DistributeKeyResourceModel, diags *diag.Diagnostics) {
+	if v, ok := responseData["purpose"].([]interface{}); ok {
 		purposes, d := types.SetValueFrom(ctx, types.StringType, v)
 		diags.Append(d...)
 		if !diags.HasError() {
 			data.Purpose = purposes
 		}
 	}
-	if v, ok := vaultResp.Data["protection"].(string); ok {
+	if v, ok := responseData["protection"].(string); ok {
 		data.Protection = types.StringValue(v)
 	}
 
-	// Always set key_id and versions to ensure they are known after apply
-	data.KeyID = setStringFromInterface(vaultResp.Data["key_id"])
+	// Set key_id - always to a known value (never Unknown)
+	if keyID := setStringFromInterface(responseData["key_id"]); !keyID.IsNull() {
+		data.KeyID = keyID
+	} else if data.KeyID.IsUnknown() {
+		data.KeyID = types.StringNull()
+	}
 
-	if v, ok := vaultResp.Data["versions"].([]interface{}); ok && len(v) > 0 {
+	// Set versions - always to a known value (never Unknown)
+	if v, ok := responseData["versions"].([]interface{}); ok && len(v) > 0 {
 		versions, d := types.ListValueFrom(ctx, types.Int64Type, v)
 		diags.Append(d...)
 		if !diags.HasError() {
 			data.Versions = versions
 		}
-	} else {
-		// Set to empty list instead of leaving unknown
+	} else if data.Versions.IsUnknown() {
 		emptyList, d := types.ListValueFrom(ctx, types.Int64Type, []int64{})
 		diags.Append(d...)
 		if !diags.HasError() {
@@ -257,15 +272,23 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	if hasChanges {
-		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
+		writeResp, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData)
+		if err != nil {
 			resp.Diagnostics.AddError(errUpdating("Key Management key distribution", apiPath, err))
 			return
 		}
-	}
 
-	r.read(ctx, cli, &plan, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
+		// Parse the write response to extract updated fields
+		if writeResp != nil && writeResp.Data != nil {
+			r.parseVaultResponse(ctx, writeResp.Data, &plan, &resp.Diagnostics)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
+	} else {
+		// No changes, preserve existing computed values
+		plan.KeyID = state.KeyID
+		plan.Versions = state.Versions
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)

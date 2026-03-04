@@ -110,30 +110,8 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 		kmsProvider = v
 	}
 
-	if kmsProvider != "awskms" {
+	if kmsProvider != ProviderAWSKMS {
 		resp.Diagnostics.AddError("Invalid KMS provider", fmt.Sprintf("Key replication is only supported for AWS KMS providers. Current provider: %s", kmsProvider))
-		return
-	}
-
-	keyPath := buildKeyPath(vaultPath, keyName)
-	keyResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
-	if err != nil {
-		resp.Diagnostics.AddError(errReading("Key Management key", keyPath, err))
-		return
-	}
-
-	if keyResp == nil {
-		resp.Diagnostics.AddError("Key not found", fmt.Sprintf("Key %s not found at %s", keyName, keyPath))
-		return
-	}
-
-	hasReplicaRegions := false
-	if v, ok := keyResp.Data["replica_regions"].([]interface{}); ok && len(v) > 0 {
-		hasReplicaRegions = true
-	}
-
-	if !hasReplicaRegions {
-		resp.Diagnostics.AddError("No replica regions configured", fmt.Sprintf("Cannot replicate key %s: replica_regions must be configured in vault_keymgmt_key resource before replication", keyName))
 		return
 	}
 
