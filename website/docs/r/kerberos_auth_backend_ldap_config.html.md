@@ -245,8 +245,7 @@ The following arguments are supported:
 
 * `enable_samaccountname_login` - (Optional) If true, matching sAMAccountName attribute values
   will be allowed to login when `upndomain` is defined. Defaults to `false`.
-  **Note:** This field is only supported in Vault 1.19.0 and above. Do not configure this
-  attribute if your Vault version is below 1.19.0.
+  **Note:** This field is only supported in Vault 1.19.0 and above. If configured for vault version lesser than 1.21.0, this field will be ignored, eventhough the value is persisted in the state file.
 
 ### Group Search Settings
 
@@ -319,7 +318,7 @@ For more information on token settings, see the [Token Fields documentation](/do
 
 * `alias_metadata` - (Optional) A map of string to string that will be set as metadata on
   the identity alias. **Note:** This field is only supported in Vault 1.21.0 and above.
-  Do not configure this attribute if your Vault version is below 1.21.0.
+  If configured for vault version lesser than 1.21.0, this field will be ignored, eventhough the value is persisted in the state file.
 
 ## Import
 
