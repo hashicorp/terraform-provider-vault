@@ -5,6 +5,7 @@ package keymgmt_test
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -15,6 +16,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
@@ -147,4 +149,137 @@ resource "vault_keymgmt_key" "test" {
   replica_regions  = [%s]
 }
 `, mount, keyName, regionsStr)
+}
+
+func TestAccKeymgmtKey_multiple(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	key1Name := acctest.RandomWithPrefix("key1")
+	key2Name := acctest.RandomWithPrefix("key2")
+	resourceType := "vault_keymgmt_key"
+	resourceName1 := resourceType + ".test1"
+	resourceName2 := resourceType + ".test2"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtKey_multipleConfig(mount, key1Name, key2Name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, key1Name),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldType, "aes256-gcm96"),
+					resource.TestCheckResourceAttr(resourceName1, "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldName, key2Name),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldType, "rsa-2048"),
+					resource.TestCheckResourceAttr(resourceName2, "deletion_allowed", "true"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeymgmtKey_namespace(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	keyName := acctest.RandomWithPrefix("key")
+	namespace := acctest.RandomWithPrefix("test-namespace")
+	resourceType := "vault_keymgmt_key"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion111)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtKey_namespaceConfig(namespace, mount, keyName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
+					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeymgmtKey_validation(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	keyName := acctest.RandomWithPrefix("key")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeymgmtKey_invalidTypeConfig(mount, keyName),
+				ExpectError: regexp.MustCompile("unsupported key type"),
+			},
+		},
+	})
+}
+
+func testKeymgmtKey_multipleConfig(mount, key1Name, key2Name string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test1" {
+  path             = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
+}
+
+resource "vault_keymgmt_key" "test2" {
+  path             = vault_mount.keymgmt.path
+  name             = %q
+  type             = "rsa-2048"
+  deletion_allowed = true
+}
+`, mount, key1Name, key2Name)
+}
+
+func testKeymgmtKey_namespaceConfig(namespace, mount, keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = %q
+}
+
+resource "vault_mount" "keymgmt" {
+  namespace = vault_namespace.test.path
+  path      = %q
+  type      = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test" {
+  namespace        = vault_namespace.test.path
+  path             = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
+}
+`, namespace, mount, keyName)
+}
+
+func testKeymgmtKey_invalidTypeConfig(mount, keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test" {
+  path             = vault_mount.keymgmt.path
+  name             = %q
+  type             = "invalid-key-type"
+  deletion_allowed = true
+}
+`, mount, keyName)
 }
