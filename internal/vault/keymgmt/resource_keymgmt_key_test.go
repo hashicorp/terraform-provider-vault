@@ -11,11 +11,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKeymgmtKey(t *testing.T) {
@@ -36,7 +36,6 @@ func TestAccKeymgmtKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
 					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "false"),
 					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{
@@ -70,11 +69,30 @@ func TestAccKeymgmtKey(t *testing.T) {
 					},
 				},
 			},
-			testutil.GetImportTestStep(resourceName, false, nil,
-				consts.FieldReplicaRegions,
-			),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKeymgmtKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldReplicaRegions,
+				},
+			},
 		},
 	})
+}
+
+func testAccKeymgmtKeyImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+		path := rs.Primary.Attributes[consts.FieldPath]
+		name := rs.Primary.Attributes[consts.FieldName]
+		return fmt.Sprintf("%s/key/%s", path, name), nil
+	}
 }
 
 func testKeymgmtKey_initialConfig(mount, keyName string) string {
