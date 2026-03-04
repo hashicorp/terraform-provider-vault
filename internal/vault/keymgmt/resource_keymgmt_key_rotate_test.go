@@ -9,11 +9,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKeymgmtKeyRotate_basic(t *testing.T) {
@@ -34,7 +34,13 @@ func TestAccKeymgmtKeyRotate_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKeymgmtKeyRotateImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+			},
 		},
 	})
 }
@@ -78,9 +84,10 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path = vault_mount.keymgmt.path
-  name = %q
-  type = "aes256-gcm96"
+  path             = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
 }
 
 resource "vault_keymgmt_key_rotate" "test" {
@@ -98,9 +105,10 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path = vault_mount.keymgmt.path
-  name = %q
-  type = "aes256-gcm96"
+  path             = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
 }
 
 resource "vault_keymgmt_key_rotate" "test" {
@@ -118,9 +126,10 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path = vault_mount.keymgmt.path
-  name = %q
-  type = "aes256-gcm96"
+  path             = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
 }
 
 resource "vault_keymgmt_key_rotate" "test" {
@@ -135,4 +144,16 @@ resource "vault_keymgmt_key_rotate" "second" {
   depends_on = [vault_keymgmt_key_rotate.test]
 }
 `, mount, keyName)
+}
+
+func testAccKeymgmtKeyRotateImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+		path := rs.Primary.Attributes[consts.FieldPath]
+		name := rs.Primary.Attributes[consts.FieldName]
+		return fmt.Sprintf("%s/key/%s/rotate", path, name), nil
+	}
 }
