@@ -73,13 +73,6 @@ The following write-only attribute is supported:
   provided as a write-only field. This value will **never** be stored in
   Terraform state or plan files.
 
-## Attributes Reference
-
-In addition to the arguments above, the following attributes are exported:
-
-* `path` - The full Vault API path to the CF auth backend config
-  (e.g. `auth/cf/config`).
-
 ## Import
 
 CF auth backend configs can be imported using `auth/`, the `mount` path, and

@@ -269,7 +269,7 @@ func (r *CFAuthBackendRoleResource) Delete(ctx context.Context, req resource.Del
 		return
 	}
 
-	if _, err := vaultClient.Logical().Delete(rolePath); err != nil {
+	if _, err := vaultClient.Logical().DeleteWithContext(ctx, rolePath); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
 	}
 }
