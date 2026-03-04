@@ -81,7 +81,6 @@ func TestGCPSecretsSyncDestinationWIF(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion200)
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
@@ -91,13 +90,33 @@ func TestGCPSecretsSyncDestinationWIF(t *testing.T) {
 				},
 				Config: testGCPSecretsSyncDestinationWIFConfig_initial(destName, project_id, service_account_email, audience),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project_id),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, audience),
+					// identity_token_audience is write-only and cannot be verified from state
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWOVersion, "1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, service_account_email),
 				),
+			},
+
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
+				},
+				// Missing service_account_email field should error
+				Config:      testGCPSecretsSyncDestinationWIFConfigMissingServiceAccountEmail(destName, project_id, audience),
+				ExpectError: regexp.MustCompile(`failed to parse credentials: workload identity federation auth requires both identity_token_audience and service_account_email`),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
+				},
+				// Invalid service_account_email field should error
+				Config:      testGCPSecretsSyncDestinationWIFConfigInvalidServiceAccountEmail(destName, project_id, audience),
+				ExpectError: regexp.MustCompile(`failed to parse credentials: invalid service account email format, expected format: project-id@project-id.iam.gserviceaccount.com`),
 			},
 		},
 	})
@@ -120,13 +139,39 @@ resource "vault_secrets_sync_gcp_destination" "test" {
 func testGCPSecretsSyncDestinationWIFConfig_initial(destName, project_id, service_account_email, audience string) string {
 	return fmt.Sprintf(`
 resource "vault_secrets_sync_gcp_destination" "test" {
-  name                    = "%s"
-  granularity			   = "secret-path"
-  project_id				= "%s"
-  service_account_email   = "%s"
-  identity_token_audience = "%s"
-  identity_token_ttl      = 30
+  name                               = "%s"
+  granularity			             = "secret-path"
+  project_id				         = "%s"
+  service_account_email              = "%s"
+  identity_token_audience            = "%s"
+  identity_token_audience_wo_version = 1
+  identity_token_ttl                 = 30
 }`, destName, project_id, service_account_email, audience)
+}
+
+func testGCPSecretsSyncDestinationWIFConfigMissingServiceAccountEmail(destName, project_id, audience string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                               = "%s"
+  granularity			             = "secret-path"
+  project_id				         = "%s"
+  identity_token_audience            = "%s"
+  identity_token_audience_wo_version = 1
+  identity_token_ttl                 = 30
+}`, destName, project_id, audience)
+}
+
+func testGCPSecretsSyncDestinationWIFConfigInvalidServiceAccountEmail(destName, project_id, audience string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                               = "%s"
+  granularity			             = "secret-path"
+  project_id				         = "%s"
+  service_account_email              = "123"
+  identity_token_audience            = "%s"
+  identity_token_audience_wo_version = 1
+  identity_token_ttl                 = 30
+}`, destName, project_id, audience)
 }
 
 func testGCPSecretsSyncDestinationConfig_updated(credentials, destName, templ string) string {

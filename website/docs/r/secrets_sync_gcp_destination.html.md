@@ -128,14 +128,21 @@ The following arguments are supported:
 * `service_account_email` – (Optional) Service Account to impersonate for secrets sync workload identity federation.
   Required with `identity_token_audience`. **Requires Vault 2.0.0+**.
 
-* `identity_token_audience` - (Optional) The audience claim value for identity tokens.
+* `identity_token_audience` - (Optional) The audience claim value for identity tokens. This is a write-only field
   **Requires Vault 2.0.0+**.
 
-* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds.
+* `identity_token_audience_wo_version` - (Optional) This is used along with `identity_token_audience` to track updates as `identity_token_audience` is a write-only field. Increment this field to update `identity_token_audience`
+  **Requires Vault 2.0.0+**.`
+
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Default is 1 hour.
   **Requires Vault 2.0.0+**.
 
-* `identity_token_key` - (Optional) The key to use for signing identity tokens.
+* `identity_token_key` - (Optional) The key to use for signing identity tokens. This is a write-only field.
   **Requires Vault 2.0.0+**.
+
+* `identity_token_key_wo_version` - (Optional) This is used along with `identity_token_key` to track updates as `identity_token_key` is a write-only field. Increment this field to update `identity_token_key`
+  **Requires Vault 2.0.0+**.
+  
 
 
 ### Networking Configuration (Vault 1.19+)

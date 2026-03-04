@@ -5,7 +5,9 @@ package vault
 
 import (
 	"context"
+	"log"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -118,17 +120,32 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 			},
 			consts.FieldIdentityTokenKey: {
 				Type:        schema.TypeString,
+				WriteOnly:   true,
 				Optional:    true,
-				Description: "The key to use for signing identity tokens.",
+				Description: "The key to use for signing identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenKeyWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_key field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenKey},
 			},
 			consts.FieldIdentityTokenAudience: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The audience claim value for identity tokens.",
+				WriteOnly:   true,
+				Description: "The audience claim value for identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenAudienceWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_audience field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenAudience},
 			},
 			consts.FieldIdentityTokenTTL: {
 				Type:        schema.TypeInt,
 				Optional:    true,
+				Computed:    true,
 				Description: "The TTL of generated tokens.",
 			},
 			consts.FieldServiceAccountEmail: {
@@ -184,8 +201,15 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 }
 
 func gcpSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
+	name := d.Get(consts.FieldName).(string)
+	path := syncutil.SecretsSyncDestinationPath(name, gcpSyncType)
+
 	writeFields := buildGCPSyncWriteFields(meta)
-	readFields := buildGCPSyncReadFields(meta)
 	// typeSetFields indicates which fields are of TypeSet type and need conversion to List during write
 	typeSetFields := map[string]bool{
 		consts.FieldAllowedIPv4Addresses: true,
@@ -193,7 +217,53 @@ func gcpSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Resour
 		consts.FieldAllowedPorts:         true,
 		consts.FieldReplicationLocations: true,
 	}
-	return syncutil.SyncDestinationCreateUpdateWithOptions(ctx, d, meta, gcpSyncType, writeFields, readFields, typeSetFields)
+
+	data := map[string]interface{}{}
+
+	// Build data map from write fields
+	for _, k := range writeFields {
+		// Skip write-only fields - they'll be handled separately below
+		if k == consts.FieldIdentityTokenKey || k == consts.FieldIdentityTokenAudience {
+			continue
+		}
+
+		if v, ok := d.GetOk(k); ok {
+			// Convert TypeSet to List for JSON serialization if needed
+			if typeSetFields[k] {
+				if set, ok := v.(*schema.Set); ok {
+					data[k] = set.List()
+					continue
+				}
+			}
+			data[k] = v
+		}
+	}
+
+	// Handle write-only fields using GetRawConfigAt for Vault 2.0.0+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
+		// Handle identity_token_key (write-only)
+		if identityTokenKeyRaw, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldIdentityTokenKey)); !identityTokenKeyRaw.IsNull() {
+			data[consts.FieldIdentityTokenKey] = identityTokenKeyRaw.AsString()
+		}
+
+		// Handle identity_token_audience (write-only)
+		if identityTokenAudienceRaw, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldIdentityTokenAudience)); !identityTokenAudienceRaw.IsNull() {
+			data[consts.FieldIdentityTokenAudience] = identityTokenAudienceRaw.AsString()
+		}
+	}
+
+	log.Printf("[DEBUG] Writing sync destination data to %q", path)
+	_, err := client.Logical().WriteWithContext(ctx, path, data)
+	if err != nil {
+		return diag.Errorf("error writing sync destination data %q to %q: %s", data, path, err)
+	}
+	log.Printf("[DEBUG] Wrote sync destination data to %q", path)
+
+	if d.IsNewResource() {
+		d.SetId(name)
+	}
+
+	return gcpSecretsSyncDestinationRead(ctx, d, meta)
 }
 
 func gcpSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
