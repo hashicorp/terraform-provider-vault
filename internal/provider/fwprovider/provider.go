@@ -260,7 +260,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		alicloud.NewAliCloudSecretBackendRoleResource,
 		kerberosauth.NewKerberosAuthBackendConfigResource,
 		kerberosauth.NewKerberosAuthBackendLDAPConfigResource,
-		//kerberosauth.NewKerberosAuthBackendGroupResource,
+		kerberosauth.NewKerberosAuthBackendGroupResource,
 	}, testResources()...)
 }
 
