@@ -72,6 +72,9 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "AWS region where keys are stored (e.g., us-east-1)",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			consts.FieldCredentials: schema.MapAttribute{
 				Optional:            true,
@@ -219,11 +222,6 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		"provider": ProviderAWSKMS,
 	}
 	hasChanges := false
-
-	if !plan.KeyCollection.Equal(state.KeyCollection) {
-		writeData["key_collection"] = plan.KeyCollection.ValueString()
-		hasChanges = true
-	}
 
 	if !plan.Credentials.Equal(state.Credentials) || !plan.AccessKey.Equal(state.AccessKey) || !plan.SecretKey.Equal(state.SecretKey) {
 		if creds := buildAWSCredentialsMap(ctx, plan.Credentials, plan.AccessKey, plan.SecretKey, &resp.Diagnostics); creds != nil {

@@ -70,6 +70,9 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Azure Key Vault name where keys are stored",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			consts.FieldTenantID: schema.StringAttribute{
 				Required:            true,
@@ -208,10 +211,6 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 	hasChanges := false
 
-	if !plan.KeyCollection.Equal(state.KeyCollection) {
-		writeData["key_collection"] = plan.KeyCollection.ValueString()
-		hasChanges = true
-	}
 
 	credentialsChanged := !plan.TenantID.Equal(state.TenantID) ||
 		!plan.ClientID.Equal(state.ClientID) ||
@@ -219,8 +218,6 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 		!plan.Environment.Equal(state.Environment)
 
 	if credentialsChanged {
-		// Re-send all credential fields together under the nested credentials object,
-		// consistent with how Create() sends them to the Vault API.
 		creds := map[string]interface{}{
 			"tenant_id":     plan.TenantID.ValueString(),
 			"client_id":     plan.ClientID.ValueString(),
