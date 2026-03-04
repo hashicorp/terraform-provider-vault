@@ -211,7 +211,6 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 	hasChanges := false
 
-
 	credentialsChanged := !plan.TenantID.Equal(state.TenantID) ||
 		!plan.ClientID.Equal(state.ClientID) ||
 		!plan.ClientSecret.Equal(state.ClientSecret) ||
