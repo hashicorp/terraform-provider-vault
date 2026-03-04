@@ -5,7 +5,6 @@ package keymgmt_test
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"testing"
 
@@ -21,7 +20,7 @@ import (
 )
 
 func TestAccKeymgmtReplicateKey(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -37,7 +36,7 @@ func TestAccKeymgmtReplicateKey(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtReplicateKeyConfig(backend, kmsName, keyName),
+				Config: testKeymgmtReplicateKeyConfig(backend, kmsName, keyName, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "kms_name", kmsName),
@@ -56,7 +55,7 @@ func TestAccKeymgmtReplicateKey(t *testing.T) {
 }
 
 func TestAccKeymgmtReplicateKey_NoReplicaRegions(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -70,7 +69,7 @@ func TestAccKeymgmtReplicateKey_NoReplicaRegions(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config:      testKeymgmtReplicateKeyConfig_NoReplicaRegions(backend, kmsName, keyName),
+				Config:      testKeymgmtReplicateKeyConfig_NoReplicaRegions(backend, kmsName, keyName, accessKey, secretKey),
 				ExpectError: regexp.MustCompile("replica_regions must be configured"),
 			},
 		},
@@ -78,7 +77,7 @@ func TestAccKeymgmtReplicateKey_NoReplicaRegions(t *testing.T) {
 }
 
 func TestAccKeymgmtReplicateKey_multiple(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -96,7 +95,7 @@ func TestAccKeymgmtReplicateKey_multiple(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtReplicateKeyConfigMultiple(backend, kmsName, keyName1, keyName2),
+				Config: testKeymgmtReplicateKeyConfigMultiple(backend, kmsName, keyName1, keyName2, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName1, "kms_name", kmsName),
@@ -110,7 +109,7 @@ func TestAccKeymgmtReplicateKey_multiple(t *testing.T) {
 	})
 }
 
-func testKeymgmtReplicateKeyConfig(path, kmsName, keyName string) string {
+func testKeymgmtReplicateKeyConfig(path, kmsName, keyName, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -148,10 +147,10 @@ resource "vault_keymgmt_replicate_key" "test" {
   
   depends_on = [vault_keymgmt_distribute_key.test]
 }
-`, path, keyName, kmsName, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+`, path, keyName, kmsName, accessKey, secretKey)
 }
 
-func testKeymgmtReplicateKeyConfig_NoReplicaRegions(path, kmsName, keyName string) string {
+func testKeymgmtReplicateKeyConfig_NoReplicaRegions(path, kmsName, keyName, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -189,7 +188,7 @@ resource "vault_keymgmt_replicate_key" "test" {
   
   depends_on = [vault_keymgmt_distribute_key.test]
 }
-`, path, keyName, kmsName, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+`, path, keyName, kmsName, accessKey, secretKey)
 }
 
 func testAccKeymgmtReplicateKeyImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
@@ -205,7 +204,7 @@ func testAccKeymgmtReplicateKeyImportStateIdFunc(resourceName string) resource.I
 	}
 }
 
-func testKeymgmtReplicateKeyConfigMultiple(path, kmsName, keyName1, keyName2 string) string {
+func testKeymgmtReplicateKeyConfigMultiple(path, kmsName, keyName1, keyName2, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -266,5 +265,5 @@ resource "vault_keymgmt_replicate_key" "test2" {
   
   depends_on = [vault_keymgmt_distribute_key.test2]
 }
-`, path, keyName1, keyName2, kmsName, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+`, path, keyName1, keyName2, kmsName, accessKey, secretKey)
 }

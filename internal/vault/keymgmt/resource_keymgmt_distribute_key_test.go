@@ -5,7 +5,6 @@ package keymgmt_test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -20,7 +19,7 @@ import (
 )
 
 func TestAccKeymgmtDistributeKey(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -36,7 +35,7 @@ func TestAccKeymgmtDistributeKey(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtDistributeKeyConfig(backend, kmsName, keyName),
+				Config: testKeymgmtDistributeKeyConfig(backend, kmsName, keyName, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "kms_name", kmsName),
@@ -58,7 +57,7 @@ func TestAccKeymgmtDistributeKey(t *testing.T) {
 }
 
 func TestAccKeymgmtDistributeKey_update(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -74,7 +73,7 @@ func TestAccKeymgmtDistributeKey_update(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtDistributeKeyConfig(backend, kmsName, keyName),
+				Config: testKeymgmtDistributeKeyConfig(backend, kmsName, keyName, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "purpose.#", "2"),
@@ -83,7 +82,7 @@ func TestAccKeymgmtDistributeKey_update(t *testing.T) {
 				),
 			},
 			{
-				Config: testKeymgmtDistributeKeyConfigWithSign(backend, kmsName, keyName),
+				Config: testKeymgmtDistributeKeyConfigWithSign(backend, kmsName, keyName, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "purpose.#", "3"),
@@ -97,7 +96,7 @@ func TestAccKeymgmtDistributeKey_update(t *testing.T) {
 }
 
 func TestAccKeymgmtDistributeKey_multiple(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -115,7 +114,7 @@ func TestAccKeymgmtDistributeKey_multiple(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtDistributeKeyConfigMultiple(backend, kmsName, keyName1, keyName2),
+				Config: testKeymgmtDistributeKeyConfigMultiple(backend, kmsName, keyName1, keyName2, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName1, "kms_name", kmsName),
@@ -131,7 +130,7 @@ func TestAccKeymgmtDistributeKey_multiple(t *testing.T) {
 	})
 }
 
-func testKeymgmtDistributeKeyConfig(path, kmsName, keyName string) string {
+func testKeymgmtDistributeKeyConfig(path, kmsName, keyName, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -160,7 +159,7 @@ resource "vault_keymgmt_distribute_key" "test" {
   purpose    = ["encrypt", "decrypt"]
   protection = "hsm"
 }
-`, path, keyName, kmsName, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+`, path, keyName, kmsName, accessKey, secretKey)
 }
 
 func testAccKeymgmtDistributeKeyImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
@@ -176,7 +175,7 @@ func testAccKeymgmtDistributeKeyImportStateIdFunc(resourceName string) resource.
 	}
 }
 
-func testKeymgmtDistributeKeyConfigWithSign(path, kmsName, keyName string) string {
+func testKeymgmtDistributeKeyConfigWithSign(path, kmsName, keyName, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -205,10 +204,10 @@ resource "vault_keymgmt_distribute_key" "test" {
   purpose    = ["encrypt", "decrypt", "sign"]
   protection = "hsm"
 }
-`, path, keyName, kmsName, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+`, path, keyName, kmsName, accessKey, secretKey)
 }
 
-func testKeymgmtDistributeKeyConfigMultiple(path, kmsName, keyName1, keyName2 string) string {
+func testKeymgmtDistributeKeyConfigMultiple(path, kmsName, keyName1, keyName2, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -251,5 +250,5 @@ resource "vault_keymgmt_distribute_key" "test2" {
   purpose    = ["encrypt", "decrypt"]
   protection = "hsm"
 }
-`, path, keyName1, keyName2, kmsName, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+`, path, keyName1, keyName2, kmsName, accessKey, secretKey)
 }
