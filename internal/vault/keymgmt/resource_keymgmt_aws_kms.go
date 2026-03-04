@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -19,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -112,41 +110,6 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 	base.MustAddBaseSchema(&resp.Schema)
 }
 
-func (r *AWSKMSResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	if req.ID == "" {
-		resp.Diagnostics.AddError(
-			"Empty Import ID",
-			"Import ID cannot be empty. Expected format: <mount>/kms/<name>",
-		)
-		return
-	}
-
-	mount, name, err := parseKMSPath(req.ID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Invalid Import ID",
-			fmt.Sprintf("Unable to parse import ID: %s\n\nExpected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-aws-kms\n\nError: %s", req.ID, err.Error()),
-		)
-		return
-	}
-
-	if mount == "" || name == "" {
-		resp.Diagnostics.AddError(
-			"Invalid Import ID",
-			fmt.Sprintf("Import ID contains empty fields. Expected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-aws-kms\n\nParsed mount: %q, name: %q", mount, name),
-		)
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
-
-	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
-		tflog.Debug(ctx, fmt.Sprintf("Setting namespace from %s: %s", consts.EnvVarVaultNamespaceImport, ns))
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
-	}
-}
-
 func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data AWSKMSResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -181,10 +144,23 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the state from Vault
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("AWS KMS provider", apiPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after creating AWS KMS provider",
+			fmt.Sprintf("AWS KMS provider not found at path %q immediately after creation", apiPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseAWSKMSResponse(vaultResp.Data, &data)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -202,35 +178,26 @@ func (r *AWSKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if data.KeyCollection.IsNull() {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-}
-
-func (r *AWSKMSResource) read(ctx context.Context, cli *api.Client, data *AWSKMSResourceModel, diags *diag.Diagnostics) {
+	// Build API path and read from Vault
 	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		diags.AddError(errReading("AWS KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(errReading("AWS KMS provider", apiPath, err))
 		return
 	}
 
 	if vaultResp == nil {
-		data.KeyCollection = types.StringNull()
+		tflog.Warn(ctx, "AWS KMS provider not found, removing from state", map[string]interface{}{
+			"path": apiPath,
+		})
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	if v, ok := vaultResp.Data["key_collection"].(string); ok {
-		data.KeyCollection = types.StringValue(v)
-	}
+	// Parse response data
+	r.parseAWSKMSResponse(vaultResp.Data, &data)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -275,10 +242,23 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		}
 	}
 
-	r.read(ctx, cli, &plan, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the state from Vault
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("AWS KMS provider", apiPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after updating AWS KMS provider",
+			fmt.Sprintf("AWS KMS provider not found at path %q immediately after update", apiPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseAWSKMSResponse(vaultResp.Data, &plan)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -300,5 +280,46 @@ func (r *AWSKMSResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError(errDeleting("AWS KMS provider", apiPath, err))
 		return
+	}
+}
+
+func (r *AWSKMSResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resp.Diagnostics.AddError(
+			"Empty Import ID",
+			"Import ID cannot be empty. Expected format: <mount>/kms/<name>",
+		)
+		return
+	}
+
+	mount, name, err := parseKMSPath(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Unable to parse import ID: %s\n\nExpected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-aws-kms\n\nError: %s", req.ID, err.Error()),
+		)
+		return
+	}
+
+	if mount == "" || name == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Import ID contains empty fields. Expected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-aws-kms\n\nParsed mount: %q, name: %q", mount, name),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		tflog.Debug(ctx, fmt.Sprintf("Setting namespace from %s: %s", consts.EnvVarVaultNamespaceImport, ns))
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
+}
+
+func (r *AWSKMSResource) parseAWSKMSResponse(responseData map[string]interface{}, data *AWSKMSResourceModel) {
+	if v, ok := responseData["key_collection"].(string); ok {
+		data.KeyCollection = types.StringValue(v)
 	}
 }

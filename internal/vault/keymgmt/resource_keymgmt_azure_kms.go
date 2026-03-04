@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -95,41 +93,6 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 	base.MustAddBaseSchema(&resp.Schema)
 }
 
-func (r *AzureKMSResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	if req.ID == "" {
-		resp.Diagnostics.AddError(
-			"Empty Import ID",
-			"Import ID cannot be empty. Expected format: <mount>/kms/<name>",
-		)
-		return
-	}
-
-	mount, name, err := parseKMSPath(req.ID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Invalid Import ID",
-			fmt.Sprintf("Unable to parse import ID: %s\n\nExpected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-azure-kms\n\nError: %s", req.ID, err.Error()),
-		)
-		return
-	}
-
-	if mount == "" || name == "" {
-		resp.Diagnostics.AddError(
-			"Invalid Import ID",
-			fmt.Sprintf("Import ID contains empty fields. Expected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-azure-kms\n\nParsed mount: %q, name: %q", mount, name),
-		)
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
-
-	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
-		tflog.Debug(ctx, fmt.Sprintf("Setting namespace from %s: %s", consts.EnvVarVaultNamespaceImport, ns))
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
-	}
-}
-
 func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data AzureKMSResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -169,10 +132,23 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the state from Vault
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("Azure Key Vault provider", apiPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after creating Azure Key Vault provider",
+			fmt.Sprintf("Azure Key Vault provider not found at path %q immediately after creation", apiPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseAzureKMSResponse(vaultResp.Data, &data)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -190,44 +166,26 @@ func (r *AzureKMSResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if data.KeyCollection.IsNull() {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-}
-
-func (r *AzureKMSResource) read(ctx context.Context, cli *api.Client, data *AzureKMSResourceModel, diags *diag.Diagnostics) {
+	// Build API path and read from Vault
 	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		diags.AddError(errReading("Azure Key Vault provider", apiPath, err))
+		resp.Diagnostics.AddError(errReading("Azure Key Vault provider", apiPath, err))
 		return
 	}
 
 	if vaultResp == nil {
-		data.KeyCollection = types.StringNull()
+		tflog.Warn(ctx, "Azure Key Vault provider not found, removing from state", map[string]interface{}{
+			"path": apiPath,
+		})
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	if v, ok := vaultResp.Data["key_collection"].(string); ok {
-		data.KeyCollection = types.StringValue(v)
-	}
-	if v, ok := vaultResp.Data["tenant_id"].(string); ok {
-		data.TenantID = types.StringValue(v)
-	}
-	if v, ok := vaultResp.Data["client_id"].(string); ok {
-		data.ClientID = types.StringValue(v)
-	}
-	if v, ok := vaultResp.Data["environment"].(string); ok {
-		data.Environment = types.StringValue(v)
-	}
+	// Parse response data
+	r.parseAzureKMSResponse(vaultResp.Data, &data)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -282,10 +240,23 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	r.read(ctx, cli, &plan, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the state from Vault
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("Azure Key Vault provider", apiPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after updating Azure Key Vault provider",
+			fmt.Sprintf("Azure Key Vault provider not found at path %q immediately after update", apiPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseAzureKMSResponse(vaultResp.Data, &plan)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -307,5 +278,56 @@ func (r *AzureKMSResource) Delete(ctx context.Context, req resource.DeleteReques
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError(errDeleting("Azure Key Vault provider", apiPath, err))
 		return
+	}
+}
+
+func (r *AzureKMSResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resp.Diagnostics.AddError(
+			"Empty Import ID",
+			"Import ID cannot be empty. Expected format: <mount>/kms/<name>",
+		)
+		return
+	}
+
+	mount, name, err := parseKMSPath(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Unable to parse import ID: %s\n\nExpected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-azure-kms\n\nError: %s", req.ID, err.Error()),
+		)
+		return
+	}
+
+	if mount == "" || name == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Import ID contains empty fields. Expected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-azure-kms\n\nParsed mount: %q, name: %q", mount, name),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		tflog.Debug(ctx, fmt.Sprintf("Setting namespace from %s: %s", consts.EnvVarVaultNamespaceImport, ns))
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
+}
+
+// parseAzureKMSResponse parses the Vault API response data into the resource model
+func (r *AzureKMSResource) parseAzureKMSResponse(responseData map[string]interface{}, data *AzureKMSResourceModel) {
+	if v, ok := responseData["key_collection"].(string); ok {
+		data.KeyCollection = types.StringValue(v)
+	}
+	if v, ok := responseData["tenant_id"].(string); ok {
+		data.TenantID = types.StringValue(v)
+	}
+	if v, ok := responseData["client_id"].(string); ok {
+		data.ClientID = types.StringValue(v)
+	}
+	if v, ok := responseData["environment"].(string); ok {
+		data.Environment = types.StringValue(v)
 	}
 }
