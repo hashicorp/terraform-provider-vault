@@ -6,6 +6,8 @@ FEATURES:
 * **New Resource**: `vault_cf_auth_backend_role` - Manage roles for the Cloud Foundry auth backend.
 * **New Ephemeral Resource**: `vault_cf_auth_login` - Authenticate against a Cloud Foundry auth backend and obtain a short-lived Vault token.
 * **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
+* Add support for SPIFFE secrets backend: ([#2660](https://github.com/hashicorp/terraform-provider-vault/pull/2660))
+
 
 IMPROVEMENTS:
 
@@ -17,6 +19,7 @@ IMPROVEMENTS:
 * `vault_pki_secret_backend_root_cert`: Add support for `use_pss` and `key_usage` fields to configure PSS signature scheme and X.509 key usage constraints for root CA certificates. Requires Vault 1.18.0+ and 1.19.2+ respectively.([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 * `vault_pki_secret_backend_root_sign_intermediate`: Add version check for `key_usage` field to ensure compatibility with Vault 1.19.2+ for configuring X.509 key usage constraints on intermediate CA certificates. ([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 * `provider/auth_jwt`: Add support for `distributed_claim_access_token` field in the `auth_login_jwt` configuration block. ([#2782](https://github.com/hashicorp/terraform-provider-vault/pull/2782))
+* `vault_database_secret`: Add support for additional credential types (`rsa_private_key`, `client_certificate`, `private_key`, `private_key_type`) in the ephemeral resource to support all database credential types available in Vault's database secrets engine. ([#2767](https://github.com/hashicorp/terraform-provider-vault/pull/2767))
 
 ## 5.7.0 (February 5, 2026)
 
