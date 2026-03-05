@@ -37,7 +37,7 @@ resource "vault_pki_secret_backend_external_ca_role" "example" {
     "*.example.com"
   ]
   
-  allowed_domains_options = [
+  allowed_domain_options = [
     "bare_domains",
     "subdomains",
     "wildcards"
@@ -62,7 +62,7 @@ resource "vault_pki_secret_backend_external_ca_role" "templated" {
     "{{identity.entity.aliases.auth_userpass_xxxxx.name}}.example.com"
   ]
   
-  allowed_domains_options = [
+  allowed_domain_options = [
     "bare_domains"
   ]
   
@@ -88,7 +88,7 @@ The following arguments are supported:
 
 * `allowed_domains` - (Optional) A list of domains the role will accept certificates for. May contain templates, as with ACL Path Templating (e.g., `{{identity.entity.aliases.<mount accessor>.name}}`).
 
-* `allowed_domains_options` - (Optional) A list of keyword options that influence how values within `allowed_domains` are interpreted against the requested set of identifiers from the client. Valid values are:
+* `allowed_domain_options` - (Optional) A list of keyword options that influence how values within `allowed_domains` are interpreted against the requested set of identifiers from the client. Valid values are:
   - `bare_domains` - Allow exact domain matches
   - `subdomains` - Allow subdomains of the specified domains
   - `wildcards` - Allow wildcard certificates
