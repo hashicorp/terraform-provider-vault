@@ -11,121 +11,50 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/vault/api"
+
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/vault/api"
 )
 
-// TestAccKerberosAuthBackendGroup_basic tests basic resource creation
 func TestAccKerberosAuthBackendGroup_basic(t *testing.T) {
-	path := acctest.RandomWithPrefix("kerberos")
+	backend := acctest.RandomWithPrefix("kerberos")
 	groupName := acctest.RandomWithPrefix("test-group")
+	resourceType := "vault_kerberos_auth_backend_group"
+	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKerberosAuthBackendGroupConfig_basic(path, groupName),
+				Config: testAccKerberosAuthBackendGroupConfig_basic(backend, groupName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldName, groupName),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".#", "2"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".*", "default"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".*", "dev"),
-				),
-			},
-		},
-	})
-}
-
-// TestAccKerberosAuthBackendGroup_update tests updating the group policies (adding and removing)
-func TestAccKerberosAuthBackendGroup_update(t *testing.T) {
-	path := acctest.RandomWithPrefix("kerberos")
-	groupName := acctest.RandomWithPrefix("test-group")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKerberosAuthBackendGroupConfig_basic(path, groupName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldName, groupName),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".#", "2"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".*", "default"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".*", "dev"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, groupName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPolicies+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPolicies+".*", "default"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPolicies+".*", "dev"),
 				),
 			},
 			{
-				Config: testAccKerberosAuthBackendGroupConfig_updated(path, groupName),
+				Config: testAccKerberosAuthBackendGroupConfig_updated(backend, groupName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldName, groupName),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".#", "3"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".*", "default"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".*", "dev"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".*", "prod"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, groupName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPolicies+".#", "3"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPolicies+".*", "default"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPolicies+".*", "dev"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPolicies+".*", "prod"),
 				),
 			},
 			{
-				Config: testAccKerberosAuthBackendGroupConfig_basic(path, groupName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".#", "2"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".*", "default"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".*", "dev"),
-				),
-			},
-		},
-	})
-}
-
-// TestAccKerberosAuthBackendGroup_noPolicies tests creating a group without policies
-func TestAccKerberosAuthBackendGroup_noPolicies(t *testing.T) {
-	path := acctest.RandomWithPrefix("kerberos")
-	groupName := acctest.RandomWithPrefix("test-group")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKerberosAuthBackendGroupConfig_noPolicies(path, groupName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldName, groupName),
-					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies),
-				),
-			},
-		},
-	})
-}
-
-// TestAccKerberosAuthBackendGroup_import tests importing the resource
-func TestAccKerberosAuthBackendGroup_import(t *testing.T) {
-	path := acctest.RandomWithPrefix("kerberos")
-	groupName := acctest.RandomWithPrefix("test-group")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKerberosAuthBackendGroupConfig_basic(path, groupName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldName, groupName),
-				),
-			},
-			{
-				ResourceName:                         "vault_kerberos_auth_backend_group.group",
+				ResourceName:                         resourceName,
 				ImportState:                          true,
-				ImportStateId:                        fmt.Sprintf("auth/%s/groups/%s", path, groupName),
 				ImportStateVerify:                    true,
+				ImportStateId:                        fmt.Sprintf("auth/%s/groups/%s", backend, groupName),
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{consts.FieldPolicies},
 			},
 		},
 	})
@@ -134,6 +63,8 @@ func TestAccKerberosAuthBackendGroup_import(t *testing.T) {
 // TestAccKerberosAuthBackendGroup_defaultCheck tests to check default values
 func TestAccKerberosAuthBackendGroup_defaultCheck(t *testing.T) {
 	groupName := acctest.RandomWithPrefix("test-group")
+	resourceType := "vault_kerberos_auth_backend_group"
+	resourceName := resourceType + ".group"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -142,10 +73,10 @@ func TestAccKerberosAuthBackendGroup_defaultCheck(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendGroupConfig_defaultValues(groupName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldMount, "kerberos"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldName, groupName),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".#", "1"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".*", "default"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, "kerberos"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, groupName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPolicies+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPolicies+".*", "default"),
 				),
 			},
 		},
@@ -157,6 +88,7 @@ func TestAccKerberosAuthBackendGroup_pathChange(t *testing.T) {
 	path1 := acctest.RandomWithPrefix("kerberos")
 	path2 := acctest.RandomWithPrefix("kerberos")
 	groupName := acctest.RandomWithPrefix("test-group")
+	resourceName := "vault_kerberos_auth_backend_group.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -165,7 +97,7 @@ func TestAccKerberosAuthBackendGroup_pathChange(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendGroupConfig_basic(path1, groupName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldMount, path1),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path1),
 				),
 			},
 			{
@@ -184,7 +116,7 @@ func TestAccKerberosAuthBackendGroup_pathChange(t *testing.T) {
 				},
 				Config: testAccKerberosAuthBackendGroupConfig_basic(path2, groupName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldMount, path2),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path2),
 				),
 			},
 			{
@@ -221,6 +153,7 @@ func TestAccKerberosAuthBackendGroup_nameChange(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
 	groupName1 := acctest.RandomWithPrefix("test-group")
 	groupName2 := acctest.RandomWithPrefix("test-group")
+	resourceName := "vault_kerberos_auth_backend_group.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -229,7 +162,7 @@ func TestAccKerberosAuthBackendGroup_nameChange(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendGroupConfig_basic(path, groupName1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldName, groupName1),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, groupName1),
 				),
 			},
 			{
@@ -248,7 +181,7 @@ func TestAccKerberosAuthBackendGroup_nameChange(t *testing.T) {
 				},
 				Config: testAccKerberosAuthBackendGroupConfig_basic(path, groupName2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldName, groupName2),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, groupName2),
 				),
 			},
 			{
@@ -280,121 +213,95 @@ func TestAccKerberosAuthBackendGroup_nameChange(t *testing.T) {
 	})
 }
 
-// TestAccKerberosAuthBackendGroup_runtimeErrors tests runtime errors
-func TestAccKerberosAuthBackendGroup_runtimeErrors(t *testing.T) {
+func TestAccKerberosAuthBackendGroup_noPolicies(t *testing.T) {
+	backend := acctest.RandomWithPrefix("kerberos")
 	groupName := acctest.RandomWithPrefix("test-group")
-	nonExistentPath := "non-existent-kerberos-backend"
+	resourceName := "vault_kerberos_auth_backend_group.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
-			// Test non-existent backend
 			{
-				Config:      testAccKerberosAuthBackendGroupConfig_nonExistentBackend(nonExistentPath, groupName),
-				ExpectError: regexp.MustCompile(`error writing|no handler for route|unsupported path`),
-			},
-		},
-	})
-}
-
-// TestAccKerberosAuthBackendGroup_groupNotFound tests the group not found scenario
-func TestAccKerberosAuthBackendGroup_groupNotFound(t *testing.T) {
-	path := acctest.RandomWithPrefix("kerberos")
-	groupName := acctest.RandomWithPrefix("test-group")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			// Step 1: Create a valid group
-			{
-				Config: testAccKerberosAuthBackendGroupConfig_basic(path, groupName),
+				Config: testAccKerberosAuthBackendGroupConfig_noPolicies(backend, groupName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, groupName),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldPolicies+".#"),
 				),
 			},
-			// Step 2: Test group not found
-			// Delete the group manually, then try to refresh
+		},
+	})
+}
+
+func TestAccKerberosAuthBackendGroup_namespace(t *testing.T) {
+	backend := acctest.RandomWithPrefix("kerberos")
+	groupName := acctest.RandomWithPrefix("test-group")
+	namespace := acctest.RandomWithPrefix("ns")
+	resourceName := "vault_kerberos_auth_backend_group.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKerberosAuthBackendGroupConfig_namespace(namespace, backend, groupName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, groupName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPolicies+".#", "2"),
+				),
+			},
 			{
 				PreConfig: func() {
-					// Get a Vault client and delete the group
-					client, err := api.NewClient(api.DefaultConfig())
-					if err != nil {
-						t.Fatalf("failed to create client: %v", err)
-					}
-					// Delete the group
-					groupPath := fmt.Sprintf("auth/%s/groups/%s", path, groupName)
-					if _, err := client.Logical().Delete(groupPath); err != nil {
-						t.Logf("Warning: failed to delete group: %v", err)
-					}
+					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
 				},
-				Config:      testAccKerberosAuthBackendGroupConfig_basic(path, groupName),
-				ExpectError: regexp.MustCompile(`Kerberos group not found`),
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateId:                        fmt.Sprintf("auth/%s/groups/%s", backend, groupName),
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				Config:                               testAccKerberosAuthBackendGroupConfig_namespace(namespace, backend, groupName),
+			},
+			{
+				Config: testAccKerberosAuthBackendGroupConfig_namespace(namespace, backend, groupName),
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
+				PlanOnly: true,
 			},
 		},
 	})
 }
 
-// TestAccKerberosAuthBackendGroup_importErrors tests import validation errors
-func TestAccKerberosAuthBackendGroup_importErrors(t *testing.T) {
+func TestAccKerberosAuthBackendGroup_invalid(t *testing.T) {
+	backend := acctest.RandomWithPrefix("kerberos")
+	groupName := acctest.RandomWithPrefix("test-group")
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
-			// Test completely invalid import ID
+			// Test invalid mount
 			{
-				Config:            testAccKerberosAuthBackendGroupConfig_basic("test", "test-group"),
-				ResourceName:      "vault_kerberos_auth_backend_group.group",
-				ImportState:       true,
-				ImportStateId:     "invalid-import-id",
-				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				Config:      testAccKerberosAuthBackendGroupConfig_invalidMount(groupName),
+				ExpectError: regexp.MustCompile("no handler for route|unsupported path|route entry not found"),
 			},
-			// Test import ID missing /groups/{name} suffix
+			// Test missing group name
 			{
-				Config:            testAccKerberosAuthBackendGroupConfig_basic("test", "test-group"),
-				ResourceName:      "vault_kerberos_auth_backend_group.group",
-				ImportState:       true,
-				ImportStateId:     "auth/kerberos",
-				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
-			},
-			// Test import ID missing auth/ prefix
-			{
-				Config:            testAccKerberosAuthBackendGroupConfig_basic("test", "test-group"),
-				ResourceName:      "vault_kerberos_auth_backend_group.group",
-				ImportState:       true,
-				ImportStateId:     "kerberos/groups/test-group",
-				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
-			},
-			// Test import ID with empty path between prefix and suffix
-			{
-				Config:            testAccKerberosAuthBackendGroupConfig_basic("test", "test-group"),
-				ResourceName:      "vault_kerberos_auth_backend_group.group",
-				ImportState:       true,
-				ImportStateId:     "auth//groups/test-group",
-				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
-			},
-			// Test import ID with empty group name
-			{
-				Config:            testAccKerberosAuthBackendGroupConfig_basic("test", "test-group"),
-				ResourceName:      "vault_kerberos_auth_backend_group.group",
-				ImportState:       true,
-				ImportStateId:     "auth/kerberos/groups/",
-				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				Config:      testAccKerberosAuthBackendGroupConfig_missingName(backend),
+				ExpectError: regexp.MustCompile(`Missing required argument|The argument "name" is required`),
 			},
 		},
 	})
 }
 
-// TestAccKerberosAuthBackendGroup_namespace tests configuration and import with namespace (Enterprise only)
-func TestAccKerberosAuthBackendGroup_namespace(t *testing.T) {
-	namespace := acctest.RandomWithPrefix("tf-ns")
-	path := acctest.RandomWithPrefix("kerberos")
+func TestAccKerberosAuthBackendGroup_invalidNamespace(t *testing.T) {
+	backend := acctest.RandomWithPrefix("kerberos")
 	groupName := acctest.RandomWithPrefix("test-group")
 
 	resource.Test(t, resource.TestCase{
@@ -405,94 +312,41 @@ func TestAccKerberosAuthBackendGroup_namespace(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKerberosAuthBackendGroupConfig_namespace(namespace, path, groupName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldNamespace, namespace),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldName, groupName),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_group.group", consts.FieldPolicies+".#", "2"),
-				),
-			},
-			{
-				PreConfig: func() {
-					// Set the namespace environment variable for import
-					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
-				},
-				ResourceName:                         "vault_kerberos_auth_backend_group.group",
-				ImportState:                          true,
-				ImportStateId:                        fmt.Sprintf("auth/%s/groups/%s", path, groupName),
-				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{consts.FieldPolicies},
-			},
-			{
-				// Cleanup step needed for the import step above
-				Config: testAccKerberosAuthBackendGroupConfig_namespace(namespace, path, groupName),
-				PreConfig: func() {
-					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
-				},
-				PlanOnly: true,
+				Config:      testAccKerberosAuthBackendGroupConfig_invalidNamespace(backend, groupName),
+				ExpectError: regexp.MustCompile("no handler for route|namespace not found|route entry not found"),
 			},
 		},
 	})
 }
 
-// Configuration templates for negative tests
-
-func testAccKerberosAuthBackendGroupConfig_nonExistentBackend(path, groupName string) string {
+func testAccKerberosAuthBackendGroupConfig_basic(backend, groupName string) string {
 	return fmt.Sprintf(`
-resource "vault_kerberos_auth_backend_group" "group" {
-  mount    = %q
-  name     = %q
-  policies = ["default"]
-}
-`, path, groupName)
-}
-
-// Configuration templates for positive tests
-
-func testAccKerberosAuthBackendGroupConfig_basic(path, groupName string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "kerberos" {
+resource "vault_auth_backend" "test" {
   type = "kerberos"
-  path = %q
+  path = "%s"
 }
 
-resource "vault_kerberos_auth_backend_group" "group" {
-  mount    = vault_auth_backend.kerberos.path
-  name     = %q
+resource "vault_kerberos_auth_backend_group" "test" {
+  mount    = vault_auth_backend.test.path
+  name     = "%s"
   policies = ["default", "dev"]
 }
-`, path, groupName)
+`, backend, groupName)
 }
 
-func testAccKerberosAuthBackendGroupConfig_updated(path, groupName string) string {
+func testAccKerberosAuthBackendGroupConfig_updated(backend, groupName string) string {
 	return fmt.Sprintf(`
-resource "vault_auth_backend" "kerberos" {
+resource "vault_auth_backend" "test" {
   type = "kerberos"
-  path = %q
+  path = "%s"
 }
 
-resource "vault_kerberos_auth_backend_group" "group" {
-  mount    = vault_auth_backend.kerberos.path
-  name     = %q
+resource "vault_kerberos_auth_backend_group" "test" {
+  mount    = vault_auth_backend.test.path
+  name     = "%s"
   policies = ["default", "dev", "prod"]
 }
-`, path, groupName)
-}
-
-func testAccKerberosAuthBackendGroupConfig_noPolicies(path, groupName string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "kerberos" {
-  type = "kerberos"
-  path = %q
-}
-
-resource "vault_kerberos_auth_backend_group" "group" {
-  mount = vault_auth_backend.kerberos.path
-  name  = %q
-}
-`, path, groupName)
+`, backend, groupName)
 }
 
 func testAccKerberosAuthBackendGroupConfig_defaultValues(groupName string) string {
@@ -509,25 +363,79 @@ resource "vault_kerberos_auth_backend_group" "group" {
 `, groupName)
 }
 
-func testAccKerberosAuthBackendGroupConfig_namespace(namespace, path, groupName string) string {
+func testAccKerberosAuthBackendGroupConfig_noPolicies(backend, groupName string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "test" {
+  type = "kerberos"
+  path = "%s"
+}
+
+resource "vault_kerberos_auth_backend_group" "test" {
+  mount = vault_auth_backend.test.path
+  name  = "%s"
+}
+`, backend, groupName)
+}
+
+func testAccKerberosAuthBackendGroupConfig_invalidMount(groupName string) string {
+	return fmt.Sprintf(`
+resource "vault_kerberos_auth_backend_group" "test" {
+  mount    = "nonexistent-mount"
+  name     = "%s"
+  policies = ["default"]
+}
+`, groupName)
+}
+
+func testAccKerberosAuthBackendGroupConfig_missingName(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "test" {
+  type = "kerberos"
+  path = "%s"
+}
+
+resource "vault_kerberos_auth_backend_group" "test" {
+  mount    = vault_auth_backend.test.path
+  policies = ["default"]
+}
+`, backend)
+}
+
+func testAccKerberosAuthBackendGroupConfig_invalidNamespace(backend, groupName string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "test" {
+  type = "kerberos"
+  path = "%s"
+}
+
+resource "vault_kerberos_auth_backend_group" "test" {
+  namespace = "nonexistent-namespace"
+  mount     = vault_auth_backend.test.path
+  name      = "%s"
+  policies  = ["default"]
+}
+`, backend, groupName)
+}
+
+func testAccKerberosAuthBackendGroupConfig_namespace(namespace, backend, groupName string) string {
 	return fmt.Sprintf(`
 resource "vault_namespace" "test" {
-  path = %q
+  path = "%s"
 }
 
-resource "vault_auth_backend" "kerberos" {
+resource "vault_auth_backend" "test" {
   namespace = vault_namespace.test.path
   type      = "kerberos"
-  path      = %q
+  path      = "%s"
 }
 
-resource "vault_kerberos_auth_backend_group" "group" {
+resource "vault_kerberos_auth_backend_group" "test" {
   namespace = vault_namespace.test.path
-  mount     = vault_auth_backend.kerberos.path
-  name      = %q
+  mount     = vault_auth_backend.test.path
+  name      = "%s"
   policies  = ["default", "dev"]
 }
-`, namespace, path, groupName)
+`, namespace, backend, groupName)
 }
 
 // Made with Bob

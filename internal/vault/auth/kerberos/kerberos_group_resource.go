@@ -6,7 +6,6 @@ package kerberos
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -20,54 +19,65 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
 )
 
-const (
-	fieldName     = consts.FieldName
-	fieldPolicies = consts.FieldPolicies
-)
-
-var kerberosGroupPathRegexp = regexp.MustCompile("^auth/(.+)/groups/(.+)$")
-
 var (
-	_ resource.Resource                = (*kerberosAuthBackendGroupResource)(nil)
-	_ resource.ResourceWithConfigure   = (*kerberosAuthBackendGroupResource)(nil)
-	_ resource.ResourceWithImportState = (*kerberosAuthBackendGroupResource)(nil)
+	// Regex patterns for parsing import path
+	kerberosAuthBackendGroupMountFromPathRegex = regexp.MustCompile("^auth/(.+)/groups/.+$")
+	kerberosAuthBackendGroupNameFromPathRegex  = regexp.MustCompile("^auth/.+/groups/(.+)$")
 )
 
-// NewKerberosAuthBackendGroupResource is the constructor function
-var NewKerberosAuthBackendGroupResource = func() resource.Resource {
+// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
+var _ resource.ResourceWithConfigure = &kerberosAuthBackendGroupResource{}
+
+// NewKerberosAuthBackendGroupResource returns the implementation for this resource to be
+// imported by the Terraform Plugin Framework provider
+func NewKerberosAuthBackendGroupResource() resource.Resource {
 	return &kerberosAuthBackendGroupResource{}
 }
 
+// kerberosAuthBackendGroupResource implements the methods that define this resource
 type kerberosAuthBackendGroupResource struct {
 	base.ResourceWithConfigure
 }
 
+// kerberosAuthBackendGroupModel describes the Terraform resource data model to match the
+// resource schema.
 type kerberosAuthBackendGroupModel struct {
 	base.BaseModel
+
 	Mount    types.String `tfsdk:"mount"`
 	Name     types.String `tfsdk:"name"`
 	Policies types.Set    `tfsdk:"policies"`
 }
 
+// kerberosAuthBackendGroupAPIModel describes the Vault API response structure.
+type kerberosAuthBackendGroupAPIModel struct {
+	Policies []string `json:"policies" mapstructure:"policies"`
+}
+
+// Metadata defines the resource name as it would appear in Terraform configurations
 func (r *kerberosAuthBackendGroupResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_kerberos_auth_backend_group"
 }
 
-func (r *kerberosAuthBackendGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+// Schema defines this resource's schema
+func (r *kerberosAuthBackendGroupResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages LDAP group to Vault policy mappings for the Kerberos authentication method.",
 		Attributes: map[string]schema.Attribute{
-			fieldMount: schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString("kerberos"),
-				Description: "Path where the Kerberos auth method is mounted.",
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Path where the Kerberos auth method is mounted.",
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString("kerberos"),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -75,220 +85,322 @@ func (r *kerberosAuthBackendGroupResource) Schema(_ context.Context, _ resource.
 					validators.PathValidator(),
 				},
 			},
-			fieldName: schema.StringAttribute{
-				Required:    true,
-				Description: "The name of the LDAP group.",
+			consts.FieldName: schema.StringAttribute{
+				MarkdownDescription: "The name of the LDAP group.",
+				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			fieldPolicies: schema.SetAttribute{
-				ElementType: types.StringType,
-				Optional:    true,
-				Description: "Set of Vault policies to associate with this group.",
+			consts.FieldPolicies: schema.SetAttribute{
+				ElementType:         types.StringType,
+				MarkdownDescription: "Set of Vault policies to associate with this group.",
+				Optional:            true,
 			},
 		},
+		MarkdownDescription: "Manages LDAP group to Vault policy mappings for the Kerberos authentication method.",
 	}
 
+	// Add the common base schema
 	base.MustAddBaseSchema(&resp.Schema)
 }
 
+// Create is called during the terraform apply command.
 func (r *kerberosAuthBackendGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan kerberosAuthBackendGroupModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	var data kerberosAuthBackendGroupModel
+
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(r.writeGroup(ctx, &plan)...)
+	// Write group to Vault and read back
+	resp.Diagnostics.Append(r.writeGroup(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *kerberosAuthBackendGroupResource) writeGroup(ctx context.Context, plan *kerberosAuthBackendGroupModel) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	vaultClient, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
-	if err != nil {
-		diags.AddError("Error getting client", err.Error())
-		return diags
-	}
-
-	mount := plan.Mount.ValueString()
-	name := plan.Name.ValueString()
-	groupPath := fmt.Sprintf("/auth/%s/groups/%s", mount, name)
-
-	data := make(map[string]interface{})
-
-	if !plan.Policies.IsNull() && !plan.Policies.IsUnknown() {
-		var policies []string
-		diags.Append(plan.Policies.ElementsAs(ctx, &policies, false)...)
-		if diags.HasError() {
-			return diags
-		}
-		data[fieldPolicies] = policies
-	}
-
-	log.Printf("[DEBUG] Writing Kerberos group to %q", groupPath)
-	_, err = vaultClient.Logical().Write(groupPath, data)
-	if err != nil {
-		diags.AddError(
-			fmt.Sprintf("Error writing Kerberos group to %q", groupPath),
-			err.Error(),
-		)
-		return diags
-	}
-
-	// Read back the configuration
-	diags.Append(r.read(ctx, plan)...)
-	return diags
-}
-
+// Read is called during the terraform apply, terraform plan, and terraform refresh commands.
 func (r *kerberosAuthBackendGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state kerberosAuthBackendGroupModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	var data kerberosAuthBackendGroupModel
+
+	// Read Terraform prior state data into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(r.read(ctx, &state)...)
+	// Read group from Vault
+	found, readDiags := r.readGroup(ctx, &data)
+	resp.Diagnostics.Append(readDiags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	// If not found, remove from state
+	if !found {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *kerberosAuthBackendGroupResource) read(ctx context.Context, model *kerberosAuthBackendGroupModel) diag.Diagnostics {
+// Update is called during the terraform apply command.
+func (r *kerberosAuthBackendGroupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data kerberosAuthBackendGroupModel
+
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Write group to Vault and read back
+	resp.Diagnostics.Append(r.writeGroup(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// Delete is called during the terraform destroy command.
+func (r *kerberosAuthBackendGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data kerberosAuthBackendGroupModel
+
+	// Read Terraform state data into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	mount := strings.Trim(data.Mount.ValueString(), "/")
+	name := strings.Trim(data.Name.ValueString(), "/")
+	groupPath := r.groupPath(mount, name)
+
+	tflog.Debug(ctx, fmt.Sprintf("Deleting Kerberos group at '%s'", groupPath))
+	_, err = vaultClient.Logical().DeleteWithContext(ctx, groupPath)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting Kerberos group",
+			fmt.Sprintf("Could not delete Kerberos group at '%s': %s", groupPath, err),
+		)
+		return
+	}
+	tflog.Info(ctx, fmt.Sprintf("Deleted Kerberos group at '%s'", groupPath))
+}
+
+// writeGroup is a reusable helper that writes a group to Vault and reads it back.
+// Used by both Create and Update operations.
+func (r *kerberosAuthBackendGroupResource) writeGroup(ctx context.Context, data *kerberosAuthBackendGroupModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), model.Namespace.ValueString())
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		diags.AddError("Error getting client", err.Error())
+		diags.AddError(errutil.ClientConfigureErr(err))
 		return diags
 	}
 
-	mount := model.Mount.ValueString()
-	name := model.Name.ValueString()
-	groupPath := fmt.Sprintf("/auth/%s/groups/%s", mount, name)
+	mount := strings.Trim(data.Mount.ValueString(), "/")
+	name := strings.Trim(data.Name.ValueString(), "/")
+	groupPath := r.groupPath(mount, name)
 
-	log.Printf("[DEBUG] Reading Kerberos group from %q", groupPath)
-	resp, err := vaultClient.Logical().ReadWithContext(ctx, groupPath)
+	// Build the API request
+	vaultRequest, apiDiags := r.getApiModel(ctx, data)
+	diags.Append(apiDiags...)
+	if diags.HasError() {
+		return diags
+	}
+
+	// Write group to Vault
+	tflog.Debug(ctx, fmt.Sprintf("Writing Kerberos group to '%s'", groupPath))
+	_, err = vaultClient.Logical().WriteWithContext(ctx, groupPath, vaultRequest)
 	if err != nil {
 		diags.AddError(
-			fmt.Sprintf("Error reading Kerberos group from %q", groupPath),
-			err.Error(),
+			"Error writing Kerberos group",
+			fmt.Sprintf("Could not write Kerberos group to '%s': %s", groupPath, err),
 		)
 		return diags
 	}
+	tflog.Info(ctx, fmt.Sprintf("Kerberos group successfully written to '%s'", groupPath))
 
-	if resp == nil {
-		diags.AddError(
-			"Kerberos group not found",
-			fmt.Sprintf("No group found at %q", groupPath),
-		)
+	// Read back group from Vault to populate computed fields using readGroup
+	found, readDiags := r.readGroup(ctx, data)
+	diags.Append(readDiags...)
+	if diags.HasError() {
 		return diags
 	}
-
-	if !model.Policies.IsNull() {
-		if v, ok := resp.Data[fieldPolicies]; ok {
-			log.Printf("[DEBUG] Vault returned policies: %v (type: %T)", v, v)
-			policies, err := types.SetValueFrom(ctx, types.StringType, v)
-			if err.HasError() {
-				diags.Append(err...)
-				return diags
-			}
-			model.Policies = policies
-		}
+	if !found {
+		diags.AddError(
+			"Error reading back Kerberos group after write",
+			fmt.Sprintf("Group at '%s' was not found after successful write", groupPath),
+		)
+		return diags
 	}
 
 	return diags
 }
 
-func (r *kerberosAuthBackendGroupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan kerberosAuthBackendGroupModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
+// readGroup is a reusable helper that reads a group from Vault.
+// Returns true if the group was found, false if not found.
+// Used by the Read operation.
+func (r *kerberosAuthBackendGroupResource) readGroup(ctx context.Context, data *kerberosAuthBackendGroupModel) (bool, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return false, diags
 	}
 
-	resp.Diagnostics.Append(r.writeGroup(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
+	mount := strings.Trim(data.Mount.ValueString(), "/")
+	name := strings.Trim(data.Name.ValueString(), "/")
+	groupPath := r.groupPath(mount, name)
+
+	// Read group from Vault
+	tflog.Debug(ctx, fmt.Sprintf("Reading Kerberos group from '%s'", groupPath))
+	groupResp, err := vaultClient.Logical().ReadWithContext(ctx, groupPath)
+	if err != nil {
+		diags.AddError(errutil.VaultReadErr(err))
+		return false, diags
+	}
+	if groupResp == nil {
+		tflog.Warn(ctx, fmt.Sprintf("Kerberos group at '%s' not found, removing from state", groupPath))
+		return false, diags
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	// Populate model from API response
+	populateDiags := r.populateDataModelFromApi(ctx, data, groupResp.Data)
+	diags.Append(populateDiags...)
+	return true, diags
 }
 
-func (r *kerberosAuthBackendGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state kerberosAuthBackendGroupModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	vaultClient, err := client.GetClient(ctx, r.Meta(), state.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Error getting client", err.Error())
-		return
-	}
-
-	mount := state.Mount.ValueString()
-	name := state.Name.ValueString()
-	groupPath := fmt.Sprintf("/auth/%s/groups/%s", mount, name)
-
-	log.Printf("[DEBUG] Deleting Kerberos group from %q", groupPath)
-	_, err = vaultClient.Logical().Delete(groupPath)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			fmt.Sprintf("Error deleting Kerberos group from %q", groupPath),
-			err.Error(),
-		)
-		return
-	}
-}
-
+// ImportState handles resource import
 func (r *kerberosAuthBackendGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldMount), req, resp)
+	id := req.ID
 
-	mount, name, err := extractKerberosGroupPathFromID(req.ID)
+	var mount, name string
+	var err error
+
+	// Parse the import ID using the official Vault API format
+	mount, err = r.mountFromPath(id)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error parsing import identifier",
-			fmt.Sprintf("The import identifier '%s' is not valid: %s", req.ID, err.Error()),
+			"Invalid import ID format",
+			fmt.Sprintf("Expected format: 'auth/<mount>/groups/<name>', got: '%s'", req.ID),
 		)
 		return
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(fieldMount), mount)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(fieldName), name)...)
 
+	name, err = r.nameFromPath(id)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid import ID format",
+			fmt.Sprintf("Could not parse group name from path '%s': %s", id, err),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+
+	// Handle namespace import via environment variable
+	// See: https://registry.terraform.io/providers/hashicorp/vault/latest/docs#namespace-support
 	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
 	if ns != "" {
-		log.Printf("[DEBUG] Environment variable %s set, attempting TF state import with namespace: %s", consts.EnvVarVaultNamespaceImport, ns)
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
 		resp.Diagnostics.Append(
 			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
 		)
 	}
 }
 
-// extractKerberosGroupPathFromID extracts the auth backend mount and group name from the import identifier provided
-// by the terraform import CLI command.
-func extractKerberosGroupPathFromID(id string) (string, string, error) {
-	// Trim leading/trailing slashes and whitespace
-	id = strings.TrimSpace(strings.Trim(id, "/"))
+// groupPath returns the Vault API path for Kerberos group
+func (r *kerberosAuthBackendGroupResource) groupPath(mount, name string) string {
+	return fmt.Sprintf("auth/%s/groups/%s", mount, name)
+}
 
-	if id == "" {
-		return "", "", fmt.Errorf("Expected import ID format: auth/{mount}/groups/{name}")
+// mountFromPath extracts the mount from the full path
+func (r *kerberosAuthBackendGroupResource) mountFromPath(path string) (string, error) {
+	if !kerberosAuthBackendGroupMountFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no mount found in path: %s", path)
+	}
+	matches := kerberosAuthBackendGroupMountFromPathRegex.FindStringSubmatch(path)
+	if len(matches) != 2 {
+		return "", fmt.Errorf("unexpected number of matches in path: %s", path)
+	}
+	return matches[1], nil
+}
+
+// nameFromPath extracts the group name from the full path
+func (r *kerberosAuthBackendGroupResource) nameFromPath(path string) (string, error) {
+	if !kerberosAuthBackendGroupNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no group name found in path: %s", path)
+	}
+	matches := kerberosAuthBackendGroupNameFromPathRegex.FindStringSubmatch(path)
+	if len(matches) != 2 {
+		return "", fmt.Errorf("unexpected number of matches in path: %s", path)
+	}
+	return matches[1], nil
+}
+
+// getApiModel builds the Vault API request map from the Terraform data model.
+func (r *kerberosAuthBackendGroupResource) getApiModel(ctx context.Context, data *kerberosAuthBackendGroupModel) (map[string]any, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	var policies []string
+	diags.Append(data.Policies.ElementsAs(ctx, &policies, false)...)
+	if diags.HasError() {
+		return nil, diags
+	}
+	vaultRequest := map[string]any{
+		consts.FieldPolicies: policies,
 	}
 
-	// Extract mount and name using regex - FindStringSubmatch returns nil if no match
-	matches := kerberosGroupPathRegexp.FindStringSubmatch(id)
-	if len(matches) != 3 || matches[1] == "" || matches[2] == "" {
-		return "", "", fmt.Errorf("Expected import ID format: auth/{mount}/groups/{name}")
+	return vaultRequest, diags
+}
+
+// populateDataModelFromApi maps the Vault API response to the Terraform data model.
+func (r *kerberosAuthBackendGroupResource) populateDataModelFromApi(ctx context.Context, data *kerberosAuthBackendGroupModel, respData map[string]any) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if respData == nil {
+		diags.AddError("Missing data in API response", "The API response data was nil.")
+		return diags
 	}
 
-	return matches[1], matches[2], nil
+	// Decode API response into API model using model.ToAPIModel
+	var apiModel kerberosAuthBackendGroupAPIModel
+	if err := model.ToAPIModel(respData, &apiModel); err != nil {
+		diags.AddError("Unable to translate Vault response data", err.Error())
+		return diags
+	}
+
+	// Convert policies from API model to Terraform model
+	if len(apiModel.Policies) > 0 {
+		policies, setDiags := types.SetValueFrom(ctx, types.StringType, apiModel.Policies)
+		diags.Append(setDiags...)
+		if diags.HasError() {
+			return diags
+		}
+		data.Policies = policies
+	}
+
+	return diags
 }
