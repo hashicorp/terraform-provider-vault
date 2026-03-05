@@ -14,9 +14,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	helper "github.com/hashicorp/vault/sdk/helper/consts"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 const secretIDResource = "vault_approle_auth_backend_role_secret_id.secret_id"
@@ -26,16 +26,16 @@ func TestAccAppRoleAuthBackendRoleSecretID_basic(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_basic(backend, role),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
-					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
-					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldRoleName, role),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldAccessor),
 				),
 			},
 			{
@@ -60,17 +60,17 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped(t *testing.T) {
 	withWrappedAccessor := false
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role, withWrappedAccessor),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
-					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
-					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_accessor"),
-					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_token"),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldRoleName, role),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldWrappingAccessor),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldWrappingToken),
 				),
 			},
 		},
@@ -83,19 +83,19 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_withWrappedAccessor(t *testin
 	withWrappedAccessor := true
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role, withWrappedAccessor),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
-					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
-					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_accessor"),
-					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_token"),
-					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
-					resource.TestMatchResourceAttr(secretIDResource, "accessor", regexp.MustCompile("^[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}$")),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldRoleName, role),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldWrappingAccessor),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldWrappingToken),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldAccessor),
+					resource.TestMatchResourceAttr(secretIDResource, consts.FieldAccessor, regexp.MustCompile("^[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}$")),
 				),
 			},
 		},
@@ -109,7 +109,7 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace(t *testing.T) {
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy: func(s *terraform.State) error {
 			if err := testAccCheckAppRoleAuthBackendRoleSecretIDDestroy(s); err != nil {
@@ -126,10 +126,10 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace(t *testing.T) {
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped_namespace(namespacePath, backend, role, withWrappedAccessor),
 				Check: resource.ComposeTestCheckFunc(
 					testAssertClientNamespace(namespacePath),
-					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
-					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
-					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_accessor"),
-					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_token"),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldRoleName, role),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldWrappingAccessor),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldWrappingToken),
 				),
 			},
 		},
@@ -143,7 +143,7 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace_withWrappedAccessor
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestEntPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy: func(s *terraform.State) error {
 			if err := testAccCheckAppRoleAuthBackendRoleSecretIDDestroy(s); err != nil {
@@ -160,12 +160,12 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace_withWrappedAccessor
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped_namespace(namespacePath, backend, role, withWrappedAccessor),
 				Check: resource.ComposeTestCheckFunc(
 					testAssertClientNamespace(namespacePath),
-					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
-					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
-					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_accessor"),
-					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_token"),
-					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
-					resource.TestMatchResourceAttr(secretIDResource, "accessor", regexp.MustCompile("^[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}$")),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldRoleName, role),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldWrappingAccessor),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldWrappingToken),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldAccessor),
+					resource.TestMatchResourceAttr(secretIDResource, consts.FieldAccessor, regexp.MustCompile("^[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}$")),
 				),
 			},
 		},
@@ -178,21 +178,22 @@ func TestAccAppRoleAuthBackendRoleSecretID_full(t *testing.T) {
 	secretID := acctest.RandomWithPrefix("test-role-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_full(backend, role, secretID),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
-					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
-					resource.TestCheckResourceAttr(secretIDResource, "secret_id", secretID),
-					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
-					resource.TestCheckResourceAttr(secretIDResource, "cidr_list.#", "2"),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldRoleName, role),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldSecretID, secretID),
+					resource.TestCheckResourceAttrSet(secretIDResource, consts.FieldAccessor),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldCIDRList+".#", "2"),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldTokenBoundCIDRs+".#", "2"),
 					resource.TestCheckResourceAttr(secretIDResource, consts.FieldMetadata, `{"hello":"world"}`),
-					resource.TestCheckResourceAttr(secretIDResource, "ttl", "700"),
-					resource.TestCheckResourceAttr(secretIDResource, "num_uses", "2"),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldTTL, "700"),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldNumUses, "2"),
 				),
 			},
 		},
@@ -257,6 +258,7 @@ resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
   role_name = vault_approle_auth_backend_role.role.role_name
   backend = vault_auth_backend.approle.path
   cidr_list = ["10.148.0.0/20", "10.150.0.0/20"]
+  token_bound_cidrs = ["10.148.0.0/20", "10.150.0.0/20"]
   ttl = 700
   num_uses = 2
   metadata = <<EOF

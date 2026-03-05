@@ -16,6 +16,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -52,13 +54,16 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 
 	userTempl := "{{.DisplayName}}"
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_import(name, backend, connURL, userTempl),
+				// Always include skip_static_role_import_rotation in config - Vault ignores unknown fields on < 1.19
+				// The testAccCheckSkipStaticRoleImportRotation helper handles version-aware assertion
+				Config: testAccDatabaseSecretBackendConnectionConfig_import(name, backend, connURL, userTempl, true),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -71,18 +76,22 @@ func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", userTempl),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_name", pluginName),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "test-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
 				),
 			},
 			{
 				ResourceName:            testDefaultDatabaseSecretBackendResource,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"verify_connection", "postgresql.0.connection_url"},
+				ImportStateVerifyIgnore: []string{"verify_connection", "postgresql.0.connection_url", consts.FieldSkipStaticRoleImportRotation},
 			},
 		},
 	})
 }
 
+// TestAccDatabaseSecretBackendConnection_cassandra tests cassandra DB connection for default values
 func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineCassandra)
 
@@ -95,13 +104,14 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineCassandra.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra(name, backend, host, username, password, "5"),
+				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra(name, backend, host, username, password, "5", false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -121,12 +131,20 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.protocol_version", "4"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.connect_timeout", "5"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.skip_verification", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.tls_server_name", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.local_datacenter", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.socket_keep_alive", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.consistency", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username_template", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "cassandra-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
 	})
 }
 
+// TestAccDatabaseSecretBackendConnection_cassandraProtocol tests cassandra DB connection when optional fields are ommitted
 func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineCassandra)
 
@@ -141,7 +159,7 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -162,9 +180,142 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.pem_bundle", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.pem_json", ""),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.protocol_version", "5"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.protocol_version", "4"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.connect_timeout", "5"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.skip_verification", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.tls_server_name", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.local_datacenter", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.socket_keep_alive", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.consistency", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username_template", ""),
+				),
+			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretBackendConnection_cassandra_invalidFields tests cassandra DB connection errors when wrong values are provided
+func TestAccDatabaseSecretBackendConnection_cassandra_invalidFields(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCassandra)
+
+	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
+	host := values[0]
+	username := os.Getenv("CASSANDRA_USERNAME")
+	password := os.Getenv("CASSANDRA_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, "tls_server_name"),
+				ExpectError: regexp.MustCompile(`(?i)invalid|error|tls_server_name`),
+			},
+			{
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, "local_datacenter"),
+				ExpectError: regexp.MustCompile(`(?i)invalid|error|local_datacenter|required|empty`),
+			},
+			{
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, "socket_keep_alive"),
+				ExpectError: regexp.MustCompile(`(?i)invalid|error|socket_keep_alive|must be|positive`),
+			},
+			{
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, "consistency"),
+				ExpectError: regexp.MustCompile(`(?i)invalid|error|consistency|unsupported`),
+			},
+			{
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, "username_template"),
+				ExpectError: regexp.MustCompile(`(?i)invalid|error|username_template|template`),
+			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretBackendConnection_cassandra_customFields tests cassandra DB connection when tls=true and proper values given to fields
+func TestAccDatabaseSecretBackendConnection_cassandra_customFields(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCassandra)
+
+	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
+	host := values[0]
+	username := os.Getenv("CASSANDRA_USERNAME")
+	password := os.Getenv("CASSANDRA_PASSWORD")
+
+	// Skip if TLS is not enabled
+	tlsStr := os.Getenv("CASSANDRA_TLS")
+	if tlsStr == "" {
+		tlsStr = "false"
+	}
+	useTLS, err := strconv.ParseBool(tlsStr)
+	if err != nil {
+		t.Fatalf("Invalid CASSANDRA_TLS value: %s", tlsStr)
+	}
+	if !useTLS {
+		t.Skip("Skipping TLS test because CASSANDRA_TLS is not set to true")
+	}
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra_customFields(name, backend, host, username, password),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineCassandra.DefaultPluginName(),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.tls_server_name", "cassandra-server"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.local_datacenter", "datacenter1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.socket_keep_alive", "30"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.consistency", "LOCAL_QUORUM"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username_template", "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccDatabaseSecretBackendConnection_cassandra_customFieldsNoTLS tests cassandra DB connection when tls=false and proper values given to fields
+func TestAccDatabaseSecretBackendConnection_cassandra_customFieldsNoTLS(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCassandra)
+
+	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
+	host := values[0]
+	username := os.Getenv("CASSANDRA_USERNAME")
+	password := os.Getenv("CASSANDRA_PASSWORD")
+
+	// Skip if TLS is enabled
+	tlsStr := os.Getenv("CASSANDRA_TLS")
+	if tlsStr == "" {
+		tlsStr = "false"
+	}
+	useTLS, err := strconv.ParseBool(tlsStr)
+	if err != nil {
+		t.Fatalf("Invalid CASSANDRA_TLS value: %s", tlsStr)
+	}
+	if useTLS {
+		t.Skip("Skipping non-TLS test because CASSANDRA_TLS is set to true")
+	}
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra_customFieldsNoTLS(name, backend, host, username, password),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineCassandra.DefaultPluginName(),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.tls", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.local_datacenter", "datacenter1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.socket_keep_alive", "30"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.consistency", "LOCAL_QUORUM"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username_template", "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"),
 				),
 			},
 		},
@@ -223,7 +374,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -284,7 +435,7 @@ func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
 	resourceName := testDefaultDatabaseSecretBackendResource
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -320,18 +471,19 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 		"MONGODB_ATLAS_PRIVATE_KEY",
 		"MONGODB_ATLAS_PROJECT_ID")
 
-	publicKey, privateKey, projectID := values[0], values[1], values[0]
+	publicKey, privateKey, projectID := values[0], values[1], values[2]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineMongoDBAtlas.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
+	usernameTemplate := "{{.DisplayName}}"
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, backend, publicKey, privateKey, projectID),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, backend, publicKey, privateKey, projectID, usernameTemplate),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -342,6 +494,7 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodbatlas.0.public_key", publicKey),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodbatlas.0.private_key", privateKey),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodbatlas.0.project_id", projectID),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodbatlas.0.username_template", usernameTemplate),
 				),
 			},
 		},
@@ -356,15 +509,17 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 	connURL := values[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
+	writeConcern := `{"wmode": "majority", "wtimeout": 5000}`
 	pluginName := dbEngineMongoDB.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mongodb(name, backend, connURL),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mongodb(name, backend, writeConcern, connURL, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -373,6 +528,34 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodb.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodb.0.write_concern", writeConcern),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mongo-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_mongodb_tls(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+	writeConcern := `{"wmode": "majority", "wtimeout": 5000}`
+	pluginName := dbEngineMongoDB.DefaultPluginName()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_mongodb_tls(name, backend, writeConcern, testMongoDBCACert, testMongoDBClientCertKey),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodb.0.tls_ca", testMongoDBCACert),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodb.0.tls_certificate_key", testMongoDBClientCertKey),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mongodb.0.write_concern", writeConcern),
 				),
 			},
 		},
@@ -395,13 +578,14 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 	}
 
 	username := parsedURL.User.Username()
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, false),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, false, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -416,10 +600,12 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.contained_db", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mssql-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, true),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, false, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_name", pluginName),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
@@ -454,16 +640,17 @@ func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_cloud(name, backend, connURL, "gcp_iam", saJSON),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_cloud(name, backend, connURL, "gcp_iam", saJSON, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQL.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -476,6 +663,9 @@ func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.service_account_json", saJSON),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -498,13 +688,14 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mysql(name, backend, connURL, username, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql(name, backend, connURL, username, password, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQL.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -517,10 +708,32 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_mysql_rds(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineMySQL)
+
+	// TODO: make these fatal once we auto provision the required test infrastructure.
+	values := testutil.SkipTestEnvUnset(t,
+		"MYSQL_CONNECTION_URL", "MYSQL_CONNECTION_USERNAME", "MYSQL_CONNECTION_PASSWORD")
+	connURL, username, password := values[0], values[1], values[2]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_rds(name, backend, connURL, username, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_rds(name, backend, connURL, username, password, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLRDS.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -533,10 +746,32 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_rds.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-rds-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_mysql_aurora(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineMySQL)
+
+	// TODO: make these fatal once we auto provision the required test infrastructure.
+	values := testutil.SkipTestEnvUnset(t,
+		"MYSQL_CONNECTION_URL", "MYSQL_CONNECTION_USERNAME", "MYSQL_CONNECTION_PASSWORD")
+	connURL, username, password := values[0], values[1], values[2]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_aurora(name, backend, connURL, username, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_aurora(name, backend, connURL, username, password, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLAurora.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -549,10 +784,32 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_aurora.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-legacy-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_mysql_legacy(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineMySQL)
+
+	// TODO: make these fatal once we auto provision the required test infrastructure.
+	values := testutil.SkipTestEnvUnset(t,
+		"MYSQL_CONNECTION_URL", "MYSQL_CONNECTION_USERNAME", "MYSQL_CONNECTION_PASSWORD")
+	connURL, username, password := values[0], values[1], values[2]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_legacy(name, backend, connURL, username, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_legacy(name, backend, connURL, username, password, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLLegacy.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -565,6 +822,8 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql_legacy.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-legacy-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
@@ -573,13 +832,31 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 
 func testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName string, fs ...resource.TestCheckFunc) resource.TestCheckFunc {
 	funcs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "name", name),
-		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "backend", backend),
-		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_name", pluginName),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldName, name),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldBackend, backend),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPluginName, pluginName),
 	}
 	funcs = append(funcs, fs...)
 
 	return resource.ComposeAggregateTestCheckFunc(funcs...)
+}
+
+// testAccCheckSkipStaticRoleImportRotation checks the skip_static_role_import_rotation attribute.
+// This field is only available in Vault Enterprise 1.19+, so the check is skipped for
+// non-Enterprise or older versions.
+func testAccCheckSkipStaticRoleImportRotation(resourceName, expected string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		meta := testProvider.Meta().(*provider.ProviderMeta)
+		curVer := meta.GetVaultVersion()
+		if curVer == nil {
+			return fmt.Errorf("vault version not set on %T", meta)
+		}
+		// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
+		if curVer.LessThan(provider.VaultVersion119) || !meta.IsEnterpriseSupported() {
+			return nil
+		}
+		return resource.TestCheckResourceAttr(resourceName, consts.FieldSkipStaticRoleImportRotation, expected)(s)
+	}
 }
 
 func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
@@ -593,13 +870,14 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineMySQL.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, username, password, 0),
+				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, username, password, 0, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -611,10 +889,12 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-update-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, username, password, 10),
+				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, username, password, 10, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -626,6 +906,8 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "10"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "mysql-update-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 		},
@@ -666,7 +948,7 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -736,7 +1018,7 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 	password := acctest.RandomWithPrefix("password")
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -781,6 +1063,63 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_oracle(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineOracle)
+
+	// ORACLE_PLUGIN_NAME is required as not built-in plugin (already installed or installed during test, cf below)
+	//  if ORACLE_PLUGIN_INSTALL=true
+	//    plugin ORACLE_PLUGIN_NAME will be add to the catalog using vault_plugin resources:
+	//    resource "vault_plugin" "plugin" {
+	//       type    = "database"
+	//       name    = "$ORACLE_PLUGIN_NAME"
+	//       command = "$ORACLE_PLUGIN_NAME"
+	//       version = "$ORACLE_PLUGIN_VERSION"
+	//       sha256  = "$ORACLE_PLUGIN_SHA"
+	//    }
+	//
+	//  To work, it requires the oracle binary plugin in Vault plugin directory
+	//
+	values := testutil.SkipTestEnvUnset(t, "ORACLE_CONNECTION_URL", "ORACLE_CONNECTION_USERNAME", "ORACLE_CONNECTION_PASSWORD", "ORACLE_PLUGIN_NAME", "ORACLE_PLUGIN_INSTALL")
+	connURL, username, password, pluginName, pluginInstall := values[0], values[1], values[2], values[3], values[4]
+
+	var pluginVersion, pluginSHA string
+	if pluginInstall == "true" {
+		values2 := testutil.SkipTestEnvUnset(t, "ORACLE_PLUGIN_VERSION", "ORACLE_PLUGIN_SHA")
+		pluginVersion, pluginSHA = values2[0], values2[1]
+	}
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.connection_url", connURL),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.username", username),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "oracle.0.password", password),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "oracle-policy"),
+		testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
+	}
+
+	// Only check plugin version when installing the plugin
+	if pluginInstall == "true" {
+		checks = append(checks, resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPluginVersion, pluginVersion))
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_oracle(name, backend, pluginName, connURL, username, password, "*", pluginInstall, pluginVersion, pluginSHA, false),
+				Check:  testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName, checks...),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 	MaybeSkipDBTests(t, dbEnginePostgres)
 
@@ -801,13 +1140,14 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 	pluginName := dbEnginePostgres.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	userTempl := "{{.DisplayName}}"
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, username, password, maxOpenConnections, maxIdleConnections, maxConnLifetime, parsedURL),
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, username, password, maxOpenConnections, maxIdleConnections, maxConnLifetime, parsedURL, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -824,6 +1164,8 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", userTempl),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "postgres-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -836,6 +1178,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.disable_escaping", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", ""),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "postgres-policy"),
 				),
 			},
 			{
@@ -857,7 +1200,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_tls(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
@@ -911,7 +1254,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
@@ -981,7 +1324,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation(t *
 				),
 			},
 			{
-				Config:      testAccDatabaseSecretBackendConnectionConfig_postgres_automatedRootRotation(name, backend, connURL, "", 30, 120, true),
+				Config:      testAccDatabaseSecretBackendConnectionConfig_postgres_automatedRootRotation(name, backend, connURL, "", 30, 120, false),
 				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
 			},
 			// zero-out rotation_schedule and rotation_window
@@ -1024,7 +1367,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_password_wo(t *testing.T)
 	pluginName := dbEnginePostgres.DefaultPluginName()
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1072,11 +1415,11 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, backend, connURL, username, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, backend, connURL, username, password, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -1087,6 +1430,8 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.insecure", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "elastic-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -1153,7 +1498,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake_userpass(t *testing.T) {
 	config := testAccDatabaseSecretBackendConnectionConfig_snowflake_userpass(name, backend, connURL, username, password, userTempl)
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -1190,13 +1535,13 @@ func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		},
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username, userTempl, privateKey, "1"),
+				Config: testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username, userTempl, privateKey, "1", false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -1206,10 +1551,12 @@ func TestAccDatabaseSecretBackendConnection_snowflake_keypair(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.private_key_wo_version", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "snowflake.0.username_template", userTempl),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "snowflake-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username+"new", userTempl, privateKey, "2"),
+				Config: testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, backend, connURL, username+"new", userTempl, privateKey, "2", false),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(testDefaultDatabaseSecretBackendResource, plancheck.ResourceActionUpdate),
@@ -1245,11 +1592,11 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "*"),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "*", false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
@@ -1260,6 +1607,8 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.tls", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure_tls", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "redis-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -1275,7 +1624,7 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 					//	t.Error(err)
 					//}
 				},
-				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "foobar"),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "foobar", false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "foobar"),
@@ -1292,6 +1641,66 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_redis_externalPlugin(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineRedis)
+
+	// REDIS_PLUGIN_NAME is required as not built-in plugin (already installed or installed during test, cf below)
+	//  if REDIS_PLUGIN_INSTALL=true
+	//    plugin REDIS_PLUGIN_NAME will be add to the catalog using vault_plugin resources:
+	//    resource "vault_plugin" "plugin" {
+	//       type    = "database"
+	//       name    = "$REDIS_PLUGIN_NAME"
+	//       command = "$REDIS_PLUGIN_NAME"
+	//       version = "$REDIS_PLUGIN_VERSION"
+	//       sha256  = "$REDIS_PLUGIN_SHA"
+	//    }
+	//
+	//  To work, it requires the redis binary plugin in Vault plugin directory
+	//
+	values := testutil.SkipTestEnvUnset(t, "REDIS_HOST", "REDIS_PORT", "REDIS_USERNAME", "REDIS_PASSWORD", "REDIS_PLUGIN_NAME", "REDIS_PLUGIN_INSTALL")
+	host, port, username, password, pluginName, pluginInstall := values[0], values[1], values[2], values[3], values[4], values[5]
+
+	var pluginVersion, pluginSHA string
+	if pluginInstall == "true" {
+		values2 := testutil.SkipTestEnvUnset(t, "REDIS_PLUGIN_VERSION", "REDIS_PLUGIN_SHA")
+		pluginVersion, pluginSHA = values2[0], values2[1]
+	}
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.host", host),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.port", port),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.username", username),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.password", password),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.tls", "false"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure_tls", "false"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "redis-policy"),
+		testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
+	}
+
+	// Only check plugin version when installing the plugin
+	if pluginInstall == "true" {
+		checks = append(checks, resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPluginVersion, pluginVersion))
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis_externalPlugin(name, backend, pluginName, host, port, username, password, "*", pluginInstall, pluginVersion, pluginSHA, false),
+				Check:  testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName, checks...),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineRedisElastiCache)
 
@@ -1302,18 +1711,21 @@ func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineRedisElastiCache.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_redis_elasticache(name, backend, url),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis_elasticache(name, backend, url, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis_elasticache.0.url", url),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "redis-elasticache-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
@@ -1336,13 +1748,14 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineRedshift.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, false),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, false, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -1354,10 +1767,12 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redshift.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redshift.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redshift.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "redshift-policy"),
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, true),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, true, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -1451,7 +1866,7 @@ resource "vault_database_secret_backend_connection" "test" {
 }`, name, name, pluginName)
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -1484,29 +1899,41 @@ func testAccDatabaseSecretBackendConnectionCheckDestroy(s *terraform.State) erro
 	return nil
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_cassandra(name, path, host, username, password, timeout string) string {
+func testAccDatabaseSecretBackendConnectionConfig_cassandra(name, path, host, username, password, timeout string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	return fmt.Sprintf(`
-resource "vault_mount" "db" {
-  path = "%s"
-  type = "database"
-}
+	resource "vault_mount" "db" {
+		path = "%s"
+		type = "database"
+	}
 
-resource "vault_database_secret_backend_connection" "test" {
-  backend = vault_mount.db.path
-  name = "%s"
-  allowed_roles = ["dev", "prod"]
-  root_rotation_statements = ["FOOBAR"]
+	resource "vault_database_secret_backend_connection" "test" {
+		backend = vault_mount.db.path
+		name = "%s"
+		allowed_roles = ["dev", "prod"]
+		verify_connection = true
+		root_rotation_statements = ["FOOBAR"]
+		password_policy = "cassandra-policy"
+  		%s
 
-  cassandra {
-    hosts = ["%s"]
-    username = "%s"
-    password = "%s"
-    tls = false
-    protocol_version = 4
-    connect_timeout = %s
-  }
-}
-`, path, name, host, username, password, timeout)
+		cassandra {
+			hosts = ["%s"]
+			username = "%s"
+			password = "%s"
+			tls = false
+			protocol_version = 4
+			connect_timeout = %s
+			tls_server_name = ""
+			local_datacenter = ""
+			socket_keep_alive = 0
+			consistency = ""
+			username_template = ""
+		}
+	}
+	`, path, name, skipStaticLine, host, username, password, timeout)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_cassandraProtocol(name, path, host, username, password string) string {
@@ -1520,6 +1947,7 @@ resource "vault_database_secret_backend_connection" "test" {
   backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
+  verify_connection = true
   root_rotation_statements = ["FOOBAR"]
 
   cassandra {
@@ -1527,13 +1955,137 @@ resource "vault_database_secret_backend_connection" "test" {
     username = "%s"
     password = "%s"
     tls = false
-    protocol_version = 5
+    protocol_version = 4
   }
 }
 `, path, name, host, username, password)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_import(name, path, connURL, userTempl string) string {
+func testAccDatabaseSecretBackendConnectionConfig_cassandra_invalidFields(name, backend, host, username, password, invalidField string) string {
+	// Base configuration with valid values
+	config := fmt.Sprintf(`
+
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  name    = "%s"
+  backend = vault_mount.db.path
+  plugin_name = "cassandra-database-plugin"
+  allowed_roles = ["dev", "prod"]
+  verify_connection = true
+
+  cassandra {
+    hosts              = ["%s"]
+    port               = 9042
+    username           = "%s"
+    password           = "%s"
+    connect_timeout    = 30`, backend, name, host, username, password)
+
+	// Add the specific invalid field based on the parameter
+	switch invalidField {
+	case "tls_server_name":
+		config += `
+    tls                = true
+    tls_server_name    = "!!invalid!!"
+    insecure_tls       = true`
+	case "local_datacenter":
+		config += `
+    local_datacenter   = ""`
+	case "socket_keep_alive":
+		config += `
+    socket_keep_alive  = -1`
+	case "consistency":
+		config += `
+    consistency        = "INVALID"`
+	case "username_template":
+		config += `
+    username_template  = "{{.Invalid}}"`
+	}
+
+	config += `
+  }
+}
+`
+	return config
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_cassandra_customFields(name, backend, host, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  name    = "%s"
+  backend = vault_mount.db.path
+  plugin_name = "cassandra-database-plugin"
+  allowed_roles = ["dev", "prod"]
+  verify_connection = true
+
+  cassandra {
+    hosts              = ["%s"]
+    port               = 9042
+    username           = "%s"
+    password           = "%s"
+    protocol_version   = 4
+    tls                = true
+    tls_server_name    = "cassandra-server"
+    local_datacenter   = "datacenter1"
+    socket_keep_alive  = 30
+    consistency        = "LOCAL_QUORUM"
+    username_template  = "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"
+    insecure_tls       = true
+    connect_timeout    = 30
+  }
+}
+`, backend, name, host, username, password)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_cassandra_customFieldsNoTLS(name, backend, host, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  name    = "%s"
+  backend = vault_mount.db.path
+  plugin_name = "cassandra-database-plugin"
+  allowed_roles = ["dev", "prod"]
+  verify_connection = true
+
+  cassandra {
+    hosts              = ["%s"]
+    port               = 9042
+    username           = "%s"
+    password           = "%s"
+    protocol_version   = 4
+    tls                = false
+    tls_server_name    = "cassandra-server"
+    local_datacenter   = "datacenter1"
+    socket_keep_alive  = 30
+    consistency        = "LOCAL_QUORUM"
+    username_template  = "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"
+    insecure_tls       = false
+    connect_timeout    = 30
+  }
+}
+`, backend, name, host, username, password)
+}
+
+// testAccDatabaseSecretBackendConnectionConfig_import generates config for PostgreSQL import test.
+// When includeSkipStatic is true, includes skip_static_role_import_rotation = true.
+// Note: Vault versions < 1.19 ignore this field; version-aware assertions should be used in tests.
+func testAccDatabaseSecretBackendConnectionConfig_import(name, path, connURL, userTempl string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1545,13 +2097,16 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "test-policy"
+  plugin_name = "postgresql-database-plugin"
+  %s
 
   postgresql {
 	  connection_url = "%s"
 	  username_template = "%s"
   }
 }
-`, path, name, connURL, userTempl)
+`, path, name, skipStaticLine, connURL, userTempl)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_influxdb(name, path, host, port, username, password string) string {
@@ -1612,7 +2167,11 @@ resource "vault_database_secret_backend_connection" "test" {
 	return config
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, path, host, username, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, path, host, username, password string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1624,6 +2183,8 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "elastic-policy"
+  %s
 
   elasticsearch {
     url = "%s"
@@ -1631,7 +2192,7 @@ resource "vault_database_secret_backend_connection" "test" {
     password = "%s"
   }
 }
-`, path, name, host, username, password)
+`, path, name, skipStaticLine, host, username, password)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_elasticsearchUpdated(name, path, host, username, password, usernameTemplate string) string {
@@ -1659,7 +2220,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, host, username, password, usernameTemplate)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, path, public_key, private_key, project_id string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, path, public_key, private_key, project_id, username_template string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1676,12 +2237,17 @@ resource "vault_database_secret_backend_connection" "test" {
     public_key  = "%s"
     private_key = "%s"
     project_id  = "%s"
+	username_template = "%s"
   }
 }
-`, path, name, public_key, private_key, project_id)
+`, path, name, public_key, private_key, project_id, username_template)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mongodb(name, path, connURL string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mongodb(name, path, writeConcern, connURL string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1693,15 +2259,41 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "mongo-policy"
+  %s
 
   mongodb {
     connection_url = "%s"
+    write_concern  = %q
   }
 }
-`, path, name, connURL)
+`, path, name, skipStaticLine, connURL, writeConcern)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, pluginName string, parsedURL *url.URL, containedDB bool) string {
+func testAccDatabaseSecretBackendConnectionConfig_mongodb_tls(name, path, writeConcern, tlsCA, tlsCertificateKey string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend          = vault_mount.db.path
+  name             = "%s"
+  allowed_roles    = ["dev", "prod"]
+  verify_connection = false
+
+  mongodb {
+    connection_url      = "mongodb://localhost:27017/admin?tls=true"
+    write_concern       = %q
+    tls_ca              = %q
+    tls_certificate_key = %q
+  }
+}
+`, path, name, writeConcern, tlsCA, tlsCertificateKey)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, pluginName string, parsedURL *url.URL, containedDB bool, includeSkipStatic bool) string {
 	var config string
 	password, _ := parsedURL.User.Password()
 
@@ -1724,6 +2316,10 @@ func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, pluginName s
   }`
 	}
 
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	result := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1736,14 +2332,20 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+    password_policy = "mssql-policy"
+  %s
 %s
 }
-`, path, pluginName, name, fmt.Sprintf(config, parsedURL.String(), parsedURL.User.Username(), password))
+`, path, pluginName, name, skipStaticLine, fmt.Sprintf(config, parsedURL.String(), parsedURL.User.Username(), password))
 
 	return result
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mysql(name, path, connURL, username, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mysql(name, path, connURL, username, password string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1755,6 +2357,8 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "mysql-policy"
+  %s
 
   mysql {
 	  connection_url = "%s"
@@ -1762,10 +2366,14 @@ resource "vault_database_secret_backend_connection" "test" {
       password       = "%s"
   }
 }
-`, path, name, connURL, username, password)
+`, path, name, skipStaticLine, connURL, username, password)
 }
 
-func testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, path, connURL, username, password string, connLifetime int) string {
+func testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, path, connURL, username, password string, connLifetime int, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	config := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1777,6 +2385,8 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "mysql-update-policy"
+  %s
 
   mysql {
 	  connection_url = "%s"
@@ -1785,7 +2395,7 @@ resource "vault_database_secret_backend_connection" "test" {
 	  max_connection_lifetime = "%d"
   }
 }
-`, path, name, connURL, username, password, connLifetime)
+`, path, name, skipStaticLine, connURL, username, password, connLifetime)
 
 	return config
 }
@@ -1874,7 +2484,11 @@ resource "vault_database_secret_backend_connection" "test" {
 	return config
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mysql_rds(name, path, connURL, username, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mysql_rds(name, path, connURL, username, password string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1886,6 +2500,8 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "mysql-rds-policy"
+  %s
 
   mysql_rds {
 	  connection_url = "%s"
@@ -1893,10 +2509,14 @@ resource "vault_database_secret_backend_connection" "test" {
 	  password       = "%s"
   }
 }
-`, path, name, connURL, username, password)
+`, path, name, skipStaticLine, connURL, username, password)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mysql_aurora(name, path, connURL, username, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mysql_aurora(name, path, connURL, username, password string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1908,6 +2528,8 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "mysql-legacy-policy"
+  %s
 
   mysql_aurora {
 	  connection_url = "%s"
@@ -1915,10 +2537,14 @@ resource "vault_database_secret_backend_connection" "test" {
 	  password       = "%s"
   }
 }
-`, path, name, connURL, username, password)
+`, path, name, skipStaticLine, connURL, username, password)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mysql_legacy(name, path, connURL, username, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mysql_legacy(name, path, connURL, username, password string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1930,6 +2556,8 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "mysql-legacy-policy"
+  %s
 
   mysql_legacy {
 	  connection_url = "%s"
@@ -1937,10 +2565,14 @@ resource "vault_database_secret_backend_connection" "test" {
 	  password       = "%s"
   }
 }
-`, path, name, connURL, username, password)
+`, path, name, skipStaticLine, connURL, username, password)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mysql_cloud(name, path, connURL, authType, serviceAccountJSON string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mysql_cloud(name, path, connURL, authType, serviceAccountJSON string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1952,6 +2584,8 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "mysql-cloud-policy"
+  %s
 
   mysql {
 	  connection_url       = "%s"
@@ -1959,10 +2593,71 @@ resource "vault_database_secret_backend_connection" "test" {
 	  service_account_json = "%s"
   }
 }
-`, path, name, connURL, authType, serviceAccountJSON)
+`, path, name, skipStaticLine, connURL, authType, serviceAccountJSON)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_postgresql(name, path, userTempl, username, password, openConn, idleConn, maxConnLifetime string, parsedURL *url.URL) string {
+func testAccDatabaseSecretBackendConnectionConfig_oracle(name, path, pluginName, connURL, username, password, allowedRoles, pluginInstall, pluginVersion, pluginSHA string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
+	config := fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+`, path)
+
+	if pluginInstall == "true" {
+		config += fmt.Sprintf(`
+resource "vault_plugin" "plugin" {
+  type    = "database"
+  name    = "%s"
+  command = "%s"
+  version = "%s"
+  sha256  = "%s"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  plugin_name = vault_plugin.plugin.name
+  plugin_version = "%s"
+  name = "%s"
+  allowed_roles = [%q]
+  password_policy = "oracle-policy"
+  %s
+  oracle {
+    	connection_url = "%s"
+		username = "%s"
+		password = "%s"
+  }
+}
+`, pluginName, pluginName, pluginVersion, pluginSHA, pluginVersion, name, allowedRoles, skipStaticLine, connURL, username, password)
+
+	} else {
+
+		config += fmt.Sprintf(`
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  plugin_name = "%s"
+  name = "%s"
+  allowed_roles = [%q]
+  oracle {
+    	connection_url = "%s"
+		username = "%s"
+		password = "%s"
+  }
+}`, pluginName, name, allowedRoles, connURL, username, password)
+	}
+
+	return config
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_postgresql(name, path, userTempl, username, password, openConn, idleConn, maxConnLifetime string, parsedURL *url.URL, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1974,7 +2669,8 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
-
+  password_policy = "postgres-policy"
+  %s
   postgresql {
       connection_url          = "%s"
       max_open_connections    = "%s"
@@ -1986,7 +2682,7 @@ resource "vault_database_secret_backend_connection" "test" {
       disable_escaping        = true
   }
 }
-`, path, name, parsedURL.String(), openConn, idleConn, maxConnLifetime, username, password, userTempl)
+`, path, name, skipStaticLine, parsedURL.String(), openConn, idleConn, maxConnLifetime, username, password, userTempl)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_postgresql_reset_optional_values(name, path string, parsedURL *url.URL) string {
@@ -2001,6 +2697,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "postgres-policy"
 
   postgresql {
 	  connection_url    = "%s"
@@ -2021,6 +2718,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "postgres-policy"
 
   postgresql {
 	  connection_url          = "%s"
@@ -2164,7 +2862,11 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, url, username, password, userTempl)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, path, url, username, userTempl, privateKey, privateKeyVersion string) string {
+func testAccDatabaseSecretBackendConnectionConfig_snowflake_keypair(name, path, url, username, userTempl, privateKey, privateKeyVersion string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -2176,6 +2878,8 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "snowflake-policy"
+  %s
 
   snowflake {
     connection_url = "%s"
@@ -2187,10 +2891,14 @@ EOT
     private_key_wo_version = "%s"
   }
 }
-`, path, name, url, username, userTempl, privateKey, privateKeyVersion)
+`, path, name, skipStaticLine, url, username, userTempl, privateKey, privateKeyVersion)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_redis(name, path, host, port, username, password, allowedRoles string) string {
+func testAccDatabaseSecretBackendConnectionConfig_redis(name, path, host, port, username, password, allowedRoles string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	config := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -2203,18 +2911,85 @@ resource "vault_database_secret_backend_connection" "test" {
   backend = vault_mount.db.path
   name = "%s"
   allowed_roles = [%q]
+  password_policy = "redis-policy"
+  %s
   redis {
     	host = "%s"
     	port = "%s"
 		username = "%s"
 		password = "%s"
   }
-}`, name, allowedRoles, host, port, username, password)
+}`, name, allowedRoles, skipStaticLine, host, port, username, password)
 
 	return config
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_redis_elasticache(name, path, connURL string) string {
+func testAccDatabaseSecretBackendConnectionConfig_redis_externalPlugin(name, path, pluginName, host, port, username, password, allowedRoles, pluginInstall, pluginVersion, pluginSHA string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
+	config := fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+`, path)
+
+	if pluginInstall == "true" {
+		config += fmt.Sprintf(`
+resource "vault_plugin" "plugin" {
+  type    = "database"
+  name    = "%s"
+  command = "%s"
+  version = "%s"
+  sha256  = "%s"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  plugin_name = vault_plugin.plugin.name
+  plugin_version = "%s"
+  name = "%s"
+  allowed_roles = [%q]
+  password_policy = "redis-policy"
+  %s
+  redis {
+    	host = "%s"
+    	port = "%s"
+		username = "%s"
+		password = "%s"
+  }
+}
+`, pluginName, pluginName, pluginVersion, pluginSHA, pluginVersion, name, allowedRoles, skipStaticLine, host, port, username, password)
+
+	} else {
+
+		config += fmt.Sprintf(`
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  plugin_name = "%s"
+  name = "%s"
+  allowed_roles = [%q]
+  password_policy = "redis-policy"
+  %s
+  redis {
+    	host = "%s"
+    	port = "%s"
+		username = "%s"
+		password = "%s"
+  }
+}`, pluginName, name, allowedRoles, skipStaticLine, host, port, username, password)
+	}
+
+	return config
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_redis_elasticache(name, path, connURL string, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	config := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -2227,15 +3002,21 @@ resource "vault_database_secret_backend_connection" "test" {
   backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["*"]
+  password_policy = "redis-elasticache-policy"
+  %s
   redis_elasticache {
     url = "%s"
   }
-}`, name, connURL)
+}`, name, skipStaticLine, connURL)
 
 	return config
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_redshift(name, path, connURL string, isUpdate bool) string {
+func testAccDatabaseSecretBackendConnectionConfig_redshift(name, path, connURL string, isUpdate bool, includeSkipStatic bool) string {
+	skipStaticLine := ""
+	if includeSkipStatic {
+		skipStaticLine = "skip_static_role_import_rotation = true"
+	}
 	config := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -2250,10 +3031,12 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+  password_policy = "redshift-policy"
+  %s
   redshift {
 	  connection_url = "%s"
   }
-}`, name, connURL)
+}`, name, skipStaticLine, connURL)
 	} else {
 		config += fmt.Sprintf(`
 resource "vault_database_secret_backend_connection" "test" {
@@ -2827,3 +3610,298 @@ v1zW4I0I38hS4J1WZc39iCNIPJ4DVekPyvuMyZwxwjZoahsoI53D7z8UnPRfqLgi
 a/0qa6m6iLDrh6oyVXsKlRgsePBl7jUjP3HZTalWpX8+HFbVYIPN3mU50qgjR/uF
 lHWczW8tCg9aF3oBqvxt8WV/TU4oV4amunSkbD9HzqcnOuj1fGcZ9w==
 -----END RSA PRIVATE KEY-----`
+
+const testMongoDBCACert = `-----BEGIN CERTIFICATE-----
+MIIE2jCCAsKgAwIBAgIBATANBgkqhkiG9w0BAQsFADANMQswCQYDVQQDEwJjYTAe
+Fw0yNDA3MTIyMDEzMzhaFw0yNjAxMTIyMDIzMzdaMA0xCzAJBgNVBAMTAmNhMIIC
+IjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzd6h6kI5Z3ofQzV5HiKL+uge
+hr8AeCywNBUAQ8yX97HKLPYMw2HQFAx9mMIiW1EbwfMb5NYY6blyyyUfZAwzIDzq
+IrKwGSa//bS2mO19N5oQdy0w+S+Xo55tsDq0C1hNZf7TOJ/lVOi+Ot68OXqLhmTa
+TYrkdYb33kanYVV5IyMgAgGA6w78gJPLKKe57CKe4oq2bU7jPANxu00TthRNL51c
+xucGYJCRkeqK7F6MSxXXS1Xv73mh4uTiFYxwsHbgTKW5LAADWWMCwtgjP1ZSfU1U
+0BGSyh/fVl1gQIjPCbGp+lSO+eYNhC+/42hvi//y0wH4cv0LwssHZKltDq4pEFwZ
+WH8iX6gXoo6FD8FNNCBaZbBAHwPGUkbtjXVl2xhwA5YAin78YM5a1Sy3ZbfxxN++
+msSdMxyVM0I/ctnAF/M8RFLOqf/xAbJf/AaXBvPhJAOqqhqMsi2SF5jc5faUpqRE
+eOHJGnfFsl1O/0t4YPly/SDowIatMRe+fYp7E79cBve4R9uMPTH2/wV1xla4s42r
+GZRoIkeRNg0dI0eFiBOJL8jDTrm8702a2Blu6E0YfxV+XppooGUVzwd2zl7Gvqnl
+cSHx4S5drMEz5WGu6/u/ae712BLBvmBrdU1ta8Fr644AZrrsAIL5plY4wez55+/u
+LcDlUkKZ01579eDdQBkCAwEAAaNFMEMwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB
+/wQIMAYBAf8CAQAwHQYDVR0OBBYEFF6gLEwzFMWpqOFkhuPY/mMepy8QMA0GCSqG
+SIb3DQEBCwUAA4ICAQCaiOUPCFpJx6fw+Vw/sUxzX/JYyrxiOOrMErM5upw3gErq
+pYP6RPZS16lOS0LwXQ9G6c72hgcSf4oBL4C/bCXDX7MtXFaa5INI+Bga+OUM9TtD
+zSZ/CWpfmUPY1NJOIqFIfhMVmuzGlxdQXrjT0pKQ/SlEJnNN6A5qFkX7+UBgT7Ii
+/D11w+I8VTzVmzkkSKalg0I8TZlXD2ADPA+SEljDB6e6wTJie++uLFjhfc2ssJ4I
+ZEkMUg8JOtyVAKlrE+i3YhQFjJuTKezIV9ss6akZb8719/iLPudiPo+4Hd4NrEi6
++VDFsc2bBCO8vLYSDyf8pqzZCG74oIZbmneAM2c4pnbTcm5LsBThVUbvzH1rPZGh
+3oB4F/CHeov9BfLCdPRjL1HFlD5zUUmA5gPI2avZL8RKCsX1lO7xXVfQihofMAd1
+Fb3Wn5+ECeWCPf6EnuEG6aZWyFiBzDrC4jP628t5Oc38Wi3ZQkyVV4BJP+/9AxoF
+Z8o9nMIie9BSNfnbAvxwEThY8Jwc5/azZdHXYUrLDA6bcsBw77WTI/TiddzqbU4g
+yCAn30ML5eJBdp30xw9+pGpFVbUh4vxBVyLC4Yhbcvp9PuZmIKvkruWNSj3zQSnm
+avNz7L+OZEENF2qm/XN6WG5UQHbl3VN614k1dsyD54T+LpNmDZ20wFKPH3zmDw==
+-----END CERTIFICATE-----`
+
+const testMongoDBClientCertKey = `-----BEGIN CERTIFICATE-----
+MIIEMTCCAhmgAwIBAgIQBMMx4O5wAf+ulbCz1EwvAjANBgkqhkiG9w0BAQsFADAN
+MQswCQYDVQQDEwJjYTAeFw0yNDA3MTIyMDEzMzhaFw0yNjAxMTIyMDIzMzdaMBEx
+DzANBgNVBAMTBmNsaWVudDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+ALNhfyofmTapjkf7M5bd6UALxVIngdMx0m/LCE5You2OtuuEM4rFDTs4yi2FFIY+
+3rT+ibEiw0QYCTJZ+xOv4TQE8lSGxnrIFtVXlwFLq5eeuuY2eMFtevXj5g6bk50/
+FQTs2Laq7LRgN8ZoW+Hn6wglbuM+QLIHGBZtVFfgYXVi54FO24MMWqThgIX21Ns6
+iA7nbG/00QYlaqGaZX5vd07cdhxo3qwMSqJc2EP7OKLtmwSuGU4CyWOKfuFr7ITl
+DObGIqODvIaRBVFjIsJiEER5V5FWyCAbj1f5jREO6rXoBlwsFvUw7PlFHtX5t7RO
+JkUajvbsPYFjNDNwk1u4Mo8CAwEAAaOBiDCBhTAOBgNVHQ8BAf8EBAMCA7gwHQYD
+VR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMB0GA1UdDgQWBBTnlzQEFsMsV3EM
+v52+eD/GsjMvqTAfBgNVHSMEGDAWgBReoCxMMxTFqajhZIbj2P5jHqcvEDAUBgNV
+HREEDTALgglsb2NhbGhvc3QwDQYJKoZIhvcNAQELBQADggIBAMm6bto3Tti9iMS/
+kRpDJ74oIAKybm313va7w85qqxa5wDHY5MAr9qWL/tNUQlzfgsfOrLbXxgVZBjAn
+1raxZaBQ5aclmTYKdJRmXAPzcYTu0YV/L3zg2ZX3Rds3M10u1BSxhXK4vTS6VH+K
+d3BZF3uQ0pRd49PERTdb+M5l4y/TV+pmgEsDYarLjAoS4WVBXe3FM/RMYjNQJIae
+baLCf87G7G/WMtmunW+PmL2pKDlmbkENoSULmX1IQ2CxotdYfI8IJWDE3nKzufzR
+X/1mfAksgsSHH4qTUXQFARoGwVaz04pe+E6R0QbgZKWIhhPF+PX99Jm+Uc7s7e7+
+u4E76SOfKXfzuB2sfJlR4BxJnVxxrmJVzBRC7ENwXJ2kTfL6PwLT1xUIu/VtJf7N
+YnXYx7Is8VVJ7oTCrA1k5tCuPv0AV3SnPq/YzhpUgiWI6sAAtv5GshVETSWta0Bh
+XKkRkRK3ubxD7yPhEWypubHY2Nutdj05erBz7FslGvSoPwJrlroLQbwb0fOlHvFA
+klHpzMyNSttmDa6S93wGD7U44C+8kMJUZGT3fy3CFvJacvpHdsNKKHhNEgBn+zmG
+IRrNQZaXS3XsmjyczI7SETRlYABq644LZlFOXkX4Gj4YG6mkznlB9sYp1OLu34Xn
+4Y1FHwnTAcoTwkEPiki3oChg0ndz
+-----END CERTIFICATE-----
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAs2F/Kh+ZNqmOR/szlt3pQAvFUieB0zHSb8sITlii7Y6264Qz
+isUNOzjKLYUUhj7etP6JsSLDRBgJMln7E6/hNATyVIbGesgW1VeXAUurl5665jZ4
+wW169ePmDpuTnT8VBOzYtqrstGA3xmhb4efrCCVu4z5AsgcYFm1UV+BhdWLngU7b
+gwxapOGAhfbU2zqIDudsb/TRBiVqoZplfm93Ttx2HGjerAxKolzYQ/s4ou2bBK4Z
+TgLJY4p+4WvshOUM5sYio4O8hpEFUWMiwmIQRHlXkVbIIBuPV/mNEQ7qtegGXCwW
+9TDs+UUe1fm3tE4mRRqO9uw9gWM0M3CTW7gyjwIDAQABAoIBAQCf5IsGUC4w1EhY
+Dyj4FIwiI5vaVA7b4vAR6CdaNpXcLLcODcQnsOfPXxqQIqyd0RKQwMaZV0Q4wTgJ
+Yr1z2fViefpLr+rhbNM1jaKza/Di8IDmTa2rtNvCrEbXxIN6yc0Bm+C8SnU9fvqY
+Z1NndWNB2qQR+N6QEdS9wOxKfF5C08y9Z3B2xoM2HpeYYW4WEJezMvcDGtDp152p
+tN/z8sLKca5doFLwIUiGuJ3g4a5048R9MyEP7bg8g/LAtas4jmOx9xIISRt2i6LJ
+ESszY5yy09K06o+IMKWSTDE1GD6o90wEuGDzF6fMNFxRgqVwAVsIaOO9ZRmIa8fV
+yyw07MnhAoGBAOG/VXK7AFqfrMLPJY66WX1Az8mLP+uEVv/bfAsnheRNgMD5v3RE
+0MgAnx7BAud4O9x4Ej3suNeEiDr4Ukg74CHVKWZACkcTgjY2rg023bwq9slml61E
+8XQDgd1D4EELAJAjIldc0rzQ8YTSJ3xBVp5KL+hl1CFPxpEuFhYS7dURAoGBAMtr
+edUwge1ti3NCW615RWyDbstvAOlcTyT/a0JViIH7zcZg20ZaQop9PYyGdu/19ha7
+8G32flWVqoWf2lBJ+ewG5ykHPEh+O3RLv+3cZs3+0c+fN70PCovsnN5C4BbmR6ls
+5FV6/sTJqgN9BJN+wHV1Dj4wMHwWzdXqDUKnPw2fAoGBANsz4+/8/zIAPEwJwuld
+r8m85kdI7K9vmN7mrANUxGFUlIJNwIdQzv52BAxj1MMYb9/7w5LXywCS04mXWKaF
+ZXTUvFdqNdCgc97ap5VzQkoV2f7knMGF4YMKaM6GuznNSiWryAvWuVbY+LxFKEwy
+Ub5wQSbDwgD6qtCMVKvog4JRAoGAcXmoAhxILnmQdCCNYc0nxCvhj4yBtqwu3lW5
+sMxkFRaxqLt5Ntq9CeJphk2wZZYQzIfUzJLX0Mhn0pjkwSszRs5m/0UxBMOeSPbE
+v1zW4I0I38hS4J1WZc39iCNIPJ4DVekPyvuMyZwxwjZoahsoI53D7z8UnPRfqLgi
+447GpsMCgYBnNiNlMvl4UqkZ83mJsqBwPhM3o3jPgS9OHk+nKjRws19lLUuRXCxy
+a/0qa6m6iLDrh6oyVXsKlRgsePBl7jUjP3HZTalWpX8+HFbVYIPN3mU50qgjR/uF
+lHWczW8tCg9aF3oBqvxt8WV/TU4oV4amunSkbD9HzqcnOuj1fGcZ9w==
+-----END RSA PRIVATE KEY-----`
+
+func TestAccDatabaseSecretBackendConnection_hana(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineHana)
+
+	values := testutil.SkipTestEnvUnset(t, "HANA_CONNECTION_URL")
+	connURL := values[0]
+
+	username := os.Getenv("HANA_USERNAME")
+	password := os.Getenv("HANA_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineHana.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+	userTempl := "{{.DisplayName}}_{{random 8}}"
+
+	importIgnoreKeys := []string{
+		"verify_connection",
+		"hana.0.password",
+		"hana.0.connection_url",
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_hana(name, backend, connURL, username, password, userTempl),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.disable_escaping", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "hana.0.username_template", userTempl),
+					func(s *terraform.State) error {
+						client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+						// Validate that the connection can generate credentials through the role
+						resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, "dev"))
+						if err != nil {
+							return fmt.Errorf("error reading credentials: %v", err)
+						}
+						if resp == nil {
+							return fmt.Errorf("no credentials returned")
+						}
+						if resp.Data["username"] == nil || resp.Data["password"] == nil {
+							return fmt.Errorf("credentials missing username or password")
+						}
+
+						// Verify the generated username matches the template pattern
+						generatedUsername := resp.Data["username"].(string)
+						if !strings.Contains(generatedUsername, "TOKEN_TERRAFORM_") {
+							return fmt.Errorf("generated username %q does not match template pattern (expected format: <displayname>_<random>)", generatedUsername)
+						}
+
+						// Revoke the lease to prevent cleanup errors
+						if resp.LeaseID != "" {
+							err = client.Sys().Revoke(resp.LeaseID)
+							if err != nil {
+								return fmt.Errorf("error revoking lease: %v", err)
+							}
+						}
+
+						return nil
+					},
+				),
+			},
+			{
+				ResourceName:            testDefaultDatabaseSecretBackendResource,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: importIgnoreKeys,
+			},
+		},
+	})
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_hana(name, path, connURL, username, password, userTempl string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  hana {
+    connection_url = "%s"
+    username = "%s"
+    password = "%s"
+    disable_escaping = true
+    username_template = "%s"
+  }
+}
+
+resource "vault_database_secret_backend_role" "test" {
+  backend = vault_mount.db.path
+  name = "dev"
+  db_name = vault_database_secret_backend_connection.test.name
+  creation_statements = [
+    "CREATE USER {{name}} PASSWORD \"{{password}}\";",
+    "GRANT SELECT ON SCHEMA _SYS_BIC TO {{name}};"
+  ]
+  default_ttl = 3600
+  max_ttl = 7200
+}
+`, path, name, connURL, username, password, userTempl)
+}
+
+func TestAccDatabaseSecretBackendConnection_skipStaticRoleImportRotation(t *testing.T) {
+	MaybeSkipDBTests(t, dbEnginePostgres)
+
+	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
+	connURL := values[0]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+			// skip_static_role_import_rotation is only available in Vault Enterprise
+			meta := testProvider.Meta().(*provider.ProviderMeta)
+			if !meta.IsEnterpriseSupported() {
+				t.Skip("skip_static_role_import_rotation is an Enterprise-only feature")
+			}
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Step 1: Create with skip_static_role_import_rotation = true
+				Config: testAccDatabaseSecretBackendConnectionConfig_skipRotation(name, backend, connURL, true),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+				),
+			},
+			{
+				// Step 2: Update to skip_static_role_import_rotation = false (explicit)
+				// This tests the SDK v2 bug fix - without GetOkExists, this would fail
+				Config: testAccDatabaseSecretBackendConnectionConfig_skipRotation(name, backend, connURL, false),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
+				),
+			},
+			{
+				// Step 3: Remove skip_static_role_import_rotation (should default to false)
+				Config: testAccDatabaseSecretBackendConnectionConfig_skipRotation_omitted(name, backend, connURL),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
+				),
+			},
+			{
+				// Step 4: Set back to true to verify toggle works
+				Config: testAccDatabaseSecretBackendConnectionConfig_skipRotation(name, backend, connURL, true),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "true"),
+				),
+			},
+		},
+	})
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_skipRotation(name, path, connURL string, skipRotation bool) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+  skip_static_role_import_rotation = %t
+
+  postgresql {
+    connection_url = "%s"
+  }
+}
+`, path, name, skipRotation, connURL)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_skipRotation_omitted(name, path, connURL string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+
+  postgresql {
+    connection_url = "%s"
+  }
+}
+`, path, name, connURL)
+}

@@ -12,6 +12,7 @@ import (
 
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -52,10 +53,25 @@ func awsAuthBackendClientResource() *schema.Resource {
 				Sensitive:   true,
 			},
 			consts.FieldSecretKey: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "AWS Secret key with permissions to query AWS APIs.",
-				Sensitive:   true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "AWS Secret key with permissions to query AWS APIs.",
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldSecretKeyWO},
+			},
+			consts.FieldSecretKeyWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				Description:   "Write-only AWS Secret key with permissions to query AWS APIs. This field is recommended over secret_key for enhanced security.",
+				ConflictsWith: []string{consts.FieldSecretKey},
+			},
+			consts.FieldSecretKeyWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only secret_key field. Increment this value to force update of the secret.",
+				RequiredWith: []string{consts.FieldSecretKeyWO},
 			},
 			consts.FieldEC2Endpoint: {
 				Type:        schema.TypeString,
@@ -184,10 +200,28 @@ func awsAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inter
 		consts.FieldMaxRetries:             maxRetries,
 	}
 
-	if d.HasChange(consts.FieldAccessKey) || d.HasChange(consts.FieldSecretKey) {
+	if d.HasChanges(consts.FieldAccessKey, consts.FieldSecretKey, consts.FieldSecretKeyWOVersion) {
 		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
+
+		// Always set access_key when credentials change (including empty to clear)
 		data[consts.FieldAccessKey] = d.Get(consts.FieldAccessKey).(string)
-		data[consts.FieldSecretKey] = d.Get(consts.FieldSecretKey).(string)
+
+		// Get secret_key from either legacy or write-only field
+		var secretKey string
+		if v, ok := d.GetOk(consts.FieldSecretKey); ok {
+			secretKey = v.(string)
+		} else if d.IsNewResource() || d.HasChange(consts.FieldSecretKeyWOVersion) {
+			p := cty.GetAttrPath(consts.FieldSecretKeyWO)
+			woVal, _ := d.GetRawConfigAt(p)
+			if !woVal.IsNull() {
+				secretKey = woVal.AsString()
+			}
+		}
+
+		// Only set secret_key if it has a value (don't send empty secret_key)
+		if secretKey != "" {
+			data[consts.FieldSecretKey] = secretKey
+		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion115) {

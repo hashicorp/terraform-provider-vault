@@ -406,6 +406,29 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 					"The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ. Supports the " +
 					"Y10K end date for IEEE 802.1AR-2018 standard devices, 9999-12-31T23:59:59Z.",
 			},
+			consts.FieldNotBeforeDuration: {
+				Type:         schema.TypeString,
+				Required:     false,
+				Optional:     true,
+				Description:  "Specifies the duration by which to backdate the NotBefore property.",
+				ForceNew:     true,
+				ValidateFunc: provider.ValidateDuration,
+			},
+			consts.FieldUsePSS: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Whether to use PSS signatures when using a RSA key-type issuer.",
+				ForceNew:    true,
+			},
+			consts.FieldKeyUsage: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Specify the allowed key usage constraint on issued certificates.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -438,6 +461,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		consts.FieldManagedKeyID,
 		consts.FieldSignatureBits,
 		consts.FieldNotAfter,
+		consts.FieldNotBeforeDuration,
 	}
 
 	rootCertBooleanAPIFields := []string{
@@ -454,6 +478,15 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 
 	// add multi-issuer write API fields if supported
 	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+
+	// Check if use_pss is supported (Vault 1.18.0+)
+	isPSSSupported := provider.IsAPISupported(meta, provider.VaultVersion118)
+	if isPSSSupported {
+		rootCertBooleanAPIFields = append(rootCertBooleanAPIFields, consts.FieldUsePSS)
+	}
+
+	// Check if key_usage is supported (Vault 1.19.2+ due to bug fix)
+	isKeyUsageSupported := provider.IsAPISupported(meta, provider.VaultVersion1192)
 
 	// Fields only used when we are generating a key
 	if !(rootType == keyTypeKMS || rootType == consts.FieldExisting) {
@@ -503,6 +536,14 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		m := util.ToStringArray(d.Get(k).([]interface{}))
 		if len(m) > 0 {
 			data[k] = strings.Join(m, ",")
+		}
+	}
+
+	// handle key_usage as string array (not comma-separated)
+	// only if Vault 1.19.2+ supports it (due to bug fix)
+	if isKeyUsageSupported {
+		if v, ok := d.GetOk(consts.FieldKeyUsage); ok {
+			data[consts.FieldKeyUsage] = expandStringSlice(v.([]interface{}))
 		}
 	}
 

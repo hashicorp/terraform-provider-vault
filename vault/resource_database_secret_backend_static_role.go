@@ -11,10 +11,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -37,6 +35,7 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendStaticRoleRead),
 		UpdateContext: databaseSecretBackendStaticRoleWrite,
 		DeleteContext: databaseSecretBackendStaticRoleDelete,
+		CustomizeDiff: validatePasswordFields,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -100,12 +99,27 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 				Optional:  true,
 				Sensitive: true,
 				Description: "The password corresponding to the username in the database. " +
-					"Required when using the Rootless Password Rotation workflow for static roles.",
+					"Required when using the Rootless Password Rotation workflow for static roles. " +
+					"Deprecated in favor of password_wo field introduced in Vault 1.19.",
+			},
+			consts.FieldPasswordWO: {
+				Type:      schema.TypeString,
+				Optional:  true,
+				WriteOnly: true,
+				Description: "The password corresponding to the username in the database. " +
+					"This is a write-only field. Requires Vault 1.19+. " +
+					"Deprecates 'self_managed_password' which was introduced in Vault 1.18.",
+			},
+			consts.FieldPasswordWOVersion: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The version of the password_wo field. Used for tracking changes to the write-only password field.",
 			},
 			consts.FieldSkipImportRotation: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Skip rotation of the password on import.",
+				Computed:    true,
+				Description: "Skip rotation of the password on import. When not set, inherits from connection's skip_static_role_import_rotation.",
 			},
 			consts.FieldCredentialType: {
 				Type:     schema.TypeString,
@@ -172,8 +186,25 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 		if v, ok := d.GetOk(consts.FieldSelfManagedPassword); ok && v != "" {
 			data[consts.FieldSelfManagedPassword] = v
 		}
-		if v, ok := d.Get(consts.FieldSkipImportRotation).(bool); ok {
-			data[consts.FieldSkipImportRotation] = v
+		// Only send skip_import_rotation if explicitly set in config
+		// Use GetRawConfig to distinguish between "not set" and "set to false"
+		skipImportAttr := d.GetRawConfig().GetAttr(consts.FieldSkipImportRotation)
+		if !skipImportAttr.IsNull() && skipImportAttr.IsKnown() {
+			data[consts.FieldSkipImportRotation] = skipImportAttr.True()
+		} else {
+			log.Printf("[DEBUG] skip_import_rotation not set in config, sending nil to Vault")
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		// Handle password write-only field for Vault 1.19+
+		// Send password on creation (d.IsNewResource()) OR when version changes
+		if d.IsNewResource() || d.HasChange(consts.FieldPasswordWOVersion) {
+			// Use GetRawConfig for write-only fields (same pattern as terraform_cloud_secret_backend)
+			pwWo := d.GetRawConfig().GetAttr(consts.FieldPasswordWO)
+			if pwWo.IsKnown() && !pwWo.IsNull() && strings.TrimSpace(pwWo.AsString()) != "" {
+				data[consts.FieldPassword] = pwWo.AsString()
+			}
 		}
 	}
 
@@ -245,10 +276,23 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
-		if err := d.Set(consts.FieldSkipImportRotation, role.Data[consts.FieldSkipImportRotation]); err != nil {
-			return diag.FromErr(err)
+		// Always read skip_import_rotation from Vault's response.
+		// When not set in config, Vault computes this value based on
+		// the connection's skip_static_role_import_rotation setting.
+		if v, ok := role.Data[consts.FieldSkipImportRotation]; ok && v != nil {
+			log.Printf("[DEBUG] Vault returned skip_import_rotation: %v (type: %T)", v, v)
+			if err := d.Set(consts.FieldSkipImportRotation, v); err != nil {
+				return diag.FromErr(err)
+			}
 		}
+		log.Printf("[DEBUG] Vault response does not contain skip_import_rotation")
 	}
+
+	// Note: password_wo_version is not explicitly set in Read function.
+	// It's a client-side tracking field that Terraform SDK manages automatically.
+	// This follows the pattern used by other resources with write-only version fields
+	// (gcp_secret_backend, terraform_cloud_secret_backend, kv_secret_v2).
+	// ensure password_wo_version is updated in state
 
 	for _, k := range staticRoleFields {
 		if v, ok := role.Data[k]; ok {
@@ -301,4 +345,17 @@ func databaseSecretBackendStaticRoleBackendFromPath(path string) (string, error)
 		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
 	}
 	return res[1], nil
+}
+
+func validatePasswordFields(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	// Validate that password_wo and self_managed_password are not both set
+	// Use GetRawConfig for write-only field password_wo
+	pwWo := d.GetRawConfig().GetAttr(consts.FieldPasswordWO)
+	hasPasswordWO := pwWo.IsKnown() && !pwWo.IsNull()
+	_, hasSelfManagedPassword := d.GetOk(consts.FieldSelfManagedPassword)
+
+	if hasPasswordWO && hasSelfManagedPassword {
+		return fmt.Errorf("password_wo and self_managed_password cannot be used together")
+	}
+	return nil
 }

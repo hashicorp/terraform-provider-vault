@@ -28,6 +28,8 @@ const (
 	testAccAWSSecretBackendRolePermissionsBoundaryArn_updated = "arn:aws:iam::123456789123:policy/boundary2"
 	testAccAWSSecretBackendRoleIamUserPath_basic              = "/path1/"
 	testAccAWSSecretBackendRoleIamUserPath_updated            = "/path2/"
+	testAccAWSSecretBackendRoleMfaSerialNumber_basic          = "arn:aws:iam::123456789123:mfa/device-name"
+	testAccAWSSecretBackendRoleMfaSerialNumber_updated        = "arn:aws:iam::123456789123:mfa/updated-name"
 )
 
 func TestAccAWSSecretBackendRole_basic(t *testing.T) {
@@ -90,6 +92,11 @@ func TestAccAWSSecretBackendRole_import(t *testing.T) {
 			},
 			{
 				ResourceName:      "vault_aws_secret_backend_role.test_iam_user_type_optional_attributes",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      "vault_aws_secret_backend_role.test_mfa_serial_number",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -170,6 +177,7 @@ func testAccAWSSecretBackendRoleCheckBasicAttributes(name, backend string) resou
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "user_path", testAccAWSSecretBackendRoleIamUserPath_basic),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "iam_tags.%", "1"),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "iam_tags.key1", "value1"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_mfa_serial_number", "mfa_serial_number", testAccAWSSecretBackendRoleMfaSerialNumber_basic),
 		// assume  role with session tags
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "name", fmt.Sprintf("%s-session-tags", name)),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "backend", backend),
@@ -217,6 +225,7 @@ func testAccAWSSecretBackendRoleCheckUpdatedAttributes(name, backend string) res
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "user_path", testAccAWSSecretBackendRoleIamUserPath_updated),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "iam_tags.%", "1"),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_iam_user_type_optional_attributes", "iam_tags.key2", "value2"),
+		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_mfa_serial_number", "mfa_serial_number", testAccAWSSecretBackendRoleMfaSerialNumber_updated),
 		// assume  role with session tags
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "name", fmt.Sprintf("%s-session-tags", name)),
 		resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_assumed_role_session_tags", "backend", backend),
@@ -317,6 +326,16 @@ resource "vault_aws_secret_backend_role" "test_assumed_role_session_tags" {
   }
 }
 `, name, testAccAWSSecretBackendRoleRoleArn_basic),
+
+		fmt.Sprintf(`
+resource "vault_aws_secret_backend_role" "test_mfa_serial_number" {
+  name = "%s-mfa-serial-number"
+  credential_type = "iam_user"
+  backend = vault_aws_secret_backend.test.path
+  policy_arns = ["%s"]
+  mfa_serial_number = "%s"
+}
+`, name, testAccAWSSecretBackendRolePolicyArn_basic, testAccAWSSecretBackendRoleMfaSerialNumber_basic),
 	}
 
 	return strings.Join(resources, "\n")
@@ -424,6 +443,16 @@ resource "vault_aws_secret_backend_role" "test_assumed_role_session_tags" {
   }
 }
 `, name, testAccAWSSecretBackendRoleRoleArn_basic),
+
+		fmt.Sprintf(`
+resource "vault_aws_secret_backend_role" "test_mfa_serial_number" {
+  name = "%s-mfa-serial-number"
+  credential_type = "iam_user"
+  backend = vault_aws_secret_backend.test.path
+  policy_arns = ["%s"]
+  mfa_serial_number = "%s"
+}
+`, name, testAccAWSSecretBackendRolePolicyArn_updated, testAccAWSSecretBackendRoleMfaSerialNumber_updated),
 	}
 	return strings.Join(resources, "\n")
 }

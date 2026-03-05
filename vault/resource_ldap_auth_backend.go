@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -34,6 +35,7 @@ var ldapAuthBackendFields = []string{
 	consts.FieldGroupFilter,
 	consts.FieldGroupDN,
 	consts.FieldGroupAttr,
+	consts.FieldDereferenceAliases,
 }
 
 var ldapAuthBackendBooleanFields = []string{
@@ -44,6 +46,7 @@ var ldapAuthBackendBooleanFields = []string{
 	consts.FieldDenyNullBind,
 	consts.FieldUsernameAsAlias,
 	consts.FieldUseTokenGroups,
+	consts.FieldAnonymousGroupSearch,
 }
 
 func ldapAuthBackendResource() *schema.Resource {
@@ -83,10 +86,25 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed: true,
 		},
 		consts.FieldBindPass: {
-			Type:      schema.TypeString,
-			Optional:  true,
-			Computed:  true,
-			Sensitive: true,
+			Type:          schema.TypeString,
+			Optional:      true,
+			Computed:      true,
+			Sensitive:     true,
+			ConflictsWith: []string{consts.FieldBindPassWO},
+		},
+		consts.FieldBindPassWO: {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Description:   "Write-only bind password to use for LDAP authentication.",
+			Sensitive:     true,
+			WriteOnly:     true,
+			ConflictsWith: []string{consts.FieldBindPass},
+		},
+		consts.FieldBindPassWOVersion: {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Description:  "Version counter for write-only bind password.",
+			RequiredWith: []string{consts.FieldBindPassWO},
 		},
 		consts.FieldCaseSensitiveNames: {
 			Type:     schema.TypeBool,
@@ -199,6 +217,31 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed: true,
 		},
 		consts.FieldTune: authMountTuneSchema(),
+		consts.FieldRequestTimeout: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Computed:    true,
+			Description: "The timeout(in sec) for requests to the LDAP server.",
+		},
+
+		consts.FieldDereferenceAliases: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "Specifies how aliases are dereferenced during LDAP searches. Valid values are 'never','searching','finding', and 'always'.",
+		},
+		consts.FieldEnableSamaccountnameLogin: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "Enables login using the sAMAccountName attribute.",
+		},
+		consts.FieldAnonymousGroupSearch: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "Allows anonymous group searches.",
+		},
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
@@ -220,8 +263,21 @@ func ldapAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
-		Schema:        fields,
+		CustomizeDiff: schema.CustomizeDiffFunc(func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+			// Handle deny_null_bind default behavior
+			rawConfig := diff.GetRawConfig()
+			configValue := rawConfig.GetAttr(consts.FieldDenyNullBind)
+			if configValue.IsNull() {
+				// Field not set in config, ensure it defaults to true
+				if err := diff.SetNew(consts.FieldDenyNullBind, true); err != nil {
+					return err
+				}
+			}
+
+			// Apply mount customization
+			return getMountCustomizeDiffFunc(consts.FieldPath)(ctx, diff, meta)
+		}),
+		Schema: fields,
 	}, true)
 
 	// add automated rotation fields to the resource
@@ -232,10 +288,6 @@ func ldapAuthBackendResource() *schema.Resource {
 
 func ldapAuthBackendConfigPath(path string) string {
 	return "auth/" + strings.Trim(path, "/") + "/config"
-}
-
-func ldapAuthBackendTunePath(path string) string {
-	return "auth/" + strings.Trim(path, "/") + "/tune"
 }
 
 func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -300,13 +352,31 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		}
 	}
 
+	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
+	if useAPIVer119 {
+		if v, ok := d.GetOk(consts.FieldEnableSamaccountnameLogin); ok {
+			data[consts.FieldEnableSamaccountnameLogin] = v
+		}
+	}
+
 	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer119Ent {
 		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
+	// Handle bindpass - check for regular field first, then write-only field
+	var bindpass string
 	if v, ok := d.GetOk(consts.FieldBindPass); ok {
-		data[consts.FieldBindPass] = v.(string)
+		bindpass = v.(string)
+	} else if d.IsNewResource() || d.HasChange(consts.FieldBindPassWOVersion) {
+		p := cty.GetAttrPath(consts.FieldBindPassWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			bindpass = woVal.AsString()
+		}
+	}
+	if bindpass != "" {
+		data[consts.FieldBindPass] = bindpass
 	}
 
 	if v, ok := d.GetOk(consts.FieldClientTLSCert); ok {
@@ -319,6 +389,9 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 
 	if v, ok := d.GetOk(consts.FieldConnectionTimeout); ok {
 		data[consts.FieldConnectionTimeout] = v
+	}
+	if v, ok := d.GetOk(consts.FieldRequestTimeout); ok {
+		data[consts.FieldRequestTimeout] = v
 	}
 
 	updateTokenFields(d, data, false)
@@ -369,7 +442,6 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	d.Set(consts.FieldAccessor, mount.Accessor)
 	d.Set(consts.FieldLocal, mount.Local)
 
-	tunePath := ldapAuthBackendTunePath(path)
 	path = ldapAuthBackendConfigPath(path)
 
 	log.Printf("[DEBUG] Reading LDAP auth backend config %q", path)
@@ -413,6 +485,12 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		}
 	}
 
+	useAPIVer119 := provider.IsAPISupported(meta, provider.VaultVersion119)
+	if useAPIVer119 {
+		if err := d.Set(consts.FieldEnableSamaccountnameLogin, resp.Data[consts.FieldEnableSamaccountnameLogin]); err != nil {
+			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldEnableSamaccountnameLogin, path, err)
+		}
+	}
 	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer119Ent {
 		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, d.Id()); err != nil {
@@ -425,10 +503,16 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldConnectionTimeout, path, err)
 		}
 	}
+	if v, ok := resp.Data[consts.FieldRequestTimeout]; ok {
+		if err := d.Set(consts.FieldRequestTimeout, v); err != nil {
+			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldRequestTimeout, path, err)
+		}
+	}
 
 	// Tune block support
-	log.Printf("[DEBUG] Reading ldap auth tune from %q", tunePath)
-	rawTune, err := authMountTuneGet(ctx, client, tunePath)
+	ldapAuthPath := "auth/" + d.Id()
+	log.Printf("[DEBUG] Reading ldap auth tune from %q", ldapAuthPath+"/tune")
+	rawTune, err := authMountTuneGet(ctx, client, ldapAuthPath)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -438,7 +522,7 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 	mergedTune := mergeAuthMethodTune(rawTune, input)
 	if err := d.Set(consts.FieldTune, mergedTune); err != nil {
-		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", tunePath, err)
+		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", ldapAuthPath+"/tune", err)
 		return diag.FromErr(err)
 	}
 

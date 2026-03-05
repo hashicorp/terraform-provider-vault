@@ -50,6 +50,8 @@ The following arguments are supported:
   can be used to fetch a token from this AppRole, after which the SecretID will
   expire. A value of zero will allow unlimited uses.
 
+  * `local_secret_ids` (bool: false) - If set, the secret IDs generated using this role will be cluster local. This can only be set during role creation and once set, it can't be reset later.
+
 * `secret_id_ttl` - (Optional) The number of seconds after which any SecretID
   expires.
 
@@ -94,6 +96,9 @@ These arguments are common across several Authentication Token resources since V
   `service` tokens). For token store roles, there are two additional possibilities:
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
+
+* `alias_metadata` - (Optional) The metadata to be tied to generated entity alias.
+This should be a list or map containing the metadata in key value pairs.
 
 ## Attributes Reference
 

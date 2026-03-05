@@ -86,6 +86,9 @@ These arguments are common across several Authentication Token resources since V
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
 
+* `alias_metadata` - (Optional) The metadata to be tied to generated entity alias.
+  This should be a list or map containing the metadata in key value pairs.
+
 For more details on the usage of each argument consult the [Vault SCEP API documentation](https://developer.hashicorp.com/vault/docs/auth/scep).
 
 ## Attribute Reference

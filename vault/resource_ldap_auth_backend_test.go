@@ -12,12 +12,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/hashicorp/vault/api"
-
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestLDAPAuthBackend_basic(t *testing.T) {
@@ -26,31 +27,83 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendDestroy,
+
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false", "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "true", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "false", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "false", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "false", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
+			{
+				Config: testLDAPAuthBackendConfig_defaults(path),
+				Check: func(s *terraform.State) error {
+					checks := []resource.TestCheckFunc{
+						testLDAPAuthBackendCheck_attrs(resourceName, path),
+						// Verify computed defaults - these fields should be set by Vault if not specified
+						resource.TestCheckResourceAttr(resourceName, "request_timeout", "90"),
+						resource.TestCheckResourceAttr(resourceName, "dereference_aliases", "never"),
+						resource.TestCheckResourceAttr(resourceName, "anonymous_group_search", "false"),
+					}
+
+					// Only check enable_samaccountname_login if Vault >= 1.19
+					if provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119) {
+						checks = append(checks, resource.TestCheckResourceAttr(resourceName, "enable_samaccountname_login", "false"))
+					}
+
+					return resource.ComposeTestCheckFunc(checks...)(s)
+				},
+			},
+			{
+				Config:      testLDAPAuthBackendConfig_params(path, -20, "never", true, true),
+				ExpectError: regexp.MustCompile("cannot provide negative value"),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_params(path, 20, "always", false, false),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_params(path, 45, "finding", false, true),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_params(path, 45, "always", true, false),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					if !meta.IsAPISupported(provider.VaultVersion121) {
+						return true, nil
+					}
+
+					return !meta.IsEnterpriseSupported(), nil
+				},
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", aliasMetadataConfig),
+				Check: resource.ComposeTestCheckFunc(
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "alias_metadata.foo", "bar"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount", "enable_samaccountname_login"),
 		},
 	})
 }
@@ -61,9 +114,10 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 
 	resourceName := "vault_ldap_auth_backend.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendDestroy,
+
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
@@ -86,7 +140,7 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass",
-				"client_tls_cert", "client_tls_key", "disable_remount"),
+				"client_tls_cert", "client_tls_key", "disable_remount", "enable_samaccountname_login"),
 		},
 	})
 }
@@ -100,23 +154,23 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					testLDAPAuthBackendCheck_attrs(resourceName, path),
 				),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true"),
+				Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true", ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
 					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount", "enable_samaccountname_login"),
 		},
 	})
 }
@@ -131,7 +185,7 @@ func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
 		},
 		Steps: []resource.TestStep{
@@ -154,6 +208,62 @@ func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
 	})
 }
 
+func TestLDAPAuthBackend_bindpassWO(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-ldap-bindpass-wo")
+
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_bindpassWO(path, "supersecurepassword", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "1"),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_bindpassWO(path, "updatedsecurepassword", 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "2"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldBindPassWO,
+				consts.FieldBindPassWOVersion,
+				consts.FieldDisableRemount,
+			),
+		},
+	})
+}
+
+func TestLDAPAuthBackend_bindpassConflict(t *testing.T) {
+	t.Parallel()
+
+	path := acctest.RandomWithPrefix("tf-test-ldap-bindpass-conflict")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testLDAPAuthBackendConfig_bindpassConflict(path),
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+				Destroy:     false,
+			},
+		},
+	})
+}
+
 func TestLDAPAuthBackend_tuning(t *testing.T) {
 	t.Parallel()
 	testutil.SkipTestAcc(t)
@@ -162,7 +272,7 @@ func TestLDAPAuthBackend_tuning(t *testing.T) {
 	resourceName := "vault_ldap_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -221,7 +331,7 @@ func TestLDAPAuthBackend_importTune(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -241,7 +351,7 @@ func TestLDAPAuthBackend_tune_conflicts(t *testing.T) {
 
 	path := acctest.RandomWithPrefix("ldap")
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
@@ -304,6 +414,48 @@ func TestLDAPAuthBackend_tune_conflicts(t *testing.T) {
 				Destroy:     false,
 				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
 			},
+		},
+	})
+}
+
+func TestLDAPAuthBackend_denyNullBindDefault(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-ldap-deny-null-bind")
+
+	resourceName := "vault_ldap_auth_backend.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_denyNullBindNotSet(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify deny_null_bind defaults to true when not explicitly set
+					resource.TestCheckResourceAttr(resourceName, "deny_null_bind", "true"),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_denyNullBindExplicitFalse(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify deny_null_bind can be explicitly set to false
+					resource.TestCheckResourceAttr(resourceName, "deny_null_bind", "false"),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_denyNullBindNotSet(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify deny_null_bind returns to default true when removed from config
+					resource.TestCheckResourceAttr(resourceName, "deny_null_bind", "true"),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
 		},
 	})
 }
@@ -402,31 +554,39 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 		}
 
 		attrs := map[string]string{
-			"url":                  "url",
-			"starttls":             "starttls",
-			"case_sensitive_names": "case_sensitive_names",
-			"tls_min_version":      "tls_min_version",
-			"tls_max_version":      "tls_max_version",
-			"insecure_tls":         "insecure_tls",
-			"certificate":          "certificate",
-			"binddn":               "binddn",
-			"userdn":               "userdn",
-			"userattr":             "userattr",
-			"userfilter":           "userfilter",
-			"discoverdn":           "discoverdn",
-			"deny_null_bind":       "deny_null_bind",
-			"upndomain":            "upndomain",
-			"groupfilter":          "groupfilter",
-			"username_as_alias":    "username_as_alias",
-			"groupdn":              "groupdn",
-			"groupattr":            "groupattr",
-			"use_token_groups":     "use_token_groups",
-			"connection_timeout":   "connection_timeout",
+			"url":                    "url",
+			"starttls":               "starttls",
+			"case_sensitive_names":   "case_sensitive_names",
+			"tls_min_version":        "tls_min_version",
+			"tls_max_version":        "tls_max_version",
+			"insecure_tls":           "insecure_tls",
+			"certificate":            "certificate",
+			"binddn":                 "binddn",
+			"userdn":                 "userdn",
+			"userattr":               "userattr",
+			"userfilter":             "userfilter",
+			"discoverdn":             "discoverdn",
+			"deny_null_bind":         "deny_null_bind",
+			"upndomain":              "upndomain",
+			"groupfilter":            "groupfilter",
+			"username_as_alias":      "username_as_alias",
+			"groupdn":                "groupdn",
+			"groupattr":              "groupattr",
+			"use_token_groups":       "use_token_groups",
+			"connection_timeout":     "connection_timeout",
+			"request_timeout":        "request_timeout",
+			"dereference_aliases":    "dereference_aliases",
+			"anonymous_group_search": "anonymous_group_search",
 		}
 
 		isVaultVersion111 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion111)
 		if isVaultVersion111 {
 			attrs["max_page_size"] = "max_page_size"
+		}
+
+		isVaultVersion119 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119)
+		if isVaultVersion119 {
+			attrs["enable_samaccountname_login"] = "enable_samaccountname_login"
 		}
 
 		if provider.IsEnterpriseSupported(testProvider.Meta()) && provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119) {
@@ -459,7 +619,7 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 	}
 }
 
-func testLDAPAuthBackendConfig_basic(path, use_token_groups string, local string) string {
+func testLDAPAuthBackendConfig_basic(path, use_token_groups, local, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
     path                   = "%s"
@@ -479,8 +639,53 @@ resource "vault_ldap_auth_backend" "test" {
     username_as_alias      = true
     use_token_groups       = %s
     connection_timeout     = 30
+	%s
 }
-`, path, local, use_token_groups)
+`, path, local, use_token_groups, extraConfig)
+}
+
+func testLDAPAuthBackendConfig_params(path string, request_timeout int, dereference_aliases string, enable_samaccountname_login bool, anonymous_group_search bool) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+	path                 = "%s"
+   	url                  = "ldaps://ldap.example.com"
+   	userdn               = "ou=Users,dc=example,dc=com"
+   	groupdn              = "ou=Groups,dc=example,dc=com"
+   	binddn               = "cn=admin,dc=example,dc=com"
+	bindpass             = "your-ldap-password"
+  	userattr             = "uid"
+	groupattr            = "cn"
+	insecure_tls          = false
+	starttls              = false
+	discoverdn            = true
+	case_sensitive_names  = false
+	request_timeout               = %d
+	dereference_aliases           = "%s"
+	enable_samaccountname_login   = %t
+	anonymous_group_search        = %t
+}
+`, path, request_timeout, dereference_aliases, enable_samaccountname_login, anonymous_group_search)
+}
+
+func testLDAPAuthBackendConfig_defaults(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+	path                 = "%s"
+   	url                  = "ldaps://ldap.example.com"
+   	userdn               = "ou=Users,dc=example,dc=com"
+   	groupdn              = "ou=Groups,dc=example,dc=com"
+   	binddn               = "cn=admin,dc=example,dc=com"
+	bindpass             = "your-ldap-password"
+  	userattr             = "uid"
+	groupattr            = "cn"
+	insecure_tls         = false
+	starttls             = false
+	discoverdn           = true
+	case_sensitive_names = false
+	# request_timeout, dereference_aliases, enable_samaccountname_login, and anonymous_group_search
+	# are intentionally omitted to test that Vault returns default/computed values
+}
+`, path)
 }
 
 func testLDAPAuthBackendConfig_tls(path, use_token_groups string, local string) string {
@@ -576,6 +781,10 @@ MvQzNd87hRypUZ9Hyx2C9RljNDHHjgwYwWv9JOT0xEOS4ZAaPfvTf20=
 -----END RSA PRIVATE KEY-----
 EOT
     use_token_groups = %s
+	request_timeout        = 60
+    dereference_aliases    = "always"
+    enable_samaccountname_login = true
+    anonymous_group_search = false
 }
 `, path, local, use_token_groups)
 }
@@ -631,6 +840,59 @@ resource "vault_ldap_auth_backend" "test" {
 		passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To"]
 		allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To"]
 	}
+}
+`, path)
+}
+
+func testLDAPAuthBackendConfig_denyNullBindNotSet(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path        = "%s"
+    url         = "ldaps://example.org"
+    binddn      = "cn=example.com"
+    bindpass    = "supersecurepassword"
+    description = "Test LDAP auth backend for deny_null_bind behavior"
+    # deny_null_bind is intentionally not set to test default behavior
+}
+`, path)
+}
+
+func testLDAPAuthBackendConfig_denyNullBindExplicitFalse(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path            = "%s"
+    url             = "ldaps://example.org"
+    binddn          = "cn=example.com"
+    bindpass        = "supersecurepassword"
+    description     = "Test LDAP auth backend for deny_null_bind behavior"
+    deny_null_bind  = false
+}
+`, path)
+}
+
+func testLDAPAuthBackendConfig_bindpassWO(path, bindpass string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path               = "%s"
+    url                = "ldaps://example.org"
+    binddn             = "cn=example.com"
+    bindpass_wo        = "%s"
+    bindpass_wo_version = %d
+    description        = "Test LDAP auth backend with write-only bindpass"
+}
+`, path, bindpass, version)
+}
+
+func testLDAPAuthBackendConfig_bindpassConflict(path string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path               = "%s"
+    url                = "ldaps://example.org"
+    binddn             = "cn=example.com"
+    bindpass           = "supersecurepassword"
+    bindpass_wo        = "anothersecurepassword"
+    bindpass_wo_version = 1
+    description        = "Test LDAP auth backend with conflicting bindpass"
 }
 `, path)
 }

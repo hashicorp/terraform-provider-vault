@@ -156,7 +156,7 @@ type dbEngine struct {
 // otherwise return the default plugin name.
 // Return an error if no plugin name can be found.
 func (i *dbEngine) GetPluginName(d *schema.ResourceData, prefix string) (string, error) {
-	if val, ok := d.GetOk(prefix + "plugin_name"); ok {
+	if val, ok := d.GetOk(prefix + consts.FieldPluginName); ok {
 		return val.(string), nil
 	}
 
@@ -220,54 +220,54 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Description: "Connection parameters for the elasticsearch-database-plugin.",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"url": {
+					consts.FieldURL: {
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "The URL for Elasticsearch's API",
 					},
-					"username": {
+					consts.FieldUsername: {
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "The username to be used in the connection URL",
 					},
-					"password": {
+					consts.FieldPassword: {
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "The password to be used in the connection URL",
 						Sensitive:   true,
 					},
-					"ca_cert": {
+					consts.FieldCACert: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity",
 					},
-					"ca_path": {
+					consts.FieldCAPath: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity",
 					},
-					"client_cert": {
+					consts.FieldClientCert: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to the certificate for the Elasticsearch client to present for communication",
 					},
-					"client_key": {
+					consts.FieldClientKey: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to the key for the Elasticsearch client to use for communication",
 					},
-					"tls_server_name": {
+					consts.FieldTLSServerName: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "This, if set, is used to set the SNI host when connecting via TLS",
 					},
-					"insecure": {
+					consts.FieldInsecureTLS: {
 						Type:        schema.TypeBool,
 						Optional:    true,
 						Default:     false,
 						Description: "Whether to disable certificate verification",
 					},
-					"username_template": {
+					consts.FieldUsernameTemplate: {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "Template describing how dynamic usernames are generated.",
@@ -320,6 +320,32 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Optional:    true,
 						Description: "Whether to skip verification of the server certificate when using TLS.",
 						Default:     false,
+					},
+					"tls_server_name": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "SNI host for TLS connections.",
+					},
+					"local_datacenter": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Cassandra local datacenter name.",
+					},
+					"socket_keep_alive": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Enable TCP keepalive for Cassandra connections.",
+						Default:     "0",
+					},
+					"consistency": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Cassandra consistency level.",
+					},
+					"username_template": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Template for dynamic Cassandra usernames.",
 					},
 					"pem_bundle": {
 						Type:        schema.TypeString,
@@ -486,12 +512,10 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			ConflictsWith: util.CalculateConflictsWith(dbEngineInfluxDB.Name(), dbEngineTypes),
 		},
 		dbEngineMongoDB.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the mongodb-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the mongodb-database-plugin plugin.",
+			Elem:          mongodbConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDB.Name(), dbEngineTypes),
 		},
@@ -517,6 +541,11 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Required:    true,
 						Description: "The Project ID the Database User should be created within.",
 					},
+					"username_template": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Template describing how dynamic usernames are generated.",
+					},
 				},
 			},
 			MaxItems:      1,
@@ -527,9 +556,8 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Optional:    true,
 			Description: "Connection parameters for the hana-database-plugin plugin.",
 			Elem: connectionStringResource(&connectionStringConfig{
-				excludeUsernameTemplate: true,
-				includeDisableEscaping:  true,
-				includeUserPass:         true,
+				includeDisableEscaping: true,
+				includeUserPass:        true,
 			}),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineHana.Name(), dbEngineTypes),
@@ -706,7 +734,7 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
 	s := setCommonDatabaseSchema(getDatabaseSchema(schema.TypeList))
-	s["backend"] = &schema.Schema{
+	s[consts.FieldBackend] = &schema.Schema{
 		Type:        schema.TypeString,
 		Required:    true,
 		Description: "Unique name of the Vault mount to configure.",
@@ -716,12 +744,31 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			return strings.Trim(v.(string), "/")
 		},
 	}
+	s[consts.FieldPluginVersion] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "Specifies the semantic version of the plugin to use for this connection",
+	}
+
+	s[consts.FieldPasswordPolicy] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The name of the password policy to use when generating passwords for this database. If not specified, this will use a default policy defined as: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.",
+	}
+
+	s[consts.FieldSkipStaticRoleImportRotation] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Computed:    true,
+		Description: "Specifies if a given static account's password should be rotated on creation of the static roles associated with this database config. This is can be overridden at the role-level by the static role's skip_import_rotation field. The default is false",
+	}
 
 	return &schema.Resource{
 		CreateContext: databaseSecretBackendConnectionCreateOrUpdate,
 		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendConnectionRead),
 		UpdateContext: databaseSecretBackendConnectionCreateOrUpdate,
 		DeleteContext: databaseSecretBackendConnectionDelete,
+		CustomizeDiff: validateDatabaseConnectionConfig,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -881,6 +928,32 @@ func postgresConnectionStringResource() *schema.Resource {
 	return r
 }
 
+func mongodbConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass: true,
+	})
+	r.Schema["write_concern"] = &schema.Schema{
+		Type:         schema.TypeString,
+		Optional:     true,
+		Description:  "Specifies the MongoDB write concern for Vault management operations.",
+		StateFunc:    NormalizeDataJSONFunc(dbEngineMongoDB.Name()),
+		ValidateFunc: ValidateDataJSONFunc(dbEngineMongoDB.Name()),
+	}
+	r.Schema["tls_certificate_key"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 certificate and private key bundle for connecting to the database. Must be PEM encoded.",
+		Sensitive:   true,
+	}
+	r.Schema["tls_ca"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.",
+	}
+
+	return r
+}
+
 func mysqlConnectionStringResource() *schema.Resource {
 	r := connectionStringResource(&connectionStringConfig{
 		includeUserPass: true,
@@ -930,7 +1003,11 @@ func oracleConnectionStringResource() *schema.Resource {
 		Description: "Set to true to disconnect any open sessions prior to running the revocation statements.",
 		Default:     true,
 	}
-
+	r.Schema["self_managed"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "If set, allows onboarding static roles with a rootless connection configuration.",
+	}
 	return r
 }
 
@@ -957,13 +1034,13 @@ func getDBEngine(d *schema.ResourceData) (*dbEngine, error) {
 }
 
 func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) {
-	pluginName, ok := r.Data["plugin_name"]
+	pluginName, ok := r.Data[consts.FieldPluginName]
 	if !ok {
-		return nil, fmt.Errorf(`invalid response data, missing "plugin_name"`)
+		return nil, fmt.Errorf(`invalid response data, missing %q`, consts.FieldPluginName)
 	}
 
 	if pluginName == "" {
-		return nil, fmt.Errorf(`invalid response data, "plugin_name" is empty`)
+		return nil, fmt.Errorf(`invalid response data, %q is empty`, consts.FieldPluginName)
 	}
 
 	var last int
@@ -996,16 +1073,22 @@ func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) 
 	return nil, fmt.Errorf("no supported database engines found for plugin %q", pluginName)
 }
 
-func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData, meta interface{}) (map[string]interface{}, error) {
+func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData, meta interface{}, unifiedSchema bool) (map[string]interface{}, error) {
 	prefix := engine.ResourcePrefix(idx)
 	data := map[string]interface{}{}
 
-	pluginName, err := engine.GetPluginName(d, prefix)
+	var pluginPrefix string
+	if unifiedSchema {
+		pluginPrefix = prefix
+	} else {
+		pluginPrefix = ""
+	}
+	pluginName, err := engine.GetPluginName(d, pluginPrefix)
 	if err != nil {
 		return nil, err
 	}
 
-	data["plugin_name"] = pluginName
+	data[consts.FieldPluginName] = pluginName
 
 	switch engine {
 	case dbEngineCassandra:
@@ -1017,7 +1100,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineHana:
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	case dbEngineMongoDB:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setMongoDBDatabaseConnectionData(d, prefix, data)
 	case dbEngineMongoDBAtlas:
 		setMongoDBAtlasDatabaseConnectionData(d, prefix, data)
 	case dbEngineMSSQL:
@@ -1061,6 +1144,9 @@ func setMongoDBAtlasDatabaseConnectionData(d *schema.ResourceData, prefix string
 	if v, ok := d.GetOk(prefix + "project_id"); ok {
 		data["project_id"] = v.(string)
 	}
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
+	}
 }
 
 func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
@@ -1095,6 +1181,23 @@ func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOkExists("cassandra.0.insecure_tls"); ok {
 		data["insecure_tls"] = v.(bool)
 	}
+
+	if v, ok := d.GetOk(prefix + "tls_server_name"); ok {
+		data["tls_server_name"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "local_datacenter"); ok {
+		data["local_datacenter"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "socket_keep_alive"); ok {
+		data["socket_keep_alive"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "consistency"); ok {
+		data["consistency"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
+	}
+
 	if v, ok := d.GetOkExists("cassandra.0.pem_bundle"); ok {
 		data["pem_bundle"] = v.(string)
 	}
@@ -1237,6 +1340,28 @@ func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData,
 	details := resp.Data["connection_details"].(map[string]interface{})
 	if v, ok := details["disable_escaping"]; ok {
 		result["disable_escaping"] = v.(bool)
+	}
+
+	return result
+}
+
+func getMongoDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return result
+	}
+
+	// Read from Vault response
+	if v, ok := data["write_concern"]; ok {
+		result["write_concern"] = v.(string)
+	}
+	if v, ok := data["tls_ca"]; ok {
+		result["tls_ca"] = v.(string)
+	}
+	if v, ok := data["tls_certificate_key"]; ok {
+		result["tls_certificate_key"] = v.(string)
 	}
 
 	return result
@@ -1553,7 +1678,7 @@ func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix
 	return result
 }
 
-func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret, meta interface{}) map[string]interface{} {
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
 	if !ok {
@@ -1561,12 +1686,19 @@ func getOracleConnectionDetailsFromResponse(d *schema.ResourceData, prefix strin
 	}
 
 	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+
 	if v, ok := data["split_statements"]; ok {
 		result["split_statements"] = v.(bool)
 	}
 
 	if v, ok := data["disconnect_sessions"]; ok {
 		result["disconnect_sessions"] = v.(bool)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := data["self_managed"]; ok {
+			result["self_managed"] = v.(bool)
+		}
 	}
 
 	return result
@@ -1616,6 +1748,19 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
 	setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	setCloudDatabaseConnectionData(d, prefix, data, meta)
+	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
+		data["tls_certificate_key"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
+		data["tls_ca"] = v.(string)
+	}
+}
+
+func setMongoDBDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+	if v, ok := d.GetOk(prefix + "write_concern"); ok {
+		data["write_concern"] = v.(string)
+	}
 	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		data["tls_certificate_key"] = v.(string)
 	}
@@ -1828,6 +1973,9 @@ func setOracleDatabaseConnectionData(d *schema.ResourceData, prefix string, data
 	if v, ok := d.GetOkExists(prefix + "disconnect_sessions"); ok {
 		data["disconnect_sessions"] = v.(bool)
 	}
+	if v, ok := d.GetOkExists(prefix + "self_managed"); ok {
+		data["self_managed"] = v.(bool)
+	}
 }
 
 func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string, data map[string]interface{}) {
@@ -1921,7 +2069,7 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 	}
 
 	path := databaseSecretBackendConnectionPath(
-		d.Get("backend").(string), d.Get("name").(string))
+		d.Get(consts.FieldBackend).(string), d.Get(consts.FieldName).(string))
 	if err := writeDatabaseSecretConfig(ctx, d, client, engine, 0, false, path, meta); err != nil {
 		return diag.FromErr(err)
 	}
@@ -1933,7 +2081,7 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 }
 
 func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, client *api.Client, engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{}) error {
-	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta)
+	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta, unifiedSchema)
 	if err != nil {
 		return err
 	}
@@ -1945,23 +2093,43 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 		prefix = engine.ResourcePrefix(idx)
 	}
 
-	if v, ok := d.GetOkExists(prefix + "verify_connection"); ok {
-		data["verify_connection"] = v.(bool)
+	// Allow plugin_version/password_policy to be defined either at the
+	// top-level resource or in the engine-specific nested block (prefix).
+	if v, ok := d.GetOk(prefix + consts.FieldPluginVersion); ok {
+		data[consts.FieldPluginVersion] = v.(string)
+	} else if v, ok := d.GetOk(consts.FieldPluginVersion); ok {
+		data[consts.FieldPluginVersion] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + consts.FieldPasswordPolicy); ok {
+		data[consts.FieldPasswordPolicy] = v.(string)
+	} else if v, ok := d.GetOk(consts.FieldPasswordPolicy); ok {
+		data[consts.FieldPasswordPolicy] = v.(string)
+	}
+	// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOkExists(prefix + consts.FieldSkipStaticRoleImportRotation); ok {
+			data[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
+		}
 	}
 
-	if v, ok := d.GetOkExists(prefix + "allowed_roles"); ok {
+	if v, ok := d.GetOkExists(prefix + consts.FieldVerifyConnection); ok {
+		data[consts.FieldVerifyConnection] = v.(bool)
+	}
+
+	if v, ok := d.GetOkExists(prefix + consts.FieldAllowedRoles); ok {
 		var roles []string
 		for _, role := range v.([]interface{}) {
 			roles = append(roles, role.(string))
 		}
-		data["allowed_roles"] = strings.Join(roles, ",")
+		data[consts.FieldAllowedRoles] = strings.Join(roles, ",")
 	}
 
-	if v, ok := d.GetOk("root_rotation_statements"); ok {
-		data["root_rotation_statements"] = v
+	if v, ok := d.GetOk(consts.FieldRootRotationStatements); ok {
+		data[consts.FieldRootRotationStatements] = v
 	}
 
-	if m, ok := d.GetOkExists(prefix + "data"); ok {
+	log.Printf("[DEBUG] database config payload : %+v", data)
+	if m, ok := d.GetOkExists(prefix + consts.FieldData); ok {
 		for k, v := range m.(map[string]interface{}) {
 			// Vault does not return the password in the API. If the root credentials have been rotated, sending
 			// the old password in the update request would break the connection config. Thus we only send it,
@@ -2070,7 +2238,7 @@ func databaseSecretBackendConnectionRead(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set("backend", backend); err != nil {
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -2085,7 +2253,7 @@ func databaseSecretBackendConnectionRead(ctx context.Context, d *schema.Resource
 
 func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngine, idx int, unifiedSchema bool, name string, meta interface{}) map[string]interface{} {
 	var roles []string
-	for _, role := range resp.Data["allowed_roles"].([]interface{}) {
+	for _, role := range resp.Data[consts.FieldAllowedRoles].([]interface{}) {
 		roles = append(roles, role.(string))
 	}
 
@@ -2095,11 +2263,12 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 	}
 
 	result := map[string]interface{}{
-		"name":              name,
-		"allowed_roles":     roles,
-		"data":              d.Get(prefix + "data"),
-		"verify_connection": d.Get(prefix + "verify_connection"),
-		"plugin_name":       resp.Data["plugin_name"],
+		consts.FieldName:             name,
+		consts.FieldAllowedRoles:     roles,
+		consts.FieldData:             d.Get(prefix + consts.FieldData),
+		consts.FieldVerifyConnection: d.Get(prefix + consts.FieldVerifyConnection),
+		consts.FieldPluginName:       resp.Data[consts.FieldPluginName],
+		consts.FieldPasswordPolicy:   resp.Data[consts.FieldPasswordPolicy],
 	}
 
 	//"root_rotation_statements": resp.Data["root_credentials_rotate_statements"],
@@ -2109,7 +2278,20 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 			rootRotationStmts = append(rootRotationStmts, s.(string))
 		}
 	}
-	result["root_rotation_statements"] = rootRotationStmts
+
+	if pv, ok := resp.Data[consts.FieldPluginVersion]; ok && pv != nil {
+		result[consts.FieldPluginVersion] = fmt.Sprintf("%v", pv)
+	}
+
+	// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
+	// Note: For Vault < 1.19 or non-Enterprise, the field is not supported and not set
+	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := resp.Data[consts.FieldSkipStaticRoleImportRotation]; ok && v != nil {
+			result[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
+		}
+	}
+
+	result[consts.FieldRootRotationStatements] = rootRotationStmts
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		automatedrotationutil.GetAutomatedRotationFieldsFromResponse(resp, result)
@@ -2138,7 +2320,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineHana:
 		result = getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
 	case dbEngineMongoDB:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getMongoDBConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineMongoDBAtlas:
 		result = getConnectionDetailsMongoDBAtlas(d, prefix, resp)
 	case dbEngineMSSQL:
@@ -2156,7 +2338,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineMySQLLegacy:
 		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineOracle:
-		result = getOracleConnectionDetailsFromResponse(d, prefix, resp)
+		result = getOracleConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEnginePostgres:
 		result = getPostgresConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineElasticSearch:
@@ -2207,6 +2389,21 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 		if v, ok := data["insecure_tls"]; ok {
 			result["insecure_tls"] = v.(bool)
 		}
+		if v, ok := data["tls_server_name"]; ok {
+			result["tls_server_name"] = v.(string)
+		}
+		if v, ok := data["local_datacenter"]; ok {
+			result["local_datacenter"] = v.(string)
+		}
+		if v, ok := data["socket_keep_alive"]; ok {
+			result["socket_keep_alive"] = v.(string)
+		}
+		if v, ok := data["consistency"]; ok {
+			result["consistency"] = v.(string)
+		}
+		if v, ok := data["username_template"]; ok {
+			result["username_template"] = v.(string)
+		}
 		if v, ok := data["pem_bundle"]; ok {
 			result["pem_bundle"] = v.(string)
 		} else if v, ok := d.GetOk(prefix + "pem_bundle"); ok {
@@ -2248,6 +2445,9 @@ func getConnectionDetailsMongoDBAtlas(d *schema.ResourceData, prefix string, res
 		if data, ok := details.(map[string]interface{}); ok {
 			for _, k := range []string{"public_key", "project_id"} {
 				result[k] = data[k]
+			}
+			if v, ok := data["username_template"]; ok {
+				result["username_template"] = v.(string)
 			}
 		}
 	}
@@ -2325,4 +2525,55 @@ func databaseEngineNameAndIndexFromPrefix(prefix string) (string, string, error)
 		return "", "", fmt.Errorf("unexpected number of matches (%d) for name", len(res))
 	}
 	return res[1], res[2], nil
+}
+
+func validateDatabaseConnectionConfig(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	// Validate Oracle self_managed configuration
+	oracleConfig, ok := d.GetOk(dbEngineOracle.name)
+	if !ok {
+		return nil
+	}
+
+	oracleList := oracleConfig.([]interface{})
+	if len(oracleList) == 0 || oracleList[0] == nil {
+		return nil
+	}
+
+	config := oracleList[0].(map[string]interface{})
+	selfManaged, ok := config["self_managed"].(bool)
+	if !ok || !selfManaged {
+		return nil
+	}
+
+	// Check for username
+	hasUsername := false
+	if username, ok := config[consts.FieldUsername].(string); ok && username != "" {
+		hasUsername = true
+	}
+
+	// Check for password
+	hasPassword := false
+	if password, ok := config[consts.FieldPassword].(string); ok && password != "" {
+		hasPassword = true
+	}
+
+	// Check password_wo using GetRawConfig
+	hasPasswordWO := false
+	rawConfig := d.GetRawConfig()
+	if !rawConfig.IsNull() {
+		if oracleAttr := rawConfig.GetAttr(dbEngineOracle.name); !oracleAttr.IsNull() && oracleAttr.LengthInt() > 0 {
+			if firstElement := oracleAttr.Index(cty.NumberIntVal(0)); !firstElement.IsNull() {
+				pwWoAttr := firstElement.GetAttr(consts.FieldPasswordWO)
+				if pwWoAttr.IsKnown() && !pwWoAttr.IsNull() && strings.TrimSpace(pwWoAttr.AsString()) != "" {
+					hasPasswordWO = true
+				}
+			}
+		}
+	}
+
+	if hasUsername || hasPassword || hasPasswordWO {
+		return fmt.Errorf("cannot use both self-managed and vault-managed workflows. Either use self_managed or username/password")
+	}
+
+	return nil
 }

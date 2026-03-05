@@ -53,7 +53,7 @@ The following arguments are supported:
 
 * `max_path_length` - (Optional) The maximum path length to encode in the generated certificate
 
-* `key_usage` - (Optional) Specify the key usages to be added to the existing set of key usages ("CRL", "CertSign") on the generated certificate.
+* `key_usage` - (Optional) Specify the key usages to be added to the existing set of key usages ("CRL", "CertSign") on the generated certificate. Requires Vault 1.19.2+.
 
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
 

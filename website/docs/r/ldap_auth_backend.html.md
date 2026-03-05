@@ -24,6 +24,10 @@ resource "vault_ldap_auth_backend" "ldap" {
     groupfilter       = "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
     rotation_schedule = "0 * * * SAT"
     rotation_window   = 3600
+    request_timeout               = 30
+    dereference_aliases           = "always"
+    enable_samaccountname_login   = false
+    anonymous_group_search        = false
 }
 ```
 
@@ -55,7 +59,11 @@ The following arguments are supported:
 
 * `binddn` - (Optional) DN of object to bind when performing user search
 
-* `bindpass` - (Optional) Password to use with `binddn` when performing user search
+* `bindpass` - (Optional) Password to use with `binddn` when performing user search. Conflicts with `bindpass_wo`.
+
+* `bindpass_wo_version` - (Optional) Version counter for write-only bind password.
+  Required when using `bindpass_wo`. For more information about write-only attributes, see 
+  [using write-only attributes](/docs/providers/vault/guides/using_write_only_attributes).
 
 * `userdn` - (Optional) Base DN under which to perform user search
 
@@ -138,6 +146,14 @@ The `tune` block is used to tune the auth backend:
 
 These arguments are common across several Authentication Token resources since Vault 1.2.
 
+* `request_timeout` - (Optional) Timeout, in seconds, for the connection when making requests against the server before returning back an error.
+
+* `dereference_aliases` - (Optional) When aliases should be dereferenced on search operations. Accepted values are 'never', 'finding', 'searching', 'always'. Defaults to 'never'.
+
+* `enable_samaccountname_login` - (Optional) Lets Active Directory LDAP users log in using sAMAccountName or userPrincipalName when the upndomain parameter is set. Requires Vault 1.19.0+.
+
+* `anonymous_group_search` - (Optional) Use anonymous binds when performing LDAP group searches (note: even when true, the initial credentials will still be used for the initial connection test).
+
 * `token_ttl` - (Optional) The incremental lifetime for generated tokens in number of seconds.
   Its current value will be referenced at renewal time.
 
@@ -173,12 +189,22 @@ These arguments are common across several Authentication Token resources since V
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
 
+* `alias_metadata` - (Optional) The metadata to be tied to generated entity alias.
+  This should be a list or map containing the metadata in key value pairs.
+
 For more details on the usage of each argument consult the [Vault LDAP API documentation](https://www.vaultproject.io/api-docs/auth/ldap).
 
 ~> **Important** Because Vault does not support reading the configured
 credentials back from the API, Terraform cannot detect and correct drift
 on `bindpass`. Changing the values, however, _will_ overwrite the
 previously stored values.
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `bindpass_wo` - (Optional) Write-only bind password to use for LDAP authentication. Can be updated. Conflicts with `bindpass`.
+  **Note**: This property is write-only and will not be read from the API.
 
 ## Attributes Reference
 

@@ -12,6 +12,8 @@ Creates an Encryption Keyring on a Transit Secret Backend for Vault.
 
 ## Example Usage
 
+### Basic Example
+
 ```hcl
 resource "vault_mount" "transit" {
   path                      = "transit"
@@ -24,6 +26,49 @@ resource "vault_mount" "transit" {
 resource "vault_transit_secret_backend_key" "key" {
   backend = vault_mount.transit.path
   name    = "my_key"
+}
+```
+
+### Example with Key Derivation and Context
+
+```hcl
+resource "vault_mount" "transit" {
+  path = "transit"
+  type = "transit"
+}
+
+resource "vault_transit_secret_backend_key" "derived_key" {
+  backend               = vault_mount.transit.path
+  name                  = "derived_key"
+  derived               = true
+  convergent_encryption = true
+  context               = "dGVzdGNvbnRleHQ="  # base64 encoded "testcontext"
+  deletion_allowed      = true
+}
+```
+
+### Example with Managed Key
+
+```hcl
+resource "vault_mount" "transit" {
+  path = "transit"
+  type = "transit"
+}
+
+resource "vault_transit_secret_backend_key" "managed_key_by_name" {
+  backend          = vault_mount.transit.path
+  name             = "my_managed_key"
+  type             = "managed_key"
+  managed_key_name = "my_aws_kms_key"
+  deletion_allowed = true
+}
+
+resource "vault_transit_secret_backend_key" "managed_key_by_id" {
+  backend        = vault_mount.transit.path
+  name           = "my_managed_key_by_id"
+  type           = "managed_key"
+  managed_key_id = "12345678-1234-1234-1234-123456789012"
+  deletion_allowed = true
 }
 ```
 
@@ -75,6 +120,12 @@ Valid values for SLH-DSA are `slh-dsa-sha2-128s`, `slh-dsa-shake-128s`, `slh-dsa
 
 * `hybrid_key_type_ec` - (Optional) The elliptic curve algorithm to use for hybrid signatures.
   Supported key types are `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, and `ed25519`.
+
+* `context` - (Optional) Base64 encoded context for key derivation. Required if `derived` is set to `true`. This provides additional entropy for key derivation and should be consistent across operations that need to use the same derived key.
+
+* `managed_key_name` - (Optional) The name of the managed key to use when the key `type` is `managed_key`. This references a previously configured managed key in Vault (e.g., AWS KMS, Azure Key Vault, PKCS#11, etc.). When `type` is `managed_key`, either `managed_key_name` or `managed_key_id` must be specified.
+
+* `managed_key_id` - (Optional) The UUID of the managed key to use when the key `type` is `managed_key`. This is the unique identifier of a previously configured managed key. When `type` is `managed_key`, either `managed_key_name` or `managed_key_id` must be specified.
 
 ## Attributes Reference
 

@@ -50,6 +50,18 @@ resource "vault_database_secret_backend_static_role" "schedule_role" {
   rotation_window     = "172800"
   rotation_statements = ["ALTER USER \"{{name}}\" WITH PASSWORD '{{password}}';"]
 }
+
+# configure a static role with a password (Vault 1.19+)
+resource "vault_database_secret_backend_static_role" "password_role" {
+  backend             = vault_mount.db.path
+  name                = "my-password-role"
+  db_name             = vault_database_secret_backend_connection.postgres.name
+  username            = "example"
+  password_wo         = "my-password"
+  password_wo_version = 1
+  rotation_period     = "3600"
+  rotation_statements = ["ALTER USER \"{{name}}\" WITH PASSWORD '{{password}}';"]
+}
 ```
 
 ## Argument Reference
@@ -72,6 +84,15 @@ The following arguments are supported:
 * `self_managed_password` - (Optional) The password corresponding to the username in the database.
   Required when using the Rootless Password Rotation workflow for static roles. Only enabled for
   select DB engines (Postgres). Requires Vault 1.18+ Enterprise.
+  **Deprecated**: Use `password_wo` instead. This field will be removed in a future version.
+
+* `password_wo` - (Optional) The password corresponding to the username in the database.
+  This is a write-only field. Requires Vault 1.19+. Deprecates `self_managed_password` which was introduced in Vault 1.18.
+  Cannot be used with `self_managed_password`.
+
+* `password_wo_version` - (Optional) The version of the `password_wo` field. 
+  Used for tracking changes to the write-only password field. For more info see 
+  [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 * `skip_import_rotation` - (Optional) If set to true, Vault will skip the
   initial secret rotation on import. Requires Vault 1.18+ Enterprise.

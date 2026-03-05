@@ -6,11 +6,13 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -26,7 +28,7 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion116)
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
@@ -91,4 +93,257 @@ resource "vault_secrets_sync_gcp_destination" "test" {
 `, destName, credentials, testSecretsSyncDestinationCommonConfig(templ, true, true, true))
 
 	return ret
+}
+
+func TestGCPSecretsSyncDestination_AdvancedFeatures(t *testing.T) {
+	destName := acctest.RandomWithPrefix("tf-sync-dest-gcp")
+	resourceName := "vault_secrets_sync_gcp_destination.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		Steps: []resource.TestStep{
+			// Step 1: Test basic replication (Vault 1.18+)
+			{
+				Config: testGCPSecretsSyncDestinationConfig_replicationBasic(credentials, project, destName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".0", "us-central1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".1", "us-east1"),
+				),
+			},
+		},
+	})
+
+	// Vault 1.19+ features require a separate test or conditional checks
+	if provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119) {
+		resource.Test(t, resource.TestCase{
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			PreCheck: func() {
+				acctestutil.TestAccPreCheck(t)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+			},
+			Steps: []resource.TestStep{
+				// Step 1: Test networking configuration
+				{
+					Config: testGCPSecretsSyncDestinationConfig_networking(credentials, project, destName+"-net"),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedIPv4Addresses+".#", "2"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedIPv4Addresses+".0", "10.0.0.0/8"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedIPv4Addresses+".1", "192.168.0.0/16"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedIPv6Addresses+".#", "1"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedIPv6Addresses+".0", "2001:db8::/32"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedPorts+".#", "2"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedPorts+".0", "443"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedPorts+".1", "8443"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldDisableStrictNetworking, "false"),
+					),
+				},
+				// Step 2: Test global encryption
+				{
+					Config: testGCPSecretsSyncDestinationConfig_encryption(credentials, project, destName+"-enc"),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldGlobalKmsKey, "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"),
+					),
+				},
+				// Step 3: Test replication with locational KMS
+				{
+					Config: testGCPSecretsSyncDestinationConfig_replication(credentials, project, destName+"-rep-kms"),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldLocationalKmsKeys+".%", "2"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldLocationalKmsKeys+".us-central1", "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldLocationalKmsKeys+".us-east1", "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".#", "2"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".0", "us-central1"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".1", "us-east1"),
+					),
+				},
+			},
+		})
+	}
+}
+
+func TestGCPSecretsSyncDestination_NegativeTests(t *testing.T) {
+	resourceName := "vault_secrets_sync_gcp_destination.test"
+	credentials, project := testutil.GetTestGCPCreds(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+		},
+		Steps: []resource.TestStep{
+			// Test 1: Invalid IPv4 CIDR notation - should fail
+			{
+				Config:      testGCPSecretsSyncDestinationConfig_invalidIPv4(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
+				ExpectError: regexp.MustCompile("."), // Any error indicates validation worked
+			},
+			// Test 2: Invalid IPv6 CIDR notation - should fail
+			{
+				Config:      testGCPSecretsSyncDestinationConfig_invalidIPv6(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
+				ExpectError: regexp.MustCompile("."), // Any error indicates validation worked
+			},
+			// Test 3: Conflicting encryption - both global_kms_key and locational_kms_keys with replication_locations - should fail
+			{
+				Config:      testGCPSecretsSyncDestinationConfig_conflictingEncryption(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
+				ExpectError: regexp.MustCompile("."), // Any error indicates validation worked
+			},
+			// Test 4: Duplicate regions in replication_locations - TypeSet should deduplicate automatically
+			{
+				Config: testGCPSecretsSyncDestinationConfig_duplicateRegions(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
+				Check: resource.ComposeTestCheckFunc(
+					// TypeSet automatically deduplicates, so we should only see 2 unique regions
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".#", "2"),
+				),
+			},
+		},
+	})
+}
+
+func testGCPSecretsSyncDestinationConfig_invalidIPv4(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                   = "%s"
+  project_id             = "%s"
+  credentials            = <<CREDS
+%s
+CREDS
+  secret_name_template   = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+  
+  allowed_ipv4_addresses = ["256.256.256.256/32", "10.0.0.0/8"]
+}
+`, destName, project, credentials)
+}
+
+func testGCPSecretsSyncDestinationConfig_invalidIPv6(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                   = "%s"
+  project_id             = "%s"
+  credentials            = <<CREDS
+%s
+CREDS
+  secret_name_template   = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+  
+  allowed_ipv6_addresses = ["gggg::/32", "2001:db8::/32"]
+}
+`, destName, project, credentials)
+}
+
+func testGCPSecretsSyncDestinationConfig_conflictingEncryption(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "%s"
+  credentials          = <<CREDS
+%s
+CREDS
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+  
+  global_kms_key = "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"
+  locational_kms_keys = {
+    "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
+  }
+  replication_locations = ["us-central1"]
+}
+`, destName, project, credentials)
+}
+
+func testGCPSecretsSyncDestinationConfig_duplicateRegions(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "%s"
+  credentials          = <<CREDS
+%s
+CREDS
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+  granularity          = "secret-path"
+  
+  # TypeSet should automatically deduplicate these
+  replication_locations = ["us-central1", "us-east1", "us-central1"]
+}
+`, destName, project, credentials)
+}
+
+func testGCPSecretsSyncDestinationConfig_networking(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                      = "%s"
+  project_id                = "%s"
+  credentials               = <<CREDS
+%s
+CREDS
+  secret_name_template      = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+  granularity               = "secret-path"
+  
+  allowed_ipv4_addresses    = ["10.0.0.0/8", "192.168.0.0/16"]
+  allowed_ipv6_addresses    = ["2001:db8::/32"]
+  allowed_ports             = [443, 8443]
+  disable_strict_networking = false
+}
+`, destName, project, credentials)
+}
+
+func testGCPSecretsSyncDestinationConfig_encryption(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "%s"
+  credentials          = <<CREDS
+%s
+CREDS
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+  granularity          = "secret-path"
+  
+  global_kms_key       = "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"
+}
+`, destName, project, credentials)
+}
+
+func testGCPSecretsSyncDestinationConfig_replicationBasic(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "%s"
+  credentials          = <<CREDS
+%s
+CREDS
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+  granularity          = "secret-path"
+  
+  replication_locations = ["us-central1", "us-east1"]
+}
+`, destName, project, credentials)
+}
+
+func testGCPSecretsSyncDestinationConfig_replication(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "%s"
+  credentials          = <<CREDS
+%s
+CREDS
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}_{{ .SecretKey }}"
+  granularity          = "secret-key"
+  
+  locational_kms_keys = {
+    "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
+    "us-east1"    = "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"
+  }
+  replication_locations = ["us-central1", "us-east1"]
+}
+`, destName, project, credentials)
 }

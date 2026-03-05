@@ -83,6 +83,15 @@ The following arguments are supported:
   the certificate valid only if all servers agree.
   Requires Vault version 1.13+.
 
+* `ocsp_max_retries` (Optional int: 4) - The number of retries to attempt when
+  connecting to an OCSP server. Defaults to 4 retries.
+  Must be a non-negative value. Requires Vault version 1.16+.
+
+* `ocsp_this_update_max_age` (Optional int: 0) - The maximum age in seconds of the
+  'thisUpdate' field in an OCSP response before it is considered too old.
+  Defaults to 0 (disabled). Must be a non-negative value.
+  Requires Vault version 1.16+.
+
 ### Common Token Arguments
 
 These arguments are common across several Authentication Token resources since Vault 1.2.
@@ -121,6 +130,9 @@ These arguments are common across several Authentication Token resources since V
   `service` tokens). For token store roles, there are two additional possibilities:
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
+
+* `alias_metadata` - (Optional) The metadata to be tied to generated entity alias.
+  This should be a list or map containing the metadata in key value pairs.
 
 For more details on the usage of each argument consult the [Vault Cert API documentation](https://www.vaultproject.io/api-docs/auth/cert).
 

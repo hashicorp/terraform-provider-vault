@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/internal/sync"
+	syncutil "github.com/hashicorp/terraform-provider-vault/internal/sync"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 	awsSyncType = "aws-sm"
 )
 
-// awsSyncWriteFields contains all fields that need to be written to the API
+// awsSyncWriteFields contains base fields that work with all Vault versions (1.16+)
 var awsSyncWriteFields = []string{
 	fieldAccessKeyID,
 	fieldSecretAccessKey,
@@ -33,7 +33,7 @@ var awsSyncWriteFields = []string{
 	consts.FieldExternalID,
 }
 
-// awsSyncReadFields contains all fields that are returned on read from the API
+// awsSyncReadFields contains base fields that are returned on read from the API (all versions)
 var awsSyncReadFields = []string{
 	consts.FieldRegion,
 	consts.FieldCustomTags,
@@ -41,6 +41,14 @@ var awsSyncReadFields = []string{
 	consts.FieldSecretNameTemplate,
 	consts.FieldRoleArn,
 	consts.FieldExternalID,
+}
+
+// awsSync119Fields contains fields that require Vault 1.19+
+var awsSync119Fields = []string{
+	consts.FieldAllowedIPv4Addresses,
+	consts.FieldAllowedIPv6Addresses,
+	consts.FieldAllowedPorts,
+	consts.FieldDisableStrictNetworking,
 }
 
 func awsSecretsSyncDestinationResource() *schema.Resource {
@@ -88,17 +96,76 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				Description: "Extra protection that must match the trust policy granting access to the AWS IAM role ARN.",
 			},
+			consts.FieldAllowedIPv4Addresses: {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Description: "Allowed IPv4 addresses for outbound connections from Vault to AWS Secrets Manager. " +
+					"Can also be set via an IP address range using CIDR notation.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldAllowedIPv6Addresses: {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Description: "Allowed IPv6 addresses for outbound connections from Vault to AWS Secrets Manager. " +
+					"Can also be set via an IP address range using CIDR notation.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldAllowedPorts: {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "Allowed ports for outbound connections from Vault to AWS Secrets Manager.",
+				Elem: &schema.Schema{
+					Type: schema.TypeInt,
+				},
+			},
+			consts.FieldDisableStrictNetworking: {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+				Description: "Disable strict networking mode. When set to true, " +
+					"Vault will not enforce allowed IP addresses and ports.",
+			},
 		},
 	})
 }
 
 func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return syncutil.SyncDestinationCreateUpdate(ctx, d, meta, awsSyncType, awsSyncWriteFields, awsSyncReadFields)
+	readFields := awsSyncReadFields
+	writeFields := awsSyncWriteFields
+
+	// Add Vault 1.19+ fields if supported
+	isVaultVersion119 := provider.IsAPISupported(meta, provider.VaultVersion119)
+	if isVaultVersion119 {
+		writeFields = append(writeFields, awsSync119Fields...)
+		readFields = append(readFields, awsSync119Fields...)
+	}
+
+	// Fields that need TypeSet to List conversion for JSON serialization
+	awsTypeSetFields := make(map[string]bool)
+	if isVaultVersion119 {
+		awsTypeSetFields[consts.FieldAllowedIPv4Addresses] = true
+		awsTypeSetFields[consts.FieldAllowedIPv6Addresses] = true
+		awsTypeSetFields[consts.FieldAllowedPorts] = true
+	}
+
+	return syncutil.SyncDestinationCreateUpdateWithOptions(ctx, d, meta, awsSyncType, writeFields, readFields, awsTypeSetFields)
 }
 
 func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	// Start with base fields (all versions)
+	readFields := awsSyncReadFields
+
+	// Add Vault 1.19+ fields only if version is supported
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		readFields = append(readFields, awsSync119Fields...)
+	}
+
 	// since other fields come back as '******', we only set the non-sensitive region fields
-	return syncutil.SyncDestinationRead(ctx, d, meta, awsSyncType, awsSyncReadFields, map[string]string{
+	return syncutil.SyncDestinationRead(ctx, d, meta, awsSyncType, readFields, map[string]string{
 		consts.FieldGranularity: consts.FieldGranularityLevel,
 	})
 }

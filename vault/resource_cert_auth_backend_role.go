@@ -15,51 +15,45 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-const (
-	fieldAllowedCommonNames         = "allowed_common_names"
-	fieldAllowedDNSSans             = "allowed_dns_sans"
-	fieldAllowedEmailSans           = "allowed_email_sans"
-	fieldAllowedNames               = "allowed_names"
-	fieldAllowedOrganizationalUnits = "allowed_organizational_units"
-	fieldAllowedURISans             = "allowed_uri_sans"
-	fieldDisplayName                = "display_name"
-	fieldOCSPCACertificates         = "ocsp_ca_certificates"
-	fieldOCSPEnabled                = "ocsp_enabled"
-	fieldOCSPFailOpen               = "ocsp_fail_open"
-	fieldOCSPQueryAllServers        = "ocsp_query_all_servers"
-	fieldOCSPServersOverride        = "ocsp_servers_override"
-	fieldRequiredExtensions         = "required_extensions"
-)
-
 var (
 	certAuthStringFields = []string{
 		consts.FieldCertificate,
-		fieldDisplayName,
-		fieldOCSPCACertificates,
+		consts.FieldDisplayName,
+		consts.FieldOCSPCACertificates,
 	}
 	certAuthListFields = []string{
-		fieldAllowedCommonNames,
-		fieldAllowedDNSSans,
-		fieldAllowedEmailSans,
-		fieldAllowedNames,
-		fieldAllowedOrganizationalUnits,
-		fieldAllowedURISans,
-		fieldOCSPServersOverride,
-		fieldRequiredExtensions,
+		consts.FieldAllowedCommonNames,
+		consts.FieldAllowedDNSSans,
+		consts.FieldAllowedEmailSans,
+		consts.FieldAllowedNames,
+		consts.FieldAllowedOrganizationalUnits,
+		consts.FieldAllowedURISans,
+		consts.FieldOCSPServersOverride,
+		consts.FieldRequiredExtensions,
 	}
 	certAuthBoolFields = []string{
-		fieldOCSPEnabled,
-		fieldOCSPFailOpen,
-		fieldOCSPQueryAllServers,
+		consts.FieldOCSPEnabled,
+		consts.FieldOCSPFailOpen,
+		consts.FieldOCSPQueryAllServers,
+	}
+	certAuthIntFields = []string{
+		consts.FieldOCSPMaxRetries,
+		consts.FieldOCSPThisUpdateMaxAge,
 	}
 
 	// the following require Vault Server Version 1.13+
 	certAuthVault113Fields = map[string]bool{
-		fieldOCSPCACertificates:  true,
-		fieldOCSPEnabled:         true,
-		fieldOCSPFailOpen:        true,
-		fieldOCSPQueryAllServers: true,
-		fieldOCSPServersOverride: true,
+		consts.FieldOCSPCACertificates:  true,
+		consts.FieldOCSPEnabled:         true,
+		consts.FieldOCSPFailOpen:        true,
+		consts.FieldOCSPQueryAllServers: true,
+		consts.FieldOCSPServersOverride: true,
+	}
+
+	// the following require Vault Server Version 1.16+
+	certAuthVault116Fields = map[string]bool{
+		consts.FieldOCSPMaxRetries:       true,
+		consts.FieldOCSPThisUpdateMaxAge: true,
 	}
 )
 
@@ -75,7 +69,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Required: true,
 			ForceNew: true,
 		},
-		fieldAllowedNames: {
+		consts.FieldAllowedNames: {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -83,7 +77,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
-		fieldAllowedCommonNames: {
+		consts.FieldAllowedCommonNames: {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -91,7 +85,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
-		fieldAllowedDNSSans: {
+		consts.FieldAllowedDNSSans: {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -99,7 +93,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
-		fieldAllowedEmailSans: {
+		consts.FieldAllowedEmailSans: {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -107,7 +101,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
-		fieldAllowedURISans: {
+		consts.FieldAllowedURISans: {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -115,14 +109,14 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
-		fieldAllowedOrganizationalUnits: {
+		consts.FieldAllowedOrganizationalUnits: {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
 			Optional: true,
 		},
-		fieldRequiredExtensions: {
+		consts.FieldRequiredExtensions: {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -130,7 +124,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
-		fieldDisplayName: {
+		consts.FieldDisplayName: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
@@ -144,13 +138,13 @@ func certAuthBackendRoleResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-		fieldOCSPCACertificates: {
+		consts.FieldOCSPCACertificates: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Description: "Any additional CA certificates needed to verify OCSP " +
 				"responses. Provided as base64 encoded PEM data.",
 		},
-		fieldOCSPServersOverride: {
+		consts.FieldOCSPServersOverride: {
 			Type: schema.TypeSet,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -160,13 +154,13 @@ func certAuthBackendRoleResource() *schema.Resource {
 				"unset, the OCSP server is determined from the " +
 				"AuthorityInformationAccess extension on the certificate being inspected.",
 		},
-		fieldOCSPEnabled: {
+		consts.FieldOCSPEnabled: {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Computed:    true,
 			Description: "If enabled, validate certificates' revocation status using OCSP.",
 		},
-		fieldOCSPFailOpen: {
+		consts.FieldOCSPFailOpen: {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
@@ -174,13 +168,28 @@ func certAuthBackendRoleResource() *schema.Resource {
 				"of an unknown status, the login will proceed as if the certificate " +
 				"has not been revoked.",
 		},
-		fieldOCSPQueryAllServers: {
+		consts.FieldOCSPQueryAllServers: {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
 			Description: "If set to true, rather than accepting the first " +
 				"successful OCSP response, query all servers and consider the " +
 				"certificate valid only if all servers agree.",
+		},
+		consts.FieldOCSPMaxRetries: {
+			Type:     schema.TypeInt,
+			Optional: true,
+			Default:  4,
+			Description: "The number of retries to attempt when connecting to " +
+				"an OCSP server. Defaults to 4 retries. Must be a non-negative value.",
+		},
+		consts.FieldOCSPThisUpdateMaxAge: {
+			Type:     schema.TypeInt,
+			Optional: true,
+			Default:  0,
+			Description: "The maximum age in seconds of the 'thisUpdate' field " +
+				"in an OCSP response before it is considered too old. " +
+				"Defaults to 0 (disabled). Must be a non-negative value.",
 		},
 	}
 
@@ -240,6 +249,15 @@ func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta int
 		data[k] = d.Get(k)
 	}
 
+	for _, k := range certAuthIntFields {
+		if certAuthVault116Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion116) {
+			continue
+		}
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
+	}
+
 	log.Printf("[DEBUG] Writing %q to cert auth backend", path)
 	d.SetId(path)
 	_, err := client.Logical().Write(path, data)
@@ -277,7 +295,7 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		}
 		// special handling for allowed_organizational_units since unsetting
 		// this in Vault has special meaning (allow all OUs)
-		if k == fieldAllowedOrganizationalUnits {
+		if k == consts.FieldAllowedOrganizationalUnits {
 			if d.HasChange(k) {
 				data[k] = d.Get(k).(*schema.Set).List()
 			}
@@ -291,6 +309,15 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 			continue
 		}
 		data[k] = d.Get(k)
+	}
+
+	for _, k := range certAuthIntFields {
+		if certAuthVault116Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion116) {
+			continue
+		}
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
 
 	log.Printf("[DEBUG] Updating %q in cert auth backend", path)
@@ -390,16 +417,31 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		// Handle string and boolean OCSP fields
 		ocspFields := []string{
-			fieldOCSPCACertificates,
-			fieldOCSPEnabled,
-			fieldOCSPFailOpen,
-			fieldOCSPQueryAllServers,
-			fieldOCSPServersOverride,
+			consts.FieldOCSPCACertificates,
+			consts.FieldOCSPEnabled,
+			consts.FieldOCSPFailOpen,
+			consts.FieldOCSPQueryAllServers,
+			consts.FieldOCSPServersOverride,
 		}
 		for _, f := range ocspFields {
 			if err := d.Set(f, resp.Data[f]); err != nil {
 				return diag.FromErr(err)
+			}
+		}
+
+		// Handle integer OCSP fields - only set if present in response
+		// to avoid setting zero values when field is not supported/returned
+		for _, f := range certAuthIntFields {
+			// Skip fields that require Vault 1.16+ if not supported
+			if certAuthVault116Fields[f] && !provider.IsAPISupported(meta, provider.VaultVersion116) {
+				continue
+			}
+			if val, ok := resp.Data[f]; ok && val != nil {
+				if err := d.Set(f, val); err != nil {
+					return diag.FromErr(err)
+				}
 			}
 		}
 	}

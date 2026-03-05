@@ -35,10 +35,15 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, ""),
+				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, fmt.Sprintf(`
+  not_after             = "%s"
+  remove_roots_from_chain = false`, notAfter)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", intermediatePath),
 					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
+					resource.TestCheckResourceAttr(resourceName, "not_after", notAfter),
+					resource.TestCheckResourceAttr(resourceName, "remove_roots_from_chain", "false"),
+					resource.TestCheckResourceAttrSet(resourceName, "ca_chain.#"),
 					testValidateCSR(resourceName),
 				),
 			},
@@ -53,9 +58,10 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, fmt.Sprintf(`not_after = "%s"`, notAfter)),
+				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath, "remove_roots_from_chain = true"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "not_after", notAfter),
+					resource.TestCheckResourceAttr(resourceName, "remove_roots_from_chain", "true"),
+					resource.TestCheckResourceAttrSet(resourceName, "ca_chain.#"),
 				),
 			},
 		},

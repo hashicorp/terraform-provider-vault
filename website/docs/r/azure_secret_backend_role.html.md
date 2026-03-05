@@ -77,6 +77,7 @@ The following arguments are supported:
 * `sign_in_audience` - (Optional) Specifies the security principal types that are allowed to sign in to the application.
   Valid values are: AzureADMyOrg, AzureADMultipleOrgs, AzureADandPersonalMicrosoftAccount, PersonalMicrosoftAccount. Requires Vault 1.16+.
 * `tags` - (Optional) - A list of Azure tags to attach to an application. Requires Vault 1.16+.
+* `persist_app` - (Optional) If set to true, persists the created service principal and application for the lifetime of the role
 
 ## Attributes Reference
 

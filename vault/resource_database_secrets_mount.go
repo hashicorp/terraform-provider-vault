@@ -87,7 +87,7 @@ func databaseSecretsMountCustomizeDiff(ctx context.Context, d *schema.ResourceDi
 		engineCount += count
 	}
 
-	key := "engine_count"
+	key := consts.FieldEngineCount
 	curCount := d.Get(key).(int)
 	// set the new engine count
 	if err := d.SetNew(key, engineCount); err != nil {
@@ -135,7 +135,7 @@ func getDatabaseSecretsMountSchema() schemaMap {
 	// Used to gauge whether the resource should be recreated via ForceNew.
 	// If the number of engines is reduced then the resource will be recreated.
 	// This is handled in the Resource's CustomizeDiff function.
-	s["engine_count"] = &schema.Schema{
+	s[consts.FieldEngineCount] = &schema.Schema{
 		Type:        schema.TypeInt,
 		Computed:    true,
 		Description: "Total number of database secret engines configured under the mount.",
@@ -162,13 +162,13 @@ func addCommonDatabaseSchema(s *schema.Schema) {
 // New fields on the DB /config endpoint should be added here.
 func getCommonDatabaseSchema() schemaMap {
 	s := schemaMap{
-		"name": {
+		consts.FieldName: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "Name of the database connection.",
 			// ForceNew:    true,
 		},
-		"plugin_name": {
+		consts.FieldPluginName: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
@@ -185,13 +185,13 @@ func getCommonDatabaseSchema() schemaMap {
 				return nil, errs
 			},
 		},
-		"verify_connection": {
+		consts.FieldVerifyConnection: {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Description: "Specifies if the connection is verified during initial configuration.",
 			Default:     true,
 		},
-		"allowed_roles": {
+		consts.FieldAllowedRoles: {
 			Type:        schema.TypeList,
 			Optional:    true,
 			Description: "A list of roles that are allowed to use this connection.",
@@ -199,7 +199,12 @@ func getCommonDatabaseSchema() schemaMap {
 				Type: schema.TypeString,
 			},
 		},
-		"root_rotation_statements": {
+		consts.FieldPluginVersion: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Optional plugin version to use for this connection.",
+		},
+		consts.FieldRootRotationStatements: {
 			Type:        schema.TypeList,
 			Optional:    true,
 			Description: "A list of database statements to be executed to rotate the root user's credentials.",
@@ -207,12 +212,23 @@ func getCommonDatabaseSchema() schemaMap {
 				Type: schema.TypeString,
 			},
 		},
-		"data": {
+		consts.FieldData: {
 			Type:        schema.TypeMap,
 			Optional:    true,
 			Description: "A map of sensitive data to pass to the endpoint. Useful for templated connection strings.",
 			// TODO: revert to true
 			Sensitive: false,
+		},
+		consts.FieldPasswordPolicy: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Optional name of the password policy to use for generated passwords.",
+		},
+		consts.FieldSkipStaticRoleImportRotation: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "Skip rotation of static role credentials on import.",
 		},
 	}
 
@@ -241,7 +257,7 @@ func databaseSecretsMountCreateOrUpdate(ctx context.Context, d *schema.ResourceD
 
 	var root string
 	if d.IsNewResource() {
-		root = d.Get("path").(string)
+		root = d.Get(consts.FieldPath).(string)
 		if err := createMount(ctx, d, meta, client, root, consts.MountTypeDatabase); err != nil {
 			return diag.FromErr(err)
 		}
@@ -259,7 +275,7 @@ func databaseSecretsMountCreateOrUpdate(ctx context.Context, d *schema.ResourceD
 		if v, ok := d.GetOk(engine.Name()); ok {
 			for i := range v.([]interface{}) {
 				prefix := engine.ResourcePrefix(i)
-				name := d.Get(prefix + "name").(string)
+				name := d.Get(prefix + consts.FieldName).(string)
 				path := databaseSecretBackendConnectionPath(root, name)
 				if _, ok := seen[name]; ok {
 					return diag.Errorf("duplicate name %q for engine %#v", name, engine)

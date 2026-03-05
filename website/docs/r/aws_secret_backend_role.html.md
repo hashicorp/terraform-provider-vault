@@ -118,6 +118,8 @@ Boundary to attach to IAM users created in the role. Valid only when
 `credential_type` is `iam_user`. If not specified, then no permissions boundary 
 policy will be attached.
 
+* `mfa_serial_number` - (Optional) The ARN or hardware device number of the device configured to the IAM user for multi-factor authentication. Only required if the IAM user has an MFA device set up in AWS.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

@@ -40,7 +40,7 @@ set -e
 BOB_PRODUCT="terraform-provider-vault"
 BOB_ENVIRONMENT="tf-provider-vault"
 # SLACK_CHANNEL code is duplicated in ./release/ci.hcl
-SLACK_CHANNEL="C03RXFX5M4L"
+SLACK_CHANNEL="C09LD1XT5MX"
 # BRANCH allow override of default branch with an optional argument
 BRANCH="${1:-origin/main}"
 # LOCAL_BRANCH bob needs this trimmed
