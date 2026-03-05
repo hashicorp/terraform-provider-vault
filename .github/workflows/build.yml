@@ -337,7 +337,7 @@ jobs:
           if [ -n "${{ env.LDAP_HOST_URL }}" ]; then
             cat testdata/openldap/ldif/*.ldif | ldapadd -x -H ${{ env.LDAP_HOST_URL }} -D "${{ env.LDAP_BINDDN }}" -w "${{ env.LDAP_BINDPASS }}"
           fi
-          make $target TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
+          make $target TESTARGS='-test.v -tags=testonly' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
