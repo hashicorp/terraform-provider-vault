@@ -276,7 +276,7 @@ resource "vault_cf_auth_backend_role" "test" {
 
 ephemeral "vault_cf_auth_login" "test" {
   mount            = vault_auth_backend.cf.path
-  mount_id         = vault_auth_backend.cf.accessor
+  mount_id         = vault_auth_backend.cf.id
   role             = vault_cf_auth_backend_role.test.name
   cf_instance_cert = var.cf_instance_cert
   signing_time     = var.signing_time
@@ -336,7 +336,7 @@ resource "vault_cf_auth_backend_role" "test" {
 
 ephemeral "vault_cf_auth_login" "test" {
   mount            = vault_auth_backend.cf.path
-  mount_id         = vault_auth_backend.cf.accessor
+  mount_id         = vault_auth_backend.cf.id
   role             = vault_cf_auth_backend_role.test.name
   cf_instance_cert = var.cf_instance_cert
   signing_time     = var.signing_time

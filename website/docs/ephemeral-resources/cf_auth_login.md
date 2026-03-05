@@ -43,7 +43,7 @@ resource "vault_cf_auth_backend_role" "role" {
 
 ephemeral "vault_cf_auth_login" "login" {
   mount            = vault_auth_backend.cf.path
-  mount_id         = vault_auth_backend.cf.accessor
+  mount_id         = vault_auth_backend.cf.id
   role             = vault_cf_auth_backend_role.role.name
   cf_instance_cert = var.cf_instance_cert
   signing_time     = var.signing_time
@@ -82,8 +82,8 @@ The following arguments are supported:
   Defaults to `cf`.
 
 * `mount_id` - (Optional) An opaque value used to defer provisioning of the
-  ephemeral resource until `terraform apply`. Set to `vault_auth_backend.cf.accessor`
-  to ensure Vault has assigned the mount an accessor (which happens only after the
+  ephemeral resource until `terraform apply`. Set to `vault_auth_backend.cf.id`
+  to ensure Vault has assigned the mount an ID (which happens only after the
   auth backend is created) before the ephemeral login is attempted. See the
   [ephemeral resources usage guide](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_ephemeral_resources)
   for more details.

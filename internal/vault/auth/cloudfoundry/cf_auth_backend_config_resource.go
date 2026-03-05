@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const (
@@ -69,7 +70,7 @@ type CFConfigAPIModel struct {
 	CFApiTrustedCertificates []string `json:"cf_api_trusted_certificates" mapstructure:"cf_api_trusted_certificates"`
 	LoginMaxSecsNotBefore    int64    `json:"login_max_seconds_not_before,omitempty" mapstructure:"login_max_seconds_not_before,omitempty"`
 	LoginMaxSecsNotAfter     int64    `json:"login_max_seconds_not_after,omitempty" mapstructure:"login_max_seconds_not_after,omitempty"`
-	CFTimeout                int64    `json:"cf_timeout" mapstructure:"cf_timeout"`
+	CFTimeout                int64    `json:"cf_timeout,omitempty" mapstructure:"cf_timeout,omitempty"`
 }
 
 func (r *CFAuthBackendConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -309,7 +310,11 @@ func (r *CFAuthBackendConfigResource) getAPIModel(ctx context.Context, data *CFA
 		CFUsername:            data.CFUsername.ValueString(),
 		LoginMaxSecsNotBefore: data.LoginMaxSecsNotBefore.ValueInt64(),
 		LoginMaxSecsNotAfter:  data.LoginMaxSecsNotAfter.ValueInt64(),
-		CFTimeout:             data.CFTimeout.ValueInt64(),
+	}
+	// cf_timeout was added to the CF auth plugin in Vault 1.19.4.
+	// Only include it in the request when the connected Vault supports it.
+	if r.Meta() != nil && r.Meta().IsAPISupported(provider.VaultVersion1194) {
+		apiModel.CFTimeout = data.CFTimeout.ValueInt64()
 	}
 	if cfPassword != nil {
 		apiModel.CFPassword = *cfPassword
@@ -366,10 +371,14 @@ func (r *CFAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Conte
 	} else {
 		data.LoginMaxSecsNotAfter = types.Int64Null()
 	}
-	if readResp.CFTimeout != 0 {
-		data.CFTimeout = types.Int64Value(readResp.CFTimeout)
-	} else {
-		data.CFTimeout = types.Int64Null()
+	// cf_timeout is not supported on Vault < 1.19.4; leave state unchanged on
+	// older servers to avoid a provider-inconsistency error.
+	if r.Meta() != nil && r.Meta().IsAPISupported(provider.VaultVersion1194) {
+		if readResp.CFTimeout != 0 {
+			data.CFTimeout = types.Int64Value(readResp.CFTimeout)
+		} else {
+			data.CFTimeout = types.Int64Null()
+		}
 	}
 
 	// identity_ca_certificates: Vault strips trailing whitespace from PEM certs.

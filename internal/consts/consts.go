@@ -887,6 +887,7 @@ const (
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
 	VaultVersion1192 = "1.19.2"
+	VaultVersion1194 = "1.19.4"
 	VaultVersion120  = "1.20.0"
 	VaultVersion121  = "1.21.0"
 	VaultVersion200  = "2.0.0"
