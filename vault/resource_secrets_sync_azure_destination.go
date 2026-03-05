@@ -5,6 +5,8 @@ package vault
 
 import (
 	"context"
+	"strconv"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -13,11 +15,39 @@ import (
 	syncutil "github.com/hashicorp/terraform-provider-vault/internal/sync"
 )
 
+// durationToSecondsDiffSuppress suppresses diffs when the config value is a
+// Go duration string (e.g. "30m", "1h") and Vault has stored it as seconds
+// (e.g. "1800", "3600"). Both directions are handled so that either format
+// works in configuration.
+func durationToSecondsDiffSuppress(_, old, new string, _ *schema.ResourceData) bool {
+	toSecs := func(s string) (int64, bool) {
+		if d, err := time.ParseDuration(s); err == nil {
+			return int64(d.Seconds()), true
+		}
+		if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+			return n, true
+		}
+		return 0, false
+	}
+	oldSecs, okOld := toSecs(old)
+	newSecs, okNew := toSecs(new)
+	return okOld && okNew && oldSecs == newSecs
+}
+
 const (
 	fieldKeyVaultURI = "key_vault_uri"
 	fieldCloud       = "cloud"
 	azureSyncType    = "azure-kv"
 )
+
+// azureNetworkingFields are the SSRF networking restriction fields added in VaultVersion119.
+// Shared between write and read field lists to avoid duplication.
+var azureNetworkingFields = []string{
+	consts.FieldAllowedIPv4Addresses,
+	consts.FieldAllowedIPv6Addresses,
+	consts.FieldAllowedPorts,
+	consts.FieldDisableStrictNetworking,
+}
 
 func buildAzureSyncWriteFields(meta interface{}) []string {
 	fields := []string{
@@ -32,12 +62,7 @@ func buildAzureSyncWriteFields(meta interface{}) []string {
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
-		fields = append(fields, []string{
-			consts.FieldAllowedIPv4Addresses,
-			consts.FieldAllowedIPv6Addresses,
-			consts.FieldAllowedPorts,
-			consts.FieldDisableStrictNetworking,
-		}...)
+		fields = append(fields, azureNetworkingFields...)
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion200) {
@@ -63,12 +88,7 @@ func buildAzureSyncReadFields(meta interface{}) []string {
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
-		fields = append(fields, []string{
-			consts.FieldAllowedIPv4Addresses,
-			consts.FieldAllowedIPv6Addresses,
-			consts.FieldAllowedPorts,
-			consts.FieldDisableStrictNetworking,
-		}...)
+		fields = append(fields, azureNetworkingFields...)
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion200) {
@@ -130,17 +150,33 @@ func azureSecretsSyncDestinationResource() *schema.Resource {
 			consts.FieldIdentityTokenKey: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The key to use for signing identity tokens.",
+				WriteOnly:   true,
+				Description: "The key to use for signing identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenKeyWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_key field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenKey},
 			},
 			consts.FieldIdentityTokenAudience: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The audience claim value for identity tokens.",
+				WriteOnly:   true,
+				Description: "The audience claim value for identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenAudienceWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_audience field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenAudience},
 			},
 			consts.FieldIdentityTokenTTL: {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Description: "The TTL of generated tokens.",
+				Type:             schema.TypeString,
+				Optional:         true,
+				Computed:         true,
+				DiffSuppressFunc: durationToSecondsDiffSuppress,
+				Description:      "Time-to-live for generated identity tokens used in WIF authentication. Accepts duration format strings such as \"30m\" or \"1h\". Must be non-negative.",
 			},
 			fieldCloud: {
 				Type:        schema.TypeString,

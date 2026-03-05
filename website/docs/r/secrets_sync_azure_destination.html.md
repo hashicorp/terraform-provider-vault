@@ -31,25 +31,26 @@ resource "vault_secrets_sync_azure_destination" "az" {
   client_secret        = var.client_secret
   tenant_id            = var.tenant_id
   secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
-  # NEW: Networking configuration (Vault 1.19+)
-  allowed_ipv4_addresses = [
-    "192.168.1.1/24",   # Allow private network
-    "10.0.0.1/8"        # Allow corporate network
-  ]
-
-  allowed_ipv6_addresses = [
-    "2001:db9::/32"     # Allow IPv6 range
-  ]
-
-  allowed_ports = [
-    443,                # HTTPS
-    9443                # Alternative HTTPS port
-  ]
-
-  disable_strict_networking = false  # Enforce networking restrictions
   custom_tags = {
     "foo" = "bar"
   }
+}
+```
+
+### With Networking Configuration (Vault 1.19+)
+
+```hcl
+resource "vault_secrets_sync_azure_destination" "az_networking" {
+  name          = "az-dest-networking"
+  key_vault_uri = var.key_vault_uri
+  client_id     = var.client_id
+  client_secret = var.client_secret
+  tenant_id     = var.tenant_id
+
+  allowed_ipv4_addresses    = ["10.0.0.0/8", "192.168.0.0/16"]
+  allowed_ipv6_addresses    = ["2001:db8::/32"]
+  allowed_ports             = [443, 8443]
+  disable_strict_networking = false
 }
 ```
 
@@ -62,7 +63,7 @@ resource "vault_secrets_sync_azure_destination" "az_wif" {
   client_id               = var.client_id
   tenant_id               = var.tenant_id
   identity_token_audience = var.identity_token_audience
-  identity_token_ttl      = 3600
+  identity_token_ttl      = "1h"
   identity_token_key      = "my-key"
   granularity             = "secret-path"
 }
@@ -104,29 +105,35 @@ The following arguments are supported:
 * `granularity` - (Optional) Determines what level of information is synced as a distinct resource
   at the destination. Supports `secret-path` and `secret-key`.
 
-* `allowed_ipv4_addresses` - (Optional) List of IPv4 addresses or CIDR blocks allowed to make outbound
-  connections from Vault to the destination. Requires Vault 1.19+.
-
-* `allowed_ipv6_addresses` - (Optional) List of IPv6 addresses or CIDR blocks allowed to make outbound
-  connections from Vault to the destination. Requires Vault 1.19+.
-
-* `allowed_ports` - (Optional) List of port numbers allowed for outbound connections from Vault to the
-  destination. Requires Vault 1.19+.
-
-* `disable_strict_networking` - (Optional) When set to `true`, disables strict enforcement of networking
-  restrictions. Defaults to `false`. Requires Vault 1.19+.
-
-
 ### Workload Identity Federation (Vault 2.0.0+)
 
-* `identity_token_audience` - (Optional) The audience claim value for identity tokens.
+* `identity_token_audience` - (Optional) The audience claim value for identity tokens. This is a write-only field.
   **Requires Vault 2.0.0+**.
 
-* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds.
+* `identity_token_audience_wo_version` - (Optional) This is used along with `identity_token_audience` to track updates as `identity_token_audience` is a write-only field. Increment this field to update `identity_token_audience`.
   **Requires Vault 2.0.0+**.
 
-* `identity_token_key` - (Optional) The key to use for signing identity tokens.
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens. Accepts duration format strings
+  such as `"30m"` or `"1h"`. Default is 1 hour. **Requires Vault 2.0.0+**.
+
+* `identity_token_key` - (Optional) The key to use for signing identity tokens. This is a write-only field.
   **Requires Vault 2.0.0+**.
+
+* `identity_token_key_wo_version` - (Optional) This is used along with `identity_token_key` to track updates as `identity_token_key` is a write-only field. Increment this field to update `identity_token_key`.
+  **Requires Vault 2.0.0+**.
+
+### Networking Configuration (Vault 1.19+)
+
+* `allowed_ipv4_addresses` - (Optional) List of IPv4 CIDR blocks that are allowed to access the synced secrets.
+  Example: `["10.0.0.0/8", "192.168.0.0/16"]`.
+
+* `allowed_ipv6_addresses` - (Optional) List of IPv6 CIDR blocks that are allowed to access the synced secrets.
+  Example: `["2001:db8::/32"]`.
+
+* `allowed_ports` - (Optional) List of TCP ports allowed for access. If not specified, all ports are allowed.
+  Example: `[443, 8443]`.
+
+* `disable_strict_networking` - (Optional) If `true`, disables strict network access controls. Default is `false`.
 
 ## Attributes Reference
 
