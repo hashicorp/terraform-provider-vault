@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -26,7 +27,7 @@ import (
 // see documentation here for more details:
 // https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/ephemeral-resources#using-echo-provider-in-acceptance-tests
 func TestAccTFToken_basic(t *testing.T) {
-	testutil.SkipTestAcc(t)
+	acctestutil.SkipTestAcc(t)
 	tfName := acctest.RandomWithPrefix("tf")
 
 	values := testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN", "TEST_TF_TEAM_ID")
@@ -38,7 +39,7 @@ func TestAccTFToken_basic(t *testing.T) {
 		t.Fatal(err)
 	}
 	resource.UnitTest(t, resource.TestCase{
-		PreCheck: func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() { acctestutil.TestAccPreCheck(t) },
 		// Include the provider we want to test
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		// Include `echo` as a v6 provider from `terraform-plugin-testing`

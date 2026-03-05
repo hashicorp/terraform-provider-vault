@@ -7,6 +7,8 @@ FEATURES:
 * Add support for pki-external-ca secrets backend: ([#2771](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
 * Add new KMIP resources `vault_kmip_secret_ca_generated`, `vault_kmip_secret_ca_imported`, `vault_kmip_secret_listener`, and add support for the `ca` field in `vault_kmip_secret_role`: ([#2773](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
 
+* **New Ephemeral Resource**:Add ephemeral resource `vault_terraform_token`, by @drewmullen ([#2616](https://github.com/hashicorp/terraform-provider-vault/pull/2616))
+
 IMPROVEMENTS:
 
 * `vault_managed_keys`: Add support for GCP Cloud KMS managed keys with parameters: `credentials`, `project`, `key_ring`, `region`, `crypto_key`, `crypto_key_version`, and `algorithm`. 
@@ -144,8 +146,6 @@ FEATURES:
 * Add support for `mfa_serial_number` parameter in `vault_aws_secret_backend_role` resource. ([#2637](https://github.com/hashicorp/terraform-provider-vault/pull/2637))
 * Add support for `persist_app`parameters in `vault_azure_secret_backend_role` resource.
   ([#2642](https://github.com/hashicorp/terraform-provider-vault/pull/2642))
-
-* Add new ephemeral resource `vault_terraform_token`, by @drewmullen ([#2616])(https://github.com/hashicorp/terraform-provider-vault/pull/2616)
 
 BUGS:
 

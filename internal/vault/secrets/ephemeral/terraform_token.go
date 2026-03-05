@@ -152,7 +152,10 @@ func (e *TerraformTokenEphemeralSecretResource) Close(ctx context.Context, req e
 	}
 
 	var privateData PrivateData
-	json.Unmarshal(privateBytes, &privateData)
+	if err := json.Unmarshal(privateBytes, &privateData); err != nil {
+		resp.Diagnostics.AddError("Unable to unmarshal private data", err.Error())
+		return
+	}
 	c, err := client.GetClient(ctx, e.Meta(), privateData.Namespace)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
