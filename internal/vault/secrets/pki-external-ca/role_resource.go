@@ -58,7 +58,7 @@ type PKIExternalCARoleModel struct {
 	Name                    types.String `tfsdk:"name"`
 	AcmeAccountName         types.String `tfsdk:"acme_account_name"`
 	AllowedDomains          types.List   `tfsdk:"allowed_domains"`
-	AllowedDomainsOptions   types.List   `tfsdk:"allowed_domains_options"`
+	AllowedDomainOptions    types.List   `tfsdk:"allowed_domain_options"`
 	AllowedChallengeTypes   types.List   `tfsdk:"allowed_challenge_types"`
 	CsrGenerateKeyType      types.String `tfsdk:"csr_generate_key_type"`
 	CsrIdentifierPopulation types.String `tfsdk:"csr_identifier_population"`
@@ -72,7 +72,7 @@ type PKIExternalCARoleAPIModel struct {
 	Name                    string   `json:"name" mapstructure:"name"`
 	AcmeAccountName         string   `json:"acme_account_name" mapstructure:"acme_account_name"`
 	AllowedDomains          []string `json:"allowed_domains" mapstructure:"allowed_domains"`
-	AllowedDomainsOptions   []string `json:"allowed_domains_options" mapstructure:"allowed_domains_options"`
+	AllowedDomainOptions    []string `json:"allowed_domain_options" mapstructure:"allowed_domain_options"`
 	AllowedChallengeTypes   []string `json:"allowed_challenge_types" mapstructure:"allowed_challenge_types"`
 	CsrGenerateKeyType      string   `json:"csr_generate_key_type" mapstructure:"csr_generate_key_type"`
 	CsrIdentifierPopulation string   `json:"csr_identifier_population" mapstructure:"csr_identifier_population"`
@@ -106,7 +106,7 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
-			"allowed_domains_options": schema.ListAttribute{
+			"allowed_domain_options": schema.ListAttribute{
 				MarkdownDescription: "A list of keyword options that influence how values within allowed_domains are interpreted against the requested set of identifiers from the client. Valid values are: `bare_domains`, `subdomains`, `wildcards`, `globs`.",
 				ElementType:         types.StringType,
 				Optional:            true,
@@ -300,13 +300,13 @@ func handleRoleResponseData(ctx context.Context, data *PKIExternalCARoleModel, r
 		data.AllowedDomains = types.ListNull(types.StringType)
 	}
 
-	// Convert allowed_domains_options list
-	allowedDomainsOptionsList, diags := types.ListValueFrom(ctx, types.StringType, apiModel.AllowedDomainsOptions)
+	// Convert allowed_domain_options list
+	allowedDomainOptionsList, diags := types.ListValueFrom(ctx, types.StringType, apiModel.AllowedDomainOptions)
 	rd.Append(diags...)
 	if rd.HasError() {
 		return
 	}
-	data.AllowedDomainsOptions = allowedDomainsOptionsList
+	data.AllowedDomainOptions = allowedDomainOptionsList
 
 	// Convert allowed_challenge_types list
 	allowedChallengeTypesList, diags := types.ListValueFrom(ctx, types.StringType, apiModel.AllowedChallengeTypes)
@@ -338,14 +338,14 @@ func buildRoleVaultRequestFromModel(ctx context.Context, data *PKIExternalCARole
 		vaultRequest["allowed_domains"] = allowedDomains
 	}
 
-	// Convert allowed_domains_options list to string slice
-	if !data.AllowedDomainsOptions.IsNull() && !data.AllowedDomainsOptions.IsUnknown() {
-		var allowedDomainsOptions []string
-		if optionsDiags := data.AllowedDomainsOptions.ElementsAs(ctx, &allowedDomainsOptions, false); optionsDiags.HasError() {
+	// Convert allowed_domain_options list to string slice
+	if !data.AllowedDomainOptions.IsNull() && !data.AllowedDomainOptions.IsUnknown() {
+		var allowedDomainOptions []string
+		if optionsDiags := data.AllowedDomainOptions.ElementsAs(ctx, &allowedDomainOptions, false); optionsDiags.HasError() {
 			diags.Append(optionsDiags...)
 			return nil, diags
 		}
-		vaultRequest["allowed_domains_options"] = allowedDomainsOptions
+		vaultRequest["allowed_domain_options"] = allowedDomainOptions
 	}
 
 	// Convert allowed_challenge_types list to string slice

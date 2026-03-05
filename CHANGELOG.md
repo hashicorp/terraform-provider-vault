@@ -1,11 +1,15 @@
-## Unrealeased
+## Unreleased
 
-FEATURES :
+FEATURES:
+
 * **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
+* Add support for SPIFFE secrets backend: ([#2660](https://github.com/hashicorp/terraform-provider-vault/pull/2660))
 * `vault_secrets_sync_azure_destination`: Add support for Workload Identity Federation (WIF) fields `identity_token_audience`, `identity_token_audience_wo_version`, `identity_token_ttl`, and `identity_token_key` to enable token-based authentication with Azure. Requires Vault 2.0.0+. ([#2790](https://github.com/hashicorp/terraform-provider-vault/pull/2790))
+
 
 IMPROVEMENTS:
 
+* `vault_managed_keys`: Add support for GCP Cloud KMS managed keys with parameters: `credentials`, `project`, `key_ring`, `region`, `crypto_key`, `crypto_key_version`, and `algorithm`. 
 * `vault_okta_auth_backend`: Add support for write-only field api_token_wo with version counters to prevent sensitive credentials from being stored in Terraform state. Deprecate `organization` and `token` and replace with `org_name` and `api_token` respectively in `vault_okta_auth_backend` resource. ([#2736](https://github.com/hashicorp/terraform-provider-vault/pull/2736))
 * `vault_kubernetes_secret_backend_role`: Add support for `token_default_audiences` field to configure default audiences for generated Kubernetes tokens. Requires Vault 1.15+. ([#2722](https://github.com/hashicorp/terraform-provider-vault/pull/2722))
 * `vault_raft_snapshot_agent_config`: Add support for `azure_auth_mode` and `azure_client_id` fields for Azure Managed Identity authentication (Vault Enterprise 1.18.0+), and `autoload_enabled` field for automatic snapshot restoration (Vault Enterprise 1.21.0+). ([#2758](https://github.com/hashicorp/terraform-provider-vault/pull/2758))
@@ -13,6 +17,7 @@ IMPROVEMENTS:
 * `vault_pki_secret_backend_root_cert`: Add support for `use_pss` and `key_usage` fields to configure PSS signature scheme and X.509 key usage constraints for root CA certificates. Requires Vault 1.18.0+ and 1.19.2+ respectively.([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 * `vault_pki_secret_backend_root_sign_intermediate`: Add version check for `key_usage` field to ensure compatibility with Vault 1.19.2+ for configuring X.509 key usage constraints on intermediate CA certificates. ([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 * `provider/auth_jwt`: Add support for `distributed_claim_access_token` field in the `auth_login_jwt` configuration block. ([#2782](https://github.com/hashicorp/terraform-provider-vault/pull/2782))
+* `vault_database_secret`: Add support for additional credential types (`rsa_private_key`, `client_certificate`, `private_key`, `private_key_type`) in the ephemeral resource to support all database credential types available in Vault's database secrets engine. ([#2767](https://github.com/hashicorp/terraform-provider-vault/pull/2767))
 
 ## 5.7.0 (February 5, 2026)
 
