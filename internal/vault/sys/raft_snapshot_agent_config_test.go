@@ -1,31 +1,30 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package vault
+package sys_test
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
-		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRaftSnapshotAgentConfig_basic(name),
@@ -108,13 +107,12 @@ func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 func TestAccRaftSnapshotAgentConfig_azureManagedIdentity(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion118)
 		},
-		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRaftSnapshotAgentConfig_azureManagedIdentity(name),
@@ -126,8 +124,9 @@ func TestAccRaftSnapshotAgentConfig_azureManagedIdentity(t *testing.T) {
 			},
 			{
 				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !provider.IsAPISupported(meta, provider.VaultVersion121), nil
+					acctestutil.PreCheck(t)
+					pm := acctestutil.TestProvider.Meta().(*provider.ProviderMeta)
+					return !pm.IsAPISupported(provider.VaultVersion121), nil
 				},
 				Config: testAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload(name),
 				Check: resource.ComposeTestCheckFunc(
@@ -141,19 +140,17 @@ func TestAccRaftSnapshotAgentConfig_azureManagedIdentity(t *testing.T) {
 	})
 }
 
-// TestAccRaftSnapshotAgentConfig_azureEnvironment tests Azure Environment authentication
-// which uses azidentity.NewDefaultCredential() to authenticate using environment variables.
+// TestAccRaftSnapshotAgentConfig_azureEnvironment tests Azure Environment authentication.
 // Requires Vault Enterprise 1.18.0+
 func TestAccRaftSnapshotAgentConfig_azureEnvironment(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion118)
 		},
-		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRaftSnapshotAgentConfig_azureEnvironment(name),
@@ -175,13 +172,12 @@ func TestAccRaftSnapshotAgentConfig_azureEnvironment(t *testing.T) {
 func TestAccRaftSnapshotAgentConfig_azureAuthModeNegative(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion118)
 		},
-		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccRaftSnapshotAgentConfig_azureSharedMissingKey(name),
@@ -204,10 +200,9 @@ func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		CheckDestroy:             testAccRaftSnapshotAgentConfigCheckDestroy,
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRaftSnapshotAgentConfig_basic(name),
@@ -228,28 +223,6 @@ func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccRaftSnapshotAgentConfigCheckDestroy(s *terraform.State) error {
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_raft_snapshot_agent_config" {
-			continue
-		}
-
-		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
-		if e != nil {
-			return e
-		}
-
-		snapshot, err := client.Logical().Read(rs.Primary.ID)
-		if err != nil {
-			return err
-		}
-		if snapshot != nil {
-			return fmt.Errorf("library %q still exists", rs.Primary.ID)
-		}
-	}
-	return nil
 }
 
 func testAccRaftSnapshotAgentConfig_basic(name string) string {
