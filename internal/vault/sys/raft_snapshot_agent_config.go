@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -171,25 +171,25 @@ func (r *RaftSnapshotAgentConfigResource) Schema(_ context.Context, _ resource.S
 			consts.FieldAWSS3DisableTLS: schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				MarkdownDescription: "Disable TLS for the S3 endpoint. This should only be used for testing purposes.",
 			},
 			consts.FieldAWSS3ForcePathStyle: schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				MarkdownDescription: "Use the endpoint/bucket URL style instead of bucket.endpoint.",
 			},
 			consts.FieldAWSS3EnableKMS: schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				MarkdownDescription: "Use KMS to encrypt bucket contents.",
 			},
 			consts.FieldAWSS3ServerSideEncryption: schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				MarkdownDescription: "Use AES256 to encrypt bucket contents.",
 			},
 			consts.FieldAWSS3KMSKey: schema.StringAttribute{
@@ -211,7 +211,7 @@ func (r *RaftSnapshotAgentConfigResource) Schema(_ context.Context, _ resource.S
 			consts.FieldGoogleDisableTLS: schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				MarkdownDescription: "Disable TLS for the GCS endpoint.",
 			},
 			consts.FieldAzureContainerName: schema.StringAttribute{
