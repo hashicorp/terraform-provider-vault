@@ -84,29 +84,34 @@ func (r *CFAuthBackendRoleResource) Schema(_ context.Context, _ resource.SchemaR
 				Required:            true,
 			},
 			consts.FieldBoundApplicationIDs: schema.SetAttribute{
-				ElementType:         types.StringType,
-				MarkdownDescription: "An optional set of application IDs an instance must be a member of to qualify for this role.",
-				Optional:            true,
+				ElementType: types.StringType,
+				MarkdownDescription: "An optional set of application IDs an instance must be a member of to qualify for this role. " +
+					"To clear this constraint, omit the field entirely rather than setting it to an empty list.",
+				Optional: true,
 			},
 			consts.FieldBoundSpaceIDs: schema.SetAttribute{
-				ElementType:         types.StringType,
-				MarkdownDescription: "An optional set of space IDs an instance must be a member of to qualify for this role.",
-				Optional:            true,
+				ElementType: types.StringType,
+				MarkdownDescription: "An optional set of space IDs an instance must be a member of to qualify for this role. " +
+					"To clear this constraint, omit the field entirely rather than setting it to an empty list.",
+				Optional: true,
 			},
 			consts.FieldBoundOrganizationIDs: schema.SetAttribute{
-				ElementType:         types.StringType,
-				MarkdownDescription: "An optional set of organization IDs an instance must be a member of to qualify for this role.",
-				Optional:            true,
+				ElementType: types.StringType,
+				MarkdownDescription: "An optional set of organization IDs an instance must be a member of to qualify for this role. " +
+					"To clear this constraint, omit the field entirely rather than setting it to an empty list.",
+				Optional: true,
 			},
 			consts.FieldBoundInstanceIDs: schema.SetAttribute{
-				ElementType:         types.StringType,
-				MarkdownDescription: "An optional set of instance IDs an instance must be a member of to qualify for this role.",
-				Optional:            true,
+				ElementType: types.StringType,
+				MarkdownDescription: "An optional set of instance IDs an instance must be a member of to qualify for this role. " +
+					"To clear this constraint, omit the field entirely rather than setting it to an empty list.",
+				Optional: true,
 			},
 			consts.FieldDisableIPMatching: schema.BoolAttribute{
 				MarkdownDescription: "If set to `true`, disables the default behavior that logging in must be performed " +
 					"from an acceptable IP address described by the presented certificate. " +
-					"Defaults to `false`. Removing this field from config resets the value to `false` in Vault.",
+					"Defaults to `false`. To reset to the default, omit this field from config rather than " +
+					"setting it to `false`.",
 				Optional: true,
 			},
 		},

@@ -34,13 +34,13 @@ EOT
 }
 
 resource "vault_cf_auth_backend_role" "role" {
-  mount               = vault_auth_backend.cf.path
-  name                = "my-role"
-  bound_space_ids         = ["space-uuid-1"]
+  mount                  = vault_auth_backend.cf.path
+  name                   = "my-role"
+  bound_space_ids        = ["space-uuid-1"]
   bound_organization_ids = ["org-uuid-1"]
-  disable_ip_matching = true
-  token_ttl           = 3600
-  token_policies      = [vault_policy.cf_policy.name]
+  disable_ip_matching    = true
+  token_ttl              = 3600
+  token_policies         = [vault_policy.cf_policy.name]
 }
 ```
 

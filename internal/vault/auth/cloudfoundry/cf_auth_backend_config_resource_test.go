@@ -6,6 +6,7 @@ package cloudfoundry_test
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -112,6 +113,10 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFUsername, params.username),
 					// Write-only field must never be stored in state.
 					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCFPasswordWO),
+					// Computed fields must be populated with Vault's defaults even when
+					// not explicitly set in config.
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotBefore, "300"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotAfter, "60"),
 				),
 				// Idempotency: re-applying the same config must produce no diff.
 				ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -216,7 +221,7 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccCFAuthBackendConfigImportStateIdFunc(resourceAddress),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: "mount",
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore:              []string{consts.FieldCFPasswordWO},
 			},
 			// Step 7: Destroy the config resource (keep the mount).
@@ -306,6 +311,118 @@ func TestAccCFAuthBackendConfigMultipleCerts(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestAccCFAuthBackendConfigInvalid combines all negative-path test cases into
+// a single test to keep invalid-input coverage together. Each step supplies a
+// deliberately broken config and asserts that Terraform (or Vault) rejects it
+// with an error.
+func TestAccCFAuthBackendConfigInvalid(t *testing.T) {
+	mount := acctest.RandomWithPrefix("cf-mount")
+
+	params := cfTestParamsFromEnv(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			// Invalid cf_api_addr: not a valid URL, Vault rejects the config write.
+			{
+				Config:      testAccCFAuthBackendConfigInvalidAPIAddr(mount, params),
+				ExpectError: regexp.MustCompile(`(?i)(invalid|error|failed|not valid)`),
+			},
+			// Missing cf_username: required field omitted; provider/Vault rejects.
+			{
+				Config:      testAccCFAuthBackendConfigMissingUsername(mount, params),
+				ExpectError: regexp.MustCompile(`(?i)(required|missing|error)`),
+			},
+			// Missing cf_password_wo: required field omitted; provider rejects.
+			{
+				Config:      testAccCFAuthBackendConfigMissingPassword(mount, params),
+				ExpectError: regexp.MustCompile(`(?i)(required|missing|error)`),
+			},
+			// Missing cf_api_addr: required field omitted; provider rejects.
+			{
+				Config:      testAccCFAuthBackendConfigMissingAPIAddr(mount, params),
+				ExpectError: regexp.MustCompile(`(?i)(required|missing|error)`),
+			},
+			// Invalid namespace: namespace does not exist in Vault.
+			{
+				Config:      testAccCFAuthBackendConfigInvalidNamespace(mount, params),
+				ExpectError: regexp.MustCompile(`(?i)(namespace|not found|error)`),
+			},
+		},
+	})
+}
+
+func testAccCFAuthBackendConfigInvalidAPIAddr(mount string, p cfTestParams) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_cf_auth_backend_config" "test" {
+  mount                    = vault_auth_backend.cf.path
+  identity_ca_certificates = ["%s"]
+  cf_api_addr              = "not-a-valid-url"
+  cf_username              = "%s"
+  cf_password_wo           = "%s"
+}
+`, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.username, p.password)
+}
+
+func testAccCFAuthBackendConfigMissingUsername(mount string, p cfTestParams) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_cf_auth_backend_config" "test" {
+  mount                    = vault_auth_backend.cf.path
+  identity_ca_certificates = ["%s"]
+  cf_api_addr              = "%s"
+  cf_password_wo           = "%s"
+}
+`, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.password)
+}
+
+func testAccCFAuthBackendConfigMissingPassword(mount string, p cfTestParams) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_cf_auth_backend_config" "test" {
+  mount                    = vault_auth_backend.cf.path
+  identity_ca_certificates = ["%s"]
+  cf_api_addr              = "%s"
+  cf_username              = "%s"
+}
+`, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.username)
+}
+
+func testAccCFAuthBackendConfigMissingAPIAddr(mount string, p cfTestParams) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_cf_auth_backend_config" "test" {
+  mount                    = vault_auth_backend.cf.path
+  identity_ca_certificates = ["%s"]
+  cf_username              = "%s"
+  cf_password_wo           = "%s"
+}
+`, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.username, p.password)
+}
+
+func testAccCFAuthBackendConfigInvalidNamespace(mount string, p cfTestParams) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_cf_auth_backend_config" "test" {
+  namespace                = "nonexistent-namespace"
+  mount                    = vault_auth_backend.cf.path
+  identity_ca_certificates = ["%s"]
+  cf_api_addr              = "%s"
+  cf_username              = "%s"
+  cf_password_wo           = "%s"
+}
+`, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.username, p.password)
 }
 
 func testAccCFAuthBackendConfigImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {

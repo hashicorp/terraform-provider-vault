@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cloudfoundry"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
-	spiffeauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
@@ -236,8 +235,6 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffe.NewSpiffeAuthRoleResource,
 		cloudfoundry.NewCFAuthBackendConfigResource,
 		cloudfoundry.NewCFAuthBackendRoleResource,
-		spiffeauth.NewSpiffeAuthConfigResource,
-		spiffeauth.NewSpiffeAuthRoleResource,
 		spiffesec.NewSpiffeSecretBackendConfigResource,
 		spiffesec.NewSpiffeSecretBackendRoleResource,
 		sys.NewPasswordPolicyResource,
