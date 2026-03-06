@@ -99,16 +99,31 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 			consts.FieldIdentityTokenKey: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The key to use for signing identity tokens.",
+				WriteOnly:   true,
+				Description: "The key to use for signing identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenKeyWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_key field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenKey},
 			},
 			consts.FieldIdentityTokenAudience: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The audience claim value for identity tokens.",
+				WriteOnly:   true,
+				Description: "The audience claim value for identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenAudienceWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_audience field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenAudience},
 			},
 			consts.FieldIdentityTokenTTL: {
 				Type:        schema.TypeInt,
 				Optional:    true,
+				Computed:    true,
 				Description: "The TTL of generated tokens.",
 			},
 			consts.FieldAllowedIPv4Addresses: {
@@ -175,6 +190,7 @@ func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Resour
 	// Add Vault 2.0.0+ WIF fields if supported
 	if provider.IsAPISupported(meta, provider.VaultVersion200) {
 		writeFields = append(writeFields, awsSync200WriteFields...)
+		readFields = append(readFields, awsSync200ReadFields...)
 	}
 
 	// Fields that need TypeSet to List conversion for JSON serialization
