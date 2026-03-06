@@ -60,10 +60,10 @@ resource "vault_secrets_sync_aws_destination" "aws_wif" {
   name                               = "aws-dest-wif"
   region                             = "us-east-1"
   role_arn                           = var.role_arn
-  identity_token_audience            = var.identity_token_audience
+  identity_token_audience_wo         = var.identity_token_audience
   identity_token_audience_wo_version = 1
   identity_token_ttl                 = 3600
-  identity_token_key                 = "my-key"
+  identity_token_key_wo              = "my-key"
   identity_token_key_wo_version      = 1
   granularity                        = "secret-path"
 }
@@ -129,25 +129,25 @@ The following arguments are supported:
 
 ### Workload Identity Federation (Vault 2.0.0+)
 
-* `identity_token_audience` - (Optional) The audience claim value for identity tokens. This is a write-only
+* `identity_token_audience_wo` - (Optional) The audience claim value for identity tokens. This is a write-only
   field and will not be read back from Vault.
   **Requires Vault 2.0.0+**.
 
-* `identity_token_audience_wo_version` - (Optional) This is used along with `identity_token_audience` to track
-  updates as `identity_token_audience` is a write-only field. Increment this field to update `identity_token_audience`.
-  Required with `identity_token_audience`. **Requires Vault 2.0.0+**.
+* `identity_token_audience_wo_version` - (Optional) This is used along with `identity_token_audience_wo` to track
+  updates as `identity_token_audience_wo` is a write-only field. Increment this field to update `identity_token_audience_wo`.
+  Required with `identity_token_audience_wo`. **Requires Vault 2.0.0+**.
 
 * `identity_token_ttl` - (Optional/Computed) The TTL of generated identity tokens in seconds.
-  Vault sets a default of 1 hour when not provided.
+  Vault sets a default of 3600 seconds when not provided.
   **Requires Vault 2.0.0+**.
 
-* `identity_token_key` - (Optional) The key to use for signing identity tokens. This is a write-only field
+* `identity_token_key_wo` - (Optional) The key to use for signing identity tokens. This is a write-only field
   and will not be read back from Vault.
   **Requires Vault 2.0.0+**.
 
-* `identity_token_key_wo_version` - (Optional) This is used along with `identity_token_key` to track
-  updates as `identity_token_key` is a write-only field. Increment this field to update `identity_token_key`.
-  Required with `identity_token_key`. **Requires Vault 2.0.0+**.
+* `identity_token_key_wo_version` - (Optional) This is used along with `identity_token_key_wo` to track
+  updates as `identity_token_key_wo` is a write-only field. Increment this field to update `identity_token_key_wo`.
+  Required with `identity_token_key_wo`. **Requires Vault 2.0.0+**.
 
 ## Attributes Reference
 

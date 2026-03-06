@@ -368,8 +368,8 @@ func TestAWSSecretsSyncDestinationWIF(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil,
 				fieldAccessKeyID,
 				fieldSecretAccessKey,
-				consts.FieldIdentityTokenAudience,
-				consts.FieldIdentityTokenKey,
+				consts.FieldIdentityTokenAudienceWO,
+				consts.FieldIdentityTokenKeyWO,
 				consts.FieldDisableStrictNetworking,
 				consts.FieldIdentityTokenTTL,
 				consts.FieldRoleArn,
@@ -388,7 +388,7 @@ resource "vault_secrets_sync_aws_destination" "test" {
   name                               = "%s"
   region                             = "%s"
   role_arn                           = "%s"
-  identity_token_audience            = "%s"
+  identity_token_audience_wo         = "%s"
   identity_token_audience_wo_version = %d
   identity_token_ttl                 = %d
   granularity                        = "secret-path"
@@ -400,7 +400,7 @@ func testAWSSecretsSyncDestinationWIFConfigMissingRoleArn(destName, region, audi
 resource "vault_secrets_sync_aws_destination" "test" {
   name                               = "%s"
   region                             = "%s"
-  identity_token_audience            = "%s"
+  identity_token_audience_wo         = "%s"
   identity_token_audience_wo_version = 2
   identity_token_ttl                 = 30
   granularity                        = "secret-path"
