@@ -14,6 +14,8 @@ A resource that manages the lifecycle of all [Managed Keys](https://www.vaultpro
 
 ## Example Usage
 
+### AWS
+
 ```hcl
 resource "vault_managed_keys" "keys" {
 
@@ -45,6 +47,34 @@ resource "vault_mount" "pki" {
   allowed_managed_keys      = [
     tolist(vault_managed_keys.keys.aws)[0].name,
     tolist(vault_managed_keys.keys.aws)[1].name
+  ]
+}
+```
+
+### GCP Cloud KMS
+
+```hcl
+resource "vault_managed_keys" "gcp_keys" {
+
+  gcp {
+    name        = "gcp-key-1"
+    credentials = file("sa-credentials.json")
+    project     = var.gcp_project
+    region      = "us-east1"
+    key_ring    = "vault-keyring"
+    crypto_key  = "vault-key"
+    algorithm   = "rsa_sign_pkcs1_2048_sha256"
+  }
+}
+
+resource "vault_mount" "pki" {
+  path                      = "pki"
+  type                      = "pki"
+  description               = "Example PKI mount using GCP Cloud KMS managed key"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds     = 36000
+  allowed_managed_keys      = [
+    tolist(vault_managed_keys.gcp_keys.gcp)[0].name
   ]
 }
 ```
@@ -162,6 +192,38 @@ The following arguments are supported:
 
 * `force_rw_session` - (Optional) Force all operations to open up a read-write session to
   the HSM.
+
+
+### GCP Cloud KMS Parameters
+
+**Note** this provider is available only with Vault Enterprise Plus (HSMs).
+
+* `name` - (Required) A unique lowercase name that serves as identifying the key.
+
+* `credentials` - (Required) The GCP service account credentials JSON contents (the raw JSON
+   key data), not a path to a credentials file.
+
+* `project` - (Required) The GCP project ID where the Cloud KMS resources are located.
+
+* `region` - (Required) The GCP region where the key ring is located (e.g., `us-east1`).
+
+* `key_ring` - (Required) The name of the Cloud KMS key ring.
+
+* `crypto_key` - (Required) The name of the Cloud KMS crypto key to use.
+
+* `crypto_key_version` - (Optional) The version of the key to use. (Default: 1)
+
+* `algorithm` - (Required) The signature algorithm to be used with the key. Supported values are:
+  - `ec_sign_p256_sha256`
+  - `ec_sign_p384_sha384`
+  - `rsa_sign_pss_2048_sha256`
+  - `rsa_sign_pss_3072_sha256`
+  - `rsa_sign_pss_4096_sha256`
+  - `rsa_sign_pss_4096_sha512`
+  - `rsa_sign_pkcs1_2048_sha256`
+  - `rsa_sign_pkcs1_3072_sha256`
+  - `rsa_sign_pkcs1_4096_sha256`
+  - `rsa_sign_pkcs1_4096_sha512`
 
 
 ## Import
