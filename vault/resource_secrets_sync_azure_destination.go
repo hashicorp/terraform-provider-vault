@@ -5,8 +5,6 @@ package vault
 
 import (
 	"context"
-	"strconv"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -14,25 +12,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	syncutil "github.com/hashicorp/terraform-provider-vault/internal/sync"
 )
-
-// durationToSecondsDiffSuppress suppresses diffs when the config value is a
-// Go duration string (e.g. "30m", "1h") and Vault has stored it as seconds
-// (e.g. "1800", "3600"). Both directions are handled so that either format
-// works in configuration.
-func durationToSecondsDiffSuppress(_, old, new string, _ *schema.ResourceData) bool {
-	toSecs := func(s string) (int64, bool) {
-		if d, err := time.ParseDuration(s); err == nil {
-			return int64(d.Seconds()), true
-		}
-		if n, err := strconv.ParseInt(s, 10, 64); err == nil {
-			return n, true
-		}
-		return 0, false
-	}
-	oldSecs, okOld := toSecs(old)
-	newSecs, okNew := toSecs(new)
-	return okOld && okNew && oldSecs == newSecs
-}
 
 const (
 	fieldKeyVaultURI = "key_vault_uri"
@@ -172,11 +151,10 @@ func azureSecretsSyncDestinationResource() *schema.Resource {
 				RequiredWith: []string{consts.FieldIdentityTokenAudience},
 			},
 			consts.FieldIdentityTokenTTL: {
-				Type:             schema.TypeString,
-				Optional:         true,
-				Computed:         true,
-				DiffSuppressFunc: durationToSecondsDiffSuppress,
-				Description:      "Time-to-live for generated identity tokens used in WIF authentication. Accepts duration format strings such as \"30m\" or \"1h\". Must be non-negative.",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The TTL of generated tokens.",
 			},
 			fieldCloud: {
 				Type:        schema.TypeString,

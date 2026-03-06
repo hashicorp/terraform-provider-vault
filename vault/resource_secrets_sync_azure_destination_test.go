@@ -79,14 +79,13 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
 				},
-				Config: testAzureSecretsSyncDestinationWIFConfig_initial(keyVaultURI, tenantID, "test", "test", destName, "30m"),
+				Config: testAzureSecretsSyncDestinationWIFConfig_initial(keyVaultURI, tenantID, "test", "test", destName, 1800),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, fieldKeyVaultURI, keyVaultURI),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, tenantID),
-				// identity_token_audience is write-only; verify its version counter instead
+					// identity_token_audience is write-only; verify its version counter instead
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWOVersion, "1"),
-					// Vault normalizes duration strings to seconds: "30m" -> "1800"
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "test"),
 				),
@@ -113,7 +112,7 @@ resource "vault_secrets_sync_azure_destination" "test" {
 	return ret
 }
 
-func testAzureSecretsSyncDestinationWIFConfig_initial(keyVaultURI, tenantID, clientID, identityTokenAudience, destName, identityTokenTTL string) string {
+func testAzureSecretsSyncDestinationWIFConfig_initial(keyVaultURI, tenantID, clientID, identityTokenAudience, destName string, identityTokenTTL int) string {
 	return fmt.Sprintf(`
 resource "vault_secrets_sync_azure_destination" "test" {
   granularity                        = "secret-path"
@@ -123,11 +122,11 @@ resource "vault_secrets_sync_azure_destination" "test" {
   client_id                          = "%s"
   identity_token_audience            = "%s"
   identity_token_audience_wo_version = 1
-  identity_token_ttl                 = "%s"
+  identity_token_ttl                 = %d
 }`, destName, keyVaultURI, tenantID, clientID, identityTokenAudience, identityTokenTTL)
 }
 
-func testAzureSecretsSyncDestinationWIFConfig_updated(keyVaultURI, tenantID, clientID, identityTokenAudience, destName, identityTokenTTL string) string {
+func testAzureSecretsSyncDestinationWIFConfig_updated(keyVaultURI, tenantID, clientID, identityTokenAudience, destName string, identityTokenTTL int) string {
 	return fmt.Sprintf(`
 resource "vault_secrets_sync_azure_destination" "test" {
   granularity                        = "secret-path"
@@ -137,7 +136,7 @@ resource "vault_secrets_sync_azure_destination" "test" {
   client_id                          = "%s"
   identity_token_audience            = "%s"
   identity_token_audience_wo_version = 2
-  identity_token_ttl                 = "%s"
+  identity_token_ttl                 = %d
 }`, destName, keyVaultURI, tenantID, clientID, identityTokenAudience, identityTokenTTL)
 }
 
@@ -408,7 +407,7 @@ func TestAzureSecretsSyncDestinationWIF(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
 				},
-				Config: testAzureSecretsSyncDestinationWIFConfig_initial(keyVaultURI, tenantID, clientID, identityTokenAudience, destName, "30m"),
+				Config: testAzureSecretsSyncDestinationWIFConfig_initial(keyVaultURI, tenantID, clientID, identityTokenAudience, destName, 1800),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
@@ -416,7 +415,6 @@ func TestAzureSecretsSyncDestinationWIF(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, tenantID),
 					// identity_token_audience is write-only; verify its version counter instead
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWOVersion, "1"),
-					// Vault normalizes duration strings to seconds: "30m" -> "1800"
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, clientID),
 				),
@@ -426,7 +424,7 @@ func TestAzureSecretsSyncDestinationWIF(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
 				},
-				Config: testAzureSecretsSyncDestinationWIFConfig_updated(keyVaultURI, tenantID, clientID, identityTokenAudience, destName, "1h"),
+				Config: testAzureSecretsSyncDestinationWIFConfig_updated(keyVaultURI, tenantID, clientID, identityTokenAudience, destName, 3600),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
@@ -434,7 +432,6 @@ func TestAzureSecretsSyncDestinationWIF(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, tenantID),
 					// identity_token_audience is write-only; verify its version counter instead
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWOVersion, "2"),
-					// Vault normalizes duration strings to seconds: "1h" -> "3600"
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "3600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, clientID),
 				),
