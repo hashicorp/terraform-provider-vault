@@ -62,7 +62,7 @@ func (r *TerraformTokenEphemeralSecretResource) Schema(_ context.Context, _ ephe
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldRoleName: schema.StringAttribute{
-				MarkdownDescription: "Specifies the name of the role to create credentials against. Must be `credential_type=\"team\"`",
+				MarkdownDescription: "Specifies the name of the role to create credentials against.",
 				Required:            true,
 			},
 			consts.FieldMount: schema.StringAttribute{
@@ -73,6 +73,7 @@ func (r *TerraformTokenEphemeralSecretResource) Schema(_ context.Context, _ ephe
 			consts.FieldToken: schema.StringAttribute{
 				MarkdownDescription: "Token requested from Vault.",
 				Computed:            true,
+				Sensitive:           true,
 			},
 		},
 		MarkdownDescription: "Provides an ephemeral resource to read a Terraform Token from Vault.",
@@ -141,7 +142,7 @@ func (r *TerraformTokenEphemeralSecretResource) Open(ctx context.Context, req ep
 }
 
 func (r *TerraformTokenEphemeralSecretResource) path(mount, roleName string) string {
-	return fmt.Sprintf("/%s/creds/%s", mount, roleName)
+	return fmt.Sprintf("%s/creds/%s", mount, roleName)
 }
 
 func (e *TerraformTokenEphemeralSecretResource) Close(ctx context.Context, req ephemeral.CloseRequest, resp *ephemeral.CloseResponse) {
