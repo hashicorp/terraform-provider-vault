@@ -781,6 +781,8 @@ const (
 	FieldAzureEndpoint             = "azure_endpoint"
 	FieldAzureClientID             = "azure_client_id"
 	FieldAzureAuthMode             = "azure_auth_mode"
+	FieldAWSSecretAccessKeyWO      = "aws_secret_access_key_wo"
+	FieldSecretsWOVersion          = "secrets_wo_version"
 
 	/*
 		ephemeral resource constants and write-only attributes

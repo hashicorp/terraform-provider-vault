@@ -374,6 +374,141 @@ resource "vault_raft_snapshot_agent_config" "azure_invalid_auth_mode" {
 }`, name)
 }
 
+// TestAccRaftSnapshotAgentConfig_awsWriteOnly tests the write-only aws_secret_access_key_wo
+// field with automatic change detection (no manual secrets_wo_version).
+func TestAccRaftSnapshotAgentConfig_awsWriteOnly(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
+			acctestutil.TestEntPreCheck(t)
+		},
+		Steps: []resource.TestStep{
+			{
+				// Step 1: Create with write-only secret, auto-managed version
+				Config: testAccRaftSnapshotAgentConfig_awsWriteOnly(name, "secret-v1"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldStorageType, "aws-s3"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldSecretsWOVersion, "1"),
+					// Write-only field should not be in state
+					resource.TestCheckNoResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldAWSSecretAccessKeyWO),
+					// Legacy field should not be set
+					resource.TestCheckNoResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldAWSSecretAccessKey),
+				),
+			},
+			{
+				// Step 2: Change the secret, version should auto-increment
+				Config: testAccRaftSnapshotAgentConfig_awsWriteOnly(name, "secret-v2"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldSecretsWOVersion, "2"),
+				),
+			},
+			{
+				// Step 3: Same secret, should be a no-op
+				Config:   testAccRaftSnapshotAgentConfig_awsWriteOnly(name, "secret-v2"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccRaftSnapshotAgentConfig_awsWriteOnlyManualVersion tests the write-only field
+// with a manually managed secrets_wo_version.
+func TestAccRaftSnapshotAgentConfig_awsWriteOnlyManualVersion(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
+			acctestutil.TestEntPreCheck(t)
+		},
+		Steps: []resource.TestStep{
+			{
+				// Step 1: Create with explicit version
+				Config: testAccRaftSnapshotAgentConfig_awsWriteOnlyManualVersion(name, "secret-v1", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo_manual", consts.FieldSecretsWOVersion, "1"),
+				),
+			},
+			{
+				// Step 2: Bump version to trigger update
+				Config: testAccRaftSnapshotAgentConfig_awsWriteOnlyManualVersion(name, "secret-v2", 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo_manual", consts.FieldSecretsWOVersion, "2"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccRaftSnapshotAgentConfig_awsWriteOnlyConflict tests that aws_secret_access_key
+// and aws_secret_access_key_wo cannot be set simultaneously.
+func TestAccRaftSnapshotAgentConfig_awsWriteOnlyConflict(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
+			acctestutil.TestEntPreCheck(t)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccRaftSnapshotAgentConfig_awsWriteOnlyConflict(name),
+				ExpectError: regexp.MustCompile(`Invalid Attribute Combination`),
+			},
+		},
+	})
+}
+
+func testAccRaftSnapshotAgentConfig_awsWriteOnly(name, secret string) string {
+	return fmt.Sprintf(`
+resource "vault_raft_snapshot_agent_config" "aws_wo" {
+  name                    = "%s"
+  interval_seconds        = 7200
+  retain                  = 1
+  path_prefix             = "wo/%s"
+  storage_type            = "aws-s3"
+  aws_s3_bucket           = "my-bucket"
+  aws_s3_region           = "us-east-1"
+  aws_access_key_id       = "aws-access-key-id"
+  aws_secret_access_key_wo = "%s"
+}`, name, name, secret)
+}
+
+func testAccRaftSnapshotAgentConfig_awsWriteOnlyManualVersion(name, secret string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_raft_snapshot_agent_config" "aws_wo_manual" {
+  name                    = "%s"
+  interval_seconds        = 7200
+  retain                  = 1
+  path_prefix             = "wo-manual/%s"
+  storage_type            = "aws-s3"
+  aws_s3_bucket           = "my-bucket"
+  aws_s3_region           = "us-east-1"
+  aws_access_key_id       = "aws-access-key-id"
+  aws_secret_access_key_wo = "%s"
+  secrets_wo_version      = %d
+}`, name, name, secret, version)
+}
+
+func testAccRaftSnapshotAgentConfig_awsWriteOnlyConflict(name string) string {
+	return fmt.Sprintf(`
+resource "vault_raft_snapshot_agent_config" "aws_wo_conflict" {
+  name                    = "%s"
+  interval_seconds        = 7200
+  retain                  = 1
+  path_prefix             = "path/in/bucket/conflict"
+  storage_type            = "aws-s3"
+  aws_s3_bucket           = "my-bucket"
+  aws_s3_region           = "us-east-1"
+  aws_access_key_id       = "aws-access-key-id"
+  aws_secret_access_key   = "legacy-secret"
+  aws_secret_access_key_wo = "wo-secret"
+}`, name)
+}
+
 func testAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload(name string) string {
 	return fmt.Sprintf(`
 resource "vault_raft_snapshot_agent_config" "azure_managed_identity" {
