@@ -120,7 +120,7 @@ resource "vault_secrets_sync_azure_destination" "test" {
   key_vault_uri                      = "%s"
   tenant_id                          = "%s"
   client_id                          = "%s"
-  identity_token_audience            = "%s"
+  identity_token_audience_wo         = "%s"
   identity_token_audience_wo_version = 1
   identity_token_ttl                 = %d
 }`, destName, keyVaultURI, tenantID, clientID, identityTokenAudience, identityTokenTTL)
@@ -134,7 +134,7 @@ resource "vault_secrets_sync_azure_destination" "test" {
   key_vault_uri                      = "%s"
   tenant_id                          = "%s"
   client_id                          = "%s"
-  identity_token_audience            = "%s"
+  identity_token_audience_wo         = "%s"
   identity_token_audience_wo_version = 2
   identity_token_ttl                 = %d
 }`, destName, keyVaultURI, tenantID, clientID, identityTokenAudience, identityTokenTTL)
