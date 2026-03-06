@@ -116,29 +116,31 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "The target project to manage secrets in.",
 			},
-			consts.FieldIdentityTokenKey: {
+			consts.FieldIdentityTokenKeyWO: {
 				Type:        schema.TypeString,
 				WriteOnly:   true,
+				Sensitive:   true,
 				Optional:    true,
 				Description: "The key to use for signing identity tokens. This is a write-only field and will not be read back from Vault.",
 			},
 			consts.FieldIdentityTokenKeyWOVersion: {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Description:  "A version counter for the write-only identity_token_key field. Incrementing this value will trigger an update.",
-				RequiredWith: []string{consts.FieldIdentityTokenKey},
+				Description:  "A version counter for the write-only identity_token_key_wo field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenKeyWO},
 			},
-			consts.FieldIdentityTokenAudience: {
+			consts.FieldIdentityTokenAudienceWO: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				WriteOnly:   true,
+				Sensitive:   true,
 				Description: "The audience claim value for identity tokens. This is a write-only field and will not be read back from Vault.",
 			},
 			consts.FieldIdentityTokenAudienceWOVersion: {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Description:  "A version counter for the write-only identity_token_audience field. Incrementing this value will trigger an update.",
-				RequiredWith: []string{consts.FieldIdentityTokenAudience},
+				Description:  "A version counter for the write-only identity_token_audience_wo field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenAudienceWO},
 			},
 			consts.FieldIdentityTokenTTL: {
 				Type:        schema.TypeInt,
