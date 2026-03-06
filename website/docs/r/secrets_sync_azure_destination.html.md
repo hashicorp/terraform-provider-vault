@@ -63,7 +63,7 @@ resource "vault_secrets_sync_azure_destination" "az_wif" {
   client_id               = var.client_id
   tenant_id               = var.tenant_id
   identity_token_audience = var.identity_token_audience
-  identity_token_ttl      = "1h"
+  identity_token_ttl      = 3600
   identity_token_key      = "my-key"
   granularity             = "secret-path"
 }
@@ -113,8 +113,8 @@ The following arguments are supported:
 * `identity_token_audience_wo_version` - (Optional) This is used along with `identity_token_audience` to track updates as `identity_token_audience` is a write-only field. Increment this field to update `identity_token_audience`.
   **Requires Vault 2.0.0+**.
 
-* `identity_token_ttl` - (Optional) The TTL of generated identity tokens. Accepts duration format strings
-  such as `"30m"` or `"1h"`. Default is 1 hour. **Requires Vault 2.0.0+**.
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Default is 3600 seconds.
+  **Requires Vault 2.0.0+**.
 
 * `identity_token_key` - (Optional) The key to use for signing identity tokens. This is a write-only field.
   **Requires Vault 2.0.0+**.
