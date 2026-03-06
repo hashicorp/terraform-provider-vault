@@ -40,6 +40,8 @@ FEATURES:
 * **New Ephemeral Resource**: Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
 * **New Ephemeral Resource**: Add ephemeral resource `vault_terraform_token`, by @drewmullen ([#2616](https://github.com/hashicorp/terraform-provider-vault/pull/2616))
 
+* `vault_radius_auth_backend`: Add resource for radius auth backend. ([#2791]https://github.com/hashicorp/terraform-provider-vault/pull/2791)
+
 IMPROVEMENTS:
 
 * `vault_managed_keys`: Add support for GCP Cloud KMS managed keys with parameters: `credentials`, `project`, `key_ring`, `region`, `crypto_key`, `crypto_key_version`, and `algorithm`. ([#2769](https://github.com/hashicorp/terraform-provider-vault/pull/2769))
