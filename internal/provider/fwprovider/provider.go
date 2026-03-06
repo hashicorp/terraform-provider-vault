@@ -236,7 +236,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffesec.NewSpiffeSecretBackendConfigResource,
 		spiffesec.NewSpiffeSecretBackendRoleResource,
 		radius.NewRadiusAuthBackendResource,
-
+		radius.NewRadiusAuthBackendUserResource,
 		sys.NewPasswordPolicyResource,
 		azure.NewAzureStaticRoleResource,
 		kmip.NewKMIPListenerResource,
