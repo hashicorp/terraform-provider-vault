@@ -110,6 +110,7 @@ func (r *RadiusAuthBackendResource) Schema(ctx context.Context, req resource.Sch
 				MarkdownDescription: "The RADIUS shared secret. This is a write-only field and will not be read back from Vault.",
 				Required:            true,
 				WriteOnly:           true,
+				Sensitive:           true,
 			},
 			consts.FieldRadiusUnregisteredUserPolicies: schema.SetAttribute{
 				ElementType:         types.StringType,
