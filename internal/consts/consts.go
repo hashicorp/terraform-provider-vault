@@ -521,6 +521,14 @@ const (
 	FieldSecretID                           = "secret_id"
 	FieldSecretIDWO                         = "secret_id_wo"
 	FieldSecretIDWOVersion                  = "secret_id_wo_version"
+	FieldRadiusSecretWO                     = "secret_wo"
+	FieldRadiusSecretWOVersion              = "secret_wo_version"
+	FieldRadiusUnregisteredUserPolicies     = "unregistered_user_policies"
+	FieldRadiusDialTimeout                  = "dial_timeout"
+	FieldRadiusReadTimeout                  = "read_timeout"
+	FieldRadiusNASPort                      = "nas_port"
+	FieldRadiusNASIdentifier                = "nas_identifier"
+	FieldHost                               = "host"
 	FieldWrappingToken                      = "wrapping_token"
 	FieldWithWrappedAccessor                = "with_wrapped_accessor"
 	FieldExternalID                         = "external_id"
@@ -661,7 +669,6 @@ const (
 	FieldSSHHostKeyTrustOnFirstUse = "ssh_host_key_trust_on_first_use"
 	FieldParentAccountRef          = "parent_account_ref"
 	FieldNextVaultRotation         = "next_vault_rotation"
-	FieldHost                      = "host"
 
 	FieldIntervalDuration                     = "interval_duration"
 	FieldMaintainStoredCertificateCounts      = "maintain_stored_certificate_counts"
@@ -692,6 +699,7 @@ const (
 	FieldEnableSamaccountnameLogin            = "enable_samaccountname_login"
 	FieldAnonymousGroupSearch                 = "anonymous_group_search"
 	FieldAliasNameSource                      = "alias_name_source"
+	FieldAliasMetadata                        = "alias_metadata"
 	FieldBoundServiceAccountNames             = "bound_service_account_names"
 	FieldBoundServiceAccountNamespaces        = "bound_service_account_namespaces"
 	FieldBoundServiceAccountNamespaceSelector = "bound_service_account_namespace_selector"
@@ -956,7 +964,6 @@ const (
 	FieldBoundOrganizationIDs     = "bound_organization_ids"
 	FieldBoundInstanceIDs         = "bound_instance_ids"
 	FieldDisableIPMatching        = "disable_ip_matching"
-	FieldAliasMetadata            = "alias_metadata"
 	FieldSigningTime              = "signing_time"
 
 	/*
