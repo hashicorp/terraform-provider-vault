@@ -379,9 +379,11 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		data[consts.FieldBindPass] = bindpass
 	}
 
-	// Explicitly clear bindpass from state when using write-only attributes
 	if _, ok := d.GetOk(consts.FieldBindPassWOVersion); ok {
-		d.Set(consts.FieldBindPass, "")
+		oldBindPass, _ := d.GetChange(consts.FieldBindPass)
+		if oldBindPass != nil && oldBindPass.(string) != "" {
+			d.Set(consts.FieldBindPass, "")
+		}
 	}
 
 	if v, ok := d.GetOk(consts.FieldClientTLSCert); ok {
