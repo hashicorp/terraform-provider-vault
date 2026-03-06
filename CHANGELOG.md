@@ -1,5 +1,8 @@
 ## Unreleased
 
+* Add support for RADIUS auth backend: `vault_radius_auth_backend` and `vault_radius_auth_backend_user` resource and `vault_radius_auth_login` ephemeral resource.([#2814](https://github.com/hashicorp/terraform-provider-vault/pull/2814))
+
+
 ## 5.8.0 (March 12, 2026)
 
 FEATURES:
@@ -13,8 +16,6 @@ FEATURES:
 * `vault_secrets_sync_gcp_destination`: Add support for Workload Identity Federation (WIF) fields `identity_token_audience_wo`, `identity_token_audience_wo_version`, `identity_token_ttl`, `identity_token_key_wo`, `identity_token_key_wo_version` and `service_account_email` to enable token-based authentication with GCP. Requires Vault 2.0.0+. ([#2798](https://github.com/hashicorp/terraform-provider-vault/pull/2798))
 * **New Ephemeral Resource**: Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
 * **New Ephemeral Resource**: Add ephemeral resource `vault_terraform_token`, by @drewmullen ([#2616](https://github.com/hashicorp/terraform-provider-vault/pull/2616))
-
-* `vault_radius_auth_backend`: Add resource for radius auth backend. ([#2791]https://github.com/hashicorp/terraform-provider-vault/pull/2791)
 
 IMPROVEMENTS:
 
