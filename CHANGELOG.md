@@ -4,7 +4,8 @@ FEATURES:
 
 * **New Ephemeral Resource**:Add ephemeral resource for `vault_generic_secret` ([#2735](https://github.com/hashicorp/terraform-provider-vault/pull/2735))
 * Add support for SPIFFE secrets backend: ([#2660](https://github.com/hashicorp/terraform-provider-vault/pull/2660))
-
+* Add support for pki-external-ca secrets backend: ([#2771](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
+* Add new KMIP resources `vault_kmip_secret_ca_generated`, `vault_kmip_secret_ca_imported`, `vault_kmip_secret_listener`, and add support for the `ca` field in `vault_kmip_secret_role`: ([#2773](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
 
 IMPROVEMENTS:
 
