@@ -6,9 +6,7 @@ FEATURES:
 * Add support for SPIFFE secrets backend: ([#2660](https://github.com/hashicorp/terraform-provider-vault/pull/2660))
 * Add support for pki-external-ca secrets backend: ([#2771](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
 * Add new KMIP resources `vault_kmip_secret_ca_generated`, `vault_kmip_secret_ca_imported`, `vault_kmip_secret_listener`, and add support for the `ca` field in `vault_kmip_secret_role`: ([#2773](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
-* **New Resource** : `vault_radius_auth_backend_user` - Manages RADIUS auth backend users and their policies.([#2810](https://github.com/hashicorp/terraform-provider-vault/pull/2810))
-
-* `vault_radius_auth_backend`: Add resource for radius auth backend. ([#2791]https://github.com/hashicorp/terraform-provider-vault/pull/2791)
+* `vault_radius_auth_backend`: Add implementation for radius auth backend. ([#2814]https://github.com/hashicorp/terraform-provider-vault/pull/2814)
 
 IMPROVEMENTS:
 
