@@ -71,7 +71,7 @@ func (r *AliCloudAccessCredentialsEphemeralResource) Schema(_ context.Context, _
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Mount path for the AliCloud secret engine in Vault.",
-				Optional:            true,
+				Required:            true,
 			},
 			consts.FieldRole: schema.StringAttribute{
 				MarkdownDescription: "AliCloud Secret Role to read credentials from.",
