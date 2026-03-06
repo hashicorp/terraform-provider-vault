@@ -81,13 +81,13 @@ func TestGCPSecretsSyncDestinationWIF(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
+			meta := testProvider.Meta().(*provider.ProviderMeta)
+			if !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()) {
+				t.Skip("Vault version < 2.0.0 or not enterprise")
+			}
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
-				},
 				Config: testGCPSecretsSyncDestinationWIFConfig_initial(destName, project_id, service_account_email, audience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -100,19 +100,11 @@ func TestGCPSecretsSyncDestinationWIF(t *testing.T) {
 				),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
-				},
 				// Missing service_account_email field should error
 				Config:      testGCPSecretsSyncDestinationWIFConfigMissingServiceAccountEmail(destName, project_id, audience),
 				ExpectError: regexp.MustCompile(`failed to parse credentials: workload identity federation auth requires both identity_token_audience and service_account_email`),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
-				},
 				// Invalid service_account_email field should error
 				Config:      testGCPSecretsSyncDestinationWIFConfigInvalidServiceAccountEmail(destName, project_id, audience),
 				ExpectError: regexp.MustCompile(`failed to parse credentials: invalid service account email format, expected format: project-id@project-id.iam.gserviceaccount.com`),
