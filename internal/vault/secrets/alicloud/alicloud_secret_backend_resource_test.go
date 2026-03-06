@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -34,9 +33,8 @@ func TestAliCloudSecretBackend_basic(t *testing.T) {
 			{
 				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
 				),
 			},
 			{
@@ -44,10 +42,39 @@ func TestAliCloudSecretBackend_basic(t *testing.T) {
 				// Both access_key and secret_key are sent to Vault (API requires both)
 				Config: testAliCloudSecretBackend_config(path, updatedAccessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, updatedAccessKey),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
 				),
+			},
+		},
+	})
+}
+
+// TestAliCloudSecretBackend_import tests importing an existing backend configuration
+func TestAliCloudSecretBackend_import(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-alicloud")
+	accessKey, secretKey := getTestAliCloudCreds(t)
+
+	resourceType := "vault_alicloud_secret_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateId:                        path,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 			},
 		},
 	})
@@ -69,49 +96,44 @@ func TestAliCloudSecretBackend_writeOnly(t *testing.T) {
 			{
 				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					// secret_key_wo is write-only, not in state after Read
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
 				),
 			},
 			{
 				// Update secret_key_wo to new value
 				Config: testAliCloudSecretBackend_config(path, accessKey, updatedSecretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					// secret_key_wo is write-only, not in state after Read
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
 				),
 			},
 			{
 				// Keep same secret_key_wo value (updatedSecretKey) - no changes, no API call
 				Config: testAliCloudSecretBackend_config(path, accessKey, updatedSecretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					// secret_key_wo is write-only, not in state after Read
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
 				),
 			},
 			{
 				// Revert secret_key_wo back to original value
 				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					// secret_key_wo is write-only, not in state after Read
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
 				),
 			},
 			{
 				// Keep same secret_key_wo value (original) - no changes, no API call
 				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
 				),
 			},
 		},
@@ -119,7 +141,7 @@ func TestAliCloudSecretBackend_writeOnly(t *testing.T) {
 }
 
 // TestAliCloudSecretBackend_remount tests changing the mount path
-// Verifies that changing the path triggers destroy+recreate with a new accessor
+// Verifies that changing the mount triggers destroy+recreate
 func TestAliCloudSecretBackend_remount(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-alicloud")
 	updatedPath := acctest.RandomWithPrefix("tf-test-alicloud-updated")
@@ -128,8 +150,6 @@ func TestAliCloudSecretBackend_remount(t *testing.T) {
 	resourceType := "vault_alicloud_secret_backend"
 	resourceName := resourceType + ".test"
 
-	var originalAccessor string
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -137,36 +157,13 @@ func TestAliCloudSecretBackend_remount(t *testing.T) {
 			{
 				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
-					// Capture the accessor value
-					func(s *terraform.State) error {
-						rs, ok := s.RootModule().Resources[resourceName]
-						if !ok {
-							return fmt.Errorf("resource not found: %s", resourceName)
-						}
-						originalAccessor = rs.Primary.Attributes[consts.FieldAccessor]
-						return nil
-					},
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 				),
 			},
 			{
 				Config: testAliCloudSecretBackend_config(updatedPath, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
-					// Accessor should be different after path change (destroy+recreate = new accessor)
-					func(s *terraform.State) error {
-						rs, ok := s.RootModule().Resources[resourceName]
-						if !ok {
-							return fmt.Errorf("resource not found: %s", resourceName)
-						}
-						currentAccessor := rs.Primary.Attributes[consts.FieldAccessor]
-						if currentAccessor == originalAccessor {
-							return fmt.Errorf("accessor should change after path change, but remained: %s", originalAccessor)
-						}
-						return nil
-					},
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, updatedPath),
 				),
 			},
 		},
@@ -188,7 +185,7 @@ func TestAliCloudSecretBackend_destroy(t *testing.T) {
 			{
 				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 				),
 			},
@@ -216,10 +213,9 @@ func TestAliCloudSecretBackend_namespace(t *testing.T) {
 			{
 				Config: testAliCloudSecretBackend_namespaceConfig(namespacePath, path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespacePath),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
 				),
 			},
 		},
@@ -243,7 +239,7 @@ func TestAliCloudSecretBackend_namespaceCredentialUpdate(t *testing.T) {
 			{
 				Config: testAliCloudSecretBackend_namespaceConfig(namespacePath, path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespacePath),
 				),
@@ -251,7 +247,7 @@ func TestAliCloudSecretBackend_namespaceCredentialUpdate(t *testing.T) {
 			{
 				Config: testAliCloudSecretBackend_namespaceConfig(namespacePath, path, updatedAccessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, updatedAccessKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespacePath),
 				),
@@ -260,36 +256,8 @@ func TestAliCloudSecretBackend_namespaceCredentialUpdate(t *testing.T) {
 	})
 }
 
-// TestAliCloudSecretBackend_namespaceAccessor tests accessor field in namespace
-func TestAliCloudSecretBackend_namespaceAccessor(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-alicloud")
-	namespacePath := acctest.RandomWithPrefix("test-namespace")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resourceType := "vault_alicloud_secret_backend"
-	resourceName := resourceType + ".test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAliCloudSecretBackend_namespaceConfig(namespacePath, path, accessKey, secretKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespacePath),
-					// Verify accessor is set (format: alicloud_<hash>)
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
-					resource.TestMatchResourceAttr(resourceName, consts.FieldAccessor,
-						regexp.MustCompile("^alicloud_[a-f0-9]+$")),
-				),
-			},
-		},
-	})
-}
-
-// TestAliCloudSecretBackend_missingPath tests validation when path is missing
-func TestAliCloudSecretBackend_missingPath(t *testing.T) {
+// TestAliCloudSecretBackend_missingMount tests validation when mount is missing
+func TestAliCloudSecretBackend_missingMount(t *testing.T) {
 	accessKey, secretKey := getTestAliCloudCreds(t)
 
 	resource.Test(t, resource.TestCase{
@@ -297,8 +265,8 @@ func TestAliCloudSecretBackend_missingPath(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAliCloudSecretBackend_missingPathConfig(accessKey, secretKey),
-				ExpectError: regexp.MustCompile(`The argument "path" is required`),
+				Config:      testAliCloudSecretBackend_missingMountConfig(accessKey, secretKey),
+				ExpectError: regexp.MustCompile(`The argument "mount" is required`),
 			},
 		},
 	})
@@ -353,9 +321,8 @@ func TestAliCloudSecretBackend_defaultNamespace(t *testing.T) {
 			{
 				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
 					// When namespace is not specified, it should not be in state
 					resource.TestCheckNoResourceAttr(resourceName, consts.FieldNamespace),
 				),
@@ -364,34 +331,8 @@ func TestAliCloudSecretBackend_defaultNamespace(t *testing.T) {
 	})
 }
 
-// TestAliCloudSecretBackend_accessorFormat tests that accessor field has correct format
-func TestAliCloudSecretBackend_accessorFormat(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-alicloud")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resourceType := "vault_alicloud_secret_backend"
-	resourceName := resourceType + ".test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					// Verify accessor matches expected format: alicloud_<hash>
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
-					resource.TestMatchResourceAttr(resourceName, consts.FieldAccessor,
-						regexp.MustCompile("^alicloud_[a-f0-9]+$")),
-				),
-			},
-		},
-	})
-}
-
-// TestAliCloudSecretBackend_emptyPath tests error when path is empty string
-func TestAliCloudSecretBackend_emptyPath(t *testing.T) {
+// TestAliCloudSecretBackend_emptyMount tests error when mount is empty string
+func TestAliCloudSecretBackend_emptyMount(t *testing.T) {
 	accessKey, secretKey := getTestAliCloudCreds(t)
 
 	resource.Test(t, resource.TestCase{
@@ -400,7 +341,7 @@ func TestAliCloudSecretBackend_emptyPath(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAliCloudSecretBackend_config("", accessKey, secretKey),
-				ExpectError: regexp.MustCompile(`Error mounting AliCloud backend|unsupported operation|path cannot be empty`),
+				ExpectError: regexp.MustCompile(`Unable to Create Resource|unsupported operation|path cannot be empty`),
 			},
 		},
 	})
@@ -412,9 +353,15 @@ resource "vault_namespace" "test" {
   path = %q
 }
 
+resource "vault_mount" "test" {
+  namespace = vault_namespace.test.path
+  path      = %q
+  type      = "alicloud"
+}
+
 resource "vault_alicloud_secret_backend" "test" {
   namespace     = vault_namespace.test.path
-  path          = %q
+  mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
 }
@@ -431,19 +378,27 @@ func getTestAliCloudCreds(t *testing.T) (string, string) {
 // testAliCloudSecretBackend_config returns test configuration for the AliCloud secret backend
 func testAliCloudSecretBackend_config(path, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = %q
+  type = "alicloud"
+}
+
 resource "vault_alicloud_secret_backend" "test" {
-  path          = %q
+  mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
 }
 `, path, accessKey, secretKey)
 }
 
-// Made with Bob
-
-// testAliCloudSecretBackend_missingPathConfig returns config without path field
-func testAliCloudSecretBackend_missingPathConfig(accessKey, secretKey string) string {
+// testAliCloudSecretBackend_missingMountConfig returns config without mount field
+func testAliCloudSecretBackend_missingMountConfig(accessKey, secretKey string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "alicloud-test"
+  type = "alicloud"
+}
+
 resource "vault_alicloud_secret_backend" "test" {
   access_key    = %q
   secret_key_wo = %q
@@ -454,8 +409,13 @@ resource "vault_alicloud_secret_backend" "test" {
 // testAliCloudSecretBackend_missingAccessKeyConfig returns config without access_key field
 func testAliCloudSecretBackend_missingAccessKeyConfig(path, secretKey string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = %q
+  type = "alicloud"
+}
+
 resource "vault_alicloud_secret_backend" "test" {
-  path          = %q
+  mount         = vault_mount.test.path
   secret_key_wo = %q
 }
 `, path, secretKey)
@@ -464,8 +424,13 @@ resource "vault_alicloud_secret_backend" "test" {
 // testAliCloudSecretBackend_missingSecretKeyConfig returns config without secret_key_wo field
 func testAliCloudSecretBackend_missingSecretKeyConfig(path, accessKey string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = %q
+  type = "alicloud"
+}
+
 resource "vault_alicloud_secret_backend" "test" {
-  path       = %q
+  mount      = vault_mount.test.path
   access_key = %q
 }
 `, path, accessKey)
