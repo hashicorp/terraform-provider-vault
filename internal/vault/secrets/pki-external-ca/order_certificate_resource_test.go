@@ -85,7 +85,7 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
   name                        = "%s"
   acme_account_name           = vault_pki_secret_backend_acme_account.test.name
   allowed_domains             = ["host.docker.internal"]
-  allowed_domains_options     = ["bare_domains", "subdomains", "wildcards"]
+  allowed_domain_options      = ["bare_domains", "subdomains", "wildcards"]
   allowed_challenge_types     = ["http-01", "dns-01", "tls-alpn-01"]
   csr_generate_key_type       = "ec-256"
   csr_identifier_population   = "cn_first"

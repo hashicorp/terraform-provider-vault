@@ -11,11 +11,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	spiffeauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
+	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -229,8 +230,10 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 // the Metadata method. All resources must have unique names.
 func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 	return append([]func() resource.Resource{
-		spiffe.NewSpiffeAuthConfigResource,
-		spiffe.NewSpiffeAuthRoleResource,
+		spiffeauth.NewSpiffeAuthConfigResource,
+		spiffeauth.NewSpiffeAuthRoleResource,
+		spiffesec.NewSpiffeSecretBackendConfigResource,
+		spiffesec.NewSpiffeSecretBackendRoleResource,
 		sys.NewPasswordPolicyResource,
 		azure.NewAzureStaticRoleResource,
 		kmip.NewKMIPListenerResource,
@@ -257,6 +260,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewAWSStaticAccessCredentialsEphemeralSecretResource,
 		ephemeralauth.NewApproleAuthBackendRoleSecretIDEphemeralResource,
 		ephemeralsecrets.NewKubernetesServiceAccountTokenEphemeralResource,
+		spiffesec.NewSpiffeSecretBackendMintJwtResource,
 	}
 
 }
