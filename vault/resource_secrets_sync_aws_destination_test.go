@@ -372,6 +372,7 @@ func TestAWSSecretsSyncDestinationWIF(t *testing.T) {
 				consts.FieldIdentityTokenKey,
 				consts.FieldDisableStrictNetworking,
 				consts.FieldIdentityTokenTTL,
+				consts.FieldRoleArn,
 			),
 			{ // Missing role_arn when using WIF should error
 				Config:      testAWSSecretsSyncDestinationWIFConfigMissingRoleArn(destName, region, audience),
