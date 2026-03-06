@@ -6,7 +6,6 @@ package alicloud
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -16,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -24,8 +22,9 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 )
 
-// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
+// Ensure the implementation satisfies the expected interfaces
 var _ resource.ResourceWithConfigure = &AliCloudSecretBackendResource{}
+var _ resource.ResourceWithImportState = &AliCloudSecretBackendResource{}
 
 // NewAliCloudSecretBackendResource returns the implementation for this resource
 func NewAliCloudSecretBackendResource() resource.Resource {
@@ -35,17 +34,16 @@ func NewAliCloudSecretBackendResource() resource.Resource {
 // AliCloudSecretBackendResource implements the methods that define this resource
 type AliCloudSecretBackendResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
-// AliCloudSecretBackendModel describes the Terraform resource data model
+// AliCloudSecretBackendModel describes the Terraform resource data model.
+
 type AliCloudSecretBackendModel struct {
 	base.BaseModel
 
-	Path        types.String `tfsdk:"path"`
+	Mount       types.String `tfsdk:"mount"`
 	AccessKey   types.String `tfsdk:"access_key"`
 	SecretKeyWO types.String `tfsdk:"secret_key_wo"`
-	Accessor    types.String `tfsdk:"accessor"`
 }
 
 func (r *AliCloudSecretBackendResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -55,9 +53,10 @@ func (r *AliCloudSecretBackendResource) Metadata(_ context.Context, req resource
 func (r *AliCloudSecretBackendResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
-				MarkdownDescription: "Path where the AliCloud secrets engine will be mounted.",
-				Required:            true,
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Path of the AliCloud secrets engine mount. Must match the `path` " +
+					"of a `vault_mount` resource with `type = \"alicloud\"`. Use `vault_mount.alicloud.path` here.",
+				Required: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -73,14 +72,17 @@ func (r *AliCloudSecretBackendResource) Schema(_ context.Context, _ resource.Sch
 				Sensitive:           true,
 				WriteOnly:           true,
 			},
-			consts.FieldAccessor: schema.StringAttribute{
-				MarkdownDescription: "Accessor of the mount.",
-				Computed:            true,
-			},
 		},
-		MarkdownDescription: "Manages an AliCloud secrets engine backend in Vault.",
+		MarkdownDescription: "Configures the AliCloud secrets engine credentials. " +
+			"The mount itself must be created first using a `vault_mount` resource with `type = \"alicloud\"`. " +
+			"Use `vault_mount.alicloud.id` as `mount_id` on ephemeral resources to guarantee deferral.",
 	}
 	base.MustAddBaseSchema(&resp.Schema)
+}
+
+// configPath constructs the Vault API path for the backend config endpoint.
+func (r *AliCloudSecretBackendResource) configPath(data *AliCloudSecretBackendModel) string {
+	return fmt.Sprintf("%s/config", data.Mount.ValueString())
 }
 
 func (r *AliCloudSecretBackendResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -105,41 +107,22 @@ func (r *AliCloudSecretBackendResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	// Mount the backend
-	mountPath := data.Path.ValueString()
-	log.Printf("[DEBUG] Mounting AliCloud secrets engine at %q", mountPath)
-
-	mountConfig := &api.MountInput{
-		Type: consts.MountTypeAliCloud,
-	}
-
-	if err := cli.Sys().MountWithContext(ctx, mountPath, mountConfig); err != nil {
-		resp.Diagnostics.AddError(
-			"Error mounting AliCloud backend",
-			fmt.Sprintf("Error mounting AliCloud backend at path %q: %s", mountPath, err),
-		)
-		return
-	}
-
-	// Configure the backend
-	configPath := fmt.Sprintf("%s/config", mountPath)
+	configPath := r.configPath(&data)
 
 	// Build config data - use secret_key_wo from Config (write-only attributes are nullified in Plan)
 	secretKeyValue := configData.SecretKeyWO.ValueString()
-	log.Printf("[DEBUG] AliCloud secret_key_wo IsNull: %v, IsUnknown: %v, Value length: %d",
-		configData.SecretKeyWO.IsNull(), configData.SecretKeyWO.IsUnknown(), len(secretKeyValue))
 
 	vaultConfigData := map[string]interface{}{
 		consts.FieldAccessKey: data.AccessKey.ValueString(),
 		consts.FieldSecretKey: secretKeyValue,
 	}
 
-	log.Printf("[DEBUG] Configuring AliCloud backend at %q with access_key length: %d", configPath, len(data.AccessKey.ValueString()))
+	tflog.Debug(ctx, "Configuring AliCloud backend", map[string]any{
+		"config_path":    configPath,
+		"access_key_len": len(data.AccessKey.ValueString()),
+	})
 	if _, err := cli.Logical().WriteWithContext(ctx, configPath, vaultConfigData); err != nil {
-		resp.Diagnostics.AddError(
-			"Error configuring AliCloud backend",
-			fmt.Sprintf("Error configuring AliCloud backend at path %q: %s", configPath, err),
-		)
+		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
 	}
 
@@ -175,45 +158,21 @@ func (r *AliCloudSecretBackendResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	mountPath := data.Path.ValueString()
+	configPath := r.configPath(&data)
 
-	// Read mount information to get accessor
-	log.Printf("[DEBUG] Reading mount information for %q", mountPath)
-	mounts, err := cli.Sys().ListMountsWithContext(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading mount information",
-			fmt.Sprintf("Error reading mount information for path %q: %s", mountPath, err),
-		)
-		return
-	}
-
-	// Find the mount and get its accessor
-	// Vault returns mounts with trailing slash
-	mountKey := mountPath + "/"
-	if mount, ok := mounts[mountKey]; ok {
-		data.Accessor = types.StringValue(mount.Accessor)
-		log.Printf("[DEBUG] Found accessor %q for mount %q", mount.Accessor, mountPath)
-	} else {
-		log.Printf("[WARN] Mount %q not found in mount list", mountPath)
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	configPath := fmt.Sprintf("%s/config", mountPath)
-
-	log.Printf("[DEBUG] Reading AliCloud backend config from %q", configPath)
+	tflog.Debug(ctx, "Reading AliCloud backend config", map[string]any{
+		"config_path": configPath,
+	})
 	secret, err := cli.Logical().ReadWithContext(ctx, configPath)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading AliCloud backend config",
-			fmt.Sprintf("Error reading AliCloud backend config from path %q: %s", configPath, err),
-		)
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
 
 	if secret == nil {
-		log.Printf("[WARN] AliCloud backend config not found at %q, removing from state", configPath)
+		tflog.Warn(ctx, "AliCloud backend config not found, removing from state", map[string]any{
+			"config_path": configPath,
+		})
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -246,8 +205,7 @@ func (r *AliCloudSecretBackendResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	mountPath := data.Path.ValueString()
-	configPath := fmt.Sprintf("%s/config", mountPath)
+	configPath := r.configPath(&data)
 
 	// Build config data - Vault API requires both access_key and secret_key
 	// Use secret_key_wo from Config (write-only attributes are nullified in Plan)
@@ -256,13 +214,12 @@ func (r *AliCloudSecretBackendResource) Update(ctx context.Context, req resource
 		consts.FieldSecretKey: configData.SecretKeyWO.ValueString(),
 	}
 
-	log.Printf("[DEBUG] Updating AliCloud backend config at %q", configPath)
+	tflog.Debug(ctx, "Updating AliCloud backend config", map[string]any{
+		"config_path": configPath,
+	})
 
 	if _, err := cli.Logical().WriteWithContext(ctx, configPath, vaultConfigData); err != nil {
-		resp.Diagnostics.AddError(
-			"Error updating AliCloud backend config",
-			fmt.Sprintf("Error updating AliCloud backend config at path %q: %s", configPath, err),
-		)
+		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
 		return
 	}
 
@@ -292,26 +249,16 @@ func (r *AliCloudSecretBackendResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	mountPath := data.Path.ValueString()
-	log.Printf("[DEBUG] Unmounting AliCloud backend at %q", mountPath)
-
-	if err := cli.Sys().UnmountWithContext(ctx, mountPath); err != nil {
-		resp.Diagnostics.AddError(
-			"Error unmounting AliCloud backend",
-			fmt.Sprintf("Error unmounting AliCloud backend at path %q: %s", mountPath, err),
-		)
-		return
-	}
+	// This resource owns only the /config endpoint.
+	// The mount lifecycle (create/destroy) is managed by vault_mount.
+	tflog.Debug(ctx, "vault_alicloud_secret_backend config deleted (mount managed by vault_mount)", map[string]any{
+		"mount": data.Mount.ValueString(),
+	})
 }
 
 func (r *AliCloudSecretBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldPath), req, resp)
+	// Import ID is the mount path, e.g. "alicloud"
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), req.ID)...)
 
 	// Set namespace from environment variable if provided
 	// This supports importing resources that exist inside a Vault namespace
