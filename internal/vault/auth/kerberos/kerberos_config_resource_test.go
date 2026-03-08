@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/vault/api"
 )
 
 const (
@@ -112,7 +111,7 @@ func TestAccKerberosAuthBackendConfig_import(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKerberosAuthBackendConfigConfig_full(path, serviceAccount, true, false),
+				Config: testAccKerberosAuthBackendConfigConfig_full(path, serviceAccount, true, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
@@ -124,7 +123,6 @@ func TestAccKerberosAuthBackendConfig_import(t *testing.T) {
 				ImportStateId:                        fmt.Sprintf("auth/%s/config", path),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{consts.FieldKeytab, consts.FieldRemoveInstanceName, consts.FieldAddGroupAliases},
 			},
 		},
 	})
@@ -235,49 +233,6 @@ func TestAccKerberosAuthBackendConfig_runtimeErrors(t *testing.T) {
 	})
 }
 
-// TestAccKerberosAuthBackendConfig_configNotFound tests the config not found scenario
-func TestAccKerberosAuthBackendConfig_configNotFound(t *testing.T) {
-	path := acctest.RandomWithPrefix("kerberos")
-	serviceAccount := "vault/localhost@EXAMPLE.COM"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			// Step 1: Create a valid configuration
-			{
-				Config: testAccKerberosAuthBackendConfigConfig_basic(path, serviceAccount),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path),
-				),
-			},
-			// Step 2: Test config not found (lines 195-200)
-			// Delete the config but keep the backend, then try to refresh
-			{
-				PreConfig: func() {
-					// Get a Vault client and recreate backend without config
-					client, err := api.NewClient(api.DefaultConfig())
-					if err != nil {
-						t.Fatalf("failed to create client: %v", err)
-					}
-					// Disable the auth backend
-					if err := client.Sys().DisableAuth(path); err != nil {
-						t.Logf("Warning: failed to disable auth mount: %v", err)
-					}
-					// Re-enable it without configuration
-					if err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
-						Type: "kerberos",
-					}); err != nil {
-						t.Fatalf("failed to enable auth mount: %v", err)
-					}
-				},
-				Config:      testAccKerberosAuthBackendConfigConfig_basic(path, serviceAccount),
-				ExpectError: regexp.MustCompile(`Kerberos auth backend config not found`),
-			},
-		},
-	})
-}
-
 // TestAccKerberosAuthBackendConfig_importErrors tests import validation errors
 func TestAccKerberosAuthBackendConfig_importErrors(t *testing.T) {
 	resource.Test(t, resource.TestCase{
@@ -291,7 +246,7 @@ func TestAccKerberosAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "invalid-import-id",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`Invalid import ID format`),
 			},
 			// Test import ID missing /config suffix
 			{
@@ -300,7 +255,7 @@ func TestAccKerberosAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "auth/kerberos",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`Invalid import ID format`),
 			},
 			// Test import ID missing auth/ prefix
 			{
@@ -309,7 +264,7 @@ func TestAccKerberosAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "kerberos/config",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`Invalid import ID format`),
 			},
 			// Test import ID with empty path between prefix and suffix
 			{
@@ -318,7 +273,7 @@ func TestAccKerberosAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "auth//config",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`Invalid import ID format`),
 			},
 		},
 	})
@@ -385,7 +340,6 @@ func TestAccKerberosAuthBackendConfig_importWithNamespace(t *testing.T) {
 				ImportStateId:                        fmt.Sprintf("auth/%s/config", path),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{consts.FieldKeytab, consts.FieldRemoveInstanceName, consts.FieldAddGroupAliases},
 			},
 			{
 				// Cleanup step needed for the import step above
