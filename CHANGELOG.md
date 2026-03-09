@@ -8,6 +8,8 @@ FEATURES:
 * Add new KMIP resources `vault_kmip_secret_ca_generated`, `vault_kmip_secret_ca_imported`, `vault_kmip_secret_listener`, and add support for the `ca` field in `vault_kmip_secret_role`: ([#2773](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
 * `vault_secrets_sync_aws_destination`: Add support for Workload Identity Federation (WIF) fields `identity_token_audience`, `identity_token_ttl`, and `identity_token_key` to enable token-based authentication with AWS. Requires Vault 2.0.0+. ([#2792](https://github.com/hashicorp/terraform-provider-vault/pull/2792))
 
+* **New Ephemeral Resource**:Add ephemeral resource `vault_terraform_token`, by @drewmullen ([#2616](https://github.com/hashicorp/terraform-provider-vault/pull/2616))
+
 IMPROVEMENTS:
 
 * `vault_managed_keys`: Add support for GCP Cloud KMS managed keys with parameters: `credentials`, `project`, `key_ring`, `region`, `crypto_key`, `crypto_key_version`, and `algorithm`. 
@@ -215,6 +217,7 @@ IMPROVEMENTS:
 BUGS:
 * Fix panic when reading the `vault_gcp_secret_backend` resource. ([#2549](https://github.com/hashicorp/terraform-provider-vault/pull/2549))
 * Fix regression where `VAULT_NAMESPACE` was not being honored, causing child namespaces to be created in the root namespace instead ([#2540](https://github.com/hashicorp/terraform-provider-vault/pull/2540))
+
 
 ## 5.1.0 (Jul 9, 2025)
 
