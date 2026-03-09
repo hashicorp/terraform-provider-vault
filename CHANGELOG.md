@@ -7,6 +7,7 @@ FEATURES:
 * Add support for pki-external-ca secrets backend: ([#2771](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
 * Add new KMIP resources `vault_kmip_secret_ca_generated`, `vault_kmip_secret_ca_imported`, `vault_kmip_secret_listener`, and add support for the `ca` field in `vault_kmip_secret_role`: ([#2773](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
 * `vault_secrets_sync_aws_destination`: Add support for Workload Identity Federation (WIF) fields `identity_token_audience`, `identity_token_ttl`, and `identity_token_key` to enable token-based authentication with AWS. Requires Vault 2.0.0+. ([#2792](https://github.com/hashicorp/terraform-provider-vault/pull/2792))
+* `vault_secrets_sync_gcp_destination`: Add support for Workload Identity Federation (WIF) fields `identity_token_audience_wo`, `identity_token_audience_wo_version`, `identity_token_ttl`, `identity_token_key_wo`, `identity_token_key_wo_version` and `service_account_email` to enable token-based authentication with GCP. Requires Vault 2.0.0+. ([#2798](https://github.com/hashicorp/terraform-provider-vault/pull/2798))
 
 * **New Ephemeral Resource**:Add ephemeral resource `vault_terraform_token`, by @drewmullen ([#2616](https://github.com/hashicorp/terraform-provider-vault/pull/2616))
 
@@ -20,7 +21,6 @@ IMPROVEMENTS:
 * `vault_pki_secret_backend_root_cert`: Add support for `use_pss` and `key_usage` fields to configure PSS signature scheme and X.509 key usage constraints for root CA certificates. Requires Vault 1.18.0+ and 1.19.2+ respectively.([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 * `vault_pki_secret_backend_root_sign_intermediate`: Add version check for `key_usage` field to ensure compatibility with Vault 1.19.2+ for configuring X.509 key usage constraints on intermediate CA certificates. ([#2754](https://github.com/hashicorp/terraform-provider-vault/pull/2754))
 * `provider/auth_jwt`: Add support for `distributed_claim_access_token` field in the `auth_login_jwt` configuration block. ([#2782](https://github.com/hashicorp/terraform-provider-vault/pull/2782))
-* `vault_secrets_sync_gcp_destination`: Add support for Workload Identity Federation (WIF) fields `identity_token_audience_wo`, `identity_token_audience_wo_version`, `identity_token_ttl`, `identity_token_key_wo`, `identity_token_key_wo_version` and `service_account_email` to enable token-based authentication with GCP. Requires Vault 2.0.0+. ([#2798](https://github.com/hashicorp/terraform-provider-vault/pull/2798))
 * `vault_database_secret`: Add support for additional credential types (`rsa_private_key`, `client_certificate`, `private_key`, `private_key_type`) in the ephemeral resource to support all database credential types available in Vault's database secrets engine. ([#2767](https://github.com/hashicorp/terraform-provider-vault/pull/2767))
 
 ## 5.7.0 (February 5, 2026)
