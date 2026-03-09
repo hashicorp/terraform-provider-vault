@@ -16,14 +16,19 @@ resource that performs decryption operations without storing the resulting plain
 ### Basic Decryption
 
 ```hcl
+resource "vault_mount" "gcpkms" {
+  path = "gcpkms"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "gcpkms" {
-  path                   = "gcpkms"
+  mount                  = vault_mount.gcpkms.path
   credentials_wo         = file("gcp-credentials.json")
   credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "encryption_key" {
-  mount            = vault_gcpkms_secret_backend.gcpkms.path
+  mount            = vault_mount.gcpkms.path
   name             = "my-key"
   key_ring         = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose          = "encrypt_decrypt"
@@ -32,7 +37,7 @@ resource "vault_gcpkms_secret_backend_key" "encryption_key" {
 }
 
 ephemeral "vault_gcpkms_decrypt" "data" {
-  mount      = vault_gcpkms_secret_backend.gcpkms.path
+  mount      = vault_mount.gcpkms.path
   name       = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext = var.encrypted_data
 }
@@ -47,14 +52,14 @@ output "decrypted_secret" {
 
 ```hcl
 ephemeral "vault_gcpkms_encrypt" "secret" {
-  mount_id  = tostring(vault_gcpkms_secret_backend_key.encryption_key.latest_version)
-  mount     = vault_gcpkms_secret_backend.gcpkms.path
+  mount_id  = vault_mount.gcpkms.id
+  mount     = vault_mount.gcpkms.path
   name      = vault_gcpkms_secret_backend_key.encryption_key.name
   plaintext = base64encode("my secret message")
 }
 
 ephemeral "vault_gcpkms_decrypt" "recovered" {
-  mount      = vault_gcpkms_secret_backend.gcpkms.path
+  mount      = vault_mount.gcpkms.path
   name       = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext = ephemeral.vault_gcpkms_encrypt.secret.ciphertext
 }
@@ -69,7 +74,7 @@ output "decrypted_value" {
 
 ```hcl
 ephemeral "vault_gcpkms_decrypt" "with_aad" {
-  mount                         = vault_gcpkms_secret_backend.gcpkms.path
+  mount                         = vault_mount.gcpkms.path
   name                          = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext                    = var.encrypted_data
   additional_authenticated_data = base64encode("context-info")
@@ -80,7 +85,7 @@ ephemeral "vault_gcpkms_decrypt" "with_aad" {
 
 ```hcl
 ephemeral "vault_gcpkms_decrypt" "versioned" {
-  mount       = vault_gcpkms_secret_backend.gcpkms.path
+  mount       = vault_mount.gcpkms.path
   name        = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext  = var.encrypted_data
   key_version = 1
@@ -97,10 +102,9 @@ The following arguments are supported:
   [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `mount_id` - (Optional) Terraform ID of the mount resource. Used to defer the provisioning of the
-  ephemeral resource until the apply stage, after the GCP KMS secrets engine mount and key have been
-  created. Set this to `tostring(vault_gcpkms_secret_backend_key.<name>.latest_version)` to establish
-  the correct dependency ordering.
+* `mount_id` - (Optional) Terraform ID of the `vault_mount` resource. Set this to
+  `vault_mount.<name>.id` to guarantee the ephemeral resource is deferred until the
+  GCP KMS secrets engine mount exists and is ready.
 
 * `mount` - (Required) Path where the GCP KMS secrets engine is mounted.
 

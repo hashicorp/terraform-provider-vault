@@ -163,8 +163,14 @@ resource "vault_namespace" "test" {
 
 	return fmt.Sprintf(`
 %s
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+%s
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -173,7 +179,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -183,15 +189,15 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id  = tostring(vault_gcpkms_secret_backend_key.test.latest_version)
-  mount     = vault_gcpkms_secret_backend.test.path
+  mount_id  = vault_mount.test.id
+  mount     = vault_mount.test.path
   name      = vault_gcpkms_secret_backend_key.test.name
   plaintext = base64encode("test plaintext data")
 %s
 }
 
 ephemeral "vault_gcpkms_decrypt" "test" {
-  mount      = vault_gcpkms_secret_backend.test.path
+  mount      = vault_mount.test.path
   name       = vault_gcpkms_secret_backend_key.test.name
   ciphertext = ephemeral.vault_gcpkms_encrypt.test.ciphertext
 %s
@@ -202,13 +208,18 @@ provider "echo" {
 }
 
 resource "echo" "plaintext" {}
-`, nsBlock, backend, getMockGCPCredentials(), namespaceAttr, keyName, getMockKeyRing(), namespaceAttr, namespaceAttr, namespaceAttr)
+`, nsBlock, backend, namespaceAttr, getMockGCPCredentials(), namespaceAttr, keyName, getMockKeyRing(), namespaceAttr, namespaceAttr, namespaceAttr)
 }
 
 func testAccGCPKMSDecryptConfig(backend, keyName string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -216,7 +227,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -226,15 +237,15 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 
 # First encrypt some data
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id  = tostring(vault_gcpkms_secret_backend_key.test.latest_version)
-  mount     = vault_gcpkms_secret_backend.test.path
+  mount_id  = vault_mount.test.id
+  mount     = vault_mount.test.path
   name      = vault_gcpkms_secret_backend_key.test.name
   plaintext = base64encode("test plaintext data")
 }
 
 # Then decrypt it
 ephemeral "vault_gcpkms_decrypt" "test" {
-  mount      = vault_gcpkms_secret_backend.test.path
+  mount      = vault_mount.test.path
   name       = vault_gcpkms_secret_backend_key.test.name
   ciphertext = ephemeral.vault_gcpkms_encrypt.test.ciphertext
 }
@@ -249,8 +260,13 @@ resource "echo" "plaintext" {}
 
 func testAccGCPKMSDecryptWithAADConfig(backend, keyName, aad string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -258,7 +274,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -268,8 +284,8 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 
 # First encrypt data with AAD
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id                      = tostring(vault_gcpkms_secret_backend_key.test.latest_version)
-  mount                         = vault_gcpkms_secret_backend.test.path
+  mount_id                      = vault_mount.test.id
+  mount                         = vault_mount.test.path
   name                          = vault_gcpkms_secret_backend_key.test.name
   plaintext                     = base64encode("test plaintext with AAD")
   additional_authenticated_data = "%s"
@@ -277,7 +293,7 @@ ephemeral "vault_gcpkms_encrypt" "test" {
 
 # Then decrypt it with the same AAD
 ephemeral "vault_gcpkms_decrypt" "test" {
-  mount                         = vault_gcpkms_secret_backend.test.path
+  mount                         = vault_mount.test.path
   name                          = vault_gcpkms_secret_backend_key.test.name
   ciphertext                    = ephemeral.vault_gcpkms_encrypt.test.ciphertext
   additional_authenticated_data = "%s"
@@ -293,8 +309,13 @@ resource "echo" "plaintext" {}
 
 func testAccGCPKMSDecryptWithKeyVersionConfig(backend, keyName, keyVersion string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -302,7 +323,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -312,8 +333,8 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 
 # First encrypt data with specific key version
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id    = tostring(vault_gcpkms_secret_backend_key.test.latest_version)
-  mount       = vault_gcpkms_secret_backend.test.path
+  mount_id    = vault_mount.test.id
+  mount       = vault_mount.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   plaintext   = base64encode("test plaintext for key version")
   key_version = %s
@@ -321,7 +342,7 @@ ephemeral "vault_gcpkms_encrypt" "test" {
 
 # Then decrypt it (key version is determined from the ciphertext)
 ephemeral "vault_gcpkms_decrypt" "test" {
-  mount      = vault_gcpkms_secret_backend.test.path
+  mount      = vault_mount.test.path
   name       = vault_gcpkms_secret_backend_key.test.name
   ciphertext = ephemeral.vault_gcpkms_encrypt.test.ciphertext
 }

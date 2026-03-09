@@ -171,8 +171,14 @@ resource "vault_namespace" "test" {
 
 	return fmt.Sprintf(`
 %s
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+%s
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -181,7 +187,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -191,8 +197,8 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id  = tostring(vault_gcpkms_secret_backend_key.test.latest_version)
-  mount     = vault_gcpkms_secret_backend.test.path
+  mount_id  = vault_mount.test.id
+  mount     = vault_mount.test.path
   name      = vault_gcpkms_secret_backend_key.test.name
   plaintext = "%s"
 %s
@@ -203,13 +209,18 @@ provider "echo" {
 }
 
 resource "echo" "ciphertext" {}
-`, nsBlock, backend, getMockGCPCredentials(), namespaceAttr, keyName, getMockKeyRing(), namespaceAttr, plaintext, namespaceAttr)
+`, nsBlock, backend, namespaceAttr, getMockGCPCredentials(), namespaceAttr, keyName, getMockKeyRing(), namespaceAttr, plaintext, namespaceAttr)
 }
 
 func testAccGCPKMSEncryptConfig(backend, keyName, plaintext string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -217,7 +228,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -226,8 +237,8 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id  = tostring(vault_gcpkms_secret_backend_key.test.latest_version)
-  mount     = vault_gcpkms_secret_backend.test.path
+  mount_id  = vault_mount.test.id
+  mount     = vault_mount.test.path
   name      = vault_gcpkms_secret_backend_key.test.name
   plaintext = "%s"
 }
@@ -242,8 +253,13 @@ resource "echo" "ciphertext" {}
 
 func testAccGCPKMSEncryptWithAADConfig(backend, keyName, plaintext, aad string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -251,7 +267,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -260,8 +276,8 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id                      = tostring(vault_gcpkms_secret_backend_key.test.latest_version)
-  mount                         = vault_gcpkms_secret_backend.test.path
+  mount_id                      = vault_mount.test.id
+  mount                         = vault_mount.test.path
   name                          = vault_gcpkms_secret_backend_key.test.name
   plaintext                     = "%s"
   additional_authenticated_data = "%s"
@@ -277,8 +293,13 @@ resource "echo" "ciphertext" {}
 
 func testAccGCPKMSEncryptWithKeyVersionConfig(backend, keyName, plaintext, keyVersion string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -286,7 +307,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -295,8 +316,8 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id    = tostring(vault_gcpkms_secret_backend_key.test.latest_version)
-  mount       = vault_gcpkms_secret_backend.test.path
+  mount_id    = vault_mount.test.id
+  mount       = vault_mount.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   plaintext   = "%s"
   key_version = %s

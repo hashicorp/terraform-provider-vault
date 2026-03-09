@@ -17,14 +17,19 @@ state.
 ### Basic Signing
 
 ```hcl
+resource "vault_mount" "gcpkms" {
+  path = "gcpkms"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "gcpkms" {
-  path                   = "gcpkms"
+  mount                  = vault_mount.gcpkms.path
   credentials_wo         = file("gcp-credentials.json")
   credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "signing_key" {
-  mount            = vault_gcpkms_secret_backend.gcpkms.path
+  mount            = vault_mount.gcpkms.path
   name             = "signing-key"
   key_ring         = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose          = "asymmetric_sign"
@@ -38,8 +43,8 @@ locals {
 }
 
 ephemeral "vault_gcpkms_sign" "signature" {
-  mount_id    = tostring(vault_gcpkms_secret_backend_key.signing_key.latest_version)
-  mount       = vault_gcpkms_secret_backend.gcpkms.path
+  mount_id    = vault_mount.gcpkms.id
+  mount       = vault_mount.gcpkms.path
   name        = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = local.digest
   key_version = 1
@@ -69,8 +74,8 @@ locals {
 }
 
 ephemeral "vault_gcpkms_sign" "create_signature" {
-  mount_id    = tostring(vault_gcpkms_secret_backend_key.signing_key.latest_version)
-  mount       = vault_gcpkms_secret_backend.gcpkms.path
+  mount_id    = vault_mount.gcpkms.id
+  mount       = vault_mount.gcpkms.path
   name        = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = local.digest
   key_version = 1
@@ -84,7 +89,7 @@ resource "local_sensitive_file" "signature" {
 
 # On a subsequent plan, verify using the captured signature file.
 data "vault_gcpkms_verify" "check_signature" {
-  mount       = vault_gcpkms_secret_backend.gcpkms.path
+  mount       = vault_mount.gcpkms.path
   name        = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = local.digest
   signature   = trimspace(file("${path.module}/signature.b64"))
@@ -117,7 +122,7 @@ locals {
 }
 
 resource "vault_gcpkms_secret_backend_key" "jwt_key" {
-  mount            = vault_gcpkms_secret_backend.gcpkms.path
+  mount            = vault_mount.gcpkms.path
   name             = "jwt-signing-key"
   key_ring         = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose          = "asymmetric_sign"
@@ -126,8 +131,8 @@ resource "vault_gcpkms_secret_backend_key" "jwt_key" {
 }
 
 ephemeral "vault_gcpkms_sign" "jwt_signature" {
-  mount_id    = tostring(vault_gcpkms_secret_backend_key.jwt_key.latest_version)
-  mount       = vault_gcpkms_secret_backend.gcpkms.path
+  mount_id    = vault_mount.gcpkms.id
+  mount       = vault_mount.gcpkms.path
   name        = vault_gcpkms_secret_backend_key.jwt_key.name
   digest      = local.jwt_digest
   key_version = 1
@@ -160,10 +165,9 @@ The following arguments are supported:
   [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `mount_id` - (Optional) Terraform ID of the mount resource. Used to defer the provisioning of the
-  ephemeral resource until the apply stage, after the GCP KMS secrets engine mount and key have been
-  created. Set this to `tostring(vault_gcpkms_secret_backend_key.<name>.latest_version)` to establish
-  the correct dependency ordering.
+* `mount_id` - (Optional) Terraform ID of the `vault_mount` resource. Set this to
+  `vault_mount.<name>.id` to guarantee the ephemeral resource is deferred until the
+  GCP KMS secrets engine mount exists and is ready.
 
 * `mount` - (Required) Path where the GCP KMS secrets engine is mounted.
 
