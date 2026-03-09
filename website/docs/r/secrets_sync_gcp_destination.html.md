@@ -128,7 +128,7 @@ The following arguments are supported:
 ### Workload Identity Federation (Vault 2.0.0+)
 
 * `service_account_email` – (Optional) Service Account to impersonate for secrets sync workload identity federation.
-  Required with `identity_token_audience`. **Requires Vault 2.0.0+**.
+  Required with `identity_token_audience_wo`. **Requires Vault 2.0.0+**.
 
 * `identity_token_audience_wo` - (Optional) The audience claim value for identity tokens. This is a write-only field
   **Requires Vault 2.0.0+**.
