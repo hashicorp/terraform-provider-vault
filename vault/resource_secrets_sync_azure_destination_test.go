@@ -74,22 +74,6 @@ func TestAzureSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),
 				),
 			},
-			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
-				},
-				Config: testAzureSecretsSyncDestinationWIFConfig_initial(keyVaultURI, tenantID, "test", "test", destName, 1800),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
-					resource.TestCheckResourceAttr(resourceName, fieldKeyVaultURI, keyVaultURI),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, tenantID),
-					// identity_token_audience is write-only; verify its version counter instead
-					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWOVersion, "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "test"),
-				),
-			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldClientSecret,
 			),
@@ -398,15 +382,15 @@ func TestAzureSecretsSyncDestinationWIF(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+			meta := testProvider.Meta().(*provider.ProviderMeta)
+			if !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()) {
+				t.Skip("skipping test; requires Vault 2.0+ enterprise")
+			}
 		},
+
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
-				},
 				Config: testAzureSecretsSyncDestinationWIFConfig_initial(keyVaultURI, tenantID, clientID, identityTokenAudience, destName, 1800),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -420,10 +404,6 @@ func TestAzureSecretsSyncDestinationWIF(t *testing.T) {
 				),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !(meta.IsAPISupported(provider.VaultVersion200) && meta.IsEnterpriseSupported()), nil
-				},
 				Config: testAzureSecretsSyncDestinationWIFConfig_updated(keyVaultURI, tenantID, clientID, identityTokenAudience, destName, 3600),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
