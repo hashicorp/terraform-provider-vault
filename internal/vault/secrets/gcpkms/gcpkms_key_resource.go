@@ -204,8 +204,8 @@ func (r *GCPKMSSecretBackendKeyResource) Create(ctx context.Context, req resourc
 	readReq := resource.ReadRequest{State: resp.State}
 	readResp := resource.ReadResponse{State: resp.State}
 	r.Read(ctx, readReq, &readResp)
-	resp.Diagnostics.Append(readResp.Diagnostics...)
 	resp.State = readResp.State
+	resp.Diagnostics.Append(readResp.Diagnostics...)
 }
 
 func (r *GCPKMSSecretBackendKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -378,8 +378,8 @@ func (r *GCPKMSSecretBackendKeyResource) Update(ctx context.Context, req resourc
 	readReq := resource.ReadRequest{State: resp.State}
 	readResp := resource.ReadResponse{State: resp.State}
 	r.Read(ctx, readReq, &readResp)
-	resp.Diagnostics.Append(readResp.Diagnostics...)
 	resp.State = readResp.State
+	resp.Diagnostics.Append(readResp.Diagnostics...)
 }
 
 func (r *GCPKMSSecretBackendKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -38,11 +37,15 @@ type GCPKMSSecretBackendResource struct {
 	base.ResourceWithConfigure
 }
 
-// GCPKMSSecretBackendModel describes the Terraform resource data model
+// GCPKMSSecretBackendModel describes the Terraform resource data model.
+//
+// This resource only manages the GCP KMS secrets engine configuration
+// (writes to <mount>/config). The mount itself is managed separately
+// by a vault_mount resource.
 type GCPKMSSecretBackendModel struct {
 	base.BaseModel
 
-	Path                 types.String `tfsdk:"path"`
+	Mount                types.String `tfsdk:"mount"`
 	CredentialsWO        types.String `tfsdk:"credentials_wo"`
 	CredentialsWOVersion types.Int64  `tfsdk:"credentials_wo_version"`
 	Scopes               types.Set    `tfsdk:"scopes"`
@@ -54,25 +57,32 @@ func (r *GCPKMSSecretBackendResource) Metadata(_ context.Context, req resource.M
 
 func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Configures the GCP KMS secrets engine credentials and scopes. " +
+			"The mount itself must be created first using a `vault_mount` resource with `type = \"gcpkms\"`. " +
+			"Use `vault_mount.gcpkms.id` as `mount_id` on ephemeral resources to guarantee deferral.",
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
-				MarkdownDescription: "Path where the GCP KMS secrets engine will be mounted.",
-				Required:            true,
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Path of the GCP KMS secrets engine mount. Must match the `path` " +
+					"of a `vault_mount` resource with `type = \"gcpkms\"`. Use `vault_mount.gcpkms.path` here.",
+				Required: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldCredentialsWO: schema.StringAttribute{
-				MarkdownDescription: "JSON-encoded GCP service account credentials. This value is write-only and will not be stored in Terraform state. Requires Terraform 1.11+.",
-				Required:            true,
-				WriteOnly:           true,
+				MarkdownDescription: "JSON-encoded GCP service account credentials. Write-only — never " +
+					"stored in Terraform state. Requires Terraform 1.11+.",
+				Required:  true,
+				Sensitive: true,
+				WriteOnly: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
-				MarkdownDescription: "Version number for the write-only credentials. Increment this value to trigger a credential rotation. Changing this value will cause the credentials to be re-sent to Vault during the next apply.",
-				Required:            true,
+				MarkdownDescription: "Version number for the write-only credentials. Increment this value to trigger a credential rotation. " +
+					"Changing this value will cause the credentials to be re-sent to Vault during the next apply.",
+				Required: true,
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -84,7 +94,6 @@ func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.Schem
 				Computed:            true,
 			},
 		},
-		MarkdownDescription: "Manages a GCP KMS secrets engine backend in Vault.",
 	}
 	base.MustAddBaseSchema(&resp.Schema)
 }
@@ -125,21 +134,7 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	// Mount the backend
-	mountPath := data.Path.ValueString()
-	log.Printf("[DEBUG] Mounting GCP KMS secrets engine at %q", mountPath)
-
-	mountConfig := &api.MountInput{
-		Type: consts.MountTypeGCPKMS,
-	}
-
-	if err := cli.Sys().MountWithContext(ctx, mountPath, mountConfig); err != nil {
-		resp.Diagnostics.AddError(
-			"Error mounting GCP KMS backend",
-			fmt.Sprintf("Error mounting GCP KMS backend at path %q: %s", mountPath, err),
-		)
-		return
-	}
+	mountPath := data.Mount.ValueString()
 
 	// Configure the backend with credentials
 	configPath := fmt.Sprintf("%s/config", mountPath)
@@ -151,13 +146,11 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	log.Printf("[DEBUG] Configuring GCP KMS backend at %q (credentials included: true, credentials length: %d)",
-		configPath, len(data.CredentialsWO.ValueString()))
+	log.Printf("[DEBUG] Configuring GCP KMS backend at %q", configPath)
 	if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
 		resp.Diagnostics.AddError(
 			"Error configuring GCP KMS backend",
-			fmt.Sprintf("Error configuring GCP KMS backend at path %q: %s", configPath, err),
-		)
+			fmt.Sprintf("Error writing %q: %s", configPath, err))
 		return
 	}
 
@@ -171,11 +164,8 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 	readReq := resource.ReadRequest{State: resp.State}
 	readResp := resource.ReadResponse{State: resp.State}
 	r.Read(ctx, readReq, &readResp)
-	resp.Diagnostics.Append(readResp.Diagnostics...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	resp.State = readResp.State
+	resp.Diagnostics.Append(readResp.Diagnostics...)
 }
 
 func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -191,7 +181,7 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	mountPath := data.Path.ValueString()
+	mountPath := data.Mount.ValueString()
 	configPath := fmt.Sprintf("%s/config", mountPath)
 
 	log.Printf("[DEBUG] Reading GCP KMS backend config from %q", configPath)
@@ -199,8 +189,7 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading GCP KMS backend config",
-			fmt.Sprintf("Error reading GCP KMS backend config from path %q: %s", configPath, err),
-		)
+			fmt.Sprintf("Error reading %q: %s", configPath, err))
 		return
 	}
 
@@ -266,9 +255,6 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 			)
 			return
 		}
-	} else {
-		log.Printf("[DEBUG] Update: credentials version unchanged (%v), not sending credentials to Vault",
-			state.CredentialsWOVersion.ValueInt64())
 	}
 
 	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
@@ -277,7 +263,7 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	mountPath := plan.Path.ValueString()
+	mountPath := plan.Mount.ValueString()
 	configPath := fmt.Sprintf("%s/config", mountPath)
 
 	configData, diags := buildBackendConfigFromModel(ctx, &plan, includeCredentials)
@@ -291,8 +277,7 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 	if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating GCP KMS backend config",
-			fmt.Sprintf("Error updating GCP KMS backend config at path %q: %s", configPath, err),
-		)
+			fmt.Sprintf("Error writing %q: %s", configPath, err))
 		return
 	}
 
@@ -306,11 +291,8 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 	readReq := resource.ReadRequest{State: resp.State}
 	readResp := resource.ReadResponse{State: resp.State}
 	r.Read(ctx, readReq, &readResp)
-	resp.Diagnostics.Append(readResp.Diagnostics...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	resp.State = readResp.State
+	resp.Diagnostics.Append(readResp.Diagnostics...)
 }
 
 func (r *GCPKMSSecretBackendResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -319,27 +301,14 @@ func (r *GCPKMSSecretBackendResource) Delete(ctx context.Context, req resource.D
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	mountPath := data.Path.ValueString()
-	log.Printf("[DEBUG] Unmounting GCP KMS backend at %q", mountPath)
-
-	if err := cli.Sys().UnmountWithContext(ctx, mountPath); err != nil {
-		resp.Diagnostics.AddError(
-			"Error unmounting GCP KMS backend",
-			fmt.Sprintf("Error unmounting GCP KMS backend at path %q: %s", mountPath, err),
-		)
-		return
-	}
+	// This resource owns only the /config endpoint.
+	// The mount lifecycle (create/destroy) is managed by vault_mount.
+	log.Printf("[DEBUG] vault_gcpkms_secret_backend config deleted (mount %q managed by vault_mount)", data.Mount.ValueString())
 }
 
 func (r *GCPKMSSecretBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), req.ID)...)
+	// Import ID is the mount path, e.g. "gcpkms"
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), req.ID)...)
 
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
@@ -366,9 +335,6 @@ func buildBackendConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendM
 			return nil, diags
 		}
 		configData["credentials"] = creds
-		log.Printf("[DEBUG] buildBackendConfigFromModel: credentials included (length: %d)", len(creds))
-	} else {
-		log.Printf("[DEBUG] buildBackendConfigFromModel: credentials NOT included (version unchanged)")
 	}
 
 	// Add scopes if provided
