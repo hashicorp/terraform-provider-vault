@@ -124,16 +124,20 @@ The following arguments are supported:
 
 ### Networking Configuration (Vault 1.19+)
 
-* `allowed_ipv4_addresses` - (Optional) List of IPv4 CIDR blocks that are allowed to access the synced secrets.
+* `allowed_ipv4_addresses` - (Optional) List of IPv4 addresses or CIDR blocks allowed to make outbound
+  connections from Vault to the destination.
   Example: `["10.0.0.0/8", "192.168.0.0/16"]`.
 
-* `allowed_ipv6_addresses` - (Optional) List of IPv6 CIDR blocks that are allowed to access the synced secrets.
+* `allowed_ipv6_addresses` - (Optional) List of IPv6 addresses or CIDR blocks allowed to make outbound 
+  connections from Vault to the destination
   Example: `["2001:db8::/32"]`.
 
-* `allowed_ports` - (Optional) List of TCP ports allowed for access. If not specified, all ports are allowed.
+* `allowed_ports` - (Optional) List of port numbers allowed for outbound connections from Vault to the 
+  destination.
   Example: `[443, 8443]`.
 
-* `disable_strict_networking` - (Optional) If `true`, disables strict network access controls. Default is `false`.
+* `disable_strict_networking` - (Optional) When set to `true`, disables strict enforcement of networking
+  restrictions. Defaults to `false`
 
 ## Attributes Reference
 
