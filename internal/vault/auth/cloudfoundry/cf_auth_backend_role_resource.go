@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/token"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var cfRoleRegexp = regexp.MustCompile(`^auth/(.+)/roles/(.+)$`)
@@ -195,7 +196,8 @@ func (r *CFAuthBackendRoleResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 	if roleResp == nil {
-		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+		tflog.Warn(ctx, "CF auth backend role not found, removing from state")
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -234,7 +236,7 @@ func (r *CFAuthBackendRoleResource) Update(ctx context.Context, req resource.Upd
 
 	_, err = vaultClient.Logical().WriteWithContext(ctx, rolePath, vaultRequest)
 	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
+		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
 		return
 	}
 
@@ -277,6 +279,9 @@ func (r *CFAuthBackendRoleResource) Delete(ctx context.Context, req resource.Del
 	}
 
 	if _, err := vaultClient.Logical().DeleteWithContext(ctx, rolePath); err != nil {
+		if util.Is404(err) {
+			return
+		}
 		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
 	}
 }
@@ -381,10 +386,14 @@ func (r *CFAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Context
 	if readResp.DisableIPMatching {
 		data.DisableIPMatching = types.BoolValue(true)
 	} else {
+		// The field is Optional with no Computed, so setting null (rather than false)
+		// allows the user to clear it by simply omitting it from their config.
 		data.DisableIPMatching = types.BoolNull()
 	}
 
 	if len(readResp.BoundApplicationIDs) == 0 {
+		// The field is Optional with no Computed; null lets the user clear the
+		// constraint by omitting the field rather than setting an empty list.
 		data.BoundApplicationIDs = types.SetNull(types.StringType)
 	} else {
 		boundAppIDs, setErr := types.SetValueFrom(ctx, types.StringType, readResp.BoundApplicationIDs)
@@ -395,6 +404,8 @@ func (r *CFAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Context
 	}
 
 	if len(readResp.BoundSpaceIDs) == 0 {
+		// The field is Optional with no Computed; null lets the user clear the
+		// constraint by omitting the field rather than setting an empty list.
 		data.BoundSpaceIDs = types.SetNull(types.StringType)
 	} else {
 		boundSpaceIDs, setErr := types.SetValueFrom(ctx, types.StringType, readResp.BoundSpaceIDs)
@@ -405,6 +416,8 @@ func (r *CFAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Context
 	}
 
 	if len(readResp.BoundOrganizationIDs) == 0 {
+		// The field is Optional with no Computed; null lets the user clear the
+		// constraint by omitting the field rather than setting an empty list.
 		data.BoundOrganizationIDs = types.SetNull(types.StringType)
 	} else {
 		boundOrgIDs, setErr := types.SetValueFrom(ctx, types.StringType, readResp.BoundOrganizationIDs)
@@ -415,6 +428,8 @@ func (r *CFAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Context
 	}
 
 	if len(readResp.BoundInstanceIDs) == 0 {
+		// The field is Optional with no Computed; null lets the user clear the
+		// constraint by omitting the field rather than setting an empty list.
 		data.BoundInstanceIDs = types.SetNull(types.StringType)
 	} else {
 		boundInstanceIDs, setErr := types.SetValueFrom(ctx, types.StringType, readResp.BoundInstanceIDs)

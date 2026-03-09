@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const (
@@ -191,7 +192,8 @@ func (r *CFAuthBackendConfigResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 	if cfgResp == nil {
-		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+		tflog.Warn(ctx, "CF auth backend config not found, removing from state")
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -233,7 +235,7 @@ func (r *CFAuthBackendConfigResource) Update(ctx context.Context, req resource.U
 
 	mountPath := r.path(data.Mount.ValueString())
 	if _, err := vaultClient.Logical().WriteWithContext(ctx, mountPath, vaultRequest); err != nil {
-		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
+		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
 		return
 	}
 
@@ -259,6 +261,9 @@ func (r *CFAuthBackendConfigResource) Delete(ctx context.Context, req resource.D
 	}
 
 	if _, err := vaultClient.Logical().DeleteWithContext(ctx, r.path(data.Mount.ValueString())); err != nil {
+		if util.Is404(err) {
+			return
+		}
 		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
 	}
 }
@@ -308,8 +313,9 @@ func (r *CFAuthBackendConfigResource) getAPIModel(ctx context.Context, data *CFA
 		LoginMaxSecsNotBefore: data.LoginMaxSecsNotBefore.ValueInt64(),
 		LoginMaxSecsNotAfter:  data.LoginMaxSecsNotAfter.ValueInt64(),
 	}
-	// cf_timeout was added to the CF auth plugin in Vault 1.19.4.
-	// Only include it in the request when the connected Vault supports it.
+	// cf_timeout is only functional on Vault 1.19.4+; a bug causing it to be
+	// ignored was fixed in that release. Only include it in the request when
+	// the connected Vault supports it.
 	if r.Meta() != nil && r.Meta().IsAPISupported(provider.VaultVersion1194) {
 		apiModel.CFTimeout = data.CFTimeout.ValueInt64()
 	}
@@ -368,8 +374,8 @@ func (r *CFAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Conte
 	} else {
 		data.LoginMaxSecsNotAfter = types.Int64Null()
 	}
-	// cf_timeout is not supported on Vault < 1.19.4; leave state unchanged on
-	// older servers to avoid a provider-inconsistency error.
+	// cf_timeout is only functional on Vault 1.19.4+ (bug fix); leave state
+	// unchanged on older servers to avoid a provider-inconsistency error.
 	if r.Meta() != nil && r.Meta().IsAPISupported(provider.VaultVersion1194) {
 		if readResp.CFTimeout != 0 {
 			data.CFTimeout = types.Int64Value(readResp.CFTimeout)
