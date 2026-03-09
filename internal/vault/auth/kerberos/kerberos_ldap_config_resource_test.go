@@ -18,12 +18,22 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+const (
+	resourceType = "vault_kerberos_auth_backend_ldap_config"
+	resourceName = resourceType + ".config"
+	testLDAPURL  = "ldap://ldap.example.com"
+	testBindDN   = "cn=vault,ou=Users,dc=example,dc=com"
+	testUserDN   = "ou=People,dc=example,dc=org"
+	testGroupDN  = "ou=Groups,dc=example,dc=org"
+	testLDAPSURL = "ldaps://ldap.example.com:636"
+)
+
 // TestAccKerberosAuthBackendLDAPConfig_basic tests basic resource creation
 func TestAccKerberosAuthBackendLDAPConfig_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -32,11 +42,11 @@ func TestAccKerberosAuthBackendLDAPConfig_basic(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_basic(path, url, bindDN, userDN),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldURL, url),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldBindDN, bindDN),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldUserDN, userDN),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldDenyNullBind, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUserDN, userDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDenyNullBind, "true"),
 				),
 			},
 		},
@@ -58,40 +68,40 @@ func TestAccKerberosAuthBackendLDAPConfig_update(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_full(path, url1, bindDN, userDN, false, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldURL, url1),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldStartTLS, "false"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldInsecureTLS, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url1),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldStartTLS, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldInsecureTLS, "false"),
 					// Token fields - initial values
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenTTL, "1800"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenMaxTTL, "3600"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenType, "service"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPolicies+".#", "2"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPolicies+".*", "default"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPolicies+".*", "dev"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenType, "service"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenPolicies+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenPolicies+".*", "default"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenPolicies+".*", "dev"),
 				),
 			},
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_full(path, url2, bindDN, userDN, true, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldURL, url2),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldStartTLS, "true"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldInsecureTLS, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url2),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldStartTLS, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldInsecureTLS, "true"),
 					// Token fields - updated values
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenTTL, "3600"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenMaxTTL, "7200"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenType, "service"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPolicies+".#", "3"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPolicies+".*", "default"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPolicies+".*", "dev"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPolicies+".*", "prod"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenNoDefaultPolicy, "true"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenNumUses, "10"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPeriod, "86400"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenBoundCIDRs+".#", "2"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenBoundCIDRs+".*", "10.0.0.0/8"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenBoundCIDRs+".*", "172.16.0.0/12"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "7200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenType, "service"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenPolicies+".#", "3"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenPolicies+".*", "default"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenPolicies+".*", "dev"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenPolicies+".*", "prod"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNoDefaultPolicy, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNumUses, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenPeriod, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenBoundCIDRs+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenBoundCIDRs+".*", "10.0.0.0/8"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenBoundCIDRs+".*", "172.16.0.0/12"),
 				),
 			},
 		},
@@ -101,9 +111,9 @@ func TestAccKerberosAuthBackendLDAPConfig_update(t *testing.T) {
 // TestAccKerberosAuthBackendLDAPConfig_bindPassUpdate tests updating the bind password
 func TestAccKerberosAuthBackendLDAPConfig_bindPassUpdate(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 	bindPass1 := "password123"
 	bindPass2 := "newpassword456"
 
@@ -114,15 +124,15 @@ func TestAccKerberosAuthBackendLDAPConfig_bindPassUpdate(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_withBindPass(path, url, bindDN, userDN, bindPass1, "v1"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldBindDN, bindDN),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldBindPassWOVersion, "v1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "v1"),
 				),
 			},
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_withBindPass(path, url, bindDN, userDN, bindPass2, "v2"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldBindDN, bindDN),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldBindPassWOVersion, "v2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "v2"),
 				),
 			},
 		},
@@ -132,9 +142,9 @@ func TestAccKerberosAuthBackendLDAPConfig_bindPassUpdate(t *testing.T) {
 // TestAccKerberosAuthBackendLDAPConfig_import tests importing the resource
 func TestAccKerberosAuthBackendLDAPConfig_import(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -143,50 +153,16 @@ func TestAccKerberosAuthBackendLDAPConfig_import(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_basic(path, url, bindDN, userDN),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldURL, url),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
 				),
 			},
 			{
-				ResourceName:                         "vault_kerberos_auth_backend_ldap_config.config",
+				ResourceName:                         resourceName,
 				ImportState:                          true,
 				ImportStateId:                        fmt.Sprintf("auth/%s/config/ldap", path),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore: []string{
-					// Write-only fields
-					consts.FieldBindPassWO,
-					consts.FieldBindPassWOVersion,
-					consts.FieldClientTLSCertWO,
-					consts.FieldClientTLSCertWOVersion,
-					consts.FieldClientTLSKeyWO,
-					consts.FieldClientTLSKeyWOVersion,
-					// Optional fields that won't be populated during import
-					consts.FieldURL,
-					consts.FieldBindDN,
-					consts.FieldUserDN,
-					consts.FieldUserAttr,
-					consts.FieldUserFilter,
-					consts.FieldGroupDN,
-					consts.FieldGroupFilter,
-					consts.FieldGroupAttr,
-					consts.FieldAnonymousGroupSearch,
-					consts.FieldUseTokenGroups,
-					consts.FieldCaseSensitiveNames,
-					consts.FieldStartTLS,
-					consts.FieldInsecureTLS,
-					consts.FieldTLSMinVersion,
-					consts.FieldTLSMaxVersion,
-					consts.FieldCertificate,
-					consts.FieldDiscoverDN,
-					consts.FieldUPNDomain,
-					consts.FieldRequestTimeout,
-					consts.FieldConnectionTimeout,
-					consts.FieldUsernameAsAlias,
-					consts.FieldDereferenceAliases,
-					consts.FieldMaxPageSize,
-					consts.FieldEnableSamaccountnameLogin,
-				},
 			},
 		},
 	})
@@ -194,9 +170,9 @@ func TestAccKerberosAuthBackendLDAPConfig_import(t *testing.T) {
 
 // TestAccKerberosAuthBackendLDAPConfig_defaultCheck tests default values
 func TestAccKerberosAuthBackendLDAPConfig_defaultCheck(t *testing.T) {
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -205,9 +181,18 @@ func TestAccKerberosAuthBackendLDAPConfig_defaultCheck(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_defaultValues(url, bindDN, userDN),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, "kerberos"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldURL, url),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldDenyNullBind, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, "kerberos"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDenyNullBind, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUserAttr, "cn"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUserFilter, "({{.UserAttr}}={{.Username}})"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupFilter, "(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupAttr, "cn"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTLSMinVersion, "tls12"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTLSMaxVersion, "tls12"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRequestTimeout, "90"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldConnectionTimeout, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDereferenceAliases, "never"),
 				),
 			},
 		},
@@ -218,9 +203,9 @@ func TestAccKerberosAuthBackendLDAPConfig_defaultCheck(t *testing.T) {
 func TestAccKerberosAuthBackendLDAPConfig_pathChange(t *testing.T) {
 	path1 := acctest.RandomWithPrefix("kerberos")
 	path2 := acctest.RandomWithPrefix("kerberos")
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -229,13 +214,13 @@ func TestAccKerberosAuthBackendLDAPConfig_pathChange(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_basic(path1, url, bindDN, userDN),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path1),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path1),
 				),
 			},
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_basic(path2, url, bindDN, userDN),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path2),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path2),
 				),
 			},
 		},
@@ -245,30 +230,26 @@ func TestAccKerberosAuthBackendLDAPConfig_pathChange(t *testing.T) {
 // TestAccKerberosAuthBackendLDAPConfig_validationErrors tests various validation errors
 func TestAccKerberosAuthBackendLDAPConfig_validationErrors(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
-			// Test bindpass_wo without version
 			{
 				Config:      testAccKerberosAuthBackendLDAPConfigConfig_bindPassWithoutVersion(path, url, bindDN, userDN),
 				ExpectError: regexp.MustCompile(`Attribute "bindpass_wo_version" must be specified when "bindpass_wo"`),
 			},
-			// Test bindpass_wo_version without bindpass_wo
 			{
 				Config:      testAccKerberosAuthBackendLDAPConfigConfig_bindPassVersionWithoutPass(path, url, bindDN, userDN),
 				ExpectError: regexp.MustCompile(`Attribute "bindpass_wo" must be specified when "bindpass_wo_version"`),
 			},
-			// Test client_tls_cert_wo without version
 			{
 				Config:      testAccKerberosAuthBackendLDAPConfigConfig_clientCertWithoutVersion(path, url, bindDN, userDN),
 				ExpectError: regexp.MustCompile(`Attribute "client_tls_cert_wo_version" must be specified when`),
 			},
-			// Test client_tls_key_wo without version
 			{
 				Config:      testAccKerberosAuthBackendLDAPConfigConfig_clientKeyWithoutVersion(path, url, bindDN, userDN),
 				ExpectError: regexp.MustCompile(`Attribute "client_tls_key_wo_version" must be specified when`),
@@ -279,9 +260,9 @@ func TestAccKerberosAuthBackendLDAPConfig_validationErrors(t *testing.T) {
 
 // TestAccKerberosAuthBackendLDAPConfig_runtimeErrors tests runtime errors
 func TestAccKerberosAuthBackendLDAPConfig_runtimeErrors(t *testing.T) {
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 	nonExistentPath := "non-existent-kerberos-backend"
 
 	resource.Test(t, resource.TestCase{
@@ -300,9 +281,9 @@ func TestAccKerberosAuthBackendLDAPConfig_runtimeErrors(t *testing.T) {
 // TestAccKerberosAuthBackendLDAPConfig_batchTokenWithNumUses tests that batch tokens cannot have limited use count
 func TestAccKerberosAuthBackendLDAPConfig_batchTokenWithNumUses(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -319,9 +300,9 @@ func TestAccKerberosAuthBackendLDAPConfig_batchTokenWithNumUses(t *testing.T) {
 // TestAccKerberosAuthBackendLDAPConfig_configNotFound tests the config not found scenario
 func TestAccKerberosAuthBackendLDAPConfig_configNotFound(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -331,11 +312,12 @@ func TestAccKerberosAuthBackendLDAPConfig_configNotFound(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_basic(path, url, bindDN, userDN),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 				),
 			},
-			// Step 2: Test config not found
+			// Step 2: Test config not found - resource should be removed from state
 			// Delete the config but keep the backend, then try to refresh
+			// With the new read() implementation, the resource is automatically removed from state when not found
 			{
 				PreConfig: func() {
 					// Get a Vault client and recreate backend without config
@@ -354,8 +336,9 @@ func TestAccKerberosAuthBackendLDAPConfig_configNotFound(t *testing.T) {
 						t.Fatalf("failed to enable auth mount: %v", err)
 					}
 				},
-				Config:      testAccKerberosAuthBackendLDAPConfigConfig_basic(path, url, bindDN, userDN),
-				ExpectError: regexp.MustCompile(`Kerberos LDAP config not found`),
+				Config:             testAccKerberosAuthBackendLDAPConfigConfig_basic(path, url, bindDN, userDN),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true, // Expect a plan to recreate the resource since it was removed from state
 			},
 		},
 	})
@@ -369,39 +352,39 @@ func TestAccKerberosAuthBackendLDAPConfig_importErrors(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Test completely invalid import ID
 			{
-				Config:            testAccKerberosAuthBackendLDAPConfigConfig_basic("test", "ldap://ldap.example.com", "cn=vault,ou=Users,dc=example,dc=com", "ou=People,dc=example,dc=org"),
-				ResourceName:      "vault_kerberos_auth_backend_ldap_config.config",
+				Config:            testAccKerberosAuthBackendLDAPConfigConfig_basic("test", testLDAPURL, testBindDN, testUserDN),
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateId:     "invalid-import-id",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`Invalid import ID format`),
 			},
 			// Test import ID missing /config/ldap suffix
 			{
-				Config:            testAccKerberosAuthBackendLDAPConfigConfig_basic("test", "ldap://ldap.example.com", "cn=vault,ou=Users,dc=example,dc=com", "ou=People,dc=example,dc=org"),
-				ResourceName:      "vault_kerberos_auth_backend_ldap_config.config",
+				Config:            testAccKerberosAuthBackendLDAPConfigConfig_basic("test", testLDAPURL, testBindDN, testUserDN),
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateId:     "auth/kerberos",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`Invalid import ID format`),
 			},
 			// Test import ID missing auth/ prefix
 			{
-				Config:            testAccKerberosAuthBackendLDAPConfigConfig_basic("test", "ldap://ldap.example.com", "cn=vault,ou=Users,dc=example,dc=com", "ou=People,dc=example,dc=org"),
-				ResourceName:      "vault_kerberos_auth_backend_ldap_config.config",
+				Config:            testAccKerberosAuthBackendLDAPConfigConfig_basic("test", testLDAPURL, testBindDN, testUserDN),
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateId:     "kerberos/config/ldap",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`Invalid import ID format`),
 			},
 			// Test import ID with empty path between prefix and suffix
 			{
-				Config:            testAccKerberosAuthBackendLDAPConfigConfig_basic("test", "ldap://ldap.example.com", "cn=vault,ou=Users,dc=example,dc=com", "ou=People,dc=example,dc=org"),
-				ResourceName:      "vault_kerberos_auth_backend_ldap_config.config",
+				Config:            testAccKerberosAuthBackendLDAPConfigConfig_basic("test", testLDAPURL, testBindDN, testUserDN),
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateId:     "auth//config/ldap",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`Invalid import ID format`),
 			},
 		},
 	})
@@ -410,10 +393,10 @@ func TestAccKerberosAuthBackendLDAPConfig_importErrors(t *testing.T) {
 // TestAccKerberosAuthBackendLDAPConfig_allFields tests configuration with all fields
 func TestAccKerberosAuthBackendLDAPConfig_allFields(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
-	url := "ldaps://ldap.example.com:636"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
-	groupDN := "ou=Groups,dc=example,dc=org"
+	url := testLDAPSURL
+	bindDN := testBindDN
+	userDN := testUserDN
+	groupDN := testGroupDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -422,46 +405,46 @@ func TestAccKerberosAuthBackendLDAPConfig_allFields(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_allFields(path, url, bindDN, userDN, groupDN),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldURL, url),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldBindDN, bindDN),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldUserDN, userDN),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldGroupDN, groupDN),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldUserAttr, "samaccountname"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldUserFilter, "(objectClass=person)"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldGroupAttr, "cn"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldGroupFilter, "(objectClass=group)"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldAnonymousGroupSearch, "true"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldUseTokenGroups, "true"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldCaseSensitiveNames, "false"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTLSMinVersion, "tls12"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTLSMaxVersion, "tls13"),
-					resource.TestCheckResourceAttrSet("vault_kerberos_auth_backend_ldap_config.config", consts.FieldCertificate),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldClientTLSCertWOVersion, "v1"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldClientTLSKeyWOVersion, "v1"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldDenyNullBind, "true"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldDiscoverDN, "true"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldUPNDomain, "example.com"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldRequestTimeout, "90"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldConnectionTimeout, "30"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldUsernameAsAlias, "true"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldDereferenceAliases, "never"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMaxPageSize, "1000"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUserDN, userDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupDN, groupDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUserAttr, "samaccountname"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUserFilter, "(objectClass=person)"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupAttr, "cn"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupFilter, "(objectClass=group)"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAnonymousGroupSearch, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUseTokenGroups, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCaseSensitiveNames, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTLSMinVersion, "tls12"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTLSMaxVersion, "tls13"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCertificate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientTLSCertWOVersion, "v1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientTLSKeyWOVersion, "v1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDenyNullBind, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDiscoverDN, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUPNDomain, "example.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRequestTimeout, "90"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldConnectionTimeout, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsernameAsAlias, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDereferenceAliases, "never"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxPageSize, "1000"),
 					// Token fields
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenTTL, "1800"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenMaxTTL, "3600"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPolicies+".#", "3"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPolicies+".*", "default"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPolicies+".*", "dev"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPolicies+".*", "prod"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenBoundCIDRs+".#", "2"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenBoundCIDRs+".*", "10.0.0.0/8"),
-					resource.TestCheckTypeSetElemAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenBoundCIDRs+".*", "172.16.0.0/12"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenExplicitMaxTTL, "7200"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenNoDefaultPolicy, "true"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenNumUses, "10"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenPeriod, "86400"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldTokenType, "service"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "1800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenPolicies+".#", "3"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenPolicies+".*", "default"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenPolicies+".*", "dev"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenPolicies+".*", "prod"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenBoundCIDRs+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenBoundCIDRs+".*", "10.0.0.0/8"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenBoundCIDRs+".*", "172.16.0.0/12"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenExplicitMaxTTL, "7200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNoDefaultPolicy, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenNumUses, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenPeriod, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenType, "service"),
 				),
 			},
 		},
@@ -471,9 +454,9 @@ func TestAccKerberosAuthBackendLDAPConfig_allFields(t *testing.T) {
 // TestAccKerberosAuthBackendLDAPConfig_aliasMetadata tests alias_metadata configuration (Vault 1.21.0+)
 func TestAccKerberosAuthBackendLDAPConfig_aliasMetadata(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -485,21 +468,21 @@ func TestAccKerberosAuthBackendLDAPConfig_aliasMetadata(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_aliasMetadata(path, url, bindDN, userDN),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldURL, url),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldAliasMetadata+".%", "2"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldAliasMetadata+".department", "engineering"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldAliasMetadata+".location", "us-west"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAliasMetadata+".%", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAliasMetadata+".department", "engineering"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAliasMetadata+".location", "us-west"),
 				),
 			},
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_aliasMetadataUpdated(path, url, bindDN, userDN),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldAliasMetadata+".%", "3"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldAliasMetadata+".department", "security"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldAliasMetadata+".location", "us-east"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldAliasMetadata+".team", "platform"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAliasMetadata+".%", "3"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAliasMetadata+".department", "security"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAliasMetadata+".location", "us-east"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAliasMetadata+".team", "platform"),
 				),
 			},
 		},
@@ -509,9 +492,9 @@ func TestAccKerberosAuthBackendLDAPConfig_aliasMetadata(t *testing.T) {
 // TestAccKerberosAuthBackendLDAPConfig_enableSAMAccountNameLogin tests enable_samaccountname_login configuration (Vault 1.19.0+)
 func TestAccKerberosAuthBackendLDAPConfig_enableSAMAccountNameLogin(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -523,17 +506,17 @@ func TestAccKerberosAuthBackendLDAPConfig_enableSAMAccountNameLogin(t *testing.T
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_enableSAMAccountNameLogin(path, url, bindDN, userDN, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldURL, url),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldEnableSamaccountnameLogin, "true"),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldUPNDomain, "example.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEnableSamaccountnameLogin, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUPNDomain, "example.com"),
 				),
 			},
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_enableSAMAccountNameLogin(path, url, bindDN, userDN, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldEnableSamaccountnameLogin, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEnableSamaccountnameLogin, "false"),
 				),
 			},
 		},
@@ -544,9 +527,9 @@ func TestAccKerberosAuthBackendLDAPConfig_enableSAMAccountNameLogin(t *testing.T
 func TestAccKerberosAuthBackendLDAPConfig_namespace(t *testing.T) {
 	namespace := acctest.RandomWithPrefix("tf-ns")
 	path := acctest.RandomWithPrefix("kerberos")
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -558,9 +541,9 @@ func TestAccKerberosAuthBackendLDAPConfig_namespace(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_namespace(namespace, path, url, bindDN, userDN),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldNamespace, namespace),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldURL, url),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
 				),
 			},
 		},
@@ -571,9 +554,9 @@ func TestAccKerberosAuthBackendLDAPConfig_namespace(t *testing.T) {
 func TestAccKerberosAuthBackendLDAPConfig_importWithNamespace(t *testing.T) {
 	namespace := acctest.RandomWithPrefix("tf-ns")
 	path := acctest.RandomWithPrefix("kerberos")
-	url := "ldap://ldap.example.com"
-	bindDN := "cn=vault,ou=Users,dc=example,dc=com"
-	userDN := "ou=People,dc=example,dc=org"
+	url := testLDAPURL
+	bindDN := testBindDN
+	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -585,54 +568,19 @@ func TestAccKerberosAuthBackendLDAPConfig_importWithNamespace(t *testing.T) {
 			{
 				Config: testAccKerberosAuthBackendLDAPConfigConfig_namespace(namespace, path, url, bindDN, userDN),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldNamespace, namespace),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_ldap_config.config", consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 				),
 			},
 			{
 				PreConfig: func() {
-					// Set the namespace environment variable for import
 					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
 				},
-				ResourceName:                         "vault_kerberos_auth_backend_ldap_config.config",
+				ResourceName:                         resourceName,
 				ImportState:                          true,
 				ImportStateId:                        fmt.Sprintf("auth/%s/config/ldap", path),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore: []string{
-					// Write-only fields
-					consts.FieldBindPassWO,
-					consts.FieldBindPassWOVersion,
-					consts.FieldClientTLSCertWO,
-					consts.FieldClientTLSCertWOVersion,
-					consts.FieldClientTLSKeyWO,
-					consts.FieldClientTLSKeyWOVersion,
-					// Optional fields that won't be populated during import
-					consts.FieldURL,
-					consts.FieldBindDN,
-					consts.FieldUserDN,
-					consts.FieldUserAttr,
-					consts.FieldUserFilter,
-					consts.FieldGroupDN,
-					consts.FieldGroupFilter,
-					consts.FieldGroupAttr,
-					consts.FieldAnonymousGroupSearch,
-					consts.FieldUseTokenGroups,
-					consts.FieldCaseSensitiveNames,
-					consts.FieldStartTLS,
-					consts.FieldInsecureTLS,
-					consts.FieldTLSMinVersion,
-					consts.FieldTLSMaxVersion,
-					consts.FieldCertificate,
-					consts.FieldDiscoverDN,
-					consts.FieldUPNDomain,
-					consts.FieldRequestTimeout,
-					consts.FieldConnectionTimeout,
-					consts.FieldUsernameAsAlias,
-					consts.FieldDereferenceAliases,
-					consts.FieldMaxPageSize,
-					consts.FieldEnableSamaccountnameLogin,
-				},
 			},
 			{
 				// Cleanup step needed for the import step above
