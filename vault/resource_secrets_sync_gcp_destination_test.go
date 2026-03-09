@@ -94,6 +94,7 @@ func TestGCPSecretsSyncDestinationWIF(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, projectID),
 					// identity_token_audience is write-only and cannot be verified from state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenAudience),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWOVersion, "1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, serviceAccountEmail),
@@ -106,6 +107,7 @@ func TestGCPSecretsSyncDestinationWIF(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, projectID),
 					// identity_token_audience is write-only and cannot be verified from state, incrementing the FieldIdentityTokenAudienceWOVersion.
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenAudience),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWOVersion, "2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "60"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountEmail, serviceAccountEmail),
