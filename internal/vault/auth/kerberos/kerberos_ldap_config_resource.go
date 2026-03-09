@@ -6,7 +6,6 @@ package kerberos
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -18,14 +17,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/token"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
@@ -124,32 +127,32 @@ type kerberosAuthBackendLDAPConfigModel struct {
 type kerberosAuthBackendLDAPConfigAPIModel struct {
 	token.TokenAPIModel `mapstructure:",squash"`
 
-	URL                       string `json:"url,omitempty" mapstructure:"url,omitempty"`
+	URL                       string `json:"url" mapstructure:"url"`
 	BindDN                    string `json:"binddn" mapstructure:"binddn"`
-	BindPass                  string `json:"bindpass,omitempty" mapstructure:"bindpass,omitempty"`
+	BindPass                  string `json:"bindpass" mapstructure:"bindpass"`
 	UserDN                    string `json:"userdn" mapstructure:"userdn"`
-	UserAttr                  string `json:"userattr,omitempty" mapstructure:"userattr,omitempty"`
-	UserFilter                string `json:"userfilter,omitempty" mapstructure:"userfilter,omitempty"`
+	UserAttr                  string `json:"userattr" mapstructure:"userattr"`
+	UserFilter                string `json:"userfilter" mapstructure:"userfilter"`
 	GroupDN                   string `json:"groupdn" mapstructure:"groupdn"`
-	GroupFilter               string `json:"groupfilter,omitempty" mapstructure:"groupfilter,omitempty"`
-	GroupAttr                 string `json:"groupattr,omitempty" mapstructure:"groupattr,omitempty"`
+	GroupFilter               string `json:"groupfilter" mapstructure:"groupfilter"`
+	GroupAttr                 string `json:"groupattr" mapstructure:"groupattr"`
 	AnonymousGroupSearch      bool   `json:"anonymous_group_search" mapstructure:"anonymous_group_search"`
 	UseTokenGroups            bool   `json:"use_token_groups" mapstructure:"use_token_groups"`
 	CaseSensitiveNames        bool   `json:"case_sensitive_names" mapstructure:"case_sensitive_names"`
 	StartTLS                  bool   `json:"starttls" mapstructure:"starttls"`
 	InsecureTLS               bool   `json:"insecure_tls" mapstructure:"insecure_tls"`
-	TLSMinVersion             string `json:"tls_min_version,omitempty" mapstructure:"tls_min_version,omitempty"`
-	TLSMaxVersion             string `json:"tls_max_version,omitempty" mapstructure:"tls_max_version,omitempty"`
+	TLSMinVersion             string `json:"tls_min_version" mapstructure:"tls_min_version"`
+	TLSMaxVersion             string `json:"tls_max_version" mapstructure:"tls_max_version"`
 	Certificate               string `json:"certificate" mapstructure:"certificate"`
-	ClientTLSCert             string `json:"client_tls_cert,omitempty" mapstructure:"client_tls_cert,omitempty"`
-	ClientTLSKey              string `json:"client_tls_key,omitempty" mapstructure:"client_tls_key,omitempty"`
+	ClientTLSCert             string `json:"client_tls_cert" mapstructure:"client_tls_cert"`
+	ClientTLSKey              string `json:"client_tls_key" mapstructure:"client_tls_key"`
 	DiscoverDN                bool   `json:"discoverdn" mapstructure:"discoverdn"`
 	DenyNullBind              bool   `json:"deny_null_bind" mapstructure:"deny_null_bind"`
 	UPNDomain                 string `json:"upndomain" mapstructure:"upndomain"`
-	RequestTimeout            int64  `json:"request_timeout,omitempty" mapstructure:"request_timeout,omitempty"`
-	ConnectionTimeout         int64  `json:"connection_timeout,omitempty" mapstructure:"connection_timeout,omitempty"`
+	RequestTimeout            int64  `json:"request_timeout" mapstructure:"request_timeout"`
+	ConnectionTimeout         int64  `json:"connection_timeout" mapstructure:"connection_timeout"`
 	UsernameAsAlias           bool   `json:"username_as_alias" mapstructure:"username_as_alias"`
-	DereferenceAliases        string `json:"dereference_aliases,omitempty" mapstructure:"dereference_aliases,omitempty"`
+	DereferenceAliases        string `json:"dereference_aliases" mapstructure:"dereference_aliases"`
 	MaxPageSize               int64  `json:"max_page_size" mapstructure:"max_page_size"`
 	EnableSAMAccountNameLogin bool   `json:"enable_samaccountname_login" mapstructure:"enable_samaccountname_login"`
 }
@@ -180,6 +183,8 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 			},
 			fieldURL: schema.StringAttribute{
 				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString("ldap://127.0.0.1"),
 				Description: "LDAP URL to connect. Multiple URLs can be specified by concatenating them with commas. " +
 					"Default: ldap://127.0.0.1",
 			},
@@ -190,6 +195,7 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 			fieldBindPassWO: schema.StringAttribute{
 				Optional:    true,
 				WriteOnly:   true,
+				Sensitive:   true,
 				Description: "LDAP password for searching for the user DN (write-only). Must be used together with bindpass_wo_version.",
 				Validators: []validator.String{
 					stringvalidator.AlsoRequires(path.MatchRoot(fieldBindPassWOVersion)),
@@ -208,10 +214,14 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 			},
 			fieldUserAttr: schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("cn"),
 				Description: "Attribute used as username. Common values: 'samaccountname', 'uid'. Default: 'cn'",
 			},
 			fieldUserFilter: schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("({{.UserAttr}}={{.Username}})"),
 				Description: "Go template for LDAP user search filter. Default: '({{.UserAttr}}={{.Username}})'",
 			},
 			fieldGroupDN: schema.StringAttribute{
@@ -220,10 +230,14 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 			},
 			fieldGroupFilter: schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))"),
 				Description: "Go template for querying group membership of user. Default: '(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))'",
 			},
 			fieldGroupAttr: schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("cn"),
 				Description: "LDAP attribute to follow for group membership. Default: 'cn'",
 			},
 			fieldAnonymousGroupSearch: schema.BoolAttribute{
@@ -248,10 +262,14 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 			},
 			fieldTLSMinVersion: schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("tls12"),
 				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Default: 'tls12'.",
 			},
 			fieldTLSMaxVersion: schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("tls12"),
 				Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Default: 'tls12'.",
 			},
 			fieldCertificate: schema.StringAttribute{
@@ -262,6 +280,7 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 			fieldClientTLSCertWO: schema.StringAttribute{
 				Optional:    true,
 				WriteOnly:   true,
+				Sensitive:   true,
 				Description: "Client certificate to provide to the LDAP server, must be x509 PEM encoded (write-only). Must be used together with client_tls_cert_wo_version.",
 				Validators: []validator.String{
 					stringvalidator.AlsoRequires(path.MatchRoot(fieldClientTLSCertWOVersion)),
@@ -277,6 +296,7 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 			fieldClientTLSKeyWO: schema.StringAttribute{
 				Optional:    true,
 				WriteOnly:   true,
+				Sensitive:   true,
 				Description: "Client certificate key to provide to the LDAP server, must be x509 PEM encoded (write-only). Must be used together with client_tls_key_wo_version.",
 				Validators: []validator.String{
 					stringvalidator.AlsoRequires(path.MatchRoot(fieldClientTLSKeyWOVersion)),
@@ -305,10 +325,14 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 			},
 			fieldRequestTimeout: schema.Int64Attribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     int64default.StaticInt64(90),
 				Description: "Timeout, in seconds, for the connection when making requests against the server. Default: 90.",
 			},
 			fieldConnectionTimeout: schema.Int64Attribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     int64default.StaticInt64(30),
 				Description: "Timeout, in seconds, when attempting to connect to the LDAP server. Default: 30.",
 			},
 			fieldUsernameAsAlias: schema.BoolAttribute{
@@ -317,6 +341,8 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 			},
 			fieldDereferenceAliases: schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("never"),
 				Description: "When aliases should be dereferenced on search operations. Accepted values are 'never', 'finding', 'searching', 'always'. Default: 'never'",
 			},
 			fieldMaxPageSize: schema.Int64Attribute{
@@ -361,19 +387,57 @@ func (r *kerberosAuthBackendLDAPConfigResource) writeConfigWithState(ctx context
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
-		diags.AddError("Error getting client", err.Error())
+		diags.AddError(errutil.ClientConfigureErr(err))
 		return diags
 	}
 
-	mount := plan.Mount.ValueString()
-	configPath := fmt.Sprintf("/auth/%s/config/ldap", mount)
+	mount := strings.Trim(plan.Mount.ValueString(), "/")
+	configPath := r.configPath(mount)
+
+	// Build the API request
+	vaultRequest, apiDiags := r.getApiModel(ctx, plan, config, state)
+	diags.Append(apiDiags...)
+	if diags.HasError() {
+		return diags
+	}
+
+	// Write config to Vault
+	tflog.Debug(ctx, fmt.Sprintf("Writing Kerberos LDAP config to '%s'", configPath))
+	_, err = vaultClient.Logical().WriteWithContext(ctx, configPath, vaultRequest)
+	if err != nil {
+		diags.AddError(
+			"Error writing Kerberos LDAP config",
+			fmt.Sprintf("Could not write Kerberos LDAP config to '%s': %s", configPath, err),
+		)
+		return diags
+	}
+	tflog.Info(ctx, fmt.Sprintf("Kerberos LDAP config successfully written to '%s'", configPath))
+
+	// Read back the configuration
+	found, readDiags := r.read(ctx, plan)
+	diags.Append(readDiags...)
+	if diags.HasError() {
+		return diags
+	}
+	if !found {
+		diags.AddError(
+			"Error reading back Kerberos LDAP config after write",
+			fmt.Sprintf("Config at '%s' was not found after successful write", r.configPath(strings.Trim(plan.Mount.ValueString(), "/"))),
+		)
+		return diags
+	}
+
+	return diags
+}
+
+// getApiModel builds the Vault API request map from the Terraform data model.
+func (r *kerberosAuthBackendLDAPConfigResource) getApiModel(ctx context.Context, plan *kerberosAuthBackendLDAPConfigModel, config *kerberosAuthBackendLDAPConfigModel, state *kerberosAuthBackendLDAPConfigModel) (map[string]interface{}, diag.Diagnostics) {
+	var diags diag.Diagnostics
 
 	// Build API model
 	apiModel := kerberosAuthBackendLDAPConfigAPIModel{}
 
-	if !plan.URL.IsNull() {
-		apiModel.URL = plan.URL.ValueString()
-	}
+	apiModel.URL = plan.URL.ValueString()
 
 	if !plan.BindDN.IsNull() {
 		apiModel.BindDN = plan.BindDN.ValueString()
@@ -385,7 +449,7 @@ func (r *kerberosAuthBackendLDAPConfigResource) writeConfigWithState(ctx context
 	if !config.BindPassWO.IsNull() {
 		if state == nil || !plan.BindPassWOVersion.Equal(state.BindPassWOVersion) {
 			apiModel.BindPass = config.BindPassWO.ValueString()
-			log.Printf("[DEBUG] Bindpass version changed or new resource, updating bindpass")
+			tflog.Debug(ctx, "Bindpass version changed or new resource, updating bindpass")
 		}
 	}
 
@@ -393,25 +457,15 @@ func (r *kerberosAuthBackendLDAPConfigResource) writeConfigWithState(ctx context
 		apiModel.UserDN = plan.UserDN.ValueString()
 	}
 
-	if !plan.UserAttr.IsNull() {
-		apiModel.UserAttr = plan.UserAttr.ValueString()
-	}
-
-	if !plan.UserFilter.IsNull() {
-		apiModel.UserFilter = plan.UserFilter.ValueString()
-	}
+	apiModel.UserAttr = plan.UserAttr.ValueString()
+	apiModel.UserFilter = plan.UserFilter.ValueString()
 
 	if !plan.GroupDN.IsNull() {
 		apiModel.GroupDN = plan.GroupDN.ValueString()
 	}
 
-	if !plan.GroupFilter.IsNull() {
-		apiModel.GroupFilter = plan.GroupFilter.ValueString()
-	}
-
-	if !plan.GroupAttr.IsNull() {
-		apiModel.GroupAttr = plan.GroupAttr.ValueString()
-	}
+	apiModel.GroupFilter = plan.GroupFilter.ValueString()
+	apiModel.GroupAttr = plan.GroupAttr.ValueString()
 
 	apiModel.AnonymousGroupSearch = plan.AnonymousGroupSearch.ValueBool()
 
@@ -423,12 +477,8 @@ func (r *kerberosAuthBackendLDAPConfigResource) writeConfigWithState(ctx context
 
 	apiModel.InsecureTLS = plan.InsecureTLS.ValueBool()
 
-	if !plan.TLSMinVersion.IsNull() {
-		apiModel.TLSMinVersion = plan.TLSMinVersion.ValueString()
-	}
-	if !plan.TLSMaxVersion.IsNull() {
-		apiModel.TLSMaxVersion = plan.TLSMaxVersion.ValueString()
-	}
+	apiModel.TLSMinVersion = plan.TLSMinVersion.ValueString()
+	apiModel.TLSMaxVersion = plan.TLSMaxVersion.ValueString()
 	if !plan.Certificate.IsNull() {
 		apiModel.Certificate = plan.Certificate.ValueString()
 	}
@@ -439,7 +489,7 @@ func (r *kerberosAuthBackendLDAPConfigResource) writeConfigWithState(ctx context
 	if !config.ClientTLSCertWO.IsNull() {
 		if state == nil || !plan.ClientTLSCertWOVersion.Equal(state.ClientTLSCertWOVersion) {
 			apiModel.ClientTLSCert = config.ClientTLSCertWO.ValueString()
-			log.Printf("[DEBUG] Client TLS cert version changed or new resource, updating client_tls_cert")
+			tflog.Debug(ctx, "Client TLS cert version changed or new resource, updating client_tls_cert")
 		}
 	}
 
@@ -449,7 +499,7 @@ func (r *kerberosAuthBackendLDAPConfigResource) writeConfigWithState(ctx context
 	if !config.ClientTLSKeyWO.IsNull() {
 		if state == nil || !plan.ClientTLSKeyWOVersion.Equal(state.ClientTLSKeyWOVersion) {
 			apiModel.ClientTLSKey = config.ClientTLSKeyWO.ValueString()
-			log.Printf("[DEBUG] Client TLS key version changed or new resource, updating client_tls_key")
+			tflog.Debug(ctx, "Client TLS key version changed or new resource, updating client_tls_key")
 		}
 	}
 
@@ -461,19 +511,12 @@ func (r *kerberosAuthBackendLDAPConfigResource) writeConfigWithState(ctx context
 		apiModel.UPNDomain = plan.UPNDomain.ValueString()
 	}
 
-	if !plan.RequestTimeout.IsNull() {
-		apiModel.RequestTimeout = plan.RequestTimeout.ValueInt64()
-	}
-
-	if !plan.ConnectionTimeout.IsNull() {
-		apiModel.ConnectionTimeout = plan.ConnectionTimeout.ValueInt64()
-	}
+	apiModel.RequestTimeout = plan.RequestTimeout.ValueInt64()
+	apiModel.ConnectionTimeout = plan.ConnectionTimeout.ValueInt64()
 
 	apiModel.UsernameAsAlias = plan.UsernameAsAlias.ValueBool()
 
-	if !plan.DereferenceAliases.IsNull() {
-		apiModel.DereferenceAliases = plan.DereferenceAliases.ValueString()
-	}
+	apiModel.DereferenceAliases = plan.DereferenceAliases.ValueString()
 
 	apiModel.MaxPageSize = plan.MaxPageSize.ValueInt64()
 
@@ -482,14 +525,14 @@ func (r *kerberosAuthBackendLDAPConfigResource) writeConfigWithState(ctx context
 	// Populate token fields
 	diags.Append(token.PopulateTokenAPIFromModel(ctx, &plan.TokenModel, &apiModel.TokenAPIModel)...)
 	if diags.HasError() {
-		return diags
+		return nil, diags
 	}
 
 	// Convert API model to map for Vault request
 	var data map[string]interface{}
 	if err := mapstructure.Decode(apiModel, &data); err != nil {
 		diags.AddError("Failed to encode LDAP config API model", err.Error())
-		return diags
+		return nil, diags
 	}
 
 	if r.Meta() == nil || !r.Meta().IsAPISupported(provider.VaultVersion121) {
@@ -500,20 +543,7 @@ func (r *kerberosAuthBackendLDAPConfigResource) writeConfigWithState(ctx context
 		delete(data, fieldEnableSAMAccountNameLogin)
 	}
 
-	log.Printf("[DEBUG] Writing Kerberos LDAP config to %q", configPath)
-	_, err = vaultClient.Logical().Write(configPath, data)
-	if err != nil {
-		diags.AddError(
-			fmt.Sprintf("Error writing Kerberos LDAP config to %q", configPath),
-			err.Error(),
-		)
-		return diags
-	}
-
-	// Read back the configuration
-	diags.Append(r.read(ctx, plan)...)
-
-	return diags
+	return data, diags
 }
 
 func (r *kerberosAuthBackendLDAPConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -523,146 +553,144 @@ func (r *kerberosAuthBackendLDAPConfigResource) Read(ctx context.Context, req re
 		return
 	}
 
-	resp.Diagnostics.Append(r.read(ctx, &state)...)
+	// Read config from Vault
+	found, readDiags := r.read(ctx, &state)
+	resp.Diagnostics.Append(readDiags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If not found, remove from state
+	if !found {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *kerberosAuthBackendLDAPConfigResource) read(ctx context.Context, tfModel *kerberosAuthBackendLDAPConfigModel) diag.Diagnostics {
+// read is a reusable helper that reads configuration from Vault.
+// Returns true if the config was found, false if not found.
+// Used by the Read operation.
+func (r *kerberosAuthBackendLDAPConfigResource) read(ctx context.Context, data *kerberosAuthBackendLDAPConfigModel) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), tfModel.Namespace.ValueString())
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		diags.AddError("Error getting client", err.Error())
-		return diags
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return false, diags
 	}
 
-	mount := tfModel.Mount.ValueString()
-	configPath := fmt.Sprintf("/auth/%s/config/ldap", mount)
+	mount := strings.Trim(data.Mount.ValueString(), "/")
+	configPath := r.configPath(mount)
 
-	log.Printf("[DEBUG] Reading Kerberos LDAP config from %q", configPath)
+	tflog.Debug(ctx, fmt.Sprintf("Reading Kerberos LDAP config from '%s'", configPath))
 	resp, err := vaultClient.Logical().ReadWithContext(ctx, configPath)
 	if err != nil {
-		diags.AddError(
-			fmt.Sprintf("Error reading Kerberos LDAP config from %q", configPath),
-			err.Error(),
-		)
-		return diags
+		diags.AddError(errutil.VaultReadErr(err))
+		return false, diags
 	}
 
 	if resp == nil {
-		diags.AddError(
-			"Kerberos LDAP config not found",
-			fmt.Sprintf("No configuration found at %q", configPath),
-		)
+		tflog.Warn(ctx, fmt.Sprintf("Kerberos LDAP config at '%s' not found, removing from state", configPath))
+		return false, diags
+	}
+
+	// Populate model from API response
+	populateDiags := r.populateDataModelFromApi(ctx, data, resp.Data)
+	diags.Append(populateDiags...)
+	return true, diags
+}
+
+// populateDataModelFromApi maps the Vault API response to the Terraform data model.
+func (r *kerberosAuthBackendLDAPConfigResource) populateDataModelFromApi(ctx context.Context, tfModel *kerberosAuthBackendLDAPConfigModel, respData map[string]interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if respData == nil {
+		diags.AddError("Missing data in API response", "The API response data was nil.")
 		return diags
 	}
 
 	// Decode response into API model
 	var apiModel kerberosAuthBackendLDAPConfigAPIModel
-	if err := model.ToAPIModel(resp.Data, &apiModel); err != nil {
+	if err := model.ToAPIModel(respData, &apiModel); err != nil {
 		diags.AddError("Unable to translate Vault response data", err.Error())
 		return diags
 	}
 
-	if !tfModel.URL.IsNull() {
-		tfModel.URL = types.StringValue(apiModel.URL)
-	}
+	tfModel.URL = types.StringValue(apiModel.URL)
 
-	if !tfModel.BindDN.IsNull() {
+	if apiModel.BindDN != "" {
 		tfModel.BindDN = types.StringValue(apiModel.BindDN)
 	}
 
-	if !tfModel.UserDN.IsNull() {
+	if apiModel.UserDN != "" {
 		tfModel.UserDN = types.StringValue(apiModel.UserDN)
 	}
 
-	if !tfModel.UserAttr.IsNull() {
-		tfModel.UserAttr = types.StringValue(apiModel.UserAttr)
-	}
+	tfModel.UserAttr = types.StringValue(apiModel.UserAttr)
 
-	if !tfModel.UserFilter.IsNull() {
-		tfModel.UserFilter = types.StringValue(apiModel.UserFilter)
-	}
+	tfModel.UserFilter = types.StringValue(apiModel.UserFilter)
 
-	if !tfModel.GroupDN.IsNull() {
+	if apiModel.GroupDN != "" {
 		tfModel.GroupDN = types.StringValue(apiModel.GroupDN)
 	}
 
-	if !tfModel.GroupFilter.IsNull() {
-		tfModel.GroupFilter = types.StringValue(apiModel.GroupFilter)
-	}
+	tfModel.GroupFilter = types.StringValue(apiModel.GroupFilter)
 
-	if !tfModel.GroupAttr.IsNull() {
-		tfModel.GroupAttr = types.StringValue(apiModel.GroupAttr)
-	}
+	tfModel.GroupAttr = types.StringValue(apiModel.GroupAttr)
 
-	if !tfModel.AnonymousGroupSearch.IsNull() {
+	if apiModel.AnonymousGroupSearch {
 		tfModel.AnonymousGroupSearch = types.BoolValue(apiModel.AnonymousGroupSearch)
 	}
 
-	if !tfModel.UseTokenGroups.IsNull() {
+	if apiModel.UseTokenGroups {
 		tfModel.UseTokenGroups = types.BoolValue(apiModel.UseTokenGroups)
 	}
 
-	if !tfModel.CaseSensitiveNames.IsNull() {
+	if apiModel.CaseSensitiveNames {
 		tfModel.CaseSensitiveNames = types.BoolValue(apiModel.CaseSensitiveNames)
 	}
 
-	if !tfModel.StartTLS.IsNull() {
+	if apiModel.StartTLS {
 		tfModel.StartTLS = types.BoolValue(apiModel.StartTLS)
 	}
 
-	if !tfModel.InsecureTLS.IsNull() {
+	if apiModel.InsecureTLS {
 		tfModel.InsecureTLS = types.BoolValue(apiModel.InsecureTLS)
 	}
 
-	if !tfModel.TLSMinVersion.IsNull() {
-		tfModel.TLSMinVersion = types.StringValue(apiModel.TLSMinVersion)
-	}
+	tfModel.TLSMinVersion = types.StringValue(apiModel.TLSMinVersion)
+	tfModel.TLSMaxVersion = types.StringValue(apiModel.TLSMaxVersion)
 
-	if !tfModel.TLSMaxVersion.IsNull() {
-		tfModel.TLSMaxVersion = types.StringValue(apiModel.TLSMaxVersion)
-	}
-
-	if !tfModel.Certificate.IsNull() {
+	if apiModel.Certificate != "" {
 		tfModel.Certificate = types.StringValue(apiModel.Certificate)
 	}
 
-	if !tfModel.DiscoverDN.IsNull() {
+	if apiModel.DiscoverDN {
 		tfModel.DiscoverDN = types.BoolValue(apiModel.DiscoverDN)
 	}
 
 	tfModel.DenyNullBind = types.BoolValue(apiModel.DenyNullBind)
 
-	if !tfModel.UPNDomain.IsNull() {
+	if apiModel.UPNDomain != "" {
 		tfModel.UPNDomain = types.StringValue(apiModel.UPNDomain)
 	}
 
-	if !tfModel.RequestTimeout.IsNull() {
-		tfModel.RequestTimeout = types.Int64Value(apiModel.RequestTimeout)
-	}
+	tfModel.RequestTimeout = types.Int64Value(apiModel.RequestTimeout)
+	tfModel.ConnectionTimeout = types.Int64Value(apiModel.ConnectionTimeout)
 
-	if !tfModel.ConnectionTimeout.IsNull() {
-		tfModel.ConnectionTimeout = types.Int64Value(apiModel.ConnectionTimeout)
-	}
-
-	if !tfModel.UsernameAsAlias.IsNull() {
+	if apiModel.UsernameAsAlias {
 		tfModel.UsernameAsAlias = types.BoolValue(apiModel.UsernameAsAlias)
 	}
 
-	if !tfModel.DereferenceAliases.IsNull() {
-		tfModel.DereferenceAliases = types.StringValue(apiModel.DereferenceAliases)
-	}
+	tfModel.DereferenceAliases = types.StringValue(apiModel.DereferenceAliases)
 
-	if !tfModel.MaxPageSize.IsNull() {
+	if apiModel.MaxPageSize != 0 {
 		tfModel.MaxPageSize = types.Int64Value(apiModel.MaxPageSize)
 	}
 
-	if !tfModel.EnableSAMAccountNameLogin.IsNull() {
+	if apiModel.EnableSAMAccountNameLogin {
 		tfModel.EnableSAMAccountNameLogin = types.BoolValue(apiModel.EnableSAMAccountNameLogin)
 	}
 
@@ -710,57 +738,67 @@ func (r *kerberosAuthBackendLDAPConfigResource) Delete(ctx context.Context, req 
 		return
 	}
 
-	mount := state.Mount.ValueString()
-	configPath := fmt.Sprintf("/auth/%s/config/ldap", mount)
+	mount := strings.Trim(state.Mount.ValueString(), "/")
+	configPath := r.configPath(mount)
 
 	// Configuration endpoints cannot be deleted from Vault, only the auth mount itself can be deleted.
 	// This function only removes the resource from Terraform state.
-	log.Printf("[DEBUG] Removing Kerberos LDAP config from Terraform state")
+	tflog.Debug(ctx, "Removing Kerberos LDAP config from Terraform state")
 
 	resp.Diagnostics.AddWarning(
 		"Configuration Remains in Vault",
-		fmt.Sprintf("The Kerberos LDAP configuration at %q has been removed from Terraform state, "+
+		fmt.Sprintf("The Kerberos LDAP configuration at '%s' has been removed from Terraform state, "+
 			"but it may still exist in Vault unless the auth mount itself is deleted.", configPath),
 	)
 }
 
+// ImportState handles resource import
 func (r *kerberosAuthBackendLDAPConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldMount), req, resp)
+	id := req.ID
 
-	mount, err := extractLDAPConfigMountFromID(req.ID)
+	var mount string
+	var err error
+
+	// Parse the import ID using the official Vault API format
+	mount, err = r.mountFromPath(id)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error parsing import identifier",
-			fmt.Sprintf("The import identifier '%s' is not valid: %s", req.ID, err.Error()),
+			"Invalid import ID format",
+			fmt.Sprintf("Expected format: 'auth/<mount>/config/ldap', got: '%s'", req.ID),
 		)
 		return
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(fieldMount), mount)...)
 
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
+
+	// Handle namespace import via environment variable
+	// See: https://registry.terraform.io/providers/hashicorp/vault/latest/docs#namespace-support
 	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
 	if ns != "" {
-		log.Printf("[DEBUG] Environment variable %s set, attempting TF state import with namespace: %s", consts.EnvVarVaultNamespaceImport, ns)
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
 		resp.Diagnostics.Append(
 			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
 		)
 	}
 }
 
-// extractLDAPConfigMountFromID extracts the auth backend mount from the import identifier provided
-// by the terraform import CLI command.
-func extractLDAPConfigMountFromID(id string) (string, error) {
-	// Trim leading/trailing slashes and whitespace
-	id = strings.TrimSpace(strings.Trim(id, "/"))
+// configPath returns the Vault API path for Kerberos LDAP config
+func (r *kerberosAuthBackendLDAPConfigResource) configPath(mount string) string {
+	return fmt.Sprintf("auth/%s/config/ldap", mount)
+}
 
-	if id == "" {
-		return "", fmt.Errorf("Expected import ID format: auth/{mount}/config/ldap")
+// mountFromPath extracts the mount from the full path
+func (r *kerberosAuthBackendLDAPConfigResource) mountFromPath(path string) (string, error) {
+	if !ldapConfigPathRegexp.MatchString(path) {
+		return "", fmt.Errorf("no mount found in path: %s", path)
 	}
-
-	// Extract mount using regex - FindStringSubmatch returns nil if no match
-	matches := ldapConfigPathRegexp.FindStringSubmatch(id)
-	if len(matches) != 2 || strings.TrimSpace(matches[1]) == "" {
-		return "", fmt.Errorf("Expected import ID format: auth/{mount}/config/ldap")
+	matches := ldapConfigPathRegexp.FindStringSubmatch(path)
+	if len(matches) != 2 {
+		return "", fmt.Errorf("unexpected number of matches in path: %s", path)
 	}
-
-	return strings.TrimSpace(matches[1]), nil
+	return matches[1], nil
 }
