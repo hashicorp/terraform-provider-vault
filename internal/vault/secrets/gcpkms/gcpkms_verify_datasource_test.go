@@ -159,8 +159,14 @@ resource "vault_namespace" "test" {
 
 	return fmt.Sprintf(`
 %s
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+%s
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -169,7 +175,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
@@ -179,20 +185,25 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  mount       = vault_gcpkms_secret_backend.test.path
+  mount       = vault_mount.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   key_version = 1
   digest      = "dGVzdC1kaWdlc3Q="
   signature   = "dGVzdC1zaWduYXR1cmU="
 %s
 }
-`, nsBlock, path, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, namespaceAttr)
+`, nsBlock, path, namespaceAttr, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, namespaceAttr)
 }
 
 func testGCPKMSVerifyDataSource_basicConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -200,7 +211,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
@@ -209,7 +220,7 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  mount       = vault_gcpkms_secret_backend.test.path
+  mount       = vault_mount.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   key_version = 1
   digest      = "dGVzdC1kaWdlc3Q="
@@ -220,8 +231,13 @@ data "vault_gcpkms_verify" "test" {
 
 func testGCPKMSVerifyDataSource_withKeyVersionConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -229,7 +245,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
@@ -238,7 +254,7 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  mount       = vault_gcpkms_secret_backend.test.path
+  mount       = vault_mount.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   digest      = "dGVzdC1kaWdlc3Q="
   signature   = "dGVzdC1zaWduYXR1cmU="
@@ -249,8 +265,13 @@ data "vault_gcpkms_verify" "test" {
 
 func testGCPKMSVerifyDataSource_invalidSignatureConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -258,7 +279,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_gcpkms_secret_backend.test.path
+  mount            = vault_mount.test.path
   name             = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
@@ -267,7 +288,7 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  mount       = vault_gcpkms_secret_backend.test.path
+  mount       = vault_mount.test.path
   name        = vault_gcpkms_secret_backend_key.test.name
   key_version = 1
   digest      = "dGVzdC1kaWdlc3Q="
