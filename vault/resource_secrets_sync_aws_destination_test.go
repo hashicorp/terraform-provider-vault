@@ -337,6 +337,9 @@ func TestAWSSecretsSyncDestinationWIF(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion200)
+			if !provider.IsEnterpriseSupported(testProvider.Meta()) {
+				t.Skip("Skipping WIF test: requires Vault Enterprise")
+			}
 		},
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
@@ -348,8 +351,10 @@ func TestAWSSecretsSyncDestinationWIF(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, roleArn),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
-					// identity_token_audience is write-only and cannot be verified from state
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWOVersion, "1"),
+					// write-only fields must not be stored in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenKeyWO),
 				),
 			},
 			{
@@ -360,8 +365,10 @@ func TestAWSSecretsSyncDestinationWIF(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, roleArn),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "60"),
-					// identity_token_audience is write-only and cannot be verified from state
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWOVersion, "2"),
+					// write-only fields must not be stored in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenKeyWO),
 				),
 			},
 			// Import before the error step so Vault state is not corrupted by the partial apply from the error step.
