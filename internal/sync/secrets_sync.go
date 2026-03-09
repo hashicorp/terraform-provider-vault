@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -47,6 +48,28 @@ func SyncDestinationCreateUpdateWithOptions(ctx context.Context, d *schema.Resou
 				}
 			}
 			data[k] = v
+		}
+
+		if k == consts.FieldIdentityTokenAudience {
+			if d.IsNewResource() || d.HasChange(consts.FieldIdentityTokenAudienceWOVersion) {
+				// Use GetRawConfigAt for write-only fields
+				p := cty.GetAttrPath(consts.FieldIdentityTokenAudienceWO)
+				woVal, _ := d.GetRawConfigAt(p)
+				if !woVal.IsNull() {
+					data[k] = woVal.AsString()
+				}
+			}
+		}
+
+		if k == consts.FieldIdentityTokenKey {
+			if d.IsNewResource() || d.HasChange(consts.FieldIdentityTokenKeyWOVersion) {
+				// Use GetRawConfigAt for write-only fields
+				p := cty.GetAttrPath(consts.FieldIdentityTokenKeyWO)
+				woVal, _ := d.GetRawConfigAt(p)
+				if !woVal.IsNull() {
+					data[k] = woVal.AsString()
+				}
+			}
 		}
 	}
 
