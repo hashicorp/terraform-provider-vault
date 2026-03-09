@@ -134,7 +134,7 @@ The following arguments are supported:
   **Requires Vault 2.0.0+**.
 
 * `identity_token_audience_wo_version` - (Optional) This is used along with `identity_token_audience_wo` to track updates as `identity_token_audience_wo` is a write-only field. Increment this field to update `identity_token_audience_wo`
-  **Requires Vault 2.0.0+**.`
+  **Requires Vault 2.0.0+**.
 
 * `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Default is 3600 seconds.
   **Requires Vault 2.0.0+**.
