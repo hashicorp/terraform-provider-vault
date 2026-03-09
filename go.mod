@@ -50,8 +50,8 @@ require (
 	github.com/spiffe/go-spiffe/v2 v2.6.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.48.0
-	golang.org/x/net v0.50.0
-	golang.org/x/oauth2 v0.35.0
+	golang.org/x/net v0.51.0
+	golang.org/x/oauth2 v0.36.0
 	google.golang.org/api v0.269.0
 	google.golang.org/genproto v0.0.0-20260128011058-8636f8732409
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
