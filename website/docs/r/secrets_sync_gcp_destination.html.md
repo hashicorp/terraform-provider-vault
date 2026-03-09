@@ -86,12 +86,14 @@ resource "vault_secrets_sync_gcp_destination" "gcp_replication_encryption" {
 
 ```hcl
 resource "vault_secrets_sync_gcp_destination" "gcp_wif" {
-  name                    = "gcp-dest-wif"
-  service_account_email   = var.service_account_email
-  identity_token_audience = var.identity_token_audience
-  identity_token_ttl      = 3600
-  identity_token_key      = "my-key"
-  granularity             = "secret-path"
+  name                             = "gcp-dest-wif"
+  service_account_email            = var.service_account_email
+  identity_token_audience_wo       = var.identity_token_audience
+  identity_token_audience_wo_version = 1
+  identity_token_ttl               = 3600
+  identity_token_key_wo            = "my-key"
+  identity_token_key_wo_version    = 1
+  granularity                      = "secret-path"
 }
 ```
 
