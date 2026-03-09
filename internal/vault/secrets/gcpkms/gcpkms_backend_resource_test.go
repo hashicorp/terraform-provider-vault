@@ -33,13 +33,13 @@ func TestGCPKMSSecretBackend_basic(t *testing.T) {
 			{
 				Config: testGCPKMSSecretBackend_initialConfig(path, credentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 				),
 			},
 			{
 				Config: testGCPKMSSecretBackend_updateConfig(path, credentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldScopes+".#", "2"),
 				),
 			},
@@ -48,7 +48,7 @@ func TestGCPKMSSecretBackend_basic(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccGCPKMSSecretBackendImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
 					consts.FieldCredentialsWO,
 					consts.FieldCredentialsWOVersion,
@@ -72,14 +72,14 @@ func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
 			{
 				Config: testGCPKMSSecretBackend_writeOnlyConfig(path, credentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "1"),
 				),
 			},
 			{
 				Config: testGCPKMSSecretBackend_writeOnlyUpdateConfig(path, credentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "2"),
 				),
 			},
@@ -126,7 +126,7 @@ func TestGCPKMSSecretBackend_namespace(t *testing.T) {
 	getSteps := func(path, ns string) []resource.TestStep {
 		var commonChecks []resource.TestCheckFunc
 		commonChecks = append(commonChecks,
-			resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+			resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 		)
 		if ns != "" {
 			commonChecks = append(commonChecks,
@@ -144,7 +144,7 @@ func TestGCPKMSSecretBackend_namespace(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccGCPKMSSecretBackendImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
 					consts.FieldCredentialsWO,
 					consts.FieldCredentialsWOVersion,
@@ -189,8 +189,13 @@ func TestGCPKMSSecretBackend_namespace(t *testing.T) {
 
 func testGCPKMSSecretBackend_initialConfig(path, credentials string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -201,8 +206,13 @@ EOT
 
 func testGCPKMSSecretBackend_updateConfig(path, credentials string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -217,8 +227,13 @@ EOT
 
 func testGCPKMSSecretBackend_writeOnlyConfig(path, credentials string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -229,8 +244,13 @@ EOT
 
 func testGCPKMSSecretBackend_writeOnlyUpdateConfig(path, credentials string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -241,16 +261,26 @@ EOT
 
 func testGCPKMSSecretBackend_noCredentialsConfig(path string) string {
 	return fmt.Sprintf(`
-resource "vault_gcpkms_secret_backend" "test" {
+resource "vault_mount" "test" {
   path = "%s"
+  type = "gcpkms"
+}
+
+resource "vault_gcpkms_secret_backend" "test" {
+  mount = vault_mount.test.path
 }
 `, path)
 }
 
 func testGCPKMSSecretBackend_emptyCredentialsConfig(path string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = ""
   credentials_wo_version = 1
 }
@@ -273,15 +303,21 @@ resource "vault_namespace" "test" {
 
 	return fmt.Sprintf(`
 %s
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "gcpkms"
+%s
+}
+
 resource "vault_gcpkms_secret_backend" "test" {
-  path                   = "%s"
+  mount                  = vault_mount.test.path
   credentials_wo         = <<-EOT
 %s
 EOT
   credentials_wo_version = 1
 %s
 }
-`, nsBlock, path, credentials, namespaceAttr)
+`, nsBlock, path, namespaceAttr, credentials, namespaceAttr)
 }
 
 func testAccGCPKMSSecretBackendImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
@@ -290,6 +326,6 @@ func testAccGCPKMSSecretBackendImportStateIdFunc(resourceName string) resource.I
 		if !ok {
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
-		return rs.Primary.Attributes[consts.FieldPath], nil
+		return rs.Primary.Attributes[consts.FieldMount], nil
 	}
 }

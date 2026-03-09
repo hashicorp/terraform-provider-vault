@@ -16,14 +16,19 @@ performs read-only signature verification operations.
 ### Basic Signature Verification
 
 ```hcl
+resource "vault_mount" "gcpkms" {
+  path = "gcpkms"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "gcpkms" {
-  path                   = "gcpkms"
+  mount                  = vault_mount.gcpkms.path
   credentials_wo         = file("gcp-credentials.json")
   credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "signing_key" {
-  mount     = vault_gcpkms_secret_backend.gcpkms.path
+  mount     = vault_mount.gcpkms.path
   name      = "signing-key"
   key_ring  = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose   = "asymmetric_sign"
@@ -31,7 +36,7 @@ resource "vault_gcpkms_secret_backend_key" "signing_key" {
 }
 
 data "vault_gcpkms_verify" "signature_check" {
-  mount       = vault_gcpkms_secret_backend.gcpkms.path
+  mount       = vault_mount.gcpkms.path
   name        = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = base64encode("my message digest")
   signature   = "BASE64_ENCODED_SIGNATURE"
@@ -47,14 +52,15 @@ output "signature_is_valid" {
 
 ```hcl
 ephemeral "vault_gcpkms_sign" "create_signature" {
-  mount       = vault_gcpkms_secret_backend.gcpkms.path
+  mount_id    = vault_mount.gcpkms.id
+  mount       = vault_mount.gcpkms.path
   name        = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = base64encode("my message digest")
   key_version = 1
 }
 
 data "vault_gcpkms_verify" "verify_signature" {
-  mount       = vault_gcpkms_secret_backend.gcpkms.path
+  mount       = vault_mount.gcpkms.path
   name        = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = base64encode("my message digest")
   signature   = ephemeral.vault_gcpkms_sign.create_signature.signature

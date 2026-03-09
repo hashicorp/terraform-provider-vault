@@ -22,14 +22,19 @@ runs. Protect these artifacts accordingly. See
 ### Symmetric Encryption Key
 
 ```hcl
+resource "vault_mount" "gcpkms" {
+  path = "gcpkms"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "gcpkms" {
-  path                   = "gcpkms"
+  mount                  = vault_mount.gcpkms.path
   credentials_wo         = file("gcp-credentials.json")
   credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "encryption" {
-  mount            = vault_gcpkms_secret_backend.gcpkms.path
+  mount            = vault_mount.gcpkms.path
   name             = "my-encryption-key"
   key_ring         = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose          = "encrypt_decrypt"
@@ -48,7 +53,7 @@ resource "vault_gcpkms_secret_backend_key" "encryption" {
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "signing" {
-  mount     = vault_gcpkms_secret_backend.gcpkms.path
+  mount     = vault_mount.gcpkms.path
   name      = "my-signing-key"
   key_ring  = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose   = "asymmetric_sign"
@@ -60,7 +65,7 @@ resource "vault_gcpkms_secret_backend_key" "signing" {
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "decrypt" {
-  mount     = vault_gcpkms_secret_backend.gcpkms.path
+  mount     = vault_mount.gcpkms.path
   name      = "my-decrypt-key"
   key_ring  = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose   = "asymmetric_decrypt"
@@ -72,7 +77,7 @@ resource "vault_gcpkms_secret_backend_key" "decrypt" {
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "hsm" {
-  mount            = vault_gcpkms_secret_backend.gcpkms.path
+  mount            = vault_mount.gcpkms.path
   name             = "hsm-key"
   key_ring         = "projects/my-project/locations/us-central1/keyRings/hsm-keyring"
   purpose          = "encrypt_decrypt"
@@ -88,7 +93,7 @@ By default, the GCP KMS crypto key uses the same name as the Vault key. Override
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "custom" {
-  mount      = vault_gcpkms_secret_backend.gcpkms.path
+  mount      = vault_mount.gcpkms.path
   name       = "vault-key-name"
   key_ring   = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   crypto_key = "different-gcp-key-name"
@@ -102,7 +107,7 @@ Only `rotation_period` and `labels` can be updated in-place. All other fields re
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "updatable" {
-  mount           = vault_gcpkms_secret_backend.gcpkms.path
+  mount           = vault_mount.gcpkms.path
   name            = "my-key"
   key_ring        = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   rotation_period = "72h"  # Duration strings ("72h") and second strings ("259200s") are both accepted
