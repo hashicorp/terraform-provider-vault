@@ -403,6 +403,7 @@ func TestAzureSecretsSyncDestinationWIF(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, clientID),
 					// write-only fields must not be stored in state
 					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenKeyWO),
 				),
 			},
 			{
@@ -418,6 +419,7 @@ func TestAzureSecretsSyncDestinationWIF(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, clientID),
 					// write-only fields must not be stored in state
 					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenKeyWO),
 				),
 			},
 		},
