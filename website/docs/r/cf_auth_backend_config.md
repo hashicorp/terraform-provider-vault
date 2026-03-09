@@ -70,7 +70,7 @@ The following arguments are supported:
 
 * `cf_timeout` - (Optional) The timeout for CF API calls in seconds. Defaults to
   `0` (no timeout). Removing this field from your configuration resets the value
-  to `0` in Vault.
+  to `0` in Vault. Requires Vault 1.19.4 or later due to a bug fix in that release.
 
 ## Ephemeral Attributes Reference
 

@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
@@ -30,8 +29,6 @@ import (
 const (
 	cfConfigPath = "config"
 )
-
-var cfConfigBackendRegexp = regexp.MustCompile(`^auth/(.+)/config$`)
 
 // Ensure the implementation satisfies the resource.ResourceWithImportState interface.
 var _ resource.ResourceWithImportState = &CFAuthBackendConfigResource{}
@@ -418,30 +415,26 @@ func reconcileCertSet(ctx context.Context, vaultCerts []string, current types.Se
 		trimmed[i] = strings.TrimSpace(c)
 	}
 
-	// If current is null/unknown (e.g. during import with no prior state),
-	// just use the trimmed Vault values.
-	if current.IsNull() || current.IsUnknown() {
-		v, diags := types.SetValueFrom(ctx, types.StringType, trimmed)
-		return v, diags
+	// Only compare if current state exists.
+	if !current.IsNull() && !current.IsUnknown() {
+		// Extract current cert strings and trim them for comparison only.
+		var currentRaw []string
+		if diags := current.ElementsAs(ctx, &currentRaw, false); diags.HasError() {
+			return types.SetNull(types.StringType), diags
+		}
+		trimmedCurrent := make([]string, len(currentRaw))
+		for i, c := range currentRaw {
+			trimmedCurrent[i] = strings.TrimSpace(c)
+		}
+
+		// Compare the two trimmed sets. If they contain the same elements, the certs
+		// haven't actually changed — return current as-is to preserve formatting.
+		if stringSetsEqual(trimmed, trimmedCurrent) {
+			return current, nil
+		}
 	}
 
-	// Extract current cert strings and trim them for comparison only.
-	var currentRaw []string
-	if diags := current.ElementsAs(ctx, &currentRaw, false); diags.HasError() {
-		return types.SetNull(types.StringType), diags
-	}
-	trimmedCurrent := make([]string, len(currentRaw))
-	for i, c := range currentRaw {
-		trimmedCurrent[i] = strings.TrimSpace(c)
-	}
-
-	// Compare the two trimmed sets. If they contain the same elements, the certs
-	// haven't actually changed — return current as-is to preserve formatting.
-	if stringSetsEqual(trimmed, trimmedCurrent) {
-		return current, nil
-	}
-
-	// The certs actually changed; use the trimmed Vault values.
+	// Default: no prior state OR content changed - use trimmed Vault values.
 	v, diags := types.SetValueFrom(ctx, types.StringType, trimmed)
 	return v, diags
 }
@@ -469,20 +462,20 @@ func extractCFConfigMountFromID(id string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("import identifier cannot be empty")
 	}
+
 	id = strings.Trim(id, "/")
 
-	if !cfConfigBackendRegexp.MatchString(id) {
+	// Expected format: auth/<mount>/config
+	if !strings.HasPrefix(id, "auth/") || !strings.HasSuffix(id, "/config") {
 		return "", fmt.Errorf("import identifier must be of the form 'auth/<mount>/config', "+
 			"namespace can be specified using the env var %s", consts.EnvVarVaultNamespaceImport)
 	}
 
-	matches := cfConfigBackendRegexp.FindStringSubmatch(id)
-	if len(matches) != 2 {
-		return "", fmt.Errorf("import identifier must be of the form 'auth/<mount>/config', "+
-			"namespace can be specified using the env var %s", consts.EnvVarVaultNamespaceImport)
-	}
+	// Extract mount: remove "auth/" prefix and "/config" suffix
+	mount := strings.TrimPrefix(id, "auth/")
+	mount = strings.TrimSuffix(mount, "/config")
+	mount = strings.TrimSpace(mount)
 
-	mount := strings.TrimSpace(matches[1])
 	if mount == "" {
 		return "", fmt.Errorf("mount cannot be empty")
 	}
