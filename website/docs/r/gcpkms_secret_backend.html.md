@@ -8,22 +8,26 @@ description: |-
 
 # vault\_gcpkms\_secret\_backend
 
-Manages the GCP KMS secrets engine in Vault. The GCP KMS secrets engine provides encryption and decryption 
-services backed by Google Cloud Platform's Key Management Service (KMS). This allows you to use GCP KMS keys 
-for cryptographic operations through Vault.
+Configures the GCP KMS secrets engine credentials and scopes in Vault. This resource **only manages
+the `<mount>/config` endpoint** — credentials and OAuth scopes. The mount itself must be created
+separately using a [`vault_mount`](mount.html) resource with `type = "gcpkms"`.
 
 ~> **Important** This resource requires **Terraform 1.11+** for write-only attribute support.
 The `credentials_wo` field is write-only and will never be stored in Terraform state.
-See [the main provider documentation](../index.html)
-for more details.
+See [the main provider documentation](../index.html) for more details.
 
 ## Example Usage
 
 ### Basic Configuration
 
 ```hcl
+resource "vault_mount" "gcpkms" {
+  path = "gcpkms"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "gcpkms" {
-  path                   = "gcpkms"
+  mount                  = vault_mount.gcpkms.path
   credentials_wo         = file("gcp-credentials.json")
   credentials_wo_version = 1
 }
@@ -32,8 +36,13 @@ resource "vault_gcpkms_secret_backend" "gcpkms" {
 ### With Custom Scopes
 
 ```hcl
+resource "vault_mount" "gcpkms" {
+  path = "gcpkms"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "gcpkms" {
-  path                   = "gcpkms"
+  mount                  = vault_mount.gcpkms.path
   credentials_wo         = file("gcp-credentials.json")
   credentials_wo_version = 1
   scopes = [
@@ -45,12 +54,17 @@ resource "vault_gcpkms_secret_backend" "gcpkms" {
 
 ### Rotating Credentials
 
-To rotate credentials, update the `credentials_wo` value and increment `credentials_wo_version`.
-The version change signals to Terraform that the credentials should be re-sent to Vault.
+To rotate credentials, update `credentials_wo` and increment `credentials_wo_version`.
+The version change signals to Terraform that the new credentials should be sent to Vault.
 
 ```hcl
+resource "vault_mount" "gcpkms" {
+  path = "gcpkms"
+  type = "gcpkms"
+}
+
 resource "vault_gcpkms_secret_backend" "gcpkms" {
-  path                   = "gcpkms"
+  mount                  = vault_mount.gcpkms.path
   credentials_wo         = file("gcp-credentials-new.json")
   credentials_wo_version = 2
 }
@@ -66,7 +80,9 @@ The following arguments are supported:
   configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `path` - (Required) Path where the GCP KMS secrets engine will be mounted. This path cannot be changed after creation.
+* `mount` - (Required, Forces new resource) Path of the GCP KMS secrets engine mount. Must match the
+  `path` of a [`vault_mount`](mount.html) resource with `type = "gcpkms"`. Use
+  `vault_mount.<name>.path` here.
 
 * `credentials_wo_version` - (Required) Version number for the write-only credentials. Increment this
   value to trigger a credential rotation. Changing this value will cause the credentials to be re-sent
@@ -94,26 +110,27 @@ No additional attributes are exported beyond the arguments above.
 
 ## Import
 
-GCP KMS secrets engines can be imported using the `path`, e.g.
+GCP KMS backend configurations can be imported using the mount path, e.g.
 
 ```
 $ terraform import vault_gcpkms_secret_backend.gcpkms gcpkms
 ```
 
-~> **Note:** When importing, the `credentials_wo` and `credentials_wo_version` fields will not be
-populated as they are not returned by the Vault API. You must supply these values in your configuration
-after import.
+~> **Note:** Import sets the `mount` attribute from the import ID. The `credentials_wo` and
+`credentials_wo_version` fields will not be populated as they are not returned by the Vault API.
+You must supply these values in your configuration after import. The corresponding `vault_mount`
+resource must also be present in your configuration (or separately imported).
 
 ## Required GCP Permissions
 
 The service account credentials provided must have the following IAM permissions:
 
 - `cloudkms.cryptoKeyVersions.useToEncrypt` - For encryption operations
-- `cloudkms.cryptoKeyVersions.useToDecrypt` - For decryption operations  
+- `cloudkms.cryptoKeyVersions.useToDecrypt` - For decryption operations
 - `cloudkms.cryptoKeyVersions.useToSign` - For signing operations
 - `cloudkms.cryptoKeyVersions.get` - For reading key version information
 - `cloudkms.cryptoKeys.get` - For reading key information
 - `cloudkms.cryptoKeys.create` - For creating new keys (optional)
 
-These permissions are typically granted through the `Cloud KMS CryptoKey Encrypter/Decrypter` and 
+These permissions are typically granted through the `Cloud KMS CryptoKey Encrypter/Decrypter` and
 `Cloud KMS Viewer` IAM roles.
