@@ -711,7 +711,6 @@ const (
 	FieldTokenPeriod                          = "token_period"
 	FieldDeferInitialCreds                    = "defer_initial_creds"
 	FieldTokenExplicitMaxTTL                  = "token_explicit_max_ttl"
-	FieldTokenNoDefaultPolicy                 = "token_no_default_policy"
 	FieldTokenDefaultAudiences                = "token_default_audiences"
 	FieldDeletionAllowed                      = "deletion_allowed"
 	FieldConvergentEncryption                 = "convergent_encryption"
