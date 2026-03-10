@@ -123,7 +123,8 @@ func (r *RadiusAuthBackendResource) Schema(ctx context.Context, req resource.Sch
 				Computed:            true,
 			},
 			consts.FieldRadiusReadTimeout: schema.Int64Attribute{
-				MarkdownDescription: "Number of seconds to wait for a response from the RADIUS server. This is a read-only field returned by Vault.",
+				MarkdownDescription: "Number of seconds to wait for a response from the RADIUS server.",
+				Optional:            true,
 				Computed:            true,
 			},
 			consts.FieldRadiusNASPort: schema.Int64Attribute{
@@ -168,26 +169,50 @@ func (r *RadiusAuthBackendResource) Create(ctx context.Context, req resource.Cre
 
 	mountPath := strings.Trim(data.Path.ValueString(), "/")
 
-	// Enable the auth backend
-	tflog.Debug(ctx, fmt.Sprintf("Enabling RADIUS auth backend at '%s'", mountPath))
-	err = vaultClient.Sys().EnableAuthWithOptionsWithContext(ctx, mountPath, &api.EnableAuthOptions{
-		Type: consts.MountTypeRadius,
-	})
+	// Check if the auth backend already exists (e.g., created by vault_auth_backend)
+	// If it exists, skip the enable step and just configure it
+	mounts, err := vaultClient.Sys().ListAuthWithContext(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error enabling RADIUS auth backend",
-			fmt.Sprintf("Could not enable RADIUS auth backend at '%s': %s", mountPath, err),
+			"Error checking existing auth mounts",
+			fmt.Sprintf("Could not list auth mounts: %s", err),
 		)
 		return
 	}
-	tflog.Info(ctx, fmt.Sprintf("Enabled RADIUS auth backend at '%s'", mountPath))
+
+	mountExists := false
+	mountKey := mountPath + "/"
+	if mounts != nil {
+		if _, exists := mounts[mountKey]; exists {
+			mountExists = true
+			tflog.Debug(ctx, fmt.Sprintf("RADIUS auth backend at '%s' already exists, skipping enable", mountPath))
+		}
+	}
+
+	// Only enable the auth backend if it doesn't already exist
+	if !mountExists {
+		tflog.Debug(ctx, fmt.Sprintf("Enabling RADIUS auth backend at '%s'", mountPath))
+		err = vaultClient.Sys().EnableAuthWithOptionsWithContext(ctx, mountPath, &api.EnableAuthOptions{
+			Type: consts.MountTypeRadius,
+		})
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error enabling RADIUS auth backend",
+				fmt.Sprintf("Could not enable RADIUS auth backend at '%s': %s", mountPath, err),
+			)
+			return
+		}
+		tflog.Info(ctx, fmt.Sprintf("Enabled RADIUS auth backend at '%s'", mountPath))
+	}
 
 	// Build the API request
 	vaultRequest, apiDiags := r.getApiModel(ctx, &data, secret)
 	resp.Diagnostics.Append(apiDiags...)
 	if resp.Diagnostics.HasError() {
-		// Try to clean up the mount on failure
-		_ = vaultClient.Sys().DisableAuthWithContext(ctx, mountPath)
+		// Only clean up the mount if we created it (not if it already existed)
+		if !mountExists {
+			_ = vaultClient.Sys().DisableAuthWithContext(ctx, mountPath)
+		}
 		return
 	}
 
@@ -200,8 +225,10 @@ func (r *RadiusAuthBackendResource) Create(ctx context.Context, req resource.Cre
 			"Error writing RADIUS auth config",
 			fmt.Sprintf("Could not write config to '%s': %s", configPath, err),
 		)
-		// Try to clean up the mount on failure
-		_ = vaultClient.Sys().DisableAuthWithContext(ctx, mountPath)
+		// Only clean up the mount if we created it (not if it already existed)
+		if !mountExists {
+			_ = vaultClient.Sys().DisableAuthWithContext(ctx, mountPath)
+		}
 		return
 	}
 	tflog.Info(ctx, fmt.Sprintf("RADIUS auth config successfully written to '%s'", configPath))
@@ -459,6 +486,9 @@ func (r *RadiusAuthBackendResource) getApiModel(ctx context.Context, data *Radiu
 	// Vault treats 0 as "use default" and returns the default value, causing state inconsistency
 	if !data.DialTimeout.IsNull() && !data.DialTimeout.IsUnknown() && data.DialTimeout.ValueInt64() != 0 {
 		vaultRequest[consts.FieldRadiusDialTimeout] = data.DialTimeout.ValueInt64()
+	}
+	if !data.ReadTimeout.IsNull() && !data.ReadTimeout.IsUnknown() && data.ReadTimeout.ValueInt64() != 0 {
+		vaultRequest[consts.FieldRadiusReadTimeout] = data.ReadTimeout.ValueInt64()
 	}
 	if !data.NASPort.IsNull() && !data.NASPort.IsUnknown() && data.NASPort.ValueInt64() != 0 {
 		vaultRequest[consts.FieldRadiusNASPort] = data.NASPort.ValueInt64()
