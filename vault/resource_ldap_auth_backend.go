@@ -88,7 +88,6 @@ func ldapAuthBackendResource() *schema.Resource {
 		consts.FieldBindPass: {
 			Type:          schema.TypeString,
 			Optional:      true,
-			Computed:      true,
 			Sensitive:     true,
 			ConflictsWith: []string{consts.FieldBindPassWO},
 		},
@@ -377,13 +376,6 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	}
 	if bindpass != "" {
 		data[consts.FieldBindPass] = bindpass
-	}
-
-	if _, ok := d.GetOk(consts.FieldBindPassWOVersion); ok {
-		oldBindPass, _ := d.GetChange(consts.FieldBindPass)
-		if oldBindPass != nil && oldBindPass.(string) != "" {
-			d.Set(consts.FieldBindPass, "")
-		}
 	}
 
 	if v, ok := d.GetOk(consts.FieldClientTLSCert); ok {
