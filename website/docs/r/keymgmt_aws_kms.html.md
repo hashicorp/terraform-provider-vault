@@ -1,6 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_keymgmt_aws_kms resource"
+sidebar_current: "docs-vault-resource-keymgmt-aws-kms"
 description: |-
   Manages AWS KMS provider in the Vault Key Management secrets engine
 ---
@@ -86,7 +87,7 @@ The following arguments are supported:
 
 * `name` - (Required) Unique name for this AWS KMS provider. This cannot be changed after creation.
 
-* `key_collection` - (Required) AWS region where keys will be created. This defines the region for the KMS keys. Examples: `us-west-2`, `us-east-1`, `eu-west-1`. Cannot be changed after creation.
+* `key_collection` - (Required) AWS region where keys will be created. This defines the region for the KMS keys. Examples: `us-west-2`, `us-east-1`, `eu-west-1`.
 
 * `credentials` - (Optional, Sensitive) Map containing AWS credentials with keys `access_key` and `secret_key`. Mutually exclusive with `access_key` and `secret_key` fields. If not provided, Vault will use the AWS SDK credential chain (environment variables, IAM roles, etc.).
 
@@ -99,8 +100,6 @@ The following arguments are supported:
 In addition to the arguments above, the following attributes are exported:
 
 * `id` - The unique identifier for the AWS KMS provider. Format: `{path}/kms/{name}`
-
-* `type` - The type of the KMS provider (`azurekeyvault`, `awskms`, or `gcpckms`).
 
 ## Import
 
