@@ -68,7 +68,7 @@ type CFConfigAPIModel struct {
 	CFApiTrustedCertificates []string `json:"cf_api_trusted_certificates" mapstructure:"cf_api_trusted_certificates"`
 	LoginMaxSecsNotBefore    int64    `json:"login_max_seconds_not_before,omitempty" mapstructure:"login_max_seconds_not_before,omitempty"`
 	LoginMaxSecsNotAfter     int64    `json:"login_max_seconds_not_after,omitempty" mapstructure:"login_max_seconds_not_after,omitempty"`
-	CFTimeout                int64    `json:"cf_timeout,omitempty" mapstructure:"cf_timeout,omitempty"`
+	CFTimeout                int64    `json:"cf_timeout,omitempty" mapstructure:"cf_timeout"`
 }
 
 func (r *CFAuthBackendConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
