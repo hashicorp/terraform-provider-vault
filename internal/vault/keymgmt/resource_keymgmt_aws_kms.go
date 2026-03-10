@@ -5,10 +5,11 @@ package keymgmt
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -29,11 +30,10 @@ var _ resource.ResourceWithImportState = &AWSKMSResource{}
 
 type AWSKMSResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 type AWSKMSResourceModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 	Path          types.String `tfsdk:"path"`
 	Name          types.String `tfsdk:"name"`
 	KeyCollection types.String `tfsdk:"key_collection"`
@@ -72,6 +72,9 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "AWS region where keys are stored (e.g., us-east-1)",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			consts.FieldCredentials: schema.MapAttribute{
 				Optional:            true,
@@ -107,7 +110,7 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 		},
 	}
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -128,7 +131,7 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 	apiPath := buildKMSPath(vaultPath, name)
 
 	writeData := map[string]interface{}{
-		"provider":       "awskms",
+		"provider":       ProviderAWSKMS,
 		"key_collection": data.KeyCollection.ValueString(),
 	}
 
@@ -144,11 +147,23 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	data.ID = types.StringValue(apiPath)
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the state from Vault
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("AWS KMS provider", apiPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after creating AWS KMS provider",
+			fmt.Sprintf("AWS KMS provider not found at path %q immediately after creation", apiPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseAWSKMSResponse(vaultResp.Data, &data)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -166,44 +181,26 @@ func (r *AWSKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	r.read(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if data.ID.IsNull() {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-}
-
-func (r *AWSKMSResource) read(ctx context.Context, cli *api.Client, data *AWSKMSResourceModel, diags *diag.Diagnostics) {
-	apiPath := data.ID.ValueString()
+	// Build API path and read from Vault
+	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		diags.AddError(errReading("AWS KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(errReading("AWS KMS provider", apiPath, err))
 		return
 	}
 
 	if vaultResp == nil {
-		data.ID = types.StringNull()
+		tflog.Warn(ctx, "AWS KMS provider not found, removing from state", map[string]interface{}{
+			"path": apiPath,
+		})
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	mountPath, kmsName, err := parseKMSPath(apiPath)
-	if err != nil {
-		diags.AddError(errInvalidPathStructure, err.Error())
-		return
-	}
+	// Parse response data
+	r.parseAWSKMSResponse(vaultResp.Data, &data)
 
-	data.Path = types.StringValue(mountPath)
-	data.Name = types.StringValue(kmsName)
-
-	if v, ok := vaultResp.Data["key_collection"].(string); ok {
-		data.KeyCollection = types.StringValue(v)
-	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -220,16 +217,11 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	apiPath := plan.ID.ValueString()
+	apiPath := buildKMSPath(plan.Path.ValueString(), plan.Name.ValueString())
 	writeData := map[string]interface{}{
 		"provider": ProviderAWSKMS,
 	}
 	hasChanges := false
-
-	if !plan.KeyCollection.Equal(state.KeyCollection) {
-		writeData["key_collection"] = plan.KeyCollection.ValueString()
-		hasChanges = true
-	}
 
 	if !plan.Credentials.Equal(state.Credentials) || !plan.AccessKey.Equal(state.AccessKey) || !plan.SecretKey.Equal(state.SecretKey) {
 		if creds := buildAWSCredentialsMap(ctx, plan.Credentials, plan.AccessKey, plan.SecretKey, &resp.Diagnostics); creds != nil {
@@ -248,10 +240,23 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		}
 	}
 
-	r.read(ctx, cli, &plan, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Read back the state from Vault
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errReading("AWS KMS provider", apiPath, err))
 		return
 	}
+
+	if vaultResp == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected error after updating AWS KMS provider",
+			fmt.Sprintf("AWS KMS provider not found at path %q immediately after update", apiPath),
+		)
+		return
+	}
+
+	// Parse response data
+	r.parseAWSKMSResponse(vaultResp.Data, &plan)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -269,9 +274,50 @@ func (r *AWSKMSResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	apiPath := data.ID.ValueString()
+	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError(errDeleting("AWS KMS provider", apiPath, err))
 		return
+	}
+}
+
+func (r *AWSKMSResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resp.Diagnostics.AddError(
+			"Empty Import ID",
+			"Import ID cannot be empty. Expected format: <mount>/kms/<name>",
+		)
+		return
+	}
+
+	mount, name, err := parseKMSPath(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Unable to parse import ID: %s\n\nExpected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-aws-kms\n\nError: %s", req.ID, err.Error()),
+		)
+		return
+	}
+
+	if mount == "" || name == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Import ID contains empty fields. Expected format: <mount>/kms/<name>\nExample: keymgmt/kms/my-aws-kms\n\nParsed mount: %q, name: %q", mount, name),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		tflog.Debug(ctx, fmt.Sprintf("Setting namespace from %s: %s", consts.EnvVarVaultNamespaceImport, ns))
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
+}
+
+func (r *AWSKMSResource) parseAWSKMSResponse(responseData map[string]interface{}, data *AWSKMSResourceModel) {
+	if v, ok := responseData["key_collection"].(string); ok {
+		data.KeyCollection = types.StringValue(v)
 	}
 }
