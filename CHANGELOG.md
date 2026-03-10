@@ -20,7 +20,7 @@ IMPROVEMENTS:
 * `vault_database_secret`: Add support for additional credential types (`rsa_private_key`, `client_certificate`, `private_key`, `private_key_type`) in the ephemeral resource to support all database credential types available in Vault's database secrets engine. ([#2767](https://github.com/hashicorp/terraform-provider-vault/pull/2767))
 
 BUGS:
-* Clear the bindpass field in the state file after migrating to the write-only field in `vault_ldap_auth_backend`resource. ([#2778](https://github.com/hashicorp/terraform-provider-vault/pull/2813))
+* Clears the bindpass field in the state file after migrating to the write-only field in `vault_ldap_auth_backend`resource. ([#2778](https://github.com/hashicorp/terraform-provider-vault/pull/2813))
 
 ## 5.7.0 (February 5, 2026)
 
