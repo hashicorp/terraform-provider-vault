@@ -407,14 +407,6 @@ func (r *RadiusAuthBackendUserResource) populateDataModelFromApi(ctx context.Con
 			return diags
 		}
 		data.Policies = policies
-	} else if !data.Policies.IsNull() {
-		// Policies was explicitly configured (even if empty), so set empty set
-		policies, setDiags := types.SetValueFrom(ctx, types.StringType, []string{})
-		diags.Append(setDiags...)
-		if diags.HasError() {
-			return diags
-		}
-		data.Policies = policies
 	}
 
 	return diags

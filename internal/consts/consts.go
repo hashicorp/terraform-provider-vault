@@ -679,7 +679,6 @@ const (
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
 	FieldTokenExplicitMaxTTL                  = "token_explicit_max_ttl"
-	FieldTokenNoDefaultPolicy                 = "token_no_default_policy"
 	FieldTokenDefaultAudiences                = "token_default_audiences"
 	FieldDeletionAllowed                      = "deletion_allowed"
 	FieldConvergentEncryption                 = "convergent_encryption"
@@ -928,7 +927,6 @@ const (
 	FieldBoundOrganizationIDs     = "bound_organization_ids"
 	FieldBoundInstanceIDs         = "bound_instance_ids"
 	FieldDisableIPMatching        = "disable_ip_matching"
-	FieldAliasMetadata            = "alias_metadata"
 	FieldSigningTime              = "signing_time"
 
 	/*
