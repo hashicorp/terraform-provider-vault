@@ -270,6 +270,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		spiffesec.NewSpiffeSecretBackendMintJwtResource,
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
 		//ephemeralauth.NewKerberosAuthBackendLoginEphemeralResource,
+		ephemeralauth.NewKerberosAuthBackendLoginEphemeralResource,
 	}
 
 }
@@ -282,9 +283,5 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
-		//kerberosauth.NewKerberosAuthBackendConfigDataSource,
-		//kerberosauth.NewKerberosAuthBackendLDAPConfigDataSource,
-		//kerberosauth.NewKerberosAuthBackendGroupDataSource,
-		//kerberosauth.NewKerberosAuthBackendGroupsDataSource,
 	}
 }

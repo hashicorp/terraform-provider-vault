@@ -347,6 +347,7 @@ const (
 	FieldDisableCheckInEnforcement          = "disable_check_in_enforcement"
 	FieldSkipChildToken                     = "skip_child_token"
 	FieldTokenPolicies                      = "token_policies"
+	FieldIdentityPolicies                   = "identity_policies"
 	FieldManagedKeyName                     = "managed_key_name"
 	FieldManagedKeyID                       = "managed_key_id"
 	FieldIssuerRef                          = "issuer_ref"
