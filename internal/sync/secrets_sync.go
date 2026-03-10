@@ -39,6 +39,7 @@ func SyncDestinationCreateUpdateWithOptions(ctx context.Context, d *schema.Resou
 	data := map[string]interface{}{}
 
 	for _, k := range writeFields {
+
 		if v, ok := d.GetOk(k); ok {
 			// Convert TypeSet to List for JSON serialization if needed
 			if typeSetFields != nil && typeSetFields[k] {
@@ -73,12 +74,10 @@ func SyncDestinationCreateUpdateWithOptions(ctx context.Context, d *schema.Resou
 		}
 	}
 
-	log.Printf("[DEBUG] Writing sync destination data to %q", path)
 	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return diag.Errorf("error writing sync destination data to %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Wrote sync destination data to %q", path)
 
 	if d.IsNewResource() {
 		d.SetId(name)

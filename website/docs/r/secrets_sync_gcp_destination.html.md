@@ -82,6 +82,21 @@ resource "vault_secrets_sync_gcp_destination" "gcp_replication_encryption" {
 }
 ```
 
+### Using Workload Identity Federation (Vault 2.0.0+)
+
+```hcl
+resource "vault_secrets_sync_gcp_destination" "gcp_wif" {
+  name                                  = "gcp-dest-wif"
+  service_account_email                 = var.service_account_email
+  identity_token_audience_wo            = var.identity_token_audience
+  identity_token_audience_wo_version    = 1
+  identity_token_ttl                    = 3600
+  identity_token_key_wo                 = "my-key"
+  identity_token_key_wo_version         = 1
+  granularity                           = "secret-path"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -108,6 +123,29 @@ The following arguments are supported:
   overrides the project ID derived from the service account JSON credentials or application
   default credentials. The service account must be [authorized](https://cloud.google.com/iam/docs/service-account-overview#locations)
   to perform Secret Manager actions in the target project.
+
+
+### Workload Identity Federation (Vault 2.0.0+)
+
+* `service_account_email` – (Optional) Service Account to impersonate for secrets sync workload identity federation.
+  Required with `identity_token_audience_wo`. **Requires Vault 2.0.0+**.
+
+* `identity_token_audience_wo` - (Optional) The audience claim value for identity tokens. This is a write-only field
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_audience_wo_version` - (Optional) This is used along with `identity_token_audience_wo` to track updates as `identity_token_audience_wo` is a write-only field. Increment this field to update `identity_token_audience_wo`
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Default is 3600 seconds.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_key_wo` - (Optional) The key to use for signing identity tokens. This is a write-only field.
+  **Requires Vault 2.0.0+**.  
+
+* `identity_token_key_wo_version` - (Optional) This is used along with `identity_token_key_wo` to track updates as `identity_token_key_wo` is a write-only field. Increment this field to update `identity_token_key_wo`
+  **Requires Vault 2.0.0+**.
+  
+
 
 ### Networking Configuration (Vault 1.19+)
 
