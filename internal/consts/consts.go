@@ -665,6 +665,8 @@ const (
 	FieldAudience                             = "audience"
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
+	FieldTokenExplicitMaxTTL                  = "token_explicit_max_ttl"
+	FieldTokenNoDefaultPolicy                 = "token_no_default_policy"
 	FieldTokenDefaultAudiences                = "token_default_audiences"
 	FieldDeletionAllowed                      = "deletion_allowed"
 	FieldConvergentEncryption                 = "convergent_encryption"
@@ -891,9 +893,30 @@ const (
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
 	VaultVersion1192 = "1.19.2"
+	VaultVersion1194 = "1.19.4"
 	VaultVersion120  = "1.20.0"
 	VaultVersion121  = "1.21.0"
 	VaultVersion200  = "2.0.0"
+
+	/*
+		CloudFoundry auth backend field names
+	*/
+	FieldCFApiAddr                = "cf_api_addr"
+	FieldCFApiTrustedCertificates = "cf_api_trusted_certificates"
+	FieldIdentityCACertificates   = "identity_ca_certificates"
+	FieldCFInstanceCert           = "cf_instance_cert"
+	FieldCFPasswordWO             = "cf_password_wo"
+	FieldCFTimeout                = "cf_timeout"
+	FieldCFUsername               = "cf_username"
+	FieldLoginMaxSecsNotAfter     = "login_max_seconds_not_after"
+	FieldLoginMaxSecsNotBefore    = "login_max_seconds_not_before"
+	FieldBoundApplicationIDs      = "bound_application_ids"
+	FieldBoundSpaceIDs            = "bound_space_ids"
+	FieldBoundOrganizationIDs     = "bound_organization_ids"
+	FieldBoundInstanceIDs         = "bound_instance_ids"
+	FieldDisableIPMatching        = "disable_ip_matching"
+	FieldAliasMetadata            = "alias_metadata"
+	FieldSigningTime              = "signing_time"
 
 	/*
 		Vault auth methods
