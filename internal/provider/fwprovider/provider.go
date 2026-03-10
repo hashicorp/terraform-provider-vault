@@ -310,6 +310,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralauth.NewTokenEphemeralResource,
 		ephemeralgeneric.NewGenericEndpointEphemeralResource,
 		//ephemeralauth.NewKerberosAuthBackendLoginEphemeralResource,
+		ephemeralauth.NewKerberosAuthBackendLoginEphemeralResource,
 	}
 }
 
@@ -324,9 +325,5 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,
-		//kerberosauth.NewKerberosAuthBackendConfigDataSource,
-		//kerberosauth.NewKerberosAuthBackendLDAPConfigDataSource,
-		//kerberosauth.NewKerberosAuthBackendGroupDataSource,
-		//kerberosauth.NewKerberosAuthBackendGroupsDataSource,
 	}
 }
