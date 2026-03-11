@@ -272,5 +272,6 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
+		gcpkms.NewGCPKMSVerifyDataSource,
 	}
 }
