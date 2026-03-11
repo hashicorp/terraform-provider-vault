@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -31,13 +32,11 @@ type AzureKMSResource struct {
 
 type AzureKMSResourceModel struct {
 	base.BaseModel
-	Mount         types.String `tfsdk:"mount"`
-	Name          types.String `tfsdk:"name"`
-	KeyCollection types.String `tfsdk:"key_collection"`
-	TenantID      types.String `tfsdk:"tenant_id"`
-	ClientID      types.String `tfsdk:"client_id"`
-	ClientSecret  types.String `tfsdk:"client_secret"`
-	Environment   types.String `tfsdk:"environment"`
+	Mount                types.String `tfsdk:"mount"`
+	Name                 types.String `tfsdk:"name"`
+	KeyCollection        types.String `tfsdk:"key_collection"`
+	CredentialsWO        types.Map    `tfsdk:"credentials_wo"`
+	CredentialsWOVersion types.Int64  `tfsdk:"credentials_wo_version"`
 }
 
 func NewAzureKMSResource() resource.Resource {
@@ -74,22 +73,19 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			consts.FieldTenantID: schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Azure Active Directory tenant ID",
-			},
-			consts.FieldClientID: schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Azure service principal client ID",
-			},
-			consts.FieldClientSecret: schema.StringAttribute{
+			consts.FieldCredentialsWO: schema.MapAttribute{
 				Required:            true,
 				Sensitive:           true,
-				MarkdownDescription: "Azure service principal client secret",
+				WriteOnly:           true,
+				ElementType:         types.StringType,
+				MarkdownDescription: "Map of Azure credentials passed directly to the Vault API. Supported keys are `tenant_id`, `client_id`, `client_secret`, and optionally `environment`. This field is write-only and will not be stored in state. Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.",
 			},
-			consts.FieldEnvironment: schema.StringAttribute{
+			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				Optional:            true,
-				MarkdownDescription: "Azure environment (e.g., AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud, AzureGermanCloud)",
+				MarkdownDescription: "Version counter for the write-only `credentials_wo` field. Increment this value whenever you update `credentials_wo` to trigger the change.",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -118,17 +114,22 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 		"key_collection": data.KeyCollection.ValueString(),
 	}
 
-	// Azure credentials must be sent as a nested credentials object
-	creds := make(map[string]string)
-	creds["tenant_id"] = data.TenantID.ValueString()
-	creds["client_id"] = data.ClientID.ValueString()
-	creds["client_secret"] = data.ClientSecret.ValueString()
-
-	if !data.Environment.IsNull() {
-		creds["environment"] = data.Environment.ValueString()
+	// Read write-only credentials from Config (the only place write-only values are accessible)
+	var configModel AzureKMSResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
+	data.CredentialsWO = configModel.CredentialsWO
 
-	writeData["credentials"] = creds
+	if !data.CredentialsWO.IsNull() && !data.CredentialsWO.IsUnknown() {
+		var creds map[string]string
+		resp.Diagnostics.Append(data.CredentialsWO.ElementsAs(ctx, &creds, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		writeData["credentials"] = creds
+	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 		resp.Diagnostics.AddError(ErrCreating(ResourceTypeAzureKV, apiPath, err))
@@ -211,21 +212,23 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 	hasChanges := false
 
-	credentialsChanged := !plan.TenantID.Equal(state.TenantID) ||
-		!plan.ClientID.Equal(state.ClientID) ||
-		!plan.ClientSecret.Equal(state.ClientSecret) ||
-		!plan.Environment.Equal(state.Environment)
+	if !plan.CredentialsWOVersion.Equal(state.CredentialsWOVersion) {
+		// Read write-only credentials from Config (the only place write-only values are accessible)
+		var configModel AzureKMSResourceModel
+		resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.CredentialsWO = configModel.CredentialsWO
 
-	if credentialsChanged {
-		creds := map[string]interface{}{
-			"tenant_id":     plan.TenantID.ValueString(),
-			"client_id":     plan.ClientID.ValueString(),
-			"client_secret": plan.ClientSecret.ValueString(),
+		if !plan.CredentialsWO.IsNull() && !plan.CredentialsWO.IsUnknown() {
+			var creds map[string]string
+			resp.Diagnostics.Append(plan.CredentialsWO.ElementsAs(ctx, &creds, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			writeData["credentials"] = creds
 		}
-		if !plan.Environment.IsNull() {
-			creds["environment"] = plan.Environment.ValueString()
-		}
-		writeData["credentials"] = creds
 		hasChanges = true
 	}
 
@@ -316,14 +319,5 @@ func (r *AzureKMSResource) ImportState(ctx context.Context, req resource.ImportS
 func (r *AzureKMSResource) parseAzureKMSResponse(responseData map[string]interface{}, data *AzureKMSResourceModel) {
 	if v, ok := responseData["key_collection"].(string); ok {
 		data.KeyCollection = types.StringValue(v)
-	}
-	if v, ok := responseData["tenant_id"].(string); ok {
-		data.TenantID = types.StringValue(v)
-	}
-	if v, ok := responseData["client_id"].(string); ok {
-		data.ClientID = types.StringValue(v)
-	}
-	if v, ok := responseData["environment"].(string); ok {
-		data.Environment = types.StringValue(v)
 	}
 }
