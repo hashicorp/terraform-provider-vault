@@ -309,7 +309,6 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
 		ephemeralauth.NewTokenEphemeralResource,
 		ephemeralgeneric.NewGenericEndpointEphemeralResource,
-		//ephemeralauth.NewKerberosAuthBackendLoginEphemeralResource,
 		ephemeralauth.NewKerberosAuthBackendLoginEphemeralResource,
 	}
 }
