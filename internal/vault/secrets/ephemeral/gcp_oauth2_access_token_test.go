@@ -45,8 +45,8 @@ func TestAccGCPOAuth2AccessToken_basic(t *testing.T) {
 				// Step 1: Create and use roleset
 				Config: testAccGCPOAuth2AccessTokenRolesetConfig(backend, roleset, creds, project),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
 					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.Bool(false)),
 				},
 			},
@@ -54,24 +54,24 @@ func TestAccGCPOAuth2AccessToken_basic(t *testing.T) {
 				// Step 2: Mutate to use static_account instead of roleset
 				Config: testAccGCPOAuth2AccessTokenStaticAccountConfig(backend, staticAccount, creds, serviceAccountEmail),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
 				},
 			},
 			{
 				// Step 3: Mutate to use impersonated_account
 				Config: testAccGCPOAuth2AccessTokenImpersonatedAccountConfig(backend, impersonatedAccount, creds, serviceAccountEmail),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
 				},
 			},
 			{
 				// Step 4: Switch back to roleset to verify bidirectional mutation
 				Config: testAccGCPOAuth2AccessTokenRolesetConfig(backend, roleset, creds, project),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
 					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey(consts.FieldLeaseRenewable), knownvalue.Bool(false)),
 				},
 			},
@@ -143,16 +143,16 @@ func TestAccGCPOAuth2AccessToken_optionalFeatures(t *testing.T) {
 				// Step 1: Test with namespace (Enterprise feature)
 				Config: testAccGCPOAuth2AccessTokenWithNamespaceConfig(backend, roleset, namespace, creds, project),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
 				},
 			},
 			{
 				// Step 2: Test with custom max_retries value
 				Config: testAccGCPOAuth2AccessTokenWithMaxRetriesConfig(backend, roleset, creds, project),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(regexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("token"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.gcp_token", tfjsonpath.New("data").AtMapKey("lease_start_time"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
 				},
 			},
 		},

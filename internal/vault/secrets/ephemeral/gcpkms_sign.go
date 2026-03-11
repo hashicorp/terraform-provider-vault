@@ -88,11 +88,11 @@ func (r *GCPKMSSignEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 	path := fmt.Sprintf("%s/sign/%s", data.Mount.ValueString(), data.Name.ValueString())
 
 	requestData := map[string]interface{}{
-		"digest": data.Digest.ValueString(),
+		consts.FieldDigest: data.Digest.ValueString(),
 	}
 
 	if !data.KeyVersion.IsNull() {
-		requestData["key_version"] = data.KeyVersion.ValueInt64()
+		requestData[consts.FieldKeyVersion] = data.KeyVersion.ValueInt64()
 	}
 
 	secret, err := c.Logical().WriteWithContext(ctx, path, requestData)
@@ -112,7 +112,7 @@ func (r *GCPKMSSignEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 		return
 	}
 
-	if signature, ok := secret.Data["signature"]; ok {
+	if signature, ok := secret.Data[consts.FieldSignature]; ok {
 		data.Signature = types.StringValue(signature.(string))
 	}
 

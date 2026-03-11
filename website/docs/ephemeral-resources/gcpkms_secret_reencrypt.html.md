@@ -71,6 +71,13 @@ ephemeral "vault_gcpkms_reencrypt" "updated" {
   name       = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext = ephemeral.vault_gcpkms_encrypt.original.ciphertext
 }
+
+# Store the rotated ciphertext
+resource "aws_ssm_parameter" "updated_secret" {
+  name  = "/myapp/rotated-data"
+  type  = "String"
+  value = ephemeral.vault_gcpkms_reencrypt.updated.new_ciphertext
+}
 ```
 
 ### Re-encryption with Additional Authenticated Data (AAD)

@@ -36,7 +36,7 @@ import (
 // which may incur GCP costs.
 
 func TestAccGCPKMSReencrypt_basic(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
@@ -49,10 +49,10 @@ func TestAccGCPKMSReencrypt_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGCPKMSReencryptConfig(backend, keyName),
+				Config: testAccGCPKMSReencryptConfig(backend, keyName, credentials, keyRing),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(regexpBase64)),
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(testutil.RegexpBase64)),
+					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
 				},
 			},
 		},
@@ -60,7 +60,7 @@ func TestAccGCPKMSReencrypt_basic(t *testing.T) {
 }
 
 func TestAccGCPKMSReencrypt_withAAD(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
@@ -74,9 +74,9 @@ func TestAccGCPKMSReencrypt_withAAD(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGCPKMSReencryptWithAADConfig(backend, keyName, aad),
+				Config: testAccGCPKMSReencryptWithAADConfig(backend, keyName, aad, credentials, keyRing),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(regexpBase64)),
+					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(testutil.RegexpBase64)),
 				},
 			},
 		},
@@ -84,7 +84,7 @@ func TestAccGCPKMSReencrypt_withAAD(t *testing.T) {
 }
 
 func TestAccGCPKMSReencrypt_withKeyVersion(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
@@ -98,9 +98,9 @@ func TestAccGCPKMSReencrypt_withKeyVersion(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGCPKMSReencryptWithKeyVersionConfig(backend, keyName, keyVersion),
+				Config: testAccGCPKMSReencryptWithKeyVersionConfig(backend, keyName, keyVersion, credentials, keyRing),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(regexpBase64)),
+					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(testutil.RegexpBase64)),
 				},
 			},
 		},
@@ -108,15 +108,15 @@ func TestAccGCPKMSReencrypt_withKeyVersion(t *testing.T) {
 }
 
 func TestAccGCPKMSReencrypt_namespace(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
-	getSteps := func(backend, keyName, ns string) []resource.TestStep {
+	getSteps := func(backend, keyName, ns, credentials, keyRing string) []resource.TestStep {
 		return []resource.TestStep{
 			{
-				Config: testAccGCPKMSReencryptNsConfig(backend, keyName, ns),
+				Config: testAccGCPKMSReencryptNsConfig(backend, keyName, ns, credentials, keyRing),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(regexpBase64)),
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(testutil.RegexpBase64)),
+					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
 				},
 			},
 		}
@@ -131,7 +131,7 @@ func TestAccGCPKMSReencrypt_namespace(t *testing.T) {
 			ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
 				"echo": echoprovider.NewProviderServer(),
 			},
-			Steps: getSteps(backend, keyName, ""),
+			Steps: getSteps(backend, keyName, "", credentials, keyRing),
 		})
 	})
 
@@ -145,12 +145,12 @@ func TestAccGCPKMSReencrypt_namespace(t *testing.T) {
 			ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
 				"echo": echoprovider.NewProviderServer(),
 			},
-			Steps: getSteps(backend, keyName, ns),
+			Steps: getSteps(backend, keyName, ns, credentials, keyRing),
 		})
 	})
 }
 
-func testAccGCPKMSReencryptNsConfig(backend, keyName, ns string) string {
+func testAccGCPKMSReencryptNsConfig(backend, keyName, ns, credentials, keyRing string) string {
 	nsBlock := ""
 	namespaceAttr := ""
 	if ns != "" {
@@ -209,10 +209,10 @@ provider "echo" {
 }
 
 resource "echo" "new_ciphertext" {}
-`, nsBlock, backend, namespaceAttr, getMockGCPCredentials(), namespaceAttr, keyName, getMockKeyRing(), namespaceAttr, namespaceAttr, namespaceAttr)
+`, nsBlock, backend, namespaceAttr, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, namespaceAttr, namespaceAttr)
 }
 
-func testAccGCPKMSReencryptConfig(backend, keyName string) string {
+func testAccGCPKMSReencryptConfig(backend, keyName, credentials, keyRing string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -256,10 +256,10 @@ provider "echo" {
 }
 
 resource "echo" "new_ciphertext" {}
-`, backend, getMockGCPCredentials(), keyName, getMockKeyRing())
+`, backend, credentials, keyName, keyRing)
 }
 
-func testAccGCPKMSReencryptWithAADConfig(backend, keyName, aad string) string {
+func testAccGCPKMSReencryptWithAADConfig(backend, keyName, aad, credentials, keyRing string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -305,10 +305,10 @@ provider "echo" {
 }
 
 resource "echo" "new_ciphertext" {}
-`, backend, getMockGCPCredentials(), keyName, getMockKeyRing(), aad, aad)
+`, backend, credentials, keyName, keyRing, aad, aad)
 }
 
-func testAccGCPKMSReencryptWithKeyVersionConfig(backend, keyName, keyVersion string) string {
+func testAccGCPKMSReencryptWithKeyVersionConfig(backend, keyName, keyVersion, credentials, keyRing string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -354,5 +354,5 @@ provider "echo" {
 }
 
 resource "echo" "new_ciphertext" {}
-`, backend, getMockGCPCredentials(), keyName, getMockKeyRing(), keyVersion, keyVersion)
+`, backend, credentials, keyName, keyRing, keyVersion, keyVersion)
 }

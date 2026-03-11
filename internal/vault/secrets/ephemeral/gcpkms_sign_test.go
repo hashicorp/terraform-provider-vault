@@ -35,7 +35,7 @@ import (
 // Note: These tests create real GCP KMS keys and perform actual signing operations.
 
 func TestAccGCPKMSSign_basic(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
@@ -52,10 +52,10 @@ func TestAccGCPKMSSign_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGCPKMSSignConfig(backend, keyName, digest, keyVersion),
+				Config: testAccGCPKMSSignConfig(backend, keyName, digest, keyVersion, credentials, keyRing),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(regexpBase64)),
-					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(testutil.RegexpBase64)),
+					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
 				},
 			},
 		},
@@ -63,7 +63,7 @@ func TestAccGCPKMSSign_basic(t *testing.T) {
 }
 
 func TestAccGCPKMSSign_differentAlgorithms(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyNameP256 := acctest.RandomWithPrefix("test-key-p256")
@@ -82,12 +82,12 @@ func TestAccGCPKMSSign_differentAlgorithms(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGCPKMSSignWithBothAlgorithmsConfig(backend, keyNameP256, keyNameP384, digestSHA256, digestSHA384, "1"),
+				Config: testAccGCPKMSSignWithBothAlgorithmsConfig(backend, keyNameP256, keyNameP384, digestSHA256, digestSHA384, "1", credentials, keyRing),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.signature_p256", tfjsonpath.New("data").AtMapKey("signature_p256").AtMapKey("signature"), knownvalue.StringRegexp(regexpBase64)),
-					statecheck.ExpectKnownValue("echo.signature_p256", tfjsonpath.New("data").AtMapKey("signature_p256").AtMapKey("signature"), knownvalue.StringRegexp(regexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.signature_p384", tfjsonpath.New("data").AtMapKey("signature_p384").AtMapKey("signature"), knownvalue.StringRegexp(regexpBase64)),
-					statecheck.ExpectKnownValue("echo.signature_p384", tfjsonpath.New("data").AtMapKey("signature_p384").AtMapKey("signature"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.signature_p256", tfjsonpath.New("data").AtMapKey("signature_p256").AtMapKey("signature"), knownvalue.StringRegexp(testutil.RegexpBase64)),
+					statecheck.ExpectKnownValue("echo.signature_p256", tfjsonpath.New("data").AtMapKey("signature_p256").AtMapKey("signature"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.signature_p384", tfjsonpath.New("data").AtMapKey("signature_p384").AtMapKey("signature"), knownvalue.StringRegexp(testutil.RegexpBase64)),
+					statecheck.ExpectKnownValue("echo.signature_p384", tfjsonpath.New("data").AtMapKey("signature_p384").AtMapKey("signature"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
 				},
 			},
 		},
@@ -95,7 +95,7 @@ func TestAccGCPKMSSign_differentAlgorithms(t *testing.T) {
 }
 
 func TestAccGCPKMSSign_differentDigests(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
@@ -113,15 +113,15 @@ func TestAccGCPKMSSign_differentDigests(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGCPKMSSignConfig(backend, keyName, digest1, keyVersion),
+				Config: testAccGCPKMSSignConfig(backend, keyName, digest1, keyVersion, credentials, keyRing),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(regexpBase64)),
+					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(testutil.RegexpBase64)),
 				},
 			},
 			{
-				Config: testAccGCPKMSSignConfig(backend, keyName, digest2, keyVersion),
+				Config: testAccGCPKMSSignConfig(backend, keyName, digest2, keyVersion, credentials, keyRing),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(regexpBase64)),
+					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(testutil.RegexpBase64)),
 				},
 			},
 		},
@@ -129,18 +129,18 @@ func TestAccGCPKMSSign_differentDigests(t *testing.T) {
 }
 
 func TestAccGCPKMSSign_namespace(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, envVarGoogleCredentials, envVarGoogleKMSKeyRing)
+	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	digest := "LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564="
 	keyVersion := "1"
 
-	getSteps := func(backend, keyName, ns string) []resource.TestStep {
+	getSteps := func(backend, keyName, ns, credentials, keyRing string) []resource.TestStep {
 		return []resource.TestStep{
 			{
-				Config: testAccGCPKMSSignNsConfig(backend, keyName, digest, keyVersion, ns),
+				Config: testAccGCPKMSSignNsConfig(backend, keyName, digest, keyVersion, ns, credentials, keyRing),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(regexpBase64)),
-					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(regexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(testutil.RegexpBase64)),
+					statecheck.ExpectKnownValue("echo.signature", tfjsonpath.New("data").AtMapKey("signature"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
 				},
 			},
 		}
@@ -155,7 +155,7 @@ func TestAccGCPKMSSign_namespace(t *testing.T) {
 			ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
 				"echo": echoprovider.NewProviderServer(),
 			},
-			Steps: getSteps(backend, keyName, ""),
+			Steps: getSteps(backend, keyName, "", credentials, keyRing),
 		})
 	})
 
@@ -169,12 +169,12 @@ func TestAccGCPKMSSign_namespace(t *testing.T) {
 			ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
 				"echo": echoprovider.NewProviderServer(),
 			},
-			Steps: getSteps(backend, keyName, ns),
+			Steps: getSteps(backend, keyName, ns, credentials, keyRing),
 		})
 	})
 }
 
-func testAccGCPKMSSignNsConfig(backend, keyName, digest, keyVersion, ns string) string {
+func testAccGCPKMSSignNsConfig(backend, keyName, digest, keyVersion, ns, credentials, keyRing string) string {
 	nsBlock := ""
 	namespaceAttr := ""
 	if ns != "" {
@@ -227,10 +227,10 @@ provider "echo" {
 }
 
 resource "echo" "signature" {}
-`, nsBlock, backend, namespaceAttr, getMockGCPCredentials(), namespaceAttr, keyName, getMockKeyRing(), namespaceAttr, digest, keyVersion, namespaceAttr)
+`, nsBlock, backend, namespaceAttr, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, digest, keyVersion, namespaceAttr)
 }
 
-func testAccGCPKMSSignConfig(backend, keyName, digest, keyVersion string) string {
+func testAccGCPKMSSignConfig(backend, keyName, digest, keyVersion, credentials, keyRing string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -267,10 +267,10 @@ provider "echo" {
 }
 
 resource "echo" "signature" {}
-`, backend, getMockGCPCredentials(), keyName, getMockKeyRing(), digest, keyVersion)
+`, backend, credentials, keyName, keyRing, digest, keyVersion)
 }
 
-func testAccGCPKMSSignWithBothAlgorithmsConfig(backend, keyNameP256, keyNameP384, digestSHA256, digestSHA384, keyVersion string) string {
+func testAccGCPKMSSignWithBothAlgorithmsConfig(backend, keyNameP256, keyNameP384, digestSHA256, digestSHA384, keyVersion, credentials, keyRing string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -328,5 +328,5 @@ provider "echo" {
 
 resource "echo" "signature_p256" {}
 resource "echo" "signature_p384" {}
-`, backend, getMockGCPCredentials(), keyNameP256, getMockKeyRing(), keyNameP384, getMockKeyRing(), digestSHA256, keyVersion, digestSHA384, keyVersion)
+`, backend, credentials, keyNameP256, keyRing, keyNameP384, keyRing, digestSHA256, keyVersion, digestSHA384, keyVersion)
 }

@@ -42,9 +42,11 @@ ephemeral "vault_gcpkms_decrypt" "data" {
   ciphertext = var.encrypted_data
 }
 
-output "decrypted_secret" {
-  value     = ephemeral.vault_gcpkms_decrypt.data.plaintext
-  sensitive = true
+# Store the decrypted plaintext securely in AWS SSM Parameter Store.
+resource "aws_ssm_parameter" "decrypted_secret" {
+  name  = "/myapp/decrypted-secret"
+  type  = "SecureString"
+  value = ephemeral.vault_gcpkms_decrypt.data.plaintext
 }
 ```
 
@@ -64,9 +66,11 @@ ephemeral "vault_gcpkms_decrypt" "recovered" {
   ciphertext = ephemeral.vault_gcpkms_encrypt.secret.ciphertext
 }
 
-output "decrypted_value" {
-  value     = ephemeral.vault_gcpkms_decrypt.recovered.plaintext
-  sensitive = true
+# Store the recovered plaintext securely
+resource "aws_ssm_parameter" "recovered_secret" {
+  name  = "/myapp/recovered-secret"
+  type  = "SecureString"
+  value = ephemeral.vault_gcpkms_decrypt.recovered.plaintext
 }
 ```
 

@@ -50,12 +50,11 @@ ephemeral "vault_gcpkms_sign" "signature" {
   key_version = 1
 }
 
-# Ephemeral values cannot be used in output blocks — use a check block instead.
-check "signature_produced" {
-  assert {
-    condition     = length(ephemeral.vault_gcpkms_sign.signature.signature) > 0
-    error_message = "Signing did not produce a signature"
-  }
+# Store the signature
+resource "aws_ssm_parameter" "signature" {
+  name  = "/myapp/signing-signature"
+  type  = "String"
+  value = ephemeral.vault_gcpkms_sign.signature.signature
 }
 ```
 
@@ -138,21 +137,11 @@ ephemeral "vault_gcpkms_sign" "jwt_signature" {
   key_version = 1
 }
 
-check "jwt_signature_produced" {
-  assert {
-    condition     = length(ephemeral.vault_gcpkms_sign.jwt_signature.signature) > 0
-    error_message = "JWT signing did not produce a signature"
-  }
+# Assemble the full JWT token and write it to a local file.
+resource "local_sensitive_file" "jwt" {
+  filename = "${path.module}/token.jwt"
+  content  = "${local.jwt_signing_input}.${ephemeral.vault_gcpkms_sign.jwt_signature.signature}"
 }
-
-# The assembled JWT is: "${local.jwt_signing_input}.${signature}"
-# Reference ephemeral.vault_gcpkms_sign.jwt_signature.signature directly
-# in any resource that consumes it within the same apply, e.g.:
-#
-#   resource "local_sensitive_file" "jwt" {
-#     filename = "${path.module}/token.jwt"
-#     content  = "${local.jwt_signing_input}.${ephemeral.vault_gcpkms_sign.jwt_signature.signature}"
-#   }
 ```
 
 ## Argument Reference

@@ -85,14 +85,16 @@ ephemeral "vault_gcpkms_encrypt" "secret" {
 }
 
 ephemeral "vault_gcpkms_decrypt" "recovered" {
-  mount      = vault_gcpkms.path
+  mount      = vault_mount.gcpkms.path
   name       = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext = ephemeral.vault_gcpkms_encrypt.secret.ciphertext
 }
 
-output "decrypted_value" {
-  value     = ephemeral.vault_gcpkms_decrypt.recovered.plaintext
-  sensitive = true
+# Store the decrypted plaintext securely 
+resource "aws_ssm_parameter" "decrypted_secret" {
+  name  = "/myapp/decrypted-secret"
+  type  = "SecureString"
+  value = ephemeral.vault_gcpkms_decrypt.recovered.plaintext
 }
 ```
 
