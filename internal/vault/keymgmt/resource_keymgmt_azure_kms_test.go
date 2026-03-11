@@ -35,7 +35,7 @@ func TestAccKeymgmtAzureKMS(t *testing.T) {
 			{
 				Config: testKeymgmtAzureKMSConfig(mount, kmsName, keyVaultName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
 					resource.TestCheckResourceAttr(resourceName, "tenant_id", os.Getenv("AZURE_TENANT_ID")),
@@ -46,7 +46,7 @@ func TestAccKeymgmtAzureKMS(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccKeymgmtAzureKMSImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
 					"client_id",
 					"client_secret",
@@ -75,7 +75,7 @@ func TestAccKeymgmtAzureKMS_update(t *testing.T) {
 			{
 				Config: testKeymgmtAzureKMSConfig(mount, kmsName, keyVaultName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
 					resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
@@ -84,7 +84,7 @@ func TestAccKeymgmtAzureKMS_update(t *testing.T) {
 			{
 				Config: testKeymgmtAzureKMSConfigWithEnvironment(mount, kmsName, keyVaultName, "AzureUSGovernmentCloud"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "environment", "AzureUSGovernmentCloud"),
 				),
@@ -121,7 +121,7 @@ func TestAccKeymgmtAzureKMS_environments(t *testing.T) {
 					{
 						Config: testKeymgmtAzureKMSConfigWithEnvironment(mount, kmsName, keyVaultName, tc.env),
 						Check: resource.ComposeTestCheckFunc(
-							resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+							resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 							resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 							resource.TestCheckResourceAttr(resourceName, "environment", tc.env),
 						),
@@ -149,11 +149,11 @@ func TestAccKeymgmtAzureKMS_multiple(t *testing.T) {
 			{
 				Config: testKeymgmtAzureKMSConfigMultiple(mount, kmsName1, kmsName2, keyVaultName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName1, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, kmsName1),
 					resource.TestCheckResourceAttr(resourceName1, "key_collection", keyVaultName),
 					resource.TestCheckResourceAttr(resourceName1, "environment", "AzurePublicCloud"),
-					resource.TestCheckResourceAttr(resourceName2, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldName, kmsName2),
 					resource.TestCheckResourceAttr(resourceName2, "key_collection", keyVaultName),
 					resource.TestCheckResourceAttr(resourceName2, "environment", "AzureUSGovernmentCloud"),
@@ -169,9 +169,9 @@ func testAccKeymgmtAzureKMSImportStateIdFunc(resourceName string) resource.Impor
 		if !ok {
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
-		path := rs.Primary.Attributes[consts.FieldPath]
+		mount := rs.Primary.Attributes[consts.FieldMount]
 		name := rs.Primary.Attributes[consts.FieldName]
-		return fmt.Sprintf("%s/kms/%s", path, name), nil
+		return fmt.Sprintf("%s/kms/%s", mount, name), nil
 	}
 }
 
@@ -183,7 +183,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_azure_kms" "test" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
   tenant_id      = "%s"
@@ -205,7 +205,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_azure_kms" "test" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
   tenant_id      = "%s"
@@ -228,7 +228,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_azure_kms" "test1" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
   tenant_id      = "%s"
@@ -238,7 +238,7 @@ resource "vault_keymgmt_azure_kms" "test1" {
 }
 
 resource "vault_keymgmt_azure_kms" "test2" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
   tenant_id      = "%s"

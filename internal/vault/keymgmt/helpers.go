@@ -18,6 +18,20 @@ const (
 	errInvalidPathStructure = "Invalid path structure"
 )
 
+// ResourceType represents a fixed set of resource type labels used in error messages.
+type ResourceType string
+
+const (
+	ResourceTypeKey             ResourceType = "Key Management key"
+	ResourceTypeKeyConfig       ResourceType = "Key Management key config"
+	ResourceTypeKeyRotation     ResourceType = "Key Management key rotation"
+	ResourceTypeKeyDistribution ResourceType = "Key Management key distribution"
+	ResourceTypeKMSProvider     ResourceType = "KMS provider"
+	ResourceTypeAWSKMS          ResourceType = "AWS KMS provider"
+	ResourceTypeAzureKV         ResourceType = "Azure Key Vault provider"
+	ResourceTypeGCPCKMS         ResourceType = "GCP Cloud KMS provider"
+)
+
 // Provider type constants
 const (
 	ProviderAWSKMS  = "awskms"
@@ -26,54 +40,57 @@ const (
 )
 
 // Error message helper functions
-func errCreating(resourceType string, path string, err error) (string, string) {
-	return fmt.Sprintf("Error creating %s", resourceType),
-		fmt.Sprintf("Error creating %s at %s: %s", resourceType, path, err)
+
+// FormatErrMsg is a common helper that produces the (summary, detail) pair
+func FormatErrMsg(action string, resourceType ResourceType, path string, err error) (string, string) {
+	return fmt.Sprintf("Error %s %s", action, resourceType),
+		fmt.Sprintf("Error %s %s at %s: %s", action, resourceType, path, err)
 }
 
-func errReading(resourceType string, path string, err error) (string, string) {
-	return fmt.Sprintf("Error reading %s", resourceType),
-		fmt.Sprintf("Error reading %s at %s: %s", resourceType, path, err)
+func ErrCreating(resourceType ResourceType, path string, err error) (string, string) {
+	return FormatErrMsg("creating", resourceType, path, err)
 }
 
-func errUpdating(resourceType string, path string, err error) (string, string) {
-	return fmt.Sprintf("Error updating %s", resourceType),
-		fmt.Sprintf("Error updating %s at %s: %s", resourceType, path, err)
+func ErrReading(resourceType ResourceType, path string, err error) (string, string) {
+	return FormatErrMsg("reading", resourceType, path, err)
 }
 
-func errDeleting(resourceType string, path string, err error) (string, string) {
-	return fmt.Sprintf("Error deleting %s", resourceType),
-		fmt.Sprintf("Error deleting %s at %s: %s", resourceType, path, err)
+func ErrUpdating(resourceType ResourceType, path string, err error) (string, string) {
+	return FormatErrMsg("updating", resourceType, path, err)
 }
 
-// buildKMSPath constructs the Vault API path for KMS provider operations
-func buildKMSPath(mountPath, name string) string {
+func ErrDeleting(resourceType ResourceType, path string, err error) (string, string) {
+	return FormatErrMsg("deleting", resourceType, path, err)
+}
+
+// BuildKMSPath constructs the Vault API path for KMS provider operations
+func BuildKMSPath(mountPath, name string) string {
 	return fmt.Sprintf("%s/kms/%s", strings.Trim(mountPath, "/"), name)
 }
 
-// buildKeyPath constructs the Vault API path for key operations
-func buildKeyPath(mountPath, name string) string {
+// BuildKeyPath constructs the Vault API path for key operations
+func BuildKeyPath(mountPath, name string) string {
 	return fmt.Sprintf("%s/key/%s", strings.Trim(mountPath, "/"), name)
 }
 
-// buildDistributeKeyPath constructs the Vault API path for key distribution operations
-func buildDistributeKeyPath(mountPath, kmsName, keyName string) string {
+// BuildDistributeKeyPath constructs the Vault API path for key distribution operations
+func BuildDistributeKeyPath(mountPath, kmsName, keyName string) string {
 	return fmt.Sprintf("%s/kms/%s/key/%s", strings.Trim(mountPath, "/"), kmsName, keyName)
 }
 
-// buildReplicateKeyPath constructs the Vault API path for key replication operations
-func buildReplicateKeyPath(mountPath, kmsName, keyName string) string {
+// BuildReplicateKeyPath constructs the Vault API path for key replication operations
+func BuildReplicateKeyPath(mountPath, kmsName, keyName string) string {
 	return fmt.Sprintf("%s/kms/%s/key/%s/replicate", strings.Trim(mountPath, "/"), kmsName, keyName)
 }
 
-// buildKeyRotatePath constructs the Vault API path for key rotation operations
-func buildKeyRotatePath(mountPath, name string) string {
+// BuildKeyRotatePath constructs the Vault API path for key rotation operations
+func BuildKeyRotatePath(mountPath, name string) string {
 	return fmt.Sprintf("%s/key/%s/rotate", strings.Trim(mountPath, "/"), name)
 }
 
-// parseKeyPath extracts the mount path and key name from a key API path
+// ParseKeyPath extracts the mount path and key name from a key API path
 // Expected format: <mount_path>/key/<key_name>
-func parseKeyPath(apiPath string) (mountPath, keyName string, err error) {
+func ParseKeyPath(apiPath string) (mountPath, keyName string, err error) {
 	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
 
 	// Minimum required: 1 mount segment + 2 fixed segments (key/<name>)
@@ -94,9 +111,9 @@ func parseKeyPath(apiPath string) (mountPath, keyName string, err error) {
 	return mountPath, keyName, nil
 }
 
-// parseKMSPath extracts the mount path and KMS provider name from a KMS API path
+// ParseKMSPath extracts the mount path and KMS provider name from a KMS API path
 // Expected format: <mount_path>/kms/<kms_name>
-func parseKMSPath(apiPath string) (mountPath, kmsName string, err error) {
+func ParseKMSPath(apiPath string) (mountPath, kmsName string, err error) {
 	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
 
 	// Minimum required: 1 mount segment + 2 fixed segments (kms/<name>)
@@ -117,9 +134,9 @@ func parseKMSPath(apiPath string) (mountPath, kmsName string, err error) {
 	return mountPath, kmsName, nil
 }
 
-// parseDistributeKeyPath extracts the mount path, KMS name, and key name from a distribution API path
+// ParseDistributeKeyPath extracts the mount path, KMS name, and key name from a distribution API path
 // Expected format: <mount_path>/kms/<kms_name>/key/<key_name>
-func parseDistributeKeyPath(apiPath string) (mountPath, kmsName, keyName string, err error) {
+func ParseDistributeKeyPath(apiPath string) (mountPath, kmsName, keyName string, err error) {
 	parts := strings.Split(strings.Trim(apiPath, "/"), "/")
 
 	// Minimum required: 1 mount segment + 4 fixed segments (kms/<name>/key/<name>)
@@ -142,9 +159,9 @@ func parseDistributeKeyPath(apiPath string) (mountPath, kmsName, keyName string,
 	return mountPath, kmsName, keyName, nil
 }
 
-// buildAWSCredentialsMap builds a credentials map from either the credentials field or individual access_key/secret_key fields
+// BuildAWSCredentialsMap builds a credentials map from either the credentials field or individual access_key/secret_key fields
 // Returns nil if no credentials are provided
-func buildAWSCredentialsMap(ctx context.Context, credentials types.Map, accessKey, secretKey types.String, diags *diag.Diagnostics) map[string]string {
+func BuildAWSCredentialsMap(ctx context.Context, credentials types.Map, accessKey, secretKey types.String, diags *diag.Diagnostics) map[string]string {
 	if !credentials.IsNull() {
 		var creds map[string]string
 		diags.Append(credentials.ElementsAs(ctx, &creds, false)...)
@@ -170,9 +187,9 @@ func buildAWSCredentialsMap(ctx context.Context, credentials types.Map, accessKe
 	return nil
 }
 
-// setInt64FromInterface converts various numeric types from Vault API responses to types.Int64
+// SetInt64FromInterface converts various numeric types from Vault API responses to types.Int64
 // Handles json.Number, float64, int, int64, and other numeric types
-func setInt64FromInterface(v interface{}) types.Int64 {
+func SetInt64FromInterface(v interface{}) types.Int64 {
 	switch val := v.(type) {
 	case json.Number:
 		if vInt, err := val.Int64(); err == nil {
@@ -188,9 +205,9 @@ func setInt64FromInterface(v interface{}) types.Int64 {
 	return types.Int64Null()
 }
 
-// setStringFromInterface converts string values from Vault API responses to types.String
+// SetStringFromInterface converts string values from Vault API responses to types.String
 // Returns null for empty strings or non-string values
-func setStringFromInterface(v interface{}) types.String {
+func SetStringFromInterface(v interface{}) types.String {
 	if str, ok := v.(string); ok && str != "" {
 		return types.StringValue(str)
 	}

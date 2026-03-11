@@ -30,7 +30,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_azure_kms" "production" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = "azure-production"
   key_collection = "my-keyvault"
   tenant_id      = var.azure_tenant_id
@@ -50,11 +50,13 @@ The following arguments are supported:
   [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `path` - (Required) Path where the Key Management secrets engine is mounted.
+* `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
+  `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
+  `vault_mount.<name>.path` here.
 
-* `name` - (Required) Unique name for this Azure Key Vault provider. This cannot be changed after creation.
+* `name` - (Required, Forces new resource) Unique name for this Azure Key Vault provider. This cannot be changed after creation.
 
-* `key_collection` - (Required) Name of the Azure Key Vault where keys will be created.
+* `key_collection` - (Required, Forces new resource) Name of the Azure Key Vault where keys will be created.
 
 * `tenant_id` - (Required) Azure Active Directory tenant ID (also called Directory ID).
 

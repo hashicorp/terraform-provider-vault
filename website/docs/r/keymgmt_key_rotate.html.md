@@ -32,13 +32,13 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "encryption_key" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = "rotation-example"
   type = "aes256-gcm96"
 }
 
 resource "vault_keymgmt_key_rotate" "rotate" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = vault_keymgmt_key.encryption_key.name
 }
 ```
@@ -53,9 +53,11 @@ The following arguments are supported:
   [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `path` - (Required) Path where the Key Management secrets engine is mounted.
+* `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
+  `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
+  `vault_mount.<name>.path` here.
 
-* `name` - (Required) Name of the key to rotate (created via `vault_keymgmt_key`).
+* `name` - (Required, Forces new resource) Name of the key to rotate (created via `vault_keymgmt_key`).
 
 ## Attributes Reference
 

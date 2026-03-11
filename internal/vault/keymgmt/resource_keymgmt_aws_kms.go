@@ -34,7 +34,7 @@ type AWSKMSResource struct {
 
 type AWSKMSResourceModel struct {
 	base.BaseModel
-	Path          types.String `tfsdk:"path"`
+	Mount         types.String `tfsdk:"mount"`
 	Name          types.String `tfsdk:"name"`
 	KeyCollection types.String `tfsdk:"key_collection"`
 	Credentials   types.Map    `tfsdk:"credentials"`
@@ -55,9 +55,9 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		MarkdownDescription: "Manages an AWS KMS provider for Vault Key Management",
 
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a [`vault_mount`](mount.html) resource with `type = \"keymgmt\"`. Use `vault_mount.<name>.path` here.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -126,16 +126,16 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	vaultPath := data.Path.ValueString()
+	vaultPath := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	apiPath := buildKMSPath(vaultPath, name)
+	apiPath := BuildKMSPath(vaultPath, name)
 
 	writeData := map[string]interface{}{
 		"provider":       ProviderAWSKMS,
 		"key_collection": data.KeyCollection.ValueString(),
 	}
 
-	if creds := buildAWSCredentialsMap(ctx, data.Credentials, data.AccessKey, data.SecretKey, &resp.Diagnostics); creds != nil {
+	if creds := BuildAWSCredentialsMap(ctx, data.Credentials, data.AccessKey, data.SecretKey, &resp.Diagnostics); creds != nil {
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -143,14 +143,14 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-		resp.Diagnostics.AddError(errCreating("AWS KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrCreating(ResourceTypeAWSKMS, apiPath, err))
 		return
 	}
 
 	// Read back the state from Vault
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("AWS KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeAWSKMS, apiPath, err))
 		return
 	}
 
@@ -182,10 +182,10 @@ func (r *AWSKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	// Build API path and read from Vault
-	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
+	apiPath := BuildKMSPath(data.Mount.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("AWS KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeAWSKMS, apiPath, err))
 		return
 	}
 
@@ -217,14 +217,14 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	apiPath := buildKMSPath(plan.Path.ValueString(), plan.Name.ValueString())
+	apiPath := BuildKMSPath(plan.Mount.ValueString(), plan.Name.ValueString())
 	writeData := map[string]interface{}{
 		"provider": ProviderAWSKMS,
 	}
 	hasChanges := false
 
 	if !plan.Credentials.Equal(state.Credentials) || !plan.AccessKey.Equal(state.AccessKey) || !plan.SecretKey.Equal(state.SecretKey) {
-		if creds := buildAWSCredentialsMap(ctx, plan.Credentials, plan.AccessKey, plan.SecretKey, &resp.Diagnostics); creds != nil {
+		if creds := BuildAWSCredentialsMap(ctx, plan.Credentials, plan.AccessKey, plan.SecretKey, &resp.Diagnostics); creds != nil {
 			if resp.Diagnostics.HasError() {
 				return
 			}
@@ -235,7 +235,7 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	if hasChanges {
 		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-			resp.Diagnostics.AddError(errUpdating("AWS KMS provider", apiPath, err))
+			resp.Diagnostics.AddError(ErrUpdating(ResourceTypeAWSKMS, apiPath, err))
 			return
 		}
 	}
@@ -243,7 +243,7 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 	// Read back the state from Vault
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("AWS KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeAWSKMS, apiPath, err))
 		return
 	}
 
@@ -274,9 +274,9 @@ func (r *AWSKMSResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
+	apiPath := BuildKMSPath(data.Mount.ValueString(), data.Name.ValueString())
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
-		resp.Diagnostics.AddError(errDeleting("AWS KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrDeleting(ResourceTypeAWSKMS, apiPath, err))
 		return
 	}
 }
@@ -290,7 +290,7 @@ func (r *AWSKMSResource) ImportState(ctx context.Context, req resource.ImportSta
 		return
 	}
 
-	mount, name, err := parseKMSPath(req.ID)
+	mount, name, err := ParseKMSPath(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
@@ -307,7 +307,7 @@ func (r *AWSKMSResource) ImportState(ctx context.Context, req resource.ImportSta
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
 
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {

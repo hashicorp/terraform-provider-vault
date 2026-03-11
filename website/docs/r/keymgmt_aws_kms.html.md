@@ -32,7 +32,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_aws_kms" "us_west" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = "aws-us-west-2"
   key_collection = "us-west-2"
   
@@ -51,7 +51,7 @@ resource "vault_keymgmt_aws_kms" "us_west" {
 # 4. ECS task credentials (when running on ECS)
 
 resource "vault_keymgmt_aws_kms" "production" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = "aws-production"
   key_collection = "us-east-1"
   
@@ -60,7 +60,7 @@ resource "vault_keymgmt_aws_kms" "production" {
 
 # Distribute a key to AWS KMS
 resource "vault_keymgmt_key" "encryption_key" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = "aws-encryption-key"
   type = "aes256-gcm96"
 }
@@ -83,11 +83,13 @@ The following arguments are supported:
   [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `path` - (Required) Path where the Key Management secrets engine is mounted.
+* `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
+  `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
+  `vault_mount.<name>.path` here.
 
-* `name` - (Required) Unique name for this AWS KMS provider. This cannot be changed after creation.
+* `name` - (Required, Forces new resource) Unique name for this AWS KMS provider. This cannot be changed after creation.
 
-* `key_collection` - (Required) AWS region where keys will be created. This defines the region for the KMS keys. Examples: `us-west-2`, `us-east-1`, `eu-west-1`.
+* `key_collection` - (Required, Forces new resource) AWS region where keys will be created. This defines the region for the KMS keys. Examples: `us-west-2`, `us-east-1`, `eu-west-1`.
 
 * `credentials` - (Optional, Sensitive) Map containing AWS credentials with keys `access_key` and `secret_key`. Mutually exclusive with `access_key` and `secret_key` fields. If not provided, Vault will use the AWS SDK credential chain (environment variables, IAM roles, etc.).
 
