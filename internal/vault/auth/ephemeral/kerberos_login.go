@@ -17,6 +17,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 )
 
 const (
@@ -60,7 +61,8 @@ type kerberosAuthBackendLoginEphemeral struct {
 
 // kerberosPrivateData holds data that needs to be passed from Open to Close
 type kerberosPrivateData struct {
-	Accessor string `json:"accessor"`
+	Accessor  string `json:"accessor"`
+	Namespace string `json:"namespace"`
 }
 
 type kerberosAuthBackendLoginModel struct {
@@ -197,7 +199,7 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 		return
 	}
 
-	client, err := e.Meta().GetClient()
+	c, err := client.GetClient(ctx, e.Meta(), config.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error getting client", err.Error())
 		return
@@ -232,11 +234,11 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 	}
 
 	// Set the Authorization header with the SPNEGO token
-	client.AddHeader(spnego.HTTPHeaderAuthRequest, authHeaderVal)
+	c.AddHeader(spnego.HTTPHeaderAuthRequest, authHeaderVal)
 
 	// Perform login with empty body (authentication is in the header)
 	tflog.Debug(ctx, fmt.Sprintf("Performing Kerberos login at '%s'", loginPath))
-	secret, err := client.Logical().Write(loginPath, map[string]interface{}{})
+	secret, err := c.Logical().Write(loginPath, map[string]interface{}{})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Error performing Kerberos login at %q", loginPath),
@@ -315,11 +317,12 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 		config.Metadata = types.MapNull(types.StringType)
 	}
 
-	// Store the accessor in private state for use in Close method
+	// Store the accessor and namespace in private state for use in Close method
 	// Must be JSON-encoded as per Terraform Plugin Framework requirements
 	if secret.Auth.Accessor != "" {
 		privateData := kerberosPrivateData{
-			Accessor: secret.Auth.Accessor,
+			Accessor:  secret.Auth.Accessor,
+			Namespace: config.Namespace.ValueString(),
 		}
 		privateDataJSON, err := json.Marshal(privateData)
 		if err != nil {
@@ -330,7 +333,7 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 			return
 		}
 		resp.Private.SetKey(ctx, "kerberos_data", privateDataJSON)
-		tflog.Debug(ctx, fmt.Sprintf("Stored accessor in private state for token revocation: %s", secret.Auth.Accessor))
+		tflog.Debug(ctx, fmt.Sprintf("Stored accessor and namespace in private state for token revocation: %s", secret.Auth.Accessor))
 	}
 
 	// Set the result after storing private state
@@ -359,8 +362,8 @@ func (e *kerberosAuthBackendLoginEphemeral) Close(ctx context.Context, req ephem
 		return
 	}
 
-	// Get the Vault client
-	client, err := e.Meta().GetClient()
+	// Get the Vault client with the appropriate namespace from private data
+	c, err := client.GetClient(ctx, e.Meta(), privateData.Namespace)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error getting Vault client for token revocation",
@@ -371,7 +374,7 @@ func (e *kerberosAuthBackendLoginEphemeral) Close(ctx context.Context, req ephem
 
 	// Revoke the token using its accessor
 	tflog.Debug(ctx, fmt.Sprintf("Revoking Kerberos token with accessor: %s", accessor))
-	err = client.Auth().Token().RevokeAccessor(accessor)
+	err = c.Auth().Token().RevokeAccessor(accessor)
 	if err != nil {
 		// Log the error but don't fail the close operation
 		// The token may have already expired or been revoked
