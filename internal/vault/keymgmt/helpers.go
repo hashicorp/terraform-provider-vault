@@ -22,8 +22,14 @@ const (
 type ResourceType string
 
 const (
-	ResourceTypeKey       ResourceType = "Key Management key"
-	ResourceTypeKeyConfig ResourceType = "Key Management key config"
+	ResourceTypeKey             ResourceType = "Key Management key"
+	ResourceTypeKeyConfig       ResourceType = "Key Management key config"
+	ResourceTypeKeyRotation     ResourceType = "Key Management key rotation"
+	ResourceTypeKeyDistribution ResourceType = "Key Management key distribution"
+	ResourceTypeKMSProvider     ResourceType = "KMS provider"
+	ResourceTypeAWSKMS          ResourceType = "AWS KMS provider"
+	ResourceTypeAzureKV         ResourceType = "Azure Key Vault provider"
+	ResourceTypeGCPCKMS         ResourceType = "GCP Cloud KMS provider"
 )
 
 // Provider type constants
