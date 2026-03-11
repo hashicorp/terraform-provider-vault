@@ -111,7 +111,7 @@ func TestAliCloudSecretBackend_writeOnly(t *testing.T) {
 				),
 			},
 			{
-				// Keep same secret_key_wo value (updatedSecretKey) - no changes, no API call
+				// Keep same secret_key_wo value
 				Config: testAliCloudSecretBackend_config(path, accessKey, updatedSecretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
@@ -129,7 +129,7 @@ func TestAliCloudSecretBackend_writeOnly(t *testing.T) {
 				),
 			},
 			{
-				// Keep same secret_key_wo value (original) - no changes, no API call
+				// Keep same secret_key_wo value (original)
 				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),

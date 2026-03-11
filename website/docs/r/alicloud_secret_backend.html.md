@@ -24,8 +24,13 @@ for more details.
 ### Basic Configuration
 
 ```hcl
+resource "vault_mount" "alicloud" {
+  path = "alicloud"
+  type = "alicloud"
+}
+
 resource "vault_alicloud_secret_backend" "alicloud" {
-  path          = "alicloud"
+  mount         = vault_mount.alicloud.path
   access_key    = var.alicloud_access_key
   secret_key_wo = var.alicloud_secret_key
 }
@@ -47,7 +52,7 @@ variable "alicloud_secret_key" {
 
 The following arguments are supported:
 
-* `path` - (Required) Path where the AliCloud secrets engine will be mounted. This path cannot be changed after creation.
+* `mount` - (Required) Path of the AliCloud secrets engine mount. Must match the `path` of a `vault_mount` resource with `type = "alicloud"`. Use `vault_mount.alicloud.path` here. Cannot be changed after creation (forces replacement).
 
 * `access_key` - (Required, Sensitive) The AliCloud Access Key ID with permissions to manage RAM users and policies.
   This credential is used by Vault to create and manage dynamic AliCloud credentials.
@@ -56,7 +61,7 @@ The following arguments are supported:
 
 In addition to the arguments above, the following attributes are exported:
 
-* `path` - The path where the AliCloud secrets engine is mounted.
+* `mount` - The path where the AliCloud secrets engine is mounted.
 * `access_key` - The AliCloud Access Key ID configured for this backend.
 
 ## Ephemeral Attributes Reference
@@ -76,7 +81,7 @@ The `secret_key_wo` field uses a write-only pattern to enhance security:
 
 ## Import
 
-AliCloud secrets engines can be imported using the `path`, e.g.
+AliCloud secrets engines can be imported using the `mount` path, e.g.
 
 ```
 $ terraform import vault_alicloud_secret_backend.alicloud alicloud

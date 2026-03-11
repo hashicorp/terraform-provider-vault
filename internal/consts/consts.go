@@ -488,6 +488,7 @@ const (
 	FieldRoleArn                            = "role_arn"
 	FieldInlinePolicies                     = "inline_policies"
 	FieldRemotePolicies                     = "remote_policies"
+	FieldPolicyDocument                     = "policy_document"
 	FieldAccessor                           = "accessor"
 	FieldOptions                            = "options"
 	FieldAllowedManagedKeys                 = "allowed_managed_keys"

@@ -252,7 +252,7 @@ func (r *AliCloudSecretBackendResource) Delete(ctx context.Context, req resource
 	// This resource owns only the /config endpoint.
 	// The mount lifecycle (create/destroy) is managed by vault_mount.
 	tflog.Debug(ctx, "vault_alicloud_secret_backend config deleted (mount managed by vault_mount)", map[string]any{
-		"mount": data.Mount.ValueString(),
+		consts.FieldMount: data.Mount.ValueString(),
 	})
 }
 
