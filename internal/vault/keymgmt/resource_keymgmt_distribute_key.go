@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -38,8 +38,7 @@ type DistributeKeyResourceModel struct {
 	KeyName    types.String `tfsdk:"key_name"`
 	Purpose    types.Set    `tfsdk:"purpose"`
 	Protection types.String `tfsdk:"protection"`
-	KeyID      types.String `tfsdk:"key_id"`
-	Versions   types.List   `tfsdk:"versions"`
+	Versions   types.Map    `tfsdk:"versions"`
 }
 
 func NewDistributeKeyResource() resource.Resource {
@@ -85,19 +84,12 @@ func (r *DistributeKeyResource) Schema(ctx context.Context, req resource.SchemaR
 				Optional:            true,
 				MarkdownDescription: "Protection level for the key (e.g., hsm, software)",
 			},
-			consts.FieldKeyID: schema.StringAttribute{
+			consts.FieldVersions: schema.MapAttribute{
 				Computed:            true,
-				MarkdownDescription: "ID of the key in the KMS provider",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			consts.FieldVersions: schema.ListAttribute{
-				Computed:            true,
-				ElementType:         types.Int64Type,
-				MarkdownDescription: "Versions of the key distributed to the KMS provider",
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
+				ElementType:         types.StringType,
+				MarkdownDescription: "Map of distributed key versions to their identifiers in the KMS provider",
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -149,12 +141,9 @@ func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateR
 			return
 		}
 	} else {
-		// Ensure computed fields are set to known values even if write response is empty
-		if data.KeyID.IsUnknown() {
-			data.KeyID = types.StringNull()
-		}
+		// Ensure computed field is set to a known value even if write response is empty
 		if data.Versions.IsUnknown() {
-			data.Versions, _ = types.ListValueFrom(ctx, types.Int64Type, []int64{})
+			data.Versions, _ = types.MapValueFrom(ctx, types.StringType, map[string]string{})
 		}
 	}
 
@@ -333,25 +322,18 @@ func parseDistributeKeyResponse(ctx context.Context, responseData map[string]int
 		data.Protection = types.StringValue(v)
 	}
 
-	// Set key_id - always to a known value (never Unknown)
-	if keyID := SetStringFromInterface(responseData["key_id"]); !keyID.IsNull() {
-		data.KeyID = keyID
-	} else if data.KeyID.IsUnknown() {
-		data.KeyID = types.StringNull()
-	}
-
-	// Set versions - always to a known value (never Unknown)
-	if v, ok := responseData["versions"].([]interface{}); ok && len(v) > 0 {
-		versions, d := types.ListValueFrom(ctx, types.Int64Type, v)
+	// versions is a map<string, string>: version number → key identifier
+	if v, ok := responseData["versions"].(map[string]interface{}); ok {
+		versions, d := types.MapValueFrom(ctx, types.StringType, v)
 		diags.Append(d...)
 		if !diags.HasError() {
 			data.Versions = versions
 		}
 	} else if data.Versions.IsUnknown() {
-		emptyList, d := types.ListValueFrom(ctx, types.Int64Type, []int64{})
+		emptyMap, d := types.MapValueFrom(ctx, types.StringType, map[string]string{})
 		diags.Append(d...)
 		if !diags.HasError() {
-			data.Versions = emptyList
+			data.Versions = emptyMap
 		}
 	}
 }
