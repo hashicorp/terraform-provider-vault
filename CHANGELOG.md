@@ -15,7 +15,7 @@ IMPROVEMENTS:
   * `github.com/hashicorp/go-secure-stdlib/awsutil` v0.3.0 -> v2.1.1
 * Docs: fix heredoc example for LDAP dynamic role LDIFs ([#2728]https://github.com/hashicorp/terraform-provider-vault/pull/2728)
 * Docs: Update example to use write-only attribute ([#2731]https://github.com/hashicorp/terraform-provider-vault/pull/2731)
-
+* Add support for `mapping_mode`,`stores` and `convergent` fields in the Vault Transform Engine resource. ([#2820](https://github.com/hashicorp/terraform-provider-vault/pull/2820))
 
 BUGS:
 
