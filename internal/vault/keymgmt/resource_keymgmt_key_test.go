@@ -33,7 +33,7 @@ func TestAccKeymgmtKey(t *testing.T) {
 			{
 				Config: testKeymgmtKey_initialConfig(mount, keyName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
 					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "false"),
@@ -43,7 +43,7 @@ func TestAccKeymgmtKey(t *testing.T) {
 			{
 				Config: testKeymgmtKey_updatedConfig(mount, keyName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
 					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
