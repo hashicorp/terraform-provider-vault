@@ -36,7 +36,7 @@ type KeyResource struct {
 type KeyResourceModel struct {
 	base.BaseModel
 
-	Path              types.String `tfsdk:"path"`
+	Mount             types.String `tfsdk:"mount"`
 	Name              types.String `tfsdk:"name"`
 	Type              types.String `tfsdk:"type"`
 	DeletionAllowed   types.Bool   `tfsdk:"deletion_allowed"`
@@ -58,24 +58,24 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 		MarkdownDescription: "Manages a Key Management key in Vault",
 
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
+				MarkdownDescription: "Specifies the mount path of the Key Management secrets engine.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldName: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Name of the key",
+				MarkdownDescription: "Specifies the name of the key to create.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldType: schema.StringAttribute{
 				Required: true,
-				MarkdownDescription: "Type of the key. Valid values are: aes256-gcm96, rsa-2048, rsa-3072, rsa-4096, " +
-					"ecdsa-p256, ecdsa-p384, ecdsa-p521, ed25519, hmac",
+				MarkdownDescription: "Specifies the type of cryptographic key to create. aes256-gcm96, rsa-2048, rsa-3072, rsa-4096, " +
+					"ecdsa-p256, ecdsa-p384, ecdsa-p521 key types are supported.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -84,26 +84,28 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
-				MarkdownDescription: "If set to true, the key can be deleted. Defaults to false",
+				MarkdownDescription: "Specifies if the key is allowed to be deleted.",
 			},
 			consts.FieldReplicaRegions: schema.SetAttribute{
 				Optional:            true,
 				ElementType:         types.StringType,
-				MarkdownDescription: "List of regions where the key should be replicated. AWS KMS only. Changing this value requires resource replacement.",
+				MarkdownDescription: "Specifies the regions in which the key should be replicated. Supported only for AWS KMS.",
 				PlanModifiers: []planmodifier.Set{
 					setplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldLatestVersion: schema.Int64Attribute{
 				Computed:            true,
-				MarkdownDescription: "Latest version of the key",
+				MarkdownDescription: "Specifies the latest version of the key.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			consts.FieldMinEnabledVersion: schema.Int64Attribute{
-				Computed:            true,
-				MarkdownDescription: "Minimum enabled version of the key",
+				Computed: true,
+				MarkdownDescription: "Specifies the minimum enabled version of the key. All versions of the key less than the specified version " +
+					"will be disabled for cryptographic operations in the KMS provider that the key has been distributed to. " +
+					"Setting this value to 0 means that all versions will be enabled.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -127,9 +129,9 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	vaultPath := data.Path.ValueString()
+	vaultPath := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	apiPath := buildKeyPath(vaultPath, name)
+	apiPath := BuildKeyPath(vaultPath, name)
 
 	writeData := map[string]interface{}{
 		"type": data.Type.ValueString(),
@@ -147,7 +149,7 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-		resp.Diagnostics.AddError(errCreating("Key Management key", apiPath, err))
+		resp.Diagnostics.AddError(ErrCreating(ResourceTypeKey, apiPath, err))
 		return
 	}
 
@@ -157,7 +159,7 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 			consts.FieldDeletionAllowed: true,
 		}
 		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, configData); err != nil {
-			resp.Diagnostics.AddError(errUpdating("Key Management key config", apiPath, err))
+			resp.Diagnostics.AddError(ErrUpdating(ResourceTypeKeyConfig, apiPath, err))
 			return
 		}
 	}
@@ -165,7 +167,7 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 	// Read back the state from Vault
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("Key Management key", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeKey, apiPath, err))
 		return
 	}
 
@@ -197,10 +199,10 @@ func (r *KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	// Build API path and read from Vault
-	apiPath := buildKeyPath(data.Path.ValueString(), data.Name.ValueString())
+	apiPath := BuildKeyPath(data.Mount.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("Key Management key", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeKey, apiPath, err))
 		return
 	}
 
@@ -232,7 +234,7 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	apiPath := buildKeyPath(plan.Path.ValueString(), plan.Name.ValueString())
+	apiPath := BuildKeyPath(plan.Mount.ValueString(), plan.Name.ValueString())
 	writeData := map[string]interface{}{}
 
 	if !plan.DeletionAllowed.Equal(state.DeletionAllowed) {
@@ -241,7 +243,7 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	if len(writeData) > 0 {
 		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-			resp.Diagnostics.AddError(errUpdating("Key Management key", apiPath, err))
+			resp.Diagnostics.AddError(ErrUpdating(ResourceTypeKey, apiPath, err))
 			return
 		}
 	}
@@ -249,7 +251,7 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	// Read back the state from Vault
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("Key Management key", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeKey, apiPath, err))
 		return
 	}
 
@@ -280,9 +282,9 @@ func (r *KeyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		return
 	}
 
-	apiPath := buildKeyPath(data.Path.ValueString(), data.Name.ValueString())
+	apiPath := BuildKeyPath(data.Mount.ValueString(), data.Name.ValueString())
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
-		resp.Diagnostics.AddError(errDeleting("Key Management key", apiPath, err))
+		resp.Diagnostics.AddError(ErrDeleting(ResourceTypeKey, apiPath, err))
 		return
 	}
 }
@@ -296,7 +298,7 @@ func (r *KeyResource) ImportState(ctx context.Context, req resource.ImportStateR
 		return
 	}
 
-	mount, name, err := parseKeyPath(req.ID)
+	mount, name, err := ParseKeyPath(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
@@ -313,7 +315,7 @@ func (r *KeyResource) ImportState(ctx context.Context, req resource.ImportStateR
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
 
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
@@ -332,11 +334,11 @@ func (r *KeyResource) parseKeyResponse(ctx context.Context, responseData map[str
 	}
 
 	if v, ok := responseData[consts.FieldLatestVersion]; ok {
-		data.LatestVersion = setInt64FromInterface(v)
+		data.LatestVersion = SetInt64FromInterface(v)
 	}
 
 	if v, ok := responseData[consts.FieldMinEnabledVersion]; ok {
-		data.MinEnabledVersion = setInt64FromInterface(v)
+		data.MinEnabledVersion = SetInt64FromInterface(v)
 	}
 
 	if v, ok := responseData[consts.FieldReplicaRegions].([]interface{}); ok {

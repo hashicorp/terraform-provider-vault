@@ -89,17 +89,17 @@ func TestParseKeyPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotMount, gotKeyName, err := parseKeyPath(tt.apiPath)
+			gotMount, gotKeyName, err := ParseKeyPath(tt.apiPath)
 
-			if !checkParseError(t, "parseKeyPath()", err, tt.wantErr, tt.errorContains) {
+			if !checkParseError(t, "ParseKeyPath()", err, tt.wantErr, tt.errorContains) {
 				return
 			}
 
 			if gotMount != tt.wantMount {
-				t.Errorf("parseKeyPath() gotMount = %q, want %q", gotMount, tt.wantMount)
+				t.Errorf("ParseKeyPath() gotMount = %q, want %q", gotMount, tt.wantMount)
 			}
 			if gotKeyName != tt.wantKeyName {
-				t.Errorf("parseKeyPath() gotKeyName = %q, want %q", gotKeyName, tt.wantKeyName)
+				t.Errorf("ParseKeyPath() gotKeyName = %q, want %q", gotKeyName, tt.wantKeyName)
 			}
 		})
 	}
@@ -170,17 +170,17 @@ func TestParseKMSPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotMount, gotKMSName, err := parseKMSPath(tt.apiPath)
+			gotMount, gotKMSName, err := ParseKMSPath(tt.apiPath)
 
-			if !checkParseError(t, "parseKMSPath()", err, tt.wantErr, tt.errorContains) {
+			if !checkParseError(t, "ParseKMSPath()", err, tt.wantErr, tt.errorContains) {
 				return
 			}
 
 			if gotMount != tt.wantMount {
-				t.Errorf("parseKMSPath() gotMount = %q, want %q", gotMount, tt.wantMount)
+				t.Errorf("ParseKMSPath() gotMount = %q, want %q", gotMount, tt.wantMount)
 			}
 			if gotKMSName != tt.wantKMSName {
-				t.Errorf("parseKMSPath() gotKMSName = %q, want %q", gotKMSName, tt.wantKMSName)
+				t.Errorf("ParseKMSPath() gotKMSName = %q, want %q", gotKMSName, tt.wantKMSName)
 			}
 		})
 	}
@@ -259,20 +259,20 @@ func TestParseDistributeKeyPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotMount, gotKMSName, gotKeyName, err := parseDistributeKeyPath(tt.apiPath)
+			gotMount, gotKMSName, gotKeyName, err := ParseDistributeKeyPath(tt.apiPath)
 
-			if !checkParseError(t, "parseDistributeKeyPath()", err, tt.wantErr, tt.errorContains) {
+			if !checkParseError(t, "ParseDistributeKeyPath()", err, tt.wantErr, tt.errorContains) {
 				return
 			}
 
 			if gotMount != tt.wantMount {
-				t.Errorf("parseDistributeKeyPath() gotMount = %q, want %q", gotMount, tt.wantMount)
+				t.Errorf("ParseDistributeKeyPath() gotMount = %q, want %q", gotMount, tt.wantMount)
 			}
 			if gotKMSName != tt.wantKMSName {
-				t.Errorf("parseDistributeKeyPath() gotKMSName = %q, want %q", gotKMSName, tt.wantKMSName)
+				t.Errorf("ParseDistributeKeyPath() gotKMSName = %q, want %q", gotKMSName, tt.wantKMSName)
 			}
 			if gotKeyName != tt.wantKeyName {
-				t.Errorf("parseDistributeKeyPath() gotKeyName = %q, want %q", gotKeyName, tt.wantKeyName)
+				t.Errorf("ParseDistributeKeyPath() gotKeyName = %q, want %q", gotKeyName, tt.wantKeyName)
 			}
 		})
 	}

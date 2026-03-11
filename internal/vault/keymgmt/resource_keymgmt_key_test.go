@@ -52,7 +52,7 @@ func TestAccKeymgmtKey(t *testing.T) {
 			{
 				Config: testKeymgmtKey_withReplicaRegions(mount, keyName, []string{"us-west-1", "us-east-1"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, "replica_regions.#", "2"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "replica_regions.*", "us-west-1"),
@@ -76,7 +76,7 @@ func TestAccKeymgmtKey(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccKeymgmtKeyImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
 					consts.FieldReplicaRegions,
 				},
@@ -91,9 +91,9 @@ func testAccKeymgmtKeyImportStateIdFunc(resourceName string) resource.ImportStat
 		if !ok {
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
-		path := rs.Primary.Attributes[consts.FieldPath]
+		mount := rs.Primary.Attributes[consts.FieldMount]
 		name := rs.Primary.Attributes[consts.FieldName]
-		return fmt.Sprintf("%s/key/%s", path, name), nil
+		return fmt.Sprintf("%s/key/%s", mount, name), nil
 	}
 }
 
@@ -105,7 +105,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = %q
   type = "aes256-gcm96"
 }
@@ -120,7 +120,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path             = vault_mount.keymgmt.path
+  mount            = vault_mount.keymgmt.path
   name             = %q
   type             = "aes256-gcm96"
   deletion_allowed = true
@@ -142,7 +142,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path             = vault_mount.keymgmt.path
+  mount            = vault_mount.keymgmt.path
   name             = %q
   type             = "aes256-gcm96"
   deletion_allowed = true
@@ -166,11 +166,11 @@ func TestAccKeymgmtKey_multiple(t *testing.T) {
 			{
 				Config: testKeymgmtKey_multipleConfig(mount, key1Name, key2Name),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName1, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, key1Name),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldType, "aes256-gcm96"),
 					resource.TestCheckResourceAttr(resourceName1, "deletion_allowed", "true"),
-					resource.TestCheckResourceAttr(resourceName2, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldName, key2Name),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldType, "rsa-2048"),
 					resource.TestCheckResourceAttr(resourceName2, "deletion_allowed", "true"),
@@ -197,7 +197,7 @@ func TestAccKeymgmtKey_namespace(t *testing.T) {
 			{
 				Config: testKeymgmtKey_namespaceConfig(namespace, mount, keyName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
 					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
@@ -231,14 +231,14 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test1" {
-  path             = vault_mount.keymgmt.path
+  mount            = vault_mount.keymgmt.path
   name             = %q
   type             = "aes256-gcm96"
   deletion_allowed = true
 }
 
 resource "vault_keymgmt_key" "test2" {
-  path             = vault_mount.keymgmt.path
+  mount            = vault_mount.keymgmt.path
   name             = %q
   type             = "rsa-2048"
   deletion_allowed = true
@@ -260,7 +260,7 @@ resource "vault_mount" "keymgmt" {
 
 resource "vault_keymgmt_key" "test" {
   namespace        = vault_namespace.test.path
-  path             = vault_mount.keymgmt.path
+  mount            = vault_mount.keymgmt.path
   name             = %q
   type             = "aes256-gcm96"
   deletion_allowed = true
@@ -276,7 +276,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path             = vault_mount.keymgmt.path
+  mount            = vault_mount.keymgmt.path
   name             = %q
   type             = "invalid-key-type"
   deletion_allowed = true
