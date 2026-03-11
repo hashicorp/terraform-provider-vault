@@ -207,7 +207,7 @@ resource "vault_radius_auth_backend" "test" {
   dial_timeout = 30
   read_timeout = 30
   
-  depends_on = [vault_auth_backend.test]
+  #depends_on = [vault_auth_backend.test]
 }
 
 resource "vault_policy" "token_creator" {
@@ -224,7 +224,7 @@ resource "vault_radius_auth_backend_user" "test" {
   username = %q
   policies = ["default", "token-creator"] 
   
-  depends_on = [vault_radius_auth_backend.test, vault_policy.token_creator]
+  #depends_on = [vault_radius_auth_backend.test, vault_policy.token_creator]
 }
 `,
 		testAccRadiusAuthBackendMountOnly(mount),
@@ -246,7 +246,7 @@ ephemeral "vault_radius_auth_login" "test" {
   username = vault_radius_auth_backend_user.test.username
   password = %q
   
-  depends_on = [vault_radius_auth_backend_user.test]
+  #depends_on = [vault_radius_auth_backend_user.test]
 }
 `, password)
 }
@@ -322,7 +322,7 @@ resource "vault_radius_auth_backend" "test" {
   dial_timeout = 30
   read_timeout = 30
   
-  depends_on = [vault_auth_backend.test]
+  #depends_on = [vault_auth_backend.test]
 }
 
 resource "vault_policy" "token_creator" {
@@ -334,7 +334,7 @@ path "auth/token/create" {
 }
 EOT
 
-  depends_on = [vault_namespace.test]
+  #depends_on = [vault_namespace.test]
 }
 
 resource "vault_radius_auth_backend_user" "test" {
@@ -343,7 +343,7 @@ resource "vault_radius_auth_backend_user" "test" {
   username  = %q
   policies  = ["default", "token-creator"] 
   
-  depends_on = [vault_radius_auth_backend.test, vault_policy.token_creator]
+  #depends_on = [vault_radius_auth_backend.test, vault_policy.token_creator]
 }
 `,
 		namespace, mount, host, secret, username,
@@ -360,7 +360,7 @@ ephemeral "vault_radius_auth_login" "test" {
   username  = vault_radius_auth_backend_user.test.username
   password  = %q
   
-  depends_on = [vault_radius_auth_backend_user.test]
+  #depends_on = [vault_radius_auth_backend_user.test]
 }
 `, password)
 }
