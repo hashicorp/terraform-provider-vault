@@ -115,6 +115,64 @@ ephemeral "vault_kerberos_auth_backend_login" "login" {
 }
 ```
 
+### Using with Namespaces (Vault Enterprise)
+
+```hcl
+resource "vault_namespace" "app" {
+  path = "app-team"
+}
+
+resource "vault_auth_backend" "kerberos" {
+  namespace = vault_namespace.app.path
+  type      = "kerberos"
+  path      = "kerberos"
+  
+  tune {
+    passthrough_request_headers = ["Authorization"]
+  }
+}
+
+resource "vault_kerberos_auth_backend_config" "config" {
+  namespace       = vault_namespace.app.path
+  mount           = vault_auth_backend.kerberos.path
+  keytab          = filebase64("/path/to/vault.keytab")
+  service_account = "vault/localhost@EXAMPLE.COM"
+}
+
+resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
+  namespace = vault_namespace.app.path
+  mount     = vault_auth_backend.kerberos.path
+  url       = "ldap://localhost:389"
+  binddn    = "cn=admin,dc=example,dc=com"
+  bindpass  = "admin-password"
+  userdn    = "ou=users,dc=example,dc=com"
+  userattr  = "uid"
+}
+
+ephemeral "vault_kerberos_auth_backend_login" "login" {
+  namespace     = vault_namespace.app.path
+  mount         = vault_auth_backend.kerberos.path
+  mount_id      = vault_auth_backend.kerberos.id
+  keytab_path   = "/path/to/user.keytab"
+  krb5conf_path = "/etc/krb5.conf"
+  username      = "user1"
+  service       = "vault/localhost"
+  realm         = "EXAMPLE.COM"
+  
+  depends_on = [
+    vault_kerberos_auth_backend_config.config,
+    vault_kerberos_auth_backend_ldap_config.ldap
+  ]
+}
+
+# Use the ephemeral token for authentication in the namespace
+provider "vault" {
+  alias     = "kerberos_auth"
+  namespace = vault_namespace.app.path
+  token     = ephemeral.vault_kerberos_auth_backend_login.login.client_token
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
