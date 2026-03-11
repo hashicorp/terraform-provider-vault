@@ -33,7 +33,7 @@ func TestAccKeymgmtAWSKMS(t *testing.T) {
 			{
 				Config: testKeymgmtAWSKMSConfig(mount, kmsName, awsRegion, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", awsRegion),
 				),
@@ -43,7 +43,7 @@ func TestAccKeymgmtAWSKMS(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccKeymgmtAWSKMSImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
 					consts.FieldAccessKey,
 					consts.FieldSecretKey,
@@ -68,7 +68,7 @@ func TestAccKeymgmtAWSKMS_keyCollectionChange(t *testing.T) {
 			{
 				Config: testKeymgmtAWSKMSConfig(mount, kmsName, "us-west-2", accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", "us-west-2"),
 				),
@@ -76,7 +76,7 @@ func TestAccKeymgmtAWSKMS_keyCollectionChange(t *testing.T) {
 			{
 				Config: testKeymgmtAWSKMSConfig(mount, kmsName, "us-east-1", accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", "us-east-1"),
 				),
@@ -100,7 +100,7 @@ func TestAccKeymgmtAWSKMS_credentialsMap(t *testing.T) {
 			{
 				Config: testKeymgmtAWSKMSConfigWithCredentialsMap(mount, kmsName, "us-west-2", accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", "us-west-2"),
 				),
@@ -110,7 +110,7 @@ func TestAccKeymgmtAWSKMS_credentialsMap(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccKeymgmtAWSKMSImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
 					"credentials",
 				},
@@ -135,10 +135,10 @@ func TestAccKeymgmtAWSKMS_multiple(t *testing.T) {
 			{
 				Config: testKeymgmtAWSKMSConfigMultiple(mount, kmsName1, kmsName2, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName1, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, kmsName1),
 					resource.TestCheckResourceAttr(resourceName1, "key_collection", "us-west-2"),
-					resource.TestCheckResourceAttr(resourceName2, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldName, kmsName2),
 					resource.TestCheckResourceAttr(resourceName2, "key_collection", "us-east-1"),
 				),
@@ -153,9 +153,9 @@ func testAccKeymgmtAWSKMSImportStateIdFunc(resourceName string) resource.ImportS
 		if !ok {
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
-		path := rs.Primary.Attributes[consts.FieldPath]
+		mount := rs.Primary.Attributes[consts.FieldMount]
 		name := rs.Primary.Attributes[consts.FieldName]
-		return fmt.Sprintf("%s/kms/%s", path, name), nil
+		return fmt.Sprintf("%s/kms/%s", mount, name), nil
 	}
 }
 
@@ -167,7 +167,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_aws_kms" "test" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
   
@@ -185,7 +185,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_aws_kms" "test" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
   
@@ -205,7 +205,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_aws_kms" "test1" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = "us-west-2"
   
@@ -214,7 +214,7 @@ resource "vault_keymgmt_aws_kms" "test1" {
 }
 
 resource "vault_keymgmt_aws_kms" "test2" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = "us-east-1"
   

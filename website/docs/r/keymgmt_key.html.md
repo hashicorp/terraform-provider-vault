@@ -32,7 +32,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "aes_key" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = "aes-encryption-key"
   type = "aes256-gcm96"
 }
@@ -42,7 +42,7 @@ resource "vault_keymgmt_key" "aes_key" {
 
 ```hcl
 resource "vault_keymgmt_key" "rsa_key" {
-  path            = vault_mount.keymgmt.path
+  mount           = vault_mount.keymgmt.path
   name            = "rsa-signing-key"
   type            = "rsa-2048"
   deletion_allowed = false
@@ -53,7 +53,7 @@ resource "vault_keymgmt_key" "rsa_key" {
 
 ```hcl
 resource "vault_keymgmt_key" "replicated_key" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = "multi-region-key"
   type = "aes256-gcm96"
   
@@ -71,34 +71,32 @@ The following arguments are supported:
   [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `path` - (Required) Path where the Key Management secrets engine is mounted.
+* `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
+  `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
+  `vault_mount.<name>.path` here.
 
-* `name` - (Required) Name of the key. This cannot be changed after creation.
+* `name` - (Required, Forces new resource) Specifies the name of the key to create.
 
-* `type` - (Required) Type of cryptographic key to create. Cannot be changed after creation. Valid values are:
-  - `aes256-gcm96` - AES-256 wrapped with GCM using a 96-bit nonce (symmetric)
-  - `rsa-2048` - RSA with 2048 bits (asymmetric)
-  - `rsa-3072` - RSA with 3072 bits (asymmetric)
-  - `rsa-4096` - RSA with 4096 bits (asymmetric)
-  - `ecdsa-p256` - ECDSA using curve P-256 (asymmetric)
-  - `ecdsa-p384` - ECDSA using curve P-384 (asymmetric)
-  - `ecdsa-p521` - ECDSA using curve P-521 (asymmetric)
-  - `ed25519` - Ed25519 signature algorithm (asymmetric)
-  - `hmac` - HMAC key for message authentication
+* `type` - (Required, Forces new resource) Specifies the type of cryptographic key to create. The following key types are supported:
+  - `aes256-gcm96` - AES-GCM with a 256-bit AES key and a 96-bit nonce (symmetric)
+  - `rsa-2048` - RSA with bit size of 2048 (asymmetric)
+  - `rsa-3072` - RSA with bit size of 3072 (asymmetric)
+  - `rsa-4096` - RSA with bit size of 4096 (asymmetric)
+  - `ecdsa-p256` - ECDSA using the P-256 elliptic curve (asymmetric)
+  - `ecdsa-p384` -  ECDSA using the P-384 elliptic curve (asymmetric)
+  - `ecdsa-p521` - ECDSA using the P-521 elliptic curve (asymmetric)
 
-* `deletion_allowed` - (Optional) If set to `true`, the key can be deleted. Defaults to `false`. Once enabled, the key can be destroyed using Terraform.
+* `deletion_allowed` - (Optional) Specifies if the key is allowed to be deleted.
 
-* `replica_regions` - (Optional) Set of AWS regions where the key should be replicated. This is only applicable when distributing keys to AWS KMS and enables multi-region key replication. Example: `["us-west-1", "us-east-1", "eu-west-1"]`.
+* `replica_regions` - (Optional, Forces new resource) Specifies the regions in which the key should be replicated. Supported only for AWS KMS.
 
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
 
-* `id` - The unique identifier for the key resource. Format: `{path}/key/{name}`
+* `latest_version` - Specifies the latest version of the key.
 
-* `latest_version` - The latest version number of the key.
-
-* `min_enabled_version` - The minimum enabled version of the key.
+* `min_enabled_version` - Specifies the minimum enabled version of the key. All versions of the key less than the specified version will be disabled for cryptographic operations in the KMS provider that the key has been distributed to. Setting this value to 0 means that all versions will be enabled.
 
 ## Import
 

@@ -31,7 +31,7 @@ type AzureKMSResource struct {
 
 type AzureKMSResourceModel struct {
 	base.BaseModel
-	Path          types.String `tfsdk:"path"`
+	Mount         types.String `tfsdk:"mount"`
 	Name          types.String `tfsdk:"name"`
 	KeyCollection types.String `tfsdk:"key_collection"`
 	TenantID      types.String `tfsdk:"tenant_id"`
@@ -53,9 +53,9 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 		MarkdownDescription: "Manages an Azure Key Vault provider for Vault Key Management",
 
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a [`vault_mount`](mount.html) resource with `type = \"keymgmt\"`. Use `vault_mount.<name>.path` here.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -109,9 +109,9 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	vaultPath := data.Path.ValueString()
+	vaultPath := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	apiPath := buildKMSPath(vaultPath, name)
+	apiPath := BuildKMSPath(vaultPath, name)
 
 	writeData := map[string]interface{}{
 		"provider":       ProviderAzureKV,
@@ -131,14 +131,14 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 	writeData["credentials"] = creds
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-		resp.Diagnostics.AddError(errCreating("Azure Key Vault provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrCreating(ResourceTypeAzureKV, apiPath, err))
 		return
 	}
 
 	// Read back the state from Vault
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("Azure Key Vault provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeAzureKV, apiPath, err))
 		return
 	}
 
@@ -170,10 +170,10 @@ func (r *AzureKMSResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Build API path and read from Vault
-	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
+	apiPath := BuildKMSPath(data.Mount.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("Azure Key Vault provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeAzureKV, apiPath, err))
 		return
 	}
 
@@ -205,7 +205,7 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	apiPath := buildKMSPath(plan.Path.ValueString(), plan.Name.ValueString())
+	apiPath := BuildKMSPath(plan.Mount.ValueString(), plan.Name.ValueString())
 	writeData := map[string]interface{}{
 		"provider": ProviderAzureKV,
 	}
@@ -231,7 +231,7 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 
 	if hasChanges {
 		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-			resp.Diagnostics.AddError(errUpdating("Azure Key Vault provider", apiPath, err))
+			resp.Diagnostics.AddError(ErrUpdating(ResourceTypeAzureKV, apiPath, err))
 			return
 		}
 	}
@@ -239,7 +239,7 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 	// Read back the state from Vault
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("Azure Key Vault provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeAzureKV, apiPath, err))
 		return
 	}
 
@@ -270,9 +270,9 @@ func (r *AzureKMSResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
+	apiPath := BuildKMSPath(data.Mount.ValueString(), data.Name.ValueString())
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
-		resp.Diagnostics.AddError(errDeleting("Azure Key Vault provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrDeleting(ResourceTypeAzureKV, apiPath, err))
 		return
 	}
 }
@@ -286,7 +286,7 @@ func (r *AzureKMSResource) ImportState(ctx context.Context, req resource.ImportS
 		return
 	}
 
-	mount, name, err := parseKMSPath(req.ID)
+	mount, name, err := ParseKMSPath(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
@@ -303,7 +303,7 @@ func (r *AzureKMSResource) ImportState(ctx context.Context, req resource.ImportS
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
 
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
