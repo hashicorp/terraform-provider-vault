@@ -35,9 +35,12 @@ resource "vault_keymgmt_aws_kms" "us_west" {
   mount          = vault_mount.keymgmt.path
   name           = "aws-us-west-2"
   key_collection = "us-west-2"
-  
-  access_key = var.aws_access_key_id
-  secret_key = var.aws_secret_access_key
+
+  credentials_wo = {
+    access_key = var.aws_access_key_id
+    secret_key = var.aws_secret_access_key
+  }
+  credentials_wo_version = 1
 }
 ```
 
@@ -54,8 +57,8 @@ resource "vault_keymgmt_aws_kms" "production" {
   mount          = vault_mount.keymgmt.path
   name           = "aws-production"
   key_collection = "us-east-1"
-  
-  # No access_key or secret_key - Vault uses AWS credential chain
+
+  # No credentials - Vault uses AWS credential chain
 }
 
 # Distribute a key to AWS KMS
@@ -91,11 +94,9 @@ The following arguments are supported:
 
 * `key_collection` - (Required, Forces new resource) AWS region where keys will be created. This defines the region for the KMS keys. Examples: `us-west-2`, `us-east-1`, `eu-west-1`.
 
-* `credentials` - (Optional, Sensitive) Map containing AWS credentials with keys `access_key` and `secret_key`. Mutually exclusive with `access_key` and `secret_key` fields. If not provided, Vault will use the AWS SDK credential chain (environment variables, IAM roles, etc.).
+* `credentials_wo` - (Optional, Sensitive, Write-only) Map of AWS credentials passed directly to the Vault API. Supported keys are `access_key` and `secret_key` (and optionally `session_token`). This field is write-only — it will never be stored in Terraform state. If not provided, Vault uses the AWS SDK credential chain (environment variables, shared credentials file, IAM instance profile, etc.). Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
 
-* `access_key` - (Optional, Sensitive) AWS access key ID with permissions to manage KMS keys. May also be specified by the `AWS_ACCESS_KEY_ID` environment variable on the Vault server. Mutually exclusive with `credentials` map.
-
-* `secret_key` - (Optional, Sensitive) AWS secret access key. May also be specified by the `AWS_SECRET_ACCESS_KEY` environment variable on the Vault server. Mutually exclusive with `credentials` map.
+* `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Increment this value whenever you rotate or update `credentials_wo` to trigger Terraform to apply the new values.
 
 ## Attributes Reference
 
@@ -111,4 +112,4 @@ AWS KMS providers can be imported using the format `{path}/kms/{name}`, e.g.
 $ terraform import vault_keymgmt_aws_kms.us_west keymgmt/kms/aws-us-west-2
 ```
 
-~> **Note:** When importing, the `credentials`, `access_key`, and `secret_key` fields will not be populated as they are write-only and not returned by the Vault API.
+~> **Note:** When importing, the `credentials_wo` and `credentials_wo_version` fields will not be populated. Set `credentials_wo` and `credentials_wo_version` in your configuration after import to re-establish credential management.

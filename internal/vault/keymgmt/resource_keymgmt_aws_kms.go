@@ -8,14 +8,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -34,12 +32,11 @@ type AWSKMSResource struct {
 
 type AWSKMSResourceModel struct {
 	base.BaseModel
-	Mount         types.String `tfsdk:"mount"`
-	Name          types.String `tfsdk:"name"`
-	KeyCollection types.String `tfsdk:"key_collection"`
-	Credentials   types.Map    `tfsdk:"credentials"`
-	AccessKey     types.String `tfsdk:"access_key"`
-	SecretKey     types.String `tfsdk:"secret_key"`
+	Mount                types.String `tfsdk:"mount"`
+	Name                 types.String `tfsdk:"name"`
+	KeyCollection        types.String `tfsdk:"key_collection"`
+	CredentialsWO        types.Map    `tfsdk:"credentials_wo"`
+	CredentialsWOVersion types.Int64  `tfsdk:"credentials_wo_version"`
 }
 
 func NewAWSKMSResource() resource.Resource {
@@ -76,36 +73,18 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			consts.FieldCredentials: schema.MapAttribute{
+			consts.FieldCredentialsWO: schema.MapAttribute{
 				Optional:            true,
 				Sensitive:           true,
+				WriteOnly:           true,
 				ElementType:         types.StringType,
-				MarkdownDescription: "Map containing access_key and secret_key for AWS authentication. Conflicts with `access_key` and `secret_key`.",
-				Validators: []validator.Map{
-					mapvalidator.ConflictsWith(
-						path.MatchRoot(consts.FieldAccessKey),
-						path.MatchRoot(consts.FieldSecretKey),
-					),
-				},
+				MarkdownDescription: "Map of AWS credentials passed directly to the Vault API (e.g., `access_key`, `secret_key`). This field is write-only and will not be stored in state. If not provided, Vault uses the AWS SDK credential chain.",
 			},
-			consts.FieldAccessKey: schema.StringAttribute{
+			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				Optional:            true,
-				Sensitive:           true,
-				MarkdownDescription: "AWS access key ID. Conflicts with `credentials`.",
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(
-						path.MatchRoot(consts.FieldCredentials),
-					),
-				},
-			},
-			consts.FieldSecretKey: schema.StringAttribute{
-				Optional:            true,
-				Sensitive:           true,
-				MarkdownDescription: "AWS secret access key. Conflicts with `credentials`.",
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(
-						path.MatchRoot(consts.FieldCredentials),
-					),
+				MarkdownDescription: "Version counter for the write-only `credentials` field. Increment this value whenever you update `credentials` to trigger the change.",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -135,7 +114,17 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		"key_collection": data.KeyCollection.ValueString(),
 	}
 
-	if creds := BuildAWSCredentialsMap(ctx, data.Credentials, data.AccessKey, data.SecretKey, &resp.Diagnostics); creds != nil {
+	// Read write-only credentials from Config (the only place write-only values are accessible)
+	var configModel AWSKMSResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.CredentialsWO = configModel.CredentialsWO
+
+	if !data.CredentialsWO.IsNull() && !data.CredentialsWO.IsUnknown() {
+		var creds map[string]string
+		resp.Diagnostics.Append(data.CredentialsWO.ElementsAs(ctx, &creds, false)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -223,14 +212,24 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 	hasChanges := false
 
-	if !plan.Credentials.Equal(state.Credentials) || !plan.AccessKey.Equal(state.AccessKey) || !plan.SecretKey.Equal(state.SecretKey) {
-		if creds := BuildAWSCredentialsMap(ctx, plan.Credentials, plan.AccessKey, plan.SecretKey, &resp.Diagnostics); creds != nil {
+	if !plan.CredentialsWOVersion.Equal(state.CredentialsWOVersion) {
+		// Read write-only credentials from Config (the only place write-only values are accessible)
+		var configModel AWSKMSResourceModel
+		resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.CredentialsWO = configModel.CredentialsWO
+
+		if !plan.CredentialsWO.IsNull() && !plan.CredentialsWO.IsUnknown() {
+			var creds map[string]string
+			resp.Diagnostics.Append(plan.CredentialsWO.ElementsAs(ctx, &creds, false)...)
 			if resp.Diagnostics.HasError() {
 				return
 			}
 			writeData["credentials"] = creds
-			hasChanges = true
 		}
+		hasChanges = true
 	}
 
 	if hasChanges {
