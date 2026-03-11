@@ -239,7 +239,6 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 		}
 	} else {
 		// No changes, preserve existing computed values
-		plan.KeyID = state.KeyID
 		plan.Versions = state.Versions
 	}
 
