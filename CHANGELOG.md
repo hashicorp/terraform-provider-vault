@@ -20,6 +20,7 @@ BUGS:
 
 FEATURES:
 
+* Add support for Kerberos auth backend: `vault_kerberos_auth_backend_config`, `vault_kerberos_auth_backend_ldap_config`, and `vault_kerberos_auth_backend_group` resources, and `vault_kerberos_auth_backend_login` ephemeral resource for Kerberos authentication. ([#2819](https://github.com/hashicorp/terraform-provider-vault/pull/2819))
 * Add support for CF auth backend: `vault_cf_auth_backend_config` and `vault_cf_auth_backend_role` resources, and `vault_cf_auth_login` ephemeral resource for short-lived Vault tokens.
 * Add support for SPIFFE secrets backend: ([#2660](https://github.com/hashicorp/terraform-provider-vault/pull/2660))
 * Add support for pki-external-ca secrets backend: ([#2771](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
