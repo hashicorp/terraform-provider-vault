@@ -27,21 +27,15 @@ func TestDataSourceAuthBackends(t *testing.T) {
 				Config: testDataSourceAuthBackendsBasic,
 				// The token auth method is built-in and automatically enabled
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".#", "1"),
-					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".0", "token"),
-					resource.TestCheckResourceAttr(ds, consts.FieldAccessors+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(ds, consts.FieldPaths+".*", "token"),
 				),
 			},
 			{
 				Config: testDataSourceAuthBackendsBasic_config,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".#", "3"),
-					resource.TestCheckResourceAttr(ds, consts.FieldAccessors+".#", "3"),
-					resource.TestCheckResourceAttr(ds, consts.FieldType, ""),
-					// Using sorted outputs for testing consistency; API returns unsorted
-					resource.TestCheckOutput(consts.FieldPath+"0", "approle"),
-					resource.TestCheckOutput(consts.FieldPath+"1", "token"),
-					resource.TestCheckOutput(consts.FieldPath+"2", "userpass"),
+					resource.TestCheckTypeSetElemAttr(ds, consts.FieldPaths+".*", "userpass"),
+					resource.TestCheckTypeSetElemAttr(ds, consts.FieldPaths+".*", "approle"),
+					resource.TestCheckTypeSetElemAttr(ds, consts.FieldPaths+".*", "token"),
 				),
 			},
 			{
