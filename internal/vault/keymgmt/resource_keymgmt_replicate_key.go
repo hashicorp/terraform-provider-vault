@@ -32,7 +32,7 @@ type ReplicateKeyResource struct {
 
 type ReplicateKeyResourceModel struct {
 	base.BaseModel
-	Path    types.String `tfsdk:"path"`
+	Mount   types.String `tfsdk:"mount"`
 	KMSName types.String `tfsdk:"kms_name"`
 	KeyName types.String `tfsdk:"key_name"`
 }
@@ -50,9 +50,9 @@ func (r *ReplicateKeyResource) Schema(ctx context.Context, req resource.SchemaRe
 		MarkdownDescription: "Replicates a Key Management key to configured regions (AWS KMS only)",
 
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` resource with `type = \"keymgmt\"`. Use `vault_mount.<name>.path` here.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -89,14 +89,14 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	vaultPath := data.Path.ValueString()
+	vaultPath := data.Mount.ValueString()
 	kmsName := data.KMSName.ValueString()
 	keyName := data.KeyName.ValueString()
 
-	kmsPath := buildKMSPath(vaultPath, kmsName)
+	kmsPath := BuildKMSPath(vaultPath, kmsName)
 	kmsResp, err := cli.Logical().ReadWithContext(ctx, kmsPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("KMS provider", kmsPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeKMSProvider, kmsPath, err))
 		return
 	}
 
@@ -115,7 +115,7 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	apiPath := buildReplicateKeyPath(vaultPath, kmsName, keyName)
+	apiPath := BuildReplicateKeyPath(vaultPath, kmsName, keyName)
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, map[string]interface{}{}); err != nil {
 		resp.Diagnostics.AddError("Error replicating Key Management key", fmt.Sprintf("Error replicating key at %s: %s", apiPath, err))
 		return
@@ -138,10 +138,10 @@ func (r *ReplicateKeyResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	// Build base path to check if distribution exists
-	basePath := buildDistributeKeyPath(data.Path.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
+	basePath := BuildDistributeKeyPath(data.Mount.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, basePath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("Key Management key distribution", basePath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeKeyDistribution, basePath, err))
 		return
 	}
 
@@ -189,7 +189,7 @@ func (r *ReplicateKeyResource) ImportState(ctx context.Context, req resource.Imp
 	// Remove the "replicate" suffix to parse the base path
 	parts = parts[:len(parts)-1]
 	basePath := strings.Join(parts, "/")
-	mountPath, kmsName, keyName, err := parseDistributeKeyPath(basePath)
+	mountPath, kmsName, keyName, err := ParseDistributeKeyPath(basePath)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing import identifier",
@@ -200,7 +200,7 @@ func (r *ReplicateKeyResource) ImportState(ctx context.Context, req resource.Imp
 	}
 
 	// Set the individual fields in state
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mountPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mountPath)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldKMSName), kmsName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldKeyName), keyName)...)
 

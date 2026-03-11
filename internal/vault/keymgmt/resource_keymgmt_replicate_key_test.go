@@ -38,7 +38,7 @@ func TestAccKeymgmtReplicateKey(t *testing.T) {
 			{
 				Config: testKeymgmtReplicateKeyConfig(backend, kmsName, keyName, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName, "kms_name", kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_name", keyName),
 				),
@@ -48,7 +48,7 @@ func TestAccKeymgmtReplicateKey(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccKeymgmtReplicateKeyImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 			},
 		},
 	})
@@ -97,10 +97,10 @@ func TestAccKeymgmtReplicateKey_multiple(t *testing.T) {
 			{
 				Config: testKeymgmtReplicateKeyConfigMultiple(backend, kmsName, keyName1, keyName2, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName1, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName1, "kms_name", kmsName),
 					resource.TestCheckResourceAttr(resourceName1, "key_name", keyName1),
-					resource.TestCheckResourceAttr(resourceName2, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName2, "kms_name", kmsName),
 					resource.TestCheckResourceAttr(resourceName2, "key_name", keyName2),
 				),
@@ -117,14 +117,14 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path            = vault_mount.test.path
+  mount           = vault_mount.test.path
   name            = "%s"
   type            = "aes256-gcm96"
   replica_regions = ["us-east-1", "eu-west-1"]
 }
 
 resource "vault_keymgmt_aws_kms" "test" {
-  path           = vault_mount.test.path
+  mount          = vault_mount.test.path
   name           = "%s"
   key_collection = "us-west-1"
 
@@ -133,7 +133,7 @@ resource "vault_keymgmt_aws_kms" "test" {
 }
 
 resource "vault_keymgmt_distribute_key" "test" {
-  path       = vault_mount.test.path
+  mount      = vault_mount.test.path
   kms_name   = vault_keymgmt_aws_kms.test.name
   key_name   = vault_keymgmt_key.test.name
   purpose    = ["encrypt", "decrypt"]
@@ -141,7 +141,7 @@ resource "vault_keymgmt_distribute_key" "test" {
 }
 
 resource "vault_keymgmt_replicate_key" "test" {
-  path     = vault_mount.test.path
+  mount    = vault_mount.test.path
   kms_name = vault_keymgmt_aws_kms.test.name
   key_name = vault_keymgmt_key.test.name
   
@@ -158,14 +158,14 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path = vault_mount.test.path
+  mount = vault_mount.test.path
   name = "%s"
   type = "aes256-gcm96"
   # No replica_regions specified
 }
 
 resource "vault_keymgmt_aws_kms" "test" {
-  path           = vault_mount.test.path
+  mount          = vault_mount.test.path
   name           = "%s"
   key_collection = "us-west-1"
 
@@ -174,7 +174,7 @@ resource "vault_keymgmt_aws_kms" "test" {
 }
 
 resource "vault_keymgmt_distribute_key" "test" {
-  path       = vault_mount.test.path
+  mount      = vault_mount.test.path
   kms_name   = vault_keymgmt_aws_kms.test.name
   key_name   = vault_keymgmt_key.test.name
   purpose    = ["encrypt", "decrypt"]
@@ -182,7 +182,7 @@ resource "vault_keymgmt_distribute_key" "test" {
 }
 
 resource "vault_keymgmt_replicate_key" "test" {
-  path     = vault_mount.test.path
+  mount    = vault_mount.test.path
   kms_name = vault_keymgmt_aws_kms.test.name
   key_name = vault_keymgmt_key.test.name
   
@@ -197,10 +197,10 @@ func testAccKeymgmtReplicateKeyImportStateIdFunc(resourceName string) resource.I
 		if !ok {
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
-		path := rs.Primary.Attributes[consts.FieldPath]
+		mount := rs.Primary.Attributes[consts.FieldMount]
 		kmsName := rs.Primary.Attributes["kms_name"]
 		keyName := rs.Primary.Attributes["key_name"]
-		return fmt.Sprintf("%s/kms/%s/key/%s/replicate", path, kmsName, keyName), nil
+		return fmt.Sprintf("%s/kms/%s/key/%s/replicate", mount, kmsName, keyName), nil
 	}
 }
 
@@ -212,21 +212,21 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_keymgmt_key" "test1" {
-  path            = vault_mount.test.path
+  mount           = vault_mount.test.path
   name            = "%s"
   type            = "aes256-gcm96"
   replica_regions = ["us-east-1", "eu-west-1"]
 }
 
 resource "vault_keymgmt_key" "test2" {
-  path            = vault_mount.test.path
+  mount           = vault_mount.test.path
   name            = "%s"
   type            = "aes256-gcm96"
   replica_regions = ["ap-southeast-1", "ap-northeast-1"]
 }
 
 resource "vault_keymgmt_aws_kms" "test" {
-  path           = vault_mount.test.path
+  mount          = vault_mount.test.path
   name           = "%s"
   key_collection = "us-west-1"
 
@@ -235,7 +235,7 @@ resource "vault_keymgmt_aws_kms" "test" {
 }
 
 resource "vault_keymgmt_distribute_key" "test1" {
-  path       = vault_mount.test.path
+  mount      = vault_mount.test.path
   kms_name   = vault_keymgmt_aws_kms.test.name
   key_name   = vault_keymgmt_key.test1.name
   purpose    = ["encrypt", "decrypt"]
@@ -243,7 +243,7 @@ resource "vault_keymgmt_distribute_key" "test1" {
 }
 
 resource "vault_keymgmt_distribute_key" "test2" {
-  path       = vault_mount.test.path
+  mount      = vault_mount.test.path
   kms_name   = vault_keymgmt_aws_kms.test.name
   key_name   = vault_keymgmt_key.test2.name
   purpose    = ["encrypt", "decrypt"]
@@ -251,7 +251,7 @@ resource "vault_keymgmt_distribute_key" "test2" {
 }
 
 resource "vault_keymgmt_replicate_key" "test1" {
-  path     = vault_mount.test.path
+  mount    = vault_mount.test.path
   kms_name = vault_keymgmt_aws_kms.test.name
   key_name = vault_keymgmt_key.test1.name
   
@@ -259,7 +259,7 @@ resource "vault_keymgmt_replicate_key" "test1" {
 }
 
 resource "vault_keymgmt_replicate_key" "test2" {
-  path     = vault_mount.test.path
+  mount    = vault_mount.test.path
   kms_name = vault_keymgmt_aws_kms.test.name
   key_name = vault_keymgmt_key.test2.name
   

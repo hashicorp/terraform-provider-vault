@@ -33,7 +33,7 @@ type DistributeKeyResource struct {
 
 type DistributeKeyResourceModel struct {
 	base.BaseModel
-	Path       types.String `tfsdk:"path"`
+	Mount      types.String `tfsdk:"mount"`
 	KMSName    types.String `tfsdk:"kms_name"`
 	KeyName    types.String `tfsdk:"key_name"`
 	Purpose    types.Set    `tfsdk:"purpose"`
@@ -55,9 +55,9 @@ func (r *DistributeKeyResource) Schema(ctx context.Context, req resource.SchemaR
 		MarkdownDescription: "Distributes a Key Management key to a KMS provider",
 
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` resource with `type = \"keymgmt\"`. Use `vault_mount.<name>.path` here.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -118,10 +118,10 @@ func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	vaultPath := data.Path.ValueString()
+	vaultPath := data.Mount.ValueString()
 	kmsName := data.KMSName.ValueString()
 	keyName := data.KeyName.ValueString()
-	apiPath := buildDistributeKeyPath(vaultPath, kmsName, keyName)
+	apiPath := BuildDistributeKeyPath(vaultPath, kmsName, keyName)
 
 	writeData := map[string]interface{}{}
 
@@ -138,7 +138,7 @@ func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateR
 
 	writeResp, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData)
 	if err != nil {
-		resp.Diagnostics.AddError(errCreating("Key Management key distribution", apiPath, err))
+		resp.Diagnostics.AddError(ErrCreating(ResourceTypeKeyDistribution, apiPath, err))
 		return
 	}
 
@@ -175,10 +175,10 @@ func (r *DistributeKeyResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	// Build API path from data fields
-	apiPath := buildDistributeKeyPath(data.Path.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
+	apiPath := BuildDistributeKeyPath(data.Mount.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("Key Management key distribution", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeKeyDistribution, apiPath, err))
 		return
 	}
 
@@ -214,7 +214,7 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	// Build API path from fields
-	apiPath := buildDistributeKeyPath(plan.Path.ValueString(), plan.KMSName.ValueString(), plan.KeyName.ValueString())
+	apiPath := BuildDistributeKeyPath(plan.Mount.ValueString(), plan.KMSName.ValueString(), plan.KeyName.ValueString())
 	writeData := map[string]interface{}{}
 	hasChanges := false
 
@@ -237,7 +237,7 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 	if hasChanges {
 		writeResp, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData)
 		if err != nil {
-			resp.Diagnostics.AddError(errUpdating("Key Management key distribution", apiPath, err))
+			resp.Diagnostics.AddError(ErrUpdating(ResourceTypeKeyDistribution, apiPath, err))
 			return
 		}
 
@@ -271,9 +271,9 @@ func (r *DistributeKeyResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 
 	// Build API path from fields
-	apiPath := buildDistributeKeyPath(data.Path.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
+	apiPath := BuildDistributeKeyPath(data.Mount.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
-		resp.Diagnostics.AddError(errDeleting("Key Management key distribution", apiPath, err))
+		resp.Diagnostics.AddError(ErrDeleting(ResourceTypeKeyDistribution, apiPath, err))
 		return
 	}
 }
@@ -290,7 +290,7 @@ func (r *DistributeKeyResource) ImportState(ctx context.Context, req resource.Im
 	}
 
 	// Parse the import ID to extract path, kms_name, key_name
-	mountPath, kmsName, keyName, err := parseDistributeKeyPath(req.ID)
+	mountPath, kmsName, keyName, err := ParseDistributeKeyPath(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing import identifier",
@@ -301,7 +301,7 @@ func (r *DistributeKeyResource) ImportState(ctx context.Context, req resource.Im
 	}
 
 	// Set the individual fields in state
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mountPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mountPath)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldKMSName), kmsName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldKeyName), keyName)...)
 
@@ -334,7 +334,7 @@ func parseDistributeKeyResponse(ctx context.Context, responseData map[string]int
 	}
 
 	// Set key_id - always to a known value (never Unknown)
-	if keyID := setStringFromInterface(responseData["key_id"]); !keyID.IsNull() {
+	if keyID := SetStringFromInterface(responseData["key_id"]); !keyID.IsNull() {
 		data.KeyID = keyID
 	} else if data.KeyID.IsUnknown() {
 		data.KeyID = types.StringNull()

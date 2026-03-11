@@ -32,7 +32,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "key" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = "multi-region-key"
   type = "aes256-gcm96"
   
@@ -40,7 +40,7 @@ resource "vault_keymgmt_key" "key" {
 }
 
 resource "vault_keymgmt_aws_kms" "aws" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = "aws-kms"
   key_collection = "us-west-2"
   access_key     = var.aws_access_key_id
@@ -48,14 +48,14 @@ resource "vault_keymgmt_aws_kms" "aws" {
 }
 
 resource "vault_keymgmt_distribute_key" "dist" {
-  path     = vault_mount.keymgmt.path
+  mount    = vault_mount.keymgmt.path
   kms_name = vault_keymgmt_aws_kms.aws.name
   key_name = vault_keymgmt_key.key.name
   purpose  = ["encrypt", "decrypt"]
 }
 
 resource "vault_keymgmt_replicate_key" "replicate" {
-  path     = vault_mount.keymgmt.path
+  mount    = vault_mount.keymgmt.path
   kms_name = vault_keymgmt_aws_kms.aws.name
   key_name = vault_keymgmt_key.key.name
   
@@ -73,11 +73,13 @@ The following arguments are supported:
   [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `path` - (Required) Path where the Key Management secrets engine is mounted.
+* `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
+  `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
+  `vault_mount.<name>.path` here.
 
-* `kms_name` - (Required) Name of the AWS KMS provider (configured via `vault_keymgmt_aws_kms`).
+* `kms_name` - (Required, Forces new resource) Name of the AWS KMS provider (configured via `vault_keymgmt_aws_kms`).
 
-* `key_name` - (Required) Name of the key to replicate (created via `vault_keymgmt_key`). The key must have `replica_regions` configured and must already be distributed to the AWS KMS provider.
+* `key_name` - (Required, Forces new resource) Name of the key to replicate (created via `vault_keymgmt_key`). The key must have `replica_regions` configured and must already be distributed to the AWS KMS provider.
 
 ## Attributes Reference
 

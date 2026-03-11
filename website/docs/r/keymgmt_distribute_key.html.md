@@ -30,13 +30,13 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "encryption_key" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = "aws-encryption-key"
   type = "aes256-gcm96"
 }
 
 resource "vault_keymgmt_aws_kms" "aws" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = "aws-kms"
   key_collection = "us-west-2"
   access_key     = var.aws_access_key_id
@@ -44,7 +44,7 @@ resource "vault_keymgmt_aws_kms" "aws" {
 }
 
 resource "vault_keymgmt_distribute_key" "aws_dist" {
-  path       = vault_mount.keymgmt.path
+  mount      = vault_mount.keymgmt.path
   kms_name   = vault_keymgmt_aws_kms.aws.name
   key_name   = vault_keymgmt_key.encryption_key.name
   purpose    = ["encrypt", "decrypt"]
@@ -58,14 +58,14 @@ resource "vault_keymgmt_distribute_key" "aws_dist" {
 # When AWS credentials are configured via environment variables or IAM roles
 # on the Vault server, you can omit access_key and secret_key
 resource "vault_keymgmt_aws_kms" "aws" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = "aws-kms"
   key_collection = "us-west-2"
   # No credentials - Vault uses AWS SDK credential chain
 }
 
 resource "vault_keymgmt_distribute_key" "aws_dist" {
-  path     = vault_mount.keymgmt.path
+  mount    = vault_mount.keymgmt.path
   kms_name = vault_keymgmt_aws_kms.aws.name
   key_name = vault_keymgmt_key.encryption_key.name
   purpose  = ["encrypt", "decrypt"]
@@ -76,13 +76,13 @@ resource "vault_keymgmt_distribute_key" "aws_dist" {
 
 ```hcl
 resource "vault_keymgmt_key" "signing_key" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = "azure-signing-key"
   type = "rsa-2048"
 }
 
 resource "vault_keymgmt_azure_kms" "azure" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = "azure-kv"
   key_collection = "my-keyvault"
   tenant_id      = var.azure_tenant_id
@@ -91,7 +91,7 @@ resource "vault_keymgmt_azure_kms" "azure" {
 }
 
 resource "vault_keymgmt_distribute_key" "azure_dist" {
-  path     = vault_mount.keymgmt.path
+  mount    = vault_mount.keymgmt.path
   kms_name = vault_keymgmt_azure_kms.azure.name
   key_name = vault_keymgmt_key.signing_key.name
   purpose  = ["sign", "verify"]
@@ -102,20 +102,20 @@ resource "vault_keymgmt_distribute_key" "azure_dist" {
 
 ```hcl
 resource "vault_keymgmt_key" "gcp_key" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = "gcp-encryption-key"
   type = "aes256-gcm96"
 }
 
 resource "vault_keymgmt_gcp_kms" "gcp" {
-  path           = vault_mount.keymgmt.path
+  mount          = vault_mount.keymgmt.path
   name           = "gcp-kms"
   key_collection = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   credentials    = file("gcp-credentials.json")
 }
 
 resource "vault_keymgmt_distribute_key" "gcp_dist" {
-  path       = vault_mount.keymgmt.path
+  mount      = vault_mount.keymgmt.path
   kms_name   = vault_keymgmt_gcp_kms.gcp.name
   key_name   = vault_keymgmt_key.gcp_key.name
   purpose    = ["encrypt", "decrypt"]
@@ -133,11 +133,13 @@ The following arguments are supported:
   [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `path` - (Required) Path where the Key Management secrets engine is mounted.
+* `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
+  `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
+  `vault_mount.<name>.path` here.
 
-* `kms_name` - (Required) Name of the KMS provider to distribute the key to (configured via `vault_keymgmt_aws_kms`, `vault_keymgmt_azure_kms`, or `vault_keymgmt_gcp_kms`).
+* `kms_name` - (Required, Forces new resource) Name of the KMS provider to distribute the key to (configured via `vault_keymgmt_aws_kms`, `vault_keymgmt_azure_kms`, or `vault_keymgmt_gcp_kms`).
 
-* `key_name` - (Required) Name of the key to distribute (created via `vault_keymgmt_key`).
+* `key_name` - (Required, Forces new resource) Name of the key to distribute (created via `vault_keymgmt_key`).
 
 * `purpose` - (Required) List of key purposes. Valid values depend on the key type and target KMS:
   - For symmetric keys (AES): `["encrypt", "decrypt"]`
