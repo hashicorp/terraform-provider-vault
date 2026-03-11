@@ -45,7 +45,7 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 			{
 				Config: testKeymgmtGCPKMSConfig(mount, kmsName, keyCollection, gcpProject, gcpLocation, gcpCredentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", keyCollection),
 					resource.TestCheckResourceAttr(resourceName, "project", gcpProject),
@@ -58,7 +58,7 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccKeymgmtGCPKMSImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
 					"service_account_file",
 				},
@@ -73,9 +73,9 @@ func testAccKeymgmtGCPKMSImportStateIdFunc(resourceName string) resource.ImportS
 		if !ok {
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
-		path := rs.Primary.Attributes[consts.FieldPath]
+		mount := rs.Primary.Attributes[consts.FieldMount]
 		name := rs.Primary.Attributes[consts.FieldName]
-		return fmt.Sprintf("%s/kms/%s", path, name), nil
+		return fmt.Sprintf("%s/kms/%s", mount, name), nil
 	}
 }
 
@@ -104,7 +104,7 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 			{
 				Config: testKeymgmtGCPKMSConfig(mount, kmsName, initialKeyCollection, gcpProject, initialLocation, gcpCredentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", initialKeyCollection),
 					resource.TestCheckResourceAttr(resourceName, "location", initialLocation),
@@ -113,7 +113,7 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 			{
 				Config: testKeymgmtGCPKMSConfig(mount, kmsName, updatedKeyCollection, gcpProject, updatedLocation, gcpCredentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", updatedKeyCollection),
 					resource.TestCheckResourceAttr(resourceName, "location", updatedLocation),
@@ -147,11 +147,11 @@ func TestAccKeymgmtGCPKMS_multiple(t *testing.T) {
 			{
 				Config: testKeymgmtGCPKMSConfigMultiple(mount, kmsName1, kmsName2, keyCollection1, keyCollection2, gcpProject, gcpCredentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName1, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, kmsName1),
 					resource.TestCheckResourceAttr(resourceName1, "key_collection", keyCollection1),
 					resource.TestCheckResourceAttr(resourceName1, "location", "us-east1"),
-					resource.TestCheckResourceAttr(resourceName2, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldName, kmsName2),
 					resource.TestCheckResourceAttr(resourceName2, "key_collection", keyCollection2),
 					resource.TestCheckResourceAttr(resourceName2, "location", "us-west1"),
@@ -184,7 +184,7 @@ func TestAccKeymgmtGCPKMS_namespace(t *testing.T) {
 			{
 				Config: testKeymgmtGCPKMSConfigNamespace(namespace, mount, kmsName, keyCollection, gcpProject, "us-east1", gcpCredentials),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", keyCollection),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
@@ -202,7 +202,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_gcp_kms" "test" {
-  path                 = vault_mount.keymgmt.path
+  mount                = vault_mount.keymgmt.path
   name                 = %q
   key_collection       = %q
   service_account_file = %q
@@ -220,7 +220,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_gcp_kms" "test1" {
-  path                 = vault_mount.keymgmt.path
+  mount                = vault_mount.keymgmt.path
   name                 = %q
   key_collection       = %q
   service_account_file = %q
@@ -229,7 +229,7 @@ resource "vault_keymgmt_gcp_kms" "test1" {
 }
 
 resource "vault_keymgmt_gcp_kms" "test2" {
-  path                 = vault_mount.keymgmt.path
+  mount                = vault_mount.keymgmt.path
   name                 = %q
   key_collection       = %q
   service_account_file = %q
@@ -254,7 +254,7 @@ resource "vault_mount" "keymgmt" {
 
 resource "vault_keymgmt_gcp_kms" "test" {
   namespace            = vault_namespace.test.path
-  path                 = vault_mount.keymgmt.path
+  mount                = vault_mount.keymgmt.path
   name                 = %q
   key_collection       = %q
   service_account_file = %q

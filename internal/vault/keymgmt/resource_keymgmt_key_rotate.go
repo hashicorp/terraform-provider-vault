@@ -32,7 +32,7 @@ type KeyRotateResource struct {
 
 type KeyRotateResourceModel struct {
 	base.BaseModel
-	Path          types.String `tfsdk:"path"`
+	Mount         types.String `tfsdk:"mount"`
 	Name          types.String `tfsdk:"name"`
 	LatestVersion types.Int64  `tfsdk:"latest_version"`
 }
@@ -50,9 +50,10 @@ func (r *KeyRotateResource) Schema(ctx context.Context, req resource.SchemaReque
 		MarkdownDescription: "Rotates a Key Management key",
 
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` resource with `type = \"keymgmt\"`. Use `vault_mount.<name>.path` here.",
+
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -86,20 +87,20 @@ func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	vaultPath := data.Path.ValueString()
+	vaultPath := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	apiPath := buildKeyRotatePath(vaultPath, name)
+	apiPath := BuildKeyRotatePath(vaultPath, name)
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, map[string]interface{}{}); err != nil {
-		resp.Diagnostics.AddError(errCreating("Key Management key rotation", apiPath, err))
+		resp.Diagnostics.AddError(ErrCreating(ResourceTypeKeyRotation, apiPath, err))
 		return
 	}
 
 	// Read back the key metadata to get latest_version
-	keyPath := buildKeyPath(vaultPath, name)
+	keyPath := BuildKeyPath(vaultPath, name)
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("Key Management key", keyPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeKey, keyPath, err))
 		return
 	}
 
@@ -131,10 +132,10 @@ func (r *KeyRotateResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	// Build the key path and read key metadata
-	keyPath := buildKeyPath(data.Path.ValueString(), data.Name.ValueString())
+	keyPath := BuildKeyPath(data.Mount.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("Key Management key", keyPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeKey, keyPath, err))
 		return
 	}
 
@@ -188,7 +189,7 @@ func (r *KeyRotateResource) ImportState(ctx context.Context, req resource.Import
 	// Remove the "rotate" suffix to parse the base key path
 	parts = parts[:len(parts)-1]
 	keyPath := strings.Join(parts, "/")
-	mountPath, keyName, err := parseKeyPath(keyPath)
+	mountPath, keyName, err := ParseKeyPath(keyPath)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing import identifier",
@@ -199,7 +200,7 @@ func (r *KeyRotateResource) ImportState(ctx context.Context, req resource.Import
 	}
 
 	// Set the individual fields in state
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mountPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mountPath)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), keyName)...)
 
 	// Handle namespace if needed
@@ -220,7 +221,7 @@ func (r *KeyRotateResource) ImportState(ctx context.Context, req resource.Import
 func (r *KeyRotateResource) parseKeyRotateResponse(responseData map[string]interface{}, data *KeyRotateResourceModel) {
 	// Only set latest_version when it is returned and can be parsed from the API response.
 	if v, ok := responseData["latest_version"]; ok && v != nil {
-		if result := setInt64FromInterface(v); !result.IsNull() {
+		if result := SetInt64FromInterface(v); !result.IsNull() {
 			data.LatestVersion = result
 		}
 	}

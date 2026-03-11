@@ -31,7 +31,7 @@ type GCPKMSResource struct {
 
 type GCPKMSResourceModel struct {
 	base.BaseModel
-	Path               types.String `tfsdk:"path"`
+	Mount              types.String `tfsdk:"mount"`
 	Name               types.String `tfsdk:"name"`
 	KeyCollection      types.String `tfsdk:"key_collection"`
 	ServiceAccountFile types.String `tfsdk:"service_account_file"`
@@ -52,9 +52,10 @@ func (r *GCPKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		MarkdownDescription: "Manages a GCP Cloud KMS provider for Vault Key Management",
 
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Path where the Key Management secrets engine is mounted",
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` resource with `type = \"keymgmt\"`. Use `vault_mount.<name>.path` here.",
+
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -101,9 +102,9 @@ func (r *GCPKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	vaultPath := data.Path.ValueString()
+	vaultPath := data.Mount.ValueString()
 	name := data.Name.ValueString()
-	apiPath := buildKMSPath(vaultPath, name)
+	apiPath := BuildKMSPath(vaultPath, name)
 
 	writeData := map[string]interface{}{
 		"provider":       ProviderGCPCKMS,
@@ -119,14 +120,14 @@ func (r *GCPKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 	writeData["credentials"] = creds
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-		resp.Diagnostics.AddError(errCreating("GCP Cloud KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrCreating(ResourceTypeGCPCKMS, apiPath, err))
 		return
 	}
 
 	// Read back the state from Vault
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("GCP Cloud KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeGCPCKMS, apiPath, err))
 		return
 	}
 
@@ -158,10 +159,10 @@ func (r *GCPKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	// Build API path and read from Vault
-	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
+	apiPath := BuildKMSPath(data.Mount.ValueString(), data.Name.ValueString())
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("GCP Cloud KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeGCPCKMS, apiPath, err))
 		return
 	}
 
@@ -194,7 +195,7 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Build API path from fields
-	apiPath := buildKMSPath(plan.Path.ValueString(), plan.Name.ValueString())
+	apiPath := BuildKMSPath(plan.Mount.ValueString(), plan.Name.ValueString())
 	writeData := map[string]interface{}{
 		"provider": ProviderGCPCKMS,
 	}
@@ -232,7 +233,7 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	if hasChanges {
 		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-			resp.Diagnostics.AddError(errUpdating("GCP Cloud KMS provider", apiPath, err))
+			resp.Diagnostics.AddError(ErrUpdating(ResourceTypeGCPCKMS, apiPath, err))
 			return
 		}
 	}
@@ -240,7 +241,7 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 	// Read back the state from Vault
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
 	if err != nil {
-		resp.Diagnostics.AddError(errReading("GCP Cloud KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeGCPCKMS, apiPath, err))
 		return
 	}
 
@@ -272,9 +273,9 @@ func (r *GCPKMSResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 
 	// Build API path from fields
-	apiPath := buildKMSPath(data.Path.ValueString(), data.Name.ValueString())
+	apiPath := BuildKMSPath(data.Mount.ValueString(), data.Name.ValueString())
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
-		resp.Diagnostics.AddError(errDeleting("GCP Cloud KMS provider", apiPath, err))
+		resp.Diagnostics.AddError(ErrDeleting(ResourceTypeGCPCKMS, apiPath, err))
 		return
 	}
 }
@@ -291,7 +292,7 @@ func (r *GCPKMSResource) ImportState(ctx context.Context, req resource.ImportSta
 	}
 
 	// Parse the import ID to extract path and name
-	mountPath, kmsName, err := parseKMSPath(req.ID)
+	mountPath, kmsName, err := ParseKMSPath(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing import identifier",
@@ -302,7 +303,7 @@ func (r *GCPKMSResource) ImportState(ctx context.Context, req resource.ImportSta
 	}
 
 	// Set the individual fields in state
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mountPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mountPath)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), kmsName)...)
 
 	// Handle namespace if needed

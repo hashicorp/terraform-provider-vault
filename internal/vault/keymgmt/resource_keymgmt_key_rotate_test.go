@@ -29,7 +29,7 @@ func TestAccKeymgmtKeyRotate_basic(t *testing.T) {
 			{
 				Config: testKeymgmtKeyRotate_initialConfig(mount, keyName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
 				),
@@ -39,7 +39,7 @@ func TestAccKeymgmtKeyRotate_basic(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccKeymgmtKeyRotateImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 			},
 		},
 	})
@@ -58,7 +58,7 @@ func TestAccKeymgmtKeyRotate_multiple(t *testing.T) {
 			{
 				Config: testKeymgmtKeyRotate_singleRotation(mount, keyName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
 				),
@@ -66,7 +66,7 @@ func TestAccKeymgmtKeyRotate_multiple(t *testing.T) {
 			{
 				Config: testKeymgmtKeyRotate_multipleRotations(mount, keyName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					// Verify that latest_version has increased
 					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
@@ -84,14 +84,14 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path             = vault_mount.keymgmt.path
+  mount            = vault_mount.keymgmt.path
   name             = %q
   type             = "aes256-gcm96"
   deletion_allowed = true
 }
 
 resource "vault_keymgmt_key_rotate" "test" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = vault_keymgmt_key.test.name
 }
 `, mount, keyName)
@@ -105,14 +105,14 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path             = vault_mount.keymgmt.path
+  mount            = vault_mount.keymgmt.path
   name             = %q
   type             = "aes256-gcm96"
   deletion_allowed = true
 }
 
 resource "vault_keymgmt_key_rotate" "test" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = vault_keymgmt_key.test.name
 }
 `, mount, keyName)
@@ -126,19 +126,19 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  path             = vault_mount.keymgmt.path
+  mount            = vault_mount.keymgmt.path
   name             = %q
   type             = "aes256-gcm96"
   deletion_allowed = true
 }
 
 resource "vault_keymgmt_key_rotate" "test" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = vault_keymgmt_key.test.name
 }
 
 resource "vault_keymgmt_key_rotate" "second" {
-  path = vault_mount.keymgmt.path
+  mount = vault_mount.keymgmt.path
   name = vault_keymgmt_key.test.name
   
   depends_on = [vault_keymgmt_key_rotate.test]
@@ -152,8 +152,8 @@ func testAccKeymgmtKeyRotateImportStateIdFunc(resourceName string) resource.Impo
 		if !ok {
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
-		path := rs.Primary.Attributes[consts.FieldPath]
+		mount := rs.Primary.Attributes[consts.FieldMount]
 		name := rs.Primary.Attributes[consts.FieldName]
-		return fmt.Sprintf("%s/key/%s/rotate", path, name), nil
+		return fmt.Sprintf("%s/key/%s/rotate", mount, name), nil
 	}
 }

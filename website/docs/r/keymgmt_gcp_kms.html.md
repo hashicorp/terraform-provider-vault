@@ -30,7 +30,7 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_gcp_kms" "production" {
-  path                 = vault_mount.keymgmt.path
+  mount                = vault_mount.keymgmt.path
   name                 = "gcp-production"
   key_collection       = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   service_account_file = file("gcp-credentials.json")
@@ -49,9 +49,11 @@ The following arguments are supported:
   [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `path` - (Required) Path where the Key Management secrets engine is mounted.
+* `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
+  `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
+  `vault_mount.<name>.path` here.
 
-* `name` - (Required) Unique name for this GCP Cloud KMS provider. This cannot be changed after creation.
+* `name` - (Required, Forces new resource) Unique name for this GCP Cloud KMS provider. This cannot be changed after creation.
 
 * `key_collection` - (Required) Full resource name of the GCP KMS key ring where keys will be created. Format: `projects/{project}/locations/{location}/keyRings/{keyring}`
 
