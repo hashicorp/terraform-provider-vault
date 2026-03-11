@@ -121,11 +121,6 @@ resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
   userattr    = "%s"
   groupdn     = "%s"
   groupattr   = "%s"
-  
-  depends_on = [
-  vault_kerberos_auth_backend_config.config,
-  vault_kerberos_auth_backend_ldap_config.ldap
-  ]
 }
 
 ephemeral "vault_kerberos_auth_backend_login" "login" {
@@ -138,6 +133,11 @@ ephemeral "vault_kerberos_auth_backend_login" "login" {
   realm                    = "%s"
   disable_fast_negotiation = false
   remove_instance_name     = false
+  
+  depends_on = [
+  vault_kerberos_auth_backend_config.config,
+  vault_kerberos_auth_backend_ldap_config.ldap
+  ]
 }
 
 provider "echo" {
