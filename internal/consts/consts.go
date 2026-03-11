@@ -738,8 +738,6 @@ const (
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
 	FieldDeferInitialCreds                    = "defer_initial_creds"
-	FieldTokenExplicitMaxTTL                  = "token_explicit_max_ttl"
-	FieldTokenNoDefaultPolicy                 = "token_no_default_policy"
 	FieldTokenDefaultAudiences                = "token_default_audiences"
 	FieldDeletionAllowed                      = "deletion_allowed"
 	FieldConvergentEncryption                 = "convergent_encryption"
@@ -903,7 +901,6 @@ const (
 	FieldAddGroupAliases            = "add_group_aliases"
 	FieldTokenExplicitMaxTTL        = "token_explicit_max_ttl"
 	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
-	FieldAliasMetadata              = "alias_metadata"
 
 	/*
 		common environment variables
