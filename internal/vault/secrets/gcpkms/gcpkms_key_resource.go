@@ -7,11 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -185,7 +186,7 @@ func (r *GCPKMSSecretBackendKeyResource) Create(ctx context.Context, req resourc
 		return
 	}
 
-	log.Printf("[DEBUG] Creating GCP KMS key at %q with data: %+v", keyPath, keyData)
+	tflog.Debug(ctx, "Creating GCP KMS key", map[string]any{"path": keyPath})
 	if _, err := cli.Logical().WriteWithContext(ctx, keyPath, keyData); err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating GCP KMS key",
@@ -225,7 +226,7 @@ func (r *GCPKMSSecretBackendKeyResource) Read(ctx context.Context, req resource.
 	name := data.Name.ValueString()
 	keyPath := buildKeyPath(backend, name)
 
-	log.Printf("[DEBUG] Reading GCP KMS key from %q", keyPath)
+	tflog.Debug(ctx, "Reading GCP KMS key", map[string]any{"path": keyPath})
 	secret, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -236,7 +237,7 @@ func (r *GCPKMSSecretBackendKeyResource) Read(ctx context.Context, req resource.
 	}
 
 	if secret == nil {
-		log.Printf("[WARN] GCP KMS key not found at %q, removing from state", keyPath)
+		tflog.Warn(ctx, "GCP KMS key not found, removing from state", map[string]any{"path": keyPath})
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -358,7 +359,7 @@ func (r *GCPKMSSecretBackendKeyResource) Update(ctx context.Context, req resourc
 	hasChanges := rotationChanged || labelsChanged
 
 	if hasChanges && len(updateData) > 0 {
-		log.Printf("[DEBUG] Updating GCP KMS key at %q with data: %+v", keyPath, updateData)
+		tflog.Debug(ctx, "Updating GCP KMS key", map[string]any{"path": keyPath})
 		if _, err := cli.Logical().WriteWithContext(ctx, keyPath, updateData); err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating GCP KMS key",
@@ -399,7 +400,7 @@ func (r *GCPKMSSecretBackendKeyResource) Delete(ctx context.Context, req resourc
 	name := data.Name.ValueString()
 	keyPath := buildKeyPath(backend, name)
 
-	log.Printf("[DEBUG] Deleting GCP KMS key at %q", keyPath)
+	tflog.Debug(ctx, "Deleting GCP KMS key", map[string]any{"path": keyPath})
 	if _, err := cli.Logical().DeleteWithContext(ctx, keyPath); err != nil {
 		// Check if this is the known issue with asymmetric keys and rotation
 		// This is a Vault backend bug where it tries to disable rotation on asymmetric keys during deletion
@@ -410,7 +411,7 @@ func (r *GCPKMSSecretBackendKeyResource) Delete(ctx context.Context, req resourc
 		errStr := err.Error()
 		if strings.Contains(errStr, "failed to disable rotation") &&
 			strings.Contains(errStr, "rotation_period must not be set if purpose is ASYMMETRIC_") {
-			log.Printf("[WARN] Ignoring rotation disable error for asymmetric key during deletion: %s", err)
+			tflog.Warn(ctx, "Ignoring rotation disable error for asymmetric key during deletion", map[string]any{"error": err.Error()})
 			// Continue with removal from state despite the Vault error
 			// The key reference is removed from Vault's tracking even if GCP deletion partially failed
 			return
@@ -468,12 +469,12 @@ func buildKeyConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendKeyMo
 	}
 
 	keyData[consts.FieldKeyRing] = data.KeyRing.ValueString()
-	log.Printf("[DEBUG] buildKeyConfigFromModel - Using key_ring: %s", data.KeyRing.ValueString())
+	tflog.Debug(ctx, "buildKeyConfigFromModel: using key_ring", map[string]any{"key_ring": data.KeyRing.ValueString()})
 
 	// crypto_key is optional - if not specified, defaults to the Vault key name
 	if !data.CryptoKey.IsNull() && data.CryptoKey.ValueString() != "" {
 		keyData[consts.FieldCryptoKey] = data.CryptoKey.ValueString()
-		log.Printf("[DEBUG] buildKeyConfigFromModel - Using custom crypto_key name: %s", data.CryptoKey.ValueString())
+		tflog.Debug(ctx, "buildKeyConfigFromModel: using custom crypto_key name", map[string]any{"crypto_key": data.CryptoKey.ValueString()})
 	}
 
 	// Add optional fields for key creation

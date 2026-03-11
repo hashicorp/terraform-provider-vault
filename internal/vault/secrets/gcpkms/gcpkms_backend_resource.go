@@ -6,8 +6,9 @@ package gcpkms
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -115,8 +116,11 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 	// This is the only way to access write-only field values.
 	data.CredentialsWO = configModel.CredentialsWO
 
-	log.Printf("[DEBUG] Create: credentials_wo from Config - is_null: %v, is_unknown: %v, length: %d",
-		data.CredentialsWO.IsNull(), data.CredentialsWO.IsUnknown(), len(data.CredentialsWO.ValueString()))
+	tflog.Debug(ctx, "Create: credentials_wo from Config", map[string]any{
+		"is_null":    data.CredentialsWO.IsNull(),
+		"is_unknown": data.CredentialsWO.IsUnknown(),
+		"length":     len(data.CredentialsWO.ValueString()),
+	})
 
 	// Validate that credentials are actually present
 	if data.CredentialsWO.IsNull() || data.CredentialsWO.IsUnknown() || data.CredentialsWO.ValueString() == "" {
@@ -146,7 +150,7 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	log.Printf("[DEBUG] Configuring GCP KMS backend at %q", configPath)
+	tflog.Debug(ctx, "Configuring GCP KMS backend", map[string]any{"path": configPath})
 	if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
 		resp.Diagnostics.AddError(
 			"Error configuring GCP KMS backend",
@@ -184,7 +188,7 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 	mountPath := data.Mount.ValueString()
 	configPath := fmt.Sprintf("%s/config", mountPath)
 
-	log.Printf("[DEBUG] Reading GCP KMS backend config from %q", configPath)
+	tflog.Debug(ctx, "Reading GCP KMS backend config", map[string]any{"path": configPath})
 	secret, err := cli.Logical().ReadWithContext(ctx, configPath)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -194,7 +198,7 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 	}
 
 	if secret == nil {
-		log.Printf("[WARN] GCP KMS backend config not found at %q, removing from state", configPath)
+		tflog.Warn(ctx, "GCP KMS backend config not found, removing from state", map[string]any{"path": configPath})
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -242,9 +246,11 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 		// Copy the write-only credential value from Config into our plan model
 		plan.CredentialsWO = configModel.CredentialsWO
 
-		log.Printf("[DEBUG] Update: credentials version changed (%v -> %v), including credentials (length: %d)",
-			state.CredentialsWOVersion.ValueInt64(), plan.CredentialsWOVersion.ValueInt64(),
-			len(plan.CredentialsWO.ValueString()))
+		tflog.Debug(ctx, "Update: credentials version changed, including credentials", map[string]any{
+			"old_version": state.CredentialsWOVersion.ValueInt64(),
+			"new_version": plan.CredentialsWOVersion.ValueInt64(),
+			"length":      len(plan.CredentialsWO.ValueString()),
+		})
 
 		// Validate that credentials are actually present
 		if plan.CredentialsWO.IsNull() || plan.CredentialsWO.IsUnknown() || plan.CredentialsWO.ValueString() == "" {
@@ -272,8 +278,10 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	log.Printf("[DEBUG] Updating GCP KMS backend config at %q (credentials included: %v)",
-		configPath, includeCredentials)
+	tflog.Debug(ctx, "Updating GCP KMS backend config", map[string]any{
+		"path":                 configPath,
+		"credentials_included": includeCredentials,
+	})
 	if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating GCP KMS backend config",
@@ -303,7 +311,7 @@ func (r *GCPKMSSecretBackendResource) Delete(ctx context.Context, req resource.D
 	}
 	// This resource owns only the /config endpoint.
 	// The mount lifecycle (create/destroy) is managed by vault_mount.
-	log.Printf("[DEBUG] vault_gcpkms_secret_backend config deleted (mount %q managed by vault_mount)", data.Mount.ValueString())
+	tflog.Debug(ctx, "vault_gcpkms_secret_backend config deleted (mount managed by vault_mount)", map[string]any{"mount": data.Mount.ValueString()})
 }
 
 func (r *GCPKMSSecretBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
