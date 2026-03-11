@@ -5,7 +5,6 @@ package keymgmt_test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -26,15 +25,7 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 	resourceType := "vault_keymgmt_gcp_kms"
 	resourceName := resourceType + ".test"
 
-	gcpLocation := os.Getenv("GOOGLE_CLOUD_LOCATION")
-	if gcpLocation == "" {
-		gcpLocation = "us-east1"
-	}
-
-	gcpKeyRing := os.Getenv("GOOGLE_CLOUD_KEYRING")
-	if gcpKeyRing == "" {
-		gcpKeyRing = "test-keyring"
-	}
+	gcpLocation, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
 
 	keyCollection := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", gcpProject, gcpLocation, gcpKeyRing)
 
@@ -48,9 +39,6 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", keyCollection),
-					resource.TestCheckResourceAttr(resourceName, "project", gcpProject),
-					resource.TestCheckResourceAttr(resourceName, "location", gcpLocation),
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{
@@ -60,7 +48,8 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
-					"service_account_file",
+					consts.FieldCredentialsWO,
+					consts.FieldCredentialsWOVersion,
 				},
 			},
 		},
@@ -87,10 +76,7 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 	resourceType := "vault_keymgmt_gcp_kms"
 	resourceName := resourceType + ".test"
 
-	gcpKeyRing := os.Getenv("GOOGLE_CLOUD_KEYRING")
-	if gcpKeyRing == "" {
-		gcpKeyRing = "test-keyring"
-	}
+	_, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
 
 	initialLocation := "us-east1"
 	updatedLocation := "us-west1"
@@ -107,7 +93,6 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", initialKeyCollection),
-					resource.TestCheckResourceAttr(resourceName, "location", initialLocation),
 				),
 			},
 			{
@@ -116,7 +101,6 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", updatedKeyCollection),
-					resource.TestCheckResourceAttr(resourceName, "location", updatedLocation),
 				),
 			},
 		},
@@ -132,10 +116,7 @@ func TestAccKeymgmtGCPKMS_multiple(t *testing.T) {
 	resourceName1 := "vault_keymgmt_gcp_kms.test1"
 	resourceName2 := "vault_keymgmt_gcp_kms.test2"
 
-	gcpKeyRing := os.Getenv("GOOGLE_CLOUD_KEYRING")
-	if gcpKeyRing == "" {
-		gcpKeyRing = "test-keyring"
-	}
+	_, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
 
 	keyCollection1 := fmt.Sprintf("projects/%s/locations/us-east1/keyRings/%s", gcpProject, gcpKeyRing)
 	keyCollection2 := fmt.Sprintf("projects/%s/locations/us-west1/keyRings/%s", gcpProject, gcpKeyRing)
@@ -150,11 +131,9 @@ func TestAccKeymgmtGCPKMS_multiple(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, kmsName1),
 					resource.TestCheckResourceAttr(resourceName1, "key_collection", keyCollection1),
-					resource.TestCheckResourceAttr(resourceName1, "location", "us-east1"),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldName, kmsName2),
 					resource.TestCheckResourceAttr(resourceName2, "key_collection", keyCollection2),
-					resource.TestCheckResourceAttr(resourceName2, "location", "us-west1"),
 				),
 			},
 		},
@@ -170,10 +149,7 @@ func TestAccKeymgmtGCPKMS_namespace(t *testing.T) {
 	resourceType := "vault_keymgmt_gcp_kms"
 	resourceName := resourceType + ".test"
 
-	gcpKeyRing := os.Getenv("GOOGLE_CLOUD_KEYRING")
-	if gcpKeyRing == "" {
-		gcpKeyRing = "test-keyring"
-	}
+	_, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
 
 	keyCollection := fmt.Sprintf("projects/%s/locations/us-east1/keyRings/%s", gcpProject, gcpKeyRing)
 
@@ -202,12 +178,15 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_gcp_kms" "test" {
-  mount                = vault_mount.keymgmt.path
-  name                 = %q
-  key_collection       = %q
-  service_account_file = %q
-  project              = %q
-  location             = %q
+  mount          = vault_mount.keymgmt.path
+  name           = %q
+  key_collection = %q
+  credentials_wo = {
+    service_account_file = %q
+    project              = %q
+    location             = %q
+  }
+  credentials_wo_version = 1
 }
 `, mount, kmsName, keyCollection, gcpCredentials, gcpProject, gcpLocation)
 }
@@ -220,21 +199,27 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_gcp_kms" "test1" {
-  mount                = vault_mount.keymgmt.path
-  name                 = %q
-  key_collection       = %q
-  service_account_file = %q
-  project              = %q
-  location             = "us-east1"
+  mount          = vault_mount.keymgmt.path
+  name           = %q
+  key_collection = %q
+  credentials_wo = {
+    service_account_file = %q
+    project              = %q
+    location             = "us-east1"
+  }
+  credentials_wo_version = 1
 }
 
 resource "vault_keymgmt_gcp_kms" "test2" {
-  mount                = vault_mount.keymgmt.path
-  name                 = %q
-  key_collection       = %q
-  service_account_file = %q
-  project              = %q
-  location             = "us-west1"
+  mount          = vault_mount.keymgmt.path
+  name           = %q
+  key_collection = %q
+  credentials_wo = {
+    service_account_file = %q
+    project              = %q
+    location             = "us-west1"
+  }
+  credentials_wo_version = 1
 }
 `, mount, kmsName1, keyCollection1, gcpCredentials, gcpProject,
 		kmsName2, keyCollection2, gcpCredentials, gcpProject)
@@ -253,13 +238,16 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_gcp_kms" "test" {
-  namespace            = vault_namespace.test.path
-  mount                = vault_mount.keymgmt.path
-  name                 = %q
-  key_collection       = %q
-  service_account_file = %q
-  project              = %q
-  location             = %q
+  namespace      = vault_namespace.test.path
+  mount          = vault_mount.keymgmt.path
+  name           = %q
+  key_collection = %q
+  credentials_wo = {
+    service_account_file = %q
+    project              = %q
+    location             = %q
+  }
+  credentials_wo_version = 1
 }
 `, namespace, mount, kmsName, keyCollection, gcpCredentials, gcpProject, gcpLocation)
 }

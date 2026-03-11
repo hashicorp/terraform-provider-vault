@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -31,12 +32,11 @@ type GCPKMSResource struct {
 
 type GCPKMSResourceModel struct {
 	base.BaseModel
-	Mount              types.String `tfsdk:"mount"`
-	Name               types.String `tfsdk:"name"`
-	KeyCollection      types.String `tfsdk:"key_collection"`
-	ServiceAccountFile types.String `tfsdk:"service_account_file"`
-	Project            types.String `tfsdk:"project"`
-	Location           types.String `tfsdk:"location"`
+	Mount                types.String `tfsdk:"mount"`
+	Name                 types.String `tfsdk:"name"`
+	KeyCollection        types.String `tfsdk:"key_collection"`
+	CredentialsWO        types.Map    `tfsdk:"credentials_wo"`
+	CredentialsWOVersion types.Int64  `tfsdk:"credentials_wo_version"`
 }
 
 func NewGCPKMSResource() resource.Resource {
@@ -71,18 +71,19 @@ func (r *GCPKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Required:            true,
 				MarkdownDescription: "GCP Key Ring name where keys are stored",
 			},
-			consts.FieldServiceAccountFile: schema.StringAttribute{
+			consts.FieldCredentialsWO: schema.MapAttribute{
 				Required:            true,
 				Sensitive:           true,
-				MarkdownDescription: "GCP service account JSON credentials file content",
+				WriteOnly:           true,
+				ElementType:         types.StringType,
+				MarkdownDescription: "Map of GCP credentials passed directly to the Vault API. Supported keys are `service_account_file`, `project`, and `location`. This field is write-only and will not be stored in state. Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.",
 			},
-			consts.FieldProject: schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "GCP project ID",
-			},
-			consts.FieldLocation: schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "GCP location/region (e.g., us-central1, global)",
+			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
+				Optional:            true,
+				MarkdownDescription: "Version counter for the write-only `credentials_wo` field. Increment this value whenever you update `credentials_wo` to trigger the change.",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -111,13 +112,22 @@ func (r *GCPKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		"key_collection": data.KeyCollection.ValueString(),
 	}
 
-	// GCP credentials must be sent as a nested credentials object
-	creds := make(map[string]string)
-	creds["service_account_file"] = data.ServiceAccountFile.ValueString()
-	creds["project"] = data.Project.ValueString()
-	creds["location"] = data.Location.ValueString()
+	// Read write-only credentials from Config (the only place write-only values are accessible)
+	var configModel GCPKMSResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.CredentialsWO = configModel.CredentialsWO
 
-	writeData["credentials"] = creds
+	if !data.CredentialsWO.IsNull() && !data.CredentialsWO.IsUnknown() {
+		var creds map[string]string
+		resp.Diagnostics.Append(data.CredentialsWO.ElementsAs(ctx, &creds, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		writeData["credentials"] = creds
+	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 		resp.Diagnostics.AddError(ErrCreating(ResourceTypeGCPCKMS, apiPath, err))
@@ -206,28 +216,23 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		hasChanges = true
 	}
 
-	credentials := map[string]interface{}{}
-	credentialsChanged := false
+	if !plan.CredentialsWOVersion.Equal(state.CredentialsWOVersion) {
+		// Read write-only credentials from Config (the only place write-only values are accessible)
+		var configModel GCPKMSResourceModel
+		resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.CredentialsWO = configModel.CredentialsWO
 
-	if !plan.ServiceAccountFile.Equal(state.ServiceAccountFile) {
-		credentials["service_account_file"] = plan.ServiceAccountFile.ValueString()
-		credentialsChanged = true
-	}
-	if !plan.Project.Equal(state.Project) {
-		credentials["project"] = plan.Project.ValueString()
-		credentialsChanged = true
-	}
-	if !plan.Location.Equal(state.Location) {
-		credentials["location"] = plan.Location.ValueString()
-		credentialsChanged = true
-	}
-
-	if credentialsChanged {
-		// Re-send all credential fields together under the nested credentials object
-		credentials["service_account_file"] = plan.ServiceAccountFile.ValueString()
-		credentials["project"] = plan.Project.ValueString()
-		credentials["location"] = plan.Location.ValueString()
-		writeData["credentials"] = credentials
+		if !plan.CredentialsWO.IsNull() && !plan.CredentialsWO.IsUnknown() {
+			var creds map[string]string
+			resp.Diagnostics.Append(plan.CredentialsWO.ElementsAs(ctx, &creds, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			writeData["credentials"] = creds
+		}
 		hasChanges = true
 	}
 
@@ -324,11 +329,5 @@ func (r *GCPKMSResource) ImportState(ctx context.Context, req resource.ImportSta
 func (r *GCPKMSResource) parseGCPKMSResponse(responseData map[string]interface{}, data *GCPKMSResourceModel) {
 	if v, ok := responseData["key_collection"].(string); ok {
 		data.KeyCollection = types.StringValue(v)
-	}
-	if v, ok := responseData["project"].(string); ok {
-		data.Project = types.StringValue(v)
-	}
-	if v, ok := responseData["location"].(string); ok {
-		data.Location = types.StringValue(v)
 	}
 }
