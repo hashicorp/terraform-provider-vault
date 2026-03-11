@@ -38,7 +38,6 @@ func TestAccKeymgmtAzureKMS(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
-					resource.TestCheckResourceAttr(resourceName, "tenant_id", os.Getenv("AZURE_TENANT_ID")),
 				),
 			},
 			{
@@ -48,10 +47,8 @@ func TestAccKeymgmtAzureKMS(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
-					"client_id",
-					"client_secret",
-					"environment",
-					"tenant_id",
+					consts.FieldCredentialsWO,
+					consts.FieldCredentialsWOVersion,
 				},
 			},
 		},
@@ -78,7 +75,6 @@ func TestAccKeymgmtAzureKMS_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
-					resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
 				),
 			},
 			{
@@ -86,7 +82,7 @@ func TestAccKeymgmtAzureKMS_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "environment", "AzureUSGovernmentCloud"),
+					resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
 				),
 			},
 		},
@@ -123,7 +119,7 @@ func TestAccKeymgmtAzureKMS_environments(t *testing.T) {
 						Check: resource.ComposeTestCheckFunc(
 							resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 							resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-							resource.TestCheckResourceAttr(resourceName, "environment", tc.env),
+							resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
 						),
 					},
 				},
@@ -152,11 +148,9 @@ func TestAccKeymgmtAzureKMS_multiple(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, kmsName1),
 					resource.TestCheckResourceAttr(resourceName1, "key_collection", keyVaultName),
-					resource.TestCheckResourceAttr(resourceName1, "environment", "AzurePublicCloud"),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldName, kmsName2),
 					resource.TestCheckResourceAttr(resourceName2, "key_collection", keyVaultName),
-					resource.TestCheckResourceAttr(resourceName2, "environment", "AzureUSGovernmentCloud"),
 				),
 			},
 		},
@@ -186,10 +180,12 @@ resource "vault_keymgmt_azure_kms" "test" {
   mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
-  tenant_id      = "%s"
-  client_id      = "%s"
-  client_secret  = "%s"
-  environment    = "AzurePublicCloud"
+  credentials_wo = {
+    tenant_id     = "%s"
+    client_id     = "%s"
+    client_secret = "%s"
+  }
+  credentials_wo_version = 1
 }
 `, mount, kmsName, keyVaultName,
 		os.Getenv("AZURE_TENANT_ID"),
@@ -208,10 +204,13 @@ resource "vault_keymgmt_azure_kms" "test" {
   mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
-  tenant_id      = "%s"
-  client_id      = "%s"
-  client_secret  = "%s"
-  environment    = %q
+  credentials_wo = {
+    tenant_id     = "%s"
+    client_id     = "%s"
+    client_secret = "%s"
+    environment   = %q
+  }
+  credentials_wo_version = 1
 }
 `, mount, kmsName, keyVaultName,
 		os.Getenv("AZURE_TENANT_ID"),
@@ -231,20 +230,26 @@ resource "vault_keymgmt_azure_kms" "test1" {
   mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
-  tenant_id      = "%s"
-  client_id      = "%s"
-  client_secret  = "%s"
-  environment    = "AzurePublicCloud"
+  credentials_wo = {
+    tenant_id     = "%s"
+    client_id     = "%s"
+    client_secret = "%s"
+    environment   = "AzurePublicCloud"
+  }
+  credentials_wo_version = 1
 }
 
 resource "vault_keymgmt_azure_kms" "test2" {
   mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
-  tenant_id      = "%s"
-  client_id      = "%s"
-  client_secret  = "%s"
-  environment    = "AzureUSGovernmentCloud"
+  credentials_wo = {
+    tenant_id     = "%s"
+    client_id     = "%s"
+    client_secret = "%s"
+    environment   = "AzureUSGovernmentCloud"
+  }
+  credentials_wo_version = 1
 }
 `, mount, kmsName1, keyVaultName,
 		os.Getenv("AZURE_TENANT_ID"),

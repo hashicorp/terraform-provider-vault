@@ -45,8 +45,8 @@ func TestAccKeymgmtAWSKMS(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
-					consts.FieldAccessKey,
-					consts.FieldSecretKey,
+					consts.FieldCredentials,
+					consts.FieldCredentialsWOVersion,
 				},
 			},
 		},
@@ -80,40 +80,6 @@ func TestAccKeymgmtAWSKMS_keyCollectionChange(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, "key_collection", "us-east-1"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKeymgmtAWSKMS_credentialsMap(t *testing.T) {
-	accessKey, secretKey := testutil.GetTestAWSCreds(t)
-
-	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
-	kmsName := acctest.RandomWithPrefix("awskms")
-	resourceType := "vault_keymgmt_aws_kms"
-	resourceName := resourceType + ".test"
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config: testKeymgmtAWSKMSConfigWithCredentialsMap(mount, kmsName, "us-west-2", accessKey, secretKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", "us-west-2"),
-				),
-			},
-			{
-				ResourceName:                         resourceName,
-				ImportState:                          true,
-				ImportStateIdFunc:                    testAccKeymgmtAWSKMSImportStateIdFunc(resourceName),
-				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore: []string{
-					"credentials",
-				},
 			},
 		},
 	})
@@ -170,29 +136,12 @@ resource "vault_keymgmt_aws_kms" "test" {
   mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = %q
-  
-  access_key = "%s"
-  secret_key = "%s"
-}
-`, mount, kmsName, region, accessKey, secretKey)
-}
 
-func testKeymgmtAWSKMSConfigWithCredentialsMap(mount, kmsName, region, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "keymgmt" {
-  path = %q
-  type = "keymgmt"
-}
-
-resource "vault_keymgmt_aws_kms" "test" {
-  mount          = vault_mount.keymgmt.path
-  name           = %q
-  key_collection = %q
-  
-  credentials = {
+  credentials_wo = {
     access_key = "%s"
     secret_key = "%s"
   }
+  credentials_wo_version = 1
 }
 `, mount, kmsName, region, accessKey, secretKey)
 }
@@ -208,18 +157,24 @@ resource "vault_keymgmt_aws_kms" "test1" {
   mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = "us-west-2"
-  
-  access_key = "%s"
-  secret_key = "%s"
+
+  credentials_wo = {
+    access_key = "%s"
+    secret_key = "%s"
+  }
+  credentials_wo_version = 1
 }
 
 resource "vault_keymgmt_aws_kms" "test2" {
   mount          = vault_mount.keymgmt.path
   name           = %q
   key_collection = "us-east-1"
-  
-  access_key = "%s"
-  secret_key = "%s"
+
+  credentials_wo = {
+    access_key = "%s"
+    secret_key = "%s"
+  }
+  credentials_wo_version = 1
 }
 `, mount, kmsName1, accessKey, secretKey,
 		kmsName2, accessKey, secretKey)
