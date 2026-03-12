@@ -33,8 +33,18 @@ resource "vault_mount" "keymgmt" {
 
 resource "vault_keymgmt_key" "aes_key" {
   mount = vault_mount.keymgmt.path
-  name = "aes-encryption-key"
-  type = "aes256-gcm96"
+  name  = "aes-encryption-key"
+  type  = "aes256-gcm96"
+}
+```
+
+### Default RSA Key (type omitted)
+
+```hcl
+resource "vault_keymgmt_key" "default_key" {
+  mount = vault_mount.keymgmt.path
+  name  = "my-key"
+  # type defaults to "rsa-2048"
 }
 ```
 
@@ -42,10 +52,20 @@ resource "vault_keymgmt_key" "aes_key" {
 
 ```hcl
 resource "vault_keymgmt_key" "rsa_key" {
-  mount           = vault_mount.keymgmt.path
-  name            = "rsa-signing-key"
-  type            = "rsa-2048"
+  mount            = vault_mount.keymgmt.path
+  name             = "rsa-signing-key"
   deletion_allowed = false
+}
+```
+
+### Key with Minimum Enabled Version
+
+```hcl
+resource "vault_keymgmt_key" "versioned_key" {
+  mount               = vault_mount.keymgmt.path
+  name                = "versioned-key"
+  type                = "aes256-gcm96"
+  min_enabled_version = 2
 }
 ```
 
@@ -77,9 +97,10 @@ The following arguments are supported:
 
 * `name` - (Required, Forces new resource) Specifies the name of the key to create.
 
-* `type` - (Required, Forces new resource) Specifies the type of cryptographic key to create. The following key types are supported:
+* `type` - (Optional, Forces new resource) Specifies the type of cryptographic key to create. Defaults to `rsa-2048`.
+  The following key types are supported:
   - `aes256-gcm96` - AES-GCM with a 256-bit AES key and a 96-bit nonce (symmetric)
-  - `rsa-2048` - RSA with bit size of 2048 (asymmetric)
+  - `rsa-2048` - RSA with bit size of 2048 (asymmetric) (**default**)
   - `rsa-3072` - RSA with bit size of 3072 (asymmetric)
   - `rsa-4096` - RSA with bit size of 4096 (asymmetric)
   - `ecdsa-p256` - ECDSA using the P-256 elliptic curve (asymmetric)
@@ -88,6 +109,10 @@ The following arguments are supported:
 
 * `deletion_allowed` - (Optional) Specifies if the key is allowed to be deleted.
 
+* `min_enabled_version` - (Optional) Specifies the minimum enabled version of the key. All versions of the key
+  less than the specified version will be disabled for cryptographic operations in the KMS provider that the key
+  has been distributed to. Setting this value to `0` means that all versions will be enabled.
+
 * `replica_regions` - (Optional, Forces new resource) Specifies the regions in which the key should be replicated. Supported only for AWS KMS.
 
 ## Attributes Reference
@@ -95,8 +120,6 @@ The following arguments are supported:
 In addition to the arguments above, the following attributes are exported:
 
 * `latest_version` - Specifies the latest version of the key.
-
-* `min_enabled_version` - Specifies the minimum enabled version of the key. All versions of the key less than the specified version will be disabled for cryptographic operations in the KMS provider that the key has been distributed to. Setting this value to 0 means that all versions will be enabled.
 
 ## Import
 
