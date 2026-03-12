@@ -11,10 +11,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -120,7 +118,8 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 			consts.FieldSkipImportRotation: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Skip rotation of the password on import.",
+				Computed:    true,
+				Description: "Skip rotation of the password on import. When not set, inherits from connection's skip_static_role_import_rotation.",
 			},
 			consts.FieldCredentialType: {
 				Type:     schema.TypeString,
@@ -187,8 +186,13 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 		if v, ok := d.GetOk(consts.FieldSelfManagedPassword); ok && v != "" {
 			data[consts.FieldSelfManagedPassword] = v
 		}
-		if v, ok := d.Get(consts.FieldSkipImportRotation).(bool); ok {
-			data[consts.FieldSkipImportRotation] = v
+		// Only send skip_import_rotation if explicitly set in config
+		// Use GetRawConfig to distinguish between "not set" and "set to false"
+		skipImportAttr := d.GetRawConfig().GetAttr(consts.FieldSkipImportRotation)
+		if !skipImportAttr.IsNull() && skipImportAttr.IsKnown() {
+			data[consts.FieldSkipImportRotation] = skipImportAttr.True()
+		} else {
+			log.Printf("[DEBUG] skip_import_rotation not set in config, sending nil to Vault")
 		}
 	}
 
@@ -272,9 +276,16 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
-		if err := d.Set(consts.FieldSkipImportRotation, role.Data[consts.FieldSkipImportRotation]); err != nil {
-			return diag.FromErr(err)
+		// Always read skip_import_rotation from Vault's response.
+		// When not set in config, Vault computes this value based on
+		// the connection's skip_static_role_import_rotation setting.
+		if v, ok := role.Data[consts.FieldSkipImportRotation]; ok && v != nil {
+			log.Printf("[DEBUG] Vault returned skip_import_rotation: %v (type: %T)", v, v)
+			if err := d.Set(consts.FieldSkipImportRotation, v); err != nil {
+				return diag.FromErr(err)
+			}
 		}
+		log.Printf("[DEBUG] Vault response does not contain skip_import_rotation")
 	}
 
 	// Note: password_wo_version is not explicitly set in Read function.
