@@ -314,6 +314,106 @@ resource "vault_secrets_sync_aws_destination" "test" {
 `, destName, accessKey, secretKey, region)
 }
 
+// TestAWSSecretsSyncDestinationWIF tests WIF (Workload Identity Federation)
+// fields for the AWS secrets sync destination.
+//
+// This test requires IDENTITY_TOKEN_AUDIENCE and ROLE_ARN environment variables
+// to be set. It will be skipped if they are not present. To run locally:
+//
+//	TF_ACC=1 VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root \
+//	  AWS_DEFAULT_REGION=us-east-1 \
+//	  IDENTITY_TOKEN_AUDIENCE=<audience> ROLE_ARN=<role-arn> \
+//	  go test ./vault/ -run 'TestAWSSecretsSyncDestinationWIF' -v -count=1
+func TestAWSSecretsSyncDestinationWIF(t *testing.T) {
+	destName := acctest.RandomWithPrefix("tf-sync-dest-aws-wif")
+	resourceName := "vault_secrets_sync_aws_destination.test"
+	region := testutil.GetTestAWSRegion(t)
+	values := testutil.SkipTestEnvUnset(t, "IDENTITY_TOKEN_AUDIENCE", "ROLE_ARN")
+	audience := values[0]
+	roleArn := values[1]
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion200)
+			if !provider.IsEnterpriseSupported(testProvider.Meta()) {
+				t.Skip("Skipping WIF test: requires Vault Enterprise")
+			}
+		},
+		PreventPostDestroyRefresh: true,
+		Steps: []resource.TestStep{
+			{
+				Config: testAWSSecretsSyncDestinationWIFConfig(destName, region, audience, 30, roleArn, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, region),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, roleArn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "30"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWOVersion, "1"),
+					// write-only fields must not be stored in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenKeyWO),
+				),
+			},
+			{
+				Config: testAWSSecretsSyncDestinationWIFConfig(destName, region, audience, 60, roleArn, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, region),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, roleArn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "60"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWOVersion, "2"),
+					// write-only fields must not be stored in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenAudienceWO),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldIdentityTokenKeyWO),
+				),
+			},
+			// Import before the error step so Vault state is not corrupted by the partial apply from the error step.
+			testutil.GetImportTestStep(resourceName, false, nil,
+				fieldAccessKeyID,
+				fieldSecretAccessKey,
+				consts.FieldIdentityTokenAudienceWO,
+				consts.FieldIdentityTokenKeyWO,
+				consts.FieldDisableStrictNetworking,
+				consts.FieldIdentityTokenTTL,
+				consts.FieldRoleArn,
+			),
+			{ // Missing role_arn when using WIF should error
+				Config:      testAWSSecretsSyncDestinationWIFConfigMissingRoleArn(destName, region, audience),
+				ExpectError: regexp.MustCompile(`role_arn|invalid|error`),
+			},
+		},
+	})
+}
+
+func testAWSSecretsSyncDestinationWIFConfig(destName, region, audience string, ttl int, roleArn string, identity_token_audience_wo_version int) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_aws_destination" "test" {
+  name                               = "%s"
+  region                             = "%s"
+  role_arn                           = "%s"
+  identity_token_audience_wo         = "%s"
+  identity_token_audience_wo_version = %d
+  identity_token_ttl                 = %d
+  granularity                        = "secret-path"
+}`, destName, region, roleArn, audience, identity_token_audience_wo_version, ttl)
+}
+
+func testAWSSecretsSyncDestinationWIFConfigMissingRoleArn(destName, region, audience string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_aws_destination" "test" {
+  name                               = "%s"
+  region                             = "%s"
+  identity_token_audience_wo         = "%s"
+  identity_token_audience_wo_version = 2
+  identity_token_ttl                 = 30
+  granularity                        = "secret-path"
+}`, destName, region, audience)
+}
+
 func testSecretsSyncDestinationCommonConfig(templ string, withTemplate, withTags, update bool) string {
 	ret := ""
 	if withTemplate {
