@@ -51,23 +51,23 @@ func (r *KeyRotateResource) Schema(ctx context.Context, req resource.SchemaReque
 
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` resource with `type = \"keymgmt\"`. Use `vault_mount.<name>.path` here.",
-
+				Required: true,
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` " +
+					"resource with `type = \"keymgmt\"`. Use `vault_mount.keymgmt.path` here.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldName: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Name of the key to rotate",
+				MarkdownDescription: "Specifies the name of the key to rotate.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldLatestVersion: schema.Int64Attribute{
 				Computed:            true,
-				MarkdownDescription: "Latest version of the key after rotation",
+				MarkdownDescription: "Specifies the latest version of the key.",
 			},
 		},
 	}

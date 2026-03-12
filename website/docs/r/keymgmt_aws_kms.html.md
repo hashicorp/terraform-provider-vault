@@ -88,21 +88,15 @@ The following arguments are supported:
 
 * `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
   `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
-  `vault_mount.<name>.path` here.
+  `vault_mount.keymgmt.path` here.
 
-* `name` - (Required, Forces new resource) Unique name for this AWS KMS provider. This cannot be changed after creation.
+* `name` - (Required, Forces new resource) Specifies the name of the AWS KMS provider. Cannot be changed after creation.
 
-* `key_collection` - (Required, Forces new resource) AWS region where keys will be created. This defines the region for the KMS keys. Examples: `us-west-2`, `us-east-1`, `eu-west-1`.
+* `key_collection` - (Required, Forces new resource) Refers to a location to store keys in the AWS KMS provider. Cannot be changed after creation.
 
 * `credentials_wo` - (Optional, Sensitive, Write-only) Map of AWS credentials passed directly to the Vault API. Supported keys are `access_key` and `secret_key` (and optionally `session_token`). This field is write-only — it will never be stored in Terraform state. If not provided, Vault uses the AWS SDK credential chain (environment variables, shared credentials file, IAM instance profile, etc.). Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
 
 * `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Increment this value whenever you rotate or update `credentials_wo` to trigger Terraform to apply the new values.
-
-## Attributes Reference
-
-In addition to the arguments above, the following attributes are exported:
-
-* `id` - The unique identifier for the AWS KMS provider. Format: `{path}/kms/{name}`
 
 ## Import
 

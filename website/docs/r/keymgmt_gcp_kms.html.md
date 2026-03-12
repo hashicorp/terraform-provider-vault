@@ -49,27 +49,21 @@ The following arguments are supported:
 
 * `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
   `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
-  `vault_mount.<name>.path` here.
+  `vault_mount.keymgmt.path` here.
 
-* `name` - (Required, Forces new resource) Unique name for this GCP Cloud KMS provider. This cannot be changed after creation.
+* `name` - (Required, Forces new resource) Specifies the name of the GCP Cloud KMS provider. Cannot be changed after creation.
 
-* `key_collection` - (Required) Full resource name of the GCP KMS key ring where keys will be created. Format: `projects/{project}/locations/{location}/keyRings/{keyring}`
+* `key_collection` - (Required) Refers to a location to store keys in the GCP Cloud KMS provider. Cannot be changed after creation.
 
 * `credentials_wo` - (Required, Write-only, Sensitive) Map of GCP credentials passed directly to the Vault API.
   Supported keys are:
   - `service_account_file` - (Required) JSON-encoded GCP service account credentials with permissions to manage Cloud KMS keys.
   - `project` - (Required) GCP project ID where the Cloud KMS key ring is located.
-  - `location` - (Required) GCP location/region for the Cloud KMS key ring (e.g., `us-central1`, `global`).
+  - `location` - (Required) GCP location/region for the Cloud KMS key ring.
 
   This field is write-only and will never be stored in Terraform state. Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
 
-* `credentials_wo_version` - (Optional) Version counter for the `credentials_wo` field. Increment this value whenever you update `credentials_wo` to trigger the credential rotation.
-
-## Attributes Reference
-
-In addition to the arguments above, the following attributes are exported:
-
-* `id` - The unique identifier for the GCP Cloud KMS provider. Format: `{path}/kms/{name}`
+* `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Increment this value whenever you rotate or update `credentials_wo` to trigger Terraform to apply the new values.
 
 ## Import
 

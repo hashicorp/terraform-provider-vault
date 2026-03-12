@@ -59,8 +59,9 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Specifies the mount path of the Key Management secrets engine.",
+				Required: true,
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` " +
+					"resource with `type = \"keymgmt\"`. Use `vault_mount.keymgmt.path` here.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},

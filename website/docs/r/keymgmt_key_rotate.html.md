@@ -55,17 +55,15 @@ The following arguments are supported:
 
 * `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
   `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
-  `vault_mount.<name>.path` here.
+  `vault_mount.keymgmt.path` here.
 
-* `name` - (Required, Forces new resource) Name of the key to rotate (created via `vault_keymgmt_key`).
+* `name` - (Required, Forces new resource) Specifies the name of the key to rotate.
 
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
 
-* `id` - The unique identifier for the key rotation resource. Format: `{path}/key/{name}/rotate`
-
-* `latest_version` - The latest version number of the key after rotation.
+* `latest_version` - Specifies the latest version of the key.
 
 ## Import
 
