@@ -50,6 +50,14 @@ func TestAccKeymgmtKey(t *testing.T) {
 				),
 			},
 			{
+				Config: testKeymgmtKey_withMinEnabledVersion(mount, keyName, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMinEnabledVersion, "1"),
+				),
+			},
+			{
 				Config: testKeymgmtKey_withReplicaRegions(mount, keyName, []string{"us-west-1", "us-east-1"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
@@ -149,6 +157,30 @@ resource "vault_keymgmt_key" "test" {
   replica_regions  = [%s]
 }
 `, mount, keyName, regionsStr)
+}
+
+func TestAccKeymgmtKey_defaultType(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	keyName := acctest.RandomWithPrefix("key")
+	resourceType := "vault_keymgmt_key"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtKey_noTypeConfig(mount, keyName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					// type should default to rsa-2048
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "rsa-2048"),
+					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
+				),
+			},
+		},
+	})
 }
 
 func TestAccKeymgmtKey_multiple(t *testing.T) {
@@ -266,6 +298,38 @@ resource "vault_keymgmt_key" "test" {
   deletion_allowed = true
 }
 `, namespace, mount, keyName)
+}
+
+func testKeymgmtKey_noTypeConfig(mount, keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test" {
+  mount            = vault_mount.keymgmt.path
+  name             = %q
+  deletion_allowed = true
+}
+`, mount, keyName)
+}
+
+func testKeymgmtKey_withMinEnabledVersion(mount, keyName string, minEnabledVersion int) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test" {
+  mount               = vault_mount.keymgmt.path
+  name                = %q
+  type                = "aes256-gcm96"
+  deletion_allowed    = true
+  min_enabled_version = %d
+}
+`, mount, keyName, minEnabledVersion)
 }
 
 func testKeymgmtKey_invalidTypeConfig(mount, keyName string) string {
