@@ -53,36 +53,39 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a [`vault_mount`](mount.html) resource with `type = \"keymgmt\"`. Use `vault_mount.<name>.path` here.",
+				Required: true,
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` " +
+					"resource with `type = \"keymgmt\"`. Use `vault_mount.keymgmt.path` here.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldName: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Name of the AWS KMS provider",
+				MarkdownDescription: "Specifies the name of the AWS KMS provider. Cannot be changed after creation.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "AWS region where keys are stored (e.g., us-east-1)",
+				MarkdownDescription: "Refers to a location to store keys in the AWS KMS provider. Cannot be changed after creation.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldCredentialsWO: schema.MapAttribute{
-				Optional:            true,
-				Sensitive:           true,
-				WriteOnly:           true,
-				ElementType:         types.StringType,
-				MarkdownDescription: "Map of AWS credentials passed directly to the Vault API (e.g., `access_key`, `secret_key`). This field is write-only and will not be stored in state. If not provided, Vault uses the AWS SDK credential chain.",
+				Optional:    true,
+				Sensitive:   true,
+				WriteOnly:   true,
+				ElementType: types.StringType,
+				MarkdownDescription: "The credentials to use for authentication with the AWS KMS provider. Supplying values for this parameter " +
+					"is optional, as credentials may also be specified as environment variables.",
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
-				Optional:            true,
-				MarkdownDescription: "Version counter for the write-only `credentials` field. Increment this value whenever you update `credentials` to trigger the change.",
+				Optional: true,
+				MarkdownDescription: "Version number for the write-only credentials. Increment this value to trigger a credential rotation. " +
+					"Changing this value will cause the credentials to be re-sent to Vault during the next apply.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},

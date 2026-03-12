@@ -5,7 +5,6 @@ package keymgmt_test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -19,21 +18,19 @@ import (
 )
 
 func TestAccKeymgmtAzureKMS(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_KEYVAULT_NAME")
+	tenantID, clientID, clientSecret, keyVaultName := testutil.GetTestAzureKMSCreds(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("azurekms")
 	resourceType := "vault_keymgmt_azure_kms"
 	resourceName := resourceType + ".test"
 
-	keyVaultName := os.Getenv("AZURE_KEYVAULT_NAME")
-
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtAzureKMSConfig(mount, kmsName, keyVaultName),
+				Config: testKeymgmtAzureKMSConfig(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
@@ -56,21 +53,19 @@ func TestAccKeymgmtAzureKMS(t *testing.T) {
 }
 
 func TestAccKeymgmtAzureKMS_update(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_KEYVAULT_NAME")
+	tenantID, clientID, clientSecret, keyVaultName := testutil.GetTestAzureKMSCreds(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("azurekms")
 	resourceType := "vault_keymgmt_azure_kms"
 	resourceName := resourceType + ".test"
 
-	keyVaultName := os.Getenv("AZURE_KEYVAULT_NAME")
-
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtAzureKMSConfig(mount, kmsName, keyVaultName),
+				Config: testKeymgmtAzureKMSConfig(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
@@ -78,7 +73,7 @@ func TestAccKeymgmtAzureKMS_update(t *testing.T) {
 				),
 			},
 			{
-				Config: testKeymgmtAzureKMSConfigWithEnvironment(mount, kmsName, keyVaultName, "AzureUSGovernmentCloud"),
+				Config: testKeymgmtAzureKMSConfigWithEnvironment(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret, "AzureUSGovernmentCloud"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
@@ -90,10 +85,9 @@ func TestAccKeymgmtAzureKMS_update(t *testing.T) {
 }
 
 func TestAccKeymgmtAzureKMS_environments(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_KEYVAULT_NAME")
+	tenantID, clientID, clientSecret, keyVaultName := testutil.GetTestAzureKMSCreds(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
-	keyVaultName := os.Getenv("AZURE_KEYVAULT_NAME")
 
 	environments := []struct {
 		name string
@@ -115,7 +109,7 @@ func TestAccKeymgmtAzureKMS_environments(t *testing.T) {
 				PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
-						Config: testKeymgmtAzureKMSConfigWithEnvironment(mount, kmsName, keyVaultName, tc.env),
+						Config: testKeymgmtAzureKMSConfigWithEnvironment(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret, tc.env),
 						Check: resource.ComposeTestCheckFunc(
 							resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 							resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
@@ -129,12 +123,11 @@ func TestAccKeymgmtAzureKMS_environments(t *testing.T) {
 }
 
 func TestAccKeymgmtAzureKMS_multiple(t *testing.T) {
-	testutil.SkipTestEnvUnset(t, "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_KEYVAULT_NAME")
+	tenantID, clientID, clientSecret, keyVaultName := testutil.GetTestAzureKMSCreds(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName1 := acctest.RandomWithPrefix("azurekms-1")
 	kmsName2 := acctest.RandomWithPrefix("azurekms-2")
-	keyVaultName := os.Getenv("AZURE_KEYVAULT_NAME")
 	resourceName1 := "vault_keymgmt_azure_kms.test1"
 	resourceName2 := "vault_keymgmt_azure_kms.test2"
 
@@ -143,7 +136,7 @@ func TestAccKeymgmtAzureKMS_multiple(t *testing.T) {
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtAzureKMSConfigMultiple(mount, kmsName1, kmsName2, keyVaultName),
+				Config: testKeymgmtAzureKMSConfigMultiple(mount, kmsName1, kmsName2, keyVaultName, tenantID, clientID, clientSecret),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, kmsName1),
@@ -169,7 +162,7 @@ func testAccKeymgmtAzureKMSImportStateIdFunc(resourceName string) resource.Impor
 	}
 }
 
-func testKeymgmtAzureKMSConfig(mount, kmsName, keyVaultName string) string {
+func testKeymgmtAzureKMSConfig(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "keymgmt" {
   path = %q
@@ -187,13 +180,10 @@ resource "vault_keymgmt_azure_kms" "test" {
   }
   credentials_wo_version = 1
 }
-`, mount, kmsName, keyVaultName,
-		os.Getenv("AZURE_TENANT_ID"),
-		os.Getenv("AZURE_CLIENT_ID"),
-		os.Getenv("AZURE_CLIENT_SECRET"))
+`, mount, kmsName, keyVaultName, tenantID, clientID, clientSecret)
 }
 
-func testKeymgmtAzureKMSConfigWithEnvironment(mount, kmsName, keyVaultName, environment string) string {
+func testKeymgmtAzureKMSConfigWithEnvironment(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret, environment string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "keymgmt" {
   path = %q
@@ -212,14 +202,10 @@ resource "vault_keymgmt_azure_kms" "test" {
   }
   credentials_wo_version = 1
 }
-`, mount, kmsName, keyVaultName,
-		os.Getenv("AZURE_TENANT_ID"),
-		os.Getenv("AZURE_CLIENT_ID"),
-		os.Getenv("AZURE_CLIENT_SECRET"),
-		environment)
+`, mount, kmsName, keyVaultName, tenantID, clientID, clientSecret, environment)
 }
 
-func testKeymgmtAzureKMSConfigMultiple(mount, kmsName1, kmsName2, keyVaultName string) string {
+func testKeymgmtAzureKMSConfigMultiple(mount, kmsName1, kmsName2, keyVaultName, tenantID, clientID, clientSecret string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "keymgmt" {
   path = %q
@@ -251,12 +237,6 @@ resource "vault_keymgmt_azure_kms" "test2" {
   }
   credentials_wo_version = 1
 }
-`, mount, kmsName1, keyVaultName,
-		os.Getenv("AZURE_TENANT_ID"),
-		os.Getenv("AZURE_CLIENT_ID"),
-		os.Getenv("AZURE_CLIENT_SECRET"),
-		kmsName2, keyVaultName,
-		os.Getenv("AZURE_TENANT_ID"),
-		os.Getenv("AZURE_CLIENT_ID"),
-		os.Getenv("AZURE_CLIENT_SECRET"))
+`, mount, kmsName1, keyVaultName, tenantID, clientID, clientSecret,
+		kmsName2, keyVaultName, tenantID, clientID, clientSecret)
 }
