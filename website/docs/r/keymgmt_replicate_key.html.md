@@ -75,17 +75,11 @@ The following arguments are supported:
 
 * `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
   `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
-  `vault_mount.<name>.path` here.
+  `vault_mount.keymgmt.path` here.
 
-* `kms_name` - (Required, Forces new resource) Name of the AWS KMS provider (configured via `vault_keymgmt_aws_kms`).
+* `kms_name` - (Required, Forces new resource) Specifies the name of the AWS KMS provider.
 
-* `key_name` - (Required, Forces new resource) Name of the key to replicate (created via `vault_keymgmt_key`). The key must have `replica_regions` configured and must already be distributed to the AWS KMS provider.
-
-## Attributes Reference
-
-In addition to the arguments above, the following attributes are exported:
-
-* `id` - The unique identifier for the key replication. Format: `{path}/kms/{kms_name}/key/{key_name}/replicate`
+* `key_name` - (Required, Forces new resource) Specifies the name of the key to replicate. The key must have `replica_regions` configured and must already be distributed to the AWS KMS provider.
 
 ## Import
 

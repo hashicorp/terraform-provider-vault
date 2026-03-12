@@ -55,39 +55,43 @@ func (r *DistributeKeyResource) Schema(ctx context.Context, req resource.SchemaR
 
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` resource with `type = \"keymgmt\"`. Use `vault_mount.<name>.path` here.",
+				Required: true,
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` " +
+					"resource with `type = \"keymgmt\"`. Use `vault_mount.keymgmt.path` here.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldKMSName: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Name of the KMS provider",
+				MarkdownDescription: "Specifies the name of the KMS provider to distribute the given key to.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldKeyName: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Name of the key to distribute",
+				MarkdownDescription: "Specifies the name of the key to distribute to the given KMS provider.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldPurpose: schema.SetAttribute{
-				Required:            true,
-				ElementType:         types.StringType,
-				MarkdownDescription: "Purposes for which the key can be used (e.g., encrypt, decrypt, sign, verify)",
+				Required:    true,
+				ElementType: types.StringType,
+				MarkdownDescription: "Specifies the purpose of the key. The purpose defines a set of cryptographic capabilities that " +
+					"the key will have in the KMS provider. A key must have at least one of the supported purposes. " +
+					"The following values are supported : encrypt, decrypt, sign, verify, wrap, unwrap.",
 			},
 			consts.FieldProtection: schema.StringAttribute{
-				Optional:            true,
-				MarkdownDescription: "Protection level for the key (e.g., hsm, software)",
+				Optional: true,
+				MarkdownDescription: "Specifies the protection of the key. The protection defines where cryptographic operations are " +
+					"performed with the key in the KMS provider. The following values are supported: hsm, software.",
 			},
 			consts.FieldVersions: schema.MapAttribute{
 				Computed:            true,
 				ElementType:         types.StringType,
-				MarkdownDescription: "Map of distributed key versions to their identifiers in the KMS provider",
+				MarkdownDescription: "List of distributed key versions to their identifiers in the KMS provider.",
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.UseStateForUnknown(),
 				},

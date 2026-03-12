@@ -135,29 +135,21 @@ The following arguments are supported:
 
 * `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
   `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
-  `vault_mount.<name>.path` here.
+  `vault_mount.keymgmt.path` here.
 
-* `kms_name` - (Required, Forces new resource) Name of the KMS provider to distribute the key to (configured via `vault_keymgmt_aws_kms`, `vault_keymgmt_azure_kms`, or `vault_keymgmt_gcp_kms`).
+* `kms_name` - (Required, Forces new resource) Specifies the name of the KMS provider to distribute the given key to.
 
-* `key_name` - (Required, Forces new resource) Name of the key to distribute (created via `vault_keymgmt_key`).
+* `key_name` - (Required, Forces new resource) Specifies the name of the key to distribute to the given KMS provider.
 
-* `purpose` - (Required) List of key purposes. Valid values depend on the key type and target KMS:
-  - For symmetric keys (AES): `["encrypt", "decrypt"]`
-  - For asymmetric keys (RSA, ECDSA): `["encrypt", "decrypt"]`, `["sign", "verify"]`, or combinations
+* `purpose` - (Required) Specifies the purpose of the key. The purpose defines a set of cryptographic capabilities that the key will have in the KMS provider. A key must have at least one of the supported purposes. The following values are supported : encrypt, decrypt, sign, verify, wrap, unwrap.
 
-* `protection` - (Optional) Protection level for the distributed key. Valid values:
-  - `software` - Software-protected key (default)
-  - `hsm` - Hardware Security Module protected key (if supported by the target KMS)
+* `protection` - (Optional) Specifies the protection of the key. The protection defines where cryptographic operations are performed with the key in the KMS provider. The following values are supported: hsm, software.
 
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
 
-* `id` - The unique identifier for the key distribution. Format: `{path}/kms/{kms_name}/key/{key_name}`
-
-* `key_id` - The ID of the distributed key in the external KMS.
-
-* `versions` - List of key version numbers that have been distributed to the KMS provider. Each time a key is rotated in Vault and redistributed, a new version number is added to this list.
+* `versions` - List of distributed key versions to their identifiers in the KMS provider.
 
 ## Import
 

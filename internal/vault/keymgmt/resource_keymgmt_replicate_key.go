@@ -51,22 +51,23 @@ func (r *ReplicateKeyResource) Schema(ctx context.Context, req resource.SchemaRe
 
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` resource with `type = \"keymgmt\"`. Use `vault_mount.<name>.path` here.",
+				Required: true,
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` " +
+					"resource with `type = \"keymgmt\"`. Use `vault_mount.keymgmt.path` here.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldKMSName: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Name of the KMS provider",
+				MarkdownDescription: "Specifies the name of the AWS KMS provider.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldKeyName: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Name of the key to replicate",
+				MarkdownDescription: "Specifies the name of the key to replicate.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
