@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	vaultapi "github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -81,39 +83,32 @@ func (r *KeyRotateResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	vaultPath := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	apiPath := BuildKeyRotatePath(vaultPath, name)
-
-	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, map[string]interface{}{}); err != nil {
-		resp.Diagnostics.AddError(ErrCreating(ResourceTypeKeyRotation, apiPath, err))
+	rotatePath := BuildKeyRotatePath(data.Mount.ValueString(), data.Name.ValueString())
+	if _, err := cli.Logical().WriteWithContext(ctx, rotatePath, map[string]interface{}{}); err != nil {
+		resp.Diagnostics.AddError(ErrCreating(ResourceTypeKeyRotation, rotatePath, err))
 		return
 	}
 
 	// Read back the key metadata to get latest_version
-	keyPath := BuildKeyPath(vaultPath, name)
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
-	if err != nil {
-		resp.Diagnostics.AddError(ErrReading(ResourceTypeKey, keyPath, err))
+	responseData, exists := r.readKey(ctx, cli, data.KeyPath(), &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if vaultResp == nil {
+	if !exists {
 		resp.Diagnostics.AddError(
 			"Unexpected error after rotating Key Management key",
-			fmt.Sprintf("Key Management key not found at path %q immediately after rotation", keyPath),
+			fmt.Sprintf("Key Management key not found at path %q immediately after rotation", data.KeyPath()),
 		)
 		return
 	}
 
 	// Parse response data
-	r.parseKeyRotateResponse(vaultResp.Data, &data)
+	data.parseKeyRotateResponse(responseData)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -125,21 +120,18 @@ func (r *KeyRotateResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
 	// Build the key path and read key metadata
-	keyPath := BuildKeyPath(data.Mount.ValueString(), data.Name.ValueString())
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
-	if err != nil {
-		resp.Diagnostics.AddError(ErrReading(ResourceTypeKey, keyPath, err))
+	keyPath := data.KeyPath()
+	responseData, exists := r.readKey(ctx, cli, keyPath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if vaultResp == nil {
+	if !exists {
 		tflog.Warn(ctx, "Key Management key not found, removing from state", map[string]interface{}{
 			"path": keyPath,
 		})
@@ -148,7 +140,7 @@ func (r *KeyRotateResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	// Parse response data
-	r.parseKeyRotateResponse(vaultResp.Data, &data)
+	data.parseKeyRotateResponse(responseData)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -218,11 +210,39 @@ func (r *KeyRotateResource) ImportState(ctx context.Context, req resource.Import
 }
 
 // parseKeyRotateResponse parses the Vault API response data into the resource model
-func (r *KeyRotateResource) parseKeyRotateResponse(responseData map[string]interface{}, data *KeyRotateResourceModel) {
+func (data *KeyRotateResourceModel) parseKeyRotateResponse(responseData map[string]interface{}) {
 	// Only set latest_version when it is returned and can be parsed from the API response.
 	if v, ok := responseData["latest_version"]; ok && v != nil {
 		if result := SetInt64FromInterface(v); !result.IsNull() {
 			data.LatestVersion = result
 		}
 	}
+}
+
+// KeyPath returns the Vault API path for reading the key's metadata.
+func (m *KeyRotateResourceModel) KeyPath() string {
+	return BuildKeyPath(m.Mount.ValueString(), m.Name.ValueString())
+}
+
+// getVaultClient returns a Vault client for the given namespace, adding a diagnostic on error.
+func (r *KeyRotateResource) getVaultClient(ctx context.Context, namespace string, diags *diag.Diagnostics) (*vaultapi.Client, bool) {
+	cli, err := client.GetClient(ctx, r.Meta(), namespace)
+	if err != nil {
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return nil, false
+	}
+	return cli, true
+}
+
+// readKey reads the key metadata from Vault. Returns (data, true) if found, (nil, false) otherwise. API errors are added to diags.
+func (r *KeyRotateResource) readKey(ctx context.Context, cli *vaultapi.Client, keyPath string, diags *diag.Diagnostics) (map[string]interface{}, bool) {
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, keyPath)
+	if err != nil {
+		diags.AddError(ErrReading(ResourceTypeKey, keyPath, err))
+		return nil, false
+	}
+	if vaultResp == nil {
+		return nil, false
+	}
+	return vaultResp.Data, true
 }

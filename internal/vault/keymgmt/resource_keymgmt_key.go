@@ -10,15 +10,18 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	vaultapi "github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -74,9 +77,11 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 				},
 			},
 			consts.FieldType: schema.StringAttribute{
-				Required: true,
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString("rsa-2048"),
 				MarkdownDescription: "Specifies the type of cryptographic key to create. aes256-gcm96, rsa-2048, rsa-3072, rsa-4096, " +
-					"ecdsa-p256, ecdsa-p384, ecdsa-p521 key types are supported.",
+					"ecdsa-p256, ecdsa-p384, ecdsa-p521 key types are supported. Defaults to `rsa-2048`.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -103,6 +108,7 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 				},
 			},
 			consts.FieldMinEnabledVersion: schema.Int64Attribute{
+				Optional: true,
 				Computed: true,
 				MarkdownDescription: "Specifies the minimum enabled version of the key. All versions of the key less than the specified version " +
 					"will be disabled for cryptographic operations in the KMS provider that the key has been distributed to. " +
@@ -124,15 +130,12 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	vaultPath := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	apiPath := BuildKeyPath(vaultPath, name)
+	apiPath := data.APIPath()
 
 	writeData := map[string]interface{}{
 		"type": data.Type.ValueString(),
@@ -166,13 +169,11 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	// Read back the state from Vault
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
-	if err != nil {
-		resp.Diagnostics.AddError(ErrReading(ResourceTypeKey, apiPath, err))
+	responseData, exists := r.readKey(ctx, cli, apiPath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if vaultResp == nil {
+	if !exists {
 		resp.Diagnostics.AddError(
 			"Unexpected error after creating Key Management key",
 			fmt.Sprintf("Key Management key not found at path %q immediately after creation", apiPath),
@@ -180,8 +181,7 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	// Parse response data
-	r.parseKeyResponse(ctx, vaultResp.Data, &data, &resp.Diagnostics)
+	data.parseKeyResponse(ctx, responseData)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -193,21 +193,17 @@ func (r *KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	// Build API path and read from Vault
-	apiPath := BuildKeyPath(data.Mount.ValueString(), data.Name.ValueString())
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
-	if err != nil {
-		resp.Diagnostics.AddError(ErrReading(ResourceTypeKey, apiPath, err))
+	apiPath := data.APIPath()
+	responseData, exists := r.readKey(ctx, cli, apiPath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if vaultResp == nil {
+	if !exists {
 		tflog.Warn(ctx, "Key Management key not found, removing from state", map[string]interface{}{
 			"path": apiPath,
 		})
@@ -215,8 +211,7 @@ func (r *KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	// Parse response data
-	r.parseKeyResponse(ctx, vaultResp.Data, &data, &resp.Diagnostics)
+	data.parseKeyResponse(ctx, responseData)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -229,17 +224,20 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, plan.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	apiPath := BuildKeyPath(plan.Mount.ValueString(), plan.Name.ValueString())
+	apiPath := plan.APIPath()
 	writeData := map[string]interface{}{}
 
 	if !plan.DeletionAllowed.Equal(state.DeletionAllowed) {
 		writeData[consts.FieldDeletionAllowed] = plan.DeletionAllowed.ValueBool()
+	}
+
+	if !plan.MinEnabledVersion.Equal(state.MinEnabledVersion) {
+		writeData[consts.FieldMinEnabledVersion] = plan.MinEnabledVersion.ValueInt64()
 	}
 
 	if len(writeData) > 0 {
@@ -249,14 +247,11 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		}
 	}
 
-	// Read back the state from Vault
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
-	if err != nil {
-		resp.Diagnostics.AddError(ErrReading(ResourceTypeKey, apiPath, err))
+	responseData, exists := r.readKey(ctx, cli, apiPath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if vaultResp == nil {
+	if !exists {
 		resp.Diagnostics.AddError(
 			"Unexpected error after updating Key Management key",
 			fmt.Sprintf("Key Management key not found at path %q immediately after update", apiPath),
@@ -264,8 +259,7 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	// Parse response data
-	r.parseKeyResponse(ctx, vaultResp.Data, &plan, &resp.Diagnostics)
+	plan.parseKeyResponse(ctx, responseData)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -277,13 +271,12 @@ func (r *KeyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	apiPath := BuildKeyPath(data.Mount.ValueString(), data.Name.ValueString())
+	apiPath := data.APIPath()
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError(ErrDeleting(ResourceTypeKey, apiPath, err))
 		return
@@ -325,8 +318,36 @@ func (r *KeyResource) ImportState(ctx context.Context, req resource.ImportStateR
 	}
 }
 
+// APIPath returns the Vault API path for this key.
+func (m *KeyResourceModel) APIPath() string {
+	return BuildKeyPath(m.Mount.ValueString(), m.Name.ValueString())
+}
+
+// getVaultClient returns a Vault client for the given namespace, adding a diagnostic on error.
+func (r *KeyResource) getVaultClient(ctx context.Context, namespace string, diags *diag.Diagnostics) (*vaultapi.Client, bool) {
+	cli, err := client.GetClient(ctx, r.Meta(), namespace)
+	if err != nil {
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return nil, false
+	}
+	return cli, true
+}
+
+// readKey reads the key from Vault. Returns (data, true) if found, (nil, false) otherwise. API errors are added to diags.
+func (r *KeyResource) readKey(ctx context.Context, cli *vaultapi.Client, apiPath string, diags *diag.Diagnostics) (map[string]interface{}, bool) {
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		diags.AddError(ErrReading(ResourceTypeKey, apiPath, err))
+		return nil, false
+	}
+	if vaultResp == nil {
+		return nil, false
+	}
+	return vaultResp.Data, true
+}
+
 // parseKeyResponse parses the Vault API response data into the resource model
-func (r *KeyResource) parseKeyResponse(ctx context.Context, responseData map[string]interface{}, data *KeyResourceModel, diags *diag.Diagnostics) {
+func (data *KeyResourceModel) parseKeyResponse(ctx context.Context, responseData map[string]interface{}) {
 	if v, ok := responseData["type"].(string); ok {
 		data.Type = types.StringValue(v)
 	}
