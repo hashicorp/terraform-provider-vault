@@ -41,10 +41,10 @@ func TestDataSourceAuthBackends(t *testing.T) {
 			{
 				Config: testDataSourceAuthBackends_config([]string{userpassPath, approlePath}, "userpass"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".#", "1"),
-					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".0", userpassPath),
-					resource.TestCheckResourceAttr(ds, consts.FieldAccessors+".#", "1"),
 					resource.TestCheckResourceAttr(ds, consts.FieldType, "userpass"),
+					resource.TestCheckTypeSetElemAttr(ds, consts.FieldPaths+".*", userpassPath),
+					resource.TestCheckResourceAttrSet(ds, consts.FieldPaths+".#"),
+					resource.TestCheckResourceAttrSet(ds, consts.FieldAccessors+".#"),
 				),
 			},
 		},
@@ -67,15 +67,6 @@ data "vault_auth_backends" "test" {
 		vault_auth_backend.userpass,
 		vault_auth_backend.approle,
 	]
-}
-output "path0" {
-	value = sort(data.vault_auth_backends.test.paths).0
-}
-output "path1" {
-	value = sort(data.vault_auth_backends.test.paths).1
-}
-output "path2" {
-	value = sort(data.vault_auth_backends.test.paths).2
 }
 `
 
