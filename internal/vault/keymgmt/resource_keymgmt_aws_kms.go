@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	vaultapi "github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -102,15 +104,12 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	vaultPath := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	apiPath := BuildKMSPath(vaultPath, name)
+	apiPath := data.APIPath()
 
 	writeData := map[string]interface{}{
 		"provider":       ProviderAWSKMS,
@@ -140,13 +139,11 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Read back the state from Vault
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
-	if err != nil {
-		resp.Diagnostics.AddError(ErrReading(ResourceTypeAWSKMS, apiPath, err))
+	responseData, exists := r.readKMS(ctx, cli, apiPath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if vaultResp == nil {
+	if !exists {
 		resp.Diagnostics.AddError(
 			"Unexpected error after creating AWS KMS provider",
 			fmt.Sprintf("AWS KMS provider not found at path %q immediately after creation", apiPath),
@@ -155,7 +152,7 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Parse response data
-	r.parseAWSKMSResponse(vaultResp.Data, &data)
+	data.parseAWSKMSResponse(responseData)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -167,21 +164,18 @@ func (r *AWSKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
 	// Build API path and read from Vault
-	apiPath := BuildKMSPath(data.Mount.ValueString(), data.Name.ValueString())
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
-	if err != nil {
-		resp.Diagnostics.AddError(ErrReading(ResourceTypeAWSKMS, apiPath, err))
+	apiPath := data.APIPath()
+	responseData, exists := r.readKMS(ctx, cli, apiPath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if vaultResp == nil {
+	if !exists {
 		tflog.Warn(ctx, "AWS KMS provider not found, removing from state", map[string]interface{}{
 			"path": apiPath,
 		})
@@ -190,7 +184,7 @@ func (r *AWSKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	// Parse response data
-	r.parseAWSKMSResponse(vaultResp.Data, &data)
+	data.parseAWSKMSResponse(responseData)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -203,13 +197,12 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, plan.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	apiPath := BuildKMSPath(plan.Mount.ValueString(), plan.Name.ValueString())
+	apiPath := plan.APIPath()
 	writeData := map[string]interface{}{
 		"provider": ProviderAWSKMS,
 	}
@@ -243,13 +236,11 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Read back the state from Vault
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
-	if err != nil {
-		resp.Diagnostics.AddError(ErrReading(ResourceTypeAWSKMS, apiPath, err))
+	responseData, exists := r.readKMS(ctx, cli, apiPath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if vaultResp == nil {
+	if !exists {
 		resp.Diagnostics.AddError(
 			"Unexpected error after updating AWS KMS provider",
 			fmt.Sprintf("AWS KMS provider not found at path %q immediately after update", apiPath),
@@ -258,7 +249,7 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Parse response data
-	r.parseAWSKMSResponse(vaultResp.Data, &plan)
+	plan.parseAWSKMSResponse(responseData)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -270,13 +261,12 @@ func (r *AWSKMSResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	apiPath := BuildKMSPath(data.Mount.ValueString(), data.Name.ValueString())
+	apiPath := data.APIPath()
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError(ErrDeleting(ResourceTypeAWSKMS, apiPath, err))
 		return
@@ -318,7 +308,35 @@ func (r *AWSKMSResource) ImportState(ctx context.Context, req resource.ImportSta
 	}
 }
 
-func (r *AWSKMSResource) parseAWSKMSResponse(responseData map[string]interface{}, data *AWSKMSResourceModel) {
+// APIPath returns the Vault API path for this KMS provider.
+func (m *AWSKMSResourceModel) APIPath() string {
+	return BuildKMSPath(m.Mount.ValueString(), m.Name.ValueString())
+}
+
+// getVaultClient returns a Vault client for the given namespace, adding a diagnostic on error.
+func (r *AWSKMSResource) getVaultClient(ctx context.Context, namespace string, diags *diag.Diagnostics) (*vaultapi.Client, bool) {
+	cli, err := client.GetClient(ctx, r.Meta(), namespace)
+	if err != nil {
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return nil, false
+	}
+	return cli, true
+}
+
+// readKMS reads the KMS provider from Vault. Returns (data, true) if found, (nil, false) otherwise. API errors are added to diags.
+func (r *AWSKMSResource) readKMS(ctx context.Context, cli *vaultapi.Client, apiPath string, diags *diag.Diagnostics) (map[string]interface{}, bool) {
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		diags.AddError(ErrReading(ResourceTypeAWSKMS, apiPath, err))
+		return nil, false
+	}
+	if vaultResp == nil {
+		return nil, false
+	}
+	return vaultResp.Data, true
+}
+
+func (data *AWSKMSResourceModel) parseAWSKMSResponse(responseData map[string]interface{}) {
 	if v, ok := responseData["key_collection"].(string); ok {
 		data.KeyCollection = types.StringValue(v)
 	}
