@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -86,8 +87,10 @@ func (r *DistributeKeyResource) Schema(ctx context.Context, req resource.SchemaR
 			},
 			consts.FieldProtection: schema.StringAttribute{
 				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString("hsm"),
 				MarkdownDescription: "Specifies the protection of the key. The protection defines where cryptographic operations are " +
-					"performed with the key in the KMS provider. The following values are supported: hsm, software.",
+					"performed with the key in the KMS provider. The following values are supported: hsm, software. Defaults to `hsm`.",
 			},
 			consts.FieldVersions: schema.MapAttribute{
 				Computed:            true,

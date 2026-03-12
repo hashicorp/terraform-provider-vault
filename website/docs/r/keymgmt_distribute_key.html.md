@@ -143,7 +143,7 @@ The following arguments are supported:
 
 * `purpose` - (Required) Specifies the purpose of the key. The purpose defines a set of cryptographic capabilities that the key will have in the KMS provider. A key must have at least one of the supported purposes. The following values are supported : encrypt, decrypt, sign, verify, wrap, unwrap.
 
-* `protection` - (Optional) Specifies the protection of the key. The protection defines where cryptographic operations are performed with the key in the KMS provider. The following values are supported: hsm, software.
+* `protection` - (Optional) Specifies the protection of the key. The protection defines where cryptographic operations are performed with the key in the KMS provider. The following values are supported: `hsm`, `software`. Defaults to `hsm`.
 
 ## Attributes Reference
 
