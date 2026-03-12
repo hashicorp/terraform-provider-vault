@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	vaultapi "github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -108,17 +109,12 @@ func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	vaultPath := data.Mount.ValueString()
-	kmsName := data.KMSName.ValueString()
-	keyName := data.KeyName.ValueString()
-	apiPath := BuildDistributeKeyPath(vaultPath, kmsName, keyName)
-
+	apiPath := data.APIPath()
 	writeData := map[string]interface{}{}
 
 	var purposes []string
@@ -132,23 +128,27 @@ func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateR
 		writeData["protection"] = data.Protection.ValueString()
 	}
 
-	writeResp, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData)
-	if err != nil {
+	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 		resp.Diagnostics.AddError(ErrCreating(ResourceTypeKeyDistribution, apiPath, err))
 		return
 	}
 
-	// Parse the write response to extract all fields including computed ones
-	if writeResp != nil && writeResp.Data != nil {
-		parseDistributeKeyResponse(ctx, writeResp.Data, &data, &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
-		// Ensure computed field is set to a known value even if write response is empty
-		if data.Versions.IsUnknown() {
-			data.Versions, _ = types.MapValueFrom(ctx, types.StringType, map[string]string{})
-		}
+	// Read back the state from Vault
+	responseData, exists := r.readDistributeKey(ctx, cli, apiPath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !exists {
+		resp.Diagnostics.AddError(
+			"Unexpected error after creating key distribution",
+			fmt.Sprintf("Key distribution not found at path %q immediately after creation", apiPath),
+		)
+		return
+	}
+
+	data.parseDistributeKeyResponse(ctx, responseData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -161,21 +161,17 @@ func (r *DistributeKeyResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	// Build API path from data fields
-	apiPath := BuildDistributeKeyPath(data.Mount.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
-	if err != nil {
-		resp.Diagnostics.AddError(ErrReading(ResourceTypeKeyDistribution, apiPath, err))
+	apiPath := data.APIPath()
+	responseData, exists := r.readDistributeKey(ctx, cli, apiPath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if vaultResp == nil {
+	if !exists {
 		tflog.Warn(ctx, "key distribution not found, removing from state", map[string]interface{}{
 			"path": apiPath,
 		})
@@ -184,7 +180,7 @@ func (r *DistributeKeyResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	// Parse response data
-	parseDistributeKeyResponse(ctx, vaultResp.Data, &data, &resp.Diagnostics)
+	data.parseDistributeKeyResponse(ctx, responseData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -200,14 +196,12 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, plan.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	// Build API path from fields
-	apiPath := BuildDistributeKeyPath(plan.Mount.ValueString(), plan.KMSName.ValueString(), plan.KeyName.ValueString())
+	apiPath := plan.APIPath()
 	writeData := map[string]interface{}{}
 	hasChanges := false
 
@@ -228,22 +222,28 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	if hasChanges {
-		writeResp, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData)
-		if err != nil {
+		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
 			resp.Diagnostics.AddError(ErrUpdating(ResourceTypeKeyDistribution, apiPath, err))
 			return
 		}
+	}
 
-		// Parse the write response to extract updated fields
-		if writeResp != nil && writeResp.Data != nil {
-			parseDistributeKeyResponse(ctx, writeResp.Data, &plan, &resp.Diagnostics)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-		}
-	} else {
-		// No changes, preserve existing computed values
-		plan.Versions = state.Versions
+	// Read back the state from Vault
+	responseData, exists := r.readDistributeKey(ctx, cli, apiPath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !exists {
+		resp.Diagnostics.AddError(
+			"Unexpected error after updating key distribution",
+			fmt.Sprintf("Key distribution not found at path %q immediately after update", apiPath),
+		)
+		return
+	}
+
+	plan.parseDistributeKeyResponse(ctx, responseData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -256,14 +256,12 @@ func (r *DistributeKeyResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	// Build API path from fields
-	apiPath := BuildDistributeKeyPath(data.Mount.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
+	apiPath := data.APIPath()
 	if _, err := cli.Logical().DeleteWithContext(ctx, apiPath); err != nil {
 		resp.Diagnostics.AddError(ErrDeleting(ResourceTypeKeyDistribution, apiPath, err))
 		return
@@ -311,9 +309,36 @@ func (r *DistributeKeyResource) ImportState(ctx context.Context, req resource.Im
 	}
 }
 
-// parseDistributeKeyResponse extracts data from Vault API response data into the distribute key model
-// This works with both write responses and read responses from the key distribution API
-func parseDistributeKeyResponse(ctx context.Context, responseData map[string]interface{}, data *DistributeKeyResourceModel, diags *diag.Diagnostics) {
+// APIPath returns the Vault API path for this key distribution.
+func (m *DistributeKeyResourceModel) APIPath() string {
+	return BuildDistributeKeyPath(m.Mount.ValueString(), m.KMSName.ValueString(), m.KeyName.ValueString())
+}
+
+// getVaultClient returns a Vault client for the given namespace, adding a diagnostic on error.
+func (r *DistributeKeyResource) getVaultClient(ctx context.Context, namespace string, diags *diag.Diagnostics) (*vaultapi.Client, bool) {
+	cli, err := client.GetClient(ctx, r.Meta(), namespace)
+	if err != nil {
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return nil, false
+	}
+	return cli, true
+}
+
+// readDistributeKey reads the key distribution from Vault. Returns (data, true) if found, (nil, false) otherwise. API errors are added to diags.
+func (r *DistributeKeyResource) readDistributeKey(ctx context.Context, cli *vaultapi.Client, apiPath string, diags *diag.Diagnostics) (map[string]interface{}, bool) {
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		diags.AddError(ErrReading(ResourceTypeKeyDistribution, apiPath, err))
+		return nil, false
+	}
+	if vaultResp == nil {
+		return nil, false
+	}
+	return vaultResp.Data, true
+}
+
+// parseDistributeKeyResponse extracts data from Vault API response data into the distribute key model.
+func (data *DistributeKeyResourceModel) parseDistributeKeyResponse(ctx context.Context, responseData map[string]interface{}, diags *diag.Diagnostics) {
 	if v, ok := responseData["purpose"].([]interface{}); ok {
 		purposes, d := types.SetValueFrom(ctx, types.StringType, v)
 		diags.Append(d...)

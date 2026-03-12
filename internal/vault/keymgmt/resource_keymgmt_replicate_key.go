@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	vaultapi "github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -84,17 +86,12 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	vaultPath := data.Mount.ValueString()
-	kmsName := data.KMSName.ValueString()
-	keyName := data.KeyName.ValueString()
-
-	kmsPath := BuildKMSPath(vaultPath, kmsName)
+	kmsPath := data.KMSPath()
 	kmsResp, err := cli.Logical().ReadWithContext(ctx, kmsPath)
 	if err != nil {
 		resp.Diagnostics.AddError(ErrReading(ResourceTypeKMSProvider, kmsPath, err))
@@ -102,7 +99,7 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	if kmsResp == nil {
-		resp.Diagnostics.AddError("KMS provider not found", fmt.Sprintf("KMS provider %s not found at %s", kmsName, kmsPath))
+		resp.Diagnostics.AddError("KMS provider not found", fmt.Sprintf("KMS provider %s not found at %s", data.KMSName.ValueString(), kmsPath))
 		return
 	}
 
@@ -116,9 +113,9 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	apiPath := BuildReplicateKeyPath(vaultPath, kmsName, keyName)
-	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, map[string]interface{}{}); err != nil {
-		resp.Diagnostics.AddError("Error replicating Key Management key", fmt.Sprintf("Error replicating key at %s: %s", apiPath, err))
+	replicatePath := data.ReplicatePath()
+	if _, err := cli.Logical().WriteWithContext(ctx, replicatePath, map[string]interface{}{}); err != nil {
+		resp.Diagnostics.AddError("Error replicating Key Management key", fmt.Sprintf("Error replicating key at %s: %s", replicatePath, err))
 		return
 	}
 
@@ -132,14 +129,13 @@ func (r *ReplicateKeyResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
 	// Build base path to check if distribution exists
-	basePath := BuildDistributeKeyPath(data.Mount.ValueString(), data.KMSName.ValueString(), data.KeyName.ValueString())
+	basePath := data.DistributePath()
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, basePath)
 	if err != nil {
 		resp.Diagnostics.AddError(ErrReading(ResourceTypeKeyDistribution, basePath, err))
@@ -217,4 +213,29 @@ func (r *ReplicateKeyResource) ImportState(ctx context.Context, req resource.Imp
 			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
 		)
 	}
+}
+
+// KMSPath returns the Vault API path for the KMS provider.
+func (m *ReplicateKeyResourceModel) KMSPath() string {
+	return BuildKMSPath(m.Mount.ValueString(), m.KMSName.ValueString())
+}
+
+// ReplicatePath returns the Vault API path for key replication.
+func (m *ReplicateKeyResourceModel) ReplicatePath() string {
+	return BuildReplicateKeyPath(m.Mount.ValueString(), m.KMSName.ValueString(), m.KeyName.ValueString())
+}
+
+// DistributePath returns the Vault API path for the key distribution (used to verify replication exists).
+func (m *ReplicateKeyResourceModel) DistributePath() string {
+	return BuildDistributeKeyPath(m.Mount.ValueString(), m.KMSName.ValueString(), m.KeyName.ValueString())
+}
+
+// getVaultClient returns a Vault client for the given namespace, adding a diagnostic on error.
+func (r *ReplicateKeyResource) getVaultClient(ctx context.Context, namespace string, diags *diag.Diagnostics) (*vaultapi.Client, bool) {
+	cli, err := client.GetClient(ctx, r.Meta(), namespace)
+	if err != nil {
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return nil, false
+	}
+	return cli, true
 }
