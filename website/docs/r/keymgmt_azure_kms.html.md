@@ -50,18 +50,18 @@ The following arguments are supported:
 
 * `mount` - (Required, Forces new resource) Path of the Key Management secrets engine mount. Must match the
   `path` of a [`vault_mount`](mount.html) resource with `type = "keymgmt"`. Use
-  `vault_mount.<name>.path` here.
+  `vault_mount.keymgmt.path` here.
 
-* `name` - (Required, Forces new resource) Unique name for this Azure Key Vault provider. This cannot be changed after creation.
+* `name` - (Required, Forces new resource) Specifies the name of the Azure Key Vault provider. Cannot be changed after creation.
 
-* `key_collection` - (Required, Forces new resource) Name of the Azure Key Vault where keys will be created.
+* `key_collection` - (Required, Forces new resource) Refers to a location to store keys in the Azure Key Vault provider. Cannot be changed after creation.
 
 * `credentials_wo` - (Required, Write-only, Sensitive) Map of Azure credentials passed directly to the Vault API.
   Supported keys are:
   - `tenant_id` - (Required) Azure Active Directory tenant ID (also called Directory ID).
   - `client_id` - (Required) Azure Active Directory application/client ID for the service principal.
   - `client_secret` - (Required) Azure Active Directory client secret for the service principal.
-  - `environment` - (Optional) Azure cloud environment. Valid values: `AzurePublicCloud` (default), `AzureUSGovernmentCloud`, `AzureChinaCloud`, `AzureGermanCloud`.
+  - `environment` - (Optional) Azure cloud environment.
 
   This field is write-only and will never be stored in Terraform state. Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
 

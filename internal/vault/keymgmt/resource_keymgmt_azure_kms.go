@@ -53,36 +53,39 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a [`vault_mount`](mount.html) resource with `type = \"keymgmt\"`. Use `vault_mount.<name>.path` here.",
+				Required: true,
+				MarkdownDescription: "Path of the Key Management secrets engine mount. Must match the `path` of a `vault_mount` " +
+					"resource with `type = \"keymgmt\"`. Use `vault_mount.keymgmt.path` here.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldName: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Name of the Azure Key Vault provider",
+				MarkdownDescription: "Specifies the name of the Azure Key Vault provider. Cannot be changed after creation.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Azure Key Vault name where keys are stored",
+				MarkdownDescription: "Refers to a location to store keys in the Azure Key Vault provider. Cannot be changed after creation.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldCredentialsWO: schema.MapAttribute{
-				Required:            true,
-				Sensitive:           true,
-				WriteOnly:           true,
-				ElementType:         types.StringType,
-				MarkdownDescription: "Map of Azure credentials passed directly to the Vault API. Supported keys are `tenant_id`, `client_id`, `client_secret`, and optionally `environment`. This field is write-only and will not be stored in state. Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.",
+				Required:    true,
+				Sensitive:   true,
+				WriteOnly:   true,
+				ElementType: types.StringType,
+				MarkdownDescription: "The credentials to use for authentication with the Azure Key Vault provider. Supplying values for this parameter " +
+					"is optional, as credentials may also be specified as environment variables.",
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
-				Optional:            true,
-				MarkdownDescription: "Version counter for the write-only `credentials_wo` field. Increment this value whenever you update `credentials_wo` to trigger the change.",
+				Optional: true,
+				MarkdownDescription: "Version number for the write-only credentials. Increment this value to trigger a credential rotation. " +
+					"Changing this value will cause the credentials to be re-sent to Vault during the next apply.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
