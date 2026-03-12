@@ -67,11 +67,6 @@ The following arguments are supported:
 
 * `credentials_wo_version` - (Optional) Version counter for the `credentials_wo` field. Increment this value whenever you update `credentials_wo` to trigger the credential rotation.
 
-## Attributes Reference
-
-In addition to the arguments above, the following attributes are exported:
-
-* `id` - The unique identifier for the Azure Key Vault provider. Format: `{path}/kms/{name}`
 
 ## Import
 

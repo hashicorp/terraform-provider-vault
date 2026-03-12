@@ -98,12 +98,6 @@ The following arguments are supported:
 
 * `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Increment this value whenever you rotate or update `credentials_wo` to trigger Terraform to apply the new values.
 
-## Attributes Reference
-
-In addition to the arguments above, the following attributes are exported:
-
-* `id` - The unique identifier for the AWS KMS provider. Format: `{path}/kms/{name}`
-
 ## Import
 
 AWS KMS providers can be imported using the format `{path}/kms/{name}`, e.g.
