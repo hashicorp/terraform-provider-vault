@@ -15,9 +15,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -32,146 +30,103 @@ var (
 
 func sshSecretBackendRoleResource() *schema.Resource {
 	s := map[string]*schema.Schema{
-		consts.FieldName: {
+		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
 			ForceNew:    true,
 			Description: "Unique name for the role.",
 		},
-		consts.FieldBackend: {
+		"backend": {
 			Type:     schema.TypeString,
 			Required: true,
 			ForceNew: true,
 		},
-		consts.FieldAllowBareDomains: {
+		"allow_bare_domains": {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Default:  false,
 		},
-		consts.FieldAllowHostCertificates: {
+		"allow_host_certificates": {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Default:  false,
 		},
-		consts.FieldAllowSubdomains: {
+		"allow_subdomains": {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Default:  false,
 		},
-		consts.FieldAllowUserCertificates: {
+		"allow_user_certificates": {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Default:  false,
 		},
-		consts.FieldAllowUserKeyIDs: {
+		"allow_user_key_ids": {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Default:  false,
 		},
-		consts.FieldAllowedCriticalOptions: {
+		"allowed_critical_options": {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
-		consts.FieldAllowedDomainsTemplate: {
+		"allowed_domains_template": {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
 		},
-		consts.FieldAllowedDomains: {
+		"allowed_domains": {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
-		consts.FieldCIDRList: {
+		"cidr_list": {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
-		consts.FieldAllowedExtensions: {
+		"allowed_extensions": {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
-		consts.FieldDefaultExtensions: {
-			Type:        schema.TypeMap,
-			Optional:    true,
-			Description: "Default extensions to include in SSH certificates. Only applicable for CA key type.",
-			DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-				// Suppress diff if key_type is not "ca" since Vault ignores this field for OTP
-				keyType := strings.ToLower(d.Get(consts.FieldKeyType).(string))
-				return keyType != consts.SSHKeyTypeCA
-			},
-		},
-		consts.FieldDefaultExtensionsTemplate: {
-			Type:        schema.TypeBool,
-			Optional:    true,
-			Default:     false,
-			Description: "Specifies if the default_extensions field supports templating. Only applicable for CA key type.",
-			DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-				// Suppress diff if key_type is not "ca" since Vault ignores this field for OTP
-				keyType := strings.ToLower(d.Get(consts.FieldKeyType).(string))
-				return keyType != consts.SSHKeyTypeCA
-			},
-		},
-		consts.FieldDefaultCriticalOptions: {
+		"default_extensions": {
 			Type:     schema.TypeMap,
 			Optional: true,
 		},
-		consts.FieldExcludeCIDRList: {
-			Type:        schema.TypeSet,
-			Optional:    true,
-			Description: "List of CIDR blocks for which credentials cannot be created. Applicable for OTP and dynamic key types.",
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-				// Suppress diff if key_type is "ca" since Vault ignores this field for CA roles
-				// This field is applicable for OTP key type
-				keyType := strings.ToLower(d.Get(consts.FieldKeyType).(string))
-				return keyType == consts.SSHKeyTypeCA
-			},
+		"default_critical_options": {
+			Type:     schema.TypeMap,
+			Optional: true,
 		},
-		consts.FieldPort: {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Computed:    true,
-			Description: "Specifies the port number for SSH connections (default 22). Applicable for OTP and dynamic key types.",
-			DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-				// Suppress diff if key_type is "ca" since Vault ignores this field for CA roles
-				// This field is applicable for OTP key type
-				keyType := strings.ToLower(d.Get(consts.FieldKeyType).(string))
-				return keyType == consts.SSHKeyTypeCA
-			},
-		},
-		consts.FieldAllowedUsersTemplate: {
+		"allowed_users_template": {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Default:  false,
 		},
-		consts.FieldAllowedUsers: {
+		"allowed_users": {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
-		consts.FieldDefaultUser: {
+		"default_user": {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
-		consts.FieldDefaultUserTemplate: {
+		"default_user_template": {
 			Type:     schema.TypeBool,
 			Optional: true,
 		},
-		consts.FieldKeyIDFormat: {
+		"key_id_format": {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
-		consts.FieldKeyType: {
+		"key_type": {
 			Type:     schema.TypeString,
 			Required: true,
 		},
-		consts.FieldAllowedUserKeyConfig: {
+		"allowed_user_key_config": {
 			Type:        schema.TypeSet,
 			Optional:    true,
 			Description: "Set of allowed public key types and their relevant configuration",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					consts.FieldType: {
+					"type": {
 						Required: true,
 						Type:     schema.TypeString,
 						Description: fmt.Sprintf("Key type, choices:\n%s",
@@ -196,7 +151,7 @@ func sshSecretBackendRoleResource() *schema.Resource {
 							}
 						},
 					},
-					consts.FieldLengths: {
+					"lengths": {
 						Description: "List of allowed key lengths, vault-1.10 and above",
 						Required:    true,
 						Type:        schema.TypeList,
@@ -207,28 +162,28 @@ func sshSecretBackendRoleResource() *schema.Resource {
 				},
 			},
 		},
-		consts.FieldAlgorithmSigner: {
+		"algorithm_signer": {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		consts.FieldMaxTTL: {
+		"max_ttl": {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		consts.FieldTTL: {
+		"ttl": {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-		consts.FieldNotBeforeDuration: {
+		"not_before_duration": {
 			Type:        schema.TypeString,
 			Description: "Specifies the duration by which to backdate the ValidAfter property. Uses duration format strings.",
 			Optional:    true,
 			Computed:    true,
 		},
-		consts.FieldAllowEmptyPrincipals: {
+		"allow_empty_principals": {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Default:  false,
@@ -254,114 +209,95 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	backend := d.Get(consts.FieldBackend).(string)
-	name := d.Get(consts.FieldName).(string)
+	backend := d.Get("backend").(string)
+	name := d.Get("name").(string)
 
 	path := sshRoleResourcePath(backend, name)
 
 	data := map[string]interface{}{
-		consts.FieldKeyType:               d.Get(consts.FieldKeyType).(string),
-		consts.FieldAllowBareDomains:      d.Get(consts.FieldAllowBareDomains).(bool),
-		consts.FieldAllowHostCertificates: d.Get(consts.FieldAllowHostCertificates).(bool),
-		consts.FieldAllowSubdomains:       d.Get(consts.FieldAllowSubdomains).(bool),
-		consts.FieldAllowUserCertificates: d.Get(consts.FieldAllowUserCertificates).(bool),
-		consts.FieldAllowUserKeyIDs:       d.Get(consts.FieldAllowUserKeyIDs).(bool),
+		"key_type":                d.Get("key_type").(string),
+		"allow_bare_domains":      d.Get("allow_bare_domains").(bool),
+		"allow_host_certificates": d.Get("allow_host_certificates").(bool),
+		"allow_subdomains":        d.Get("allow_subdomains").(bool),
+		"allow_user_certificates": d.Get("allow_user_certificates").(bool),
+		"allow_user_key_ids":      d.Get("allow_user_key_ids").(bool),
 	}
 
-	if v, ok := d.GetOk(consts.FieldAllowedCriticalOptions); ok {
-		data[consts.FieldAllowedCriticalOptions] = v.(string)
+	if v, ok := d.GetOk("allowed_critical_options"); ok {
+		data["allowed_critical_options"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(consts.FieldAllowedDomains); ok {
-		data[consts.FieldAllowedDomains] = v.(string)
+	if v, ok := d.GetOk("allowed_domains"); ok {
+		data["allowed_domains"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(consts.FieldCIDRList); ok {
-		data[consts.FieldCIDRList] = v.(string)
+	if v, ok := d.GetOk("cidr_list"); ok {
+		data["cidr_list"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(consts.FieldAllowedExtensions); ok {
-		data[consts.FieldAllowedExtensions] = v.(string)
+	if v, ok := d.GetOk("allowed_extensions"); ok {
+		data["allowed_extensions"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(consts.FieldDefaultExtensions); ok {
-		data[consts.FieldDefaultExtensions] = v
+	if v, ok := d.GetOk("default_extensions"); ok {
+		data["default_extensions"] = v
 	}
 
-	if v, ok := d.GetOk(consts.FieldDefaultExtensionsTemplate); ok {
-		data[consts.FieldDefaultExtensionsTemplate] = v.(bool)
+	if v, ok := d.GetOk("default_critical_options"); ok {
+		data["default_critical_options"] = v
 	}
 
-	if v, ok := d.GetOk(consts.FieldDefaultCriticalOptions); ok {
-		data[consts.FieldDefaultCriticalOptions] = v
+	if v, ok := d.GetOk("allowed_users_template"); ok {
+		data["allowed_users_template"] = v.(bool)
 	}
 
-	if v, ok := d.GetOk(consts.FieldExcludeCIDRList); ok {
-		data[consts.FieldExcludeCIDRList] = strings.Join(util.TerraformSetToStringArray(v), ",")
+	if v, ok := d.GetOk("allowed_users"); ok {
+		data["allowed_users"] = v.(string)
 	}
 
-	// For port field , GetOk returns true even if value is only in state
-	// Use GetRawConfig to check if port is actually set in the configuration
-	if v, ok := d.GetOk(consts.FieldPort); ok {
-		rawConfig := d.GetRawConfig()
-		portAttr := rawConfig.GetAttr(consts.FieldPort)
-		// Only send to Vault if port is explicitly set in config
-		if !portAttr.IsNull() {
-			data[consts.FieldPort] = v.(int)
-		}
-	}
-
-	if v, ok := d.GetOk(consts.FieldAllowedUsersTemplate); ok {
-		data[consts.FieldAllowedUsersTemplate] = v.(bool)
-	}
-
-	if v, ok := d.GetOk(consts.FieldAllowedUsers); ok {
-		data[consts.FieldAllowedUsers] = v.(string)
-	}
-
-	if v, ok := d.GetOk(consts.FieldDefaultUser); ok {
-		data[consts.FieldDefaultUser] = v.(string)
+	if v, ok := d.GetOk("default_user"); ok {
+		data["default_user"] = v.(string)
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		if v, ok := d.GetOk(consts.FieldDefaultUserTemplate); ok {
-			data[consts.FieldDefaultUserTemplate] = v.(bool)
+		if v, ok := d.GetOk("default_user_template"); ok {
+			data["default_user_template"] = v.(bool)
 		}
 
-		data[consts.FieldAllowedDomainsTemplate] = d.Get(consts.FieldAllowedDomainsTemplate)
+		data["allowed_domains_template"] = d.Get("allowed_domains_template")
 	}
 	if provider.IsAPISupported(meta, provider.VaultVersion117) {
-		data[consts.FieldAllowEmptyPrincipals] = d.Get(consts.FieldAllowEmptyPrincipals).(bool)
+		data["allow_empty_principals"] = d.Get("allow_empty_principals").(bool)
 	}
 
-	if v, ok := d.GetOk(consts.FieldKeyIDFormat); ok {
-		data[consts.FieldKeyIDFormat] = v.(string)
+	if v, ok := d.GetOk("key_id_format"); ok {
+		data["key_id_format"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(consts.FieldAlgorithmSigner); ok {
-		data[consts.FieldAlgorithmSigner] = v.(string)
+	if v, ok := d.GetOk("algorithm_signer"); ok {
+		data["algorithm_signer"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(consts.FieldMaxTTL); ok {
-		data[consts.FieldMaxTTL] = v.(string)
+	if v, ok := d.GetOk("max_ttl"); ok {
+		data["max_ttl"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(consts.FieldTTL); ok {
-		data[consts.FieldTTL] = v.(string)
+	if v, ok := d.GetOk("ttl"); ok {
+		data["ttl"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(consts.FieldNotBeforeDuration); ok {
-		data[consts.FieldNotBeforeDuration] = v.(string)
+	if v, ok := d.GetOk("not_before_duration"); ok {
+		data["not_before_duration"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(consts.FieldAllowedUserKeyConfig); ok {
+	if v, ok := d.GetOk("allowed_user_key_config"); ok {
 		// post vault-1.10
 		vals := make(map[string][]interface{})
 		for _, m := range v.(*schema.Set).List() {
 			val := m.(map[string]interface{})
-			vals[val[consts.FieldType].(string)] = val[consts.FieldLengths].([]interface{})
+			vals[val["type"].(string)] = val["lengths"].([]interface{})
 		}
-		data[consts.FieldAllowedUserKeyLengths] = vals
+		data["allowed_user_key_lengths"] = vals
 	}
 
 	log.Printf("[DEBUG] Writing role %q on SSH backend %q", name, backend)
@@ -410,30 +346,29 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	if err := d.Set(consts.FieldName, name); err != nil {
+	if err := d.Set("name", name); err != nil {
 		return err
 	}
 
-	if err := d.Set(consts.FieldBackend, backend); err != nil {
+	if err := d.Set("backend", backend); err != nil {
 		return err
 	}
 
 	fields := []string{
-		consts.FieldKeyType, consts.FieldAllowBareDomains, consts.FieldAllowHostCertificates,
-		consts.FieldAllowSubdomains, consts.FieldAllowUserCertificates, consts.FieldAllowUserKeyIDs,
-		consts.FieldAllowedCriticalOptions, consts.FieldAllowedDomains,
-		consts.FieldCIDRList, consts.FieldAllowedExtensions,
-		consts.FieldDefaultCriticalOptions,
-		consts.FieldAllowedUsersTemplate, consts.FieldAllowedUsers, consts.FieldDefaultUser,
-		consts.FieldKeyIDFormat, consts.FieldMaxTTL, consts.FieldTTL, consts.FieldAlgorithmSigner,
-		consts.FieldNotBeforeDuration,
+		"key_type", "allow_bare_domains", "allow_host_certificates",
+		"allow_subdomains", "allow_user_certificates", "allow_user_key_ids",
+		"allowed_critical_options", "allowed_domains",
+		"cidr_list", "allowed_extensions", "default_extensions",
+		"default_critical_options", "allowed_users_template",
+		"allowed_users", "default_user", "key_id_format",
+		"max_ttl", "ttl", "algorithm_signer", "not_before_duration",
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		fields = append(fields, []string{consts.FieldDefaultUserTemplate, consts.FieldAllowedDomainsTemplate}...)
+		fields = append(fields, []string{"default_user_template", "allowed_domains_template"}...)
 	}
 	if provider.IsAPISupported(meta, provider.VaultVersion117) {
-		fields = append(fields, []string{consts.FieldAllowEmptyPrincipals}...)
+		fields = append(fields, []string{"allow_empty_principals"}...)
 	}
 
 	// cannot be read from the API, potential for drift here:
@@ -441,49 +376,6 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	// - allow_empty_principals
 	for _, k := range fields {
 		if err := d.Set(k, role.Data[k]); err != nil {
-			return err
-		}
-	}
-
-	// Handle port field
-	// Vault returns port for OTP/dynamic roles (default 22 if not set)
-	// For CA roles, Vault may not return port, so we set 0 to indicate unset
-	// DiffSuppressFunc will prevent drift for CA roles with port in config
-	if v, ok := role.Data[consts.FieldPort]; ok {
-		if err := d.Set(consts.FieldPort, v); err != nil {
-			return err
-		}
-	} else {
-		// If Vault doesn't return port, set to 0
-		// This ensures proper state management when port is removed from config
-		if err := d.Set(consts.FieldPort, 0); err != nil {
-			return err
-		}
-	}
-
-	// Handle key_type specific fields - only set if returned by Vault
-	// CA-specific: default_extensions, default_extensions_template
-	// OTP-specific: exclude_cidr_list
-	// DiffSuppressFunc prevents drift when fields are configured for wrong key_type
-	if v, ok := role.Data[consts.FieldDefaultExtensions]; ok {
-		if err := d.Set(consts.FieldDefaultExtensions, v); err != nil {
-			return err
-		}
-	}
-
-	if v, ok := role.Data[consts.FieldDefaultExtensionsTemplate]; ok {
-		if err := d.Set(consts.FieldDefaultExtensionsTemplate, v); err != nil {
-			return err
-		}
-	}
-
-	if v, ok := role.Data[consts.FieldExcludeCIDRList].(string); ok && v != "" {
-		cidrs := strings.Split(v, ",")
-		// Trim whitespace from each CIDR
-		for i, cidr := range cidrs {
-			cidrs[i] = strings.TrimSpace(cidr)
-		}
-		if err := d.Set(consts.FieldExcludeCIDRList, cidrs); err != nil {
 			return err
 		}
 	}
@@ -501,14 +393,15 @@ func setSSHRoleKeyConfig(d *schema.ResourceData, role *api.Secret) error {
 		return err
 	}
 
+	field := "allowed_user_key_config"
 	// set the key configuration
-	return d.Set(consts.FieldAllowedUserKeyConfig, keyConfigs)
+	return d.Set(field, keyConfigs)
 }
 
 func getSSHRoleKeyConfig(role *api.Secret) ([]map[string]interface{}, error) {
 	keyConfigs := make([]map[string]interface{}, 0)
 
-	l, ok := role.Data[consts.FieldAllowedUserKeyLengths].(map[string]interface{})
+	l, ok := role.Data["allowed_user_key_lengths"].(map[string]interface{})
 	if !ok {
 		return nil, nil
 	}
@@ -524,12 +417,12 @@ func getSSHRoleKeyConfig(role *api.Secret) ([]map[string]interface{}, error) {
 			lengths = append(lengths, v)
 		default:
 			return nil, fmt.Errorf("unexpected value type %T returned for "+
-				"%s in vault response", v, consts.FieldAllowedUserKeyLengths)
+				"allowed_user_key_lengths in vault response", v)
 		}
 
 		keyConfigs = append(keyConfigs, map[string]interface{}{
-			consts.FieldType:    keyType,
-			consts.FieldLengths: lengths,
+			"type":    keyType,
+			"lengths": lengths,
 		})
 	}
 

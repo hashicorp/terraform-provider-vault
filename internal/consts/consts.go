@@ -21,7 +21,6 @@ const (
 	FieldCertificate                        = "certificate"
 	FieldCACert                             = "ca_cert"
 	FieldClientCert                         = "client_cert"
-	FieldCAPath                             = "ca_path"
 	FieldClientKey                          = "client_key"
 	FieldAllowedCommonNames                 = "allowed_common_names"
 	FieldAllowedDNSSans                     = "allowed_dns_sans"
@@ -273,7 +272,6 @@ const (
 	FieldRenewIncrement                     = "renew_increment"
 	FieldLeaseStarted                       = "lease_started"
 	FieldLeaseStartTime                     = "lease_start_time"
-	FieldWithLeaseStartTime                 = "with_lease_start_time"
 	FieldClientToken                        = "client_token"
 	FieldWrappedToken                       = "wrapped_token"
 	FieldOrphan                             = "orphan"
@@ -399,7 +397,6 @@ const (
 	FieldOtherSans                          = "other_sans"
 	FieldMaxPathLength                      = "max_path_length"
 	FieldExcludeCNFromSans                  = "exclude_cn_from_sans"
-	FieldRemoveRootsFromChain               = "remove_roots_from_chain"
 	FieldPermittedDNSDomains                = "permitted_dns_domains"
 	FieldExcludedDNSDomains                 = "excluded_dns_domains"
 	FieldPermittedIPRanges                  = "permitted_ip_ranges"
@@ -539,10 +536,7 @@ const (
 	FieldPassthroughRequestHeaders          = "passthrough_request_headers"
 	FieldAllowedResponseHeaders             = "allowed_response_headers"
 	FieldDelegatedAuthAccessors             = "delegated_auth_accessors"
-	FieldPluginName                         = "plugin_name"
 	FieldPluginVersion                      = "plugin_version"
-	FieldRootRotationStatements             = "root_rotation_statements"
-	FieldEngineCount                        = "engine_count"
 	FieldEnabled                            = "enabled"
 	FieldDefaultMount                       = "default_mount"
 	FieldDefaultPathPolicy                  = "default_path_policy"
@@ -672,32 +666,8 @@ const (
 	FieldSupportsDecryption                   = "supports_decryption"
 	FieldSupportsDerivation                   = "supports_derivation"
 	FieldSupportsSigning                      = "supports_signing"
-	FieldLengths                              = "lengths"
-	FieldExcludeCIDRList                      = "exclude_cidr_list"
-	FieldPort                                 = "port"
-	FieldDefaultExtensionsTemplate            = "default_extensions_template"
-	FieldDefaultExtensions                    = "default_extensions"
-	FieldDefaultCriticalOptions               = "default_critical_options"
-	FieldAllowedExtensions                    = "allowed_extensions"
-	FieldAllowedCriticalOptions               = "allowed_critical_options"
-	FieldAllowedUsers                         = "allowed_users"
-	FieldAllowedUsersTemplate                 = "allowed_users_template"
-	FieldDefaultUser                          = "default_user"
-	FieldDefaultUserTemplate                  = "default_user_template"
-	FieldAllowHostCertificates                = "allow_host_certificates"
-	FieldAllowUserCertificates                = "allow_user_certificates"
-	FieldAllowUserKeyIDs                      = "allow_user_key_ids"
-	FieldAllowedUserKeyConfig                 = "allowed_user_key_config"
-	FieldAllowedUserKeyLengths                = "allowed_user_key_lengths"
-	FieldAlgorithmSigner                      = "algorithm_signer"
-	FieldKeyIDFormat                          = "key_id_format"
-	FieldDistributedClaimAccessToken          = "distributed_claim_access_token"
-	// SSH Secret Backend Key Types
-	SSHKeyTypeCA              = "ca"
-	FieldAllowEmptyPrincipals = "allow_empty_principals"
 
 	// KMIP Secret Role fields
-	FieldCA                        = "ca"
 	FieldOperationActivate         = "operation_activate"
 	FieldOperationAddAttribute     = "operation_add_attribute"
 	FieldOperationAll              = "operation_all"
@@ -740,37 +710,6 @@ const (
 	FieldVerboseLogging             = "verbose_logging"
 	FieldValidateAssertionSignature = "validate_assertion_signature"
 	FieldValidateResponseSignature  = "validate_response_signature"
-
-	/*
-		raft snapshot agent config fields
-	*/
-	FieldInterval                  = "interval"
-	FieldIntervalSeconds           = "interval_seconds"
-	FieldRetain                    = "retain"
-	FieldPathPrefix                = "path_prefix"
-	FieldFilePrefix                = "file_prefix"
-	FieldStorageType               = "storage_type"
-	FieldAutoloadEnabled           = "autoload_enabled"
-	FieldLocalMaxSpace             = "local_max_space"
-	FieldAWSS3Bucket               = "aws_s3_bucket"
-	FieldAWSS3Region               = "aws_s3_region"
-	FieldAWSS3Endpoint             = "aws_s3_endpoint"
-	FieldAWSS3DisableTLS           = "aws_s3_disable_tls"
-	FieldAWSS3ForcePathStyle       = "aws_s3_force_path_style"
-	FieldAWSS3EnableKMS            = "aws_s3_enable_kms"
-	FieldAWSS3ServerSideEncryption = "aws_s3_server_side_encryption"
-	FieldAWSS3KMSKey               = "aws_s3_kms_key"
-	FieldGoogleGCSBucket           = "google_gcs_bucket"
-	FieldGoogleServiceAccountKey   = "google_service_account_key"
-	FieldGoogleEndpoint            = "google_endpoint"
-	FieldGoogleDisableTLS          = "google_disable_tls"
-	FieldAzureContainerName        = "azure_container_name"
-	FieldAzureAccountName          = "azure_account_name"
-	FieldAzureAccountKey           = "azure_account_key"
-	FieldAzureBlobEnvironment      = "azure_blob_environment"
-	FieldAzureEndpoint             = "azure_endpoint"
-	FieldAzureClientID             = "azure_client_id"
-	FieldAzureAuthMode             = "azure_auth_mode"
 
 	/*
 		ephemeral resource constants and write-only attributes
@@ -833,10 +772,6 @@ const (
 	// EnvVarVaultConfigPath to override where the Vault configuration is in tests.
 	// Note: only used in tests. not used by the provider to read the Vault config.
 	EnvVarVaultConfigPath = "VAULT_CONFIG_PATH"
-	// EnvVarVaultAuthDistributedClaimAccessToken is used to provide an access token to
-	// fetch group memberships for distributed claims. Supported for Azure/Entra ID
-	// with Vault 1.18+.
-	EnvVarVaultAuthDistributedClaimAccessToken = "TERRAFORM_VAULT_AUTH_DISTRIBUTED_CLAIM_ACCESS_TOKEN"
 	/*
 		common mount types
 	*/
@@ -883,10 +818,8 @@ const (
 	VaultVersion118  = "1.18.0"
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
-	VaultVersion1192 = "1.19.2"
 	VaultVersion120  = "1.20.0"
 	VaultVersion121  = "1.21.0"
-	VaultVersion200  = "2.0.0"
 
 	/*
 		Vault auth methods
