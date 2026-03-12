@@ -28,6 +28,10 @@ IMPROVEMENTS:
 BUGS:
 * Clears the bindpass field in the state file after migrating to the write-only field in `vault_ldap_auth_backend` resource. ([#2813](https://github.com/hashicorp/terraform-provider-vault/pull/2813))
 
+BUG FIXES:
+
+* `provider/auth_login`: Fix "Missing Region" error when using generic `auth_login` block for AWS authentication without explicit `sts_region` parameter. The provider now properly resolves AWS region from environment variables (`AWS_REGION`, `AWS_DEFAULT_REGION`) and EC2 instance metadata service (IMDS), consistent with `auth_login_aws` behavior. ([#2786](https://github.com/hashicorp/terraform-provider-vault/issues/2786))
+
 ## 5.7.0 (February 5, 2026)
 
 FEATURES:
