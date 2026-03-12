@@ -10,8 +10,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cloudfoundry"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
-	spiffeauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
@@ -229,8 +230,10 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 // the Metadata method. All resources must have unique names.
 func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 	return append([]func() resource.Resource{
-		spiffeauth.NewSpiffeAuthConfigResource,
-		spiffeauth.NewSpiffeAuthRoleResource,
+		spiffe.NewSpiffeAuthConfigResource,
+		spiffe.NewSpiffeAuthRoleResource,
+		cloudfoundry.NewCFAuthBackendConfigResource,
+		cloudfoundry.NewCFAuthBackendRoleResource,
 		spiffesec.NewSpiffeSecretBackendConfigResource,
 		spiffesec.NewSpiffeSecretBackendRoleResource,
 		sys.NewPasswordPolicyResource,
@@ -259,6 +262,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewAWSStaticAccessCredentialsEphemeralSecretResource,
 		ephemeralauth.NewApproleAuthBackendRoleSecretIDEphemeralResource,
 		ephemeralsecrets.NewKubernetesServiceAccountTokenEphemeralResource,
+		cloudfoundry.NewCFAuthLoginEphemeralResource,
 		spiffesec.NewSpiffeSecretBackendMintJwtResource,
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
 	}
