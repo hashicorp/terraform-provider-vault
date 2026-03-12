@@ -48,36 +48,8 @@ func TestAccAliCloudSecretBackendRole_basic(t *testing.T) {
 	})
 }
 
-// TestAccAliCloudSecretBackendRole_import tests import state functionality
-func TestAccAliCloudSecretBackendRole_import(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-alicloud")
-	name := acctest.RandomWithPrefix("tf-test-role")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAliCloudSecretBackendRoleConfig_remotePolicy(name, backend, accessKey, secretKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldName, name),
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMount, backend),
-				),
-			},
-			{
-				ResourceName:                         "vault_alicloud_secret_backend_role.test",
-				ImportState:                          true,
-				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateIdFunc:                    testAccAliCloudSecretBackendRoleImportStateIdFunc("vault_alicloud_secret_backend_role.test"),
-			},
-		},
-	})
-}
-
-// TestAccAliCloudSecretBackendRole_remotePolicy tests remote policy configuration
-func TestAccAliCloudSecretBackendRole_remotePolicy(t *testing.T) {
+// TestAccAliCloudSecretBackendRole_remotePolicyLifecycle tests remote policy config and import.
+func TestAccAliCloudSecretBackendRole_remotePolicyLifecycle(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-alicloud")
 	name := acctest.RandomWithPrefix("tf-test-role")
 	accessKey, secretKey := getTestAliCloudCreds(t)
@@ -103,6 +75,13 @@ func TestAccAliCloudSecretBackendRole_remotePolicy(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldTTL, "3600"),
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMaxTTL, "7200"),
 				),
+			},
+			{
+				ResourceName:                         "vault_alicloud_secret_backend_role.test",
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateIdFunc:                    testAccAliCloudSecretBackendRoleImportStateIdFunc("vault_alicloud_secret_backend_role.test"),
 			},
 		},
 	})
@@ -214,72 +193,66 @@ func TestAccAliCloudSecretBackendRole_multipleRemotePolicies(t *testing.T) {
 	})
 }
 
-// TestAccAliCloudSecretBackendRole_missingName tests validation when name is missing
-func TestAccAliCloudSecretBackendRole_missingName(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-alicloud")
+// TestAccAliCloudSecretBackendRole_validation groups single-step role validation tests.
+func TestAccAliCloudSecretBackendRole_validation(t *testing.T) {
 	accessKey, secretKey := getTestAliCloudCreds(t)
 
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccAliCloudSecretBackendRoleConfig_missingName(backend, accessKey, secretKey),
-				ExpectError: regexp.MustCompile(`The argument "name" is required`),
-			},
+	testCases := []struct {
+		name        string
+		config      string
+		expectError string
+	}{
+		{
+			name:        "missing_name",
+			config:      testAccAliCloudSecretBackendRoleConfig_missingName(acctest.RandomWithPrefix("tf-test-alicloud"), accessKey, secretKey),
+			expectError: `The argument "name" is required`,
 		},
-	})
-}
-
-// TestAccAliCloudSecretBackendRole_missingMount tests validation when mount is missing
-func TestAccAliCloudSecretBackendRole_missingMount(t *testing.T) {
-	name := acctest.RandomWithPrefix("tf-test-role")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccAliCloudSecretBackendRoleConfig_missingMount(name),
-				ExpectError: regexp.MustCompile(`The argument "mount" is required`),
-			},
+		{
+			name:        "missing_mount",
+			config:      testAccAliCloudSecretBackendRoleConfig_missingMount(acctest.RandomWithPrefix("tf-test-role")),
+			expectError: `The argument "mount" is required`,
 		},
-	})
-}
-
-// TestAccAliCloudSecretBackendRole_noCredentialType tests error when no credential type specified
-func TestAccAliCloudSecretBackendRole_noCredentialType(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-alicloud")
-	name := acctest.RandomWithPrefix("tf-test-role")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccAliCloudSecretBackendRoleConfig_noCredentialType(name, backend, accessKey, secretKey),
-				ExpectError: regexp.MustCompile(`must include an arn, or at least one of inline_policies or remote_policies`),
-			},
+		{
+			name:        "no_credential_type",
+			config:      testAccAliCloudSecretBackendRoleConfig_noCredentialType(acctest.RandomWithPrefix("tf-test-role"), acctest.RandomWithPrefix("tf-test-alicloud"), accessKey, secretKey),
+			expectError: `must include an arn, or at least one of inline_policies or remote_policies`,
 		},
-	})
-}
-
-// TestAccAliCloudSecretBackendRole_emptyName tests error when name is empty
-func TestAccAliCloudSecretBackendRole_emptyName(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-alicloud")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccAliCloudSecretBackendRoleConfig_emptyName(backend, accessKey, secretKey),
-				ExpectError: regexp.MustCompile(`unsupported operation`),
-			},
+		{
+			name:        "empty_name",
+			config:      testAccAliCloudSecretBackendRoleConfig_emptyName(acctest.RandomWithPrefix("tf-test-alicloud"), accessKey, secretKey),
+			expectError: `unsupported operation`,
 		},
-	})
+		{
+			name:        "conflict_role_arn_inline_policies",
+			config:      testAccAliCloudSecretBackendRoleConfig_conflictRoleArnWithInlinePolicies(acctest.RandomWithPrefix("tf-test-role"), acctest.RandomWithPrefix("tf-test-alicloud"), accessKey, secretKey),
+			expectError: `Conflicting configuration arguments`,
+		},
+		{
+			name:        "conflict_role_arn_remote_policies",
+			config:      testAccAliCloudSecretBackendRoleConfig_conflictRoleArnWithRemotePolicies(acctest.RandomWithPrefix("tf-test-role"), acctest.RandomWithPrefix("tf-test-alicloud"), accessKey, secretKey),
+			expectError: `Conflicting configuration arguments`,
+		},
+		{
+			name:        "conflict_role_arn_both_policies",
+			config:      testAccAliCloudSecretBackendRoleConfig_conflictRoleArnWithBothPolicies(acctest.RandomWithPrefix("tf-test-role"), acctest.RandomWithPrefix("tf-test-alicloud"), accessKey, secretKey),
+			expectError: `Conflicting configuration arguments`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config:      tc.config,
+						ExpectError: regexp.MustCompile(tc.expectError),
+					},
+				},
+			})
+		})
+	}
 }
 
 // TestAccAliCloudSecretBackendRole_defaultNamespace tests role creation without explicit namespace
@@ -307,8 +280,8 @@ func TestAccAliCloudSecretBackendRole_defaultNamespace(t *testing.T) {
 	})
 }
 
-// TestAccAliCloudSecretBackendRole_namespace tests role creation in a custom namespace
-func TestAccAliCloudSecretBackendRole_namespace(t *testing.T) {
+// TestAccAliCloudSecretBackendRole_namespaceLifecycle tests create and update in a custom namespace.
+func TestAccAliCloudSecretBackendRole_namespaceLifecycle(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-alicloud")
 	name := acctest.RandomWithPrefix("tf-test-role")
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
@@ -329,31 +302,6 @@ func TestAccAliCloudSecretBackendRole_namespace(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMaxTTL, "7200"),
 				),
 			},
-		},
-	})
-}
-
-// TestAccAliCloudSecretBackendRole_namespaceUpdate tests updating role in a namespace
-func TestAccAliCloudSecretBackendRole_namespaceUpdate(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-alicloud")
-	name := acctest.RandomWithPrefix("tf-test-role")
-	namespacePath := acctest.RandomWithPrefix("test-namespace")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAliCloudSecretBackendRoleConfig_namespace(namespacePath, name, backend, accessKey, secretKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldName, name),
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMount, backend),
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldNamespace, namespacePath),
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldRoleArn, testAccAliCloudSecretBackendRoleRoleARN_basic),
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldTTL, "3600"),
-				),
-			},
 			{
 				Config: testAccAliCloudSecretBackendRoleConfig_namespaceUpdated(namespacePath, name, backend, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
@@ -362,61 +310,8 @@ func TestAccAliCloudSecretBackendRole_namespaceUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldNamespace, namespacePath),
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldRoleArn, testAccAliCloudSecretBackendRoleRoleARN_updated),
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldTTL, "7200"),
+					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMaxTTL, "14400"),
 				),
-			},
-		},
-	})
-}
-
-// TestAccAliCloudSecretBackendRole_conflictRoleArnWithInlinePolicies tests that role_arn conflicts with inline_policies
-func TestAccAliCloudSecretBackendRole_conflictRoleArnWithInlinePolicies(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-alicloud")
-	name := acctest.RandomWithPrefix("tf-test-role")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccAliCloudSecretBackendRoleConfig_conflictRoleArnWithInlinePolicies(name, backend, accessKey, secretKey),
-				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
-			},
-		},
-	})
-}
-
-// TestAccAliCloudSecretBackendRole_conflictRoleArnWithRemotePolicies tests that role_arn conflicts with remote_policies
-func TestAccAliCloudSecretBackendRole_conflictRoleArnWithRemotePolicies(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-alicloud")
-	name := acctest.RandomWithPrefix("tf-test-role")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccAliCloudSecretBackendRoleConfig_conflictRoleArnWithRemotePolicies(name, backend, accessKey, secretKey),
-				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
-			},
-		},
-	})
-}
-
-// TestAccAliCloudSecretBackendRole_conflictRoleArnWithBothPolicies tests that role_arn conflicts with both policy types
-func TestAccAliCloudSecretBackendRole_conflictRoleArnWithBothPolicies(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-alicloud")
-	name := acctest.RandomWithPrefix("tf-test-role")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccAliCloudSecretBackendRoleConfig_conflictRoleArnWithBothPolicies(name, backend, accessKey, secretKey),
-				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
 			},
 		},
 	})

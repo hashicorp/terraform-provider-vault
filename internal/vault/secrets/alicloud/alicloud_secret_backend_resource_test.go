@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-// TestAliCloudSecretBackend_basic tests basic CRUD operations
-func TestAliCloudSecretBackend_basic(t *testing.T) {
+// TestAliCloudSecretBackend_lifecycle tests create, update, and import for the backend resource.
+func TestAliCloudSecretBackend_lifecycle(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-alicloud")
 	accessKey, secretKey := getTestAliCloudCreds(t)
 	updatedAccessKey := accessKey + "-updated"
@@ -44,29 +44,6 @@ func TestAliCloudSecretBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, updatedAccessKey),
-				),
-			},
-		},
-	})
-}
-
-// TestAliCloudSecretBackend_import tests importing an existing backend configuration
-func TestAliCloudSecretBackend_import(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-alicloud")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resourceType := "vault_alicloud_secret_backend"
-	resourceName := resourceType + ".test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 				),
 			},
 			{
@@ -197,33 +174,8 @@ func TestAliCloudSecretBackend_destroy(t *testing.T) {
 	})
 }
 
-// TestAliCloudSecretBackend_namespace tests backend creation in a custom namespace
-func TestAliCloudSecretBackend_namespace(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-alicloud")
-	namespacePath := acctest.RandomWithPrefix("test-namespace")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resourceType := "vault_alicloud_secret_backend"
-	resourceName := resourceType + ".test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAliCloudSecretBackend_namespaceConfig(namespacePath, path, accessKey, secretKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespacePath),
-				),
-			},
-		},
-	})
-}
-
-// TestAliCloudSecretBackend_namespaceCredentialUpdate tests updating credentials in a namespace
-func TestAliCloudSecretBackend_namespaceCredentialUpdate(t *testing.T) {
+// TestAliCloudSecretBackend_namespaceLifecycle tests create and update in a custom namespace.
+func TestAliCloudSecretBackend_namespaceLifecycle(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-alicloud")
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 	accessKey, secretKey := getTestAliCloudCreds(t)
@@ -245,6 +197,14 @@ func TestAliCloudSecretBackend_namespaceCredentialUpdate(t *testing.T) {
 				),
 			},
 			{
+				Config: testAliCloudSecretBackend_namespaceConfig(namespacePath, path, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespacePath),
+				),
+			},
+			{
 				Config: testAliCloudSecretBackend_namespaceConfig(namespacePath, path, updatedAccessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
@@ -256,54 +216,51 @@ func TestAliCloudSecretBackend_namespaceCredentialUpdate(t *testing.T) {
 	})
 }
 
-// TestAliCloudSecretBackend_missingMount tests validation when mount is missing
-func TestAliCloudSecretBackend_missingMount(t *testing.T) {
+// TestAliCloudSecretBackend_validation groups single-step backend validation tests.
+func TestAliCloudSecretBackend_validation(t *testing.T) {
 	accessKey, secretKey := getTestAliCloudCreds(t)
 
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAliCloudSecretBackend_missingMountConfig(accessKey, secretKey),
-				ExpectError: regexp.MustCompile(`The argument "mount" is required`),
-			},
+	testCases := []struct {
+		name        string
+		config      string
+		expectError string
+	}{
+		{
+			name:        "missing_mount",
+			config:      testAliCloudSecretBackend_missingMountConfig(accessKey, secretKey),
+			expectError: `The argument "mount" is required`,
 		},
-	})
-}
-
-// TestAliCloudSecretBackend_missingAccessKey tests validation when access_key is missing
-func TestAliCloudSecretBackend_missingAccessKey(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-alicloud")
-	_, secretKey := getTestAliCloudCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAliCloudSecretBackend_missingAccessKeyConfig(path, secretKey),
-				ExpectError: regexp.MustCompile(`The argument "access_key" is required`),
-			},
+		{
+			name:        "missing_access_key",
+			config:      testAliCloudSecretBackend_missingAccessKeyConfig(acctest.RandomWithPrefix("tf-test-alicloud"), secretKey),
+			expectError: `The argument "access_key" is required`,
 		},
-	})
-}
-
-// TestAliCloudSecretBackend_missingSecretKey tests validation when secret_key_wo is missing
-func TestAliCloudSecretBackend_missingSecretKey(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-alicloud")
-	accessKey, _ := getTestAliCloudCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAliCloudSecretBackend_missingSecretKeyConfig(path, accessKey),
-				ExpectError: regexp.MustCompile(`The argument "secret_key_wo" is required`),
-			},
+		{
+			name:        "missing_secret_key",
+			config:      testAliCloudSecretBackend_missingSecretKeyConfig(acctest.RandomWithPrefix("tf-test-alicloud"), accessKey),
+			expectError: `The argument "secret_key_wo" is required`,
 		},
-	})
+		{
+			name:        "empty_mount",
+			config:      testAliCloudSecretBackend_config("", accessKey, secretKey),
+			expectError: `Unable to Create Resource|unsupported operation|path cannot be empty`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config:      tc.config,
+						ExpectError: regexp.MustCompile(tc.expectError),
+					},
+				},
+			})
+		})
+	}
 }
 
 // TestAliCloudSecretBackend_defaultNamespace tests backend creation without explicit namespace (uses root)
@@ -326,22 +283,6 @@ func TestAliCloudSecretBackend_defaultNamespace(t *testing.T) {
 					// When namespace is not specified, it should not be in state
 					resource.TestCheckNoResourceAttr(resourceName, consts.FieldNamespace),
 				),
-			},
-		},
-	})
-}
-
-// TestAliCloudSecretBackend_emptyMount tests error when mount is empty string
-func TestAliCloudSecretBackend_emptyMount(t *testing.T) {
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAliCloudSecretBackend_config("", accessKey, secretKey),
-				ExpectError: regexp.MustCompile(`Unable to Create Resource|unsupported operation|path cannot be empty`),
 			},
 		},
 	})
