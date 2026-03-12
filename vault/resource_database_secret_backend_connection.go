@@ -156,7 +156,7 @@ type dbEngine struct {
 // otherwise return the default plugin name.
 // Return an error if no plugin name can be found.
 func (i *dbEngine) GetPluginName(d *schema.ResourceData, prefix string) (string, error) {
-	if val, ok := d.GetOk(prefix + consts.FieldPluginName); ok {
+	if val, ok := d.GetOk(prefix + "plugin_name"); ok {
 		return val.(string), nil
 	}
 
@@ -220,54 +220,54 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Description: "Connection parameters for the elasticsearch-database-plugin.",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					consts.FieldURL: {
+					"url": {
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "The URL for Elasticsearch's API",
 					},
-					consts.FieldUsername: {
+					"username": {
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "The username to be used in the connection URL",
 					},
-					consts.FieldPassword: {
+					"password": {
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "The password to be used in the connection URL",
 						Sensitive:   true,
 					},
-					consts.FieldCACert: {
+					"ca_cert": {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity",
 					},
-					consts.FieldCAPath: {
+					"ca_path": {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity",
 					},
-					consts.FieldClientCert: {
+					"client_cert": {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to the certificate for the Elasticsearch client to present for communication",
 					},
-					consts.FieldClientKey: {
+					"client_key": {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "The path to the key for the Elasticsearch client to use for communication",
 					},
-					consts.FieldTLSServerName: {
+					"tls_server_name": {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "This, if set, is used to set the SNI host when connecting via TLS",
 					},
-					consts.FieldInsecureTLS: {
+					"insecure": {
 						Type:        schema.TypeBool,
 						Optional:    true,
 						Default:     false,
 						Description: "Whether to disable certificate verification",
 					},
-					consts.FieldUsernameTemplate: {
+					"username_template": {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "Template describing how dynamic usernames are generated.",
@@ -734,7 +734,7 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
 	s := setCommonDatabaseSchema(getDatabaseSchema(schema.TypeList))
-	s[consts.FieldBackend] = &schema.Schema{
+	s["backend"] = &schema.Schema{
 		Type:        schema.TypeString,
 		Required:    true,
 		Description: "Unique name of the Vault mount to configure.",
@@ -743,24 +743,6 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 		StateFunc: func(v interface{}) string {
 			return strings.Trim(v.(string), "/")
 		},
-	}
-	s[consts.FieldPluginVersion] = &schema.Schema{
-		Type:        schema.TypeString,
-		Optional:    true,
-		Description: "Specifies the semantic version of the plugin to use for this connection",
-	}
-
-	s[consts.FieldPasswordPolicy] = &schema.Schema{
-		Type:        schema.TypeString,
-		Optional:    true,
-		Description: "The name of the password policy to use when generating passwords for this database. If not specified, this will use a default policy defined as: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.",
-	}
-
-	s[consts.FieldSkipStaticRoleImportRotation] = &schema.Schema{
-		Type:        schema.TypeBool,
-		Optional:    true,
-		Computed:    true,
-		Description: "Specifies if a given static account's password should be rotated on creation of the static roles associated with this database config. This is can be overridden at the role-level by the static role's skip_import_rotation field. The default is false",
 	}
 
 	return &schema.Resource{
@@ -1034,13 +1016,13 @@ func getDBEngine(d *schema.ResourceData) (*dbEngine, error) {
 }
 
 func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) {
-	pluginName, ok := r.Data[consts.FieldPluginName]
+	pluginName, ok := r.Data["plugin_name"]
 	if !ok {
-		return nil, fmt.Errorf(`invalid response data, missing %q`, consts.FieldPluginName)
+		return nil, fmt.Errorf(`invalid response data, missing "plugin_name"`)
 	}
 
 	if pluginName == "" {
-		return nil, fmt.Errorf(`invalid response data, %q is empty`, consts.FieldPluginName)
+		return nil, fmt.Errorf(`invalid response data, "plugin_name" is empty`)
 	}
 
 	var last int
@@ -1088,7 +1070,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 		return nil, err
 	}
 
-	data[consts.FieldPluginName] = pluginName
+	data["plugin_name"] = pluginName
 
 	switch engine {
 	case dbEngineCassandra:
@@ -2069,7 +2051,7 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 	}
 
 	path := databaseSecretBackendConnectionPath(
-		d.Get(consts.FieldBackend).(string), d.Get(consts.FieldName).(string))
+		d.Get("backend").(string), d.Get("name").(string))
 	if err := writeDatabaseSecretConfig(ctx, d, client, engine, 0, false, path, meta); err != nil {
 		return diag.FromErr(err)
 	}
@@ -2093,43 +2075,23 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 		prefix = engine.ResourcePrefix(idx)
 	}
 
-	// Allow plugin_version/password_policy to be defined either at the
-	// top-level resource or in the engine-specific nested block (prefix).
-	if v, ok := d.GetOk(prefix + consts.FieldPluginVersion); ok {
-		data[consts.FieldPluginVersion] = v.(string)
-	} else if v, ok := d.GetOk(consts.FieldPluginVersion); ok {
-		data[consts.FieldPluginVersion] = v.(string)
-	}
-	if v, ok := d.GetOk(prefix + consts.FieldPasswordPolicy); ok {
-		data[consts.FieldPasswordPolicy] = v.(string)
-	} else if v, ok := d.GetOk(consts.FieldPasswordPolicy); ok {
-		data[consts.FieldPasswordPolicy] = v.(string)
-	}
-	// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
-	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
-		if v, ok := d.GetOkExists(prefix + consts.FieldSkipStaticRoleImportRotation); ok {
-			data[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
-		}
+	if v, ok := d.GetOkExists(prefix + "verify_connection"); ok {
+		data["verify_connection"] = v.(bool)
 	}
 
-	if v, ok := d.GetOkExists(prefix + consts.FieldVerifyConnection); ok {
-		data[consts.FieldVerifyConnection] = v.(bool)
-	}
-
-	if v, ok := d.GetOkExists(prefix + consts.FieldAllowedRoles); ok {
+	if v, ok := d.GetOkExists(prefix + "allowed_roles"); ok {
 		var roles []string
 		for _, role := range v.([]interface{}) {
 			roles = append(roles, role.(string))
 		}
-		data[consts.FieldAllowedRoles] = strings.Join(roles, ",")
+		data["allowed_roles"] = strings.Join(roles, ",")
 	}
 
-	if v, ok := d.GetOk(consts.FieldRootRotationStatements); ok {
-		data[consts.FieldRootRotationStatements] = v
+	if v, ok := d.GetOk("root_rotation_statements"); ok {
+		data["root_rotation_statements"] = v
 	}
 
-	log.Printf("[DEBUG] database config payload : %+v", data)
-	if m, ok := d.GetOkExists(prefix + consts.FieldData); ok {
+	if m, ok := d.GetOkExists(prefix + "data"); ok {
 		for k, v := range m.(map[string]interface{}) {
 			// Vault does not return the password in the API. If the root credentials have been rotated, sending
 			// the old password in the update request would break the connection config. Thus we only send it,
@@ -2238,7 +2200,7 @@ func databaseSecretBackendConnectionRead(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set(consts.FieldBackend, backend); err != nil {
+	if err := d.Set("backend", backend); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -2253,7 +2215,7 @@ func databaseSecretBackendConnectionRead(ctx context.Context, d *schema.Resource
 
 func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngine, idx int, unifiedSchema bool, name string, meta interface{}) map[string]interface{} {
 	var roles []string
-	for _, role := range resp.Data[consts.FieldAllowedRoles].([]interface{}) {
+	for _, role := range resp.Data["allowed_roles"].([]interface{}) {
 		roles = append(roles, role.(string))
 	}
 
@@ -2263,12 +2225,11 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 	}
 
 	result := map[string]interface{}{
-		consts.FieldName:             name,
-		consts.FieldAllowedRoles:     roles,
-		consts.FieldData:             d.Get(prefix + consts.FieldData),
-		consts.FieldVerifyConnection: d.Get(prefix + consts.FieldVerifyConnection),
-		consts.FieldPluginName:       resp.Data[consts.FieldPluginName],
-		consts.FieldPasswordPolicy:   resp.Data[consts.FieldPasswordPolicy],
+		"name":              name,
+		"allowed_roles":     roles,
+		"data":              d.Get(prefix + "data"),
+		"verify_connection": d.Get(prefix + "verify_connection"),
+		"plugin_name":       resp.Data["plugin_name"],
 	}
 
 	//"root_rotation_statements": resp.Data["root_credentials_rotate_statements"],
@@ -2278,20 +2239,7 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 			rootRotationStmts = append(rootRotationStmts, s.(string))
 		}
 	}
-
-	if pv, ok := resp.Data[consts.FieldPluginVersion]; ok && pv != nil {
-		result[consts.FieldPluginVersion] = fmt.Sprintf("%v", pv)
-	}
-
-	// skip_static_role_import_rotation is only available in Vault Enterprise 1.19+
-	// Note: For Vault < 1.19 or non-Enterprise, the field is not supported and not set
-	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
-		if v, ok := resp.Data[consts.FieldSkipStaticRoleImportRotation]; ok && v != nil {
-			result[consts.FieldSkipStaticRoleImportRotation] = v.(bool)
-		}
-	}
-
-	result[consts.FieldRootRotationStatements] = rootRotationStmts
+	result["root_rotation_statements"] = rootRotationStmts
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		automatedrotationutil.GetAutomatedRotationFieldsFromResponse(resp, result)

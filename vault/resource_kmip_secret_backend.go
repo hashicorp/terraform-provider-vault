@@ -6,13 +6,12 @@ package vault
 import (
 	"context"
 	"fmt"
-	"log"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"log"
 )
 
 var kmipAPIFields = []string{
@@ -53,6 +52,7 @@ func kmipSecretBackendResource() *schema.Resource {
 			"listen_addrs": {
 				Type:        schema.TypeSet,
 				Optional:    true,
+				Computed:    true,
 				Description: "Addresses the KMIP server should listen on (host:port)",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
@@ -158,21 +158,12 @@ func kmipSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta i
 
 	for _, k := range kmipAPIFields {
 		if d.HasChange(k) {
-			v, ok := d.GetOk(k)
-			if ok {
+			if v, ok := d.GetOk(k); ok {
 				switch v.(type) {
 				case *schema.Set:
 					data[k] = util.TerraformSetToStringArray(v)
 				default:
 					data[k] = v
-				}
-			} else {
-				// Explicitly send empty value when field is being cleared
-				switch d.Get(k).(type) {
-				case *schema.Set:
-					data[k] = []string{}
-				default:
-					data[k] = nil
 				}
 			}
 		}
