@@ -193,6 +193,12 @@ func GetTestAzureConfExistingSP(t *testing.T) *AzureTestConf {
 	}
 }
 
+func GetTestAzureKMSCreds(t *testing.T) (tenantID, clientID, clientSecret, keyVaultName string) {
+	t.Helper()
+	v := SkipTestEnvUnset(t, "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_KEYVAULT_NAME")
+	return v[0], v[1], v[2], v[3]
+}
+
 func GetTestGCPCreds(t *testing.T) (string, string) {
 	t.Helper()
 
