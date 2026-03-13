@@ -20,30 +20,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 )
 
-const (
-	// Local const aliases for kerberos login ephemeral with unique prefix
-	kerberosLoginFieldMount                  = consts.FieldMount
-	kerberosLoginFieldKeytabPath             = consts.FieldKeytabPath
-	kerberosLoginFieldKRB5ConfPath           = consts.FieldKRB5ConfPath
-	kerberosLoginFieldUsername               = consts.FieldUsername
-	kerberosLoginFieldService                = consts.FieldService
-	kerberosLoginFieldRealm                  = consts.FieldRealm
-	kerberosLoginFieldDisableFastNegotiation = consts.FieldDisableFastNegotiation
-	kerberosLoginFieldRemoveInstanceName     = consts.FieldRemoveInstanceName
-	kerberosLoginFieldClientToken            = consts.FieldClientToken
-	kerberosLoginFieldAccessor               = consts.FieldAccessor
-	kerberosLoginFieldPolicies               = consts.FieldPolicies
-	kerberosLoginFieldTokenPolicies          = consts.FieldTokenPolicies
-	kerberosLoginFieldIdentityPolicies       = consts.FieldIdentityPolicies
-	kerberosLoginFieldMetadata               = consts.FieldMetadata
-	kerberosLoginFieldLeaseDuration          = consts.FieldLeaseDuration
-	kerberosLoginFieldRenewable              = consts.FieldRenewable
-	kerberosLoginFieldEntityID               = consts.FieldEntityID
-	kerberosLoginFieldTokenType              = consts.FieldTokenType
-	kerberosLoginFieldOrphan                 = consts.FieldOrphan
-	kerberosLoginFieldNumUses                = consts.FieldNumUses
-)
-
 var (
 	_ ephemeral.EphemeralResource              = (*kerberosAuthBackendLoginEphemeral)(nil)
 	_ ephemeral.EphemeralResourceWithConfigure = (*kerberosAuthBackendLoginEphemeral)(nil)
@@ -88,9 +64,7 @@ type kerberosAuthBackendLoginModel struct {
 	LeaseDuration    types.Int64  `tfsdk:"lease_duration"`
 	Renewable        types.Bool   `tfsdk:"renewable"`
 	EntityID         types.String `tfsdk:"entity_id"`
-	TokenType        types.String `tfsdk:"token_type"`
 	Orphan           types.Bool   `tfsdk:"orphan"`
-	NumUses          types.Int64  `tfsdk:"num_uses"`
 }
 
 func (e *kerberosAuthBackendLoginEphemeral) Metadata(_ context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
@@ -101,90 +75,82 @@ func (e *kerberosAuthBackendLoginEphemeral) Schema(_ context.Context, _ ephemera
 	resp.Schema = schema.Schema{
 		Description: "Performs Kerberos authentication and returns a Vault token. This is an ephemeral resource - credentials and tokens are not persisted to state.",
 		Attributes: map[string]schema.Attribute{
-			kerberosLoginFieldMount: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				Required:    true,
 				Description: "Path where the Kerberos auth method is mounted. Defaults to 'kerberos'.",
 			},
-			kerberosLoginFieldKeytabPath: schema.StringAttribute{
+			consts.FieldKeytabPath: schema.StringAttribute{
 				Required:    true,
 				Description: "Path to the keytab file for authentication.",
 			},
-			kerberosLoginFieldKRB5ConfPath: schema.StringAttribute{
+			consts.FieldKRB5ConfPath: schema.StringAttribute{
 				Required:    true,
 				Description: "Path to the krb5.conf configuration file.",
 			},
-			kerberosLoginFieldUsername: schema.StringAttribute{
+			consts.FieldUsername: schema.StringAttribute{
 				Required:    true,
 				Description: "Username for the keytab entry. Must match a service account in LDAP.",
 			},
-			kerberosLoginFieldService: schema.StringAttribute{
+			consts.FieldService: schema.StringAttribute{
 				Required:    true,
 				Description: "Service principal name for obtaining a service ticket.",
 			},
-			kerberosLoginFieldRealm: schema.StringAttribute{
+			consts.FieldRealm: schema.StringAttribute{
 				Required:    true,
 				Description: "Kerberos realm name. Must match the UPNDomain in LDAP config.",
 			},
-			kerberosLoginFieldDisableFastNegotiation: schema.BoolAttribute{
+			consts.FieldDisableFastNegotiation: schema.BoolAttribute{
 				Optional:    true,
 				Description: "Disable FAST negotiation. Default: false.",
 			},
-			kerberosLoginFieldRemoveInstanceName: schema.BoolAttribute{
+			consts.FieldRemoveInstanceName: schema.BoolAttribute{
 				Optional:    true,
 				Description: "Remove instance name from principal. Default: false.",
 			},
-			kerberosLoginFieldClientToken: schema.StringAttribute{
+			consts.FieldClientToken: schema.StringAttribute{
 				Computed:    true,
 				Sensitive:   true,
 				Description: "The Vault token returned after successful authentication.",
 			},
-			kerberosLoginFieldAccessor: schema.StringAttribute{
+			consts.FieldAccessor: schema.StringAttribute{
 				Computed:    true,
 				Description: "The accessor for the token.",
 			},
-			kerberosLoginFieldPolicies: schema.SetAttribute{
+			consts.FieldPolicies: schema.SetAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "Set of policies attached to the token.",
 			},
-			kerberosLoginFieldTokenPolicies: schema.SetAttribute{
+			consts.FieldTokenPolicies: schema.SetAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "Policies from the token configuration.",
 			},
-			kerberosLoginFieldIdentityPolicies: schema.SetAttribute{
+			consts.FieldIdentityPolicies: schema.SetAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "Policies from identity.",
 			},
-			kerberosLoginFieldMetadata: schema.MapAttribute{
+			consts.FieldMetadata: schema.MapAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "Metadata associated with the token.",
 			},
-			kerberosLoginFieldLeaseDuration: schema.Int64Attribute{
+			consts.FieldLeaseDuration: schema.Int64Attribute{
 				Computed:    true,
 				Description: "Token lease duration in seconds.",
 			},
-			kerberosLoginFieldRenewable: schema.BoolAttribute{
+			consts.FieldRenewable: schema.BoolAttribute{
 				Computed:    true,
 				Description: "Whether the token is renewable.",
 			},
-			kerberosLoginFieldEntityID: schema.StringAttribute{
+			consts.FieldEntityID: schema.StringAttribute{
 				Computed:    true,
 				Description: "The identifier of the entity in the identity store.",
 			},
-			kerberosLoginFieldTokenType: schema.StringAttribute{
-				Computed:    true,
-				Description: "The type of token (service, batch, or default).",
-			},
-			kerberosLoginFieldOrphan: schema.BoolAttribute{
+			consts.FieldOrphan: schema.BoolAttribute{
 				Computed:    true,
 				Description: "Whether the token is orphaned.",
-			},
-			kerberosLoginFieldNumUses: schema.Int64Attribute{
-				Computed:    true,
-				Description: "Number of allowed uses of the issued token.",
 			},
 		},
 	}
@@ -233,12 +199,25 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 		return
 	}
 
-	// Set the Authorization header with the SPNEGO token
-	c.AddHeader(spnego.HTTPHeaderAuthRequest, authHeaderVal)
+	// Clone the client to avoid mutating shared headers
+	// This prevents the Kerberos Authorization header from leaking into
+	// subsequent unrelated Vault requests on the cached client
+	loginClient, err := c.Clone()
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error cloning Vault client for Kerberos login",
+			err.Error(),
+		)
+		return
+	}
+
+	// Set the Authorization header with the SPNEGO token on the cloned client
+	loginClient.AddHeader(spnego.HTTPHeaderAuthRequest, authHeaderVal)
 
 	// Perform login with empty body (authentication is in the header)
+	// Use WriteWithContext to honor context cancellations and timeouts
 	tflog.Debug(ctx, fmt.Sprintf("Performing Kerberos login at '%s'", loginPath))
-	secret, err := c.Logical().Write(loginPath, map[string]interface{}{})
+	secret, err := loginClient.Logical().WriteWithContext(ctx, loginPath, map[string]interface{}{})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Error performing Kerberos login at %q", loginPath),
@@ -262,16 +241,11 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 	config.Renewable = types.BoolValue(secret.Auth.Renewable)
 	config.EntityID = types.StringValue(secret.Auth.EntityID)
 
-	// TokenType and NumUses may not be present in all Vault versions
 	if secret.Auth.Orphan {
 		config.Orphan = types.BoolValue(true)
 	} else {
 		config.Orphan = types.BoolValue(false)
 	}
-
-	// Set TokenType if available
-	config.TokenType = types.StringNull()
-	config.NumUses = types.Int64Null()
 
 	// Convert policies
 	if len(secret.Auth.Policies) > 0 {
