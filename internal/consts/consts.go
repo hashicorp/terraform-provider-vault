@@ -804,6 +804,7 @@ const (
 	FieldBindPassWO                 = "bindpass_wo"
 	FieldBindPassWOVersion          = "bindpass_wo_version"
 	FieldKeytab                     = "keytab"
+	FieldKeytabWO                   = "keytab_wo"
 	FieldClientTLSKeyWO             = "client_tls_key_wo"
 	FieldClientTLSKeyWOVersion      = "client_tls_key_wo_version"
 	FieldClientTLSCertWO            = "client_tls_cert_wo"

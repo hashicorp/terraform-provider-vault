@@ -28,7 +28,7 @@ const (
 	testLDAPSURL = "ldaps://ldap.example.com:636"
 )
 
-// TestAccKerberosAuthBackendLDAPConfig_basic tests basic resource creation
+// TestAccKerberosAuthBackendLDAPConfig_basic tests basic resource creation and import
 func TestAccKerberosAuthBackendLDAPConfig_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
 	url := testLDAPURL
@@ -49,11 +49,18 @@ func TestAccKerberosAuthBackendLDAPConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDenyNullBind, "true"),
 				),
 			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateId:                        fmt.Sprintf("auth/%s/config/ldap", path),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+			},
 		},
 	})
 }
 
-// TestAccKerberosAuthBackendLDAPConfig_update tests updating the configuration including token fields
+// TestAccKerberosAuthBackendLDAPConfig_update tests updating the configuration including token fields and import
 func TestAccKerberosAuthBackendLDAPConfig_update(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
 	url1 := "ldap://ldap1.example.com"
@@ -104,6 +111,13 @@ func TestAccKerberosAuthBackendLDAPConfig_update(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldTokenBoundCIDRs+".*", "172.16.0.0/12"),
 				),
 			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateId:                        fmt.Sprintf("auth/%s/config/ldap", path),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+			},
 		},
 	})
 }
@@ -139,50 +153,32 @@ func TestAccKerberosAuthBackendLDAPConfig_bindPassUpdate(t *testing.T) {
 	})
 }
 
-// TestAccKerberosAuthBackendLDAPConfig_import tests importing the resource
-func TestAccKerberosAuthBackendLDAPConfig_import(t *testing.T) {
-	path := acctest.RandomWithPrefix("kerberos")
-	url := testLDAPURL
-	bindDN := testBindDN
-	userDN := testUserDN
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKerberosAuthBackendLDAPConfigConfig_basic(path, url, bindDN, userDN),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
-				),
-			},
-			{
-				ResourceName:                         resourceName,
-				ImportState:                          true,
-				ImportStateId:                        fmt.Sprintf("auth/%s/config/ldap", path),
-				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-			},
-		},
-	})
-}
-
 // TestAccKerberosAuthBackendLDAPConfig_defaultCheck tests default values
 func TestAccKerberosAuthBackendLDAPConfig_defaultCheck(t *testing.T) {
-	url := testLDAPURL
-	bindDN := testBindDN
-	userDN := testUserDN
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKerberosAuthBackendLDAPConfigConfig_defaultValues(url, bindDN, userDN),
+				Config: testAccKerberosAuthBackendLDAPConfigConfig_defaultValues(),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, "kerberos"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, "ldap://127.0.0.1"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldBindDN),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldUserDN),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldGroupDN),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCertificate),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldUPNDomain),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldAnonymousGroupSearch),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldUseTokenGroups),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCaseSensitiveNames),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldStartTLS),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldInsecureTLS),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldDiscoverDN),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldUsernameAsAlias),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldMaxPageSize),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldEnableSamaccountnameLogin),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDenyNullBind, "true"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserAttr, "cn"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserFilter, "({{.UserAttr}}={{.Username}})"),
@@ -546,32 +542,6 @@ func TestAccKerberosAuthBackendLDAPConfig_namespace(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
 				),
 			},
-		},
-	})
-}
-
-// TestAccKerberosAuthBackendLDAPConfig_importWithNamespace tests importing with namespace (Enterprise only)
-func TestAccKerberosAuthBackendLDAPConfig_importWithNamespace(t *testing.T) {
-	namespace := acctest.RandomWithPrefix("tf-ns")
-	path := acctest.RandomWithPrefix("kerberos")
-	url := testLDAPURL
-	bindDN := testBindDN
-	userDN := testUserDN
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKerberosAuthBackendLDAPConfigConfig_namespace(namespace, path, url, bindDN, userDN),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
-				),
-			},
 			{
 				PreConfig: func() {
 					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
@@ -773,19 +743,16 @@ resource "vault_kerberos_auth_backend_ldap_config" "config" {
 `, path, url, bindDN, userDN, bindPass, version)
 }
 
-func testAccKerberosAuthBackendLDAPConfigConfig_defaultValues(url, bindDN, userDN string) string {
-	return fmt.Sprintf(`
+func testAccKerberosAuthBackendLDAPConfigConfig_defaultValues() string {
+	return `
 resource "vault_auth_backend" "kerberos" {
   type = "kerberos"
 }
 
 resource "vault_kerberos_auth_backend_ldap_config" "config" {
-  url        = %q
-  binddn     = %q
-  userdn     = %q
-  depends_on = [vault_auth_backend.kerberos]
+  mount = vault_auth_backend.kerberos.path
 }
-`, url, bindDN, userDN)
+`
 }
 
 func testAccKerberosAuthBackendLDAPConfigConfig_namespace(namespace, path, url, bindDN, userDN string) string {

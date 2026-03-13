@@ -38,12 +38,13 @@ resource "vault_kerberos_auth_backend_config" "config" {
 }
 
 resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
-  mount    = vault_auth_backend.kerberos.path
-  url      = "ldap://localhost:389"
-  binddn   = "cn=admin,dc=example,dc=com"
-  bindpass = "admin-password"
-  userdn   = "ou=users,dc=example,dc=com"
-  userattr = "uid"
+  mount               = vault_auth_backend.kerberos.path
+  url                 = "ldap://localhost:389"
+  binddn              = "cn=admin,dc=example,dc=com"
+  bindpass_wo         = "admin-password"
+  bindpass_wo_version = "1"
+  userdn              = "ou=users,dc=example,dc=com"
+  userattr            = "uid"
 }
 
 ephemeral "vault_kerberos_auth_backend_login" "login" {
@@ -140,13 +141,14 @@ resource "vault_kerberos_auth_backend_config" "config" {
 }
 
 resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
-  namespace = vault_namespace.app.path
-  mount     = vault_auth_backend.kerberos.path
-  url       = "ldap://localhost:389"
-  binddn    = "cn=admin,dc=example,dc=com"
-  bindpass  = "admin-password"
-  userdn    = "ou=users,dc=example,dc=com"
-  userattr  = "uid"
+  namespace           = vault_namespace.app.path
+  mount               = vault_auth_backend.kerberos.path
+  url                 = "ldap://localhost:389"
+  binddn              = "cn=admin,dc=example,dc=com"
+  bindpass_wo         = "admin-password"
+  bindpass_wo_version = "1"
+  userdn              = "ou=users,dc=example,dc=com"
+  userattr            = "uid"
 }
 
 ephemeral "vault_kerberos_auth_backend_login" "login" {

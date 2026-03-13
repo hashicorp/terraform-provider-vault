@@ -38,7 +38,7 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "kerberos" {
-  path            = vault_auth_backend.kerberos.path
+  mount           = vault_auth_backend.kerberos.path
   keytab          = filebase64("/path/to/vault.keytab")
   service_account = "vault/localhost@EXAMPLE.COM"
 }
@@ -123,21 +123,6 @@ resource "vault_kerberos_auth_backend_ldap_config" "config" {
 }
 ```
 
-### Using Default Mount Path
-
-```hcl
-resource "vault_auth_backend" "kerberos" {
-  type = "kerberos"
-}
-
-resource "vault_kerberos_auth_backend_ldap_config" "config" {
-  url        = "ldap://ldap.example.com"
-  binddn     = "cn=vault,ou=Users,dc=example,dc=com"
-  userdn     = "ou=People,dc=example,dc=org"
-  depends_on = [vault_auth_backend.kerberos]
-}
-```
-
 ### Using Namespace (Vault Enterprise)
 
 ```hcl
@@ -169,8 +154,8 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `mount` - (Optional) Path where the Kerberos auth method is mounted. 
-  Defaults to `kerberos`. Changing this will force a new resource to be created.
+* `mount` - (Required) Path where the Kerberos auth method is mounted.
+  Changing this will force a new resource to be created.
 
 ### LDAP Connection Settings
 
@@ -245,7 +230,7 @@ The following arguments are supported:
 
 * `enable_samaccountname_login` - (Optional) If true, matching sAMAccountName attribute values
   will be allowed to login when `upndomain` is defined. Defaults to `false`.
-  **Note:** This field is only supported in Vault 1.19.0 and above. If configured for vault version lesser than 1.21.0, this field will be ignored, eventhough the value is persisted in the state file.
+  **Note:** This field is only supported in Vault 1.19.0 and above. If configured for vault version lesser than 1.21.0, this field will be ignored, even though the value is persisted in the state file.
 
 ### Group Search Settings
 
@@ -318,7 +303,7 @@ For more information on token settings, see the [Token Fields documentation](/do
 
 * `alias_metadata` - (Optional) A map of string to string that will be set as metadata on
   the identity alias. **Note:** This field is only supported in Vault 1.21.0 and above.
-  If configured for vault version lesser than 1.21.0, this field will be ignored, eventhough the value is persisted in the state file.
+  If configured for vault version lesser than 1.21.0, this field will be ignored, even though the value is persisted in the state file.
 
 ## Import
 
