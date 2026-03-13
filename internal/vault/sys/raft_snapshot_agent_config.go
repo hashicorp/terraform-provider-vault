@@ -38,8 +38,8 @@ const raftSnapshotAutoPath = "sys/storage/raft/snapshot-auto/config/%s"
 
 // Ensure the implementation satisfies the expected interfaces
 var (
-	_ resource.ResourceWithConfigure      = &RaftSnapshotAgentConfigResource{}
-	_ resource.ResourceWithModifyPlan     = &RaftSnapshotAgentConfigResource{}
+	_ resource.ResourceWithConfigure  = &RaftSnapshotAgentConfigResource{}
+	_ resource.ResourceWithModifyPlan = &RaftSnapshotAgentConfigResource{}
 )
 
 const privateStateKeySecretsHash = "secrets_wo_hash"
@@ -172,7 +172,7 @@ func (r *RaftSnapshotAgentConfigResource) Schema(_ context.Context, _ resource.S
 				Optional:            true,
 				Sensitive:           true,
 				MarkdownDescription: "AWS secret access key.",
-				DeprecationMessage: "Use aws_secret_access_key_wo instead, which is a write-only attribute that is never stored in state.",
+				DeprecationMessage:  "Use aws_secret_access_key_wo instead, which is a write-only attribute that is never stored in state.",
 				Validators: []fwvalidator.String{
 					stringvalidator.ConflictsWith(
 						path.MatchRoot(consts.FieldAWSSecretAccessKeyWO),
