@@ -6,13 +6,14 @@ package vault
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"log"
-	"strings"
 )
 
 func consulSecretBackendResource() *schema.Resource {
@@ -384,6 +385,7 @@ func consulSecretsBackendCustomizeDiff(ctx context.Context, diff *schema.Resourc
 		}
 	}
 
+	// check whether mount migration is required
 	f := getMountCustomizeDiffFunc(consts.FieldPath)
 	return f(ctx, diff, meta)
 }

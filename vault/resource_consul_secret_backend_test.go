@@ -521,9 +521,9 @@ func TestConsulSecretBackend_CustomizeDiff(t *testing.T) {
 				// Test Case 5: Computed Token + Bootstrap=false (THE BUG FIX)
 				// This verifies that "Unknown" values do not trigger the error during Plan.
 				// We use PlanOnly to avoid actually connecting to Consul
-				Config:              testConsulSecretBackend_computedTokenNoBootstrap(path),
-				PlanOnly:            true,
-				ExpectNonEmptyPlan:  true,
+				Config:             testConsulSecretBackend_computedTokenNoBootstrap(path),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
@@ -816,7 +816,6 @@ resource "vault_consul_secret_backend" "test" {
   client_key_wo_version    = 1
 }`, path, token)
 }
-
 
 func testConsulSecretBackend_staticTokenNoBootstrap(path string) string {
 	return fmt.Sprintf(`
