@@ -715,10 +715,6 @@ var (
 			Resource:      UpdateSchemaResource(transitSecretBackendCacheConfig()),
 			PathInventory: []string{"/transit/cache-config"},
 		},
-		"vault_raft_snapshot_agent_config": {
-			Resource:      UpdateSchemaResource(raftSnapshotAgentConfigResource()),
-			PathInventory: []string{"/sys/storage/raft/snapshot-auto/config/{name}"},
-		},
 		"vault_raft_autopilot": {
 			Resource:      UpdateSchemaResource(raftAutopilotConfigResource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/configuration"},
