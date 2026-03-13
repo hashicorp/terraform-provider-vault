@@ -31,7 +31,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/token"
-	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -139,9 +138,6 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 				Description: "Path where the Kerberos auth method is mounted.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validators.PathValidator(),
 				},
 			},
 			consts.FieldURL: schema.StringAttribute{
