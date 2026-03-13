@@ -20,6 +20,14 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
+const testAccAliCloudAccessCredentialsEphemeralResourceNamespaceConfig = `
+variable "vault_namespace" {
+	description = "The Vault namespace to use for all resources"
+	type        = string
+	default     = "admin"
+}
+`
+
 // TestAccAliCloudAccessCredentialsEphemeralResource_basic tests the creation of
 // AliCloud credentials using ephemeral resource.
 //
@@ -47,11 +55,6 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				// Step 1: Create backend and role
-				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_setup(backend, role, accessKey, secretKey),
-			},
-			{
-				// Step 2: Use ephemeral resource
 				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_basic(backend, role, accessKey, secretKey),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("mount"), knownvalue.StringExact(backend)),
@@ -90,9 +93,6 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_defaultMount(t *testing.T
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_defaultMountSetup(backend, role, accessKey, secretKey),
-			},
-			{
 				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_defaultMount(backend, role, accessKey, secretKey),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("mount"), knownvalue.StringExact(backend)),
@@ -117,7 +117,6 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_namespace(t *testing.T) {
 
 	backend := acctest.RandomWithPrefix("tf-alicloud")
 	role := acctest.RandomWithPrefix("test-role")
-	namespace := acctest.RandomWithPrefix("test-ns")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -129,10 +128,7 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_namespace(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_namespaceSetup(backend, role, namespace, accessKey, secretKey),
-			},
-			{
-				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_namespace(backend, role, namespace, accessKey, secretKey),
+				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_namespace(backend, role, accessKey, secretKey),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("mount"), knownvalue.StringExact(backend)),
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("role"), knownvalue.StringExact(role)),
@@ -173,9 +169,6 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_roleARN(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_roleARNSetup(backend, role, roleARN, accessKey, secretKey),
-			},
-			{
 				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_roleARN(backend, role, roleARN, accessKey, secretKey),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("mount"), knownvalue.StringExact(backend)),
@@ -212,9 +205,6 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_inlinePolicy(t *testing.T
 			"echo": echoprovider.NewProviderServer(),
 		},
 		Steps: []resource.TestStep{
-			{
-				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_inlinePolicySetup(backend, role, accessKey, secretKey),
-			},
 			{
 				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_inlinePolicy(backend, role, accessKey, secretKey),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -253,9 +243,6 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_remotePolicy(t *testing.T
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_remotePolicySetup(backend, role, accessKey, secretKey),
-			},
-			{
 				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_remotePolicy(backend, role, accessKey, secretKey),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("mount"), knownvalue.StringExact(backend)),
@@ -268,39 +255,87 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_remotePolicy(t *testing.T
 	})
 }
 
-// Setup functions (Step 1: Create backend and role)
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_setup(backend, role, accessKey, secretKey string) string {
+func testAccAliCloudAccessCredentialsEphemeralResourceConfigBase(backend, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
-resource "vault_alicloud_secret_backend" "test" {
-  path          = "%s"
-  access_key    = "%s"
-  secret_key_wo = "%s"
+%s
+
+resource "vault_mount" "alicloud" {
+	namespace   = var.vault_namespace
+	path        = "%s"
+	type        = "alicloud"
+	description = "AliCloud secrets engine for testing"
 }
+
+resource "vault_alicloud_secret_backend" "test" {
+	namespace     = var.vault_namespace
+	mount         = vault_mount.alicloud.path
+	access_key    = "%s"
+	secret_key_wo = "%s"
+}
+`, testAccAliCloudAccessCredentialsEphemeralResourceNamespaceConfig, backend, accessKey, secretKey)
+}
+
+func testAccAliCloudAccessCredentialsEphemeralResourceConfig_basic(backend, role, accessKey, secretKey string) string {
+	return testAccAliCloudAccessCredentialsEphemeralResourceConfigBase(backend, accessKey, secretKey) + fmt.Sprintf(`
 
 resource "vault_alicloud_secret_backend_role" "test" {
-  mount = vault_alicloud_secret_backend.test.path
-  name  = "%s"
-  inline_policies = jsonencode({
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["ecs:Describe*"]
-      Resource = "*"
-    }]
-    Version = "1"
-  })
-  ttl     = 3600
-  max_ttl = 7200
-}
-`, backend, accessKey, secretKey, role)
-}
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	name      = "%s"
 
-// Full config functions (Step 2: Use ephemeral resource)
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_basic(backend, role, accessKey, secretKey string) string {
-	return testAccAliCloudAccessCredentialsEphemeralResourceConfig_setup(backend, role, accessKey, secretKey) + fmt.Sprintf(`
+	inline_policies {
+		policy_document = jsonencode({
+			Statement = [{
+				Action   = ["ecs:DescribeInstances", "ecs:StartInstance", "ecs:StopInstance"]
+				Effect   = "Allow"
+				Resource = "*"
+			}]
+			Version = "1"
+		})
+	}
+
+	inline_policies {
+		policy_document = jsonencode({
+			Statement = [
+				{
+					Action   = ["oss:GetObject", "oss:PutObject", "oss:ListBuckets"]
+					Effect   = "Allow"
+					Resource = "acs:oss:*:*:my-bucket/*"
+				},
+				{
+					Action   = ["oss:DeleteObject"]
+					Effect   = "Deny"
+					Resource = "acs:oss:*:*:my-bucket/protected/*"
+				}
+			]
+			Version = "1"
+		})
+	}
+
+	remote_policies {
+		name = "AliyunRDSReadOnlyAccess"
+		type = "System"
+	}
+
+	remote_policies {
+		name = "AliyunOSSFullAccess"
+		type = "System"
+	}
+
+	remote_policies {
+		name = "AliyunECSReadOnlyAccess"
+		type = "System"
+	}
+
+	ttl     = 3600
+	max_ttl = 7200
+}
 
 ephemeral "vault_alicloud_access_credentials" "creds" {
-  mount = vault_alicloud_secret_backend.test.path
-  role  = vault_alicloud_secret_backend_role.test.name
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	role      = vault_alicloud_secret_backend_role.test.name
+	mount_id  = vault_mount.alicloud.id
 }
 
 provider "echo" {
@@ -319,40 +354,37 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`)
-}
-
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_defaultMountSetup(backend, role, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-resource "vault_alicloud_secret_backend" "test" {
-  path          = "%s"
-  access_key    = "%s"
-  secret_key_wo = "%s"
-}
-
-resource "vault_alicloud_secret_backend_role" "test" {
-  mount = vault_alicloud_secret_backend.test.path
-  name  = "%s"
-  inline_policies = jsonencode({
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["ecs:Describe*"]
-      Resource = "*"
-    }]
-    Version = "1"
-  })
-  ttl     = 3600
-  max_ttl = 7200
-}
-`, backend, accessKey, secretKey, role)
+`, role)
 }
 
 func testAccAliCloudAccessCredentialsEphemeralResourceConfig_defaultMount(backend, role, accessKey, secretKey string) string {
-	return testAccAliCloudAccessCredentialsEphemeralResourceConfig_defaultMountSetup(backend, role, accessKey, secretKey) + `
+	return testAccAliCloudAccessCredentialsEphemeralResourceConfigBase(backend, accessKey, secretKey) + fmt.Sprintf(`
+
+resource "vault_alicloud_secret_backend_role" "test" {
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	name      = "%s"
+
+	inline_policies {
+		policy_document = jsonencode({
+			Statement = [{
+				Action   = ["ecs:DescribeInstances"]
+				Effect   = "Allow"
+				Resource = "*"
+			}]
+			Version = "1"
+		})
+	}
+
+	ttl     = 3600
+	max_ttl = 7200
+}
 
 ephemeral "vault_alicloud_access_credentials" "creds" {
-  mount = vault_alicloud_secret_backend.test.path
-  role  = vault_alicloud_secret_backend_role.test.name
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	role      = vault_alicloud_secret_backend_role.test.name
+	mount_id  = vault_mount.alicloud.id
 }
 
 provider "echo" {
@@ -365,47 +397,37 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`
+`, role)
 }
 
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_namespaceSetup(backend, role, namespace, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-resource "vault_namespace" "test" {
-  path = "%s"
-}
-
-resource "vault_alicloud_secret_backend" "test" {
-  namespace     = vault_namespace.test.path
-  path          = "%s"
-  access_key    = "%s"
-  secret_key_wo = "%s"
-}
+func testAccAliCloudAccessCredentialsEphemeralResourceConfig_namespace(backend, role, accessKey, secretKey string) string {
+	return testAccAliCloudAccessCredentialsEphemeralResourceConfigBase(backend, accessKey, secretKey) + fmt.Sprintf(`
 
 resource "vault_alicloud_secret_backend_role" "test" {
-  namespace = vault_namespace.test.path
-  mount     = vault_alicloud_secret_backend.test.path
-  name      = "%s"
-  inline_policies = jsonencode({
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["ecs:Describe*"]
-      Resource = "*"
-    }]
-    Version = "1"
-  })
-  ttl     = 3600
-  max_ttl = 7200
-}
-`, namespace, backend, accessKey, secretKey, role)
-}
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	name      = "%s"
 
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_namespace(backend, role, namespace, accessKey, secretKey string) string {
-	return testAccAliCloudAccessCredentialsEphemeralResourceConfig_namespaceSetup(backend, role, namespace, accessKey, secretKey) + `
+	inline_policies {
+		policy_document = jsonencode({
+			Statement = [{
+				Action   = ["ecs:Describe*"]
+				Effect   = "Allow"
+				Resource = "*"
+			}]
+			Version = "1"
+		})
+	}
+
+	ttl     = 3600
+	max_ttl = 7200
+}
 
 ephemeral "vault_alicloud_access_credentials" "creds" {
-  namespace = vault_namespace.test.path
-  mount     = vault_alicloud_secret_backend.test.path
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
   role      = vault_alicloud_secret_backend_role.test.name
+	mount_id  = vault_mount.alicloud.id
 }
 
 provider "echo" {
@@ -419,33 +441,26 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`
-}
-
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_roleARNSetup(backend, role, roleARN, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-resource "vault_alicloud_secret_backend" "test" {
-  path          = "%s"
-  access_key    = "%s"
-  secret_key_wo = "%s"
-}
-
-resource "vault_alicloud_secret_backend_role" "test" {
-  mount    = vault_alicloud_secret_backend.test.path
-  name     = "%s"
-  role_arn = "%s"
-  ttl      = 3600
-  max_ttl  = 7200
-}
-`, backend, accessKey, secretKey, role, roleARN)
+`, role)
 }
 
 func testAccAliCloudAccessCredentialsEphemeralResourceConfig_roleARN(backend, role, roleARN, accessKey, secretKey string) string {
-	return testAccAliCloudAccessCredentialsEphemeralResourceConfig_roleARNSetup(backend, role, roleARN, accessKey, secretKey) + `
+	return testAccAliCloudAccessCredentialsEphemeralResourceConfigBase(backend, accessKey, secretKey) + fmt.Sprintf(`
+
+resource "vault_alicloud_secret_backend_role" "test" {
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	name      = "%s"
+	role_arn  = "%s"
+	ttl       = 3600
+	max_ttl   = 7200
+}
 
 ephemeral "vault_alicloud_access_credentials" "creds" {
-  mount = vault_alicloud_secret_backend.test.path
-  role  = vault_alicloud_secret_backend_role.test.name
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	role      = vault_alicloud_secret_backend_role.test.name
+	mount_id  = vault_mount.alicloud.id
 }
 
 provider "echo" {
@@ -460,47 +475,48 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`
-}
-
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_inlinePolicySetup(backend, role, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-resource "vault_alicloud_secret_backend" "test" {
-  path          = "%s"
-  access_key    = "%s"
-  secret_key_wo = "%s"
-}
-
-resource "vault_alicloud_secret_backend_role" "test" {
-  mount = vault_alicloud_secret_backend.test.path
-  name  = "%s"
-  inline_policies = jsonencode({
-    Statement = [
-      {
-        Effect   = "Allow"
-        Action   = ["ecs:Describe*", "ecs:List*"]
-        Resource = "*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["oss:Get*", "oss:List*"]
-        Resource = "*"
-      }
-    ]
-    Version = "1"
-  })
-  ttl     = 1800
-  max_ttl = 3600
-}
-`, backend, accessKey, secretKey, role)
+`, role, roleARN)
 }
 
 func testAccAliCloudAccessCredentialsEphemeralResourceConfig_inlinePolicy(backend, role, accessKey, secretKey string) string {
-	return testAccAliCloudAccessCredentialsEphemeralResourceConfig_inlinePolicySetup(backend, role, accessKey, secretKey) + `
+	return testAccAliCloudAccessCredentialsEphemeralResourceConfigBase(backend, accessKey, secretKey) + fmt.Sprintf(`
+
+resource "vault_alicloud_secret_backend_role" "test" {
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	name      = "%s"
+
+	inline_policies {
+		policy_document = jsonencode({
+			Statement = [{
+				Action   = ["ecs:Describe*", "ecs:List*"]
+				Effect   = "Allow"
+				Resource = "*"
+			}]
+			Version = "1"
+		})
+	}
+
+	inline_policies {
+		policy_document = jsonencode({
+			Statement = [{
+				Action   = ["oss:Get*", "oss:List*"]
+				Effect   = "Allow"
+				Resource = "*"
+			}]
+			Version = "1"
+		})
+	}
+
+	ttl     = 1800
+	max_ttl = 3600
+}
 
 ephemeral "vault_alicloud_access_credentials" "creds" {
-  mount = vault_alicloud_secret_backend.test.path
-  role  = vault_alicloud_secret_backend_role.test.name
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	role      = vault_alicloud_secret_backend_role.test.name
+	mount_id  = vault_mount.alicloud.id
 }
 
 provider "echo" {
@@ -515,33 +531,36 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`
-}
-
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_remotePolicySetup(backend, role, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-resource "vault_alicloud_secret_backend" "test" {
-  path          = "%s"
-  access_key    = "%s"
-  secret_key_wo = "%s"
-}
-
-resource "vault_alicloud_secret_backend_role" "test" {
-  mount           = vault_alicloud_secret_backend.test.path
-  name            = "%s"
-  remote_policies = "name:AliyunECSReadOnlyAccess,type:System,name:AliyunOSSReadOnlyAccess,type:System"
-  ttl             = 3600
-  max_ttl         = 7200
-}
-`, backend, accessKey, secretKey, role)
+`, role)
 }
 
 func testAccAliCloudAccessCredentialsEphemeralResourceConfig_remotePolicy(backend, role, accessKey, secretKey string) string {
-	return testAccAliCloudAccessCredentialsEphemeralResourceConfig_remotePolicySetup(backend, role, accessKey, secretKey) + `
+	return testAccAliCloudAccessCredentialsEphemeralResourceConfigBase(backend, accessKey, secretKey) + fmt.Sprintf(`
+
+resource "vault_alicloud_secret_backend_role" "test" {
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	name      = "%s"
+
+	remote_policies {
+		name = "AliyunECSReadOnlyAccess"
+		type = "System"
+	}
+
+	remote_policies {
+		name = "AliyunOSSReadOnlyAccess"
+		type = "System"
+	}
+
+	ttl     = 3600
+	max_ttl = 7200
+}
 
 ephemeral "vault_alicloud_access_credentials" "creds" {
-  mount = vault_alicloud_secret_backend.test.path
-  role  = vault_alicloud_secret_backend_role.test.name
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	role      = vault_alicloud_secret_backend_role.test.name
+	mount_id  = vault_mount.alicloud.id
 }
 
 provider "echo" {
@@ -554,7 +573,7 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`
+`, role)
 }
 
 // Negative test scenarios
@@ -622,26 +641,23 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_nonExistentRole(t *testin
 }
 
 func testAccAliCloudAccessCredentialsEphemeralResourceConfig_nonExistentRole(backend, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-resource "vault_alicloud_secret_backend" "test" {
-  path          = "%s"
-  access_key    = "%s"
-  secret_key_wo = "%s"
-}
+	return testAccAliCloudAccessCredentialsEphemeralResourceConfigBase(backend, accessKey, secretKey) + `
 
 ephemeral "vault_alicloud_access_credentials" "creds" {
-  mount = vault_alicloud_secret_backend.test.path
-  role  = "non-existent-role"
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	role      = "non-existent-role"
+	mount_id  = vault_mount.alicloud.id
 }
 
 provider "echo" {
-  data = {
-    access_key = ephemeral.vault_alicloud_access_credentials.creds.access_key
-  }
+	data = {
+		access_key = ephemeral.vault_alicloud_access_credentials.creds.access_key
+	}
 }
 
 resource "echo" "test" {}
-`, backend, accessKey, secretKey)
+`
 }
 
 // TestAccAliCloudAccessCredentialsEphemeralResource_emptyMount tests that
@@ -735,11 +751,6 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_multipleSimultaneous(t *t
 		},
 		Steps: []resource.TestStep{
 			{
-				// Step 1: Create backend and two roles
-				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_multipleSimultaneousSetup(backend, role1, role2, accessKey, secretKey),
-			},
-			{
-				// Step 2: Use multiple ephemeral resources simultaneously
 				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_multipleSimultaneous(backend, role1, role2, accessKey, secretKey),
 				ConfigStateChecks: []statecheck.StateCheck{
 					// Verify first ephemeral resource
@@ -763,65 +774,71 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_multipleSimultaneous(t *t
 	})
 }
 
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_multipleSimultaneousSetup(backend, role1, role2, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-resource "vault_alicloud_secret_backend" "test" {
-  path          = "%s"
-  access_key    = "%s"
-  secret_key_wo = "%s"
-}
+func testAccAliCloudAccessCredentialsEphemeralResourceConfig_multipleSimultaneous(backend, role1, role2, accessKey, secretKey string) string {
+	return testAccAliCloudAccessCredentialsEphemeralResourceConfigBase(backend, accessKey, secretKey) + fmt.Sprintf(`
 
 resource "vault_alicloud_secret_backend_role" "role1" {
-  mount = vault_alicloud_secret_backend.test.path
-  name  = "%s"
-  inline_policies = jsonencode({
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["ecs:Describe*"]
-      Resource = "*"
-    }]
-    Version = "1"
-  })
-  ttl     = 3600
-  max_ttl = 7200
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	name      = "%s"
+
+	inline_policies {
+		policy_document = jsonencode({
+			Statement = [{
+				Action   = ["ecs:Describe*"]
+				Effect   = "Allow"
+				Resource = "*"
+			}]
+			Version = "1"
+		})
+	}
+
+	ttl     = 3600
+	max_ttl = 7200
 }
 
 resource "vault_alicloud_secret_backend_role" "role2" {
-  mount = vault_alicloud_secret_backend.test.path
-  name  = "%s"
-  inline_policies = jsonencode({
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["oss:Get*"]
-      Resource = "*"
-    }]
-    Version = "1"
-  })
-  ttl     = 3600
-  max_ttl = 7200
-}
-`, backend, accessKey, secretKey, role1, role2)
-}
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	name      = "%s"
 
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_multipleSimultaneous(backend, role1, role2, accessKey, secretKey string) string {
-	return testAccAliCloudAccessCredentialsEphemeralResourceConfig_multipleSimultaneousSetup(backend, role1, role2, accessKey, secretKey) + `
+	inline_policies {
+		policy_document = jsonencode({
+			Statement = [{
+				Action   = ["oss:Get*"]
+				Effect   = "Allow"
+				Resource = "*"
+			}]
+			Version = "1"
+		})
+	}
+
+	ttl     = 3600
+	max_ttl = 7200
+}
 
 # First ephemeral resource using role1
 ephemeral "vault_alicloud_access_credentials" "creds1" {
-  mount = vault_alicloud_secret_backend.test.path
-  role  = vault_alicloud_secret_backend_role.role1.name
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	role      = vault_alicloud_secret_backend_role.role1.name
+	mount_id  = vault_mount.alicloud.id
 }
 
 # Second ephemeral resource using role2
 ephemeral "vault_alicloud_access_credentials" "creds2" {
-  mount = vault_alicloud_secret_backend.test.path
-  role  = vault_alicloud_secret_backend_role.role2.name
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	role      = vault_alicloud_secret_backend_role.role2.name
+	mount_id  = vault_mount.alicloud.id
 }
 
 # Third ephemeral resource using role1 again (should get different credentials than creds1)
 ephemeral "vault_alicloud_access_credentials" "creds3" {
-  mount = vault_alicloud_secret_backend.test.path
-  role  = vault_alicloud_secret_backend_role.role1.name
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	role      = vault_alicloud_secret_backend_role.role1.name
+	mount_id  = vault_mount.alicloud.id
 }
 
 provider "echo" {
@@ -845,7 +862,7 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`
+`, role1, role2)
 }
 
 // TestAccAliCloudAccessCredentialsEphemeralResource_rapidRefresh tests behavior
@@ -884,11 +901,7 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_rapidRefresh(t *testing.T
 		},
 		Steps: []resource.TestStep{
 			{
-				// Step 1: Setup backend and role with role_arn for STS credentials
-				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_rapidRefreshSetup(backend, role, roleARN, accessKey, secretKey),
-			},
-			{
-				// Step 2: First credential generation
+				// Step 1: First credential generation
 				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_rapidRefresh(backend, role, roleARN, accessKey, secretKey, "run1"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("access_key"), knownvalue.NotNull()),
@@ -908,7 +921,7 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_rapidRefresh(t *testing.T
 				),
 			},
 			{
-				// Step 3: Second credential generation (rapid refresh - simulates second apply)
+				// Step 2: Second credential generation (rapid refresh - simulates second apply)
 				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_rapidRefresh(backend, role, roleARN, accessKey, secretKey, "run2"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("access_key"), knownvalue.NotNull()),
@@ -926,7 +939,7 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_rapidRefresh(t *testing.T
 				),
 			},
 			{
-				// Step 4: Third credential generation (rapid refresh)
+				// Step 3: Third credential generation (rapid refresh)
 				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_rapidRefresh(backend, role, roleARN, accessKey, secretKey, "run3"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("access_key"), knownvalue.NotNull()),
@@ -942,7 +955,7 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_rapidRefresh(t *testing.T
 				),
 			},
 			{
-				// Step 5: Fourth credential generation (rapid refresh)
+				// Step 4: Fourth credential generation (rapid refresh)
 				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_rapidRefresh(backend, role, roleARN, accessKey, secretKey, "run4"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("access_key"), knownvalue.NotNull()),
@@ -965,30 +978,23 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_rapidRefresh(t *testing.T
 	})
 }
 
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_rapidRefreshSetup(backend, role, roleARN, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-resource "vault_alicloud_secret_backend" "test" {
-  path          = "%s"
-  access_key    = "%s"
-  secret_key_wo = "%s"
-}
+func testAccAliCloudAccessCredentialsEphemeralResourceConfig_rapidRefresh(backend, role, roleARN, accessKey, secretKey, runID string) string {
+	return testAccAliCloudAccessCredentialsEphemeralResourceConfigBase(backend, accessKey, secretKey) + fmt.Sprintf(`
 
 resource "vault_alicloud_secret_backend_role" "test" {
-  mount    = vault_alicloud_secret_backend.test.path
-  name     = "%s"
-  role_arn = "%s"
-  ttl      = 3600
-  max_ttl  = 7200
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	name      = "%s"
+	role_arn  = "%s"
+	ttl       = 3600
+	max_ttl   = 7200
 }
-`, backend, accessKey, secretKey, role, roleARN)
-}
-
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_rapidRefresh(backend, role, roleARN, accessKey, secretKey, runID string) string {
-	return testAccAliCloudAccessCredentialsEphemeralResourceConfig_rapidRefreshSetup(backend, role, roleARN, accessKey, secretKey) + fmt.Sprintf(`
 
 ephemeral "vault_alicloud_access_credentials" "creds" {
-  mount = vault_alicloud_secret_backend.test.path
-  role  = vault_alicloud_secret_backend_role.test.name
+	namespace = var.vault_namespace
+	mount     = vault_mount.alicloud.path
+	role      = vault_alicloud_secret_backend_role.test.name
+	mount_id  = vault_mount.alicloud.id
 }
 
 # Using runID to force config change and trigger refresh: %s
@@ -1008,5 +1014,5 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`, runID, runID)
+`, role, roleARN, runID, runID)
 }
