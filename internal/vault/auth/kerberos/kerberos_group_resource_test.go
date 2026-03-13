@@ -75,8 +75,7 @@ func TestAccKerberosAuthBackendGroup_defaultCheck(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, "kerberos"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, groupName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPolicies+".#", "1"),
-					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPolicies+".*", "default"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldPolicies),
 				),
 			},
 		},
@@ -356,9 +355,8 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_group" "group" {
-  name       = %q
-  policies   = ["default"]
-  depends_on = [vault_auth_backend.kerberos]
+  mount = vault_auth_backend.kerberos.path
+  name  = %q
 }
 `, groupName)
 }

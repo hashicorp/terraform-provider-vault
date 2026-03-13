@@ -33,7 +33,7 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "kerberos" {
-  path            = vault_auth_backend.kerberos.path
+  mount           = vault_auth_backend.kerberos.path
   keytab          = filebase64("/path/to/vault.keytab")
   service_account = "vault/localhost@EXAMPLE.COM"
 }
@@ -77,20 +77,6 @@ resource "vault_kerberos_auth_backend_group" "readonly" {
   mount    = vault_auth_backend.kerberos.path
   name     = "readonly-users"
   policies = ["read-only"]
-}
-```
-
-### Using Default Mount Path
-
-```hcl
-resource "vault_auth_backend" "kerberos" {
-  type = "kerberos"
-}
-
-resource "vault_kerberos_auth_backend_group" "engineering" {
-  name       = "engineering"
-  policies   = ["engineering-policy"]
-  depends_on = [vault_auth_backend.kerberos]
 }
 ```
 
@@ -140,8 +126,8 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `mount` - (Optional) Path where the Kerberos auth method is mounted. 
-  Defaults to `kerberos`. Changing this will force a new resource to be created.
+* `mount` - (Required) Path where the Kerberos auth method is mounted.
+  Changing this will force a new resource to be created.
 
 * `name` - (Required) The name of the LDAP group to map to Vault policies. 
   This should match the group name as it appears in your LDAP directory. 

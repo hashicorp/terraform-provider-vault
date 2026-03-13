@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package ephemeralauth_test
+package kerberos_test
 
 import (
 	"fmt"
@@ -106,9 +106,9 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "config" {
-  mount           = vault_auth_backend.kerberos.path
-  keytab       = "%s"
-  service_account = "%s"
+  mount               = vault_auth_backend.kerberos.path
+  keytab_wo           = "%s"
+  service_account     = "%s"
 }
 
 resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
@@ -209,9 +209,9 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "config" {
-  mount           = vault_auth_backend.kerberos.path
-  keytab          = "%s"
-  service_account = "%s"
+  mount               = vault_auth_backend.kerberos.path
+  keytab_wo           = "%s"
+  service_account     = "%s"
 }
 
 resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
@@ -341,10 +341,10 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "config" {
-  namespace       = vault_namespace.test.path
-  mount           = vault_auth_backend.kerberos.path
-  keytab          = "%s"
-  service_account = "%s"
+  namespace           = vault_namespace.test.path
+  mount               = vault_auth_backend.kerberos.path
+  keytab_wo           = "%s"
+  service_account     = "%s"
 }
 
 resource "vault_kerberos_auth_backend_ldap_config" "ldap" {

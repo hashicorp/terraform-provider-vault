@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -27,14 +26,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
-)
-
-const (
-	fieldMount              = consts.FieldMount
-	fieldKeytab             = consts.FieldKeytab
-	fieldServiceAccount     = consts.FieldServiceAccount
-	fieldRemoveInstanceName = consts.FieldRemoveInstanceName
-	fieldAddGroupAliases    = consts.FieldAddGroupAliases
 )
 
 var kerberosConfigPathRegexp = regexp.MustCompile("^auth/(.+)/config$")
@@ -61,7 +52,7 @@ type kerberosAuthBackendConfigResource struct {
 type kerberosAuthBackendConfigModel struct {
 	base.BaseModel
 	Mount              types.String `tfsdk:"mount"`
-	Keytab             types.String `tfsdk:"keytab"`
+	Keytab             types.String `tfsdk:"keytab_wo"`
 	ServiceAccount     types.String `tfsdk:"service_account"`
 	RemoveInstanceName types.Bool   `tfsdk:"remove_instance_name"`
 	AddGroupAliases    types.Bool   `tfsdk:"add_group_aliases"`
@@ -87,10 +78,8 @@ func (r *kerberosAuthBackendConfigResource) Schema(_ context.Context, _ resource
 			"it is only removed from Terraform state. The configuration remains in Vault until " +
 			"the auth mount itself is deleted.",
 		Attributes: map[string]schema.Attribute{
-			fieldMount: schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString("kerberos"),
+			consts.FieldMount: schema.StringAttribute{
+				Required:    true,
 				Description: "Path where the Kerberos auth method is mounted.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -99,21 +88,21 @@ func (r *kerberosAuthBackendConfigResource) Schema(_ context.Context, _ resource
 					validators.PathValidator(),
 				},
 			},
-			fieldKeytab: schema.StringAttribute{
+			consts.FieldKeytabWO: schema.StringAttribute{
 				Required:    true,
 				WriteOnly:   true,
 				Sensitive:   true,
 				Description: "Base64-encoded keytab file content (write-only). Must contain an entry matching service_account.",
 			},
-			fieldServiceAccount: schema.StringAttribute{
+			consts.FieldServiceAccount: schema.StringAttribute{
 				Required:    true,
 				Description: "The Kerberos service account associated with the keytab entry (e.g., 'vault_svc').",
 			},
-			fieldRemoveInstanceName: schema.BoolAttribute{
+			consts.FieldRemoveInstanceName: schema.BoolAttribute{
 				Optional:    true,
 				Description: "Removes instance names from Kerberos service principal names. Default: false.",
 			},
-			fieldAddGroupAliases: schema.BoolAttribute{
+			consts.FieldAddGroupAliases: schema.BoolAttribute{
 				Optional:    true,
 				Description: "Adds group aliases during authentication. Default: false.",
 			},
@@ -345,10 +334,10 @@ func (r *kerberosAuthBackendConfigResource) getApiModel(data *kerberosAuthBacken
 	var diags diag.Diagnostics
 
 	vaultRequest := map[string]any{
-		fieldKeytab:             data.Keytab.ValueString(),
-		fieldServiceAccount:     data.ServiceAccount.ValueString(),
-		fieldRemoveInstanceName: data.RemoveInstanceName.ValueBool(),
-		fieldAddGroupAliases:    data.AddGroupAliases.ValueBool(),
+		consts.FieldKeytab:             data.Keytab.ValueString(),
+		consts.FieldServiceAccount:     data.ServiceAccount.ValueString(),
+		consts.FieldRemoveInstanceName: data.RemoveInstanceName.ValueBool(),
+		consts.FieldAddGroupAliases:    data.AddGroupAliases.ValueBool(),
 	}
 
 	return vaultRequest, diags

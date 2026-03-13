@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package ephemeralauth
+package kerberos
 
 import (
 	"context"
@@ -102,7 +102,7 @@ func (e *kerberosAuthBackendLoginEphemeral) Schema(_ context.Context, _ ephemera
 		Description: "Performs Kerberos authentication and returns a Vault token. This is an ephemeral resource - credentials and tokens are not persisted to state.",
 		Attributes: map[string]schema.Attribute{
 			kerberosLoginFieldMount: schema.StringAttribute{
-				Optional:    true,
+				Required:    true,
 				Description: "Path where the Kerberos auth method is mounted. Defaults to 'kerberos'.",
 			},
 			kerberosLoginFieldKeytabPath: schema.StringAttribute{

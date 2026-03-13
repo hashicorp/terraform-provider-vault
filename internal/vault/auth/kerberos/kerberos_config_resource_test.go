@@ -21,7 +21,7 @@ const (
 	testKeytab = "BQIAAABUAAIADU1ZTE9DQUwuUkVBTE0ABXZhdWx0AAlsb2NhbGhvc3QAAAABaZ11VQIAEgAgHescP6FZQHb+kxWfQZ2M+hHDI2y7J+PllwXaaAdB4rgAAAACAAAARAACAA1NWUxPQ0FMLlJFQUxNAAV2YXVsdAAJbG9jYWxob3N0AAAAAWmddVUCABEAEH7WVnf3yj8yJjS9fkHFfIsAAAAC"
 )
 
-// TestAccKerberosAuthBackendConfig_basic tests basic resource creation and update
+// TestAccKerberosAuthBackendConfig_basic tests basic resource creation and import
 func TestAccKerberosAuthBackendConfig_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
 	serviceAccount := "vault/localhost@EXAMPLE.COM"
@@ -35,15 +35,23 @@ func TestAccKerberosAuthBackendConfig_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldKeytabWO),
 					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldRemoveInstanceName),
 					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldAddGroupAliases),
 				),
+			},
+			{
+				ResourceName:                         "vault_kerberos_auth_backend_config.config",
+				ImportState:                          true,
+				ImportStateId:                        fmt.Sprintf("auth/%s/config", path),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 			},
 		},
 	})
 }
 
-// TestAccKerberosAuthBackendConfig_update tests updating the configuration
+// TestAccKerberosAuthBackendConfig_update tests updating the configuration and import
 func TestAccKerberosAuthBackendConfig_update(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
 	serviceAccount1 := "vault/localhost@EXAMPLE.COM"
@@ -58,6 +66,7 @@ func TestAccKerberosAuthBackendConfig_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount1),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldKeytabWO),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldRemoveInstanceName, "false"),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldAddGroupAliases, "false"),
 				),
@@ -67,54 +76,9 @@ func TestAccKerberosAuthBackendConfig_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount2),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldKeytabWO),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldRemoveInstanceName, "true"),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldAddGroupAliases, "true"),
-				),
-			},
-		},
-	})
-}
-
-// TestAccKerberosAuthBackendConfig_keytabUpdate tests updating the keytab
-func TestAccKerberosAuthBackendConfig_keytabUpdate(t *testing.T) {
-	path := acctest.RandomWithPrefix("kerberos")
-	serviceAccount := "vault/localhost@EXAMPLE.COM"
-	newKeytab := "BQIAAABJAAEADU1ZTE9DQUwuUkVBTE0ABXVzZXIxAAAAAWmddVUCABIAIEwYj3TuYhptSAZ2tAu/Jt8WcCJuvQLnToLPTVKzTyr/AAAAAgAAADkAAQANTVlMT0NBTC5SRUFMTQAFdXNlcjEAAAABaZ11VQIAEQAQ2gqjbGiRd5/K3dj5Wn7Z5QAAAAI="
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKerberosAuthBackendConfigConfig_basic(path, serviceAccount),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
-				),
-			},
-			{
-				Config: testAccKerberosAuthBackendConfigConfig_keytabUpdate(path, serviceAccount, newKeytab),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
-				),
-			},
-		},
-	})
-}
-
-// TestAccKerberosAuthBackendConfig_import tests importing the resource
-func TestAccKerberosAuthBackendConfig_import(t *testing.T) {
-	path := acctest.RandomWithPrefix("kerberos")
-	serviceAccount := "vault/localhost@EXAMPLE.COM"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKerberosAuthBackendConfigConfig_full(path, serviceAccount, true, true),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
 				),
 			},
 			{
@@ -123,6 +87,45 @@ func TestAccKerberosAuthBackendConfig_import(t *testing.T) {
 				ImportStateId:                        fmt.Sprintf("auth/%s/config", path),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+			},
+		},
+	})
+}
+
+// TestAccKerberosAuthBackendConfig_updateAndReplacement tests keytab updates and path changes
+func TestAccKerberosAuthBackendConfig_updateAndReplacement(t *testing.T) {
+	path1 := acctest.RandomWithPrefix("kerberos")
+	path2 := acctest.RandomWithPrefix("kerberos")
+	serviceAccount := "vault/localhost@EXAMPLE.COM"
+	newKeytab := "BQIAAABJAAEADU1ZTE9DQUwuUkVBTE0ABXVzZXIxAAAAAWmddVUCABIAIEwYj3TuYhptSAZ2tAu/Jt8WcCJuvQLnToLPTVKzTyr/AAAAAgAAADkAAQANTVlMT0NBTC5SRUFMTQAFdXNlcjEAAAABaZ11VQIAEQAQ2gqjbGiRd5/K3dj5Wn7Z5QAAAAI="
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKerberosAuthBackendConfigConfig_basic(path1, serviceAccount),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path1),
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldKeytabWO),
+				),
+			},
+			{
+				Config: testAccKerberosAuthBackendConfigConfig_keytabUpdate(path1, serviceAccount, newKeytab),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path1),
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldKeytabWO),
+				),
+			},
+			{
+				Config: testAccKerberosAuthBackendConfigConfig_basic(path2, serviceAccount),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path2),
+					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldKeytabWO),
+				),
 			},
 		},
 	})
@@ -141,34 +144,9 @@ func TestAccKerberosAuthBackendConfig_defaultCheck(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, "kerberos"),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldKeytabWO),
 					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldRemoveInstanceName),
 					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldAddGroupAliases),
-				),
-			},
-		},
-	})
-}
-
-// TestAccKerberosAuthBackendConfig_pathChange tests that changing path requires replacement
-func TestAccKerberosAuthBackendConfig_pathChange(t *testing.T) {
-	path1 := acctest.RandomWithPrefix("kerberos")
-	path2 := acctest.RandomWithPrefix("kerberos")
-	serviceAccount := "vault/localhost@EXAMPLE.COM"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKerberosAuthBackendConfigConfig_basic(path1, serviceAccount),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path1),
-				),
-			},
-			{
-				Config: testAccKerberosAuthBackendConfigConfig_basic(path2, serviceAccount),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path2),
 				),
 			},
 		},
@@ -187,7 +165,7 @@ func TestAccKerberosAuthBackendConfig_validationErrors(t *testing.T) {
 			// Test missing keytab
 			{
 				Config:      testAccKerberosAuthBackendConfigConfig_missingKeytab(path, serviceAccount),
-				ExpectError: regexp.MustCompile(`(attribute|argument) "keytab" is required`),
+				ExpectError: regexp.MustCompile(`(attribute|argument) "keytab_wo" is required`),
 			},
 			// Test missing service account
 			{
@@ -301,33 +279,9 @@ func TestAccKerberosAuthBackendConfig_namespace(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldNamespace, namespace),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path),
 					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
+					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldKeytabWO),
 					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldRemoveInstanceName),
 					resource.TestCheckNoResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldAddGroupAliases),
-				),
-			},
-		},
-	})
-}
-
-// TestAccKerberosAuthBackendConfig_importWithNamespace tests importing with namespace (Enterprise only)
-func TestAccKerberosAuthBackendConfig_importWithNamespace(t *testing.T) {
-	namespace := acctest.RandomWithPrefix("tf-ns")
-	path := acctest.RandomWithPrefix("kerberos")
-	serviceAccount := "vault/localhost@EXAMPLE.COM"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKerberosAuthBackendConfigConfig_namespace(namespace, path, serviceAccount),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldNamespace, namespace),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldMount, path),
-					resource.TestCheckResourceAttr("vault_kerberos_auth_backend_config.config", consts.FieldServiceAccount, serviceAccount),
 				),
 			},
 			{
@@ -378,7 +332,7 @@ resource "vault_auth_backend" "kerberos" {
 
 resource "vault_kerberos_auth_backend_config" "config" {
   mount  = vault_auth_backend.kerberos.path
-  keytab = %q
+  keytab_wo = %q
 }
 `, path, testKeytab)
 }
@@ -392,7 +346,7 @@ resource "vault_auth_backend" "kerberos" {
 
 resource "vault_kerberos_auth_backend_config" "config" {
   mount           = vault_auth_backend.kerberos.path
-  keytab          = %q
+  keytab_wo       = %q
   service_account = %q
 }
 `, path, keytab, serviceAccount)
@@ -407,7 +361,7 @@ resource "vault_auth_backend" "kerberos" {
 
 resource "vault_kerberos_auth_backend_config" "config" {
   mount           = vault_auth_backend.kerberos.path
-  keytab          = %q
+  keytab_wo       = %q
   service_account = ""
 }
 `, path, testKeytab)
@@ -417,7 +371,7 @@ func testAccKerberosAuthBackendConfigConfig_nonExistentBackend(path, serviceAcco
 	return fmt.Sprintf(`
 resource "vault_kerberos_auth_backend_config" "config" {
   mount           = %q
-  keytab          = %q
+  keytab_wo       = %q
   service_account = %q
 }
 `, path, testKeytab, serviceAccount)
@@ -432,7 +386,7 @@ resource "vault_auth_backend" "kerberos" {
 
 resource "vault_kerberos_auth_backend_config" "config" {
   mount           = vault_auth_backend.kerberos.path
-  keytab          = ""
+  keytab_wo       = ""
   service_account = %q
 }
 `, path, serviceAccount)
@@ -449,7 +403,7 @@ resource "vault_auth_backend" "kerberos" {
 
 resource "vault_kerberos_auth_backend_config" "config" {
   mount           = vault_auth_backend.kerberos.path
-  keytab          = %q
+  keytab_wo       = %q
   service_account = %q
 }
 `, path, testKeytab, serviceAccount)
@@ -464,7 +418,7 @@ resource "vault_auth_backend" "kerberos" {
 
 resource "vault_kerberos_auth_backend_config" "config" {
   mount                = vault_auth_backend.kerberos.path
-  keytab               = %q
+  keytab_wo            = %q
   service_account      = %q
   remove_instance_name = %t
   add_group_aliases    = %t
@@ -481,7 +435,7 @@ resource "vault_auth_backend" "kerberos" {
 
 resource "vault_kerberos_auth_backend_config" "config" {
   mount           = vault_auth_backend.kerberos.path
-  keytab          = %q
+  keytab_wo       = %q
   service_account = %q
 }
 `, path, keytab, serviceAccount)
@@ -494,9 +448,9 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "config" {
-  keytab          = %q
+  mount           = vault_auth_backend.kerberos.path
+  keytab_wo       = %q
   service_account = %q
-  depends_on      = [vault_auth_backend.kerberos]
 }
 `, testKeytab, serviceAccount)
 }
@@ -516,7 +470,7 @@ resource "vault_auth_backend" "kerberos" {
 resource "vault_kerberos_auth_backend_config" "config" {
   namespace       = vault_namespace.test.path
   mount           = vault_auth_backend.kerberos.path
-  keytab          = %q
+  keytab_wo       = %q
   service_account = %q
 }
 `, namespace, path, testKeytab, serviceAccount)
