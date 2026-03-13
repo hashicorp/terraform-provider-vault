@@ -323,6 +323,11 @@ func (e *kerberosAuthBackendLoginEphemeral) Close(ctx context.Context, req ephem
 		return
 	}
 
+	// If no private data was stored (e.g., Open failed before setting it), nothing to clean up
+	if len(privateBytes) == 0 {
+		return
+	}
+
 	// Unmarshal the private data
 	var privateData kerberosPrivateData
 	if err := json.Unmarshal(privateBytes, &privateData); err != nil {
