@@ -10,6 +10,10 @@ IMPROVEMENTS:
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
 * Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734)
 
+FEATURES:
+
+* Add support for Kerberos auth backend: `vault_kerberos_auth_backend_config`, `vault_kerberos_auth_backend_ldap_config`, and `vault_kerberos_auth_backend_group` resources, and `vault_kerberos_auth_backend_login` ephemeral resource for Kerberos authentication. ([#2819](https://github.com/hashicorp/terraform-provider-vault/pull/2819))
+
 BUGS: 
 * `vault_consul_secret_backend`: Fixed validation logic to allow computed token values by correcting the condition that checks for token presence during plan phase. ([#2823](https://github.com/hashicorp/terraform-provider-vault/pull/2823))
 * `vault_pki_external_ca_secret_backend_acme_account`: Provide eab_kid and eab_key values through the ACME account creation request. ([#2851]https://github.com/hashicorp/terraform-provider-vault/pull/2852)
@@ -20,7 +24,6 @@ BUGS:
 
 FEATURES:
 
-* Add support for Kerberos auth backend: `vault_kerberos_auth_backend_config`, `vault_kerberos_auth_backend_ldap_config`, and `vault_kerberos_auth_backend_group` resources, and `vault_kerberos_auth_backend_login` ephemeral resource for Kerberos authentication. ([#2819](https://github.com/hashicorp/terraform-provider-vault/pull/2819))
 * Add support for CF auth backend: `vault_cf_auth_backend_config` and `vault_cf_auth_backend_role` resources, and `vault_cf_auth_login` ephemeral resource for short-lived Vault tokens.
 * Add support for SPIFFE secrets backend: ([#2660](https://github.com/hashicorp/terraform-provider-vault/pull/2660))
 * Add support for pki-external-ca secrets backend: ([#2771](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
