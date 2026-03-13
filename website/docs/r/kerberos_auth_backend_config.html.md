@@ -16,7 +16,7 @@ and service account information required for Vault to authenticate users via Ker
 For more information, see the
 [Vault docs](https://www.vaultproject.io/docs/auth/kerberos).
 
-~> **Important** The `keytab` field is write-only and is not stored in Terraform state.
+~> **Important** The `keytab_wo` field is write-only and is not stored in Terraform state.
 It is only sent to Vault during configuration. See [the main provider documentation](../index.html)
 for more details.
 
@@ -36,8 +36,8 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "config" {
-  path            = vault_auth_backend.kerberos.path
-  keytab          = filebase64("/path/to/vault.keytab")
+  mount           = vault_auth_backend.kerberos.path
+  keytab_wo       = filebase64("/path/to/vault.keytab")
   service_account = "vault/localhost@EXAMPLE.COM"
 }
 ```
@@ -51,25 +51,11 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "config" {
-  path                 = vault_auth_backend.kerberos.path
-  keytab               = filebase64("/path/to/vault.keytab")
+  mount                = vault_auth_backend.kerberos.path
+  keytab_wo            = filebase64("/path/to/vault.keytab")
   service_account      = "vault/localhost@EXAMPLE.COM"
   remove_instance_name = true
   add_group_aliases    = true
-}
-```
-
-### Using Default Path
-
-```hcl
-resource "vault_auth_backend" "kerberos" {
-  type = "kerberos"
-}
-
-resource "vault_kerberos_auth_backend_config" "config" {
-  keytab          = filebase64("/path/to/vault.keytab")
-  service_account = "vault/localhost@EXAMPLE.COM"
-  depends_on      = [vault_auth_backend.kerberos]
 }
 ```
 
@@ -88,8 +74,8 @@ resource "vault_auth_backend" "kerberos" {
 
 resource "vault_kerberos_auth_backend_config" "config" {
   namespace       = vault_namespace.example.path
-  path            = vault_auth_backend.kerberos.path
-  keytab          = filebase64("/path/to/vault.keytab")
+  mount           = vault_auth_backend.kerberos.path
+  keytab_wo       = filebase64("/path/to/vault.keytab")
   service_account = "vault/localhost@EXAMPLE.COM"
 }
 ```
@@ -103,10 +89,10 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `path` - (Optional) Path where the Kerberos auth method is mounted. 
-  Defaults to `kerberos`. Changing this will force a new resource to be created.
+* `mount` - (Required) Path where the Kerberos auth method is mounted.
+  Changing this will force a new resource to be created.
 
-* `keytab` - (Required) Base64-encoded keytab file content. This is a write-only
+* `keytab_wo` - (Required) Base64-encoded keytab file content. This is a write-only
   field and is not stored in Terraform state. The keytab must contain an entry
   matching the `service_account`.
 
@@ -133,7 +119,7 @@ Kerberos auth backend configurations can be imported using the `path`, e.g.
 $ terraform import vault_kerberos_auth_backend_config.config auth/kerberos/config
 ```
 
-~> **Note** The `keytab` field cannot be imported as it is write-only and not stored
+~> **Note** The `keytab_wo` field cannot be imported as it is write-only and not stored
 in state. You will need to provide it in your configuration after import.
 
 ### Importing with Namespace (Vault Enterprise)

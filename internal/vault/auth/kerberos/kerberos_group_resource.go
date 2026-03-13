@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -75,9 +74,7 @@ func (r *kerberosAuthBackendGroupResource) Schema(ctx context.Context, req resou
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Path where the Kerberos auth method is mounted.",
-				Optional:            true,
-				Computed:            true,
-				Default:             stringdefault.StaticString("kerberos"),
+				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
