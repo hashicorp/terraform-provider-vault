@@ -3,6 +3,7 @@
 FEATURES:
 
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
+* Add support for Kerberos auth backend: `vault_kerberos_auth_backend_config`, `vault_kerberos_auth_backend_ldap_config`, and `vault_kerberos_auth_backend_group` resources, and `vault_kerberos_auth_backend_login` ephemeral resource for Kerberos authentication. ([#2819](https://github.com/hashicorp/terraform-provider-vault/pull/2819))
 
 BUG FIXES:
 
@@ -157,7 +158,6 @@ Release Note:
 
 FEATURES:
 
-* Add support for Kerberos auth backend: `vault_kerberos_auth_backend_config`, `vault_kerberos_auth_backend_ldap_config`, and `vault_kerberos_auth_backend_group` resources, and `vault_kerberos_auth_backend_login` ephemeral resource for Kerberos authentication. ([#2819](https://github.com/hashicorp/terraform-provider-vault/pull/2819))
 * Add support for CF auth backend: `vault_cf_auth_backend_config` and `vault_cf_auth_backend_role` resources, and `vault_cf_auth_login` ephemeral resource for short-lived Vault tokens.
 * Add support for SPIFFE secrets backend: ([#2660](https://github.com/hashicorp/terraform-provider-vault/pull/2660))
 * Add support for pki-external-ca secrets backend: ([#2771](https://github.com/hashicorp/terraform-provider-vault/pull/2771))
