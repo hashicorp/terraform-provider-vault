@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -25,7 +24,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
-	"github.com/hashicorp/terraform-provider-vault/internal/framework/validators"
 )
 
 var kerberosConfigPathRegexp = regexp.MustCompile("^auth/(.+)/config$")
@@ -84,9 +82,6 @@ func (r *kerberosAuthBackendConfigResource) Schema(_ context.Context, _ resource
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-				Validators: []validator.String{
-					validators.PathValidator(),
-				},
 			},
 			consts.FieldKeytabWO: schema.StringAttribute{
 				Required:    true,
@@ -113,35 +108,49 @@ func (r *kerberosAuthBackendConfigResource) Schema(_ context.Context, _ resource
 }
 
 func (r *kerberosAuthBackendConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan kerberosAuthBackendConfigModel
 	var config kerberosAuthBackendConfigModel
 
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(r.writeConfig(ctx, &plan, &config)...)
+	resp.Diagnostics.Append(r.writeConfig(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &config)...)
+}
+
+func (r *kerberosAuthBackendConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var config kerberosAuthBackendConfigModel
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(r.writeConfig(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &config)...)
 }
 
 // writeConfig is a reusable helper that writes configuration to Vault and reads it back.
 // Used by both Create and Update operations.
-func (r *kerberosAuthBackendConfigResource) writeConfig(ctx context.Context, plan *kerberosAuthBackendConfigModel, config *kerberosAuthBackendConfigModel) diag.Diagnostics {
+func (r *kerberosAuthBackendConfigResource) writeConfig(ctx context.Context, config *kerberosAuthBackendConfigModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
+	vaultClient, err := client.GetClient(ctx, r.Meta(), config.Namespace.ValueString())
 	if err != nil {
 		diags.AddError(errutil.ClientConfigureErr(err))
 		return diags
 	}
 
-	mount := strings.Trim(plan.Mount.ValueString(), "/")
+	mount := strings.Trim(config.Mount.ValueString(), "/")
 	configPath := r.configPath(mount)
 
 	// Build the API request
@@ -164,7 +173,7 @@ func (r *kerberosAuthBackendConfigResource) writeConfig(ctx context.Context, pla
 	tflog.Info(ctx, fmt.Sprintf("Kerberos auth backend config successfully written to '%s'", configPath))
 
 	// Read back the configuration
-	found, readDiags := r.read(ctx, plan)
+	found, readDiags := r.read(ctx, config)
 	diags.Append(readDiags...)
 	if diags.HasError() {
 		return diags
@@ -172,7 +181,7 @@ func (r *kerberosAuthBackendConfigResource) writeConfig(ctx context.Context, pla
 	if !found {
 		diags.AddError(
 			"Error reading back Kerberos auth backend config after write",
-			fmt.Sprintf("Config at '%s' was not found after successful write", r.configPath(strings.Trim(plan.Mount.ValueString(), "/"))),
+			fmt.Sprintf("Config at '%s' was not found after successful write", r.configPath(strings.Trim(config.Mount.ValueString(), "/"))),
 		)
 		return diags
 	}
@@ -180,7 +189,6 @@ func (r *kerberosAuthBackendConfigResource) writeConfig(ctx context.Context, pla
 	return diags
 }
 
-// Read is called during the terraform apply, terraform plan, and terraform refresh commands.
 func (r *kerberosAuthBackendConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state kerberosAuthBackendConfigModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -206,17 +214,16 @@ func (r *kerberosAuthBackendConfigResource) Read(ctx context.Context, req resour
 
 // read is a reusable helper that reads configuration from Vault.
 // Returns true if the config was found, false if not found.
-// Used by the Read operation.
-func (r *kerberosAuthBackendConfigResource) read(ctx context.Context, data *kerberosAuthBackendConfigModel) (bool, diag.Diagnostics) {
+func (r *kerberosAuthBackendConfigResource) read(ctx context.Context, config *kerberosAuthBackendConfigModel) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	vaultClient, err := client.GetClient(ctx, r.Meta(), config.Namespace.ValueString())
 	if err != nil {
 		diags.AddError(errutil.ClientConfigureErr(err))
 		return false, diags
 	}
 
-	mount := strings.Trim(data.Mount.ValueString(), "/")
+	mount := strings.Trim(config.Mount.ValueString(), "/")
 	configPath := r.configPath(mount)
 
 	tflog.Debug(ctx, fmt.Sprintf("Reading Kerberos auth backend config from '%s'", configPath))
@@ -232,28 +239,9 @@ func (r *kerberosAuthBackendConfigResource) read(ctx context.Context, data *kerb
 	}
 
 	// Populate model from API response
-	populateDiags := r.populateDataModelFromApi(data, resp.Data)
+	populateDiags := r.populateDataModelFromApi(config, resp.Data)
 	diags.Append(populateDiags...)
 	return true, diags
-}
-
-// Update is called during the terraform apply command.
-func (r *kerberosAuthBackendConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan kerberosAuthBackendConfigModel
-	var config kerberosAuthBackendConfigModel
-
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(r.writeConfig(ctx, &plan, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 // Delete is called during the terraform destroy command.
@@ -330,21 +318,21 @@ func (r *kerberosAuthBackendConfigResource) mountFromPath(path string) (string, 
 }
 
 // getApiModel builds the Vault API request map from the Terraform data model.
-func (r *kerberosAuthBackendConfigResource) getApiModel(data *kerberosAuthBackendConfigModel) (map[string]any, diag.Diagnostics) {
+func (r *kerberosAuthBackendConfigResource) getApiModel(config *kerberosAuthBackendConfigModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	vaultRequest := map[string]any{
-		consts.FieldKeytab:             data.Keytab.ValueString(),
-		consts.FieldServiceAccount:     data.ServiceAccount.ValueString(),
-		consts.FieldRemoveInstanceName: data.RemoveInstanceName.ValueBool(),
-		consts.FieldAddGroupAliases:    data.AddGroupAliases.ValueBool(),
+		consts.FieldKeytab:             config.Keytab.ValueString(),
+		consts.FieldServiceAccount:     config.ServiceAccount.ValueString(),
+		consts.FieldRemoveInstanceName: config.RemoveInstanceName.ValueBool(),
+		consts.FieldAddGroupAliases:    config.AddGroupAliases.ValueBool(),
 	}
 
 	return vaultRequest, diags
 }
 
 // populateDataModelFromApi maps the Vault API response to the Terraform data model.
-func (r *kerberosAuthBackendConfigResource) populateDataModelFromApi(data *kerberosAuthBackendConfigModel, respData map[string]interface{}) diag.Diagnostics {
+func (r *kerberosAuthBackendConfigResource) populateDataModelFromApi(config *kerberosAuthBackendConfigModel, respData map[string]interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if respData == nil {
@@ -358,13 +346,13 @@ func (r *kerberosAuthBackendConfigResource) populateDataModelFromApi(data *kerbe
 		return diags
 	}
 
-	data.ServiceAccount = types.StringValue(apiModel.ServiceAccount)
+	config.ServiceAccount = types.StringValue(apiModel.ServiceAccount)
 
 	if apiModel.RemoveInstanceName {
-		data.RemoveInstanceName = types.BoolValue(apiModel.RemoveInstanceName)
+		config.RemoveInstanceName = types.BoolValue(apiModel.RemoveInstanceName)
 	}
 	if apiModel.AddGroupAliases {
-		data.AddGroupAliases = types.BoolValue(apiModel.AddGroupAliases)
+		config.AddGroupAliases = types.BoolValue(apiModel.AddGroupAliases)
 	}
 
 	return diags
