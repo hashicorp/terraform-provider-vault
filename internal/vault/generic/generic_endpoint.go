@@ -46,7 +46,7 @@ type GenericEndpointEphemeralModel struct {
 	WriteDataJSON types.String `tfsdk:"write_data_json"`
 	WriteData     types.Map    `tfsdk:"write_data"`
 	// Naming convention check: path_wrap_ttl is the standard for Generic endpoints
-    PathWrapTTL   types.String `tfsdk:"path_wrap_ttl"`
+	PathWrapTTL types.String `tfsdk:"path_wrap_ttl"`
 }
 
 // Schema defines this resource's schema which is the data that is available in
@@ -78,11 +78,10 @@ func (r *GenericEndpointEphemeralResource) Schema(_ context.Context, _ ephemeral
 				Computed:            true,
 			},
 			// Naming convention: Use path_wrap_ttl to match vault_generic_endpoint
-            "path_wrap_ttl": schema.StringAttribute{
-                MarkdownDescription: "The TTL for the wrapped response.",
-                Optional:            true,
-            },
-            
+			"path_wrap_ttl": schema.StringAttribute{
+				MarkdownDescription: "The TTL for the wrapped response.",
+				Optional:            true,
+			},
 		},
 		MarkdownDescription: "Provides an ephemeral resource to write to a generic Vault endpoint and read response data.",
 	}
