@@ -1,5 +1,7 @@
 ## Unreleased
 
+* Add support for write only paramters for s3 backends for `vault_raft_snapshot_agent_config` by @drewmullen ([#2825]https://github.com/hashicorp/terraform-provider-vault/pull/2825)
+
 ## 5.8.0 (March 12, 2026)
 
 FEATURES:
