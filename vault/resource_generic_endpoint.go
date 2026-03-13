@@ -113,8 +113,32 @@ func genericEndpointResourceWrite(d *schema.ResourceData, meta interface{}) erro
 
 	d.SetId(path)
 
+	// Debug: log what the response actually contains
+	if response != nil {
+		log.Printf("[DEBUG] response.Data: %#v", response.Data)
+		log.Printf("[DEBUG] response.Auth: %#v", response.Auth)
+		log.Printf("[DEBUG] response.WrapInfo: %#v", response.WrapInfo)
+		log.Printf("[DEBUG] response.LeaseID: %q, LeaseDuration: %d", response.LeaseID, response.LeaseDuration)
+	} else {
+		log.Printf("[DEBUG] response is nil")
+	}
+
 	writeDataMap := map[string]string{}
-	if response != nil && response.Data != nil {
+	// Prepare wrap info map if present
+	var wrapMap map[string]interface{}
+	if response != nil && response.WrapInfo != nil {
+		if wb, err := json.Marshal(response.WrapInfo); err == nil {
+			_ = json.Unmarshal(wb, &wrapMap) // ignore unmarshal error; wrapMap stays nil on error
+		}
+	}
+	// Prepare auth map if present
+	var authMap map[string]interface{}
+	if response != nil && response.Auth != nil {
+		if ab, err := json.Marshal(response.Auth); err == nil {
+			_ = json.Unmarshal(ab, &authMap) // ignore unmarshal error; authMap stays nil on error
+		}
+	}
+	if response != nil && (response.Data != nil || wrapMap != nil || authMap != nil || response.LeaseDuration != 0 || response.LeaseID != "") {
 
 		// Since our "write_data" map can only contain string values, we
 		// will take strings from Data and write them in as-is, and write
@@ -125,9 +149,89 @@ func genericEndpointResourceWrite(d *schema.ResourceData, meta interface{}) erro
 		iWriteFields := d.Get("write_fields").([]interface{})
 		for _, iWriteField := range iWriteFields {
 			writeField := iWriteField.(string)
-			if _, ok := response.Data[writeField]; ok {
-				v := response.Data[writeField]
-				log.Printf("[DEBUG] %s found in response", writeField)
+
+			//1) initial check for response.Data
+			if response.Data != nil {
+				if v, ok := response.Data[writeField]; ok {
+					log.Printf("[DEBUG] %s found in response.Data", writeField)
+					writeData[writeField] = v
+					if vs, ok := v.(string); ok {
+						writeDataMap[writeField] = vs
+					} else {
+						vBytes, _ := json.Marshal(v)
+						writeDataMap[writeField] = string(vBytes)
+					}
+					continue
+				}
+			}
+			// 2)"wrap_info" to include the entire wrap map
+			if writeField == "wrap_info" && wrapMap != nil {
+				log.Printf("[DEBUG] %s found in response.WrapInfo", writeField)
+				writeData[writeField] = wrapMap
+				vBytes, _ := json.Marshal(wrapMap)
+				writeDataMap[writeField] = string(vBytes)
+				continue
+			}
+			// 3) checking individual fields in WrapInfo
+			if wrapMap != nil {
+				if v, ok := wrapMap[writeField]; ok {
+					log.Printf("[DEBUG] %s found in response.WrapInfo", writeField)
+					writeData[writeField] = v
+					if vs, ok := v.(string); ok {
+						writeDataMap[writeField] = vs
+					} else {
+						vBytes, _ := json.Marshal(v)
+						writeDataMap[writeField] = string(vBytes)
+					}
+					continue
+				}
+			}
+
+			// 4) "auth" to include the entire auth map
+			if writeField == "auth" && authMap != nil {
+				log.Printf("[DEBUG] %s found in response.Auth", writeField)
+				writeData[writeField] = authMap
+				vBytes, _ := json.Marshal(authMap)
+				writeDataMap[writeField] = string(vBytes)
+				continue
+			}
+			// 5) checking individual fields in Auth
+			if authMap != nil {
+				if v, ok := authMap[writeField]; ok {
+					log.Printf("[DEBUG] %s found in response.Auth", writeField)
+					writeData[writeField] = v
+					if vs, ok := v.(string); ok {
+						writeDataMap[writeField] = vs
+					} else {
+						vBytes, _ := json.Marshal(v)
+						writeDataMap[writeField] = string(vBytes)
+					}
+					continue
+				}
+				// alias: "token" -> "client_token" in Auth
+				if writeField == "token" {
+					if v, ok := authMap["client_token"]; ok {
+						log.Printf("[DEBUG] %s mapped from response.Auth.client_token", writeField)
+						writeData[writeField] = v
+						if vs, ok := v.(string); ok {
+							writeDataMap[writeField] = vs
+						} else {
+							vBytes, _ := json.Marshal(v)
+							writeDataMap[writeField] = string(vBytes)
+						}
+						continue
+					}
+				}
+			}
+
+			// 6) check top-level response fields (lease_duration, lease_id, renewable)
+			topLevel := map[string]interface{}{
+				"lease_duration": response.LeaseDuration,
+				"lease_id":       response.LeaseID,
+				"renewable":      response.Renewable,
+			}
+			if v, ok := topLevel[writeField]; ok {
+				log.Printf("[DEBUG] %s found in top-level response", writeField)
 				writeData[writeField] = v
 				if vs, ok := v.(string); ok {
 					writeDataMap[writeField] = vs
@@ -137,9 +241,10 @@ func genericEndpointResourceWrite(d *schema.ResourceData, meta interface{}) erro
 					vBytes, _ := json.Marshal(v)
 					writeDataMap[writeField] = string(vBytes)
 				}
-			} else {
-				log.Printf("[DEBUG] %s not found in response", writeField)
+				continue
 			}
+
+			log.Printf("[DEBUG] %s not found in response", writeField)
 		}
 
 		jsonData, err := json.Marshal(writeData)
