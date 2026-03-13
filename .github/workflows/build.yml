@@ -74,7 +74,7 @@ jobs:
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
-      - uses: hashicorp/setup-terraform@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '1.12.*'
           terraform_wrapper: false
@@ -264,7 +264,7 @@ jobs:
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
-      - uses: hashicorp/setup-terraform@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ matrix.terraform_version }}
           terraform_wrapper: false

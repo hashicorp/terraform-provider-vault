@@ -6,9 +6,8 @@ package base
 import (
 	"context"
 	"fmt"
-	"os"
-
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"

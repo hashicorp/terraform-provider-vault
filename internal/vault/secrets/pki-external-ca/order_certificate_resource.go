@@ -96,6 +96,7 @@ func (r *PKIExternalCAOrderCertificateResource) Schema(_ context.Context, _ reso
 			"certificate": schema.StringAttribute{
 				MarkdownDescription: "The PEM-encoded certificate.",
 				Computed:            true,
+				Sensitive:           true,
 			},
 			"ca_chain": schema.ListAttribute{
 				MarkdownDescription: "The PEM-encoded certificate chain.",
