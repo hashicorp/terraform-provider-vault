@@ -435,5 +435,3 @@ resource "vault_kerberos_auth_backend_group" "test" {
 }
 `, namespace, backend, groupName)
 }
-
-// Made with Bob
