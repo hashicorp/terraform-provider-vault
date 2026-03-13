@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* Add support for Kerberos auth backend: `vault_kerberos_auth_backend_config`, `vault_kerberos_auth_backend_ldap_config`, and `vault_kerberos_auth_backend_group` resources, and `vault_kerberos_auth_backend_login` ephemeral resource for Kerberos authentication. ([#2819](https://github.com/hashicorp/terraform-provider-vault/pull/2819))
+
 ## 5.8.0 (March 12, 2026)
 
 FEATURES:
