@@ -1,6 +1,6 @@
 ---
 layout: "vault"
-page_title: "Vault: ephemeral vault_radius_auth_login data resource"
+page_title: "Vault: ephemeral vault_radius_auth_login resource"
 sidebar_current: "docs-vault-ephemeral-radius-auth-login"
 description: |-
   Login to Vault using RADIUS authentication and obtain ephemeral credentials
@@ -22,14 +22,20 @@ the [Vault RADIUS Auth documentation](https://developer.hashicorp.com/vault/docs
 ### Basic Usage
 
 ```hcl
+resource "vault_auth_backend" "radius" {
+  type = "radius"
+  path = "radius"
+}
+
 resource "vault_radius_auth_backend" "radius" {
-  backend = "radius"
-  host    = "radius.example.com:1812"
-  secret  = "my-radius-shared-secret"
+  mount     = vault_auth_backend.radius.path
+  host      = "radius.example.com"
+  port      = 1812
+  secret_wo = "my-radius-shared-secret"
 }
 
 ephemeral "vault_radius_auth_login" "test" {
-  mount    = vault_radius_auth_backend.radius.backend
+  mount    = vault_auth_backend.radius.path
   username = "testuser"
   password = "testpass"
 }
@@ -48,14 +54,20 @@ output "entity_id" {
 ### With Custom Backend Path
 
 ```hcl
+resource "vault_auth_backend" "custom" {
+  type = "radius"
+  path = "custom-radius"
+}
+
 resource "vault_radius_auth_backend" "custom" {
-  backend = "custom-radius"
-  host    = "radius.company.com:1812"
-  secret  = "shared-secret"
+  mount     = vault_auth_backend.custom.path
+  host      = "radius.company.com"
+  port      = 1812
+  secret_wo = "shared-secret"
 }
 
 ephemeral "vault_radius_auth_login" "app" {
-  mount    = vault_radius_auth_backend.custom.backend
+  mount    = vault_auth_backend.custom.path
   username = var.radius_username
   password = var.radius_password
 }
@@ -69,14 +81,20 @@ output "assigned_policies" {
 ### Using with Vault Provider Authentication
 
 ```hcl
+resource "vault_auth_backend" "radius" {
+  type = "radius"
+  path = "radius"
+}
+
 resource "vault_radius_auth_backend" "radius" {
-  backend = "radius"
-  host    = "radius.example.com:1812"
-  secret  = "shared-secret"
+  mount     = vault_auth_backend.radius.path
+  host      = "radius.example.com"
+  port      = 1812
+  secret_wo = "shared-secret"
 }
 
 ephemeral "vault_radius_auth_login" "admin" {
-  mount    = vault_radius_auth_backend.radius.backend
+  mount    = vault_auth_backend.radius.path
   username = "admin"
   password = var.admin_password
 }
@@ -161,4 +179,4 @@ This is an ephemeral resource, which means:
 
 The Vault token used to configure the provider must have the following capabilities:
 
-- `read` on `auth/<backend>/login/<username>` to perform authentication
+- `read` on `auth/<mount>/login/<username>` to perform authentication

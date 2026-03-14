@@ -237,7 +237,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		cloudfoundry.NewCFAuthBackendRoleResource,
 		spiffesec.NewSpiffeSecretBackendConfigResource,
 		spiffesec.NewSpiffeSecretBackendRoleResource,
-		radius.NewRadiusAuthBackendResource,
+		radius.NewRadiusAuthBackendConfigResource,
 		radius.NewRadiusAuthBackendUserResource,
 		sys.NewPasswordPolicyResource,
 		azure.NewAzureStaticRoleResource,
