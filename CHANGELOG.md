@@ -1,5 +1,8 @@
 ## Unreleased
 
+* Add support for RADIUS auth backend: `vault_radius_auth_backend` and `vault_radius_auth_backend_user` resource and `vault_radius_auth_login` ephemeral resource.([#2814](https://github.com/hashicorp/terraform-provider-vault/pull/2814))
+
+
 ## 5.8.0 (March 12, 2026)
 
 FEATURES:
