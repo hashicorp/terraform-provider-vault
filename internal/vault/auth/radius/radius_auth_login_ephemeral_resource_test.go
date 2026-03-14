@@ -201,7 +201,7 @@ func testAccRadiusAuthBackendInfra(mount, username string) string {
 %s
 
 resource "vault_radius_auth_backend" "test" {
-  path         = vault_auth_backend.test.path
+	mount        = vault_auth_backend.test.path
   host         = %q
   secret_wo    = %q
   dial_timeout = 30
@@ -316,7 +316,7 @@ resource "vault_auth_backend" "test" {
 
 resource "vault_radius_auth_backend" "test" {
   namespace    = vault_namespace.test.path
-  path         = vault_auth_backend.test.path
+	mount        = vault_auth_backend.test.path
   host         = %q
   secret_wo    = %q
   dial_timeout = 30

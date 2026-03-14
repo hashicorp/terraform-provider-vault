@@ -32,6 +32,12 @@ type RadiusAuthLoginEphemeralResource struct {
 	base.EphemeralResourceWithConfigure
 }
 
+type radiusAuthLoginPrivateData struct {
+	LeaseID   string
+	Accessor  string
+	Namespace string
+}
+
 // RadiusAuthLoginEphemeralModel describes the Terraform resource data model to match the
 // resource schema.
 type RadiusAuthLoginEphemeralModel struct {
@@ -287,8 +293,57 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 
-	// Store token and accessor for potential cleanup
-	resp.Private.SetKey(ctx, "client_token", []byte(loginResp.Auth.ClientToken))
-	resp.Private.SetKey(ctx, consts.FieldAccessor, []byte(loginResp.Auth.Accessor))
+	// Store revocation identifiers for Close.
+	if loginResp.LeaseID != "" {
+		resp.Private.SetKey(ctx, consts.FieldLeaseID, []byte(loginResp.LeaseID))
+	}
+	if loginResp.Auth.Accessor != "" {
+		resp.Private.SetKey(ctx, consts.FieldAccessor, []byte(loginResp.Auth.Accessor))
+	}
 	resp.Private.SetKey(ctx, consts.FieldNamespace, []byte(data.Namespace.ValueString()))
+}
+
+func (r *RadiusAuthLoginEphemeralResource) Close(ctx context.Context, req ephemeral.CloseRequest, resp *ephemeral.CloseResponse) {
+	leaseID, diags := req.Private.GetKey(ctx, consts.FieldLeaseID)
+	resp.Diagnostics.Append(diags...)
+	accessor, diags := req.Private.GetKey(ctx, consts.FieldAccessor)
+	resp.Diagnostics.Append(diags...)
+	namespace, diags := req.Private.GetKey(ctx, consts.FieldNamespace)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if len(leaseID) == 0 && len(accessor) == 0 {
+		return
+	}
+
+	c, err := client.GetClient(ctx, r.Meta(), string(namespace))
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	if len(leaseID) > 0 {
+		if err := c.Sys().RevokeWithContext(ctx, string(leaseID)); err == nil {
+			return
+		} else if len(accessor) == 0 {
+			resp.Diagnostics.AddError(
+				"Error revoking RADIUS login token",
+				fmt.Sprintf("Could not revoke login token lease %q: %s", string(leaseID), err),
+			)
+			return
+		}
+	}
+
+	if len(accessor) > 0 {
+		if _, err := c.Logical().WriteWithContext(ctx, "auth/token/revoke-accessor", map[string]any{
+			consts.FieldAccessor: string(accessor),
+		}); err != nil {
+			resp.Diagnostics.AddError(
+				"Error revoking RADIUS login token",
+				fmt.Sprintf("Could not revoke login token accessor %q: %s", string(accessor), err),
+			)
+		}
+	}
 }

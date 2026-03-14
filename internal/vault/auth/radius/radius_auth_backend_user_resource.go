@@ -370,14 +370,22 @@ func (r *RadiusAuthBackendUserResource) usernameFromPath(path string) (string, e
 func (r *RadiusAuthBackendUserResource) getApiModel(ctx context.Context, data *RadiusAuthBackendUserModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	// // Convert Set to comma-separated string for Vault API
+	// // Note: Vault RADIUS API accepts comma-separated string but returns array
+	vaultRequest := map[string]any{}
 	// Convert Set to comma-separated string for Vault API
 	// Note: Vault RADIUS API accepts comma-separated string but returns array
-	var elements []string
-	_ = data.Policies.ElementsAs(ctx, &elements, false)
-	policiesStr := strings.Join(elements, ",")
-
-	vaultRequest := map[string]any{
-		consts.FieldPolicies: policiesStr,
+	if !data.Policies.IsNull() && !data.Policies.IsUnknown() {
+		var elements []string
+		elementsDiags := data.Policies.ElementsAs(ctx, &elements, false)
+		diags.Append(elementsDiags...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		if len(elements) > 0 {
+			policiesStr := strings.Join(elements, ",")
+			vaultRequest[consts.FieldPolicies] = policiesStr
+		}
 	}
 
 	return vaultRequest, diags
@@ -407,7 +415,9 @@ func (r *RadiusAuthBackendUserResource) populateDataModelFromApi(ctx context.Con
 			return diags
 		}
 		data.Policies = policies
+	} else {
+		// When Vault returns no policies, clear the Terraform state to avoid stale values.
+		data.Policies = types.SetNull(types.StringType)
 	}
-
 	return diags
 }
