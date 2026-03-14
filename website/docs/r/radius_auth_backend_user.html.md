@@ -48,7 +48,7 @@ No additional attributes are exposed by this resource.
 
 ## Import
 
-RADIUS authentication backend users can be imported using the `path`, e.g.
+RADIUS authentication backend users can be imported using the full user API path, e.g.
 
 ```
 $ terraform import vault_radius_auth_backend_user.user auth/radius/users/test-user
