@@ -13,8 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -34,16 +32,17 @@ import (
 const defaultMountPath = "radius"
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
-var _ resource.ResourceWithConfigure = &RadiusAuthBackendResource{}
+var _ resource.ResourceWithConfigure = &RadiusAuthBackendConfigResource{}
+var _ resource.ResourceWithImportState = &RadiusAuthBackendConfigResource{}
 
-// NewRadiusAuthBackendResource returns the implementation for this resource to be
+// NewRadiusAuthBackendConfigResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider
-func NewRadiusAuthBackendResource() resource.Resource {
-	return &RadiusAuthBackendResource{}
+func NewRadiusAuthBackendConfigResource() resource.Resource {
+	return &RadiusAuthBackendConfigResource{}
 }
 
-// RadiusAuthBackendResource implements the methods that define this resource
-type RadiusAuthBackendResource struct {
+// RadiusAuthBackendConfigResource implements the methods that define this resource
+type RadiusAuthBackendConfigResource struct {
 	base.ResourceWithConfigure
 }
 
@@ -52,7 +51,7 @@ type RadiusAuthBackendResource struct {
 type RadiusAuthBackendModel struct {
 	token.TokenModel
 
-	Path                     types.String `tfsdk:"path"`
+	Mount                    types.String `tfsdk:"mount"`
 	Host                     types.String `tfsdk:"host"`
 	Port                     types.Int64  `tfsdk:"port"`
 	SecretWO                 types.String `tfsdk:"secret_wo"`
@@ -76,26 +75,23 @@ type RadiusAuthBackendAPIModel struct {
 	Secret                   string   `json:"secret" mapstructure:"secret"`
 	UnregisteredUserPolicies []string `json:"unregistered_user_policies" mapstructure:"unregistered_user_policies"`
 	DialTimeout              int64    `json:"dial_timeout,omitempty" mapstructure:"dial_timeout,omitempty"`
-	ReadTimeout              int64    `json:"read_timeout" mapstructure:"read_timeout"`
+	ReadTimeout              int64    `json:"read_timeout,omitempty" mapstructure:"read_timeout,omitempty"`
 	NASPort                  int64    `json:"nas_port,omitempty" mapstructure:"nas_port,omitempty"`
 	NASIdentifier            string   `json:"nas_identifier" mapstructure:"nas_identifier"`
 }
 
 // Metadata defines the resource name as it would appear in Terraform configurations
-func (r *RadiusAuthBackendResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *RadiusAuthBackendConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_radius_auth_backend"
 }
 
 // Schema defines this resource's schema
-func (r *RadiusAuthBackendResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *RadiusAuthBackendConfigResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
-				MarkdownDescription: "Path to mount the RADIUS auth backend. Defaults to `radius`.",
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Path of the enabled RADIUS auth backend mount to configure.",
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			consts.FieldHost: schema.StringAttribute{
 				MarkdownDescription: "The RADIUS server to connect to. Examples: `radius.myorg.com`, `127.0.0.1`.",
@@ -118,17 +114,17 @@ func (r *RadiusAuthBackendResource) Schema(ctx context.Context, req resource.Sch
 				Optional:            true,
 			},
 			consts.FieldRadiusDialTimeout: schema.Int64Attribute{
-				MarkdownDescription: "Number of seconds to wait for a backend connection before timing out. Defaults to `10`.",
+				MarkdownDescription: "Number of seconds to wait for a backend connection before timing out. Defaults to `10`. If removed from configuration after being set, Vault retains the previously stored value.",
 				Optional:            true,
 				Computed:            true,
 			},
 			consts.FieldRadiusReadTimeout: schema.Int64Attribute{
-				MarkdownDescription: "Number of seconds to wait for a response from the RADIUS server.",
+				MarkdownDescription: "Number of seconds to wait for a response from the RADIUS server. Defaults to `10`. If removed from configuration after being set, Vault retains the previously stored value.",
 				Optional:            true,
 				Computed:            true,
 			},
 			consts.FieldRadiusNASPort: schema.Int64Attribute{
-				MarkdownDescription: "The NAS-Port attribute of the RADIUS request. Defaults to `10`.",
+				MarkdownDescription: "The NAS-Port attribute of the RADIUS request. Defaults to `10`. If removed from configuration after being set, Vault retains the previously stored value.",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -137,7 +133,7 @@ func (r *RadiusAuthBackendResource) Schema(ctx context.Context, req resource.Sch
 				Computed:            true,
 			},
 		},
-		MarkdownDescription: "Manages a RADIUS Auth mount in a Vault server.",
+		MarkdownDescription: "Manages RADIUS auth backend configuration for an existing auth mount in Vault.",
 	}
 
 	// Add the common token fields and base schema
@@ -145,7 +141,7 @@ func (r *RadiusAuthBackendResource) Schema(ctx context.Context, req resource.Sch
 }
 
 // Create is called during the terraform apply command.
-func (r *RadiusAuthBackendResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *RadiusAuthBackendConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data RadiusAuthBackendModel
 
 	// Read Terraform plan data into the model
@@ -167,80 +163,18 @@ func (r *RadiusAuthBackendResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	mountPath := strings.Trim(data.Path.ValueString(), "/")
-
-	// Check if the auth backend already exists (e.g., created by vault_auth_backend)
-	// If it exists, skip the enable step and just configure it
-	mounts, err := vaultClient.Sys().ListAuthWithContext(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error checking existing auth mounts",
-			fmt.Sprintf("Could not list auth mounts: %s", err),
-		)
-		return
-	}
-
-	mountExists := false
-	mountKey := mountPath + "/"
-	if mounts != nil {
-		if _, exists := mounts[mountKey]; exists {
-			mountExists = true
-			tflog.Debug(ctx, fmt.Sprintf("RADIUS auth backend at '%s' already exists, skipping enable", mountPath))
-		}
-	}
-
-	// Only enable the auth backend if it doesn't already exist
-	if !mountExists {
-		tflog.Debug(ctx, fmt.Sprintf("Enabling RADIUS auth backend at '%s'", mountPath))
-		err = vaultClient.Sys().EnableAuthWithOptionsWithContext(ctx, mountPath, &api.EnableAuthOptions{
-			Type: consts.MountTypeRadius,
-		})
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error enabling RADIUS auth backend",
-				fmt.Sprintf("Could not enable RADIUS auth backend at '%s': %s", mountPath, err),
-			)
-			return
-		}
-		tflog.Info(ctx, fmt.Sprintf("Enabled RADIUS auth backend at '%s'", mountPath))
-	}
+	mountPath := r.mountPath(data.Mount)
 
 	// Build the API request
 	vaultRequest, apiDiags := r.getApiModel(ctx, &data, secret)
 	resp.Diagnostics.Append(apiDiags...)
 	if resp.Diagnostics.HasError() {
-		// Only clean up the mount if we created it (not if it already existed)
-		if !mountExists {
-			_ = vaultClient.Sys().DisableAuthWithContext(ctx, mountPath)
-		}
 		return
 	}
 
-	// Write config to Vault
-	configPath := r.configPath(mountPath)
-	tflog.Debug(ctx, fmt.Sprintf("Writing RADIUS auth config to '%s'", configPath))
-	_, err = vaultClient.Logical().WriteWithContext(ctx, configPath, vaultRequest)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error writing RADIUS auth config",
-			fmt.Sprintf("Could not write config to '%s': %s", configPath, err),
-		)
-		// Only clean up the mount if we created it (not if it already existed)
-		if !mountExists {
-			_ = vaultClient.Sys().DisableAuthWithContext(ctx, mountPath)
-		}
-		return
-	}
-	tflog.Info(ctx, fmt.Sprintf("RADIUS auth config successfully written to '%s'", configPath))
-
-	// Read back config from Vault to populate computed fields
-	configResp, err := vaultClient.Logical().ReadWithContext(ctx, configPath)
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	if configResp == nil {
-		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+	configResp, writeDiags := r.writeConfig(ctx, vaultClient, mountPath, vaultRequest, errutil.VaultCreateErr)
+	resp.Diagnostics.Append(writeDiags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -251,15 +185,14 @@ func (r *RadiusAuthBackendResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	// Set path (used as resource identifier)
-	data.Path = types.StringValue(mountPath)
+	data.Mount = types.StringValue(mountPath)
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // Read is called during the terraform apply, terraform plan, and terraform refresh commands.
-func (r *RadiusAuthBackendResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *RadiusAuthBackendConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data RadiusAuthBackendModel
 
 	// Read Terraform prior state data into the model
@@ -274,11 +207,7 @@ func (r *RadiusAuthBackendResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
-	mountPath := data.Path.ValueString()
-	if mountPath == "" {
-		mountPath = defaultMountPath
-	}
-	mountPath = strings.Trim(mountPath, "/")
+	mountPath := r.mountPath(data.Mount)
 
 	// Read config
 	configPath := r.configPath(mountPath)
@@ -302,13 +231,13 @@ func (r *RadiusAuthBackendResource) Read(ctx context.Context, req resource.ReadR
 	}
 
 	// Update state
-	data.Path = types.StringValue(mountPath)
+	data.Mount = types.StringValue(mountPath)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // Update is called during the terraform apply command.
-func (r *RadiusAuthBackendResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *RadiusAuthBackendConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data RadiusAuthBackendModel
 
 	// Read Terraform plan data into the model
@@ -330,7 +259,7 @@ func (r *RadiusAuthBackendResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	mountPath := strings.Trim(data.Path.ValueString(), "/")
+	mountPath := r.mountPath(data.Mount)
 
 	// Build the API request
 	vaultRequest, apiDiags := r.getApiModel(ctx, &data, secret)
@@ -339,27 +268,9 @@ func (r *RadiusAuthBackendResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	// Write config to Vault
-	configPath := r.configPath(mountPath)
-	tflog.Debug(ctx, fmt.Sprintf("Writing RADIUS auth config to '%s'", configPath))
-	_, err = vaultClient.Logical().WriteWithContext(ctx, configPath, vaultRequest)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error writing RADIUS auth config",
-			fmt.Sprintf("Could not write config to '%s': %s", configPath, err),
-		)
-		return
-	}
-	tflog.Info(ctx, fmt.Sprintf("RADIUS auth config successfully written to '%s'", configPath))
-
-	// Read back config from Vault to populate computed fields
-	configResp, err := vaultClient.Logical().ReadWithContext(ctx, configPath)
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	if configResp == nil {
-		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+	configResp, writeDiags := r.writeConfig(ctx, vaultClient, mountPath, vaultRequest, errutil.VaultUpdateErr)
+	resp.Diagnostics.Append(writeDiags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -370,13 +281,13 @@ func (r *RadiusAuthBackendResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	data.Path = types.StringValue(mountPath)
+	data.Mount = types.StringValue(mountPath)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // Delete is called during the terraform destroy command.
-func (r *RadiusAuthBackendResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *RadiusAuthBackendConfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data RadiusAuthBackendModel
 
 	// Read Terraform state data into the model
@@ -385,33 +296,26 @@ func (r *RadiusAuthBackendResource) Delete(ctx context.Context, req resource.Del
 		return
 	}
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
+	mountPath := r.mountPath(data.Mount)
 
-	mountPath := strings.Trim(data.Path.ValueString(), "/")
-
-	tflog.Debug(ctx, fmt.Sprintf("Disabling RADIUS auth backend at '%s'", mountPath))
-	if err := vaultClient.Sys().DisableAuthWithContext(ctx, mountPath); err != nil {
-		resp.Diagnostics.AddError(
-			"Error disabling RADIUS auth backend",
-			fmt.Sprintf("Could not disable RADIUS auth backend at '%s': %s", mountPath, err),
-		)
-		return
-	}
-	tflog.Info(ctx, fmt.Sprintf("Disabled RADIUS auth backend at '%s'", mountPath))
+	resp.Diagnostics.AddWarning(
+		"RADIUS auth backend configuration remains in Vault",
+		fmt.Sprintf("Removing this resource from Terraform state does not disable the RADIUS auth mount or clear the config at '%s'. Manage the mount lifecycle separately with vault_auth_backend if needed.", r.configPath(mountPath)),
+	)
 }
 
 // ImportState handles resource import
-func (r *RadiusAuthBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	mountPath := strings.Trim(req.ID, "/")
-	if mountPath == "" {
-		mountPath = defaultMountPath
+func (r *RadiusAuthBackendConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	mountPath, err := extractRadiusConfigMountFromID(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			fmt.Sprintf("The import identifier %q is not valid: %s", req.ID, err.Error()),
+		)
+		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mountPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mountPath)...)
 
 	// Handle namespace import via environment variable
 	// See: https://registry.terraform.io/providers/hashicorp/vault/latest/docs#namespace-support
@@ -428,14 +332,57 @@ func (r *RadiusAuthBackendResource) ImportState(ctx context.Context, req resourc
 	}
 }
 
+func extractRadiusConfigMountFromID(id string) (string, error) {
+	id = strings.Trim(id, "/")
+	if !strings.HasPrefix(id, "auth/") || !strings.HasSuffix(id, "/config") {
+		return "", fmt.Errorf("expected import ID in the format auth/<mount>/config")
+	}
+
+	mountPath := strings.Trim(strings.TrimSuffix(strings.TrimPrefix(id, "auth/"), "/config"), "/")
+	if mountPath == "" || strings.Contains(mountPath, "//") {
+		return "", fmt.Errorf("expected import ID in the format auth/<mount>/config")
+	}
+
+	return mountPath, nil
+}
+
 // configPath returns the Vault API path for RADIUS config
-func (r *RadiusAuthBackendResource) configPath(mountPath string) string {
+func (r *RadiusAuthBackendConfigResource) configPath(mountPath string) string {
 	return fmt.Sprintf("auth/%s/config", mountPath)
+}
+
+func (r *RadiusAuthBackendConfigResource) mountPath(mount types.String) string {
+	return strings.Trim(mount.ValueString(), "/")
+}
+
+func (r *RadiusAuthBackendConfigResource) writeConfig(ctx context.Context, vaultClient *api.Client, mountPath string, vaultRequest map[string]any, writeErr func(error) (string, string)) (*api.Secret, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	configPath := r.configPath(mountPath)
+	tflog.Debug(ctx, fmt.Sprintf("Writing RADIUS auth config to '%s'", configPath))
+	_, err := vaultClient.Logical().WriteWithContext(ctx, configPath, vaultRequest)
+	if err != nil {
+		diags.AddError(writeErr(err))
+		return nil, diags
+	}
+	tflog.Info(ctx, fmt.Sprintf("RADIUS auth config successfully written to '%s'", configPath))
+
+	configResp, err := vaultClient.Logical().ReadWithContext(ctx, configPath)
+	if err != nil {
+		diags.AddError(errutil.VaultReadErr(err))
+		return nil, diags
+	}
+	if configResp == nil {
+		diags.AddError(errutil.VaultReadResponseNil())
+		return nil, diags
+	}
+
+	return configResp, diags
 }
 
 // readSecretFromConfig reads the write-only secret from the Terraform config.
 // Write-only fields are not included in the plan, so they must be read from config directly.
-func (r *RadiusAuthBackendResource) readSecretFromConfig(ctx context.Context, config tfsdk.Config) (string, diag.Diagnostics) {
+func (r *RadiusAuthBackendConfigResource) readSecretFromConfig(ctx context.Context, config tfsdk.Config) (string, diag.Diagnostics) {
 	var secret *string
 	diags := config.GetAttribute(ctx, path.Root(consts.FieldRadiusSecretWO), &secret)
 	if diags.HasError() {
@@ -449,7 +396,7 @@ func (r *RadiusAuthBackendResource) readSecretFromConfig(ctx context.Context, co
 
 // getApiModel builds the Vault API request map from the Terraform data model.
 // Note: secret is write-only so it is never part of the plan and must be passed separately.
-func (r *RadiusAuthBackendResource) getApiModel(ctx context.Context, data *RadiusAuthBackendModel, secret string) (map[string]any, diag.Diagnostics) {
+func (r *RadiusAuthBackendConfigResource) getApiModel(ctx context.Context, data *RadiusAuthBackendModel, secret string) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	// Build token API model
@@ -463,35 +410,30 @@ func (r *RadiusAuthBackendResource) getApiModel(ctx context.Context, data *Radiu
 	// Convert Set to comma-separated string for Vault API
 	// Note: Vault RADIUS API accepts comma-separated string but returns array
 	var elements []string
-	_ = data.UnregisteredUserPolicies.ElementsAs(ctx, &elements, false)
+	policiesDiags := data.UnregisteredUserPolicies.ElementsAs(ctx, &elements, false)
+	diags.Append(policiesDiags...)
+	if diags.HasError() {
+		return nil, diags
+	}
 	policiesStr := strings.Join(elements, ",")
 
-	// Build API model without UnregisteredUserPolicies (we'll add it manually as string)
-	// Note: DialTimeout and NASPort are set to 0 here; we'll add non-zero values manually
-	// to avoid sending 0 which Vault interprets as "use default"
+	// Build API model without UnregisteredUserPolicies (we'll add it manually as string).
+	// The timeout/NAS fields use omitempty so removing them from configuration omits
+	// them from the request, matching Vault's retain-on-update behavior.
 	apiModel := RadiusAuthBackendAPIModel{
 		TokenAPIModel: tokenAPI,
 		Host:          data.Host.ValueString(),
 		Port:          data.Port.ValueInt64(),
 		Secret:        secret,
+		DialTimeout:   data.DialTimeout.ValueInt64(),
+		ReadTimeout:   data.ReadTimeout.ValueInt64(),
+		NASPort:       data.NASPort.ValueInt64(),
 	}
 
 	var vaultRequest map[string]any
 	if err := mapstructure.Decode(apiModel, &vaultRequest); err != nil {
 		diags.AddError("Failed to decode RADIUS config API model to map", err.Error())
 		return nil, diags
-	}
-
-	// Only include integer fields if they have non-zero values
-	// Vault treats 0 as "use default" and returns the default value, causing state inconsistency
-	if !data.DialTimeout.IsNull() && !data.DialTimeout.IsUnknown() && data.DialTimeout.ValueInt64() != 0 {
-		vaultRequest[consts.FieldRadiusDialTimeout] = data.DialTimeout.ValueInt64()
-	}
-	if !data.ReadTimeout.IsNull() && !data.ReadTimeout.IsUnknown() && data.ReadTimeout.ValueInt64() != 0 {
-		vaultRequest[consts.FieldRadiusReadTimeout] = data.ReadTimeout.ValueInt64()
-	}
-	if !data.NASPort.IsNull() && !data.NASPort.IsUnknown() && data.NASPort.ValueInt64() != 0 {
-		vaultRequest[consts.FieldRadiusNASPort] = data.NASPort.ValueInt64()
 	}
 
 	// Always send unregistered_user_policies as comma-separated string (Vault API requirement)
@@ -508,7 +450,7 @@ func (r *RadiusAuthBackendResource) getApiModel(ctx context.Context, data *Radiu
 }
 
 // populateDataModelFromApi maps the Vault API response to the Terraform data model.
-func (r *RadiusAuthBackendResource) populateDataModelFromApi(ctx context.Context, data *RadiusAuthBackendModel, resp *api.Secret) diag.Diagnostics {
+func (r *RadiusAuthBackendConfigResource) populateDataModelFromApi(ctx context.Context, data *RadiusAuthBackendModel, resp *api.Secret) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if resp == nil || resp.Data == nil {
@@ -527,7 +469,15 @@ func (r *RadiusAuthBackendResource) populateDataModelFromApi(ctx context.Context
 	data.Port = types.Int64Value(apiModel.Port)
 	// Convert []string from API to Set for Terraform
 	if len(apiModel.UnregisteredUserPolicies) == 0 {
-		data.UnregisteredUserPolicies = types.SetNull(types.StringType)
+		if data.UnregisteredUserPolicies.IsNull() || data.UnregisteredUserPolicies.IsUnknown() {
+			data.UnregisteredUserPolicies = types.SetNull(types.StringType)
+		} else {
+			policies, setDiags := types.SetValueFrom(ctx, types.StringType, []string{})
+			if setDiags.HasError() {
+				return setDiags
+			}
+			data.UnregisteredUserPolicies = policies
+		}
 	} else {
 		policies, setDiags := types.SetValueFrom(ctx, types.StringType, apiModel.UnregisteredUserPolicies)
 		if setDiags.HasError() {
