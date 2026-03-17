@@ -1,6 +1,8 @@
 ## Unreleased
 * **New Ephemeral Resource**: Add ephemeral resource for `vault_generic_endpoint` to write to generic Vault endpoints and extract response data, including Auth and WrapInfo support.([#2830](https://github.com/hashicorp/terraform-provider-vault/pull/2830))
 
+## 5.8.0 (March 12, 2026)
+
 FEATURES:
 
 * Add support for CF auth backend: `vault_cf_auth_backend_config` and `vault_cf_auth_backend_role` resources, and `vault_cf_auth_login` ephemeral resource for short-lived Vault tokens.
