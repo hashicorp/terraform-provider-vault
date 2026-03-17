@@ -35,15 +35,15 @@ resource "vault_generic_endpoint" "user" {
   depends_on           = [vault_auth_backend.userpass]
   path                 = "auth/userpass/users/myuser"
   ignore_absent_fields = true
-  data_json = jsonencode({
+  data_json            = jsonencode({
     password = "changeme"
   })
 }
 
 # Login and extract token from response.Auth
 ephemeral "vault_generic_endpoint" "login" {
-  path      = "auth/userpass/login/myuser"
-  data_json = jsonencode({
+  path         = "auth/userpass/login/myuser"
+  data_json    = jsonencode({
     password = "changeme"
   })
   write_fields = ["token", "accessor"]
@@ -68,15 +68,15 @@ data "vault_generic_secret" "user_data" {
 ```hcl
 # Create a wrapped token
 ephemeral "vault_generic_endpoint" "wrapped_token" {
-  path      = "auth/token/create"
-  data_json = jsonencode({
+  path          = "auth/token/create"
+  data_json     = jsonencode({
     policies = ["default"]
     ttl      = "1h"
   })
   # Enable response wrapping
   path_wrap_ttl = "300s"
   # Extract wrap_info fields
-  write_fields = ["token", "ttl", "creation_time", "wrapped_accessor"]
+  write_fields  = ["token", "ttl", "creation_time", "wrapped_accessor"]
 }
 
 # The wrap token can be securely distributed
@@ -95,7 +95,7 @@ ephemeral "vault_generic_endpoint" "dr_secondary_token" {
   disable_read  = true
   path_wrap_ttl = "30m"
   write_fields  = ["token", "ttl", "creation_time"]
-  data_json = jsonencode({
+  data_json     = jsonencode({
     id = "dr-secondary-1"
   })
 }
@@ -169,8 +169,14 @@ The resource extracts fields in the following order:
   and use it with a Vault provider alias (see examples above).
 
 * **Response wrapping** - When `path_wrap_ttl` is set, Vault returns a wrapping
-  token instead of the actual response. The wrapping token can be unwrapped once
-  to retrieve the original response.
+  token instead of the actual response. The wrapping token is a single-use token
+  that must be unwrapped to retrieve the original response. **Important**: A wrapped
+  token cannot be used directly for authentication - it must first be unwrapped using
+  Vault's `sys/wrapping/unwrap` endpoint or the `vault unwrap` CLI command. This is
+  a security feature that allows secure distribution of secrets where the wrapping
+  token can be given to a recipient who then unwraps it to get the actual secret.
+  See [Vault Response Wrapping](https://developer.hashicorp.com/vault/docs/concepts/response-wrapping)
+  for more details.
 
 * **Sensitive data** - All extracted fields are marked as sensitive in Terraform
   and will not be displayed in plan or apply output.
