@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -346,6 +347,8 @@ func seedExactUserReproState(t *testing.T) {
 
 	ensureKVV2MountExists(t, ns1Client, "secret")
 	ensureKVV2MountExists(t, ns2Client, "secret")
+	ensureSecretAbsent(t, ns1Client, "secret/test")
+	ensureSecretAbsent(t, ns2Client, "secret/test")
 
 	if _, err := ns1Client.Logical().Write("secret/data/test", map[string]interface{}{
 		"data": map[string]interface{}{"foo": "bar"},
@@ -387,6 +390,25 @@ func ensureKVV2MountExists(t *testing.T, client *api.Client, path string) {
 	}
 
 	t.Fatalf("failed enabling kv-v2 at %q: %s", path, err)
+}
+
+func ensureSecretAbsent(t *testing.T, client *api.Client, path string) {
+	t.Helper()
+
+	mountPath, v2, err := isKVv2(path, client)
+	if err != nil {
+		t.Fatalf("failed determining secret engine version for %q: %s", path, err)
+	}
+
+	deletePath := path
+	if v2 {
+		deletePath = addPrefixToVKVPath(path, mountPath, consts.FieldMetadata)
+	}
+
+	_, err = client.Logical().Delete(deletePath)
+	if err != nil && !util.Is404(err) {
+		t.Fatalf("failed deleting pre-existing secret at %q: %s", deletePath, err)
+	}
 }
 
 func testResourceGenericSecret_updateConfig(mount, name string) string {

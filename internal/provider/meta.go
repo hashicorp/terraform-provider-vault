@@ -489,12 +489,8 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 			ns = value.(string)
 		}
 	case *schema.ResourceDiff:
-		rawConfig := v.GetRawConfig()
-		if !rawConfig.IsNull() {
-			rawValue := rawConfig.GetAttr(consts.FieldNamespace)
-			if !rawValue.IsNull() && rawValue.IsKnown() {
-				ns = rawValue.AsString()
-			}
+		if configuredNS, ok := getRawConfigStringAttribute(v.GetRawConfig(), consts.FieldNamespace); ok {
+			ns = configuredNS
 		}
 		if ns == "" {
 			if value, ok := v.GetOk(consts.FieldNamespace); ok {
