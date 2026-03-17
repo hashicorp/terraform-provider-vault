@@ -525,6 +525,13 @@ func TestConsulSecretBackend_CustomizeDiff(t *testing.T) {
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: true,
 			},
+			{
+				// Test Case 6: Bootstrap=true with Computed Token (should fail)
+				// This verifies that bootstrap=true is rejected when any token field is present,
+				// even if it's a computed value
+				Config:      testConsulSecretBackend_bootstrapWithComputedToken(path),
+				ExpectError: regexp.MustCompile("field 'bootstrap' must be set to false when 'token' or 'token_wo' is specified"),
+			},
 		},
 	})
 }
@@ -852,6 +859,18 @@ resource "vault_consul_secret_backend" "test" {
 	 address   = "127.0.0.1:8500"
 	 token     = "static-token"
 	 bootstrap = true
+}`, path)
+}
+
+func testConsulSecretBackend_bootstrapWithComputedToken(path string) string {
+	return fmt.Sprintf(`
+resource "random_uuid" "token" {}
+
+resource "vault_consul_secret_backend" "test" {
+  path      = "%s"
+  address   = "127.0.0.1:8500"
+  token     = random_uuid.token.result
+  bootstrap = true
 }`, path)
 }
 
