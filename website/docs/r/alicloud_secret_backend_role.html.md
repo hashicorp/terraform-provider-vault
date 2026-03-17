@@ -187,9 +187,10 @@ Each `remote_policies` block supports:
 * `type` - (Required) The type of the remote policy. Must be `System` (for
   AliCloud managed policies) or `Custom` (for customer-managed policies).
 
-~> **Note:** You must specify exactly one of `role_arn`, `inline_policies`, or
-`remote_policies`. The role will fail validation if none is provided. Vault
-also accepts a combination of both `inline_policies` and `remote_policies`.
+~> **Note:** You must specify  either `role_arn` or at least one `inline_policies` block,
+or `remote_policies` block, or a combination of `inline_policies`
+and `remote_policies`. The role will fail validation if none is provided.
+`role_arn` cannot be combined with `inline_policies` or `remote_policies`.
 
 ## Attributes Reference
 

@@ -21,7 +21,7 @@ for more details.
 
 ## Example Usage
 
-### Basic Configuration
+### Recommended Configuration
 
 ```hcl
 resource "vault_mount" "alicloud" {
@@ -72,11 +72,9 @@ The following attributes are write-only and will never be read back from Vault o
 
 ## Understanding the Write-Only Pattern
 
-The `secret_key_wo` field uses a write-only pattern to enhance security:
+The `secret_key_wo` field is write-only and required. It will not be stored in Terraform state or read back from Vault, so Terraform sends it to Vault on each apply.
 
-1. **Write-Only**: The secret key is sent to Vault but never read back or stored in Terraform state
-2. **Required Field**: Since it's required, any change to the value will trigger an update to Vault
-3. **Credential Rotation**: To rotate credentials, simply update `secret_key_wo` to the new value and run `terraform apply`
+If you change `secret_key_wo` in your configuration, Terraform will send the new value to Vault on the next apply.
 
 
 ## Import
