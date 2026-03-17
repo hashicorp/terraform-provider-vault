@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -225,7 +226,12 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 		for _, policy := range loginResp.Auth.TokenPolicies {
 			tokenPolicies = append(tokenPolicies, types.StringValue(policy))
 		}
-		data.TokenPolicies, _ = types.ListValueFrom(ctx, types.StringType, tokenPolicies)
+		var listDiags diag.Diagnostics
+		data.TokenPolicies, listDiags = types.ListValueFrom(ctx, types.StringType, tokenPolicies)
+		resp.Diagnostics.Append(listDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	} else {
 		data.TokenPolicies = types.ListNull(types.StringType)
 	}
@@ -236,7 +242,12 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 		for _, policy := range loginResp.Auth.IdentityPolicies {
 			identityPolicies = append(identityPolicies, types.StringValue(policy))
 		}
-		data.IdentityPolicies, _ = types.ListValueFrom(ctx, types.StringType, identityPolicies)
+		var listDiags diag.Diagnostics
+		data.IdentityPolicies, listDiags = types.ListValueFrom(ctx, types.StringType, identityPolicies)
+		resp.Diagnostics.Append(listDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	} else {
 		data.IdentityPolicies = types.ListNull(types.StringType)
 	}
@@ -247,7 +258,12 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 		for _, policy := range loginResp.Auth.Policies {
 			policies = append(policies, types.StringValue(policy))
 		}
-		data.Policies, _ = types.ListValueFrom(ctx, types.StringType, policies)
+		var listDiags diag.Diagnostics
+		data.Policies, listDiags = types.ListValueFrom(ctx, types.StringType, policies)
+		resp.Diagnostics.Append(listDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	} else {
 		data.Policies = types.ListNull(types.StringType)
 	}
@@ -257,7 +273,12 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 	for key, value := range loginResp.Auth.Metadata {
 		metadata[key] = types.StringValue(value)
 	}
-	data.Metadata, _ = types.MapValueFrom(ctx, types.StringType, metadata)
+	var mapDiags diag.Diagnostics
+	data.Metadata, mapDiags = types.MapValueFrom(ctx, types.StringType, metadata)
+	resp.Diagnostics.Append(mapDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Set additional auth fields
 	data.EntityID = types.StringValue(loginResp.Auth.EntityID)
@@ -275,7 +296,12 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 		for key, value := range loginResp.Data {
 			respData[key] = types.StringValue(fmt.Sprintf("%v", value))
 		}
-		data.Data, _ = types.MapValueFrom(ctx, types.StringType, respData)
+		var mapDiags diag.Diagnostics
+		data.Data, mapDiags = types.MapValueFrom(ctx, types.StringType, respData)
+		resp.Diagnostics.Append(mapDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	} else {
 		data.Data = types.MapNull(types.StringType)
 	}
@@ -286,7 +312,12 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 		for _, warning := range loginResp.Warnings {
 			warnings = append(warnings, types.StringValue(warning))
 		}
-		data.Warnings, _ = types.ListValueFrom(ctx, types.StringType, warnings)
+		var listDiags diag.Diagnostics
+		data.Warnings, listDiags = types.ListValueFrom(ctx, types.StringType, warnings)
+		resp.Diagnostics.Append(listDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	} else {
 		data.Warnings = types.ListNull(types.StringType)
 	}
