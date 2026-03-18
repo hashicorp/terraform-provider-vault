@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
@@ -63,22 +62,21 @@ func (r *GenericEndpointEphemeralResource) Schema(_ context.Context, _ ephemeral
 				Required:            true,
 				Sensitive:           true,
 			},
-			"write_fields": schema.ListAttribute{
+			consts.FieldWriteFields: schema.ListAttribute{
 				MarkdownDescription: "Top-level fields returned by write to persist in state",
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
-			"write_data_json": schema.StringAttribute{
+			consts.FieldWriteDataJSON: schema.StringAttribute{
 				MarkdownDescription: "JSON data returned by write operation",
 				Computed:            true,
 			},
-			"write_data": schema.MapAttribute{
+			consts.FieldWriteData: schema.MapAttribute{
 				MarkdownDescription: "Map of strings returned by write operation",
 				ElementType:         types.StringType,
 				Computed:            true,
 			},
-			// Naming convention: Use path_wrap_ttl to match vault_generic_endpoint
-			"path_wrap_ttl": schema.StringAttribute{
+			consts.FieldPathWrapTTL: schema.StringAttribute{
 				MarkdownDescription: "The TTL for the wrapped response.",
 				Optional:            true,
 			},
@@ -122,7 +120,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 	}
 
 	path := data.Path.ValueString()
-	log.Printf("[DEBUG] Writing to ephemeral Vault endpoint %s", path)
 
 	// Set wrap TTL if provided
 	if !data.PathWrapTTL.IsNull() && !data.PathWrapTTL.IsUnknown() {
@@ -141,16 +138,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			fmt.Sprintf("error writing to %s: %s", path, err),
 		)
 		return
-	}
-
-	// Debug: log what the response actually contains
-	if response != nil {
-		log.Printf("[DEBUG] response.Data: %#v", response.Data)
-		log.Printf("[DEBUG] response.Auth: %#v", response.Auth)
-		log.Printf("[DEBUG] response.WrapInfo: %#v", response.WrapInfo)
-		log.Printf("[DEBUG] response.LeaseID: %q, LeaseDuration: %d", response.LeaseID, response.LeaseDuration)
-	} else {
-		log.Printf("[DEBUG] response is nil")
 	}
 
 	// Process write_fields if provided
@@ -187,7 +174,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			// 1) initial check for response.Data
 			if response.Data != nil {
 				if v, ok := response.Data[writeField]; ok {
-					log.Printf("[DEBUG] %s found in response.Data", writeField)
 					writeData[writeField] = v
 					if vs, ok := v.(string); ok {
 						writeDataMap[writeField] = vs
@@ -201,7 +187,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 
 			// 2) "wrap_info" to include the entire wrap map
 			if writeField == "wrap_info" && wrapMap != nil {
-				log.Printf("[DEBUG] %s found in response.WrapInfo", writeField)
 				writeData[writeField] = wrapMap
 				vBytes, _ := json.Marshal(wrapMap)
 				writeDataMap[writeField] = string(vBytes)
@@ -211,7 +196,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			// 3) checking individual fields in WrapInfo
 			if wrapMap != nil {
 				if v, ok := wrapMap[writeField]; ok {
-					log.Printf("[DEBUG] %s found in response.WrapInfo", writeField)
 					writeData[writeField] = v
 					if vs, ok := v.(string); ok {
 						writeDataMap[writeField] = vs
@@ -225,7 +209,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 
 			// 4) "auth" to include the entire auth map
 			if writeField == "auth" && authMap != nil {
-				log.Printf("[DEBUG] %s found in response.Auth", writeField)
 				writeData[writeField] = authMap
 				vBytes, _ := json.Marshal(authMap)
 				writeDataMap[writeField] = string(vBytes)
@@ -235,7 +218,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			// 5) checking individual fields in Auth
 			if authMap != nil {
 				if v, ok := authMap[writeField]; ok {
-					log.Printf("[DEBUG] %s found in response.Auth", writeField)
 					writeData[writeField] = v
 					if vs, ok := v.(string); ok {
 						writeDataMap[writeField] = vs
@@ -249,7 +231,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 				// alias: "token" -> "client_token" in Auth
 				if writeField == "token" {
 					if v, ok := authMap["client_token"]; ok {
-						log.Printf("[DEBUG] %s mapped from response.Auth.client_token", writeField)
 						writeData[writeField] = v
 						if vs, ok := v.(string); ok {
 							writeDataMap[writeField] = vs
@@ -269,7 +250,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 				"renewable":      response.Renewable,
 			}
 			if v, ok := topLevel[writeField]; ok {
-				log.Printf("[DEBUG] %s found in top-level response", writeField)
 				writeData[writeField] = v
 				if vs, ok := v.(string); ok {
 					writeDataMap[writeField] = vs
@@ -279,8 +259,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 				}
 				continue
 			}
-
-			log.Printf("[DEBUG] %s not found in response", writeField)
 		}
 
 		jsonData, err := json.Marshal(writeData)
