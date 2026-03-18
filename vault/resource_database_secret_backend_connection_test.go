@@ -1261,7 +1261,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_postgres_cloud(name, backend, connURL, "gcp_iam", saJSON),
-				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQL.DefaultPluginName(),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEnginePostgres.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
@@ -1277,7 +1277,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 				ResourceName:            testDefaultDatabaseSecretBackendResource,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"verify_connection", "postgres.0.service_account_json"},
+				ImportStateVerifyIgnore: []string{"verify_connection", "postgresql.0.service_account_json"},
 			},
 		},
 	})
