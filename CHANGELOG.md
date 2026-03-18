@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add support for `use_private_ip` in for private cloudsql instaces (postgresql) ([#2833](https://github.com/hashicorp/terraform-provider-vault/pull/2833))
+
 BUGS: 
 * `vault_consul_secret_backend`: Fixed validation logic to allow computed token values by correcting the condition that checks for token presence during plan phase. ([#2823](https://github.com/hashicorp/terraform-provider-vault/pull/2823))
 
