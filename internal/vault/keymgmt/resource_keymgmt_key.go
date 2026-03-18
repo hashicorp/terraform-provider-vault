@@ -138,7 +138,7 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 	apiPath := data.APIPath()
 
 	writeData := map[string]interface{}{
-		"type": data.Type.ValueString(),
+		consts.FieldType: data.Type.ValueString(),
 	}
 
 	if !data.ReplicaRegions.IsNull() {
@@ -205,7 +205,7 @@ func (r *KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 	if !exists {
 		tflog.Warn(ctx, "Key Management key not found, removing from state", map[string]interface{}{
-			"path": apiPath,
+			consts.FieldPath: apiPath,
 		})
 		resp.State.RemoveResource(ctx)
 		return
