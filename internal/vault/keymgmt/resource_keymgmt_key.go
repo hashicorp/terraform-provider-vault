@@ -348,7 +348,7 @@ func (r *KeyResource) readKey(ctx context.Context, cli *vaultapi.Client, apiPath
 
 // parseKeyResponse parses the Vault API response data into the resource model
 func (data *KeyResourceModel) parseKeyResponse(ctx context.Context, responseData map[string]interface{}) {
-	if v, ok := responseData["type"].(string); ok {
+	if v, ok := responseData[consts.FieldType].(string); ok {
 		data.Type = types.StringValue(v)
 	}
 	if v, ok := responseData[consts.FieldDeletionAllowed].(bool); ok {

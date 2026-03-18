@@ -130,7 +130,7 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		writeData["credentials"] = creds
+		writeData[consts.FieldCredentials] = creds
 	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
@@ -223,7 +223,7 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 			if resp.Diagnostics.HasError() {
 				return
 			}
-			writeData["credentials"] = creds
+			writeData[consts.FieldCredentials] = creds
 		}
 		hasChanges = true
 	}
@@ -337,7 +337,7 @@ func (r *AzureKMSResource) readKMS(ctx context.Context, cli *vaultapi.Client, ap
 }
 
 func (data *AzureKMSResourceModel) parseAzureKMSResponse(responseData map[string]interface{}) {
-	if v, ok := responseData["key_collection"].(string); ok {
+	if v, ok := responseData[consts.FieldKeyCollection].(string); ok {
 		data.KeyCollection = types.StringValue(v)
 	}
 }
