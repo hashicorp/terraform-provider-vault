@@ -581,10 +581,14 @@ func (r *kerberosAuthBackendLDAPConfigResource) populateDataModelFromApi(ctx con
 
 	if apiModel.BindDN != "" {
 		tfModel.BindDN = types.StringValue(apiModel.BindDN)
+	} else {
+		tfModel.BindDN = types.StringNull()
 	}
 
 	if apiModel.UserDN != "" {
 		tfModel.UserDN = types.StringValue(apiModel.UserDN)
+	} else {
+		tfModel.UserDN = types.StringNull()
 	}
 
 	tfModel.UserAttr = types.StringValue(apiModel.UserAttr)
@@ -593,6 +597,8 @@ func (r *kerberosAuthBackendLDAPConfigResource) populateDataModelFromApi(ctx con
 
 	if apiModel.GroupDN != "" {
 		tfModel.GroupDN = types.StringValue(apiModel.GroupDN)
+	} else {
+		tfModel.GroupDN = types.StringNull()
 	}
 
 	tfModel.GroupFilter = types.StringValue(apiModel.GroupFilter)
@@ -624,6 +630,8 @@ func (r *kerberosAuthBackendLDAPConfigResource) populateDataModelFromApi(ctx con
 
 	if apiModel.Certificate != "" {
 		tfModel.Certificate = types.StringValue(apiModel.Certificate)
+	} else {
+		tfModel.Certificate = types.StringNull()
 	}
 
 	if apiModel.DiscoverDN {
@@ -634,6 +642,8 @@ func (r *kerberosAuthBackendLDAPConfigResource) populateDataModelFromApi(ctx con
 
 	if apiModel.UPNDomain != "" {
 		tfModel.UPNDomain = types.StringValue(apiModel.UPNDomain)
+	} else {
+		tfModel.UPNDomain = types.StringNull()
 	}
 
 	tfModel.RequestTimeout = types.Int64Value(apiModel.RequestTimeout)
@@ -647,6 +657,8 @@ func (r *kerberosAuthBackendLDAPConfigResource) populateDataModelFromApi(ctx con
 
 	if apiModel.MaxPageSize != 0 {
 		tfModel.MaxPageSize = types.Int64Value(apiModel.MaxPageSize)
+	} else {
+		tfModel.MaxPageSize = types.Int64Null()
 	}
 
 	if apiModel.EnableSAMAccountNameLogin {
