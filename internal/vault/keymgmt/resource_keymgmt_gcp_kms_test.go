@@ -18,14 +18,16 @@ import (
 )
 
 func TestAccKeymgmtGCPKMS(t *testing.T) {
-	gcpCredentials, gcpProject := testutil.GetTestGCPCreds(t)
+	gcpCredentials := testutil.GetTestGCPCredsFile(t)
+	gcpProject := testutil.GetTestGCPProject(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("gcpkms")
 	resourceType := "vault_keymgmt_gcp_kms"
 	resourceName := resourceType + ".test"
 
-	gcpLocation, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
+	gcpLocation := testutil.GetTestGCPRegion(t)
+	gcpKeyRing := testutil.GetTestGCPKeyRing(t)
 
 	keyCollection := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", gcpProject, gcpLocation, gcpKeyRing)
 
@@ -38,7 +40,7 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", keyCollection),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyCollection),
 				),
 			},
 			{
@@ -69,14 +71,15 @@ func testAccKeymgmtGCPKMSImportStateIdFunc(resourceName string) resource.ImportS
 }
 
 func TestAccKeymgmtGCPKMS_update(t *testing.T) {
-	gcpCredentials, gcpProject := testutil.GetTestGCPCreds(t)
+	gcpCredentials := testutil.GetTestGCPCredsFile(t)
+	gcpProject := testutil.GetTestGCPProject(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("gcpkms")
 	resourceType := "vault_keymgmt_gcp_kms"
 	resourceName := resourceType + ".test"
 
-	_, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
+	gcpKeyRing := testutil.GetTestGCPKeyRing(t)
 
 	initialLocation := "us-east1"
 	updatedLocation := "us-west1"
@@ -92,7 +95,7 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", initialKeyCollection),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, initialKeyCollection),
 				),
 			},
 			{
@@ -100,7 +103,7 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", updatedKeyCollection),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, updatedKeyCollection),
 				),
 			},
 		},
@@ -108,7 +111,8 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 }
 
 func TestAccKeymgmtGCPKMS_multiple(t *testing.T) {
-	gcpCredentials, gcpProject := testutil.GetTestGCPCreds(t)
+	gcpCredentials := testutil.GetTestGCPCredsFile(t)
+	gcpProject := testutil.GetTestGCPProject(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName1 := acctest.RandomWithPrefix("gcpkms-1")
@@ -116,7 +120,7 @@ func TestAccKeymgmtGCPKMS_multiple(t *testing.T) {
 	resourceName1 := "vault_keymgmt_gcp_kms.test1"
 	resourceName2 := "vault_keymgmt_gcp_kms.test2"
 
-	_, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
+	gcpKeyRing := testutil.GetTestGCPKeyRing(t)
 
 	keyCollection1 := fmt.Sprintf("projects/%s/locations/us-east1/keyRings/%s", gcpProject, gcpKeyRing)
 	keyCollection2 := fmt.Sprintf("projects/%s/locations/us-west1/keyRings/%s", gcpProject, gcpKeyRing)
@@ -130,10 +134,10 @@ func TestAccKeymgmtGCPKMS_multiple(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, kmsName1),
-					resource.TestCheckResourceAttr(resourceName1, "key_collection", keyCollection1),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldKeyCollection, keyCollection1),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldName, kmsName2),
-					resource.TestCheckResourceAttr(resourceName2, "key_collection", keyCollection2),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldKeyCollection, keyCollection2),
 				),
 			},
 		},
@@ -141,7 +145,8 @@ func TestAccKeymgmtGCPKMS_multiple(t *testing.T) {
 }
 
 func TestAccKeymgmtGCPKMS_namespace(t *testing.T) {
-	gcpCredentials, gcpProject := testutil.GetTestGCPCreds(t)
+	gcpCredentials := testutil.GetTestGCPCredsFile(t)
+	gcpProject := testutil.GetTestGCPProject(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("gcpkms")
@@ -149,7 +154,7 @@ func TestAccKeymgmtGCPKMS_namespace(t *testing.T) {
 	resourceType := "vault_keymgmt_gcp_kms"
 	resourceName := resourceType + ".test"
 
-	_, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
+	gcpKeyRing := testutil.GetTestGCPKeyRing(t)
 
 	keyCollection := fmt.Sprintf("projects/%s/locations/us-east1/keyRings/%s", gcpProject, gcpKeyRing)
 
@@ -162,7 +167,7 @@ func TestAccKeymgmtGCPKMS_namespace(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", keyCollection),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyCollection),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
 				),
 			},

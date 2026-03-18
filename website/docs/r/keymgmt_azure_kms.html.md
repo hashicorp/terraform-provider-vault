@@ -18,6 +18,8 @@ For more information on managing Azure Key Vault with Vault, please refer to the
 
 ## Example Usage
 
+### Using Explicit Credentials
+
 ```hcl
 resource "vault_mount" "keymgmt" {
   path = "keymgmt"
@@ -35,6 +37,30 @@ resource "vault_keymgmt_azure_kms" "production" {
     environment   = "AzurePublicCloud"
   }
   credentials_wo_version = 1
+}
+```
+
+### Using Azure Environment Variables or Managed Identity
+
+```hcl
+# When credentials_wo is not provided, Vault uses its own environment to
+# authenticate with Azure. Supported options include:
+# 1. Environment variables set on the Vault server:
+#    AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
+# 2. Azure Managed Identity (when Vault runs on an Azure VM or service
+#    with an assigned identity)
+
+resource "vault_mount" "keymgmt" {
+  path = "keymgmt"
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_azure_kms" "production" {
+  mount          = vault_mount.keymgmt.path
+  name           = "azure-production"
+  key_collection = "my-keyvault"
+
+  # No credentials_wo - Vault authenticates using its own environment
 }
 ```
 
@@ -56,16 +82,16 @@ The following arguments are supported:
 
 * `key_collection` - (Required, Forces new resource) Refers to a location to store keys in the Azure Key Vault provider. Cannot be changed after creation.
 
-* `credentials_wo` - (Required, Write-only, Sensitive) Map of Azure credentials passed directly to the Vault API.
+* `credentials_wo` - (Optional, Write-only, Sensitive) Map of Azure credentials passed directly to the Vault API.
   Supported keys are:
-  - `tenant_id` - (Required) Azure Active Directory tenant ID (also called Directory ID).
-  - `client_id` - (Required) Azure Active Directory application/client ID for the service principal.
-  - `client_secret` - (Required) Azure Active Directory client secret for the service principal.
+  - `tenant_id` - Azure Active Directory tenant ID (also called Directory ID).
+  - `client_id` - Azure Active Directory application/client ID for the service principal.
+  - `client_secret` - Azure Active Directory client secret for the service principal.
   - `environment` - (Optional) Azure cloud environment.
 
-  This field is write-only and will never be stored in Terraform state. Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
+  This field is write-only and will never be stored in Terraform state. If not provided, Vault uses credentials from its own environment (e.g. `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` env vars set on the Vault server, or Azure Managed Identity). Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
 
-* `credentials_wo_version` - (Optional) Version counter for the `credentials_wo` field. Increment this value whenever you update `credentials_wo` to trigger the credential rotation.
+* `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Since write-only values are not stored in state, Terraform cannot detect when credentials change. Increment this value whenever you update `credentials_wo` to ensure the new credentials are sent to Vault.
 
 
 ## Import

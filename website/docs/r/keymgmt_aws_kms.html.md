@@ -96,7 +96,7 @@ The following arguments are supported:
 
 * `credentials_wo` - (Optional, Sensitive, Write-only) Map of AWS credentials passed directly to the Vault API. Supported keys are `access_key` and `secret_key` (and optionally `session_token`). This field is write-only — it will never be stored in Terraform state. If not provided, Vault uses the AWS SDK credential chain (environment variables, shared credentials file, IAM instance profile, etc.). Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
 
-* `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Increment this value whenever you rotate or update `credentials_wo` to trigger Terraform to apply the new values.
+* `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Since write-only values are not stored in state, Terraform cannot detect when credentials change. Increment this value whenever you update `credentials_wo` to ensure the new credentials are sent to Vault.
 
 ## Import
 
