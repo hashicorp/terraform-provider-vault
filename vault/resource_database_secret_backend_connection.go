@@ -1778,6 +1778,12 @@ func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	setCloudDatabaseConnectionData(d, prefix, data, meta)
 
+	if provider.IsAPISupported(meta, provider.VaultVersion121) {
+		if v, ok := d.GetOk(prefix + "use_private_ip"); ok {
+			data["use_private_ip"] = v.(bool)
+		}
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion118) {
 		if v, ok := d.GetOk(prefix + "tls_ca"); ok {
 			data["tls_ca"] = v.(string)
