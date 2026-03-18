@@ -924,6 +924,11 @@ func postgresConnectionStringResource() *schema.Resource {
 		Default:     "password",
 		Description: "When set to `scram-sha-256`, passwords will be hashed by Vault before being sent to PostgreSQL.",
 	}
+	r.Schema["use_private_ip"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "If set, allows connection to a CloudSQL instance using a Private IP. Requires Vault 1.21+.",
+	}
 
 	return r
 }
