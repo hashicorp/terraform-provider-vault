@@ -136,6 +136,10 @@ func GetTestAWSRegion(t *testing.T) string {
 	return v[0]
 }
 
+func GetTestAWSSessionToken(t *testing.T) string {
+	return os.Getenv("AWS_SESSION_TOKEN")
+}
+
 type AzureTestConf struct {
 	SubscriptionID, TenantID, ClientID, ClientSecret, Scope, AppObjectID string
 }

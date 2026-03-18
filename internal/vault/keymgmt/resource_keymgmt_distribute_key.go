@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -84,6 +85,9 @@ func (r *DistributeKeyResource) Schema(ctx context.Context, req resource.SchemaR
 				MarkdownDescription: "Specifies the purpose of the key. The purpose defines a set of cryptographic capabilities that " +
 					"the key will have in the KMS provider. A key must have at least one of the supported purposes. " +
 					"The following values are supported : encrypt, decrypt, sign, verify, wrap, unwrap.",
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.RequiresReplace(),
+				},
 			},
 			consts.FieldProtection: schema.StringAttribute{
 				Optional: true,
@@ -91,6 +95,9 @@ func (r *DistributeKeyResource) Schema(ctx context.Context, req resource.SchemaR
 				Default:  stringdefault.StaticString("hsm"),
 				MarkdownDescription: "Specifies the protection of the key. The protection defines where cryptographic operations are " +
 					"performed with the key in the KMS provider. The following values are supported: hsm, software. Defaults to `hsm`.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			consts.FieldVersions: schema.MapAttribute{
 				Computed:            true,

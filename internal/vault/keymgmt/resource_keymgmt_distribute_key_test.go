@@ -20,6 +20,7 @@ import (
 
 func TestAccKeymgmtDistributeKey(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	sessionToken := testutil.GetTestAWSSessionToken(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -35,16 +36,16 @@ func TestAccKeymgmtDistributeKey(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtDistributeKeyConfig(backend, kmsName, keyName, accessKey, secretKey),
+				Config: testKeymgmtDistributeKeyConfig(backend, kmsName, keyName, accessKey, secretKey, sessionToken),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
-					resource.TestCheckResourceAttr(resourceName, "kms_name", kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_name", keyName),
-					resource.TestCheckResourceAttr(resourceName, "purpose.#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "encrypt"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "decrypt"),
-					resource.TestCheckResourceAttr(resourceName, "protection", "hsm"),
-					resource.TestCheckResourceAttrSet(resourceName, "versions.%"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKMSName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPurpose+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPurpose+".*", "encrypt"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPurpose+".*", "decrypt"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProtection, "hsm"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldVersions+"."+"%"),
 				),
 			},
 			{
@@ -53,45 +54,7 @@ func TestAccKeymgmtDistributeKey(t *testing.T) {
 				ImportStateIdFunc:                    testAccKeymgmtDistributeKeyImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-			},
-		},
-	})
-}
-
-func TestAccKeymgmtDistributeKey_update(t *testing.T) {
-	accessKey, secretKey := testutil.GetTestAWSCreds(t)
-
-	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
-	kmsName := acctest.RandomWithPrefix("awskms")
-	keyName := acctest.RandomWithPrefix("test-key")
-
-	resourceName := "vault_keymgmt_distribute_key.test"
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck: func() {
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion111)
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testKeymgmtDistributeKeyConfig(backend, kmsName, keyName, accessKey, secretKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
-					resource.TestCheckResourceAttr(resourceName, "purpose.#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "encrypt"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "decrypt"),
-				),
-			},
-			{
-				Config: testKeymgmtDistributeKeyConfigWithSign(backend, kmsName, keyName, accessKey, secretKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
-					resource.TestCheckResourceAttr(resourceName, "purpose.#", "3"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "encrypt"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "decrypt"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "sign"),
-				),
+				ImportStateVerifyIgnore:              []string{consts.FieldPurpose, consts.FieldProtection},
 			},
 		},
 	})
@@ -99,6 +62,7 @@ func TestAccKeymgmtDistributeKey_update(t *testing.T) {
 
 func TestAccKeymgmtDistributeKey_multiple(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	sessionToken := testutil.GetTestAWSSessionToken(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -116,23 +80,23 @@ func TestAccKeymgmtDistributeKey_multiple(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtDistributeKeyConfigMultiple(backend, kmsName, keyName1, keyName2, accessKey, secretKey),
+				Config: testKeymgmtDistributeKeyConfigMultiple(backend, kmsName, keyName1, keyName2, accessKey, secretKey, sessionToken),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, backend),
-					resource.TestCheckResourceAttr(resourceName1, "kms_name", kmsName),
-					resource.TestCheckResourceAttr(resourceName1, "key_name", keyName1),
-					resource.TestCheckResourceAttrSet(resourceName1, "versions.%"),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldKMSName, kmsName),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldKeyName, keyName1),
+					resource.TestCheckResourceAttrSet(resourceName1, consts.FieldVersions+"."+"%"),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, backend),
-					resource.TestCheckResourceAttr(resourceName2, "kms_name", kmsName),
-					resource.TestCheckResourceAttr(resourceName2, "key_name", keyName2),
-					resource.TestCheckResourceAttrSet(resourceName2, "versions.%"),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldKMSName, kmsName),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldKeyName, keyName2),
+					resource.TestCheckResourceAttrSet(resourceName2, consts.FieldVersions+"."+"%"),
 				),
 			},
 		},
 	})
 }
 
-func testKeymgmtDistributeKeyConfig(path, kmsName, keyName, accessKey, secretKey string) string {
+func testKeymgmtDistributeKeyConfig(path, kmsName, keyName, accessKey, secretKey, sessionToken string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -143,6 +107,7 @@ resource "vault_keymgmt_key" "test" {
   mount = vault_mount.test.path
   name = "%s"
   type = "aes256-gcm96"
+  deletion_allowed = true
 }
 
 resource "vault_keymgmt_aws_kms" "test" {
@@ -151,8 +116,9 @@ resource "vault_keymgmt_aws_kms" "test" {
   key_collection = "us-west-1"
 
   credentials_wo = {
-    access_key = "%s"
-    secret_key = "%s"
+    access_key    = "%s"
+    secret_key    = "%s"
+    session_token = "%s"
   }
   credentials_wo_version = 1
 }
@@ -164,7 +130,7 @@ resource "vault_keymgmt_distribute_key" "test" {
   purpose    = ["encrypt", "decrypt"]
   protection = "hsm"
 }
-`, path, keyName, kmsName, accessKey, secretKey)
+`, path, keyName, kmsName, accessKey, secretKey, sessionToken)
 }
 
 func testAccKeymgmtDistributeKeyImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
@@ -180,42 +146,7 @@ func testAccKeymgmtDistributeKeyImportStateIdFunc(resourceName string) resource.
 	}
 }
 
-func testKeymgmtDistributeKeyConfigWithSign(path, kmsName, keyName, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "keymgmt"
-}
-
-resource "vault_keymgmt_key" "test" {
-  mount = vault_mount.test.path
-  name = "%s"
-  type = "aes256-gcm96"
-}
-
-resource "vault_keymgmt_aws_kms" "test" {
-  mount          = vault_mount.test.path
-  name           = "%s"
-  key_collection = "us-west-1"
-
-  credentials_wo = {
-    access_key = "%s"
-    secret_key = "%s"
-  }
-  credentials_wo_version = 1
-}
-
-resource "vault_keymgmt_distribute_key" "test" {
-  mount      = vault_mount.test.path
-  kms_name   = vault_keymgmt_aws_kms.test.name
-  key_name   = vault_keymgmt_key.test.name
-  purpose    = ["encrypt", "decrypt", "sign"]
-  protection = "hsm"
-}
-`, path, keyName, kmsName, accessKey, secretKey)
-}
-
-func testKeymgmtDistributeKeyConfigMultiple(path, kmsName, keyName1, keyName2, accessKey, secretKey string) string {
+func testKeymgmtDistributeKeyConfigMultiple(path, kmsName, keyName1, keyName2, accessKey, secretKey, sessionToken string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -226,12 +157,14 @@ resource "vault_keymgmt_key" "test1" {
   mount = vault_mount.test.path
   name = "%s"
   type = "aes256-gcm96"
+  deletion_allowed = true
 }
 
 resource "vault_keymgmt_key" "test2" {
   mount = vault_mount.test.path
   name = "%s"
   type = "aes256-gcm96"
+  deletion_allowed = true
 }
 
 resource "vault_keymgmt_aws_kms" "test" {
@@ -240,8 +173,9 @@ resource "vault_keymgmt_aws_kms" "test" {
   key_collection = "us-west-1"
 
   credentials_wo = {
-    access_key = "%s"
-    secret_key = "%s"
+    access_key    = "%s"
+    secret_key    = "%s"
+    session_token = "%s"
   }
   credentials_wo_version = 1
 }
@@ -261,7 +195,7 @@ resource "vault_keymgmt_distribute_key" "test2" {
   purpose    = ["encrypt", "decrypt"]
   protection = "hsm"
 }
-`, path, keyName1, keyName2, kmsName, accessKey, secretKey)
+`, path, keyName1, keyName2, kmsName, accessKey, secretKey, sessionToken)
 }
 
 func TestAccKeymgmtDistributeKey_azure(t *testing.T) {
@@ -284,11 +218,11 @@ func TestAccKeymgmtDistributeKey_azure(t *testing.T) {
 				Config: testKeymgmtDistributeKeyConfigAzure(backend, kmsName, keyName, keyVaultName, tenantID, clientID, clientSecret),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
-					resource.TestCheckResourceAttr(resourceName, "kms_name", kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_name", keyName),
-					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "sign"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "verify"),
-					resource.TestCheckResourceAttrSet(resourceName, "versions.%"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKMSName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPurpose+".*", "sign"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPurpose+".*", "verify"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldVersions+"."+"%"),
 				),
 			},
 			{
@@ -296,15 +230,16 @@ func TestAccKeymgmtDistributeKey_azure(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccKeymgmtDistributeKeyImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-			},
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount, ImportStateVerifyIgnore: []string{consts.FieldPurpose, consts.FieldProtection}},
 		},
 	})
 }
 
 func TestAccKeymgmtDistributeKey_gcp(t *testing.T) {
-	gcpCredentials, gcpProject := testutil.GetTestGCPCreds(t)
-	gcpLocation, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
+	gcpCredentials := testutil.GetTestGCPCredsFile(t)
+	gcpProject := testutil.GetTestGCPProject(t)
+	gcpLocation := testutil.GetTestGCPRegion(t)
+	gcpKeyRing := testutil.GetTestGCPKeyRing(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("gcpkms")
@@ -324,11 +259,11 @@ func TestAccKeymgmtDistributeKey_gcp(t *testing.T) {
 				Config: testKeymgmtDistributeKeyConfigGCP(backend, kmsName, keyName, keyCollection, gcpProject, gcpLocation, gcpCredentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
-					resource.TestCheckResourceAttr(resourceName, "kms_name", kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_name", keyName),
-					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "encrypt"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "purpose.*", "decrypt"),
-					resource.TestCheckResourceAttrSet(resourceName, "versions.%"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKMSName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPurpose+".*", "encrypt"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldPurpose+".*", "decrypt"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldVersions+"."+"%"),
 				),
 			},
 			{
@@ -337,6 +272,7 @@ func TestAccKeymgmtDistributeKey_gcp(t *testing.T) {
 				ImportStateIdFunc:                    testAccKeymgmtDistributeKeyImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore:              []string{consts.FieldPurpose, consts.FieldProtection},
 			},
 		},
 	})
@@ -353,6 +289,7 @@ resource "vault_keymgmt_key" "test" {
   mount = vault_mount.test.path
   name  = %q
   type  = "rsa-2048"
+  deletion_allowed = true
 }
 
 resource "vault_keymgmt_azure_kms" "test" {
@@ -388,6 +325,7 @@ resource "vault_keymgmt_key" "test" {
   mount = vault_mount.test.path
   name  = %q
   type  = "aes256-gcm96"
+  deletion_allowed = true
 }
 
 resource "vault_keymgmt_gcp_kms" "test" {

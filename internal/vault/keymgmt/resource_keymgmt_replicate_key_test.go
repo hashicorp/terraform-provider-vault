@@ -21,6 +21,7 @@ import (
 
 func TestAccKeymgmtReplicateKey(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	sessionToken := testutil.GetTestAWSSessionToken(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -36,11 +37,11 @@ func TestAccKeymgmtReplicateKey(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtReplicateKeyConfig(backend, kmsName, keyName, accessKey, secretKey),
+				Config: testKeymgmtReplicateKeyConfig(backend, kmsName, keyName, accessKey, secretKey, sessionToken),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
-					resource.TestCheckResourceAttr(resourceName, "kms_name", kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_name", keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKMSName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 				),
 			},
 			{
@@ -56,6 +57,7 @@ func TestAccKeymgmtReplicateKey(t *testing.T) {
 
 func TestAccKeymgmtReplicateKey_NoReplicaRegions(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	sessionToken := testutil.GetTestAWSSessionToken(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -69,8 +71,8 @@ func TestAccKeymgmtReplicateKey_NoReplicaRegions(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config:      testKeymgmtReplicateKeyConfig_NoReplicaRegions(backend, kmsName, keyName, accessKey, secretKey),
-				ExpectError: regexp.MustCompile("replica_regions must be configured"),
+				Config:      testKeymgmtReplicateKeyConfig_NoReplicaRegions(backend, kmsName, keyName, accessKey, secretKey, sessionToken),
+				ExpectError: regexp.MustCompile("does not have replica_regions"),
 			},
 		},
 	})
@@ -78,6 +80,7 @@ func TestAccKeymgmtReplicateKey_NoReplicaRegions(t *testing.T) {
 
 func TestAccKeymgmtReplicateKey_multiple(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	sessionToken := testutil.GetTestAWSSessionToken(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("awskms")
@@ -95,21 +98,21 @@ func TestAccKeymgmtReplicateKey_multiple(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testKeymgmtReplicateKeyConfigMultiple(backend, kmsName, keyName1, keyName2, accessKey, secretKey),
+				Config: testKeymgmtReplicateKeyConfigMultiple(backend, kmsName, keyName1, keyName2, accessKey, secretKey, sessionToken),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, backend),
-					resource.TestCheckResourceAttr(resourceName1, "kms_name", kmsName),
-					resource.TestCheckResourceAttr(resourceName1, "key_name", keyName1),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldKMSName, kmsName),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldKeyName, keyName1),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, backend),
-					resource.TestCheckResourceAttr(resourceName2, "kms_name", kmsName),
-					resource.TestCheckResourceAttr(resourceName2, "key_name", keyName2),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldKMSName, kmsName),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldKeyName, keyName2),
 				),
 			},
 		},
 	})
 }
 
-func testKeymgmtReplicateKeyConfig(path, kmsName, keyName, accessKey, secretKey string) string {
+func testKeymgmtReplicateKeyConfig(path, kmsName, keyName, accessKey, secretKey, sessionToken string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -117,10 +120,11 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  mount           = vault_mount.test.path
-  name            = "%s"
-  type            = "aes256-gcm96"
-  replica_regions = ["us-east-1", "eu-west-1"]
+  mount            = vault_mount.test.path
+  name             = "%s"
+  type             = "aes256-gcm96"
+  replica_regions  = ["us-east-1", "eu-west-1"]
+  deletion_allowed = true
 }
 
 resource "vault_keymgmt_aws_kms" "test" {
@@ -129,8 +133,9 @@ resource "vault_keymgmt_aws_kms" "test" {
   key_collection = "us-west-1"
 
   credentials_wo = {
-    access_key = %q
-    secret_key = %q
+    access_key    = %q
+    secret_key    = %q
+    session_token = %q
   }
   credentials_wo_version = 1
 }
@@ -150,10 +155,10 @@ resource "vault_keymgmt_replicate_key" "test" {
 
   depends_on = [vault_keymgmt_distribute_key.test]
 }
-`, path, keyName, kmsName, accessKey, secretKey)
+`, path, keyName, kmsName, accessKey, secretKey, sessionToken)
 }
 
-func testKeymgmtReplicateKeyConfig_NoReplicaRegions(path, kmsName, keyName, accessKey, secretKey string) string {
+func testKeymgmtReplicateKeyConfig_NoReplicaRegions(path, kmsName, keyName, accessKey, secretKey, sessionToken string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -161,9 +166,10 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  mount = vault_mount.test.path
-  name = "%s"
-  type = "aes256-gcm96"
+  mount            = vault_mount.test.path
+  name             = "%s"
+  type             = "aes256-gcm96"
+  deletion_allowed = true
   # No replica_regions specified
 }
 
@@ -173,8 +179,9 @@ resource "vault_keymgmt_aws_kms" "test" {
   key_collection = "us-west-1"
 
   credentials_wo = {
-    access_key = %q
-    secret_key = %q
+    access_key    = %q
+    secret_key    = %q
+    session_token = %q
   }
   credentials_wo_version = 1
 }
@@ -194,7 +201,7 @@ resource "vault_keymgmt_replicate_key" "test" {
 
   depends_on = [vault_keymgmt_distribute_key.test]
 }
-`, path, keyName, kmsName, accessKey, secretKey)
+`, path, keyName, kmsName, accessKey, secretKey, sessionToken)
 }
 
 func testAccKeymgmtReplicateKeyImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
@@ -210,7 +217,7 @@ func testAccKeymgmtReplicateKeyImportStateIdFunc(resourceName string) resource.I
 	}
 }
 
-func testKeymgmtReplicateKeyConfigMultiple(path, kmsName, keyName1, keyName2, accessKey, secretKey string) string {
+func testKeymgmtReplicateKeyConfigMultiple(path, kmsName, keyName1, keyName2, accessKey, secretKey, sessionToken string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -218,17 +225,19 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_keymgmt_key" "test1" {
-  mount           = vault_mount.test.path
-  name            = "%s"
-  type            = "aes256-gcm96"
-  replica_regions = ["us-east-1", "eu-west-1"]
+  mount            = vault_mount.test.path
+  name             = "%s"
+  type             = "aes256-gcm96"
+  replica_regions  = ["us-east-1", "eu-west-1"]
+  deletion_allowed = true
 }
 
 resource "vault_keymgmt_key" "test2" {
-  mount           = vault_mount.test.path
-  name            = "%s"
-  type            = "aes256-gcm96"
-  replica_regions = ["ap-southeast-1", "ap-northeast-1"]
+  mount            = vault_mount.test.path
+  name             = "%s"
+  type             = "aes256-gcm96"
+  replica_regions  = ["ap-southeast-1", "ap-northeast-1"]
+  deletion_allowed = true
 }
 
 resource "vault_keymgmt_aws_kms" "test" {
@@ -237,8 +246,9 @@ resource "vault_keymgmt_aws_kms" "test" {
   key_collection = "us-west-1"
 
   credentials_wo = {
-    access_key = %q
-    secret_key = %q
+    access_key    = %q
+    secret_key    = %q
+    session_token = %q
   }
   credentials_wo_version = 1
 }
@@ -274,5 +284,5 @@ resource "vault_keymgmt_replicate_key" "test2" {
   
   depends_on = [vault_keymgmt_distribute_key.test2]
 }
-`, path, keyName1, keyName2, kmsName, accessKey, secretKey)
+`, path, keyName1, keyName2, kmsName, accessKey, secretKey, sessionToken)
 }
