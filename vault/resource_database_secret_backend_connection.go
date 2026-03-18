@@ -1785,7 +1785,7 @@ func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 	setCloudDatabaseConnectionData(d, prefix, data, meta)
 
 	if provider.IsAPISupported(meta, provider.VaultVersion121) {
-		if v, ok := d.GetOk(prefix + "use_private_ip"); ok {
+		if v, ok := d.GetOkExists(prefix + "use_private_ip"); ok {
 			data["use_private_ip"] = v.(bool)
 		}
 	}
