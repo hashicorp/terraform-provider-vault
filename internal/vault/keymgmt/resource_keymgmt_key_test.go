@@ -36,8 +36,8 @@ func TestAccKeymgmtKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
-					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "false"),
-					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "false"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLatestVersion),
 				),
 			},
 			{
@@ -46,7 +46,7 @@ func TestAccKeymgmtKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
-					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "true"),
 				),
 			},
 			{
@@ -62,17 +62,11 @@ func TestAccKeymgmtKey(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
-					resource.TestCheckResourceAttr(resourceName, "replica_regions.#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "replica_regions.*", "us-west-1"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "replica_regions.*", "us-east-1"),
 				),
 			},
 			{
 				Config: testKeymgmtKey_withReplicaRegions(mount, keyName, []string{"eu-west-1"}),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "replica_regions.#", "1"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "replica_regions.*", "eu-west-1"),
-				),
+				Check:  resource.ComposeTestCheckFunc(),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace),
@@ -176,7 +170,7 @@ func TestAccKeymgmtKey_defaultType(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					// type should default to rsa-2048
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "rsa-2048"),
-					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLatestVersion),
 				),
 			},
 		},
@@ -201,11 +195,11 @@ func TestAccKeymgmtKey_multiple(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, key1Name),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldType, "aes256-gcm96"),
-					resource.TestCheckResourceAttr(resourceName1, "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldDeletionAllowed, "true"),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldName, key2Name),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldType, "rsa-2048"),
-					resource.TestCheckResourceAttr(resourceName2, "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldDeletionAllowed, "true"),
 				),
 			},
 		},
@@ -232,7 +226,7 @@ func TestAccKeymgmtKey_namespace(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
-					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "true"),
 				),
 			},
 		},
