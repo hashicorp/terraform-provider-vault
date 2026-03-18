@@ -1333,6 +1333,12 @@ func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 			result["self_managed"] = v.(bool)
 		}
 	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion121) {
+		if v, ok := data["use_private_ip"]; ok {
+			result["use_private_ip"] = v.(bool)
+		}
+	}
 	return result
 }
 
