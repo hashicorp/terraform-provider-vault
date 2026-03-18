@@ -130,7 +130,7 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		writeData["credentials"] = creds
+		writeData[consts.FieldCredentials] = creds
 	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
@@ -223,7 +223,7 @@ func (r *AWSKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 			if resp.Diagnostics.HasError() {
 				return
 			}
-			writeData["credentials"] = creds
+			writeData[consts.FieldCredentials] = creds
 		}
 		hasChanges = true
 	}
@@ -337,7 +337,7 @@ func (r *AWSKMSResource) readKMS(ctx context.Context, cli *vaultapi.Client, apiP
 }
 
 func (data *AWSKMSResourceModel) parseAWSKMSResponse(responseData map[string]interface{}) {
-	if v, ok := responseData["key_collection"].(string); ok {
+	if v, ok := responseData[consts.FieldKeyCollection].(string); ok {
 		data.KeyCollection = types.StringValue(v)
 	}
 }

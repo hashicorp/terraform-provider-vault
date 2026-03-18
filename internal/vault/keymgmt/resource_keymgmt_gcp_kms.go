@@ -126,7 +126,7 @@ func (r *GCPKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		writeData["credentials"] = creds
+		writeData[consts.FieldCredentials] = creds
 	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
@@ -205,7 +205,7 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 	hasChanges := false
 
 	if !plan.KeyCollection.Equal(state.KeyCollection) {
-		writeData["key_collection"] = plan.KeyCollection.ValueString()
+		writeData[consts.FieldKeyCollection] = plan.KeyCollection.ValueString()
 		hasChanges = true
 	}
 
@@ -224,7 +224,7 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 			if resp.Diagnostics.HasError() {
 				return
 			}
-			writeData["credentials"] = creds
+			writeData[consts.FieldCredentials] = creds
 		}
 		hasChanges = true
 	}
@@ -343,7 +343,7 @@ func (r *GCPKMSResource) readKMS(ctx context.Context, cli *vaultapi.Client, apiP
 }
 
 func (data *GCPKMSResourceModel) parseGCPKMSResponse(responseData map[string]interface{}) {
-	if v, ok := responseData["key_collection"].(string); ok {
+	if v, ok := responseData[consts.FieldKeyCollection].(string); ok {
 		data.KeyCollection = types.StringValue(v)
 	}
 }
