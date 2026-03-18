@@ -178,7 +178,7 @@ func (r *AWSKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	if !exists {
 		tflog.Warn(ctx, "AWS KMS provider not found, removing from state", map[string]interface{}{
-			"path": apiPath,
+			consts.FieldPath: apiPath,
 		})
 		resp.State.RemoveResource(ctx)
 		return

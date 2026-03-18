@@ -178,7 +178,7 @@ func (r *AzureKMSResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 	if !exists {
 		tflog.Warn(ctx, "Azure Key Vault provider not found, removing from state", map[string]interface{}{
-			"path": apiPath,
+			consts.FieldPath: apiPath,
 		})
 		resp.State.RemoveResource(ctx)
 		return

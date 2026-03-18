@@ -34,7 +34,7 @@ func TestAccKeymgmtAzureKMS(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyVaultName),
 				),
 			},
 			{
@@ -70,7 +70,7 @@ func TestAccKeymgmtAzureKMS_envCredentials(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyVaultName),
 				),
 			},
 		},
@@ -94,7 +94,7 @@ func TestAccKeymgmtAzureKMS_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyVaultName),
 				),
 			},
 			{
@@ -102,7 +102,7 @@ func TestAccKeymgmtAzureKMS_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyVaultName),
 				),
 			},
 		},
@@ -138,7 +138,7 @@ func TestAccKeymgmtAzureKMS_environments(t *testing.T) {
 						Check: resource.ComposeTestCheckFunc(
 							resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 							resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-							resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
+							resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyVaultName),
 						),
 					},
 				},
@@ -165,10 +165,10 @@ func TestAccKeymgmtAzureKMS_multiple(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, kmsName1),
-					resource.TestCheckResourceAttr(resourceName1, "key_collection", keyVaultName),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldKeyCollection, keyVaultName),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldName, kmsName2),
-					resource.TestCheckResourceAttr(resourceName2, "key_collection", keyVaultName),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldKeyCollection, keyVaultName),
 				),
 			},
 		},
