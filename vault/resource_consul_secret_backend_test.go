@@ -518,19 +518,60 @@ func TestConsulSecretBackend_CustomizeDiff(t *testing.T) {
 				ExpectError: regexp.MustCompile("field 'bootstrap' must be set to true when neither 'token' nor 'token_wo' is specified"),
 			},
 			{
-				// Test Case 5: Computed Token + Bootstrap=false (THE BUG FIX)
-				// This verifies that "Unknown" values do not trigger the error during Plan.
-				// We use PlanOnly to avoid actually connecting to Consul
+				Config:      testConsulSecretBackend_emptyTokenNoBootstrap(path),
+				ExpectError: regexp.MustCompile("field 'bootstrap' must be set to true when neither 'token' nor 'token_wo' is specified"),
+			},
+			{
 				Config:             testConsulSecretBackend_computedTokenNoBootstrap(path),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: true,
 			},
 			{
-				// Test Case 6: Bootstrap=true with Computed Token (should fail)
-				// This verifies that bootstrap=true is rejected when any token field is present,
-				// even if it's a computed value
 				Config:      testConsulSecretBackend_bootstrapWithComputedToken(path),
 				ExpectError: regexp.MustCompile("field 'bootstrap' must be set to false when 'token' or 'token_wo' is specified"),
+			},
+		},
+	})
+}
+
+func TestConsulSecretBackend_ComputedTokenWithConsul(t *testing.T) {
+	t.Parallel()
+	acctestutil.SkipTestAcc(t)
+
+	path := acctest.RandomWithPrefix("tf-test-consul-computed")
+	resourceType := "vault_consul_secret_backend"
+	resourceName := resourceType + ".test"
+
+	// Set up Consul with ACLs enabled (OSS, not Enterprise)
+	cleanup, consulConfig := testutil.PrepareTestContainer(t, "1.12.3", false, true)
+	t.Cleanup(cleanup)
+	consulAddr := consulConfig.Address()
+	consulToken := consulConfig.Token
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"consul": {
+				Source:            "hashicorp/consul",
+				VersionConstraint: "~> 2.0",
+			},
+		},
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				// Test with computed token from Consul provider
+				// This validates that computed values work end-to-end with real Consul
+				Config: testConsulSecretBackend_computedTokenFromConsul(path, consulAddr, consulToken),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, "address", consulAddr),
+					resource.TestCheckResourceAttr(resourceName, "bootstrap", "false"),
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+				),
 			},
 		},
 	})
@@ -852,6 +893,29 @@ resource "vault_consul_secret_backend" "test" {
 }`, path)
 }
 
+func testConsulSecretBackend_computedTokenFromConsul(path, consulAddr, consulToken string) string {
+	return fmt.Sprintf(`
+# Configure Consul provider with bootstrap token
+provider "consul" {
+  address = "%s"
+  token   = "%s"
+}
+
+# Generate a management token from Consul
+resource "consul_acl_token" "test" {
+  description = "Test token for Vault"
+  policies    = ["global-management"]
+}
+
+# Use the computed token in Vault Consul backend
+resource "vault_consul_secret_backend" "test" {
+  path        = "%s"
+  address     = "%s"
+  token       = consul_acl_token.test.accessor_id
+  bootstrap   = false
+}`, consulAddr, consulToken, path, consulAddr)
+}
+
 func testConsulSecretBackend_bootstrapWithToken(path string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
@@ -877,9 +941,19 @@ resource "vault_consul_secret_backend" "test" {
 func testConsulSecretBackend_tokenWONoBootstrap(path string, version int) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
-  path                 = "%s"
-  address              = "127.0.0.1:8500"
-  token_wo             = "test-token-wo-%d"
-  token_wo_version     = %d
+	 path                 = "%s"
+	 address              = "127.0.0.1:8500"
+	 token_wo             = "test-token-wo-%d"
+	 token_wo_version     = %d
 }`, path, version, version)
+}
+
+func testConsulSecretBackend_emptyTokenNoBootstrap(path string) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+	 path      = "%s"
+	 address   = "127.0.0.1:8500"
+	 token     = ""
+	 bootstrap = false
+}`, path)
 }
