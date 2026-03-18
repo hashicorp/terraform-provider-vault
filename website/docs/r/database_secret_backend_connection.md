@@ -447,6 +447,9 @@ See the [Vault
 
 * `service_account_json` - (Optional) JSON encoding of an IAM access key. Requires `auth_type` to be `gcp_iam`.
 
+* `use_private_ip` - (Optional) If set, allows connection to a CloudSQL instance using a Private IP.
+  Requires `auth_type` to be `gcp_iam`. Requires Vault 1.21+.
+
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
