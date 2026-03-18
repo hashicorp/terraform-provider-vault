@@ -104,7 +104,7 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	kmsProvider := ""
-	if v, ok := kmsResp.Data["provider"].(string); ok {
+	if v, ok := kmsResp.Data[consts.FieldProvider].(string); ok {
 		kmsProvider = v
 	}
 
