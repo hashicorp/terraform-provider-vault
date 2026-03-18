@@ -113,7 +113,7 @@ func (r *AWSKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 	apiPath := data.APIPath()
 
 	writeData := map[string]interface{}{
-		consts.FieldProvider:       ProviderAWSKMS,
+		consts.FieldProvider:      ProviderAWSKMS,
 		consts.FieldKeyCollection: data.KeyCollection.ValueString(),
 	}
 

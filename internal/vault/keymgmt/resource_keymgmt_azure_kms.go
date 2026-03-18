@@ -113,7 +113,7 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 	apiPath := data.APIPath()
 
 	writeData := map[string]interface{}{
-		consts.FieldProvider:       ProviderAzureKV,
+		consts.FieldProvider:      ProviderAzureKV,
 		consts.FieldKeyCollection: data.KeyCollection.ValueString(),
 	}
 
