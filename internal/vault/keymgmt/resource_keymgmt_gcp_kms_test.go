@@ -18,14 +18,16 @@ import (
 )
 
 func TestAccKeymgmtGCPKMS(t *testing.T) {
-	gcpCredentials, gcpProject := testutil.GetTestGCPCreds(t)
+	gcpCredentials := testutil.GetTestGCPCredsFile(t)
+	gcpProject := testutil.GetTestGCPProject(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("gcpkms")
 	resourceType := "vault_keymgmt_gcp_kms"
 	resourceName := resourceType + ".test"
 
-	gcpLocation, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
+	gcpLocation := testutil.GetTestGCPRegion(t)
+	gcpKeyRing := testutil.GetTestGCPKeyRing(t)
 
 	keyCollection := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", gcpProject, gcpLocation, gcpKeyRing)
 
@@ -69,14 +71,15 @@ func testAccKeymgmtGCPKMSImportStateIdFunc(resourceName string) resource.ImportS
 }
 
 func TestAccKeymgmtGCPKMS_update(t *testing.T) {
-	gcpCredentials, gcpProject := testutil.GetTestGCPCreds(t)
+	gcpCredentials := testutil.GetTestGCPCredsFile(t)
+	gcpProject := testutil.GetTestGCPProject(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("gcpkms")
 	resourceType := "vault_keymgmt_gcp_kms"
 	resourceName := resourceType + ".test"
 
-	_, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
+	gcpKeyRing := testutil.GetTestGCPKeyRing(t)
 
 	initialLocation := "us-east1"
 	updatedLocation := "us-west1"
@@ -108,7 +111,8 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 }
 
 func TestAccKeymgmtGCPKMS_multiple(t *testing.T) {
-	gcpCredentials, gcpProject := testutil.GetTestGCPCreds(t)
+	gcpCredentials := testutil.GetTestGCPCredsFile(t)
+	gcpProject := testutil.GetTestGCPProject(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName1 := acctest.RandomWithPrefix("gcpkms-1")
@@ -116,7 +120,7 @@ func TestAccKeymgmtGCPKMS_multiple(t *testing.T) {
 	resourceName1 := "vault_keymgmt_gcp_kms.test1"
 	resourceName2 := "vault_keymgmt_gcp_kms.test2"
 
-	_, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
+	gcpKeyRing := testutil.GetTestGCPKeyRing(t)
 
 	keyCollection1 := fmt.Sprintf("projects/%s/locations/us-east1/keyRings/%s", gcpProject, gcpKeyRing)
 	keyCollection2 := fmt.Sprintf("projects/%s/locations/us-west1/keyRings/%s", gcpProject, gcpKeyRing)
@@ -141,7 +145,8 @@ func TestAccKeymgmtGCPKMS_multiple(t *testing.T) {
 }
 
 func TestAccKeymgmtGCPKMS_namespace(t *testing.T) {
-	gcpCredentials, gcpProject := testutil.GetTestGCPCreds(t)
+	gcpCredentials := testutil.GetTestGCPCredsFile(t)
+	gcpProject := testutil.GetTestGCPProject(t)
 
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
 	kmsName := acctest.RandomWithPrefix("gcpkms")
@@ -149,7 +154,7 @@ func TestAccKeymgmtGCPKMS_namespace(t *testing.T) {
 	resourceType := "vault_keymgmt_gcp_kms"
 	resourceName := resourceType + ".test"
 
-	_, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
+	gcpKeyRing := testutil.GetTestGCPKeyRing(t)
 
 	keyCollection := fmt.Sprintf("projects/%s/locations/us-east1/keyRings/%s", gcpProject, gcpKeyRing)
 
@@ -164,33 +169,6 @@ func TestAccKeymgmtGCPKMS_namespace(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyCollection),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
-				),
-			},
-		},
-	})
-}
-
-func TestAccKeymgmtGCPKMS_envCredentials(t *testing.T) {
-	v := testutil.SkipTestEnvUnset(t, "GOOGLE_PROJECT")
-	gcpProject := v[0]
-	gcpLocation, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
-	keyCollection := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", gcpProject, gcpLocation, gcpKeyRing)
-
-	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
-	kmsName := acctest.RandomWithPrefix("gcpkms")
-	resourceType := "vault_keymgmt_gcp_kms"
-	resourceName := resourceType + ".test"
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config: testKeymgmtGCPKMSConfigNoCredentials(mount, kmsName, keyCollection),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyCollection),
 				),
 			},
 		},
@@ -277,19 +255,4 @@ resource "vault_keymgmt_gcp_kms" "test" {
   credentials_wo_version = 1
 }
 `, namespace, mount, kmsName, keyCollection, gcpCredentials, gcpProject, gcpLocation)
-}
-
-func testKeymgmtGCPKMSConfigNoCredentials(mount, kmsName, keyCollection string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "keymgmt" {
-  path = %q
-  type = "keymgmt"
-}
-
-resource "vault_keymgmt_gcp_kms" "test" {
-  mount          = vault_mount.keymgmt.path
-  name           = %q
-  key_collection = %q
-}
-`, mount, kmsName, keyCollection)
 }

@@ -245,21 +245,6 @@ func GetTestGCPCreds(t *testing.T) (string, string) {
 	return creds, project
 }
 
-// GetTestGCPKMSConfig returns the GCP location and key ring for KMS tests,
-// defaulting to "us-east1" and "test-keyring" if the env vars are unset.
-func GetTestGCPKMSConfig(t *testing.T) (location, keyRing string) {
-	t.Helper()
-	location = os.Getenv("GOOGLE_CLOUD_LOCATION")
-	if location == "" {
-		location = "us-east1"
-	}
-	keyRing = os.Getenv("GOOGLE_CLOUD_KEYRING")
-	if keyRing == "" {
-		keyRing = "test-keyring"
-	}
-	return location, keyRing
-}
-
 func GetTestRMQCreds(t *testing.T) (string, string, string) {
 	v := SkipTestEnvUnset(t, "RMQ_CONNECTION_URI", "RMQ_USERNAME", "RMQ_PASSWORD")
 	return v[0], v[1], v[2]
@@ -297,6 +282,16 @@ func GetTestGCPKeyRing(t *testing.T) string {
 
 func GetTestGCPRegion(t *testing.T) string {
 	v := SkipTestEnvUnset(t, "GOOGLE_REGION")
+	return v[0]
+}
+
+func GetTestGCPCredsFile(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_CREDENTIALS_FILE")
+	return v[0]
+}
+
+func GetTestGCPProject(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_PROJECT")
 	return v[0]
 }
 
