@@ -65,7 +65,7 @@ The following arguments are supported:
 
   This field is write-only and will never be stored in Terraform state. Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
 
-* `credentials_wo_version` - (Optional) Version counter for the `credentials_wo` field. Increment this value whenever you update `credentials_wo` to trigger the credential rotation.
+* `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Since write-only values are not stored in state, Terraform cannot detect when credentials change. Increment this value whenever you update `credentials_wo` to ensure the new credentials are sent to Vault.
 
 
 ## Import

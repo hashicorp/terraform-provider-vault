@@ -77,7 +77,7 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 				},
 			},
 			consts.FieldCredentialsWO: schema.MapAttribute{
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
 				WriteOnly:   true,
 				ElementType: types.StringType,
@@ -86,8 +86,9 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				Optional: true,
-				MarkdownDescription: "Version number for the write-only credentials. Increment this value to trigger a credential rotation. " +
-					"Changing this value will cause the credentials to be re-sent to Vault during the next apply.",
+				MarkdownDescription: "Version counter for the write-only `credentials_wo` field. " +
+					"Since write-only values are not stored in state, Terraform cannot detect when credentials change. " +
+					"Increment this value whenever you update `credentials_wo` to ensure the new credentials are sent to Vault.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -112,8 +113,8 @@ func (r *AzureKMSResource) Create(ctx context.Context, req resource.CreateReques
 	apiPath := data.APIPath()
 
 	writeData := map[string]interface{}{
-		"provider":       ProviderAzureKV,
-		"key_collection": data.KeyCollection.ValueString(),
+		consts.FieldProvider:       ProviderAzureKV,
+		consts.FieldKeyCollection: data.KeyCollection.ValueString(),
 	}
 
 	// Read write-only credentials from Config (the only place write-only values are accessible)
@@ -204,7 +205,7 @@ func (r *AzureKMSResource) Update(ctx context.Context, req resource.UpdateReques
 
 	apiPath := plan.APIPath()
 	writeData := map[string]interface{}{
-		"provider": ProviderAzureKV,
+		consts.FieldProvider: ProviderAzureKV,
 	}
 	hasChanges := false
 
