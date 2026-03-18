@@ -133,7 +133,7 @@ func (r *KeyRotateResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 	if !exists {
 		tflog.Warn(ctx, "Key Management key not found, removing from state", map[string]interface{}{
-			"path": keyPath,
+			consts.FieldPath: keyPath,
 		})
 		resp.State.RemoveResource(ctx)
 		return

@@ -31,7 +31,7 @@ func TestAccKeymgmtKeyRotate_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
-					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLatestVersion),
 				),
 			},
 			{
@@ -60,7 +60,7 @@ func TestAccKeymgmtKeyRotate_multiple(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
-					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLatestVersion),
 				),
 			},
 			{
@@ -69,7 +69,7 @@ func TestAccKeymgmtKeyRotate_multiple(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					// Verify that latest_version has increased
-					resource.TestCheckResourceAttrSet(resourceName, "latest_version"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLatestVersion),
 				),
 			},
 		},

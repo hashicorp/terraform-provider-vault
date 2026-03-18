@@ -72,9 +72,12 @@ func (r *GCPKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Refers to a location to store keys in the GCP Cloud KMS provider. Cannot be changed after creation.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			consts.FieldCredentialsWO: schema.MapAttribute{
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
 				WriteOnly:   true,
 				ElementType: types.StringType,
@@ -83,8 +86,9 @@ func (r *GCPKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				Optional: true,
-				MarkdownDescription: "Version number for the write-only credentials. Increment this value to trigger a credential rotation. " +
-					"Changing this value will cause the credentials to be re-sent to Vault during the next apply.",
+				MarkdownDescription: "Version counter for the write-only `credentials_wo` field. " +
+					"Since write-only values are not stored in state, Terraform cannot detect when credentials change. " +
+					"Increment this value whenever you update `credentials_wo` to ensure the new credentials are sent to Vault.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -108,8 +112,8 @@ func (r *GCPKMSResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	apiPath := data.APIPath()
 	writeData := map[string]interface{}{
-		"provider":       ProviderGCPCKMS,
-		"key_collection": data.KeyCollection.ValueString(),
+		consts.FieldProvider:      ProviderGCPCKMS,
+		consts.FieldKeyCollection: data.KeyCollection.ValueString(),
 	}
 
 	// Read write-only credentials from Config (the only place write-only values are accessible)
@@ -173,7 +177,7 @@ func (r *GCPKMSResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	if !exists {
 		tflog.Warn(ctx, "GCP Cloud KMS provider not found, removing from state", map[string]interface{}{
-			"path": apiPath,
+			consts.FieldPath: apiPath,
 		})
 		resp.State.RemoveResource(ctx)
 		return
@@ -200,14 +204,9 @@ func (r *GCPKMSResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	apiPath := plan.APIPath()
 	writeData := map[string]interface{}{
-		"provider": ProviderGCPCKMS,
+		consts.FieldProvider: ProviderGCPCKMS,
 	}
 	hasChanges := false
-
-	if !plan.KeyCollection.Equal(state.KeyCollection) {
-		writeData[consts.FieldKeyCollection] = plan.KeyCollection.ValueString()
-		hasChanges = true
-	}
 
 	if !plan.CredentialsWOVersion.Equal(state.CredentialsWOVersion) {
 		// Read write-only credentials from Config (the only place write-only values are accessible)

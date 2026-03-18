@@ -18,6 +18,8 @@ For more information on managing GCP Cloud KMS with Vault, please refer to the V
 
 ## Example Usage
 
+### Using Explicit Credentials
+
 ```hcl
 resource "vault_mount" "keymgmt" {
   path = "keymgmt"
@@ -34,6 +36,30 @@ resource "vault_keymgmt_gcp_kms" "production" {
     location             = "us-central1"
   }
   credentials_wo_version = 1
+}
+```
+
+### Using GCP Application Default Credentials
+
+```hcl
+# When credentials_wo is not provided, Vault uses its own environment to
+# authenticate with GCP. Supported options include:
+# 1. The GOOGLE_APPLICATION_CREDENTIALS environment variable set on the Vault
+#    server, pointing to a service account key file.
+# 2. Application Default Credentials (ADC) when Vault runs on GCP infrastructure
+#    with an attached service account.
+
+resource "vault_mount" "keymgmt" {
+  path = "keymgmt"
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_gcp_kms" "production" {
+  mount          = vault_mount.keymgmt.path
+  name           = "gcp-production"
+  key_collection = "projects/my-project/locations/us-central1/keyRings/my-keyring"
+
+  # No credentials_wo - Vault authenticates using its own environment
 }
 ```
 
@@ -55,15 +81,15 @@ The following arguments are supported:
 
 * `key_collection` - (Required) Refers to a location to store keys in the GCP Cloud KMS provider. Cannot be changed after creation.
 
-* `credentials_wo` - (Required, Write-only, Sensitive) Map of GCP credentials passed directly to the Vault API.
+* `credentials_wo` - (Optional, Write-only, Sensitive) Map of GCP credentials passed directly to the Vault API.
   Supported keys are:
-  - `service_account_file` - (Required) JSON-encoded GCP service account credentials with permissions to manage Cloud KMS keys.
-  - `project` - (Required) GCP project ID where the Cloud KMS key ring is located.
-  - `location` - (Required) GCP location/region for the Cloud KMS key ring.
+  - `service_account_file` - JSON-encoded GCP service account credentials with permissions to manage Cloud KMS keys.
+  - `project` - GCP project ID where the Cloud KMS key ring is located.
+  - `location` - GCP location/region for the Cloud KMS key ring.
 
-  This field is write-only and will never be stored in Terraform state. Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
+  This field is write-only and will never be stored in Terraform state. If not provided, Vault uses credentials from its own environment (e.g. `GOOGLE_APPLICATION_CREDENTIALS` set on the Vault server, or GCP Application Default Credentials). Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
 
-* `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Increment this value whenever you rotate or update `credentials_wo` to trigger Terraform to apply the new values.
+* `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Since write-only values are not stored in state, Terraform cannot detect when credentials change. Increment this value whenever you update `credentials_wo` to ensure the new credentials are sent to Vault.
 
 ## Import
 

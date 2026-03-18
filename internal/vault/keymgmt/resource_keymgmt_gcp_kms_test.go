@@ -38,7 +38,7 @@ func TestAccKeymgmtGCPKMS(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", keyCollection),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyCollection),
 				),
 			},
 			{
@@ -92,7 +92,7 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", initialKeyCollection),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, initialKeyCollection),
 				),
 			},
 			{
@@ -100,7 +100,7 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", updatedKeyCollection),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, updatedKeyCollection),
 				),
 			},
 		},
@@ -130,10 +130,10 @@ func TestAccKeymgmtGCPKMS_multiple(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName1, consts.FieldName, kmsName1),
-					resource.TestCheckResourceAttr(resourceName1, "key_collection", keyCollection1),
+					resource.TestCheckResourceAttr(resourceName1, consts.FieldKeyCollection, keyCollection1),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName2, consts.FieldName, kmsName2),
-					resource.TestCheckResourceAttr(resourceName2, "key_collection", keyCollection2),
+					resource.TestCheckResourceAttr(resourceName2, consts.FieldKeyCollection, keyCollection2),
 				),
 			},
 		},
@@ -162,8 +162,35 @@ func TestAccKeymgmtGCPKMS_namespace(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
-					resource.TestCheckResourceAttr(resourceName, "key_collection", keyCollection),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyCollection),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeymgmtGCPKMS_envCredentials(t *testing.T) {
+	v := testutil.SkipTestEnvUnset(t, "GOOGLE_PROJECT")
+	gcpProject := v[0]
+	gcpLocation, gcpKeyRing := testutil.GetTestGCPKMSConfig(t)
+	keyCollection := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", gcpProject, gcpLocation, gcpKeyRing)
+
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	kmsName := acctest.RandomWithPrefix("gcpkms")
+	resourceType := "vault_keymgmt_gcp_kms"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtGCPKMSConfigNoCredentials(mount, kmsName, keyCollection),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyCollection),
 				),
 			},
 		},
@@ -250,4 +277,19 @@ resource "vault_keymgmt_gcp_kms" "test" {
   credentials_wo_version = 1
 }
 `, namespace, mount, kmsName, keyCollection, gcpCredentials, gcpProject, gcpLocation)
+}
+
+func testKeymgmtGCPKMSConfigNoCredentials(mount, kmsName, keyCollection string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_gcp_kms" "test" {
+  mount          = vault_mount.keymgmt.path
+  name           = %q
+  key_collection = %q
+}
+`, mount, kmsName, keyCollection)
 }
