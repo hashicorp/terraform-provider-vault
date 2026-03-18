@@ -290,6 +290,11 @@ func TestAccKerberosAuthBackendGroup_invalid(t *testing.T) {
 				Config:      testAccKerberosAuthBackendGroupConfig_invalidMount(groupName),
 				ExpectError: regexp.MustCompile("no handler for route|unsupported path|route entry not found"),
 			},
+			// Test missing mount
+			{
+				Config:      testAccKerberosAuthBackendGroupConfig_missingMount(groupName),
+				ExpectError: regexp.MustCompile(`Missing required argument|The argument "mount" is required`),
+			},
 			// Test missing group name
 			{
 				Config:      testAccKerberosAuthBackendGroupConfig_missingName(backend),
@@ -397,6 +402,15 @@ resource "vault_kerberos_auth_backend_group" "test" {
   policies = ["default"]
 }
 `, backend)
+}
+
+func testAccKerberosAuthBackendGroupConfig_missingMount(groupName string) string {
+	return fmt.Sprintf(`
+resource "vault_kerberos_auth_backend_group" "test" {
+  name     = "%s"
+  policies = ["default"]
+}
+`, groupName)
 }
 
 func testAccKerberosAuthBackendGroupConfig_invalidNamespace(backend, groupName string) string {
