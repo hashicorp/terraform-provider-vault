@@ -873,20 +873,6 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 		}
 	}
 
-	if config.isCloud {
-		res.Schema["auth_type"] = &schema.Schema{
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Specify alternative authorization type. (Only 'gcp_iam' is valid currently)",
-		}
-		res.Schema["service_account_json"] = &schema.Schema{
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "A JSON encoded credential for use with IAM authorization",
-			Sensitive:   true,
-		}
-	}
-
 	return res
 }
 
