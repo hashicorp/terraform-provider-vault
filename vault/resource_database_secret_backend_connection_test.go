@@ -1283,6 +1283,38 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_postgresql_cloud_private_ip(t *testing.T) {
+	values := testutil.SkipTestEnvUnset(t, "POSTGRES_CLOUD_URL", "POSTGRES_CLOUD_SERVICE_ACCOUNT_JSON")
+	connURL, saJSON := values[0], values[1]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion121)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgres_cloud_private_ip(name, backend, connURL, "gcp_iam", saJSON, true),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEnginePostgres.DefaultPluginName(),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.auth_type", "gcp_iam"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.use_private_ip", "true"),
+				),
+			},
+			{
+				ResourceName:            testDefaultDatabaseSecretBackendResource,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"verify_connection", "postgresql.0.service_account_json"},
+			},
+		},
+	})
+}
+
 // TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation tests that Automated
 // Root Rotation parameters are compatible with the DB Secrets Backend Connection resource
 func TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation(t *testing.T) {
@@ -2791,6 +2823,29 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, connURL, authType, serviceAccountJSON)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_postgres_cloud_private_ip(name, path, connURL, authType, serviceAccountJSON string, usePrivateIP bool) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend       = vault_mount.db.path
+  name          = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  postgresql {
+      connection_url       = "%s"
+      auth_type            = "%s"
+      service_account_json = "%s"
+      use_private_ip       = %t
+  }
+}
+`, path, name, connURL, authType, serviceAccountJSON, usePrivateIP)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_postgres_automatedRootRotation(name, path, connURL, schedule string, period, window int, disable bool) string {
