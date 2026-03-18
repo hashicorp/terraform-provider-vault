@@ -212,7 +212,7 @@ func (r *KeyRotateResource) ImportState(ctx context.Context, req resource.Import
 // parseKeyRotateResponse parses the Vault API response data into the resource model
 func (data *KeyRotateResourceModel) parseKeyRotateResponse(responseData map[string]interface{}) {
 	// Only set latest_version when it is returned and can be parsed from the API response.
-	if v, ok := responseData["latest_version"]; ok && v != nil {
+	if v, ok := responseData[consts.FieldLatestVersion]; ok && v != nil {
 		if result := SetInt64FromInterface(v); !result.IsNull() {
 			data.LatestVersion = result
 		}
