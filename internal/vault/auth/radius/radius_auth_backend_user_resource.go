@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -107,15 +108,11 @@ func (r *RadiusAuthBackendUserResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	vaultClient, _, _, userPath, diags := r.getClientAndUserData(ctx, data.Namespace.ValueString(), data.Mount, data.Username)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	mount := strings.Trim(data.Mount.ValueString(), "/")
-	username := strings.Trim(data.Username.ValueString(), "/")
-	userPath := r.userPath(mount, username)
 
 	// Build the API request
 	vaultRequest, apiDiags := r.getApiModel(ctx, &data)
@@ -124,26 +121,9 @@ func (r *RadiusAuthBackendUserResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	// Write user to Vault
-	tflog.Debug(ctx, fmt.Sprintf("Registering RADIUS user at '%s'", userPath))
-	_, err = vaultClient.Logical().WriteWithContext(ctx, userPath, vaultRequest)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error registering RADIUS user",
-			fmt.Sprintf("Could not register RADIUS user at '%s': %s", userPath, err),
-		)
-		return
-	}
-	tflog.Info(ctx, fmt.Sprintf("RADIUS user successfully registered at '%s'", userPath))
-
-	// Read back user from Vault to populate computed fields
-	userResp, err := vaultClient.Logical().ReadWithContext(ctx, userPath)
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	if userResp == nil {
-		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+	userResp, writeDiags := r.writeUser(ctx, vaultClient, userPath, vaultRequest, errutil.VaultCreateErr)
+	resp.Diagnostics.Append(writeDiags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -168,21 +148,15 @@ func (r *RadiusAuthBackendUserResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	vaultClient, _, _, userPath, diags := r.getClientAndUserData(ctx, data.Namespace.ValueString(), data.Mount, data.Username)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	mount := strings.Trim(data.Mount.ValueString(), "/")
-	username := strings.Trim(data.Username.ValueString(), "/")
-	userPath := r.userPath(mount, username)
-
-	// Read user from Vault
-	tflog.Debug(ctx, fmt.Sprintf("Reading RADIUS user from '%s'", userPath))
-	userResp, err := vaultClient.Logical().ReadWithContext(ctx, userPath)
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
+	userResp, readDiags := r.readUser(ctx, vaultClient, userPath)
+	resp.Diagnostics.Append(readDiags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 	if userResp == nil {
@@ -211,15 +185,11 @@ func (r *RadiusAuthBackendUserResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	vaultClient, _, _, userPath, diags := r.getClientAndUserData(ctx, data.Namespace.ValueString(), data.Mount, data.Username)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	mount := strings.Trim(data.Mount.ValueString(), "/")
-	username := strings.Trim(data.Username.ValueString(), "/")
-	userPath := r.userPath(mount, username)
 
 	// Build the API request
 	vaultRequest, apiDiags := r.getApiModel(ctx, &data)
@@ -228,26 +198,9 @@ func (r *RadiusAuthBackendUserResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	// Write user to Vault
-	tflog.Debug(ctx, fmt.Sprintf("Updating RADIUS user at '%s'", userPath))
-	_, err = vaultClient.Logical().WriteWithContext(ctx, userPath, vaultRequest)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error updating RADIUS user",
-			fmt.Sprintf("Could not update RADIUS user at '%s': %s", userPath, err),
-		)
-		return
-	}
-	tflog.Info(ctx, fmt.Sprintf("RADIUS user successfully updated at '%s'", userPath))
-
-	// Read back user from Vault to populate computed fields
-	userResp, err := vaultClient.Logical().ReadWithContext(ctx, userPath)
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	if userResp == nil {
-		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+	userResp, writeDiags := r.writeUser(ctx, vaultClient, userPath, vaultRequest, errutil.VaultUpdateErr)
+	resp.Diagnostics.Append(writeDiags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -271,18 +224,14 @@ func (r *RadiusAuthBackendUserResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+	vaultClient, _, _, userPath, diags := r.getClientAndUserData(ctx, data.Namespace.ValueString(), data.Mount, data.Username)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	mount := strings.Trim(data.Mount.ValueString(), "/")
-	username := strings.Trim(data.Username.ValueString(), "/")
-	userPath := r.userPath(mount, username)
-
 	tflog.Debug(ctx, fmt.Sprintf("Deleting RADIUS user at '%s'", userPath))
-	_, err = vaultClient.Logical().DeleteWithContext(ctx, userPath)
+	_, err := vaultClient.Logical().DeleteWithContext(ctx, userPath)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting RADIUS user",
@@ -364,6 +313,59 @@ func (r *RadiusAuthBackendUserResource) usernameFromPath(path string) (string, e
 		return "", fmt.Errorf("unexpected number of matches in path: %s", path)
 	}
 	return matches[1], nil
+}
+
+func (r *RadiusAuthBackendUserResource) getClientAndUserData(ctx context.Context, namespace string, mount types.String, username types.String) (*api.Client, string, string, string, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	vaultClient, err := client.GetClient(ctx, r.Meta(), namespace)
+	if err != nil {
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return nil, "", "", "", diags
+	}
+
+	mountPath := strings.Trim(mount.ValueString(), "/")
+	userName := strings.Trim(username.ValueString(), "/")
+	userPath := r.userPath(mountPath, userName)
+
+	return vaultClient, mountPath, userName, userPath, diags
+}
+
+func (r *RadiusAuthBackendUserResource) writeUser(ctx context.Context, vaultClient *api.Client, userPath string, vaultRequest map[string]any, writeErr func(error) (string, string)) (*api.Secret, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	tflog.Debug(ctx, fmt.Sprintf("Writing RADIUS user to '%s'", userPath))
+	_, err := vaultClient.Logical().WriteWithContext(ctx, userPath, vaultRequest)
+	if err != nil {
+		diags.AddError(writeErr(err))
+		return nil, diags
+	}
+	tflog.Info(ctx, fmt.Sprintf("RADIUS user successfully written to '%s'", userPath))
+
+	userResp, readDiags := r.readUser(ctx, vaultClient, userPath)
+	diags.Append(readDiags...)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if userResp == nil {
+		diags.AddError(errutil.VaultReadResponseNil())
+		return nil, diags
+	}
+
+	return userResp, diags
+}
+
+func (r *RadiusAuthBackendUserResource) readUser(ctx context.Context, vaultClient *api.Client, userPath string) (*api.Secret, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	tflog.Debug(ctx, fmt.Sprintf("Reading RADIUS user from '%s'", userPath))
+	userResp, err := vaultClient.Logical().ReadWithContext(ctx, userPath)
+	if err != nil {
+		diags.AddError(errutil.VaultReadErr(err))
+		return nil, diags
+	}
+
+	return userResp, diags
 }
 
 // getApiModel builds the Vault API request map from the Terraform data model.
