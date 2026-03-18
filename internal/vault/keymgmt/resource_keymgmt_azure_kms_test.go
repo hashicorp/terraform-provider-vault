@@ -52,6 +52,31 @@ func TestAccKeymgmtAzureKMS(t *testing.T) {
 	})
 }
 
+func TestAccKeymgmtAzureKMS_envCredentials(t *testing.T) {
+	v := testutil.SkipTestEnvUnset(t, "AZURE_KEYVAULT_NAME")
+	keyVaultName := v[0]
+
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	kmsName := acctest.RandomWithPrefix("azurekms")
+	resourceType := "vault_keymgmt_azure_kms"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtAzureKMSConfigNoCredentials(mount, kmsName, keyVaultName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, "key_collection", keyVaultName),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeymgmtAzureKMS_update(t *testing.T) {
 	tenantID, clientID, clientSecret, keyVaultName := testutil.GetTestAzureKMSCreds(t)
 
@@ -160,6 +185,21 @@ func testAccKeymgmtAzureKMSImportStateIdFunc(resourceName string) resource.Impor
 		name := rs.Primary.Attributes[consts.FieldName]
 		return fmt.Sprintf("%s/kms/%s", mount, name), nil
 	}
+}
+
+func testKeymgmtAzureKMSConfigNoCredentials(mount, kmsName, keyVaultName string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_azure_kms" "test" {
+  mount          = vault_mount.keymgmt.path
+  name           = %q
+  key_collection = %q
+}
+`, mount, kmsName, keyVaultName)
 }
 
 func testKeymgmtAzureKMSConfig(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret string) string {

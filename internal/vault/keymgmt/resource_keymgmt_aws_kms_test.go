@@ -85,6 +85,30 @@ func TestAccKeymgmtAWSKMS_keyCollectionChange(t *testing.T) {
 	})
 }
 
+func TestAccKeymgmtAWSKMS_envCredentials(t *testing.T) {
+	awsRegion := testutil.GetTestAWSRegion(t)
+
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	kmsName := acctest.RandomWithPrefix("awskms")
+	resourceType := "vault_keymgmt_aws_kms"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtAWSKMSConfigNoCredentials(mount, kmsName, awsRegion),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, "key_collection", awsRegion),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKeymgmtAWSKMS_multiple(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
@@ -123,6 +147,21 @@ func testAccKeymgmtAWSKMSImportStateIdFunc(resourceName string) resource.ImportS
 		name := rs.Primary.Attributes[consts.FieldName]
 		return fmt.Sprintf("%s/kms/%s", mount, name), nil
 	}
+}
+
+func testKeymgmtAWSKMSConfigNoCredentials(mount, kmsName, region string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_aws_kms" "test" {
+  mount          = vault_mount.keymgmt.path
+  name           = %q
+  key_collection = %q
+}
+`, mount, kmsName, region)
 }
 
 func testKeymgmtAWSKMSConfig(mount, kmsName, region, accessKey, secretKey string) string {
