@@ -95,7 +95,7 @@ func (r *DistributeKeyResource) Schema(ctx context.Context, req resource.SchemaR
 			consts.FieldVersions: schema.MapAttribute{
 				Computed:            true,
 				ElementType:         types.StringType,
-				MarkdownDescription: "List of distributed key versions to their identifiers in the KMS provider.",
+				MarkdownDescription: "Map of distributed key versions to their identifiers in the KMS provider.",
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.UseStateForUnknown(),
 				},
@@ -125,10 +125,10 @@ func (r *DistributeKeyResource) Create(ctx context.Context, req resource.CreateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	writeData["purpose"] = purposes
+	writeData[consts.FieldPurpose] = purposes
 
 	if !data.Protection.IsNull() {
-		writeData["protection"] = data.Protection.ValueString()
+		writeData[consts.FieldProtection] = data.Protection.ValueString()
 	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
@@ -214,12 +214,12 @@ func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateR
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		writeData["purpose"] = purposes
+		writeData[consts.FieldPurpose] = purposes
 		hasChanges = true
 	}
 	if !plan.Protection.Equal(state.Protection) {
 		if !plan.Protection.IsNull() && !plan.Protection.IsUnknown() {
-			writeData["protection"] = plan.Protection.ValueString()
+			writeData[consts.FieldProtection] = plan.Protection.ValueString()
 			hasChanges = true
 		}
 	}
@@ -342,19 +342,19 @@ func (r *DistributeKeyResource) readDistributeKey(ctx context.Context, cli *vaul
 
 // parseDistributeKeyResponse extracts data from Vault API response data into the distribute key model.
 func (data *DistributeKeyResourceModel) parseDistributeKeyResponse(ctx context.Context, responseData map[string]interface{}, diags *diag.Diagnostics) {
-	if v, ok := responseData["purpose"].([]interface{}); ok {
+	if v, ok := responseData[consts.FieldPurpose].([]interface{}); ok {
 		purposes, d := types.SetValueFrom(ctx, types.StringType, v)
 		diags.Append(d...)
 		if !diags.HasError() {
 			data.Purpose = purposes
 		}
 	}
-	if v, ok := responseData["protection"].(string); ok {
+	if v, ok := responseData[consts.FieldProtection].(string); ok {
 		data.Protection = types.StringValue(v)
 	}
 
 	// versions is a map<string, string>: version number → key identifier
-	if v, ok := responseData["versions"].(map[string]interface{}); ok {
+	if v, ok := responseData[consts.FieldVersions].(map[string]interface{}); ok {
 		versions, d := types.MapValueFrom(ctx, types.StringType, v)
 		diags.Append(d...)
 		if !diags.HasError() {

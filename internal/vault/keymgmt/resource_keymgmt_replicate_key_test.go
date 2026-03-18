@@ -128,8 +128,11 @@ resource "vault_keymgmt_aws_kms" "test" {
   name           = "%s"
   key_collection = "us-west-1"
 
-  access_key = %q
-  secret_key = %q
+  credentials_wo = {
+    access_key = %q
+    secret_key = %q
+  }
+  credentials_wo_version = 1
 }
 
 resource "vault_keymgmt_distribute_key" "test" {
@@ -144,7 +147,7 @@ resource "vault_keymgmt_replicate_key" "test" {
   mount    = vault_mount.test.path
   kms_name = vault_keymgmt_aws_kms.test.name
   key_name = vault_keymgmt_key.test.name
-  
+
   depends_on = [vault_keymgmt_distribute_key.test]
 }
 `, path, keyName, kmsName, accessKey, secretKey)
@@ -169,8 +172,11 @@ resource "vault_keymgmt_aws_kms" "test" {
   name           = "%s"
   key_collection = "us-west-1"
 
-  access_key = %q
-  secret_key = %q
+  credentials_wo = {
+    access_key = %q
+    secret_key = %q
+  }
+  credentials_wo_version = 1
 }
 
 resource "vault_keymgmt_distribute_key" "test" {
@@ -185,7 +191,7 @@ resource "vault_keymgmt_replicate_key" "test" {
   mount    = vault_mount.test.path
   kms_name = vault_keymgmt_aws_kms.test.name
   key_name = vault_keymgmt_key.test.name
-  
+
   depends_on = [vault_keymgmt_distribute_key.test]
 }
 `, path, keyName, kmsName, accessKey, secretKey)
@@ -230,8 +236,11 @@ resource "vault_keymgmt_aws_kms" "test" {
   name           = "%s"
   key_collection = "us-west-1"
 
-  access_key = %q
-  secret_key = %q
+  credentials_wo = {
+    access_key = %q
+    secret_key = %q
+  }
+  credentials_wo_version = 1
 }
 
 resource "vault_keymgmt_distribute_key" "test1" {

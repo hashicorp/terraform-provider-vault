@@ -39,8 +39,12 @@ resource "vault_keymgmt_aws_kms" "aws" {
   mount          = vault_mount.keymgmt.path
   name           = "aws-kms"
   key_collection = "us-west-2"
-  access_key     = var.aws_access_key_id
-  secret_key     = var.aws_secret_access_key
+
+  credentials_wo = {
+    access_key = var.aws_access_key_id
+    secret_key = var.aws_secret_access_key
+  }
+  credentials_wo_version = 1
 }
 
 resource "vault_keymgmt_distribute_key" "aws_dist" {
@@ -85,9 +89,13 @@ resource "vault_keymgmt_azure_kms" "azure" {
   mount          = vault_mount.keymgmt.path
   name           = "azure-kv"
   key_collection = "my-keyvault"
-  tenant_id      = var.azure_tenant_id
-  client_id      = var.azure_client_id
-  client_secret  = var.azure_client_secret
+
+  credentials_wo = {
+    tenant_id     = var.azure_tenant_id
+    client_id     = var.azure_client_id
+    client_secret = var.azure_client_secret
+  }
+  credentials_wo_version = 1
 }
 
 resource "vault_keymgmt_distribute_key" "azure_dist" {
@@ -111,7 +119,13 @@ resource "vault_keymgmt_gcp_kms" "gcp" {
   mount          = vault_mount.keymgmt.path
   name           = "gcp-kms"
   key_collection = "projects/my-project/locations/us-central1/keyRings/my-keyring"
-  credentials    = file("gcp-credentials.json")
+
+  credentials_wo = {
+    service_account_file = file("gcp-credentials.json")
+    project              = "my-project"
+    location             = "us-central1"
+  }
+  credentials_wo_version = 1
 }
 
 resource "vault_keymgmt_distribute_key" "gcp_dist" {
@@ -149,7 +163,7 @@ The following arguments are supported:
 
 In addition to the arguments above, the following attributes are exported:
 
-* `versions` - List of distributed key versions to their identifiers in the KMS provider.
+* `versions` - Map of distributed key versions to their identifiers in the KMS provider.
 
 ## Import
 

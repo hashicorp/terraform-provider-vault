@@ -43,8 +43,12 @@ resource "vault_keymgmt_aws_kms" "aws" {
   mount          = vault_mount.keymgmt.path
   name           = "aws-kms"
   key_collection = "us-west-2"
-  access_key     = var.aws_access_key_id
-  secret_key     = var.aws_secret_access_key
+
+  credentials_wo = {
+    access_key = var.aws_access_key_id
+    secret_key = var.aws_secret_access_key
+  }
+  credentials_wo_version = 1
 }
 
 resource "vault_keymgmt_distribute_key" "dist" {
