@@ -537,12 +537,12 @@ func TestConsulSecretBackend_CustomizeDiff(t *testing.T) {
 func TestConsulSecretBackend_ComputedTokenWithConsul(t *testing.T) {
 	t.Parallel()
 	acctestutil.SkipTestAcc(t)
+	testutil.SkipTestEnvSet(t, "CONSUL_HTTP_ADDR")
 
 	path := acctest.RandomWithPrefix("tf-test-consul-computed")
 	resourceType := "vault_consul_secret_backend"
 	resourceName := resourceType + ".test"
 
-	// Set up Consul with ACLs enabled (OSS, not Enterprise)
 	cleanup, consulConfig := testutil.PrepareTestContainer(t, "1.12.3", false, true)
 	t.Cleanup(cleanup)
 	consulAddr := consulConfig.Address()
