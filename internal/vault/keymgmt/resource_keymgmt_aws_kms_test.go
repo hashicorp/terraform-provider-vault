@@ -45,7 +45,7 @@ func TestAccKeymgmtAWSKMS(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
-					consts.FieldCredentials,
+					consts.FieldCredentialsWO,
 					consts.FieldCredentialsWOVersion,
 				},
 			},
