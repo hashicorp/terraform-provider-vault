@@ -172,3 +172,5 @@ Key distributions can be imported using the format `{path}/kms/{kms_name}/key/{k
 ```
 $ terraform import vault_keymgmt_distribute_key.aws_dist keymgmt/kms/aws-kms/key/aws-encryption-key
 ```
+
+~> **Note:** When importing, the `purpose` and `protection` fields are not returned by the Vault API and will not be populated in state. Both fields carry `Forces new resource`, so a missing or mismatched value will trigger a destroy+recreate on the next `terraform apply`. Always set `purpose` (and `protection` if not using the default `hsm`) explicitly in your configuration after import.

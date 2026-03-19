@@ -199,64 +199,7 @@ func (r *DistributeKeyResource) Read(ctx context.Context, req resource.ReadReque
 }
 
 func (r *DistributeKeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan, state DistributeKeyResourceModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	cli, ok := r.getVaultClient(ctx, plan.Namespace.ValueString(), &resp.Diagnostics)
-	if !ok {
-		return
-	}
-
-	apiPath := plan.APIPath()
-	writeData := map[string]interface{}{}
-	hasChanges := false
-
-	if !plan.Purpose.Equal(state.Purpose) {
-		var purposes []string
-		resp.Diagnostics.Append(plan.Purpose.ElementsAs(ctx, &purposes, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		writeData[consts.FieldPurpose] = purposes
-		hasChanges = true
-	}
-	if !plan.Protection.Equal(state.Protection) {
-		if !plan.Protection.IsNull() && !plan.Protection.IsUnknown() {
-			writeData[consts.FieldProtection] = plan.Protection.ValueString()
-			hasChanges = true
-		}
-	}
-
-	if hasChanges {
-		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
-			resp.Diagnostics.AddError(ErrUpdating(ResourceTypeKeyDistribution, apiPath, err))
-			return
-		}
-	}
-
-	// Read back the state from Vault
-	responseData, exists := r.readDistributeKey(ctx, cli, apiPath, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	if !exists {
-		resp.Diagnostics.AddError(
-			"Unexpected error after updating key distribution",
-			fmt.Sprintf("Key distribution not found at path %q immediately after update", apiPath),
-		)
-		return
-	}
-
-	plan.parseDistributeKeyResponse(ctx, responseData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	resp.Diagnostics.AddError("Update not supported", "Key distribution resource does not support in-place updates")
 }
 
 func (r *DistributeKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
