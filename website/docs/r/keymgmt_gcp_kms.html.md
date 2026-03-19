@@ -79,7 +79,7 @@ The following arguments are supported:
 
 * `name` - (Required, Forces new resource) Specifies the name of the GCP Cloud KMS provider. Cannot be changed after creation.
 
-* `key_collection` - (Required) Refers to a location to store keys in the GCP Cloud KMS provider. Cannot be changed after creation.
+* `key_collection` - (Required, Forces new resource) Refers to a location to store keys in the GCP Cloud KMS provider. Cannot be changed after creation.
 
 * `credentials_wo` - (Optional, Write-only, Sensitive) Map of GCP credentials passed directly to the Vault API.
   Supported keys are:

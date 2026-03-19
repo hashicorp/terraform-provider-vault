@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
@@ -70,7 +71,7 @@ func testAccKeymgmtGCPKMSImportStateIdFunc(resourceName string) resource.ImportS
 	}
 }
 
-func TestAccKeymgmtGCPKMS_update(t *testing.T) {
+func TestAccKeymgmtGCPKMS_keyCollectionReplace(t *testing.T) {
 	gcpCredentials := testutil.GetTestGCPCredsFile(t)
 	gcpProject := testutil.GetTestGCPProject(t)
 
@@ -100,6 +101,11 @@ func TestAccKeymgmtGCPKMS_update(t *testing.T) {
 			},
 			{
 				Config: testKeymgmtGCPKMSConfig(mount, kmsName, updatedKeyCollection, gcpProject, updatedLocation, gcpCredentials),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace),
+					},
+				},
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
