@@ -16,6 +16,38 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
+func testAccRadiusAuthBackendUserConfigWithBody(backend, userBody string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "test" {
+	type = "radius"
+	path = %q
+}
+
+resource "vault_radius_auth_backend_user" "test" {
+%s
+}
+`, backend, userBody)
+}
+
+func testAccRadiusAuthBackendUserNamespacedConfigWithBody(namespace, backend, userBody string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+	path = %q
+}
+
+resource "vault_auth_backend" "test" {
+	namespace = vault_namespace.test.path
+	type      = "radius"
+	path      = %q
+}
+
+resource "vault_radius_auth_backend_user" "test" {
+	namespace = vault_namespace.test.path
+%s
+}
+`, namespace, backend, userBody)
+}
+
 func TestAccRadiusAuthBackendUser_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("radius")
 	username := acctest.RandomWithPrefix("user")
@@ -79,47 +111,26 @@ func TestAccRadiusAuthBackendUser_noPolicies(t *testing.T) {
 }
 
 func testAccRadiusAuthBackendUserConfig_basic(backend, username string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "test" {
-  type = "radius"
-  path = "%s"
-}
-
-resource "vault_radius_auth_backend_user" "test" {
-  mount    = vault_auth_backend.test.path
-  username = "%s"
-  policies = ["default"]
-}
-`, backend, username)
+	return testAccRadiusAuthBackendUserConfigWithBody(backend, fmt.Sprintf(`
+	mount    = vault_auth_backend.test.path
+	username = %q
+	policies = ["default"]
+`, username))
 }
 
 func testAccRadiusAuthBackendUserConfig_updated(backend, username string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "test" {
-  type = "radius"
-  path = "%s"
-}
-
-resource "vault_radius_auth_backend_user" "test" {
-  mount    = vault_auth_backend.test.path
-  username = "%s"
-  policies = ["dev", "prod"]
-}
-`, backend, username)
+	return testAccRadiusAuthBackendUserConfigWithBody(backend, fmt.Sprintf(`
+	mount    = vault_auth_backend.test.path
+	username = %q
+	policies = ["dev", "prod"]
+`, username))
 }
 
 func testAccRadiusAuthBackendUserConfig_noPolicies(backend, username string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "test" {
-  type = "radius"
-  path = "%s"
-}
-
-resource "vault_radius_auth_backend_user" "test" {
-  mount    = vault_auth_backend.test.path
-  username = "%s"
-}
-`, backend, username)
+	return testAccRadiusAuthBackendUserConfigWithBody(backend, fmt.Sprintf(`
+	mount    = vault_auth_backend.test.path
+	username = %q
+`, username))
 }
 
 func TestAccRadiusAuthBackendUser_namespace(t *testing.T) {
@@ -206,17 +217,10 @@ resource "vault_radius_auth_backend_user" "test" {
 }
 
 func testAccRadiusAuthBackendUserConfig_missingUsername(backend string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "test" {
-  type = "radius"
-  path = "%s"
-}
-
-resource "vault_radius_auth_backend_user" "test" {
-  mount    = vault_auth_backend.test.path
-  policies = ["default"]
-}
-`, backend)
+	return testAccRadiusAuthBackendUserConfigWithBody(backend, `
+	mount    = vault_auth_backend.test.path
+	policies = ["default"]
+`)
 }
 
 func testAccRadiusAuthBackendUserConfig_missingMount() string {
@@ -229,38 +233,18 @@ resource "vault_radius_auth_backend_user" "test" {
 }
 
 func testAccRadiusAuthBackendUserConfig_invalidNamespace(backend, username string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "test" {
-  type = "radius"
-  path = "%s"
-}
-
-resource "vault_radius_auth_backend_user" "test" {
-  namespace = "nonexistent-namespace"
-  mount     = vault_auth_backend.test.path
-  username  = "%s"
-  policies  = ["default"]
-}
-`, backend, username)
+	return testAccRadiusAuthBackendUserConfigWithBody(backend, fmt.Sprintf(`
+	namespace = "nonexistent-namespace"
+	mount     = vault_auth_backend.test.path
+	username  = %q
+	policies  = ["default"]
+`, username))
 }
 
 func testAccRadiusAuthBackendUserConfig_namespace(backend, username, namespace string) string {
-	return fmt.Sprintf(`
-resource "vault_namespace" "test" {
-  path = "%s"
-}
-
-resource "vault_auth_backend" "test" {
-  namespace = vault_namespace.test.path
-  type      = "radius"
-  path      = "%s"
-}
-
-resource "vault_radius_auth_backend_user" "test" {
-  namespace = vault_namespace.test.path
-  mount     = vault_auth_backend.test.path
-  username  = "%s"
-  policies  = ["default"]
-}
-`, namespace, backend, username)
+	return testAccRadiusAuthBackendUserNamespacedConfigWithBody(namespace, backend, fmt.Sprintf(`
+	mount     = vault_auth_backend.test.path
+	username  = %q
+	policies  = ["default"]
+`, username))
 }
