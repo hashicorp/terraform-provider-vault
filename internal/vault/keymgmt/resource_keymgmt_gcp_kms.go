@@ -295,6 +295,14 @@ func (r *GCPKMSResource) ImportState(ctx context.Context, req resource.ImportSta
 		return
 	}
 
+	if mountPath == "" || kmsName == "" {
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			fmt.Sprintf("Import identifier contains empty fields. Expected format: '<mount_path>/kms/<name>'\nExample: keymgmt/kms/gcp-production\n\nParsed mount: %q, name: %q", mountPath, kmsName),
+		)
+		return
+	}
+
 	// Set the individual fields in state
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mountPath)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), kmsName)...)
