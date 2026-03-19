@@ -102,33 +102,33 @@ func (r *RadiusAuthBackendConfigResource) Schema(ctx context.Context, req resour
 				Optional:            true,
 				Computed:            true,
 			},
-			consts.FieldRadiusSecretWO: schema.StringAttribute{
+			consts.FieldSecretWO: schema.StringAttribute{
 				MarkdownDescription: "The RADIUS shared secret. This is a write-only field and will not be read back from Vault.",
 				Required:            true,
 				WriteOnly:           true,
 				Sensitive:           true,
 			},
-			consts.FieldRadiusUnregisteredUserPolicies: schema.SetAttribute{
+			consts.FieldUnregisteredUserPolicies: schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "A set of policies to be granted to unregistered users.",
 				Optional:            true,
 			},
-			consts.FieldRadiusDialTimeout: schema.Int64Attribute{
+			consts.FieldDialTimeout: schema.Int64Attribute{
 				MarkdownDescription: "Number of seconds to wait for a backend connection before timing out. Defaults to `10`. If removed from configuration after being set, Vault retains the previously stored value.",
 				Optional:            true,
 				Computed:            true,
 			},
-			consts.FieldRadiusReadTimeout: schema.Int64Attribute{
+			consts.FieldReadTimeout: schema.Int64Attribute{
 				MarkdownDescription: "Number of seconds to wait for a response from the RADIUS server. Defaults to `10`. If removed from configuration after being set, Vault retains the previously stored value.",
 				Optional:            true,
 				Computed:            true,
 			},
-			consts.FieldRadiusNASPort: schema.Int64Attribute{
+			consts.FieldNASPort: schema.Int64Attribute{
 				MarkdownDescription: "The NAS-Port attribute of the RADIUS request. Defaults to `10`. If removed from configuration after being set, Vault retains the previously stored value.",
 				Optional:            true,
 				Computed:            true,
 			},
-			consts.FieldRadiusNASIdentifier: schema.StringAttribute{
+			consts.FieldNASIdentifier: schema.StringAttribute{
 				MarkdownDescription: "The NAS-Identifier attribute of the RADIUS request. This is a read-only field returned by Vault.",
 				Computed:            true,
 			},
@@ -384,7 +384,7 @@ func (r *RadiusAuthBackendConfigResource) writeConfig(ctx context.Context, vault
 // Write-only fields are not included in the plan, so they must be read from config directly.
 func (r *RadiusAuthBackendConfigResource) readSecretFromConfig(ctx context.Context, config tfsdk.Config) (string, diag.Diagnostics) {
 	var secret *string
-	diags := config.GetAttribute(ctx, path.Root(consts.FieldRadiusSecretWO), &secret)
+	diags := config.GetAttribute(ctx, path.Root(consts.FieldSecretWO), &secret)
 	if diags.HasError() {
 		return "", diags
 	}
@@ -438,11 +438,10 @@ func (r *RadiusAuthBackendConfigResource) getApiModel(ctx context.Context, data 
 
 	// Always send unregistered_user_policies as comma-separated string (Vault API requirement)
 	// Empty string clears policies, non-empty string sets them
-	vaultRequest[consts.FieldRadiusUnregisteredUserPolicies] = policiesStr
+	vaultRequest[consts.FieldUnregisteredUserPolicies] = policiesStr
 
 	// alias_metadata requires Vault Enterprise 1.21+
-	meta := r.Meta()
-	if meta == nil || !meta.IsAPISupported(provider.VaultVersion121) || !meta.IsEnterpriseSupported() {
+	if meta := r.Meta(); meta == nil || !meta.IsAPISupported(provider.VaultVersion121) || !meta.IsEnterpriseSupported() {
 		delete(vaultRequest, consts.FieldAliasMetadata)
 	}
 
@@ -499,8 +498,7 @@ func (r *RadiusAuthBackendConfigResource) populateDataModelFromApi(ctx context.C
 
 	// Restore alias_metadata if Vault doesn't support it (CE or < 1.21)
 	// This prevents state inconsistency when user configures alias_metadata on unsupported Vault
-	meta := r.Meta()
-	if meta == nil || !meta.IsAPISupported(provider.VaultVersion121) || !meta.IsEnterpriseSupported() {
+	if meta := r.Meta(); meta == nil || !meta.IsAPISupported(provider.VaultVersion121) || !meta.IsEnterpriseSupported() {
 		data.TokenModel.AliasMetadata = savedAliasMetadata
 	}
 
