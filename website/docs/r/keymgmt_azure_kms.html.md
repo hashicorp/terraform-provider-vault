@@ -12,6 +12,10 @@ Manages an Azure Key Vault provider in the Vault Key Management secrets engine. 
 
 Once configured, keys can be distributed to Azure Key Vault using the `vault_keymgmt_distribute_key` resource.
 
+~> **Important** This resource requires **Terraform 1.11+** for write-only attribute support.
+The `credentials_wo` field is write-only and will never be stored in Terraform state.
+See [the main provider documentation](../index.html) for more details.
+
 For more information on managing Azure Key Vault with Vault, please refer to the Vault [documentation](https://developer.hashicorp.com/vault/docs/secrets/key-management).
 
 **Note** this feature is available only with Vault Enterprise.
