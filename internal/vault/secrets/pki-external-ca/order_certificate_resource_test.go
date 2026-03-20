@@ -1,8 +1,9 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-// Uses vault_acme_challenge_server which is a test only resource.
-//go:build testonly
+// This test uses vault_acme_challenge_server which is a test only resource.
+// If you see a failure that the resource doesn't exist you need to run the
+// test with -tags testonly
 
 package pki_external_ca_test
 
