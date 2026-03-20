@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 )
 
 var (
@@ -167,7 +168,7 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 
 	c, err := client.GetClient(ctx, e.Meta(), config.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error getting client", err.Error())
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
@@ -251,9 +252,10 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 	if len(secret.Auth.Policies) > 0 {
 		policies, diags := types.SetValueFrom(ctx, types.StringType, secret.Auth.Policies)
 		resp.Diagnostics.Append(diags...)
-		if !resp.Diagnostics.HasError() {
-			config.Policies = policies
+		if resp.Diagnostics.HasError() {
+			return
 		}
+		config.Policies = policies
 	} else {
 		config.Policies = types.SetNull(types.StringType)
 	}
@@ -262,9 +264,10 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 	if len(secret.Auth.TokenPolicies) > 0 {
 		tokenPolicies, diags := types.SetValueFrom(ctx, types.StringType, secret.Auth.TokenPolicies)
 		resp.Diagnostics.Append(diags...)
-		if !resp.Diagnostics.HasError() {
-			config.TokenPolicies = tokenPolicies
+		if resp.Diagnostics.HasError() {
+			return
 		}
+		config.TokenPolicies = tokenPolicies
 	} else {
 		config.TokenPolicies = types.SetNull(types.StringType)
 	}
@@ -273,9 +276,10 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 	if len(secret.Auth.IdentityPolicies) > 0 {
 		identityPolicies, diags := types.SetValueFrom(ctx, types.StringType, secret.Auth.IdentityPolicies)
 		resp.Diagnostics.Append(diags...)
-		if !resp.Diagnostics.HasError() {
-			config.IdentityPolicies = identityPolicies
+		if resp.Diagnostics.HasError() {
+			return
 		}
+		config.IdentityPolicies = identityPolicies
 	} else {
 		config.IdentityPolicies = types.SetNull(types.StringType)
 	}
@@ -284,9 +288,10 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 	if len(secret.Auth.Metadata) > 0 {
 		metadata, diags := types.MapValueFrom(ctx, types.StringType, secret.Auth.Metadata)
 		resp.Diagnostics.Append(diags...)
-		if !resp.Diagnostics.HasError() {
-			config.Metadata = metadata
+		if resp.Diagnostics.HasError() {
+			return
 		}
+		config.Metadata = metadata
 	} else {
 		config.Metadata = types.MapNull(types.StringType)
 	}
@@ -344,10 +349,7 @@ func (e *kerberosAuthBackendLoginEphemeral) Close(ctx context.Context, req ephem
 	// Get the Vault client with the appropriate namespace from private data
 	c, err := client.GetClient(ctx, e.Meta(), privateData.Namespace)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting Vault client for token revocation",
-			err.Error(),
-		)
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
