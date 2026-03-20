@@ -99,7 +99,7 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 	if !ok {
 		return
 	}
-	
+
 	kmsResp, err := cli.Logical().ReadWithContext(ctx, kmsPath)
 	if err != nil {
 		resp.Diagnostics.AddError(ErrReading(ResourceTypeKMSProvider, kmsPath, err))
