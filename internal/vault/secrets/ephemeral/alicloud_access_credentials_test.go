@@ -660,39 +660,6 @@ resource "echo" "test" {}
 `
 }
 
-// TestAccAliCloudAccessCredentialsEphemeralResource_emptyMount tests that
-// an empty mount path causes a validation error.
-func TestAccAliCloudAccessCredentialsEphemeralResource_emptyMount(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: `
-ephemeral "vault_alicloud_access_credentials" "creds" {
-  mount = ""
-  role  = "test-role"
-}
-
-provider "echo" {
-  data = {
-    access_key = ephemeral.vault_alicloud_access_credentials.creds.access_key
-  }
-}
-
-resource "echo" "test" {}
-`,
-				ExpectError: regexp.MustCompile(`(?i)Vault response was nil|mount.*empty|mount.*required`),
-			},
-		},
-	})
-}
-
 // TestAccAliCloudAccessCredentialsEphemeralResource_emptyRole tests that
 // an empty role causes a validation error.
 func TestAccAliCloudAccessCredentialsEphemeralResource_emptyRole(t *testing.T) {

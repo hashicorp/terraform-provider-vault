@@ -80,10 +80,12 @@ func (r *AliCloudAccessCredentialsEphemeralResource) Schema(_ context.Context, _
 			consts.FieldAccessKey: schema.StringAttribute{
 				MarkdownDescription: "AliCloud access key ID read from Vault.",
 				Computed:            true,
+				Sensitive:           true,
 			},
 			consts.FieldSecretKey: schema.StringAttribute{
 				MarkdownDescription: "AliCloud secret key read from Vault.",
 				Computed:            true,
+				Sensitive:           true,
 			},
 			consts.FieldSecurityToken: schema.StringAttribute{
 				MarkdownDescription: "AliCloud security token read from Vault (STS credentials).",
@@ -123,6 +125,7 @@ func (r *AliCloudAccessCredentialsEphemeralResource) Metadata(_ context.Context,
 // Open method reads AliCloud credentials from Vault.
 func (r *AliCloudAccessCredentialsEphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
 	var data AliCloudAccessCredentialsModel
+	var mount string
 	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -135,8 +138,6 @@ func (r *AliCloudAccessCredentialsEphemeralResource) Open(ctx context.Context, r
 		return
 	}
 
-	// Default mount to "alicloud" if not specified
-	mount := "alicloud"
 	if !data.Mount.IsNull() && !data.Mount.IsUnknown() {
 		mount = data.Mount.ValueString()
 	}
