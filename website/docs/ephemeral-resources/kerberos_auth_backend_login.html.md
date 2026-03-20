@@ -90,32 +90,6 @@ ephemeral "vault_kerberos_auth_backend_login" "login" {
 }
 ```
 
-### Using Default Mount Path
-
-```hcl
-resource "vault_auth_backend" "kerberos" {
-  type = "kerberos"
-  
-  tune {
-    passthrough_request_headers = ["Authorization"]
-  }
-}
-
-ephemeral "vault_kerberos_auth_backend_login" "login" {
-  mount_id      = vault_auth_backend.kerberos.id
-  keytab_path   = "/path/to/user.keytab"
-  krb5conf_path = "/etc/krb5.conf"
-  username      = "user1"
-  service       = "vault/localhost"
-  realm         = "EXAMPLE.COM"
-  
-  depends_on = [
-    vault_kerberos_auth_backend_config.config,
-    vault_kerberos_auth_backend_ldap_config.ldap
-  ]
-}
-```
-
 ### Using with Namespaces (Vault Enterprise)
 
 ```hcl
