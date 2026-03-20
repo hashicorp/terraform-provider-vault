@@ -326,6 +326,21 @@ func testAccRadiusLoginStateChecks(echoResourceName string, nonEmptyRegex *regex
 			tfjsonpath.New("data").AtMapKey(consts.FieldLeaseDuration),
 			knownvalue.NotNull(),
 		),
+		statecheck.ExpectKnownValue(
+			echoResourceName,
+			tfjsonpath.New("data").AtMapKey(consts.FieldRenewable),
+			knownvalue.NotNull(),
+		),
+		statecheck.ExpectKnownValue(
+			echoResourceName,
+			tfjsonpath.New("data").AtMapKey(consts.FieldPolicies),
+			knownvalue.NotNull(),
+		),
+		statecheck.ExpectKnownValue(
+			echoResourceName,
+			tfjsonpath.New("data").AtMapKey(consts.FieldTokenPolicies),
+			knownvalue.NotNull(),
+		),
 	}
 }
 
