@@ -13,7 +13,6 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -32,7 +31,6 @@ func TestAccKeymgmtDistributeKey(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion111)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -76,7 +74,6 @@ func TestAccKeymgmtDistributeKey_multiple(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion111)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -211,7 +208,6 @@ func TestAccKeymgmtDistributeKey_azure(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion111)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -230,7 +226,8 @@ func TestAccKeymgmtDistributeKey_azure(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccKeymgmtDistributeKeyImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: consts.FieldMount, ImportStateVerifyIgnore: []string{consts.FieldPurpose, consts.FieldProtection}},
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount, ImportStateVerifyIgnore: []string{consts.FieldPurpose, consts.FieldProtection},
+			},
 		},
 	})
 }
@@ -252,7 +249,6 @@ func TestAccKeymgmtDistributeKey_gcp(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion111)
 		},
 		Steps: []resource.TestStep{
 			{
