@@ -34,7 +34,7 @@ resource "vault_auth_backend" "kerberos" {
 
 resource "vault_kerberos_auth_backend_config" "kerberos" {
   mount           = vault_auth_backend.kerberos.path
-  keytab          = filebase64("/path/to/vault.keytab")
+  keytab_wo       = filebase64("/path/to/vault.keytab")
   service_account = "vault/localhost@EXAMPLE.COM"
 }
 
