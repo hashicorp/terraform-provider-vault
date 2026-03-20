@@ -100,30 +100,23 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	kmsResp, err := cli.Logical().ReadWithContext(ctx, kmsPath)
-	if err != nil {
-		resp.Diagnostics.AddError(ErrReading(ResourceTypeKMSProvider, kmsPath, err))
+	replicatePath := data.ReplicatePath()
+	if _, err := cli.Logical().WriteWithContext(ctx, replicatePath, map[string]interface{}{}); err != nil {
+		resp.Diagnostics.AddError("Error replicating Key Management key", fmt.Sprintf("Error replicating key at %s: %s", replicatePath, err))
 		return
 	}
 
-	if kmsResp == nil {
+	responseData, exists := r.readReplicateKey(ctx, cli, kmsPath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !exists {
 		resp.Diagnostics.AddError("KMS provider not found", fmt.Sprintf("KMS provider %s not found at %s", data.KMSName.ValueString(), kmsPath))
 		return
 	}
 
-	kmsProvider := ""
-	if v, ok := kmsResp.Data[consts.FieldProvider].(string); ok {
-		kmsProvider = v
-	}
-
-	if kmsProvider != ProviderAWSKMS {
-		resp.Diagnostics.AddError("Invalid KMS provider", fmt.Sprintf("Key replication is only supported for AWS KMS providers. Current provider: %s", kmsProvider))
-		return
-	}
-
-	replicatePath := data.ReplicatePath()
-	if _, err := cli.Logical().WriteWithContext(ctx, replicatePath, map[string]interface{}{}); err != nil {
-		resp.Diagnostics.AddError("Error replicating Key Management key", fmt.Sprintf("Error replicating key at %s: %s", replicatePath, err))
+	data.parseReplicateKeyResponse(responseData, &resp.Diagnostics, kmsPath)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -144,14 +137,17 @@ func (r *ReplicateKeyResource) Read(ctx context.Context, req resource.ReadReques
 
 	// Build base path to check if distribution exists
 	basePath := data.DistributePath()
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, basePath)
-	if err != nil {
-		resp.Diagnostics.AddError(ErrReading(ResourceTypeKeyDistribution, basePath, err))
+	responseData, exists := r.readReplicateKey(ctx, cli, basePath, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !exists {
+		resp.Diagnostics.AddError("KMS provider not found", fmt.Sprintf("KMS provider %s not found at %s", data.KMSName.ValueString(), basePath))
 		return
 	}
 
-	if vaultResp == nil {
-		resp.State.RemoveResource(ctx)
+	data.parseReplicateKeyResponse(responseData, &resp.Diagnostics, basePath)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -258,4 +254,33 @@ func checkVaultVersion(meta *provider.ProviderMeta) error {
 	}
 
 	return nil
+}
+
+func (r *ReplicateKeyResource) readReplicateKey(ctx context.Context, cli *vaultapi.Client, apiPath string, diags *diag.Diagnostics) (map[string]interface{}, bool) {
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, apiPath)
+	if err != nil {
+		diags.AddError(ErrReading(ResourceTypeKMSProvider, apiPath, err))
+		return nil, false
+	}
+	if vaultResp == nil {
+		return nil, false
+	}
+	return vaultResp.Data, true
+}
+
+func (data *ReplicateKeyResourceModel) parseReplicateKeyResponse(responseData map[string]interface{}, diags *diag.Diagnostics, kmsPath string) {
+	if responseData == nil {
+		diags.AddError("KMS provider not found", fmt.Sprintf("KMS provider %s not found at %s", data.KMSName.ValueString(), kmsPath))
+		return
+	}
+
+	kmsProvider := ""
+	if v, ok := responseData[consts.FieldProvider].(string); ok {
+		kmsProvider = v
+	}
+
+	if kmsProvider != ProviderAWSKMS {
+		diags.AddError("Invalid KMS provider", fmt.Sprintf("Key replication is only supported for AWS KMS providers. Current provider: %s", kmsProvider))
+		return
+	}
 }
