@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -58,7 +59,7 @@ type kerberosAuthBackendLDAPConfigModel struct {
 	URL                       types.String `tfsdk:"url"`
 	BindDN                    types.String `tfsdk:"binddn"`
 	BindPassWO                types.String `tfsdk:"bindpass_wo"`
-	BindPassWOVersion         types.String `tfsdk:"bindpass_wo_version"`
+	BindPassWOVersion         types.Int64  `tfsdk:"bindpass_wo_version"`
 	UserDN                    types.String `tfsdk:"userdn"`
 	UserAttr                  types.String `tfsdk:"userattr"`
 	UserFilter                types.String `tfsdk:"userfilter"`
@@ -74,9 +75,9 @@ type kerberosAuthBackendLDAPConfigModel struct {
 	TLSMaxVersion             types.String `tfsdk:"tls_max_version"`
 	Certificate               types.String `tfsdk:"certificate"`
 	ClientTLSCertWO           types.String `tfsdk:"client_tls_cert_wo"`
-	ClientTLSCertWOVersion    types.String `tfsdk:"client_tls_cert_wo_version"`
+	ClientTLSCertWOVersion    types.Int64  `tfsdk:"client_tls_cert_wo_version"`
 	ClientTLSKeyWO            types.String `tfsdk:"client_tls_key_wo"`
-	ClientTLSKeyWOVersion     types.String `tfsdk:"client_tls_key_wo_version"`
+	ClientTLSKeyWOVersion     types.Int64  `tfsdk:"client_tls_key_wo_version"`
 	DiscoverDN                types.Bool   `tfsdk:"discoverdn"`
 	DenyNullBind              types.Bool   `tfsdk:"deny_null_bind"`
 	UPNDomain                 types.String `tfsdk:"upndomain"`
@@ -160,11 +161,11 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldBindPassWOVersion)),
 				},
 			},
-			consts.FieldBindPassWOVersion: schema.StringAttribute{
+			consts.FieldBindPassWOVersion: schema.Int64Attribute{
 				Optional:    true,
 				Description: "Version identifier for bindpass updates. Change to trigger password update. Must be used together with bindpass_wo.",
-				Validators: []validator.String{
-					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldBindPassWO)),
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRoot(consts.FieldBindPassWO)),
 				},
 			},
 			consts.FieldUserDN: schema.StringAttribute{
@@ -245,11 +246,11 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldClientTLSCertWOVersion)),
 				},
 			},
-			consts.FieldClientTLSCertWOVersion: schema.StringAttribute{
+			consts.FieldClientTLSCertWOVersion: schema.Int64Attribute{
 				Optional:    true,
 				Description: "Version identifier for client TLS certificate updates. Change to trigger certificate update. Must be used together with client_tls_cert_wo.",
-				Validators: []validator.String{
-					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldClientTLSCertWO)),
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRoot(consts.FieldClientTLSCertWO)),
 				},
 			},
 			consts.FieldClientTLSKeyWO: schema.StringAttribute{
@@ -261,11 +262,11 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldClientTLSKeyWOVersion)),
 				},
 			},
-			consts.FieldClientTLSKeyWOVersion: schema.StringAttribute{
+			consts.FieldClientTLSKeyWOVersion: schema.Int64Attribute{
 				Optional:    true,
 				Description: "Version identifier for client TLS key updates. Must be used together with client_tls_key_wo.",
-				Validators: []validator.String{
-					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldClientTLSKeyWO)),
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRoot(consts.FieldClientTLSKeyWO)),
 				},
 			},
 			consts.FieldDiscoverDN: schema.BoolAttribute{
@@ -329,7 +330,7 @@ func (r *kerberosAuthBackendLDAPConfigResource) Create(ctx context.Context, req 
 		return
 	}
 
-	resp.Diagnostics.Append(r.writeConfig(ctx, &plan, &config)...)
+	resp.Diagnostics.Append(r.writeConfig(ctx, &plan, &config, nil)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -337,11 +338,7 @@ func (r *kerberosAuthBackendLDAPConfigResource) Create(ctx context.Context, req 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *kerberosAuthBackendLDAPConfigResource) writeConfig(ctx context.Context, plan *kerberosAuthBackendLDAPConfigModel, config *kerberosAuthBackendLDAPConfigModel) diag.Diagnostics {
-	return r.writeConfigWithState(ctx, plan, config, nil)
-}
-
-func (r *kerberosAuthBackendLDAPConfigResource) writeConfigWithState(ctx context.Context, plan *kerberosAuthBackendLDAPConfigModel, config *kerberosAuthBackendLDAPConfigModel, state *kerberosAuthBackendLDAPConfigModel) diag.Diagnostics {
+func (r *kerberosAuthBackendLDAPConfigResource) writeConfig(ctx context.Context, plan *kerberosAuthBackendLDAPConfigModel, config *kerberosAuthBackendLDAPConfigModel, state *kerberosAuthBackendLDAPConfigModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
@@ -394,9 +391,28 @@ func (r *kerberosAuthBackendLDAPConfigResource) getApiModel(ctx context.Context,
 	var diags diag.Diagnostics
 
 	// Build API model
-	apiModel := kerberosAuthBackendLDAPConfigAPIModel{}
-
-	apiModel.URL = plan.URL.ValueString()
+	apiModel := kerberosAuthBackendLDAPConfigAPIModel{
+		URL:                       plan.URL.ValueString(),
+		UserAttr:                  plan.UserAttr.ValueString(),
+		UserFilter:                plan.UserFilter.ValueString(),
+		GroupFilter:               plan.GroupFilter.ValueString(),
+		GroupAttr:                 plan.GroupAttr.ValueString(),
+		AnonymousGroupSearch:      plan.AnonymousGroupSearch.ValueBool(),
+		UseTokenGroups:            plan.UseTokenGroups.ValueBool(),
+		CaseSensitiveNames:        plan.CaseSensitiveNames.ValueBool(),
+		StartTLS:                  plan.StartTLS.ValueBool(),
+		InsecureTLS:               plan.InsecureTLS.ValueBool(),
+		TLSMinVersion:             plan.TLSMinVersion.ValueString(),
+		TLSMaxVersion:             plan.TLSMaxVersion.ValueString(),
+		DiscoverDN:                plan.DiscoverDN.ValueBool(),
+		DenyNullBind:              plan.DenyNullBind.ValueBool(),
+		RequestTimeout:            plan.RequestTimeout.ValueInt64(),
+		ConnectionTimeout:         plan.ConnectionTimeout.ValueInt64(),
+		UsernameAsAlias:           plan.UsernameAsAlias.ValueBool(),
+		DereferenceAliases:        plan.DereferenceAliases.ValueString(),
+		MaxPageSize:               plan.MaxPageSize.ValueInt64(),
+		EnableSAMAccountNameLogin: plan.EnableSAMAccountNameLogin.ValueBool(),
+	}
 
 	if !plan.BindDN.IsNull() {
 		apiModel.BindDN = plan.BindDN.ValueString()
@@ -416,35 +432,14 @@ func (r *kerberosAuthBackendLDAPConfigResource) getApiModel(ctx context.Context,
 		apiModel.UserDN = plan.UserDN.ValueString()
 	}
 
-	apiModel.UserAttr = plan.UserAttr.ValueString()
-	apiModel.UserFilter = plan.UserFilter.ValueString()
-
 	if !plan.GroupDN.IsNull() {
 		apiModel.GroupDN = plan.GroupDN.ValueString()
 	}
 
-	apiModel.GroupFilter = plan.GroupFilter.ValueString()
-	apiModel.GroupAttr = plan.GroupAttr.ValueString()
-
-	apiModel.AnonymousGroupSearch = plan.AnonymousGroupSearch.ValueBool()
-
-	apiModel.UseTokenGroups = plan.UseTokenGroups.ValueBool()
-
-	apiModel.CaseSensitiveNames = plan.CaseSensitiveNames.ValueBool()
-
-	apiModel.StartTLS = plan.StartTLS.ValueBool()
-
-	apiModel.InsecureTLS = plan.InsecureTLS.ValueBool()
-
-	apiModel.TLSMinVersion = plan.TLSMinVersion.ValueString()
-	apiModel.TLSMaxVersion = plan.TLSMaxVersion.ValueString()
 	if !plan.Certificate.IsNull() {
 		apiModel.Certificate = plan.Certificate.ValueString()
 	}
 
-	// Only send client_tls_cert if:
-	// 1. This is a create operation (state is nil), OR
-	// 2. The version field has changed
 	if !config.ClientTLSCertWO.IsNull() {
 		if state == nil || !plan.ClientTLSCertWOVersion.Equal(state.ClientTLSCertWOVersion) {
 			apiModel.ClientTLSCert = config.ClientTLSCertWO.ValueString()
@@ -452,9 +447,6 @@ func (r *kerberosAuthBackendLDAPConfigResource) getApiModel(ctx context.Context,
 		}
 	}
 
-	// Only send client_tls_key if:
-	// 1. This is a create operation (state is nil), OR
-	// 2. The version field has changed
 	if !config.ClientTLSKeyWO.IsNull() {
 		if state == nil || !plan.ClientTLSKeyWOVersion.Equal(state.ClientTLSKeyWOVersion) {
 			apiModel.ClientTLSKey = config.ClientTLSKeyWO.ValueString()
@@ -462,24 +454,9 @@ func (r *kerberosAuthBackendLDAPConfigResource) getApiModel(ctx context.Context,
 		}
 	}
 
-	apiModel.DiscoverDN = plan.DiscoverDN.ValueBool()
-
-	apiModel.DenyNullBind = plan.DenyNullBind.ValueBool()
-
 	if !plan.UPNDomain.IsNull() {
 		apiModel.UPNDomain = plan.UPNDomain.ValueString()
 	}
-
-	apiModel.RequestTimeout = plan.RequestTimeout.ValueInt64()
-	apiModel.ConnectionTimeout = plan.ConnectionTimeout.ValueInt64()
-
-	apiModel.UsernameAsAlias = plan.UsernameAsAlias.ValueBool()
-
-	apiModel.DereferenceAliases = plan.DereferenceAliases.ValueString()
-
-	apiModel.MaxPageSize = plan.MaxPageSize.ValueInt64()
-
-	apiModel.EnableSAMAccountNameLogin = plan.EnableSAMAccountNameLogin.ValueBool()
 
 	// Populate token fields
 	diags.Append(token.PopulateTokenAPIFromModel(ctx, &plan.TokenModel, &apiModel.TokenAPIModel)...)
@@ -577,8 +554,20 @@ func (r *kerberosAuthBackendLDAPConfigResource) populateDataModelFromApi(ctx con
 		return diags
 	}
 
+	// Set unconditional string fields
 	tfModel.URL = types.StringValue(apiModel.URL)
+	tfModel.UserAttr = types.StringValue(apiModel.UserAttr)
+	tfModel.UserFilter = types.StringValue(apiModel.UserFilter)
+	tfModel.GroupFilter = types.StringValue(apiModel.GroupFilter)
+	tfModel.GroupAttr = types.StringValue(apiModel.GroupAttr)
+	tfModel.TLSMinVersion = types.StringValue(apiModel.TLSMinVersion)
+	tfModel.TLSMaxVersion = types.StringValue(apiModel.TLSMaxVersion)
+	tfModel.DereferenceAliases = types.StringValue(apiModel.DereferenceAliases)
+	tfModel.DenyNullBind = types.BoolValue(apiModel.DenyNullBind)
+	tfModel.RequestTimeout = types.Int64Value(apiModel.RequestTimeout)
+	tfModel.ConnectionTimeout = types.Int64Value(apiModel.ConnectionTimeout)
 
+	// Set conditional string fields (nullable)
 	if apiModel.BindDN != "" {
 		tfModel.BindDN = types.StringValue(apiModel.BindDN)
 	} else {
@@ -591,19 +580,23 @@ func (r *kerberosAuthBackendLDAPConfigResource) populateDataModelFromApi(ctx con
 		tfModel.UserDN = types.StringNull()
 	}
 
-	tfModel.UserAttr = types.StringValue(apiModel.UserAttr)
-
-	tfModel.UserFilter = types.StringValue(apiModel.UserFilter)
-
 	if apiModel.GroupDN != "" {
 		tfModel.GroupDN = types.StringValue(apiModel.GroupDN)
 	} else {
 		tfModel.GroupDN = types.StringNull()
 	}
 
-	tfModel.GroupFilter = types.StringValue(apiModel.GroupFilter)
+	if apiModel.Certificate != "" {
+		tfModel.Certificate = types.StringValue(apiModel.Certificate)
+	} else {
+		tfModel.Certificate = types.StringNull()
+	}
 
-	tfModel.GroupAttr = types.StringValue(apiModel.GroupAttr)
+	if apiModel.UPNDomain != "" {
+		tfModel.UPNDomain = types.StringValue(apiModel.UPNDomain)
+	} else {
+		tfModel.UPNDomain = types.StringNull()
+	}
 
 	if apiModel.AnonymousGroupSearch {
 		tfModel.AnonymousGroupSearch = types.BoolValue(apiModel.AnonymousGroupSearch)
@@ -625,35 +618,13 @@ func (r *kerberosAuthBackendLDAPConfigResource) populateDataModelFromApi(ctx con
 		tfModel.InsecureTLS = types.BoolValue(apiModel.InsecureTLS)
 	}
 
-	tfModel.TLSMinVersion = types.StringValue(apiModel.TLSMinVersion)
-	tfModel.TLSMaxVersion = types.StringValue(apiModel.TLSMaxVersion)
-
-	if apiModel.Certificate != "" {
-		tfModel.Certificate = types.StringValue(apiModel.Certificate)
-	} else {
-		tfModel.Certificate = types.StringNull()
-	}
-
 	if apiModel.DiscoverDN {
 		tfModel.DiscoverDN = types.BoolValue(apiModel.DiscoverDN)
 	}
 
-	tfModel.DenyNullBind = types.BoolValue(apiModel.DenyNullBind)
-
-	if apiModel.UPNDomain != "" {
-		tfModel.UPNDomain = types.StringValue(apiModel.UPNDomain)
-	} else {
-		tfModel.UPNDomain = types.StringNull()
-	}
-
-	tfModel.RequestTimeout = types.Int64Value(apiModel.RequestTimeout)
-	tfModel.ConnectionTimeout = types.Int64Value(apiModel.ConnectionTimeout)
-
 	if apiModel.UsernameAsAlias {
 		tfModel.UsernameAsAlias = types.BoolValue(apiModel.UsernameAsAlias)
 	}
-
-	tfModel.DereferenceAliases = types.StringValue(apiModel.DereferenceAliases)
 
 	if apiModel.MaxPageSize != 0 {
 		tfModel.MaxPageSize = types.Int64Value(apiModel.MaxPageSize)
@@ -694,7 +665,7 @@ func (r *kerberosAuthBackendLDAPConfigResource) Update(ctx context.Context, req 
 		return
 	}
 
-	resp.Diagnostics.Append(r.writeConfigWithState(ctx, &plan, &config, &state)...)
+	resp.Diagnostics.Append(r.writeConfig(ctx, &plan, &config, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
