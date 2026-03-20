@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* Add support for `vault_quota_config` resource. ([#2837](https://github.com/hashicorp/terraform-provider-vault/pull/2837))
+
 ## 5.8.0 (March 12, 2026)
 
 FEATURES:
