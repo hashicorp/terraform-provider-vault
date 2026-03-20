@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var _ resource.Resource = &ReplicateKeyResource{}
@@ -86,12 +87,19 @@ func (r *ReplicateKeyResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	kmsPath := data.KMSPath()
+
+	// Check Vault version
+	if err := checkVaultVersion(r.Meta()); err != nil {
+		resp.Diagnostics.AddError(ErrReading(ResourceTypeKMSProvider, kmsPath, err))
+		return
+	}
+
 	cli, ok := r.getVaultClient(ctx, data.Namespace.ValueString(), &resp.Diagnostics)
 	if !ok {
 		return
 	}
-
-	kmsPath := data.KMSPath()
+	
 	kmsResp, err := cli.Logical().ReadWithContext(ctx, kmsPath)
 	if err != nil {
 		resp.Diagnostics.AddError(ErrReading(ResourceTypeKMSProvider, kmsPath, err))
@@ -238,4 +246,16 @@ func (r *ReplicateKeyResource) getVaultClient(ctx context.Context, namespace str
 		return nil, false
 	}
 	return cli, true
+}
+
+func checkVaultVersion(meta *provider.ProviderMeta) error {
+	minVersion := provider.VaultVersion200
+	currentVersion := meta.GetVaultVersion()
+
+	if !meta.IsAPISupported(minVersion) {
+		return fmt.Errorf("Key replication requires Vault %s or higher; current version: %s",
+			minVersion, currentVersion)
+	}
+
+	return nil
 }
