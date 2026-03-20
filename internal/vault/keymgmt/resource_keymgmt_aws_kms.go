@@ -71,7 +71,7 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Refers to a location to store keys in the AWS KMS provider. Cannot be changed after creation.",
+				MarkdownDescription: "Refers to the name of an AWS region. Cannot be changed after creation.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -81,8 +81,9 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Sensitive:   true,
 				WriteOnly:   true,
 				ElementType: types.StringType,
-				MarkdownDescription: "The credentials to use for authentication with the AWS KMS provider. Supplying values for this parameter " +
-					"is optional, as credentials may also be specified as environment variables.",
+				MarkdownDescription: "The credentials to use for authentication with AWS KMS. Supplying values for this parameter is " +
+					"optional, as credentials may also be specified as environment variables. Credentials provided to this parameter will " +
+					"take precedence over credentials provided via environment variables.",
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				Optional: true,
