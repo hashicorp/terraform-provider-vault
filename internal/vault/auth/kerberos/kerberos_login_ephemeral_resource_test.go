@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -54,7 +53,6 @@ func TestAccKerberosAuthBackendLoginEphemeralResource_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -116,7 +114,7 @@ resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
   url         = "%s"
   binddn      = "%s"
   bindpass_wo = "%s"
-  bindpass_wo_version = "1"
+  bindpass_wo_version = 1
   userdn      = "%s"
   userattr    = "%s"
   groupdn     = "%s"
@@ -178,7 +176,6 @@ func TestAccKerberosAuthBackendLoginEphemeralResource_withOptions(t *testing.T) 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -219,7 +216,7 @@ resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
   url         = "%s"
   binddn      = "%s"
   bindpass_wo = "%s"
-  bindpass_wo_version = "1"
+  bindpass_wo_version = 1
   userdn      = "%s"
   userattr    = "%s"
   groupdn     = "%s"
@@ -283,8 +280,7 @@ func TestAccKerberosAuthBackendLoginEphemeralResource_namespace(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -353,7 +349,7 @@ resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
   url                 = "%s"
   binddn              = "%s"
   bindpass_wo         = "%s"
-  bindpass_wo_version = "1"
+  bindpass_wo_version = 1
   userdn              = "%s"
   userattr            = "%s"
   groupdn             = "%s"
