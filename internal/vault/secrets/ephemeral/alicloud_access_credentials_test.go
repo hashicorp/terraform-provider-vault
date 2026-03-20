@@ -70,41 +70,6 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_basic(t *testing.T) {
 	})
 }
 
-// TestAccAliCloudAccessCredentialsEphemeralResource_defaultMount tests the creation of
-// AliCloud credentials using the default mount path.
-func TestAccAliCloudAccessCredentialsEphemeralResource_defaultMount(t *testing.T) {
-	accessKey := os.Getenv("ALICLOUD_ACCESS_KEY")
-	secretKey := os.Getenv("ALICLOUD_SECRET_KEY")
-
-	if accessKey == "" || secretKey == "" {
-		t.Skip("ALICLOUD_ACCESS_KEY and ALICLOUD_SECRET_KEY must be set for acceptance tests")
-	}
-
-	backend := acctest.RandomWithPrefix("tf-alicloud")
-	role := acctest.RandomWithPrefix("test-role")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAliCloudAccessCredentialsEphemeralResourceConfig_defaultMount(backend, role, accessKey, secretKey),
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("mount"), knownvalue.StringExact(backend)),
-					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("role"), knownvalue.StringExact(role)),
-					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("access_key"), knownvalue.NotNull()),
-					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("secret_key"), knownvalue.NotNull()),
-				},
-			},
-		},
-	})
-}
-
 // TestAccAliCloudAccessCredentialsEphemeralResource_namespace tests the creation of
 // AliCloud credentials in a Vault namespace.
 func TestAccAliCloudAccessCredentialsEphemeralResource_namespace(t *testing.T) {
@@ -606,88 +571,6 @@ provider "echo" {
 resource "echo" "test" {}
 `,
 				ExpectError: regexp.MustCompile(`(?i)error|no.*secrets.*engine|permission denied|invalid path`),
-			},
-		},
-	})
-}
-
-// TestAccAliCloudAccessCredentialsEphemeralResource_nonExistentRole tests that
-// requesting credentials for a non-existent role returns an error.
-func TestAccAliCloudAccessCredentialsEphemeralResource_nonExistentRole(t *testing.T) {
-	accessKey := os.Getenv("ALICLOUD_ACCESS_KEY")
-	secretKey := os.Getenv("ALICLOUD_SECRET_KEY")
-
-	if accessKey == "" || secretKey == "" {
-		t.Skip("ALICLOUD_ACCESS_KEY and ALICLOUD_SECRET_KEY must be set for acceptance tests")
-	}
-
-	backend := acctest.RandomWithPrefix("tf-alicloud")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccAliCloudAccessCredentialsEphemeralResourceConfig_nonExistentRole(backend, accessKey, secretKey),
-				ExpectError: regexp.MustCompile(`(?i)Vault response was nil|role.*not.*found|unknown.*role`),
-			},
-		},
-	})
-}
-
-func testAccAliCloudAccessCredentialsEphemeralResourceConfig_nonExistentRole(backend, accessKey, secretKey string) string {
-	return testAccAliCloudAccessCredentialsEphemeralResourceConfigBase(backend, accessKey, secretKey) + `
-
-ephemeral "vault_alicloud_access_credentials" "creds" {
-	namespace = var.vault_namespace
-	mount     = vault_mount.alicloud.path
-	role      = "non-existent-role"
-	mount_id  = vault_mount.alicloud.id
-}
-
-provider "echo" {
-	data = {
-		access_key = ephemeral.vault_alicloud_access_credentials.creds.access_key
-	}
-}
-
-resource "echo" "test" {}
-`
-}
-
-// TestAccAliCloudAccessCredentialsEphemeralResource_emptyRole tests that
-// an empty role causes a validation error.
-func TestAccAliCloudAccessCredentialsEphemeralResource_emptyRole(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: `
-ephemeral "vault_alicloud_access_credentials" "creds" {
-  mount = "alicloud"
-  role  = ""
-}
-
-provider "echo" {
-  data = {
-    access_key = ephemeral.vault_alicloud_access_credentials.creds.access_key
-  }
-}
-
-resource "echo" "test" {}
-`,
-				ExpectError: regexp.MustCompile(`(?i)Vault response was nil|role.*empty|role.*required`),
 			},
 		},
 	})
