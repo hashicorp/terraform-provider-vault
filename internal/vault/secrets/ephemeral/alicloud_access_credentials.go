@@ -90,6 +90,7 @@ func (r *AliCloudAccessCredentialsEphemeralResource) Schema(_ context.Context, _
 			consts.FieldSecurityToken: schema.StringAttribute{
 				MarkdownDescription: "AliCloud security token read from Vault (STS credentials).",
 				Computed:            true,
+				Sensitive:           true,
 			},
 			consts.FieldExpiration: schema.StringAttribute{
 				MarkdownDescription: "Expiration time for the credentials.",
