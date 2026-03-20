@@ -108,28 +108,7 @@ func (r *RadiusAuthBackendUserResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	vaultClient, _, _, userPath, diags := r.getClientAndUserData(ctx, data.Namespace.ValueString(), data.Mount, data.Username)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Build the API request
-	vaultRequest, apiDiags := r.getApiModel(ctx, &data)
-	resp.Diagnostics.Append(apiDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	userResp, writeDiags := r.writeUser(ctx, vaultClient, userPath, vaultRequest, errutil.VaultCreateErr)
-	resp.Diagnostics.Append(writeDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Populate model from API response
-	populateDiags := r.populateDataModelFromApi(ctx, &data, userResp.Data)
-	resp.Diagnostics.Append(populateDiags...)
+	resp.Diagnostics.Append(r.upsertUser(ctx, &data, errutil.VaultCreateErr)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -185,33 +164,37 @@ func (r *RadiusAuthBackendUserResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	vaultClient, _, _, userPath, diags := r.getClientAndUserData(ctx, data.Namespace.ValueString(), data.Mount, data.Username)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Build the API request
-	vaultRequest, apiDiags := r.getApiModel(ctx, &data)
-	resp.Diagnostics.Append(apiDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	userResp, writeDiags := r.writeUser(ctx, vaultClient, userPath, vaultRequest, errutil.VaultUpdateErr)
-	resp.Diagnostics.Append(writeDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Populate model from API response
-	populateDiags := r.populateDataModelFromApi(ctx, &data, userResp.Data)
-	resp.Diagnostics.Append(populateDiags...)
+	resp.Diagnostics.Append(r.upsertUser(ctx, &data, errutil.VaultUpdateErr)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *RadiusAuthBackendUserResource) upsertUser(ctx context.Context, data *RadiusAuthBackendUserModel, writeErr func(error) (string, string)) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	vaultClient, _, _, userPath, clientDiags := r.getClientAndUserData(ctx, data.Namespace.ValueString(), data.Mount, data.Username)
+	diags.Append(clientDiags...)
+	if diags.HasError() {
+		return diags
+	}
+
+	vaultRequest, apiDiags := r.getApiModel(ctx, data)
+	diags.Append(apiDiags...)
+	if diags.HasError() {
+		return diags
+	}
+
+	userResp, writeDiags := r.writeUser(ctx, vaultClient, userPath, vaultRequest, writeErr)
+	diags.Append(writeDiags...)
+	if diags.HasError() {
+		return diags
+	}
+
+	diags.Append(r.populateDataModelFromApi(ctx, data, userResp.Data)...)
+	return diags
 }
 
 // Delete is called during the terraform destroy command.
