@@ -95,68 +95,6 @@ func FatalTestEnvUnset(t *testing.T, envVars ...string) []string {
 	return handleTestEnvUnsetF(t, t.Fatalf, envVars...)
 }
 
-// SkipTestEnvUnsetKerberos skips the test if any of the required Kerberos environment variables
-// are empty/unset. Returns a KerberosTestConfig struct with all the values.
-func SkipTestEnvUnsetKerberos(t *testing.T) *KerberosTestConfig {
-	t.Helper()
-	values := SkipTestEnvUnset(t,
-		"VAULT_TEST_KERBEROS_KEYTAB_PATH",
-		"VAULT_TEST_KERBEROS_KRB5CONF_PATH",
-		"VAULT_TEST_KERBEROS_USERNAME",
-		"VAULT_TEST_KERBEROS_SERVICE",
-		"VAULT_TEST_KERBEROS_REALM",
-		"VAULT_TEST_KERBEROS_KEYTAB_BASE64",
-		"VAULT_TEST_KERBEROS_SERVICE_ACCOUNT",
-		"VAULT_TEST_KERBEROS_LDAP_URL",
-		"VAULT_TEST_KERBEROS_LDAP_BINDDN",
-		"VAULT_TEST_KERBEROS_LDAP_BINDPASS",
-		"VAULT_TEST_KERBEROS_LDAP_USERDN",
-		"VAULT_TEST_KERBEROS_LDAP_USERATTR",
-		"VAULT_TEST_KERBEROS_LDAP_GROUPDN",
-		"VAULT_TEST_KERBEROS_LDAP_GROUPATTR",
-	)
-
-	return &KerberosTestConfig{
-		KeytabPath:     values[0],
-		Krb5ConfPath:   values[1],
-		Username:       values[2],
-		Service:        values[3],
-		Realm:          values[4],
-		KeytabBase64:   values[5],
-		ServiceAccount: values[6],
-		LdapURL:        values[7],
-		LdapBindDN:     values[8],
-		LdapBindPass:   values[9],
-		LdapUserDN:     values[10],
-		LdapUserAttr:   values[11],
-		LdapGroupDN:    values[12],
-		LdapGroupAttr:  values[13],
-	}
-}
-
-// KerberosTestConfig holds all the Kerberos test configuration values
-type KerberosTestConfig struct {
-	// Kerberos login configuration
-	KeytabPath   string
-	Krb5ConfPath string
-	Username     string
-	Service      string
-	Realm        string
-
-	// Kerberos backend configuration
-	KeytabBase64   string
-	ServiceAccount string
-
-	// LDAP configuration
-	LdapURL       string
-	LdapBindDN    string
-	LdapBindPass  string
-	LdapUserDN    string
-	LdapUserAttr  string
-	LdapGroupDN   string
-	LdapGroupAttr string
-}
-
 func handleTestEnvUnsetF(t *testing.T, f func(f string, args ...interface{}), envVars ...string) []string {
 	t.Helper()
 	return handleTestEnv(t, func(k, v string) {

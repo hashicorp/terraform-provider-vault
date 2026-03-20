@@ -39,7 +39,7 @@ resource "vault_auth_backend" "kerberos" {
 
 resource "vault_kerberos_auth_backend_config" "kerberos" {
   mount           = vault_auth_backend.kerberos.path
-  keytab          = filebase64("/path/to/vault.keytab")
+  keytab_wo       = filebase64("/path/to/vault.keytab")
   service_account = "vault/localhost@EXAMPLE.COM"
 }
 
@@ -64,7 +64,7 @@ resource "vault_kerberos_auth_backend_ldap_config" "config" {
   url                 = "ldap://ldap.example.com"
   binddn              = "cn=vault,ou=Users,dc=example,dc=com"
   bindpass_wo         = var.ldap_bind_password
-  bindpass_wo_version = "v1"
+  bindpass_wo_version = 1
   userdn              = "ou=People,dc=example,dc=org"
 }
 ```
@@ -82,7 +82,7 @@ resource "vault_kerberos_auth_backend_ldap_config" "config" {
   url                     = "ldaps://ldap.example.com:636"
   binddn                  = "cn=vault,ou=Users,dc=example,dc=com"
   bindpass_wo             = var.ldap_bind_password
-  bindpass_wo_version     = "v1"
+  bindpass_wo_version     = 1
   userdn                  = "ou=People,dc=example,dc=org"
   userattr                = "samaccountname"
   groupdn                 = "ou=Groups,dc=example,dc=org"
@@ -117,9 +117,9 @@ resource "vault_kerberos_auth_backend_ldap_config" "config" {
   userdn                     = "ou=People,dc=example,dc=org"
   certificate                = file("/path/to/ca-cert.pem")
   client_tls_cert_wo         = file("/path/to/client-cert.pem")
-  client_tls_cert_wo_version = "v1"
+  client_tls_cert_wo_version = 1
   client_tls_key_wo          = file("/path/to/client-key.pem")
-  client_tls_key_wo_version  = "v1"
+  client_tls_key_wo_version  = 1
 }
 ```
 
@@ -206,7 +206,7 @@ The following arguments are supported:
 * `bindpass_wo` - (Optional) LDAP password for searching for the user DN. This is a write-only field. 
   Must be used together with `bindpass_wo_version`.
 
-* `bindpass_wo_version` - (Optional) Version identifier for bind password updates. Change this value 
+* `bindpass_wo_version` - (Optional) Version identifier (integer) for bind password updates. Change this value
   to trigger a password update. Must be used together with `bindpass_wo`.
 
 * `deny_null_bind` - (Optional) Denies an unauthenticated LDAP bind request if the user's password 

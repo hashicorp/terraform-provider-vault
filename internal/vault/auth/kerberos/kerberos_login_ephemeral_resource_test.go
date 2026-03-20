@@ -20,6 +20,68 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+// kerberosTestConfig holds all the Kerberos test configuration values
+type kerberosTestConfig struct {
+	// Kerberos login configuration
+	KeytabPath   string
+	Krb5ConfPath string
+	Username     string
+	Service      string
+	Realm        string
+
+	// Kerberos backend configuration
+	KeytabBase64   string
+	ServiceAccount string
+
+	// LDAP configuration
+	LdapURL       string
+	LdapBindDN    string
+	LdapBindPass  string
+	LdapUserDN    string
+	LdapUserAttr  string
+	LdapGroupDN   string
+	LdapGroupAttr string
+}
+
+// skipTestEnvUnsetKerberos skips the test if any of the required Kerberos environment variables
+// are empty/unset. Returns a kerberosTestConfig struct with all the values.
+func skipTestEnvUnsetKerberos(t *testing.T) *kerberosTestConfig {
+	t.Helper()
+	values := testutil.SkipTestEnvUnset(t,
+		"VAULT_TEST_KERBEROS_KEYTAB_PATH",
+		"VAULT_TEST_KERBEROS_KRB5CONF_PATH",
+		"VAULT_TEST_KERBEROS_USERNAME",
+		"VAULT_TEST_KERBEROS_SERVICE",
+		"VAULT_TEST_KERBEROS_REALM",
+		"VAULT_TEST_KERBEROS_KEYTAB_BASE64",
+		"VAULT_TEST_KERBEROS_SERVICE_ACCOUNT",
+		"VAULT_TEST_KERBEROS_LDAP_URL",
+		"VAULT_TEST_KERBEROS_LDAP_BINDDN",
+		"VAULT_TEST_KERBEROS_LDAP_BINDPASS",
+		"VAULT_TEST_KERBEROS_LDAP_USERDN",
+		"VAULT_TEST_KERBEROS_LDAP_USERATTR",
+		"VAULT_TEST_KERBEROS_LDAP_GROUPDN",
+		"VAULT_TEST_KERBEROS_LDAP_GROUPATTR",
+	)
+
+	return &kerberosTestConfig{
+		KeytabPath:     values[0],
+		Krb5ConfPath:   values[1],
+		Username:       values[2],
+		Service:        values[3],
+		Realm:          values[4],
+		KeytabBase64:   values[5],
+		ServiceAccount: values[6],
+		LdapURL:        values[7],
+		LdapBindDN:     values[8],
+		LdapBindPass:   values[9],
+		LdapUserDN:     values[10],
+		LdapUserAttr:   values[11],
+		LdapGroupDN:    values[12],
+		LdapGroupAttr:  values[13],
+	}
+}
+
 // TestAccKerberosAuthBackendLoginEphemeralResource_basic tests the Kerberos login ephemeral resource
 // Note: This test requires a properly configured Kerberos environment with:
 // - A valid keytab file
@@ -45,7 +107,7 @@ import (
 func TestAccKerberosAuthBackendLoginEphemeralResource_basic(t *testing.T) {
 	acctestutil.SkipTestAcc(t)
 
-	config := testutil.SkipTestEnvUnsetKerberos(t)
+	config := skipTestEnvUnsetKerberos(t)
 
 	mount := acctest.RandomWithPrefix("kerberos-mount")
 	nonEmpty := regexp.MustCompile(`^.+$`)
@@ -92,7 +154,7 @@ func TestAccKerberosAuthBackendLoginEphemeralResource_basic(t *testing.T) {
 	})
 }
 
-func testAccKerberosAuthBackendLoginEphemeralResourceConfig_basic(mount string, config *testutil.KerberosTestConfig) string {
+func testAccKerberosAuthBackendLoginEphemeralResourceConfig_basic(mount string, config *kerberosTestConfig) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kerberos" {
   type = "kerberos"
@@ -169,7 +231,7 @@ resource "echo" "test_kerberos" {}
 func TestAccKerberosAuthBackendLoginEphemeralResource_withOptions(t *testing.T) {
 	acctestutil.SkipTestAcc(t)
 
-	config := testutil.SkipTestEnvUnsetKerberos(t)
+	config := skipTestEnvUnsetKerberos(t)
 
 	mount := acctest.RandomWithPrefix("kerberos-mount")
 
@@ -194,7 +256,7 @@ func TestAccKerberosAuthBackendLoginEphemeralResource_withOptions(t *testing.T) 
 	})
 }
 
-func testAccKerberosAuthBackendLoginEphemeralResourceConfig_withOptions(mount string, config *testutil.KerberosTestConfig) string {
+func testAccKerberosAuthBackendLoginEphemeralResourceConfig_withOptions(mount string, config *kerberosTestConfig) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kerberos" {
   type = "kerberos"
@@ -271,7 +333,7 @@ resource "echo" "test_kerberos" {}
 func TestAccKerberosAuthBackendLoginEphemeralResource_namespace(t *testing.T) {
 	acctestutil.SkipTestAcc(t)
 
-	config := testutil.SkipTestEnvUnsetKerberos(t)
+	config := skipTestEnvUnsetKerberos(t)
 
 	namespace := acctest.RandomWithPrefix("test-namespace")
 	mount := acctest.RandomWithPrefix("kerberos-mount")
@@ -320,7 +382,7 @@ func TestAccKerberosAuthBackendLoginEphemeralResource_namespace(t *testing.T) {
 	})
 }
 
-func testAccKerberosAuthBackendLoginEphemeralResourceConfig_namespace(namespace, mount string, config *testutil.KerberosTestConfig) string {
+func testAccKerberosAuthBackendLoginEphemeralResourceConfig_namespace(namespace, mount string, config *kerberosTestConfig) string {
 	return fmt.Sprintf(`
 resource "vault_namespace" "test" {
   path = "%s"
@@ -389,7 +451,7 @@ resource "echo" "test_kerberos" {}
 func TestAccKerberosAuthBackendLoginEphemeralResource_invalidKeytab(t *testing.T) {
 	acctestutil.SkipTestAcc(t)
 
-	config := testutil.SkipTestEnvUnsetKerberos(t)
+	config := skipTestEnvUnsetKerberos(t)
 
 	mount := acctest.RandomWithPrefix("kerberos-mount")
 
@@ -410,7 +472,7 @@ func TestAccKerberosAuthBackendLoginEphemeralResource_invalidKeytab(t *testing.T
 	})
 }
 
-func testAccKerberosAuthBackendLoginEphemeralResourceConfig_invalidKeytab(mount string, config *testutil.KerberosTestConfig) string {
+func testAccKerberosAuthBackendLoginEphemeralResourceConfig_invalidKeytab(mount string, config *kerberosTestConfig) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kerberos" {
   type = "kerberos"
@@ -471,7 +533,7 @@ resource "echo" "test_kerberos" {}
 func TestAccKerberosAuthBackendLoginEphemeralResource_invalidNamespace(t *testing.T) {
 	acctestutil.SkipTestAcc(t)
 
-	config := testutil.SkipTestEnvUnsetKerberos(t)
+	config := skipTestEnvUnsetKerberos(t)
 
 	mount := acctest.RandomWithPrefix("kerberos-mount")
 
@@ -493,7 +555,7 @@ func TestAccKerberosAuthBackendLoginEphemeralResource_invalidNamespace(t *testin
 	})
 }
 
-func testAccKerberosAuthBackendLoginEphemeralResourceConfig_invalidNamespace(mount string, config *testutil.KerberosTestConfig) string {
+func testAccKerberosAuthBackendLoginEphemeralResourceConfig_invalidNamespace(mount string, config *kerberosTestConfig) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kerberos" {
   type = "kerberos"
