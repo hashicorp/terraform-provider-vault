@@ -136,17 +136,17 @@ func TestAccKerberosAuthBackendLDAPConfig_bindPassUpdate(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKerberosAuthBackendLDAPConfigConfig_withBindPass(path, url, bindDN, userDN, bindPass1, "v1"),
+				Config: testAccKerberosAuthBackendLDAPConfigConfig_withBindPass(path, url, bindDN, userDN, bindPass1, 1),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "v1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "1"),
 				),
 			},
 			{
-				Config: testAccKerberosAuthBackendLDAPConfigConfig_withBindPass(path, url, bindDN, userDN, bindPass2, "v2"),
+				Config: testAccKerberosAuthBackendLDAPConfigConfig_withBindPass(path, url, bindDN, userDN, bindPass2, 2),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "v2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "2"),
 				),
 			},
 		},
@@ -416,8 +416,8 @@ func TestAccKerberosAuthBackendLDAPConfig_allFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTLSMinVersion, "tls12"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTLSMaxVersion, "tls13"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCertificate),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldClientTLSCertWOVersion, "v1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldClientTLSKeyWOVersion, "v1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientTLSCertWOVersion, "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldClientTLSKeyWOVersion, "1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDenyNullBind, "true"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDiscoverDN, "true"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUPNDomain, "example.com"),
@@ -598,7 +598,7 @@ resource "vault_kerberos_auth_backend_ldap_config" "config" {
   mount                = vault_auth_backend.kerberos.path
   url                  = %q
   binddn               = %q
-  bindpass_wo_version  = "v1"
+  bindpass_wo_version  = 1
   userdn               = %q
 }
 `, path, url, bindDN, userDN)
@@ -729,7 +729,7 @@ resource "vault_kerberos_auth_backend_ldap_config" "config" {
 	return config
 }
 
-func testAccKerberosAuthBackendLDAPConfigConfig_withBindPass(path, url, bindDN, userDN, bindPass, version string) string {
+func testAccKerberosAuthBackendLDAPConfigConfig_withBindPass(path, url, bindDN, userDN, bindPass string, version int) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kerberos" {
   type = "kerberos"
@@ -742,7 +742,7 @@ resource "vault_kerberos_auth_backend_ldap_config" "config" {
   binddn              = %q
   userdn              = %q
   bindpass_wo         = %q
-  bindpass_wo_version = %q
+  bindpass_wo_version = %d
 }
 `, path, url, bindDN, userDN, bindPass, version)
 }
@@ -862,7 +862,7 @@ ZscqCwaiRiHHPi/TnX0RlpXBJgvwmMTh5FS/iUkYBUwFgRz0IkNPAC6aen2KyPWk
 S095THILQpinS1k7aEMGfl2seEOmnI4Ou/nT
 -----END CERTIFICATE-----
 EOT
-  client_tls_cert_wo_version = "v1"
+  client_tls_cert_wo_version = 1
   client_tls_key_wo         = <<-EOT
 -----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDpbw4YjPqeMFuv
@@ -893,7 +893,7 @@ NF8CWGLZpxhdm75eXy0RdPKy2h+Xp3fIi6hAdoOR8z1KiTs7swRh9dS4jcbNYxzO
 H6Kj7Yv/nKr9jdhDJ1iMUjse
 -----END PRIVATE KEY-----
 EOT
-  client_tls_key_wo_version    = "v1"
+  client_tls_key_wo_version    = 1
   deny_null_bind               = true
   discoverdn                  = true
   upndomain                    = "example.com"
