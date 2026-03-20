@@ -157,35 +157,10 @@ func (r *RadiusAuthBackendConfigResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	mountPath := r.mountPath(data.Mount)
-
-	// Build the API request
-	vaultRequest, apiDiags := r.getApiModel(ctx, &data, secret)
-	resp.Diagnostics.Append(apiDiags...)
+	resp.Diagnostics.Append(r.upsertConfig(ctx, &data, secret, errutil.VaultCreateErr)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	configResp, writeDiags := r.writeConfig(ctx, vaultClient, mountPath, vaultRequest, errutil.VaultCreateErr)
-	resp.Diagnostics.Append(writeDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Populate model from API response
-	populateDiags := r.populateDataModelFromApi(ctx, &data, configResp)
-	resp.Diagnostics.Append(populateDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	data.Mount = types.StringValue(mountPath)
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -253,37 +228,45 @@ func (r *RadiusAuthBackendConfigResource) Update(ctx context.Context, req resour
 		return
 	}
 
+	resp.Diagnostics.Append(r.upsertConfig(ctx, &data, secret, errutil.VaultUpdateErr)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *RadiusAuthBackendConfigResource) upsertConfig(ctx context.Context, data *RadiusAuthBackendModel, secret string, writeErr func(error) (string, string)) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return diags
 	}
 
 	mountPath := r.mountPath(data.Mount)
 
-	// Build the API request
-	vaultRequest, apiDiags := r.getApiModel(ctx, &data, secret)
-	resp.Diagnostics.Append(apiDiags...)
-	if resp.Diagnostics.HasError() {
-		return
+	vaultRequest, apiDiags := r.getApiModel(ctx, data, secret)
+	diags.Append(apiDiags...)
+	if diags.HasError() {
+		return diags
 	}
 
-	configResp, writeDiags := r.writeConfig(ctx, vaultClient, mountPath, vaultRequest, errutil.VaultUpdateErr)
-	resp.Diagnostics.Append(writeDiags...)
-	if resp.Diagnostics.HasError() {
-		return
+	configResp, writeDiags := r.writeConfig(ctx, vaultClient, mountPath, vaultRequest, writeErr)
+	diags.Append(writeDiags...)
+	if diags.HasError() {
+		return diags
 	}
 
-	// Populate model from API response
-	populateDiags := r.populateDataModelFromApi(ctx, &data, configResp)
-	resp.Diagnostics.Append(populateDiags...)
-	if resp.Diagnostics.HasError() {
-		return
+	diags.Append(r.populateDataModelFromApi(ctx, data, configResp)...)
+	if diags.HasError() {
+		return diags
 	}
 
 	data.Mount = types.StringValue(mountPath)
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	return diags
 }
 
 // Delete is called during the terraform destroy command.

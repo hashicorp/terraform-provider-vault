@@ -5,6 +5,7 @@ package radius
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -33,8 +35,9 @@ type RadiusAuthLoginEphemeralResource struct {
 	base.EphemeralResourceWithConfigure
 }
 
+const radiusPrivateDataKey = "radius_data"
+
 type radiusAuthLoginPrivateData struct {
-	LeaseID   string
 	Accessor  string
 	Namespace string
 }
@@ -220,61 +223,32 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 	data.ClientToken = types.StringValue(loginResp.Auth.ClientToken)
 	data.Accessor = types.StringValue(loginResp.Auth.Accessor)
 
-	// Convert token policies to List
-	if len(loginResp.Auth.TokenPolicies) > 0 {
-		tokenPolicies := make([]types.String, 0, len(loginResp.Auth.TokenPolicies))
-		for _, policy := range loginResp.Auth.TokenPolicies {
-			tokenPolicies = append(tokenPolicies, types.StringValue(policy))
-		}
-		var listDiags diag.Diagnostics
-		data.TokenPolicies, listDiags = types.ListValueFrom(ctx, types.StringType, tokenPolicies)
-		resp.Diagnostics.Append(listDiags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
-		data.TokenPolicies = types.ListNull(types.StringType)
+	var listDiags diag.Diagnostics
+	data.TokenPolicies, listDiags = listValueFromStringsOrNull(ctx, loginResp.Auth.TokenPolicies)
+	resp.Diagnostics.Append(listDiags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	// Convert identity policies to List
-	if len(loginResp.Auth.IdentityPolicies) > 0 {
-		identityPolicies := make([]types.String, 0, len(loginResp.Auth.IdentityPolicies))
-		for _, policy := range loginResp.Auth.IdentityPolicies {
-			identityPolicies = append(identityPolicies, types.StringValue(policy))
-		}
-		var listDiags diag.Diagnostics
-		data.IdentityPolicies, listDiags = types.ListValueFrom(ctx, types.StringType, identityPolicies)
-		resp.Diagnostics.Append(listDiags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
-		data.IdentityPolicies = types.ListNull(types.StringType)
+	data.IdentityPolicies, listDiags = listValueFromStringsOrNull(ctx, loginResp.Auth.IdentityPolicies)
+	resp.Diagnostics.Append(listDiags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	// Convert all policies to List
-	if len(loginResp.Auth.Policies) > 0 {
-		policies := make([]types.String, 0, len(loginResp.Auth.Policies))
-		for _, policy := range loginResp.Auth.Policies {
-			policies = append(policies, types.StringValue(policy))
-		}
-		var listDiags diag.Diagnostics
-		data.Policies, listDiags = types.ListValueFrom(ctx, types.StringType, policies)
-		resp.Diagnostics.Append(listDiags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
-		data.Policies = types.ListNull(types.StringType)
+	data.Policies, listDiags = listValueFromStringsOrNull(ctx, loginResp.Auth.Policies)
+	resp.Diagnostics.Append(listDiags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	// Convert metadata to Map
-	metadata := make(map[string]types.String)
+	metadata := make(map[string]string)
 	for key, value := range loginResp.Auth.Metadata {
-		metadata[key] = types.StringValue(value)
+		metadata[key] = value
 	}
 	var mapDiags diag.Diagnostics
-	data.Metadata, mapDiags = types.MapValueFrom(ctx, types.StringType, metadata)
+	data.Metadata, mapDiags = mapValueFromStrings(ctx, metadata)
 	resp.Diagnostics.Append(mapDiags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -292,12 +266,12 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 
 	// Convert data to Map (if present)
 	if loginResp.Data != nil && len(loginResp.Data) > 0 {
-		respData := make(map[string]types.String)
+		respData := make(map[string]string)
 		for key, value := range loginResp.Data {
-			respData[key] = types.StringValue(fmt.Sprintf("%v", value))
+			respData[key] = fmt.Sprintf("%v", value)
 		}
 		var mapDiags diag.Diagnostics
-		data.Data, mapDiags = types.MapValueFrom(ctx, types.StringType, respData)
+		data.Data, mapDiags = mapValueFromStrings(ctx, respData)
 		resp.Diagnostics.Append(mapDiags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -306,75 +280,75 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 		data.Data = types.MapNull(types.StringType)
 	}
 
-	// Convert warnings to List (if present)
-	if len(loginResp.Warnings) > 0 {
-		warnings := make([]types.String, 0, len(loginResp.Warnings))
-		for _, warning := range loginResp.Warnings {
-			warnings = append(warnings, types.StringValue(warning))
-		}
-		var listDiags diag.Diagnostics
-		data.Warnings, listDiags = types.ListValueFrom(ctx, types.StringType, warnings)
-		resp.Diagnostics.Append(listDiags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
-		data.Warnings = types.ListNull(types.StringType)
-	}
-
-	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
-
-	// Store revocation identifiers for Close.
-	if loginResp.LeaseID != "" {
-		resp.Private.SetKey(ctx, consts.FieldLeaseID, []byte(loginResp.LeaseID))
-	}
-	if loginResp.Auth.Accessor != "" {
-		resp.Private.SetKey(ctx, consts.FieldAccessor, []byte(loginResp.Auth.Accessor))
-	}
-	resp.Private.SetKey(ctx, consts.FieldNamespace, []byte(data.Namespace.ValueString()))
-}
-
-func (r *RadiusAuthLoginEphemeralResource) Close(ctx context.Context, req ephemeral.CloseRequest, resp *ephemeral.CloseResponse) {
-	leaseID, diags := req.Private.GetKey(ctx, consts.FieldLeaseID)
-	resp.Diagnostics.Append(diags...)
-	accessor, diags := req.Private.GetKey(ctx, consts.FieldAccessor)
-	resp.Diagnostics.Append(diags...)
-	namespace, diags := req.Private.GetKey(ctx, consts.FieldNamespace)
-	resp.Diagnostics.Append(diags...)
+	data.Warnings, listDiags = listValueFromStringsOrNull(ctx, loginResp.Warnings)
+	resp.Diagnostics.Append(listDiags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if len(leaseID) == 0 && len(accessor) == 0 {
+	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
+
+	// Store revocation identifiers for Close using one JSON payload in private state.
+	if loginResp.Auth.Accessor != "" {
+		privateData := radiusAuthLoginPrivateData{
+			Accessor:  loginResp.Auth.Accessor,
+			Namespace: data.Namespace.ValueString(),
+		}
+		privateDataJSON, err := json.Marshal(privateData)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error encoding private data",
+				err.Error(),
+			)
+			return
+		}
+
+		resp.Private.SetKey(ctx, radiusPrivateDataKey, privateDataJSON)
+	}
+}
+
+func listValueFromStringsOrNull(ctx context.Context, values []string) (types.List, diag.Diagnostics) {
+	if len(values) == 0 {
+		return types.ListNull(types.StringType), nil
+	}
+
+	return types.ListValueFrom(ctx, types.StringType, values)
+}
+
+func mapValueFromStrings(ctx context.Context, values map[string]string) (types.Map, diag.Diagnostics) {
+	return types.MapValueFrom(ctx, types.StringType, values)
+}
+
+func (r *RadiusAuthLoginEphemeralResource) Close(ctx context.Context, req ephemeral.CloseRequest, resp *ephemeral.CloseResponse) {
+	privateBytes, diags := req.Private.GetKey(ctx, radiusPrivateDataKey)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if len(privateBytes) == 0 {
 		return
 	}
 
-	c, err := client.GetClient(ctx, r.Meta(), string(namespace))
+	var privateData radiusAuthLoginPrivateData
+	if err := json.Unmarshal(privateBytes, &privateData); err != nil {
+		tflog.Warn(ctx, fmt.Sprintf("Failed to unmarshal private data for RADIUS login cleanup: %v", err))
+		return
+	}
+
+	if privateData.Accessor == "" {
+		return
+	}
+
+	c, err := client.GetClient(ctx, r.Meta(), privateData.Namespace)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
-	if len(leaseID) > 0 {
-		if err := c.Sys().RevokeWithContext(ctx, string(leaseID)); err == nil {
-			return
-		} else if len(accessor) == 0 {
-			resp.Diagnostics.AddError(
-				"Error revoking RADIUS login token",
-				fmt.Sprintf("Could not revoke login token lease %q: %s", string(leaseID), err),
-			)
-			return
-		}
+	if err := c.Auth().Token().RevokeAccessor(privateData.Accessor); err != nil {
+		tflog.Warn(ctx, fmt.Sprintf("Failed to revoke RADIUS login token accessor %q: %v", privateData.Accessor, err))
+		return
 	}
 
-	if len(accessor) > 0 {
-		if _, err := c.Logical().WriteWithContext(ctx, "auth/token/revoke-accessor", map[string]any{
-			consts.FieldAccessor: string(accessor),
-		}); err != nil {
-			resp.Diagnostics.AddError(
-				"Error revoking RADIUS login token",
-				fmt.Sprintf("Could not revoke login token accessor %q: %s", string(accessor), err),
-			)
-		}
-	}
+	tflog.Info(ctx, fmt.Sprintf("Successfully revoked RADIUS login token accessor: %s", privateData.Accessor))
 }
