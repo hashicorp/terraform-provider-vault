@@ -383,3 +383,169 @@ resource "echo" "test_kerberos" {}
 		config.LdapUserDN, config.LdapUserAttr, config.LdapGroupDN, config.LdapGroupAttr,
 		config.KeytabPath, config.Krb5ConfPath, config.Username, config.Service, config.Realm)
 }
+
+// TestAccKerberosAuthBackendLoginEphemeralResource_invalidKeytab tests error handling
+// when an invalid keytab path is provided, which should trigger SPNEGO token generation error
+func TestAccKerberosAuthBackendLoginEphemeralResource_invalidKeytab(t *testing.T) {
+	acctestutil.SkipTestAcc(t)
+
+	config := testutil.SkipTestEnvUnsetKerberos(t)
+
+	mount := acctest.RandomWithPrefix("kerberos-mount")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccKerberosAuthBackendLoginEphemeralResourceConfig_invalidKeytab(mount, config),
+				ExpectError: regexp.MustCompile("Error generating Kerberos SPNEGO token"),
+			},
+		},
+	})
+}
+
+func testAccKerberosAuthBackendLoginEphemeralResourceConfig_invalidKeytab(mount string, config *testutil.KerberosTestConfig) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "kerberos" {
+  type = "kerberos"
+  path = "%s"
+  
+  tune {
+    passthrough_request_headers = ["Authorization"]
+  }
+}
+
+resource "vault_kerberos_auth_backend_config" "config" {
+  mount               = vault_auth_backend.kerberos.path
+  keytab_wo           = "%s"
+  service_account     = "%s"
+}
+
+resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
+  mount       = vault_auth_backend.kerberos.path
+  url         = "%s"
+  binddn      = "%s"
+  bindpass_wo = "%s"
+  bindpass_wo_version = 1
+  userdn      = "%s"
+  userattr    = "%s"
+  groupdn     = "%s"
+  groupattr   = "%s"
+}
+
+ephemeral "vault_kerberos_auth_backend_login" "login" {
+  mount                    = vault_auth_backend.kerberos.path
+  mount_id                 = vault_auth_backend.kerberos.id
+  keytab_path              = "/nonexistent/path/to/keytab"
+  krb5conf_path            = "%s"
+  username                 = "%s"
+  service                  = "%s"
+  realm                    = "%s"
+  disable_fast_negotiation = false
+  remove_instance_name     = false
+  
+  depends_on = [
+    vault_kerberos_auth_backend_config.config,
+    vault_kerberos_auth_backend_ldap_config.ldap
+  ]
+}
+
+provider "echo" {
+  data = ephemeral.vault_kerberos_auth_backend_login.login
+}
+
+resource "echo" "test_kerberos" {}
+`, mount, config.KeytabBase64, config.ServiceAccount, config.LdapURL, config.LdapBindDN, config.LdapBindPass,
+		config.LdapUserDN, config.LdapUserAttr, config.LdapGroupDN, config.LdapGroupAttr,
+		config.Krb5ConfPath, config.Username, config.Service, config.Realm)
+}
+
+// TestAccKerberosAuthBackendLoginEphemeralResource_invalidNamespace tests error handling
+// when an invalid namespace is provided, which should trigger login API error
+func TestAccKerberosAuthBackendLoginEphemeralResource_invalidNamespace(t *testing.T) {
+	acctestutil.SkipTestAcc(t)
+
+	config := testutil.SkipTestEnvUnsetKerberos(t)
+
+	mount := acctest.RandomWithPrefix("kerberos-mount")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccKerberosAuthBackendLoginEphemeralResourceConfig_invalidNamespace(mount, config),
+				ExpectError: regexp.MustCompile("no handler for route"),
+			},
+		},
+	})
+}
+
+func testAccKerberosAuthBackendLoginEphemeralResourceConfig_invalidNamespace(mount string, config *testutil.KerberosTestConfig) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "kerberos" {
+  type = "kerberos"
+  path = "%s"
+  
+  tune {
+    passthrough_request_headers = ["Authorization"]
+  }
+}
+
+resource "vault_kerberos_auth_backend_config" "config" {
+  mount               = vault_auth_backend.kerberos.path
+  keytab_wo           = "%s"
+  service_account     = "%s"
+}
+
+resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
+  mount       = vault_auth_backend.kerberos.path
+  url         = "%s"
+  binddn      = "%s"
+  bindpass_wo = "%s"
+  bindpass_wo_version = 1
+  userdn      = "%s"
+  userattr    = "%s"
+  groupdn     = "%s"
+  groupattr   = "%s"
+}
+
+ephemeral "vault_kerberos_auth_backend_login" "login" {
+  namespace                = "nonexistent-namespace"
+  mount                    = vault_auth_backend.kerberos.path
+  mount_id                 = vault_auth_backend.kerberos.id
+  keytab_path              = "%s"
+  krb5conf_path            = "%s"
+  username                 = "%s"
+  service                  = "%s"
+  realm                    = "%s"
+  disable_fast_negotiation = false
+  remove_instance_name     = false
+  
+  depends_on = [
+    vault_kerberos_auth_backend_config.config,
+    vault_kerberos_auth_backend_ldap_config.ldap
+  ]
+}
+
+provider "echo" {
+  data = ephemeral.vault_kerberos_auth_backend_login.login
+}
+
+resource "echo" "test_kerberos" {}
+`, mount, config.KeytabBase64, config.ServiceAccount, config.LdapURL, config.LdapBindDN, config.LdapBindPass,
+		config.LdapUserDN, config.LdapUserAttr, config.LdapGroupDN, config.LdapGroupAttr,
+		config.KeytabPath, config.Krb5ConfPath, config.Username, config.Service, config.Realm)
+}
