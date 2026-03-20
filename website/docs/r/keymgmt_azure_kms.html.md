@@ -84,18 +84,16 @@ The following arguments are supported:
 
 * `name` - (Required, Forces new resource) Specifies the name of the Azure Key Vault provider. Cannot be changed after creation.
 
-* `key_collection` - (Required, Forces new resource) Refers to a location to store keys in the Azure Key Vault provider. Cannot be changed after creation.
+* `key_collection` - (Required, Forces new resource) Refers to the name of an existing Azure Key Vault instance. Cannot be changed after creation.
 
-* `credentials_wo` - (Optional, Write-only, Sensitive) Map of Azure credentials passed directly to the Vault API.
-  Supported keys are:
-  - `tenant_id` - Azure Active Directory tenant ID (also called Directory ID).
-  - `client_id` - Azure Active Directory application/client ID for the service principal.
-  - `client_secret` - Azure Active Directory client secret for the service principal.
-  - `environment` - (Optional) Azure cloud environment.
+* `credentials_wo` - (Optional, Write-only, Sensitive) The credentials to use for authentication with Azure Key Vault. Supplying values for this parameter is optional, as credentials may also be specified as environment variables. Environment variables will take precedence over credentials provided via this parameter. This value is write-only and will not be stored in Terraform state.
+  The following values are supported:
+  - `tenant_id` - (Required) The tenant ID for the Azure Active Directory organization. May also be specified by the AZURE_TENANT_ID environment variable.
+  - `client_id` - (Required) The client ID for credentials to invoke the Azure APIs. May also be specified by the AZURE_CLIENT_ID environment variable.
+  - `client_secret` - (Required) The client secret for credentials to invoke the Azure APIs. May also be specified by the AZURE_CLIENT_SECRET environment variable.
+  - `environment` - (Optional) The Azure Cloud environment API endpoints to use. May also be specified by the AZURE_ENVIRONMENT environment variable. Defaults to `AzurePublicCloud`.
 
-  This field is write-only and will never be stored in Terraform state. If not provided, Vault uses credentials from its own environment (e.g. `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` env vars set on the Vault server, or Azure Managed Identity). Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
-
-* `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Since write-only values are not stored in state, Terraform cannot detect when credentials change. Increment this value whenever you update `credentials_wo` to ensure the new credentials are sent to Vault.
+* `credentials_wo_version` - (Optional) Version number for the write-only credentials. Increment this value to trigger a credential rotation. Changing this value will cause the credentials to be re-sent to Vault during the next apply. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 
 ## Import
@@ -106,4 +104,4 @@ Azure Key Vault providers can be imported using the format `{path}/kms/{name}`, 
 $ terraform import vault_keymgmt_azure_kms.production keymgmt/kms/azure-production
 ```
 
-~> **Note:** When importing, `credentials_wo` will not be populated as it is write-only and never returned by the Vault API. Set `credentials_wo` and `credentials_wo_version` after import to manage credentials.
+> **Note:** Import sets the `mount` attribute from the import ID. The `credentials_wo` and `credentials_wo_version` fields will not be populated as they are not returned by the Vault API. You must supply these values in your configuration after import. The corresponding `vault_mount` resource must also be present in your configuration (or separately imported).

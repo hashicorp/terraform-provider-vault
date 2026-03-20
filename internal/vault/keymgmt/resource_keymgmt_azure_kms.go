@@ -71,7 +71,7 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 			},
 			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Refers to a location to store keys in the Azure Key Vault provider. Cannot be changed after creation.",
+				MarkdownDescription: "Refers to the name of an existing Azure Key Vault instance. Cannot be changed after creation.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -81,8 +81,9 @@ func (r *AzureKMSResource) Schema(ctx context.Context, req resource.SchemaReques
 				Sensitive:   true,
 				WriteOnly:   true,
 				ElementType: types.StringType,
-				MarkdownDescription: "The credentials to use for authentication with the Azure Key Vault provider. Supplying values for this parameter " +
-					"is optional, as credentials may also be specified as environment variables.",
+				MarkdownDescription: "The credentials to use for authentication with Azure Key Vault. Supplying values for this " +
+					"parameter is optional, as credentials may also be specified as environment variables. Environment variables will " +
+					"take precedence over credentials provided via this parameter.",
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				Optional: true,
