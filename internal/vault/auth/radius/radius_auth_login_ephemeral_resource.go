@@ -38,8 +38,8 @@ type RadiusAuthLoginEphemeralResource struct {
 const radiusPrivateDataKey = "radius_data"
 
 type radiusAuthLoginPrivateData struct {
-	Accessor  string
-	Namespace string
+	Accessor  string `json:"accessor"`
+	Namespace string `json:"namespace"`
 }
 
 // RadiusAuthLoginEphemeralModel describes the Terraform resource data model to match the
@@ -286,8 +286,6 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 		return
 	}
 
-	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
-
 	// Store revocation identifiers for Close using one JSON payload in private state.
 	if loginResp.Auth.Accessor != "" {
 		privateData := radiusAuthLoginPrivateData{
@@ -305,6 +303,8 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 
 		resp.Private.SetKey(ctx, radiusPrivateDataKey, privateDataJSON)
 	}
+
+	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
 func listValueFromStringsOrNull(ctx context.Context, values []string) (types.List, diag.Diagnostics) {
