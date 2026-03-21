@@ -71,7 +71,7 @@ func (r *GCPKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 			consts.FieldKeyCollection: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Refers to a location to store keys in the GCP Cloud KMS provider. Cannot be changed after creation.",
+				MarkdownDescription: "Refers to the resource ID of an existing GCP Cloud KMS key ring. Cannot be changed after creation.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -81,8 +81,10 @@ func (r *GCPKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Sensitive:   true,
 				WriteOnly:   true,
 				ElementType: types.StringType,
-				MarkdownDescription: "The credentials to use for authentication with the GCP Cloud KMS provider. Supplying values for this parameter " +
-					"is optional, as credentials may also be specified as environment variables.",
+				MarkdownDescription: "The credentials to use for authentication with Google Cloud KMS. Supplying values for this parameter " +
+				"is optional, as credentials may also be specified through environment variables (GOOGLE_CREDENTIALS) or Application Default " +
+				"Credentials (GOOGLE_APPLICATION_CREDENTIALS). The order of precedence is: environment variables, then the credentials provided " +
+				"to this parameter and Application Default Credentials.",
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				Optional: true,
