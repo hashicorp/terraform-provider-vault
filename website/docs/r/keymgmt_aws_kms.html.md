@@ -91,11 +91,16 @@ The following arguments are supported:
 
 * `name` - (Required, Forces new resource) Specifies the name of the AWS KMS provider. Cannot be changed after creation.
 
-* `key_collection` - (Required, Forces new resource) Refers to a location to store keys in the AWS KMS provider. Cannot be changed after creation.
+* `key_collection` - (Required, Forces new resource) Refers to the name of an AWS region. Cannot be changed after creation.
 
-* `credentials_wo` - (Optional, Sensitive, Write-only) Map of AWS credentials passed directly to the Vault API. Supported keys are `access_key` and `secret_key` (and optionally `session_token`). This field is write-only — it will never be stored in Terraform state. If not provided, Vault uses the AWS SDK credential chain (environment variables, shared credentials file, IAM instance profile, etc.). Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
+* `credentials_wo` - (Optional, Sensitive, Write-only) The credentials to use for authentication with AWS KMS. Supplying values for this parameter is optional, as credentials may also be specified as environment variables. Credentials provided to this parameter will take precedence over credentials provided via environment variables. This value is write-only and will not be stored in Terraform state.
+  The following vaules are supported:
+  - `access_key` - (Required) The AWS access key ID. May also be specified by the AWS_ACCESS_KEY_ID environment variable.
+  - `secret_key` - (Required) The AWS secret access key. May also be specified by the AWS_SECRET_ACCESS_KEY environment variable.
+  - `session_token` - (Optional) The AWS session token. May also be specified by the AWS_SESSION_TOKEN environment variable.
+  - `endpoint` - (Optional) The KMS API endpoint to be used to make AWS KMS requests. May also be specified by the AWS_KMS_ENDPOINT environment variable. This is useful when connecting to KMS over a VPC Endpoint. If not set, the secrets engine will use the default API endpoint for the region.
 
-* `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Since write-only values are not stored in state, Terraform cannot detect when credentials change. Increment this value whenever you update `credentials_wo` to ensure the new credentials are sent to Vault.
+* `credentials_wo_version` - (Optional) Version number for the write-only credentials. Increment this value to trigger a credential rotation. Changing this value will cause the credentials to be re-sent to Vault during the next apply. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ## Import
 
@@ -105,4 +110,4 @@ AWS KMS providers can be imported using the format `{path}/kms/{name}`, e.g.
 $ terraform import vault_keymgmt_aws_kms.us_west keymgmt/kms/aws-us-west-2
 ```
 
-~> **Note:** When importing, the `credentials_wo` and `credentials_wo_version` fields will not be populated. Set `credentials_wo` and `credentials_wo_version` in your configuration after import to re-establish credential management.
+> **Note:** Import sets the `mount` attribute from the import ID. The `credentials_wo` and `credentials_wo_version` fields will not be populated as they are not returned by the Vault API. You must supply these values in your configuration after import. The corresponding `vault_mount` resource must also be present in your configuration (or separately imported).

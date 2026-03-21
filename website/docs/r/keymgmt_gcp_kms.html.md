@@ -83,17 +83,13 @@ The following arguments are supported:
 
 * `name` - (Required, Forces new resource) Specifies the name of the GCP Cloud KMS provider. Cannot be changed after creation.
 
-* `key_collection` - (Required, Forces new resource) Refers to a location to store keys in the GCP Cloud KMS provider. Cannot be changed after creation.
+* `key_collection` - (Required, Forces new resource) Refers to the resource ID of an existing GCP Cloud KMS key ring. Cannot be changed after creation.
 
-* `credentials_wo` - (Optional, Write-only, Sensitive) Map of GCP credentials passed directly to the Vault API.
-  Supported keys are:
-  - `service_account_file` - JSON-encoded GCP service account credentials with permissions to manage Cloud KMS keys.
-  - `project` - GCP project ID where the Cloud KMS key ring is located.
-  - `location` - GCP location/region for the Cloud KMS key ring.
+* `credentials_wo` - (Optional, Write-only, Sensitive) The credentials to use for authentication with Google Cloud KMS. Supplying values for this parameter is optional, as credentials may also be specified through environment variables (GOOGLE_CREDENTIALS) or Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS). The order of precedence is: environment variables, then the credentials provided to this parameter and Application Default Credentials. This value is write-only and will not be stored in Terraform state.
+  The following values are supported:
+  - `service_account_file` - (Required) The path to a Google service account key file. The key file must be readable on the host that Vault server is running on. May also be provided by the GOOGLE_CREDENTIALS environment variable or by application default credentials.
 
-  This field is write-only and will never be stored in Terraform state. If not provided, Vault uses credentials from its own environment (e.g. `GOOGLE_APPLICATION_CREDENTIALS` set on the Vault server, or GCP Application Default Credentials). Refer to the [Vault API docs](https://developer.hashicorp.com/vault/api-docs/secret/key-management#create-update-kms-provider) for the full list of accepted credential keys.
-
-* `credentials_wo_version` - (Optional) Version counter for the write-only `credentials_wo` field. Since write-only values are not stored in state, Terraform cannot detect when credentials change. Increment this value whenever you update `credentials_wo` to ensure the new credentials are sent to Vault.
+* `credentials_wo_version` - (Optional) Version number for the write-only credentials. Increment this value to trigger a credential rotation. Changing this value will cause the credentials to be re-sent to Vault during the next apply. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 ## Import
 
@@ -103,4 +99,4 @@ GCP Cloud KMS providers can be imported using the format `{path}/kms/{name}`, e.
 $ terraform import vault_keymgmt_gcp_kms.production keymgmt/kms/gcp-production
 ```
 
-~> **Note:** When importing, `credentials_wo` will not be populated as it is write-only and never returned by the Vault API. Set `credentials_wo` and `credentials_wo_version` after import to manage credentials.
+> **Note:** Import sets the `mount` attribute from the import ID. The `credentials_wo` and `credentials_wo_version` fields will not be populated as they are not returned by the Vault API. You must supply these values in your configuration after import. The corresponding `vault_mount` resource must also be present in your configuration (or separately imported).
