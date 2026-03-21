@@ -82,9 +82,8 @@ func (r *GCPKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				WriteOnly:   true,
 				ElementType: types.StringType,
 				MarkdownDescription: "The credentials to use for authentication with Google Cloud KMS. Supplying values for this parameter " +
-					"is optional, as credentials may also be specified through environment variables (GOOGLE_CREDENTIALS) or Application Default " +
-					"Credentials (GOOGLE_APPLICATION_CREDENTIALS). The order of precedence is: environment variables, then the credentials provided " +
-					"to this parameter and Application Default Credentials.",
+					"is optional, as credentials may also be specified through environment variables or Application Default Credentials. " +
+					"The order of precedence is environment variables, then the credentials provided to this parameter and Application Default Credentials.",
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				Optional: true,

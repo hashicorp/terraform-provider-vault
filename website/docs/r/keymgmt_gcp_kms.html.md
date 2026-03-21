@@ -85,7 +85,7 @@ The following arguments are supported:
 
 * `key_collection` - (Required, Forces new resource) Refers to the resource ID of an existing GCP Cloud KMS key ring. Cannot be changed after creation.
 
-* `credentials_wo` - (Optional, Write-only, Sensitive) The credentials to use for authentication with Google Cloud KMS. Supplying values for this parameter is optional, as credentials may also be specified through environment variables (GOOGLE_CREDENTIALS) or Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS). The order of precedence is: environment variables, then the credentials provided to this parameter and Application Default Credentials. This value is write-only and will not be stored in Terraform state.
+* `credentials_wo` - (Optional, Write-only, Sensitive) The credentials to use for authentication with Google Cloud KMS. Supplying values for this parameter is optional, as credentials may also be specified through environment variables or Application Default Credentials. The order of precedence is environment variables, then the credentials provided to this parameter and Application Default Credentials. This value is write-only and will not be stored in Terraform state.
   The following values are supported:
   - `service_account_file` - (Required) The path to a Google service account key file. The key file must be readable on the host that Vault server is running on. May also be provided by the GOOGLE_CREDENTIALS environment variable or by application default credentials.
 
@@ -100,3 +100,17 @@ $ terraform import vault_keymgmt_gcp_kms.production keymgmt/kms/gcp-production
 ```
 
 > **Note:** Import sets the `mount` attribute from the import ID. The `credentials_wo` and `credentials_wo_version` fields will not be populated as they are not returned by the Vault API. You must supply these values in your configuration after import. The corresponding `vault_mount` resource must also be present in your configuration (or separately imported).
+
+## Required GCP Permissions
+
+The service account must be authorized with the following minimum IAM permissions on the target key ring resource:
+
+- `cloudkms.cryptoKeys.create`
+- `cloudkms.cryptoKeys.update`
+- `cloudkms.importJobs.create`
+- `cloudkms.importJobs.get`
+- `cloudkms.importJobs.useToImport`
+- `cloudkms.cryptoKeyVersions.list`
+- `cloudkms.cryptoKeyVersions.destroy`
+- `cloudkms.cryptoKeyVersions.update`
+- `cloudkms.cryptoKeyVersions.create`
