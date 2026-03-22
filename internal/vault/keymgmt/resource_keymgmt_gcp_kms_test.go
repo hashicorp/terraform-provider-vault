@@ -5,6 +5,8 @@ package keymgmt_test
 
 import (
 	"fmt"
+	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -177,6 +179,28 @@ func TestAccKeymgmtGCPKMS_namespace(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
 				),
 			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKeymgmtGCPKMSImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldCredentialsWO,
+					consts.FieldCredentialsWOVersion,
+				},
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
+				},
+			},
+			{
+				// Cleanup step: unset the env var and verify no drift
+				Config:   testKeymgmtGCPKMSConfigNamespace(namespace, mount, kmsName, keyCollection, gcpProject, "us-east1", gcpCredentials),
+				PlanOnly: true,
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
+			},
 		},
 	})
 }
@@ -261,4 +285,105 @@ resource "vault_keymgmt_gcp_kms" "test" {
   credentials_wo_version = 1
 }
 `, namespace, mount, kmsName, keyCollection, gcpCredentials, gcpProject, gcpLocation)
+}
+
+func TestAccKeymgmtGCPKMS_credentialRotation(t *testing.T) {
+	gcpCredentials := testutil.GetTestGCPCredsFile(t)
+	gcpProject := testutil.GetTestGCPProject(t)
+
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	kmsName := acctest.RandomWithPrefix("gcpkms")
+	resourceType := "vault_keymgmt_gcp_kms"
+	resourceName := resourceType + ".test"
+
+	gcpLocation := testutil.GetTestGCPRegion(t)
+	gcpKeyRing := testutil.GetTestGCPKeyRing(t)
+
+	keyCollection := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", gcpProject, gcpLocation, gcpKeyRing)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtGCPKMSConfigWithVersion(mount, kmsName, keyCollection, gcpProject, gcpLocation, gcpCredentials, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyCollection),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "1"),
+				),
+			},
+			{
+				Config: testKeymgmtGCPKMSConfigWithVersion(mount, kmsName, keyCollection, gcpProject, gcpLocation, gcpCredentials, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyCollection),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeymgmtGCPKMS_invalidMount(t *testing.T) {
+	gcpCredentials := testutil.GetTestGCPCredsFile(t)
+	gcpProject := testutil.GetTestGCPProject(t)
+
+	mount := "nonexistent-mount"
+	kmsName := acctest.RandomWithPrefix("gcpkms")
+
+	gcpLocation := testutil.GetTestGCPRegion(t)
+	gcpKeyRing := testutil.GetTestGCPKeyRing(t)
+
+	keyCollection := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", gcpProject, gcpLocation, gcpKeyRing)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeymgmtGCPKMSConfigInvalidMount(mount, kmsName, keyCollection, gcpProject, gcpLocation, gcpCredentials),
+				ExpectError: regexp.MustCompile(`no handler for route`),
+			},
+		},
+	})
+}
+
+func testKeymgmtGCPKMSConfigWithVersion(mount, kmsName, keyCollection, gcpProject, gcpLocation, gcpCredentials string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_gcp_kms" "test" {
+  mount          = vault_mount.keymgmt.path
+  name           = %q
+  key_collection = %q
+  credentials_wo = {
+    service_account_file = %q
+    project              = %q
+    location             = %q
+  }
+  credentials_wo_version = %d
+}
+`, mount, kmsName, keyCollection, gcpCredentials, gcpProject, gcpLocation, version)
+}
+
+func testKeymgmtGCPKMSConfigInvalidMount(mount, kmsName, keyCollection, gcpProject, gcpLocation, gcpCredentials string) string {
+	return fmt.Sprintf(`
+resource "vault_keymgmt_gcp_kms" "test" {
+  mount          = %q
+  name           = %q
+  key_collection = %q
+  credentials_wo = {
+    service_account_file = %q
+    project              = %q
+    location             = %q
+  }
+  credentials_wo_version = 1
+}
+`, mount, kmsName, keyCollection, gcpCredentials, gcpProject, gcpLocation)
 }
