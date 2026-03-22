@@ -135,18 +135,18 @@ func (r *ReplicateKeyResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	// Build base path to check if distribution exists
-	basePath := data.DistributePath()
-	responseData, exists := r.readReplicateKey(ctx, cli, basePath, &resp.Diagnostics)
+	// Read from KMS provider path to get provider type
+	kmsPath := data.KMSPath()
+	responseData, exists := r.readReplicateKey(ctx, cli, kmsPath, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	if !exists {
-		resp.Diagnostics.AddError("KMS provider not found", fmt.Sprintf("KMS provider %s not found at %s", data.KMSName.ValueString(), basePath))
+		resp.Diagnostics.AddError("KMS provider not found", fmt.Sprintf("KMS provider %s not found at %s", data.KMSName.ValueString(), kmsPath))
 		return
 	}
 
-	data.parseReplicateKeyResponse(responseData, &resp.Diagnostics, basePath)
+	data.parseReplicateKeyResponse(responseData, &resp.Diagnostics, kmsPath)
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -5,6 +5,7 @@ package keymgmt_test
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 
@@ -285,4 +286,109 @@ resource "vault_keymgmt_replicate_key" "test2" {
   depends_on = [vault_keymgmt_distribute_key.test2]
 }
 `, path, keyName1, keyName2, kmsName, accessKey, secretKey, sessionToken)
+}
+
+
+func TestAccKeymgmtReplicateKey_namespace(t *testing.T) {
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	sessionToken := testutil.GetTestAWSSessionToken(t)
+
+	backend := acctest.RandomWithPrefix("tf-test-keymgmt")
+	kmsName := acctest.RandomWithPrefix("awskms")
+	keyName := acctest.RandomWithPrefix("test-key")
+	namespace := acctest.RandomWithPrefix("ns")
+
+	resourceName := "vault_keymgmt_replicate_key.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtReplicateKeyConfigNamespace(namespace, backend, kmsName, keyName, accessKey, secretKey, sessionToken),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKMSName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
+				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKeymgmtReplicateKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
+				},
+			},
+			{
+				// Cleanup step: unset the env var and verify no drift
+				Config:   testKeymgmtReplicateKeyConfigNamespace(namespace, backend, kmsName, keyName, accessKey, secretKey, sessionToken),
+				PlanOnly: true,
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
+			},
+		},
+	})
+}
+
+func testKeymgmtReplicateKeyConfigNamespace(namespace, path, kmsName, keyName, accessKey, secretKey, sessionToken string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = %q
+}
+
+resource "vault_mount" "test" {
+  namespace = vault_namespace.test.path
+  path      = %q
+  type      = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test" {
+  namespace        = vault_namespace.test.path
+  mount            = vault_mount.test.path
+  name             = %q
+  type             = "aes256-gcm96"
+  replica_regions  = ["us-east-1", "eu-west-1"]
+  deletion_allowed = true
+}
+
+resource "vault_keymgmt_aws_kms" "test" {
+  namespace      = vault_namespace.test.path
+  mount          = vault_mount.test.path
+  name           = %q
+  key_collection = "us-west-1"
+
+  credentials_wo = {
+    access_key    = %q
+    secret_key    = %q
+    session_token = %q
+  }
+  credentials_wo_version = 1
+}
+
+resource "vault_keymgmt_distribute_key" "test" {
+  namespace  = vault_namespace.test.path
+  mount      = vault_mount.test.path
+  kms_name   = vault_keymgmt_aws_kms.test.name
+  key_name   = vault_keymgmt_key.test.name
+  purpose    = ["encrypt", "decrypt"]
+  protection = "hsm"
+}
+
+resource "vault_keymgmt_replicate_key" "test" {
+  namespace  = vault_namespace.test.path
+  mount      = vault_mount.test.path
+  kms_name   = vault_keymgmt_aws_kms.test.name
+  key_name   = vault_keymgmt_key.test.name
+
+  depends_on = [vault_keymgmt_distribute_key.test]
+}
+`, namespace, path, keyName, kmsName, accessKey, secretKey, sessionToken)
 }
