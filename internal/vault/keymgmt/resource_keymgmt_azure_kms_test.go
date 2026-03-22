@@ -5,6 +5,8 @@ package keymgmt_test
 
 import (
 	"fmt"
+	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -175,6 +177,108 @@ func TestAccKeymgmtAzureKMS_multiple(t *testing.T) {
 	})
 }
 
+func TestAccKeymgmtAzureKMS_namespace(t *testing.T) {
+	tenantID, clientID, clientSecret, keyVaultName := testutil.GetTestAzureKMSCreds(t)
+
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	kmsName := acctest.RandomWithPrefix("azurekms")
+	namespace := acctest.RandomWithPrefix("test-namespace")
+	resourceType := "vault_keymgmt_azure_kms"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtAzureKMSConfigNamespace(namespace, mount, kmsName, keyVaultName, tenantID, clientID, clientSecret),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyVaultName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
+				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKeymgmtAzureKMSImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldCredentialsWO,
+					consts.FieldCredentialsWOVersion,
+				},
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
+				},
+			},
+			{
+				// Cleanup step: unset the env var and verify no drift
+				Config:   testKeymgmtAzureKMSConfigNamespace(namespace, mount, kmsName, keyVaultName, tenantID, clientID, clientSecret),
+				PlanOnly: true,
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
+			},
+		},
+	})
+}
+
+func TestAccKeymgmtAzureKMS_credentialRotation(t *testing.T) {
+	tenantID, clientID, clientSecret, keyVaultName := testutil.GetTestAzureKMSCreds(t)
+
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	kmsName := acctest.RandomWithPrefix("azurekms")
+	resourceType := "vault_keymgmt_azure_kms"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtAzureKMSConfigWithVersion(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyVaultName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "1"),
+				),
+			},
+			{
+				Config: testKeymgmtAzureKMSConfigWithVersion(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, kmsName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyCollection, keyVaultName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeymgmtAzureKMS_invalidMount(t *testing.T) {
+	tenantID, clientID, clientSecret, keyVaultName := testutil.GetTestAzureKMSCreds(t)
+
+	mount := "nonexistent-mount"
+	kmsName := acctest.RandomWithPrefix("azurekms")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeymgmtAzureKMSConfigInvalidMount(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret),
+				ExpectError: regexp.MustCompile(`no handler for route`),
+			},
+		},
+	})
+}
+
 func testAccKeymgmtAzureKMSImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -279,4 +383,68 @@ resource "vault_keymgmt_azure_kms" "test2" {
 }
 `, mount, kmsName1, keyVaultName, tenantID, clientID, clientSecret,
 		kmsName2, keyVaultName, tenantID, clientID, clientSecret)
+}
+
+func testKeymgmtAzureKMSConfigNamespace(namespace, mount, kmsName, keyVaultName, tenantID, clientID, clientSecret string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = %q
+}
+
+resource "vault_mount" "keymgmt" {
+  namespace = vault_namespace.test.path
+  path      = %q
+  type      = "keymgmt"
+}
+
+resource "vault_keymgmt_azure_kms" "test" {
+  namespace      = vault_namespace.test.path
+  mount          = vault_mount.keymgmt.path
+  name           = %q
+  key_collection = %q
+  credentials_wo = {
+    tenant_id     = "%s"
+    client_id     = "%s"
+    client_secret = "%s"
+  }
+  credentials_wo_version = 1
+}
+`, namespace, mount, kmsName, keyVaultName, tenantID, clientID, clientSecret)
+}
+
+func testKeymgmtAzureKMSConfigWithVersion(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_azure_kms" "test" {
+  mount          = vault_mount.keymgmt.path
+  name           = %q
+  key_collection = %q
+  credentials_wo = {
+    tenant_id     = "%s"
+    client_id     = "%s"
+    client_secret = "%s"
+  }
+  credentials_wo_version = %d
+}
+`, mount, kmsName, keyVaultName, tenantID, clientID, clientSecret, version)
+}
+
+func testKeymgmtAzureKMSConfigInvalidMount(mount, kmsName, keyVaultName, tenantID, clientID, clientSecret string) string {
+	return fmt.Sprintf(`
+resource "vault_keymgmt_azure_kms" "test" {
+  mount          = %q
+  name           = %q
+  key_collection = %q
+  credentials_wo = {
+    tenant_id     = "%s"
+    client_id     = "%s"
+    client_secret = "%s"
+  }
+  credentials_wo_version = 1
+}
+`, mount, kmsName, keyVaultName, tenantID, clientID, clientSecret)
 }

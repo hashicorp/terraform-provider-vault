@@ -94,7 +94,7 @@ The following arguments are supported:
 * `key_collection` - (Required, Forces new resource) Refers to the name of an AWS region. Cannot be changed after creation.
 
 * `credentials_wo` - (Optional, Sensitive, Write-only) The credentials to use for authentication with AWS KMS. Supplying values for this parameter is optional, as credentials may also be specified as environment variables. Credentials provided to this parameter will take precedence over credentials provided via environment variables. This value is write-only and will not be stored in Terraform state.
-  The following vaules are supported:
+  The following values are supported:
   - `access_key` - (Required) The AWS access key ID. May also be specified by the AWS_ACCESS_KEY_ID environment variable.
   - `secret_key` - (Required) The AWS secret access key. May also be specified by the AWS_SECRET_ACCESS_KEY environment variable.
   - `session_token` - (Optional) The AWS session token. May also be specified by the AWS_SESSION_TOKEN environment variable.

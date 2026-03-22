@@ -5,6 +5,7 @@ package keymgmt_test
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -225,7 +226,29 @@ func TestAccKeymgmtKey_namespace(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
 				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKeymgmtKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldReplicaRegions,
+				},
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
+				},
+			},
+			{
+				// Cleanup step: unset the env var and verify no drift
+				Config:   testKeymgmtKey_namespaceConfig(namespace, mount, keyName),
+				PlanOnly: true,
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
 			},
 		},
 	})
@@ -242,6 +265,50 @@ func TestAccKeymgmtKey_validation(t *testing.T) {
 			{
 				Config:      testKeymgmtKey_invalidTypeConfig(mount, keyName),
 				ExpectError: regexp.MustCompile("unsupported key type"),
+			},
+		},
+	})
+}
+
+func TestAccKeymgmtKey_deletionNotAllowed(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	keyName := acctest.RandomWithPrefix("key")
+	resourceType := "vault_keymgmt_key"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtKey_deletionNotAllowedConfig(mount, keyName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "false"),
+				),
+			},
+			{
+				// Enable deletion so cleanup can succeed
+				Config: testKeymgmtKey_updatedConfig(mount, keyName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "true"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeymgmtKey_invalidMount(t *testing.T) {
+	keyName := acctest.RandomWithPrefix("key")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeymgmtKey_invalidMountConfig(keyName),
+				ExpectError: regexp.MustCompile("no handler for route"),
 			},
 		},
 	})
@@ -338,4 +405,31 @@ resource "vault_keymgmt_key" "test" {
   deletion_allowed = true
 }
 `, mount, keyName)
+}
+
+func testKeymgmtKey_deletionNotAllowedConfig(mount, keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test" {
+  mount            = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = false
+}
+`, mount, keyName)
+}
+
+func testKeymgmtKey_invalidMountConfig(keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_keymgmt_key" "test" {
+  mount            = "nonexistent-mount"
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
+}
+`, keyName)
 }
