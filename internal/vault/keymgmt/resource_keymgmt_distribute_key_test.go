@@ -348,7 +348,6 @@ resource "vault_keymgmt_distribute_key" "test" {
 `, path, keyName, kmsName, keyCollection, gcpCredentials, gcpProject, gcpLocation)
 }
 
-
 func TestAccKeymgmtDistributeKey_namespace(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	sessionToken := testutil.GetTestAWSSessionToken(t)

@@ -288,7 +288,6 @@ resource "vault_keymgmt_replicate_key" "test2" {
 `, path, keyName1, keyName2, kmsName, accessKey, secretKey, sessionToken)
 }
 
-
 func TestAccKeymgmtReplicateKey_namespace(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	sessionToken := testutil.GetTestAWSSessionToken(t)
