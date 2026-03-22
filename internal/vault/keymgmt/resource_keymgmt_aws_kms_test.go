@@ -244,7 +244,7 @@ func TestAccKeymgmtAWSKMS_invalidMount(t *testing.T) {
 	})
 }
 
-func testAccKeymgmtAWSKMSImportStateIdFunc(resourceName string) resource.ImportStateIdFunc{
+func testAccKeymgmtAWSKMSImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
