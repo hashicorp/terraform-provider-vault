@@ -5,6 +5,7 @@ package keymgmt_test
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -225,7 +226,29 @@ func TestAccKeymgmtKey_namespace(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, namespace),
 				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKeymgmtKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldReplicaRegions,
+				},
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, namespace)
+				},
+			},
+			{
+				// Cleanup step: unset the env var and verify no drift
+				Config:   testKeymgmtKey_namespaceConfig(namespace, mount, keyName),
+				PlanOnly: true,
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
 			},
 		},
 	})
