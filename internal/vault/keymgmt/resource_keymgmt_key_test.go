@@ -270,6 +270,50 @@ func TestAccKeymgmtKey_validation(t *testing.T) {
 	})
 }
 
+func TestAccKeymgmtKey_deletionNotAllowed(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	keyName := acctest.RandomWithPrefix("key")
+	resourceType := "vault_keymgmt_key"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtKey_deletionNotAllowedConfig(mount, keyName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "false"),
+				),
+			},
+			{
+				// Enable deletion so cleanup can succeed
+				Config: testKeymgmtKey_updatedConfig(mount, keyName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "true"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKeymgmtKey_invalidMount(t *testing.T) {
+	keyName := acctest.RandomWithPrefix("key")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config:      testKeymgmtKey_invalidMountConfig(keyName),
+				ExpectError: regexp.MustCompile("no handler for route"),
+			},
+		},
+	})
+}
+
 func testKeymgmtKey_multipleConfig(mount, key1Name, key2Name string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "keymgmt" {
@@ -361,4 +405,31 @@ resource "vault_keymgmt_key" "test" {
   deletion_allowed = true
 }
 `, mount, keyName)
+}
+
+func testKeymgmtKey_deletionNotAllowedConfig(mount, keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test" {
+  mount            = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = false
+}
+`, mount, keyName)
+}
+
+func testKeymgmtKey_invalidMountConfig(keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_keymgmt_key" "test" {
+  mount            = "nonexistent-mount"
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
+}
+`, keyName)
 }
