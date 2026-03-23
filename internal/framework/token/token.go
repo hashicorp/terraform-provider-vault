@@ -118,17 +118,14 @@ func PopulateTokenModelFromAPI(ctx context.Context, model *TokenModel, apiModel 
 		}
 	}
 
-	model.TokenTTL = types.Int64Null()
 	if apiModel.TokenTTL != 0 {
 		model.TokenTTL = types.Int64Value(apiModel.TokenTTL)
 	}
 
-	model.TokenMaxTTL = types.Int64Null()
 	if apiModel.TokenMaxTTL != 0 {
 		model.TokenMaxTTL = types.Int64Value(apiModel.TokenMaxTTL)
 	}
 
-	model.TokenPolicies = types.SetNull(types.StringType)
 	if len(apiModel.TokenPolicies) > 0 {
 		policies, err := types.SetValueFrom(ctx, types.StringType, apiModel.TokenPolicies)
 		if err.HasError() {
@@ -137,7 +134,6 @@ func PopulateTokenModelFromAPI(ctx context.Context, model *TokenModel, apiModel 
 		model.TokenPolicies = policies
 	}
 
-	model.TokenBoundCIDRs = types.SetNull(types.StringType)
 	if len(apiModel.TokenBoundCIDRs) > 0 {
 		cidrs, err := types.SetValueFrom(ctx, types.StringType, apiModel.TokenBoundCIDRs)
 		if err.HasError() {
@@ -146,32 +142,26 @@ func PopulateTokenModelFromAPI(ctx context.Context, model *TokenModel, apiModel 
 		model.TokenBoundCIDRs = cidrs
 	}
 
-	model.TokenExplicitMaxTTL = types.Int64Null()
 	if apiModel.TokenExplicitMaxTTL != 0 {
 		model.TokenExplicitMaxTTL = types.Int64Value(apiModel.TokenExplicitMaxTTL)
 	}
 
-	model.TokenNoDefaultPolicy = types.BoolNull()
 	if apiModel.TokenNoDefaultPolicy {
 		model.TokenNoDefaultPolicy = types.BoolValue(apiModel.TokenNoDefaultPolicy)
 	}
 
-	model.TokenNumUses = types.Int64Null()
 	if apiModel.TokenNumUses != 0 {
 		model.TokenNumUses = types.Int64Value(apiModel.TokenNumUses)
 	}
 
-	model.TokenPeriod = types.Int64Null()
 	if apiModel.TokenPeriod != 0 {
 		model.TokenPeriod = types.Int64Value(apiModel.TokenPeriod)
 	}
 
-	model.TokenType = types.StringNull()
 	if apiModel.TokenType != "" {
 		model.TokenType = types.StringValue(apiModel.TokenType)
 	}
 
-	model.AliasMetadata = types.MapNull(types.StringType)
 	if len(apiModel.AliasMetadata) > 0 {
 		metadata, err := types.MapValueFrom(ctx, types.StringType, apiModel.AliasMetadata)
 		if err.HasError() {
