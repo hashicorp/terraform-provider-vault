@@ -136,6 +136,10 @@ func GetTestAWSRegion(t *testing.T) string {
 	return v[0]
 }
 
+func GetTestAWSSessionToken(t *testing.T) string {
+	return os.Getenv("AWS_SESSION_TOKEN")
+}
+
 type AzureTestConf struct {
 	SubscriptionID, TenantID, ClientID, ClientSecret, Scope, AppObjectID string
 }
@@ -282,6 +286,16 @@ func GetTestGCPKeyRing(t *testing.T) string {
 
 func GetTestGCPRegion(t *testing.T) string {
 	v := SkipTestEnvUnset(t, "GOOGLE_REGION")
+	return v[0]
+}
+
+func GetTestGCPCredsFile(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_CREDENTIALS_FILE")
+	return v[0]
+}
+
+func GetTestGCPProject(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_PROJECT")
 	return v[0]
 }
 
