@@ -17,6 +17,11 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
+const (
+	FieldChallengePermittedIPRanges = "challenge_permitted_ip_ranges"
+	FieldChallengeExcludedIPRanges  = "challenge_excluded_ip_ranges"
+)
+
 var (
 	pkiSecretBackendFromConfigACMERegex = regexp.MustCompile("^(.+)/config/acme$")
 	pkiAcmeFields                       = []string{
@@ -28,11 +33,19 @@ var (
 		consts.FieldEabPolicy,
 		consts.FieldDnsResolver,
 		consts.FieldMaxTTL,
+		FieldChallengePermittedIPRanges,
+		FieldChallengeExcludedIPRanges,
 	}
 
 	// the following require Vault Server Version 1.17+
 	pkiAcmeVault117Fields = map[string]bool{
 		consts.FieldMaxTTL: true,
+	}
+
+	// the following require Vault Server Version 1.19.16+, 1.20.10+, or 1.21.5+
+	pkiAcmeVault119Fields = map[string]bool{
+		FieldChallengePermittedIPRanges: true,
+		FieldChallengeExcludedIPRanges:  true,
 	}
 )
 
@@ -109,6 +122,22 @@ func pkiSecretBackendConfigACMEResource() *schema.Resource {
 				Computed:    true,
 				Description: "Specifies the maximum TTL in seconds for certificates issued by ACME.",
 			},
+			FieldChallengePermittedIPRanges: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Specifies the permitted IP ranges for ACME challenge workers to connect.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			FieldChallengeExcludedIPRanges: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Specifies the excluded IP ranges for ACME challenge workers to connect.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -148,6 +177,9 @@ func pkiSecretBackendConfigACMEUpdate(ctx context.Context, d *schema.ResourceDat
 	data := map[string]interface{}{}
 	for _, k := range pkiAcmeFields {
 		if pkiAcmeVault117Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion117) {
+			continue
+		}
+		if pkiAcmeVault119Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion119) {
 			continue
 		}
 
@@ -201,6 +233,9 @@ func pkiSecretBackendConfigACMERead(ctx context.Context, d *schema.ResourceData,
 
 	for _, k := range pkiAcmeFields {
 		if pkiAcmeVault117Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion117) {
+			continue
+		}
+		if pkiAcmeVault119Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion119) {
 			continue
 		}
 
