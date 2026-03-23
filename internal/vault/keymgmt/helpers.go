@@ -4,18 +4,11 @@
 package keymgmt
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-)
-
-// Error message constants for consistent error reporting
-const (
-	errInvalidPathStructure = "Invalid path structure"
 )
 
 // ResourceType represents a fixed set of resource type labels used in error messages.
@@ -157,34 +150,6 @@ func ParseDistributeKeyPath(apiPath string) (mountPath, kmsName, keyName string,
 	kmsName = parts[kmsIndex+1]
 	keyName = parts[keyIndex+1]
 	return mountPath, kmsName, keyName, nil
-}
-
-// BuildAWSCredentialsMap builds a credentials map from either the credentials field or individual access_key/secret_key fields
-// Returns nil if no credentials are provided
-func BuildAWSCredentialsMap(ctx context.Context, credentials types.Map, accessKey, secretKey types.String, diags *diag.Diagnostics) map[string]string {
-	if !credentials.IsNull() {
-		var creds map[string]string
-		diags.Append(credentials.ElementsAs(ctx, &creds, false)...)
-		if diags.HasError() {
-			return nil
-		}
-		return creds
-	}
-
-	// Use individual access_key and secret_key if provided
-	creds := make(map[string]string)
-	if !accessKey.IsNull() {
-		creds["access_key"] = accessKey.ValueString()
-	}
-	if !secretKey.IsNull() {
-		creds["secret_key"] = secretKey.ValueString()
-	}
-
-	if len(creds) > 0 {
-		return creds
-	}
-
-	return nil
 }
 
 // SetInt64FromInterface converts various numeric types from Vault API responses to types.Int64

@@ -243,6 +243,12 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		pki_external_ca.NewPKIExternalCAOrderChallengeFulfilledResource,
 		pki_external_ca.NewPKIExternalCAOrderCertificateResource,
 		keymgmt.NewKeyResource,
+		keymgmt.NewAWSKMSResource,
+		keymgmt.NewAzureKMSResource,
+		keymgmt.NewGCPKMSResource,
+		keymgmt.NewKeyRotateResource,
+		keymgmt.NewDistributeKeyResource,
+		keymgmt.NewReplicateKeyResource,
 	}, testResources()...)
 }
 
