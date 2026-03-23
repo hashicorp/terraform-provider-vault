@@ -6,7 +6,9 @@ package sys
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sort"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -17,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var _ datasource.DataSource = &pluginRuntimesDataSource{}
@@ -104,8 +107,11 @@ func (d *pluginRuntimesDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	path := "sys/plugins/runtimes/catalog"
-	if !data.Type.IsNull() && !data.Type.IsUnknown() {
-		path = fmt.Sprintf("%s?type=%s", path, data.Type.ValueString())
+	filterType, hasFilterType := pluginRuntimeFilterType(data.Type)
+	if hasFilterType {
+		params := url.Values{}
+		params.Set("type", filterType)
+		path = fmt.Sprintf("%s?%s", path, params.Encode())
 	}
 
 	vaultResp, err := cli.Logical().ListWithContext(ctx, path)
@@ -121,42 +127,18 @@ func (d *pluginRuntimesDataSource) Read(ctx context.Context, req datasource.Read
 			for _, elem := range rawRuntimes {
 				if rMap, ok := elem.(map[string]interface{}); ok {
 					rm := pluginRuntimeModel{}
-					if name, ok := rMap["name"].(string); ok {
-						rm.Name = types.StringValue(name)
+					rm.Name = util.StringValueOrNull(rMap["name"])
+					rm.Type = util.StringValueOrNull(rMap["type"])
+					rm.Rootless = util.BoolValueOrNull(rMap["rootless"])
+					rm.OCIRuntime = util.StringValueOrNull(rMap["oci_runtime"])
+					rm.CgroupParent = util.StringValueOrNull(rMap["cgroup_parent"])
+
+					if cpuNanos := util.Int64ValueOrNull(rMap["cpu_nanos"]); !cpuNanos.IsNull() && cpuNanos.ValueInt64() > 0 {
+						rm.CPUNanos = cpuNanos
 					}
-					if typ, ok := rMap["type"].(string); ok {
-						rm.Type = types.StringValue(typ)
-					}
-					if rootless, ok := rMap["rootless"].(bool); ok {
-						rm.Rootless = types.BoolValue(rootless)
-					}
-					if oci, ok := rMap["oci_runtime"].(string); ok && oci != "" {
-						rm.OCIRuntime = types.StringValue(oci)
-					}
-					if cp, ok := rMap["cgroup_parent"].(string); ok && cp != "" {
-						rm.CgroupParent = types.StringValue(cp)
-					}
-					if cn, ok := rMap["cpu_nanos"]; ok {
-						if cnNum, ok := cn.(float64); ok { // JSON unmarshals numbers to float64
-							if int64(cnNum) > 0 {
-								rm.CPUNanos = types.Int64Value(int64(cnNum))
-							}
-						} else if cnNum, ok := cn.(int64); ok {
-							if cnNum > 0 {
-								rm.CPUNanos = types.Int64Value(cnNum)
-							}
-						}
-					}
-					if mb, ok := rMap["memory_bytes"]; ok {
-						if mbNum, ok := mb.(float64); ok {
-							if int64(mbNum) > 0 {
-								rm.MemoryBytes = types.Int64Value(int64(mbNum))
-							}
-						} else if mbNum, ok := mb.(int64); ok {
-							if mbNum > 0 {
-								rm.MemoryBytes = types.Int64Value(mbNum)
-							}
-						}
+
+					if memoryBytes := util.Int64ValueOrNull(rMap["memory_bytes"]); !memoryBytes.IsNull() && memoryBytes.ValueInt64() > 0 {
+						rm.MemoryBytes = memoryBytes
 					}
 					parsedRuntimes = append(parsedRuntimes, rm)
 				}
@@ -173,8 +155,8 @@ func (d *pluginRuntimesDataSource) Read(ctx context.Context, req datasource.Read
 	})
 
 	idVal := "plugin-runtimes"
-	if !data.Type.IsNull() {
-		idVal = fmt.Sprintf("plugin-runtimes/%s", data.Type.ValueString())
+	if hasFilterType {
+		idVal = fmt.Sprintf("plugin-runtimes/%s", filterType)
 	}
 	data.ID = types.StringValue(idVal)
 
@@ -203,4 +185,17 @@ func (d *pluginRuntimesDataSource) Read(ctx context.Context, req datasource.Read
 	data.Runtimes = runtimesList
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func pluginRuntimeFilterType(filter types.String) (string, bool) {
+	if filter.IsNull() || filter.IsUnknown() {
+		return "", false
+	}
+
+	value := strings.TrimSpace(filter.ValueString())
+	if value == "" {
+		return "", false
+	}
+
+	return value, true
 }

@@ -22,7 +22,6 @@ func TestAccPluginRuntimesDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipTestAccEnt(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -36,6 +35,8 @@ func TestAccPluginRuntimesDataSource(t *testing.T) {
 						"type":          "container",
 						"oci_runtime":   "runc",
 						"cgroup_parent": "/vault/plugins",
+						"cpu_nanos":     "1000000000",
+						"memory_bytes":  "536870912",
 						"rootless":      "true",
 					}),
 					testAccCheckPluginRuntimesContains(dataSourceAll, minimalName, map[string]string{
@@ -52,7 +53,6 @@ func TestAccPluginRuntimesDataSource_InvalidTypePassthrough(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipTestAccEnt(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -119,7 +119,6 @@ func testAccCheckPluginRuntimesContains(resourceName, runtimeName string, expect
 		return fmt.Errorf("runtime %q not found in %s", runtimeName, resourceName)
 	}
 }
-
 func testAccPluginRuntimesDataSourceConfig(fullName, minimalName string) string {
 	return fmt.Sprintf(`
 resource "vault_plugin_runtime" "full" {

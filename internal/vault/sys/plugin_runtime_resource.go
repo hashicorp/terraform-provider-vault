@@ -8,13 +8,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -22,7 +23,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 const (
@@ -70,6 +70,9 @@ func (r *pluginRuntimeResourceFW) Schema(_ context.Context, _ resource.SchemaReq
 				MarkdownDescription: "Specifies the plugin runtime type. Currently only `container` is supported.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.OneOf("container"),
 				},
 			},
 			consts.FieldName: schema.StringAttribute{
@@ -333,47 +336,4 @@ func (r *pluginRuntimeResourceFW) buildPayload(data pluginRuntimeResourceModel) 
 		payload[fieldMemoryBytes] = data.MemoryBytes.ValueInt64()
 	}
 	return payload
-}
-
-func (r *pluginRuntimeResourceFW) readState(
-	ctx context.Context,
-	data *pluginRuntimeResourceModel,
-	cli *api.Client,
-	path string,
-	diags *diag.Diagnostics,
-) {
-
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, path)
-	if err != nil {
-		if util.Is404(err) {
-			data.ID = types.StringNull()
-			return
-		}
-
-		diags.AddError("Error Reading Plugin Runtime", err.Error())
-		return
-	}
-
-	if vaultResp == nil || vaultResp.Data == nil {
-		data.ID = types.StringNull()
-		return
-	}
-
-	vd := vaultResp.Data
-
-	data.Name = util.StringValueOrNull(vd["name"])
-	data.Type = util.StringValueOrNull(vd["type"])
-	data.OCIRuntime = util.StringValueOrNull(vd["oci_runtime"])
-	data.CgroupParent = util.StringValueOrNull(vd["cgroup_parent"])
-
-	data.Rootless = util.BoolValueOrNull(vd["rootless"])
-	data.CPUNanos = types.Int64Null()
-	if cpuNanos := util.Int64ValueOrNull(vd["cpu_nanos"]); !cpuNanos.IsNull() && cpuNanos.ValueInt64() > 0 {
-		data.CPUNanos = cpuNanos
-	}
-
-	data.MemoryBytes = types.Int64Null()
-	if memoryBytes := util.Int64ValueOrNull(vd["memory_bytes"]); !memoryBytes.IsNull() && memoryBytes.ValueInt64() > 0 {
-		data.MemoryBytes = memoryBytes
-	}
 }

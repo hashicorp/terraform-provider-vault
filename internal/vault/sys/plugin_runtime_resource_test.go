@@ -24,7 +24,6 @@ func TestAccPluginRuntime(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipTestAccEnt(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -85,7 +84,6 @@ func TestAccPluginRuntime_MinimalConfig(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipTestAccEnt(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -116,7 +114,6 @@ func TestAccPluginRuntime_ImportWithAllFields(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipTestAccEnt(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -155,7 +152,6 @@ func TestAccPluginRuntime_ImportApplyPlanNoDrift(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipTestAccEnt(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -202,7 +198,6 @@ func TestAccPluginRuntime_MinimalImportPlanNoDrift(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipTestAccEnt(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -243,7 +238,6 @@ func TestAccPluginRuntime_UpdateFromFullToMinimalNoDrift(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipTestAccEnt(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -281,7 +275,6 @@ func TestAccPluginRuntime_InvalidType(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipTestAccEnt(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -298,7 +291,6 @@ func TestAccPluginRuntime_ImportInvalidID(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipTestAccEnt(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion115)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -406,5 +398,3 @@ resource "vault_plugin_runtime" "test" {
 func resourceNameForPluginRuntimeTest() string {
 	return "vault_plugin_runtime.test"
 }
-
-// Made with Bob
