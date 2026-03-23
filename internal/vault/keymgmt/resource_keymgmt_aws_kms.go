@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -90,9 +89,6 @@ func (r *AWSKMSResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				MarkdownDescription: "Version counter for the write-only `credentials_wo` field. " +
 					"Since write-only values are not stored in state, Terraform cannot detect when credentials change. " +
 					"Increment this value whenever you update `credentials_wo` to ensure the new credentials are sent to Vault.",
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
