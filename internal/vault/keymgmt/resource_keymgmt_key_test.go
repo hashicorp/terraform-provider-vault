@@ -36,7 +36,7 @@ func TestAccKeymgmtKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-gcm96"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "true"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLatestVersion),
 				),
 			},
@@ -107,9 +107,10 @@ resource "vault_mount" "keymgmt" {
 }
 
 resource "vault_keymgmt_key" "test" {
-  mount = vault_mount.keymgmt.path
-  name = %q
-  type = "aes256-gcm96"
+  mount            = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
 }
 `, mount, keyName)
 }
