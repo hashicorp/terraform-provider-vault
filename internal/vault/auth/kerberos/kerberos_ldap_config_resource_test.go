@@ -412,7 +412,7 @@ func TestAccKerberosAuthBackendLDAPConfig_allFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupFilter, "(objectClass=group)"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAnonymousGroupSearch, "true"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUseTokenGroups, "true"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCaseSensitiveNames, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCaseSensitiveNames, "true"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTLSMinVersion, "tls12"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTLSMaxVersion, "tls13"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCertificate),
@@ -817,7 +817,7 @@ resource "vault_kerberos_auth_backend_ldap_config" "config" {
   groupfilter                  = "(objectClass=group)"
   anonymous_group_search       = true
   use_token_groups             = true
-  case_sensitive_names         = false
+  case_sensitive_names         = true
   tls_min_version              = "tls12"
   tls_max_version              = "tls13"
   certificate               = <<-EOT
