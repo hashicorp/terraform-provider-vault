@@ -418,9 +418,6 @@ func (r *kerberosAuthBackendLDAPConfigResource) getApiModel(ctx context.Context,
 		apiModel.BindDN = plan.BindDN.ValueString()
 	}
 
-	// Only send bindpass if:
-	// 1. This is a create operation (state is nil), OR
-	// 2. The version field has changed
 	if !config.BindPassWO.IsNull() {
 		if state == nil || !plan.BindPassWOVersion.Equal(state.BindPassWOVersion) {
 			apiModel.BindPass = config.BindPassWO.ValueString()
@@ -636,19 +633,8 @@ func (r *kerberosAuthBackendLDAPConfigResource) populateDataModelFromApi(ctx con
 		tfModel.EnableSAMAccountNameLogin = types.BoolValue(apiModel.EnableSAMAccountNameLogin)
 	}
 
-	savedAliasMetadata := tfModel.AliasMetadata
-	savedEnableSAMAccountNameLogin := tfModel.EnableSAMAccountNameLogin
-
 	// Populate token fields using the token package helper
 	diags.Append(token.PopulateTokenModelFromAPI(ctx, &tfModel.TokenModel, &apiModel.TokenAPIModel)...)
-
-	if r.Meta() == nil || !r.Meta().IsAPISupported(provider.VaultVersion121) {
-		tfModel.AliasMetadata = savedAliasMetadata
-	}
-
-	if r.Meta() == nil || !r.Meta().IsAPISupported(provider.VaultVersion119) {
-		tfModel.EnableSAMAccountNameLogin = savedEnableSAMAccountNameLogin
-	}
 
 	return diags
 }

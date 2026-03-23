@@ -42,7 +42,7 @@ resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
   url                 = "ldap://localhost:389"
   binddn              = "cn=admin,dc=example,dc=com"
   bindpass_wo         = "admin-password"
-  bindpass_wo_version = "1"
+  bindpass_wo_version = 1
   userdn              = "ou=users,dc=example,dc=com"
   userattr            = "uid"
 }
@@ -120,7 +120,7 @@ resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
   url                 = "ldap://localhost:389"
   binddn              = "cn=admin,dc=example,dc=com"
   bindpass_wo         = "admin-password"
-  bindpass_wo_version = "1"
+  bindpass_wo_version = 1
   userdn              = "ou=users,dc=example,dc=com"
   userattr            = "uid"
 }

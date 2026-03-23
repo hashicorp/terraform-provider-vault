@@ -50,7 +50,7 @@ type kerberosAuthBackendConfigResource struct {
 type kerberosAuthBackendConfigModel struct {
 	base.BaseModel
 	Mount              types.String `tfsdk:"mount"`
-	Keytab             types.String `tfsdk:"keytab_wo"`
+	KeytabWO           types.String `tfsdk:"keytab_wo"`
 	ServiceAccount     types.String `tfsdk:"service_account"`
 	RemoveInstanceName types.Bool   `tfsdk:"remove_instance_name"`
 	AddGroupAliases    types.Bool   `tfsdk:"add_group_aliases"`
@@ -322,7 +322,7 @@ func (r *kerberosAuthBackendConfigResource) getApiModel(config *kerberosAuthBack
 	var diags diag.Diagnostics
 
 	vaultRequest := map[string]any{
-		consts.FieldKeytab:             config.Keytab.ValueString(),
+		consts.FieldKeytab:             config.KeytabWO.ValueString(),
 		consts.FieldServiceAccount:     config.ServiceAccount.ValueString(),
 		consts.FieldRemoveInstanceName: config.RemoveInstanceName.ValueBool(),
 		consts.FieldAddGroupAliases:    config.AddGroupAliases.ValueBool(),
