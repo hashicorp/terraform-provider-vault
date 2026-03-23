@@ -88,8 +88,6 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			},
 			consts.FieldDeletionAllowed: schema.BoolAttribute{
 				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
 				MarkdownDescription: "Specifies if the key is allowed to be deleted.",
 			},
 			consts.FieldReplicaRegions: schema.SetAttribute{
