@@ -843,6 +843,11 @@ var (
 			Resource:      UpdateSchemaResource(configUICustomMessageResource()),
 			PathInventory: []string{"/sys/config/ui/custom-messages"},
 		},
+		"vault_config_control_group": {
+			Resource:       UpdateSchemaResource(configControlGroupResource()),
+			PathInventory:  []string{"/sys/config/control-group"},
+			EnterpriseOnly: true,
+		},
 		"vault_plugin": {
 			// Only available in the root namespace, don't add namespace to the schema.
 			Resource:      pluginResource(),

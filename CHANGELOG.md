@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* `vault_config_control_group`: Added initial implementation for `vault_config_control_group` resource in sys/config/control-group. 
+
 BUGS: 
 * `vault_consul_secret_backend`: Fixed validation logic to allow computed token values by correcting the condition that checks for token presence during plan phase. ([#2823](https://github.com/hashicorp/terraform-provider-vault/pull/2823))
 
