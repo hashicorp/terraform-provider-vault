@@ -81,7 +81,7 @@ type PKIExternalCARoleAPIModel struct {
 }
 
 func (r *PKIExternalCARoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_pki_secret_backend_external_ca_role"
+	resp.TypeName = req.ProviderTypeName + "_pki_external_ca_secret_backend_role"
 }
 
 func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {

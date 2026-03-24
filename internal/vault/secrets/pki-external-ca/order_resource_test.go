@@ -25,7 +25,7 @@ func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")
-	resourceName := "vault_pki_secret_backend_external_ca_order.test"
+	resourceName := "vault_pki_external_ca_secret_backend_order.test"
 
 	ca, directoryUrl := setupVaultAndPebble(t)
 	resource.Test(t, resource.TestCase{
@@ -107,7 +107,7 @@ func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")
-	resourceName := "vault_pki_secret_backend_external_ca_order.test"
+	resourceName := "vault_pki_external_ca_secret_backend_order.test"
 	host := "example.com"
 
 	// Generate a test CSR
@@ -171,7 +171,7 @@ resource "vault_mount" "test" {
   description = "PKI External CA test"
 }
 
-resource "vault_pki_secret_backend_acme_account" "test" {
+resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
@@ -182,10 +182,10 @@ resource "vault_pki_secret_backend_acme_account" "test" {
 EOT
 }
 
-resource "vault_pki_secret_backend_external_ca_role" "test" {
+resource "vault_pki_external_ca_secret_backend_role" "test" {
   mount                       = vault_mount.test.path
   name                        = "%s"
-  acme_account_name           = vault_pki_secret_backend_acme_account.test.name
+  acme_account_name           = vault_pki_external_ca_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "*.example.com"]
   allowed_domain_options      = ["bare_domains", "subdomains", "wildcards"]
   allowed_challenge_types     = ["http-01", "dns-01", "tls-alpn-01"]
@@ -194,9 +194,9 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
   force                       =  "true"
 }
 
-resource "vault_pki_secret_backend_external_ca_order" "test" {
+resource "vault_pki_external_ca_secret_backend_order" "test" {
   mount       = vault_mount.test.path
-  role_name   = vault_pki_secret_backend_external_ca_role.test.name
+  role_name   = vault_pki_external_ca_secret_backend_role.test.name
   identifiers = ["example.com", "test.example.com"]
 }
 `, backend, accountName, directoryUrl, ca, roleName)
@@ -210,7 +210,7 @@ resource "vault_mount" "test" {
   description = "PKI External CA test"
 }
 
-resource "vault_pki_secret_backend_acme_account" "test" {
+resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
@@ -221,10 +221,10 @@ resource "vault_pki_secret_backend_acme_account" "test" {
 EOT
 }
 
-resource "vault_pki_secret_backend_external_ca_role" "test" {
+resource "vault_pki_external_ca_secret_backend_role" "test" {
   mount                       = vault_mount.test.path
   name                        = "%s"
-  acme_account_name           = vault_pki_secret_backend_acme_account.test.name
+  acme_account_name           = vault_pki_external_ca_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "*.example.com"]
   allowed_domain_options      = ["bare_domains", "subdomains", "wildcards"]
   allowed_challenge_types     = ["http-01", "dns-01", "tls-alpn-01"]
@@ -233,9 +233,9 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
   force                       =  "true"
 }
 
-resource "vault_pki_secret_backend_external_ca_order" "test" {
+resource "vault_pki_external_ca_secret_backend_order" "test" {
   mount     = vault_mount.test.path
-  role_name = vault_pki_secret_backend_external_ca_role.test.name
+  role_name = vault_pki_external_ca_secret_backend_role.test.name
   csr       = <<EOT
 %s
 EOT

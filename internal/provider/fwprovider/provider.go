@@ -242,7 +242,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		kmip.NewKMIPListenerResource,
 		kmip.NewKMIPCAGeneratedResource,
 		kmip.NewKMIPCAImportedResource,
-		pki_external_ca.NewPKIACMEAccountResource,
+		pki_external_ca.NewPKIExternalCAACMEAccountResource,
 		pki_external_ca.NewPKIExternalCARoleResource,
 		pki_external_ca.NewPKIExternalCAOrderResource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeFulfilledResource,
