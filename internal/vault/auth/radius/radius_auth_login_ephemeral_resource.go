@@ -77,8 +77,7 @@ func (r *RadiusAuthLoginEphemeralResource) Schema(_ context.Context, _ ephemeral
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Unique name of the auth backend to login to.",
-				Optional:            true,
-				Computed:            true,
+				Required:            true,
 			},
 			consts.FieldUsername: schema.StringAttribute{
 				MarkdownDescription: "RADIUS username to authenticate.",
@@ -164,6 +163,8 @@ func (r *RadiusAuthLoginEphemeralResource) Metadata(ctx context.Context, req eph
 	resp.TypeName = req.ProviderTypeName + "_radius_auth_login"
 }
 
+// Open performs the RADIUS login request and exposes the resulting Vault token
+// data for the lifetime of the ephemeral resource.
 func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
 	var data RadiusAuthLoginEphemeralModel
 
@@ -307,6 +308,8 @@ func (r *RadiusAuthLoginEphemeralResource) Open(ctx context.Context, req ephemer
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
+// listValueFromStringsOrNull converts a string slice into a Terraform list and
+// returns null when Vault returns no values.
 func listValueFromStringsOrNull(ctx context.Context, values []string) (types.List, diag.Diagnostics) {
 	if len(values) == 0 {
 		return types.ListNull(types.StringType), nil
@@ -315,10 +318,13 @@ func listValueFromStringsOrNull(ctx context.Context, values []string) (types.Lis
 	return types.ListValueFrom(ctx, types.StringType, values)
 }
 
+// mapValueFromStrings converts a string map into a Terraform map value.
 func mapValueFromStrings(ctx context.Context, values map[string]string) (types.Map, diag.Diagnostics) {
 	return types.MapValueFrom(ctx, types.StringType, values)
 }
 
+// Close revokes the token accessor captured during Open when the ephemeral
+// resource is torn down.
 func (r *RadiusAuthLoginEphemeralResource) Close(ctx context.Context, req ephemeral.CloseRequest, resp *ephemeral.CloseResponse) {
 	privateBytes, diags := req.Private.GetKey(ctx, radiusPrivateDataKey)
 	resp.Diagnostics.Append(diags...)

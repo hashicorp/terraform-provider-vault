@@ -172,6 +172,8 @@ func (r *RadiusAuthBackendUserResource) Update(ctx context.Context, req resource
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
+// upsertUser writes the RADIUS user registration and refreshes the Terraform
+// model from Vault's read-after-write response.
 func (r *RadiusAuthBackendUserResource) upsertUser(ctx context.Context, data *RadiusAuthBackendUserModel, writeErr func(error) (string, string)) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -298,6 +300,8 @@ func (r *RadiusAuthBackendUserResource) usernameFromPath(path string) (string, e
 	return matches[1], nil
 }
 
+// getClientAndUserData returns a Vault client together with normalized mount,
+// username, and user path values used by the resource operations.
 func (r *RadiusAuthBackendUserResource) getClientAndUserData(ctx context.Context, namespace string, mount types.String, username types.String) (*api.Client, string, string, string, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -314,6 +318,8 @@ func (r *RadiusAuthBackendUserResource) getClientAndUserData(ctx context.Context
 	return vaultClient, mountPath, userName, userPath, diags
 }
 
+// writeUser writes the RADIUS user entry and then reads it back so Terraform
+// state matches the values returned by Vault.
 func (r *RadiusAuthBackendUserResource) writeUser(ctx context.Context, vaultClient *api.Client, userPath string, vaultRequest map[string]any, writeErr func(error) (string, string)) (*api.Secret, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -338,6 +344,7 @@ func (r *RadiusAuthBackendUserResource) writeUser(ctx context.Context, vaultClie
 	return userResp, diags
 }
 
+// readUser reads a RADIUS user registration from Vault.
 func (r *RadiusAuthBackendUserResource) readUser(ctx context.Context, vaultClient *api.Client, userPath string) (*api.Secret, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -355,11 +362,9 @@ func (r *RadiusAuthBackendUserResource) readUser(ctx context.Context, vaultClien
 func (r *RadiusAuthBackendUserResource) getApiModel(ctx context.Context, data *RadiusAuthBackendUserModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	// // Convert Set to comma-separated string for Vault API
-	// // Note: Vault RADIUS API accepts comma-separated string but returns array
-	vaultRequest := map[string]any{}
 	// Convert Set to comma-separated string for Vault API
 	// Note: Vault RADIUS API accepts comma-separated string but returns array
+	vaultRequest := map[string]any{}
 	if !data.Policies.IsNull() && !data.Policies.IsUnknown() {
 		var elements []string
 		elementsDiags := data.Policies.ElementsAs(ctx, &elements, false)
