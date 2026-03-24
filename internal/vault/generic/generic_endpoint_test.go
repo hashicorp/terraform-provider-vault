@@ -357,13 +357,13 @@ func testResourceGenericEndpoint_initialCheck(s *terraform.State) error {
 		return fmt.Errorf("unexpected secret path")
 	}
 
-	write_data_count := instanceState.Attributes["write_data.%"]
-	if write_data_count != "1" {
-		return fmt.Errorf("write_data.%% has value %q, not 1", write_data_count)
+	writeDataCount := instanceState.Attributes["write_data.%"]
+	if writeDataCount != "1" {
+		return fmt.Errorf("write_data.%% has value %q, not 1", writeDataCount)
 	}
 
-	write_data_id := instanceState.Attributes["write_data.id"]
-	if write_data_id == "" {
+	writeDataID := instanceState.Attributes["write_data.id"]
+	if writeDataID == "" {
 		return fmt.Errorf("write_data.id not found in state (%q)", instanceState.Attributes)
 	}
 

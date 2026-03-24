@@ -92,7 +92,6 @@ output "wrap_token" {
 # Generate DR secondary token with response wrapping
 ephemeral "vault_generic_endpoint" "dr_secondary_token" {
   path          = "sys/replication/dr/primary/secondary-token"
-  disable_read  = true
   path_wrap_ttl = "30m"
   write_fields  = ["token", "ttl", "creation_time"]
   data_json     = jsonencode({
@@ -134,9 +133,6 @@ The following arguments are supported:
   wrap the response and return a wrapping token instead of the actual response.
   The value should be a duration string like `"30s"`, `"5m"`, or `"1h"`.
   When enabled, `write_fields` should extract from WrapInfo fields.
-
-* `disable_read` - (Optional) Set to `true` to prevent reading the endpoint after
-  writing. Useful for write-only operations like token generation.
 
 ## Attributes Reference
 

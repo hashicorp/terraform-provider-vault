@@ -92,6 +92,18 @@ func (r *GenericEndpointEphemeralResource) Metadata(ctx context.Context, req eph
 	resp.TypeName = req.ProviderTypeName + "_generic_endpoint"
 }
 
+// addToWriteData is a helper function that adds a value to both writeData and writeDataMap.
+// It handles string values directly and marshals non-string values to JSON.
+func addToWriteData(writeData map[string]interface{}, writeDataMap map[string]string, field string, value interface{}) {
+	writeData[field] = value
+	if vs, ok := value.(string); ok {
+		writeDataMap[field] = vs
+	} else {
+		vBytes, _ := json.Marshal(value)
+		writeDataMap[field] = string(vBytes)
+	}
+}
+
 func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
 	var data GenericEndpointEphemeralModel
 
@@ -148,7 +160,12 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 	var wrapMap map[string]interface{}
 	if response != nil && response.WrapInfo != nil {
 		if wb, err := json.Marshal(response.WrapInfo); err == nil {
-			_ = json.Unmarshal(wb, &wrapMap)
+			if err := json.Unmarshal(wb, &wrapMap); err != nil {
+				resp.Diagnostics.AddWarning(
+					"Failed to parse WrapInfo",
+					fmt.Sprintf("Could not extract wrap_info fields: %s", err),
+				)
+			}
 		}
 	}
 
@@ -156,7 +173,12 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 	var authMap map[string]interface{}
 	if response != nil && response.Auth != nil {
 		if ab, err := json.Marshal(response.Auth); err == nil {
-			_ = json.Unmarshal(ab, &authMap)
+			if err := json.Unmarshal(ab, &authMap); err != nil {
+				resp.Diagnostics.AddWarning(
+					"Failed to parse Auth",
+					fmt.Sprintf("Could not extract auth fields: %s", err),
+				)
+			}
 		}
 	}
 
@@ -171,92 +193,76 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 		}
 
 		for _, writeField := range writeFields {
-			// 1) initial check for response.Data
+			// 1) Check response.Data first - this is the primary data payload returned by most Vault endpoints.
+			// It is always checked first for any write_field requested by the user.
+			// As most Vault API responses return their data in the Data field (e.g., secret values, configuration).
 			if response.Data != nil {
 				if v, ok := response.Data[writeField]; ok {
-					writeData[writeField] = v
-					if vs, ok := v.(string); ok {
-						writeDataMap[writeField] = vs
-					} else {
-						vBytes, _ := json.Marshal(v)
-						writeDataMap[writeField] = string(vBytes)
-					}
+					addToWriteData(writeData, writeDataMap, writeField, v)
 					continue
 				}
 			}
 
-			// 2) "wrap_info" to include the entire wrap map
+			// 2) Check for the  "wrap_info" field to return the entire WrapInfo object.
+			// Checked when User explicitly requests "wrap_info" in write_fields and path_wrap_ttl was set.
+			// When response wrapping is enabled, users may want the complete wrap metadata
+			// (token, ttl, creation_time, etc.) as a single JSON object.
 			if writeField == "wrap_info" && wrapMap != nil {
-				writeData[writeField] = wrapMap
-				vBytes, _ := json.Marshal(wrapMap)
-				writeDataMap[writeField] = string(vBytes)
+				addToWriteData(writeData, writeDataMap, writeField, wrapMap)
 				continue
 			}
 
-			// 3) checking individual fields in WrapInfo
+			// 3) Check for individual fields within WrapInfo (e.g., "token", "ttl", "creation_time").
+			// Checked when User requests a specific WrapInfo field by name and path_wrap_ttl was set.
+			// Allows extracting specific wrap metadata fields without needing the entire wrap_info object.
+			// Common fields: token, ttl, creation_time, wrapped_accessor, creation_path.
 			if wrapMap != nil {
 				if v, ok := wrapMap[writeField]; ok {
-					writeData[writeField] = v
-					if vs, ok := v.(string); ok {
-						writeDataMap[writeField] = vs
-					} else {
-						vBytes, _ := json.Marshal(v)
-						writeDataMap[writeField] = string(vBytes)
-					}
+					addToWriteData(writeData, writeDataMap, writeField, v)
 					continue
 				}
 			}
 
-			// 4) "auth" to include the entire auth map
+			// 4) Check for the special "auth" field to return the entire Auth object.
+			// When User explicitly requests "auth" in write_fields and the endpoint returns authentication data.
+			// Authentication endpoints (e.g., login methods) return auth metadata that users may want
+			// as a complete JSON object (client_token, accessor, policies, metadata, etc.).
 			if writeField == "auth" && authMap != nil {
-				writeData[writeField] = authMap
-				vBytes, _ := json.Marshal(authMap)
-				writeDataMap[writeField] = string(vBytes)
+				addToWriteData(writeData, writeDataMap, writeField, authMap)
 				continue
 			}
 
-			// 5) checking individual fields in Auth
+			// 5) Check for individual fields within Auth (e.g., "client_token", "accessor", "policies").
+			// When User requests a specific Auth field by name and the endpoint returns authentication data.
+			// Allows extracting specific auth fields without needing the entire auth object.
+			// Common fields: client_token, accessor, policies, metadata, lease_duration, renewable.
 			if authMap != nil {
 				if v, ok := authMap[writeField]; ok {
-					writeData[writeField] = v
-					if vs, ok := v.(string); ok {
-						writeDataMap[writeField] = vs
-					} else {
-						vBytes, _ := json.Marshal(v)
-						writeDataMap[writeField] = string(vBytes)
-					}
+					addToWriteData(writeData, writeDataMap, writeField, v)
 					continue
 				}
 
-				// alias: "token" -> "client_token" in Auth
+				// Special alias: Allow "token" as a shorthand for "client_token" in Auth responses.
+				// Provides backward compatibility and convenience for users expecting "token" instead of "client_token".
 				if writeField == "token" {
 					if v, ok := authMap["client_token"]; ok {
-						writeData[writeField] = v
-						if vs, ok := v.(string); ok {
-							writeDataMap[writeField] = vs
-						} else {
-							vBytes, _ := json.Marshal(v)
-							writeDataMap[writeField] = string(vBytes)
-						}
+						addToWriteData(writeData, writeDataMap, writeField, v)
 						continue
 					}
 				}
 			}
 
-			// 6) check top-level response fields (lease_duration, lease_id, renewable)
+			// 6) Check top-level response fields for lease and renewal information.
+			// When User requests lease_duration, lease_id, or renewable and the response includes lease data.
+			// Some Vault responses (especially dynamic secrets) include lease information at the top level
+			// rather than in Data, Auth, or WrapInfo. These fields control secret lifecycle and renewal.
 			topLevel := map[string]interface{}{
 				"lease_duration": response.LeaseDuration,
 				"lease_id":       response.LeaseID,
 				"renewable":      response.Renewable,
 			}
 			if v, ok := topLevel[writeField]; ok {
-				writeData[writeField] = v
-				if vs, ok := v.(string); ok {
-					writeDataMap[writeField] = vs
-				} else {
-					vBytes, _ := json.Marshal(v)
-					writeDataMap[writeField] = string(vBytes)
-				}
+				addToWriteData(writeData, writeDataMap, writeField, v)
 				continue
 			}
 		}
