@@ -284,7 +284,6 @@ func TestAccGenericEndpointEphemeral_complexTypes(t *testing.T) {
 	})
 }
 
-
 // Helper functions for ephemeral resource tests
 
 // testAccGenericEndpointEphemeral_infraConfig creates the userpass auth backend and user
