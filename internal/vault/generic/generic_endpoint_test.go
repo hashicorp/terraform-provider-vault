@@ -377,9 +377,9 @@ func testResourceGenericEndpoint_initialCheck(s *terraform.State) error {
 		return fmt.Errorf("resource vault_generic_endpoint.u1_token has no primary instance")
 	}
 
-	write_data_count = instanceState.Attributes["write_data.%"]
-	if write_data_count != "0" {
-		return fmt.Errorf("write_data.%% has value %q, not 0", write_data_count)
+	writeDataCount = instanceState.Attributes["write_data.%"]
+	if writeDataCount != "0" {
+		return fmt.Errorf("write_data.%% has value %q, not 0", writeDataCount)
 	}
 
 	return nil
