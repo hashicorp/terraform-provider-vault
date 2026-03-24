@@ -8,7 +8,7 @@ description: |-
 
 # vault\_config\_control\_group
 
-Manages the Control Group configuration in Vault. Control Groups add additional authorization factors to be required before satisfying a request.
+Manages the Control Group configuration in Vault. This endpoint is used to configure Control Group settings.
 
 **Note** this feature is available only with Vault Enterprise.
 
