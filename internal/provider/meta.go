@@ -390,9 +390,6 @@ func (p *ProviderMeta) setClient() error {
 }
 
 func (p *ProviderMeta) setVaultVersion() error {
-	// if p == nil {
-	// 	return fmt.Errorf("nil ProviderMeta provided")
-	// }
 	if p.vaultVersion != nil {
 		return nil
 	}

@@ -6,6 +6,7 @@ IMPROVEMENTS:
 
 BUGS: 
 * `vault_consul_secret_backend`: Fixed validation logic to allow computed token values by correcting the condition that checks for token presence during plan phase. ([#2823](https://github.com/hashicorp/terraform-provider-vault/pull/2823))
+* `provider/auth_aws`: Fix `auth_login_aws` for Vault AWS auth backends configured with `use_sts_region_from_client = true` by generating a standard SigV4-signed `GetCallerIdentity` request with an `Authorization` header, and added support for custom STS endpoints. ([#2841](https://github.com/hashicorp/terraform-provider-vault/pull/2841))
 
 ## 5.8.0 (March 12, 2026)
 
