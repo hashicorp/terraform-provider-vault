@@ -150,14 +150,7 @@ func (r *RadiusAuthBackendConfigResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	// Read write-only secret from config (write-only fields are not in plan)
-	secret, diags := r.readSecretFromConfig(ctx, req.Config)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(r.upsertConfig(ctx, &data, secret, errutil.VaultCreateErr)...)
+	resp.Diagnostics.Append(r.upsertConfig(ctx, &data, req.Config, errutil.VaultCreateErr)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -221,14 +214,7 @@ func (r *RadiusAuthBackendConfigResource) Update(ctx context.Context, req resour
 		return
 	}
 
-	// Read write-only secret from config (write-only fields are not in plan)
-	secret, diags := r.readSecretFromConfig(ctx, req.Config)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(r.upsertConfig(ctx, &data, secret, errutil.VaultUpdateErr)...)
+	resp.Diagnostics.Append(r.upsertConfig(ctx, &data, req.Config, errutil.VaultUpdateErr)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -236,8 +222,17 @@ func (r *RadiusAuthBackendConfigResource) Update(ctx context.Context, req resour
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *RadiusAuthBackendConfigResource) upsertConfig(ctx context.Context, data *RadiusAuthBackendModel, secret string, writeErr func(error) (string, string)) diag.Diagnostics {
+// upsertConfig reads the write-only secret from config, writes the RADIUS
+// backend configuration, and refreshes the model from Vault's read-after-write
+// response.
+func (r *RadiusAuthBackendConfigResource) upsertConfig(ctx context.Context, data *RadiusAuthBackendModel, config tfsdk.Config, writeErr func(error) (string, string)) diag.Diagnostics {
 	var diags diag.Diagnostics
+
+	secret, secretDiags := r.readSecretFromConfig(ctx, config)
+	diags.Append(secretDiags...)
+	if diags.HasError() {
+		return diags
+	}
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -315,6 +310,8 @@ func (r *RadiusAuthBackendConfigResource) ImportState(ctx context.Context, req r
 	}
 }
 
+// extractRadiusConfigMountFromID parses an import identifier in the form
+// auth/<mount>/config and returns the normalized mount path.
 func extractRadiusConfigMountFromID(id string) (string, error) {
 	id = strings.Trim(id, "/")
 	if !strings.HasPrefix(id, "auth/") || !strings.HasSuffix(id, "/config") {
@@ -334,10 +331,14 @@ func (r *RadiusAuthBackendConfigResource) configPath(mountPath string) string {
 	return fmt.Sprintf("auth/%s/config", mountPath)
 }
 
+// mountPath normalizes the configured mount name before it is used in Vault
+// API paths.
 func (r *RadiusAuthBackendConfigResource) mountPath(mount types.String) string {
 	return strings.Trim(mount.ValueString(), "/")
 }
 
+// writeConfig writes the RADIUS backend configuration and re-reads it so state
+// reflects the values returned by Vault.
 func (r *RadiusAuthBackendConfigResource) writeConfig(ctx context.Context, vaultClient *api.Client, mountPath string, vaultRequest map[string]any, writeErr func(error) (string, string)) (*api.Secret, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -368,10 +369,7 @@ func (r *RadiusAuthBackendConfigResource) writeConfig(ctx context.Context, vault
 func (r *RadiusAuthBackendConfigResource) readSecretFromConfig(ctx context.Context, config tfsdk.Config) (string, diag.Diagnostics) {
 	var secret *string
 	diags := config.GetAttribute(ctx, path.Root(consts.FieldSecretWO), &secret)
-	if diags.HasError() {
-		return "", diags
-	}
-	if secret == nil {
+	if diags.HasError() || secret == nil {
 		return "", diags
 	}
 	return *secret, diags
