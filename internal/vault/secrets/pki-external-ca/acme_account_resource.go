@@ -36,9 +36,9 @@ var acmeAccountIDRe = regexp.MustCompile(`^([^/]+)/` + acmeAccountAffix + `/([^/
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
 var _ resource.ResourceWithConfigure = &PKIACMEAccountResource{}
 
-// NewPKIACMEAccountResource returns the implementation for this resource to be
+// NewPKIExternalCAACMEAccountResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider
-func NewPKIACMEAccountResource() resource.Resource {
+func NewPKIExternalCAACMEAccountResource() resource.Resource {
 	return &PKIACMEAccountResource{}
 }
 
@@ -82,7 +82,7 @@ type PKIACMEAccountAPIModel struct {
 }
 
 func (r *PKIACMEAccountResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_pki_secret_backend_acme_account"
+	resp.TypeName = req.ProviderTypeName + "_pki_external_ca_secret_backend_acme_account"
 }
 
 func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
