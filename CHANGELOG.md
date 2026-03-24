@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* **New Resource**: `vault_config_ui_header` - Manages custom HTTP headers for the Vault UI. Supports security headers (CSP, HSTS, X-Frame-Options), CORS configuration, and custom organizational headers. Requires Vault 1.16.0+.
+
 IMPROVEMENTS:
 
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
