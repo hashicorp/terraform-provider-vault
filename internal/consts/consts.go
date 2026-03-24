@@ -64,6 +64,7 @@ const (
 	FieldData                               = "data"
 	FieldDisableRead                        = "disable_read"
 	FieldName                               = "name"
+	FieldValues                             = "values"
 	FieldVersion                            = "version"
 	FieldMetadata                           = "metadata"
 	FieldNames                              = "names"
