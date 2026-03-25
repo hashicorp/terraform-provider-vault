@@ -6,6 +6,8 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/go-cty/cty"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -42,18 +44,26 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Optional:    true,
 			Description: "Distinguished name (DN) of the existing LDAP entry to manage password rotation for.",
 		},
-		consts.FieldRotationPeriod: {
-			Type:        schema.TypeInt,
-			Required:    true,
-			Description: "How often Vault should rotate the password of the user entry.",
-		},
 		consts.FieldSkipImportRotation: {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Description: "Skip rotation of the password on import.",
 		},
+		consts.FieldPasswordWO: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Sensitive:   true,
+			WriteOnly:   true,
+			Description: "Password for the static role. This is required for Vault to manage an existing account and enable rotation.",
+		},
+		consts.FieldPasswordWOVersion: {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Description:  "Version counter for write-only password.",
+			RequiredWith: []string{consts.FieldPasswordWO},
+		},
 	}
-	return &schema.Resource{
+	resource := &schema.Resource{
 		CreateContext: createUpdateLDAPStaticRoleResource,
 		UpdateContext: createUpdateLDAPStaticRoleResource,
 		ReadContext:   provider.ReadContextWrapper(readLDAPStaticRoleResource),
@@ -63,6 +73,11 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 		},
 		Schema: fields,
 	}
+
+	// add automated rotation fields to the resource
+	provider.MustAddSchema(resource, provider.GetAutomatedRootRotationSchema())
+
+	return resource
 }
 
 var ldapSecretBackendStaticRoleFields = []string{
@@ -91,6 +106,20 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 		}
 		if v, ok := d.GetOk(field); ok {
 			data[field] = v
+		}
+	}
+
+	// get automated rotation fields
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		automatedrotationutil.ParseAutomatedRotationFields(d, data)
+
+		// add write-only password field to data if provided
+		if d.HasChange(consts.FieldPasswordWOVersion) {
+			p := cty.GetAttrPath(consts.FieldPasswordWO)
+			woVal, _ := d.GetRawConfigAt(p)
+			if !woVal.IsNull() {
+				data[consts.FieldPassword] = woVal.AsString()
+			}
 		}
 	}
 
@@ -130,6 +159,13 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 			if err := d.Set(field, val); err != nil {
 				return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
 			}
+		}
+	}
+
+	// add automated rotation fields automatically
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, rolePath); err != nil {
+			return diag.Errorf("error setting automated rotation fields: %s", err)
 		}
 	}
 
