@@ -260,7 +260,15 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 
 	// get self-managed boolean
 	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
-		data[consts.FieldSelfManaged] = d.Get(consts.FieldSelfManaged)
+		if d.HasChange(consts.FieldSelfManaged) {
+			// on an update, this field is ignored by Vault, so writing on an update may
+			// cause drifts between the TF config and state
+			// we return an error to the user to indicate self_managed can only work on create.
+			if !d.IsNewResource() {
+				return diag.Errorf("self_managed parameter cannot be updated once config has been created")
+			}
+			data[consts.FieldSelfManaged] = d.Get(consts.FieldSelfManaged)
+		}
 	}
 
 	configPath := fmt.Sprintf("%s/config", path)
