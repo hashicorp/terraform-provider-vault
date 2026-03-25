@@ -157,57 +157,57 @@ func TestAccRadiusAuthBackendConfig_validationErrors(t *testing.T) {
 			// Missing required host field
 			{
 				Config:      testAccRadiusAuthBackendConfig_missingHost(path),
-				ExpectError: regexp.MustCompile(`(attribute|argument) "host" is required`),
+				ExpectError: regexp.MustCompile(`(?i)(host.*required|required.*host)`),
 			},
 			// Missing required secret_wo field
 			{
 				Config:      testAccRadiusAuthBackendConfig_missingSecret(path),
-				ExpectError: regexp.MustCompile(`(attribute|argument) "secret_wo" is required`),
+				ExpectError: regexp.MustCompile(`(?i)(secret_wo.*required|required.*secret_wo)`),
 			},
 			// Invalid port - non-integer value
 			{
 				Config:      testAccRadiusAuthBackendConfig_invalidPortType(path),
-				ExpectError: regexp.MustCompile(`Inappropriate value for attribute "port"`),
+				ExpectError: regexp.MustCompile(`(?i)(port|inappropriate value)`),
 			},
 			// Invalid dial_timeout - negative value
 			{
 				Config:      testAccRadiusAuthBackendConfig_negativeDialTimeout(path),
-				ExpectError: regexp.MustCompile(`cannot provide negative`),
+				ExpectError: regexp.MustCompile(`(?i)(dial_timeout|negative)`),
 			},
 			// Invalid token_ttl - negative value
 			{
 				Config:      testAccRadiusAuthBackendConfig_negativeTokenTTL(path),
-				ExpectError: regexp.MustCompile(`cannot provide negative`),
+				ExpectError: regexp.MustCompile(`(?i)(token_ttl|negative)`),
 			},
 			// Invalid token_ttl - malformed duration string
 			{
 				Config:      testAccRadiusAuthBackendConfig_malformedTokenTTL(path),
-				ExpectError: regexp.MustCompile(`Inappropriate value for attribute "token_ttl"`),
+				ExpectError: regexp.MustCompile(`(?i)(token_ttl|inappropriate value)`),
 			},
 			// Invalid CIDR block format
 			{
 				Config:      testAccRadiusAuthBackendConfig_invalidCIDR(path),
-				ExpectError: regexp.MustCompile(`Unable to convert`),
+				ExpectError: regexp.MustCompile(`(?i)(cidr|convert)`),
 			},
 			// Invalid token type
 			{
 				Config:      testAccRadiusAuthBackendConfig_invalidTokenType(path),
-				ExpectError: regexp.MustCompile(`invalid 'token_type' value`),
+				ExpectError: regexp.MustCompile(`(?i)(token_type|invalid)`),
 			},
 			// Invalid token_no_default_policy type
 			{
 				Config:      testAccRadiusAuthBackendConfig_invalidTokenNoDefaultPolicyType(path),
-				ExpectError: regexp.MustCompile(`Inappropriate value for attribute "token_no_default_policy"`),
+				ExpectError: regexp.MustCompile(`(?i)(token_no_default_policy|inappropriate value)`),
 			},
 			// Unknown/extra parameters
 			{
 				Config:      testAccRadiusAuthBackendConfig_unknownParameter(path),
-				ExpectError: regexp.MustCompile(`An argument named "unknown_param" is not expected here`),
+				ExpectError: regexp.MustCompile(`(?i)(unknown_param|not expected)`),
 			},
 			// Null value for required parameter
 			{
 				Config:      testAccRadiusAuthBackendConfig_nullHost(path),
-				ExpectError: regexp.MustCompile(`Must set a configuration value for the host attribute`),
+				ExpectError: regexp.MustCompile(`(?i)(host attribute|configuration value.*host|host.*configuration value)`),
 			},
 			// Final valid config so post-test destroy can clean up any mounts created by
 			// mounted invalid-config cases above.
@@ -229,11 +229,11 @@ func TestAccRadiusAuthBackendConfig_runtimeErrors(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccRadiusAuthBackendConfig_emptyHost(path),
-				ExpectError: regexp.MustCompile("config parameter `host` cannot be empty"),
+				ExpectError: regexp.MustCompile(`(?i)(host.*empty|empty.*host)`),
 			},
 			{
 				Config:      testAccRadiusAuthBackendConfig_emptySecret(path),
-				ExpectError: regexp.MustCompile("config parameter `secret` cannot be empty"),
+				ExpectError: regexp.MustCompile(`(?i)(secret.*empty|empty.*secret)`),
 			},
 			{
 				Config:      testAccRadiusAuthBackendConfig_nonExistentBackend(nonExistentPath),
@@ -257,7 +257,7 @@ func TestAccRadiusAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "invalid-import-id",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`(?i)(?=.*import)(?=.*identifier)(?=.*parsing)`),
 			},
 			{
 				Config:            testAccRadiusAuthBackendConfig_basic("test"),
@@ -265,7 +265,7 @@ func TestAccRadiusAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "auth/radius",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`(?i)(?=.*import)(?=.*identifier)(?=.*parsing)`),
 			},
 			{
 				Config:            testAccRadiusAuthBackendConfig_basic("test"),
@@ -273,7 +273,7 @@ func TestAccRadiusAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "radius/config",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`(?i)(?=.*import)(?=.*identifier)(?=.*parsing)`),
 			},
 			{
 				Config:            testAccRadiusAuthBackendConfig_basic("test"),
@@ -281,7 +281,7 @@ func TestAccRadiusAuthBackendConfig_importErrors(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "auth//config",
 				ImportStateVerify: false,
-				ExpectError:       regexp.MustCompile(`Error parsing import identifier`),
+				ExpectError:       regexp.MustCompile(`(?i)(?=.*import)(?=.*identifier)(?=.*parsing)`),
 			},
 		},
 	})

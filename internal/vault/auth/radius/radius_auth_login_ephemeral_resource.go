@@ -352,7 +352,7 @@ func (r *RadiusAuthLoginEphemeralResource) Close(ctx context.Context, req epheme
 	}
 
 	if err := c.Auth().Token().RevokeAccessor(privateData.Accessor); err != nil {
-		tflog.Warn(ctx, fmt.Sprintf("Failed to revoke RADIUS login token accessor %q: %v", privateData.Accessor, err))
+		tflog.Warn(ctx, fmt.Sprintf("Failed to revoke RADIUS login token accessor %q; if not renewed, the token will expire when its TTL elapses: %v", privateData.Accessor, err))
 		return
 	}
 

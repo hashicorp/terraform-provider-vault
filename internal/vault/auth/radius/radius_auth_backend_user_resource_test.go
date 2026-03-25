@@ -176,12 +176,12 @@ func TestAccRadiusAuthBackendUser_invalid(t *testing.T) {
 			// Test missing username
 			{
 				Config:      testAccRadiusAuthBackendUserConfig_missingUsername(backend),
-				ExpectError: regexp.MustCompile(`Missing required argument|The argument "username" is required`),
+				ExpectError: regexp.MustCompile(`(?i)(?=.*username)(?=.*required)`),
 			},
 			// Test missing mount
 			{
 				Config:      testAccRadiusAuthBackendUserConfig_missingMount(),
-				ExpectError: regexp.MustCompile(`Missing required argument|The argument "mount" is required`),
+				ExpectError: regexp.MustCompile(`(?i)(?=.*mount)(?=.*required)`),
 			},
 		},
 	})
