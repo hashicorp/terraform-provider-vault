@@ -75,7 +75,7 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 	}
 
 	// add automated rotation fields to the resource
-	provider.MustAddSchema(resource, provider.GetAutomatedRootRotationSchema())
+	provider.MustAddSchema(resource, provider.GetAutomatedRotationSchemaWithPolicy())
 
 	return resource
 }
@@ -111,7 +111,7 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 
 	// get automated rotation fields
 	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
-		automatedrotationutil.ParseAutomatedRotationFields(d, data)
+		automatedrotationutil.ParseAutomatedRotationFieldsWithPolicy(d, data)
 
 		// add write-only password field to data if provided
 		if d.HasChange(consts.FieldPasswordWOVersion) {
@@ -164,7 +164,7 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 
 	// add automated rotation fields automatically
 	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
-		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, rolePath); err != nil {
+		if err := automatedrotationutil.PopulateAutomatedRotationFieldsWithPolicy(d, resp, rolePath); err != nil {
 			return diag.Errorf("error setting automated rotation fields: %s", err)
 		}
 	}

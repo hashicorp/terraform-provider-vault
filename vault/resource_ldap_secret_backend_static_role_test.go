@@ -89,6 +89,16 @@ func TestAccLDAPSecretBackendStaticRole_SelfManaged(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDN, dn),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "60"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPolicy, "test-policy"),
+				),
+			},
+			{
+				Config: testLDAPSecretBackendStaticRoleConfig_selfManagedUpdated(path, bindDN, url, dn, username, password, "1"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDN, dn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "120"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPolicy, "test-policy-updated"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName,
@@ -160,6 +170,31 @@ resource "vault_ldap_secret_backend_static_role" "role" {
   rotation_period      = 60
   password_wo          = "%s"
   password_wo_version  = %s
+  rotation_policy      = "test-policy"
+}
+`, mount, bindDN, url, username, dn, username, password, passwordVersion)
+}
+
+func testLDAPSecretBackendStaticRoleConfig_selfManagedUpdated(mount, bindDN, url, dn, username, password, passwordVersion string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                      = "%s"
+  description               = "test description"
+  binddn                    = "%s"
+  url                       = "%s"
+  userdn                    = "CN=Users,DC=corp,DC=example,DC=net"
+  self_managed              = true
+}
+
+resource "vault_ldap_secret_backend_static_role" "role" {
+  mount                = vault_ldap_secret_backend.test.path
+  username             = "%s"
+  dn                   = "%s"
+  role_name            = "%s"
+  rotation_period      = 120
+  password_wo          = "%s"
+  password_wo_version  = %s
+  rotation_policy      = "test-policy-updated"
 }
 `, mount, bindDN, url, username, dn, username, password, passwordVersion)
 }

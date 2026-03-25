@@ -782,6 +782,7 @@ const (
 	FieldAzureClientID             = "azure_client_id"
 	FieldAzureAuthMode             = "azure_auth_mode"
 	FieldSelfManaged               = "self_managed"
+	FieldRotationPolicy            = "rotation_policy"
 
 	/*
 		ephemeral resource constants and write-only attributes
