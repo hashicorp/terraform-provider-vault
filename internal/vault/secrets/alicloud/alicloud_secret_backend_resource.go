@@ -118,8 +118,7 @@ func (r *AliCloudSecretBackendResource) Create(ctx context.Context, req resource
 	}
 
 	tflog.Debug(ctx, "Configuring AliCloud backend", map[string]any{
-		"config_path":    configPath,
-		"access_key_len": len(data.AccessKey.ValueString()),
+		"config_path": configPath,
 	})
 	if _, err := cli.Logical().WriteWithContext(ctx, configPath, vaultConfigData); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))

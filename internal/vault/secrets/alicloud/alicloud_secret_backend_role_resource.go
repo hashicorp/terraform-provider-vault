@@ -144,12 +144,10 @@ func (r *AliCloudSecretBackendRoleResource) Schema(_ context.Context, _ resource
 			},
 			consts.FieldTTL: schema.Int64Attribute{
 				Optional:            true,
-				Computed:            true,
 				MarkdownDescription: "Duration in seconds after which the issued credentials should expire. Defaults to 0, in which case the value will fallback to the system/mount defaults.",
 			},
 			consts.FieldMaxTTL: schema.Int64Attribute{
 				Optional:            true,
-				Computed:            true,
 				MarkdownDescription: "The maximum allowed lifetime of credentials issued using this role.",
 			},
 		},
@@ -614,14 +612,15 @@ func populateModelFromVaultResponse(ctx context.Context, data *AliCloudSecretBac
 		data.RemotePolicies = types.SetValueMust(types.ObjectType{AttrTypes: remotePolicyAttrTypes()}, []attr.Value{})
 	}
 
-	// TTL fields: Vault returns seconds as json.Number via model.ToAPIModel
-	data.TTL = types.Int64Value(0)
-	if ttlVal, err := role.TTL.Int64(); err == nil {
+	// TTL fields: Only set in state if non-zero, otherwise leave as null.
+	// This prevents drift when the field is omitted from config (null) and
+	// Vault returns 0 (system default). Without Computed: true, null config
+	// vs null state = no change detected.
+	if ttlVal, err := role.TTL.Int64(); err == nil && ttlVal != 0 {
 		data.TTL = types.Int64Value(ttlVal)
 	}
 
-	data.MaxTTL = types.Int64Value(0)
-	if maxTTLVal, err := role.MaxTTL.Int64(); err == nil {
+	if maxTTLVal, err := role.MaxTTL.Int64(); err == nil && maxTTLVal != 0 {
 		data.MaxTTL = types.Int64Value(maxTTLVal)
 	}
 
