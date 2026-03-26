@@ -1515,7 +1515,7 @@ func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefi
 		result["tls_server_name"] = v.(string)
 	}
 	if v, ok := data["insecure"]; ok {
-		result["insecure"] = v.(bool)
+		result["insecure_tls"] = v.(bool)
 	}
 	if v, ok := data["username_template"]; ok {
 		result["username_template"] = v.(string)
@@ -1882,7 +1882,7 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 	}
 
 	if v, ok := d.GetOk(prefix + "insecure"); ok {
-		data["insecure"] = v.(bool)
+		data["insecure_tls"] = v.(bool)
 	}
 
 	if v, ok := d.GetOk(prefix + "username_template"); ok {
