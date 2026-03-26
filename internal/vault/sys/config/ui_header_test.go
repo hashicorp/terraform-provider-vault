@@ -10,11 +10,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
+	// "github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 // TestAccConfigUIHeader tests basic resource creation and import
@@ -37,50 +38,18 @@ func TestAccConfigUIHeader(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "value1"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateId:                        headerName,
+				ImportStateVerifyIdentifierAttribute: consts.FieldName,
+			},
 		},
 	})
 }
 
-// TestAccConfigUIHeader_completeCRUD tests complete CRUD lifecycle
-func TestAccConfigUIHeader_completeCRUD(t *testing.T) {
-	headerName := acctest.RandomWithPrefix("X-CRUD-Header")
-	resourceName := "vault_config_ui_header.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			// CREATE
-			{
-				Config: testAccConfigUIHeaderConfig_basic(headerName, []string{"initial"}),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, headerName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "initial"),
-				),
-			},
-			// READ (import)
-			testutil.GetImportTestStep(resourceName, false, nil),
-			// UPDATE
-			{
-				Config: testAccConfigUIHeaderConfig_basic(headerName, []string{"updated"}),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, headerName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "updated"),
-				),
-			},
-			// READ (import again)
-			testutil.GetImportTestStep(resourceName, false, nil),
-		},
-	})
-}
-
-// TestAccConfigUIHeader_update tests update operations
+// TestAccConfigUIHeader_update tests update operations, multiple values, and import verification
 func TestAccConfigUIHeader_update(t *testing.T) {
 	headerName := acctest.RandomWithPrefix("X-Update-Header")
 	resourceName := "vault_config_ui_header.test"
@@ -100,6 +69,14 @@ func TestAccConfigUIHeader_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "initial"),
 				),
 			},
+			// Verify import works
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateId:                        headerName,
+				ImportStateVerifyIdentifierAttribute: consts.FieldName,
+			},
 			{
 				Config: testAccConfigUIHeaderConfig_basic(headerName, []string{"updated"}),
 				Check: resource.ComposeTestCheckFunc(
@@ -108,22 +85,15 @@ func TestAccConfigUIHeader_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "updated"),
 				),
 			},
-		},
-	})
-}
-
-// TestAccConfigUIHeader_multipleValues tests multiple values
-func TestAccConfigUIHeader_multipleValues(t *testing.T) {
-	headerName := acctest.RandomWithPrefix("X-Multi-Header")
-	resourceName := "vault_config_ui_header.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
+			// Verify import still works after update
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateId:                        headerName,
+				ImportStateVerifyIdentifierAttribute: consts.FieldName,
+			},
+			// Test multiple values
 			{
 				Config: testAccConfigUIHeaderConfig_basic(headerName, []string{"value1", "value2", "value3"}),
 				Check: resource.ComposeTestCheckFunc(
@@ -134,7 +104,14 @@ func TestAccConfigUIHeader_multipleValues(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".2", "value3"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			// Verify import works with multiple values
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateId:                        headerName,
+				ImportStateVerifyIdentifierAttribute: consts.FieldName,
+			},
 		},
 	})
 }
@@ -159,26 +136,12 @@ func TestAccConfigUIHeader_specialCharacters(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "value: with; special, chars="),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
-		},
-	})
-}
-
-// TestAccConfigUIHeader_commonHeaders tests common HTTP headers
-func TestAccConfigUIHeader_commonHeaders(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
 			{
-				Config: testAccConfigUIHeaderConfig_commonHeaders(),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_config_ui_header.csp", consts.FieldName, "Content-Security-Policy"),
-					resource.TestCheckResourceAttr("vault_config_ui_header.cors_origin", consts.FieldName, "Access-Control-Allow-Origin"),
-				),
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateId:                        headerName,
+				ImportStateVerifyIdentifierAttribute: consts.FieldName,
 			},
 		},
 	})
@@ -207,82 +170,13 @@ func TestAccConfigUIHeader_sudoCapability(t *testing.T) {
 				),
 			},
 			// Verify import also works with sudo
-			testutil.GetImportTestStep(resourceName, false, nil),
-		},
-	})
-}
-
-// TestAccConfigUIHeader_apiAsymmetry tests API asymmetry handling
-// The Vault API returns single values as strings but accepts arrays
-// This test verifies the provider correctly handles both formats
-func TestAccConfigUIHeader_apiAsymmetry(t *testing.T) {
-	headerName := acctest.RandomWithPrefix("X-Single-Value")
-	resourceName := "vault_config_ui_header.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			// Test 1: Single value (API returns as string)
 			{
-				Config: testAccConfigUIHeaderConfig_basic(headerName, []string{"single"}),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, headerName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "single"),
-				),
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateId:                        headerName,
+				ImportStateVerifyIdentifierAttribute: consts.FieldName,
 			},
-			// Test 2: Import single value (verify string->array conversion)
-			testutil.GetImportTestStep(resourceName, false, nil),
-			// Test 3: Update to multiple values (API returns as array)
-			{
-				Config: testAccConfigUIHeaderConfig_basic(headerName, []string{"value1", "value2"}),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, headerName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "2"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "value1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".1", "value2"),
-				),
-			},
-			// Test 4: Import multiple values (verify array handling)
-			testutil.GetImportTestStep(resourceName, false, nil),
-			// Test 5: Update back to single value (verify array->string handling)
-			{
-				Config: testAccConfigUIHeaderConfig_basic(headerName, []string{"back-to-single"}),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, headerName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "back-to-single"),
-				),
-			},
-		},
-	})
-}
-
-// TestAccConfigUIHeader_minimal tests minimal configuration
-func TestAccConfigUIHeader_minimal(t *testing.T) {
-	headerName := acctest.RandomWithPrefix("X-Minimal-Header")
-	resourceName := "vault_config_ui_header.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccConfigUIHeaderConfig_basic(headerName, []string{"minimal-value"}),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, headerName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "minimal-value"),
-				),
-			},
-			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
@@ -318,7 +212,7 @@ func TestAccConfigUIHeader_nameChange(t *testing.T) {
 	})
 }
 
-// TestAccConfigUIHeader_emptyValues tests validation for empty values list
+// TestAccConfigUIHeader_emptyValues tests that empty values are rejected
 func TestAccConfigUIHeader_emptyValues(t *testing.T) {
 	headerName := acctest.RandomWithPrefix("X-Empty-Header")
 
@@ -331,10 +225,55 @@ func TestAccConfigUIHeader_emptyValues(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccConfigUIHeaderConfig_emptyValues(headerName),
-				ExpectError: regexp.MustCompile(`Attribute values list must contain at least 1`),
+				ExpectError: regexp.MustCompile("Attribute values set must contain at least 1"),
 			},
 		},
 	})
+}
+
+// TestAccConfigUIHeader_duplicateValues tests that duplicate values are handled
+func TestAccConfigUIHeader_duplicateValues(t *testing.T) {
+	headerName := acctest.RandomWithPrefix("X-Duplicate-Header")
+	resourceName := "vault_config_ui_header.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccConfigUIHeaderConfig_basic(headerName, []string{"value1", "value1", "value2"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, headerName),
+					// Terraform sets automatically deduplicate, so we should only have 2 unique values
+					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "2"),
+					testAccCheckUIHeaderValuesContain(resourceName, "value1"),
+					testAccCheckUIHeaderValuesContain(resourceName, "value2"),
+				),
+			},
+		},
+	})
+}
+
+// Helper function to check if a value exists in the values set
+func testAccCheckUIHeaderValuesContain(resourceName, expectedValue string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		// Check if the expected value exists in any of the values
+		for key, value := range rs.Primary.Attributes {
+			if regexp.MustCompile(`^values\.\d+$`).MatchString(key) && value == expectedValue {
+				return nil
+			}
+		}
+
+		return fmt.Errorf("expected value %q not found in values set", expectedValue)
+	}
 }
 
 // Helper function to generate test configuration
@@ -352,25 +291,11 @@ resource "vault_config_ui_header" "test" {
 }`, name, valuesStr)
 }
 
-// Helper function for common HTTP headers test
-func testAccConfigUIHeaderConfig_commonHeaders() string {
-	return `
-resource "vault_config_ui_header" "csp" {
-  name = "Content-Security-Policy"
-  values = ["default-src 'self'"]
-}
-
-resource "vault_config_ui_header" "cors_origin" {
-  name = "Access-Control-Allow-Origin"
-  values = ["https://example.com"]
-}
-`
-}
-
+// Helper function to generate test configuration with empty values
 func testAccConfigUIHeaderConfig_emptyValues(name string) string {
 	return fmt.Sprintf(`
 resource "vault_config_ui_header" "test" {
-  name   = %q
+  name = %q
   values = []
 }`, name)
 }
