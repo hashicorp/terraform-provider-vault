@@ -139,10 +139,7 @@ func (r *AliCloudAccessCredentialsEphemeralResource) Open(ctx context.Context, r
 		return
 	}
 
-	if !data.Mount.IsNull() && !data.Mount.IsUnknown() {
-		mount = data.Mount.ValueString()
-	}
-
+	mount = data.Mount.ValueString()
 	role := data.Role.ValueString()
 
 	// Build path: /alicloud/creds/:role
