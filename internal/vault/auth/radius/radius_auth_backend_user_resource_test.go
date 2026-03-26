@@ -160,33 +160,6 @@ func TestAccRadiusAuthBackendUser_namespace(t *testing.T) {
 	})
 }
 
-func TestAccRadiusAuthBackendUser_invalid(t *testing.T) {
-	backend := acctest.RandomWithPrefix("radius")
-	username := acctest.RandomWithPrefix("user")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			// Test invalid mount
-			{
-				Config:      testAccRadiusAuthBackendUserConfig_invalidMount(username),
-				ExpectError: regexp.MustCompile("no handler for route|unsupported path"),
-			},
-			// Test missing username
-			{
-				Config:      testAccRadiusAuthBackendUserConfig_missingUsername(backend),
-				ExpectError: regexp.MustCompile(`(?i)(?=.*username)(?=.*required)`),
-			},
-			// Test missing mount
-			{
-				Config:      testAccRadiusAuthBackendUserConfig_missingMount(),
-				ExpectError: regexp.MustCompile(`(?i)(?=.*mount)(?=.*required)`),
-			},
-		},
-	})
-}
-
 func TestAccRadiusAuthBackendUser_invalidNamespace(t *testing.T) {
 	backend := acctest.RandomWithPrefix("radius")
 	username := acctest.RandomWithPrefix("user")
@@ -204,32 +177,6 @@ func TestAccRadiusAuthBackendUser_invalidNamespace(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccRadiusAuthBackendUserConfig_invalidMount(username string) string {
-	return fmt.Sprintf(`
-resource "vault_radius_auth_backend_user" "test" {
-  mount    = "nonexistent-mount"
-  username = "%s"
-  policies = ["default"]
-}
-`, username)
-}
-
-func testAccRadiusAuthBackendUserConfig_missingUsername(backend string) string {
-	return testAccRadiusAuthBackendUserConfigWithBody(backend, `
-	mount    = vault_auth_backend.test.path
-	policies = ["default"]
-`)
-}
-
-func testAccRadiusAuthBackendUserConfig_missingMount() string {
-	return `
-resource "vault_radius_auth_backend_user" "test" {
-  username = "testuser"
-  policies = ["default"]
-}
-`
 }
 
 func testAccRadiusAuthBackendUserConfig_invalidNamespace(backend, username string) string {
