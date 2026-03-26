@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -19,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
-	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -35,18 +36,13 @@ func NewConfigUIHeaderResource() resource.Resource {
 // ConfigUIHeaderResource implements the methods that define this resource
 type ConfigUIHeaderResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 // ConfigUIHeaderModel describes the Terraform resource data model to match the
 // resource schema.
 type ConfigUIHeaderModel struct {
-	// common fields to all migrated resources
-	base.BaseModelLegacy
-
-	// fields specific to this resource
 	Name   types.String `tfsdk:"name"`
-	Values types.List   `tfsdk:"values"`
+	Values types.Set    `tfsdk:"values"`
 }
 
 // ConfigUIHeaderAPIModel describes the Vault API data model for write operations.
@@ -75,25 +71,39 @@ func (r *ConfigUIHeaderResource) Schema(ctx context.Context, req resource.Schema
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldName: schema.StringAttribute{
-				MarkdownDescription: "Name of the custom header.",
+				MarkdownDescription: "The name of the custom header. Cannot start with `X-Vault-`.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
-			consts.FieldValues: schema.ListAttribute{
-				Required:            true,
+			consts.FieldValues: schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "List of values for the header. At least one value is required.",
-				Validators: []validator.List{
-					listvalidator.SizeAtLeast(1),
+				MarkdownDescription: "Set of values for the header. At least one value is required. Duplicates are automatically ignored.",
+				Required:            true,
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
 				},
 			},
 		},
-		MarkdownDescription: "Manages custom HTTP headers for the Vault UI.",
+		MarkdownDescription: "Manages custom response headers returned from the Vault UI. This resource requires `sudo` capability and must be called from the root namespace. **Warning:** Setting `Content-Security-Policy` will override Vault's secure default CSP.",
 	}
+}
 
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+// checkVaultVersion validates that the Vault version supports UI headers (1.16.0+)
+func (r *ConfigUIHeaderResource) checkVaultVersion(resp *resource.ReadResponse) bool {
+	if !r.Meta().IsAPISupported(provider.VaultVersion116) {
+		resp.Diagnostics.AddError(
+			"Feature Not Supported",
+			"Custom UI headers require Vault version 1.16.0 or later. "+
+				"Current Vault version: "+r.Meta().GetVaultVersion().String(),
+		)
+		return false
+	}
+	return true
 }
 
 // Create is called during the terraform apply command.
@@ -110,20 +120,19 @@ func (r *ConfigUIHeaderResource) Create(ctx context.Context, req resource.Create
 	}
 
 	// Check if Vault version supports UI headers (requires 1.16.0+)
-	if !r.Meta().IsAPISupported(provider.VaultVersion116) {
-		resp.Diagnostics.AddError(
-			"Feature Not Supported",
-			"Custom UI headers require Vault version 1.16.0 or later. "+
-				"Current Vault version: "+r.Meta().GetVaultVersion().String(),
-		)
+	readResp := &resource.ReadResponse{Diagnostics: resp.Diagnostics}
+	if !r.checkVaultVersion(readResp) {
+		resp.Diagnostics = readResp.Diagnostics
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), "")
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
+
+	name := data.Name.ValueString()
 
 	// Convert values list to string slice
 	var values []string
@@ -136,7 +145,7 @@ func (r *ConfigUIHeaderResource) Create(ctx context.Context, req resource.Create
 		consts.FieldValues: values,
 	}
 
-	path := r.path(data.Name.ValueString())
+	path := r.path(name)
 	// vault returns a nil response on success
 	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
 	if err != nil {
@@ -150,7 +159,7 @@ func (r *ConfigUIHeaderResource) Create(ctx context.Context, req resource.Create
 					"path \"sys/config/ui/headers/*\" {\n"+
 					"  capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\", \"sudo\"]\n"+
 					"}",
-					data.Name.ValueString(), err),
+					name, err),
 			)
 		} else {
 			resp.Diagnostics.AddError(
@@ -159,43 +168,6 @@ func (r *ConfigUIHeaderResource) Create(ctx context.Context, req resource.Create
 		}
 		return
 	}
-
-	// Read back the created resource to populate state
-	readPath := r.path(data.Name.ValueString())
-	queryParams := map[string][]string{
-		"multivalue": {"true"},
-	}
-	headerResp, err := client.Logical().ReadWithDataWithContext(ctx, readPath, queryParams)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			errutil.VaultReadErr(err),
-		)
-		return
-	}
-	if headerResp == nil {
-		resp.Diagnostics.AddError(
-			errutil.VaultReadResponseNil(),
-		)
-		return
-	}
-
-	var readResp ConfigUIHeaderReadAPIModel
-	err = model.ToAPIModel(headerResp.Data, &readResp)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
-		return
-	}
-
-	// Convert values slice to types.List
-	valuesList, diags := types.ListValueFrom(ctx, types.StringType, readResp.Values)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	data.Values = valuesList
-
-	// write the ID to state which is required for backwards compatibility
-	data.ID = types.StringValue(data.Name.ValueString())
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -215,23 +187,18 @@ func (r *ConfigUIHeaderResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	// Check if Vault version supports UI headers (requires 1.16.0+)
-	if !r.Meta().IsAPISupported(provider.VaultVersion116) {
-		resp.Diagnostics.AddError(
-			"Feature Not Supported",
-			"Custom UI headers require Vault version 1.16.0 or later. "+
-				"Current Vault version: "+r.Meta().GetVaultVersion().String(),
-		)
+	if !r.checkVaultVersion(resp) {
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), "")
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
-	// read the name from the id field to support the import command
-	name := data.ID.ValueString()
+	// Use the name field directly
+	name := data.Name.ValueString()
 	path := r.path(name)
 	// Use multivalue=true parameter to get consistent response format
 	queryParams := map[string][]string{
@@ -244,33 +211,28 @@ func (r *ConfigUIHeaderResource) Read(ctx context.Context, req resource.ReadRequ
 		)
 		return
 	}
-	if headerResp == nil {
-		resp.Diagnostics.AddError(
-			errutil.VaultReadResponseNil(),
-		)
+	// If response is nil, the header has been deleted outside of Terraform
+	if headerResp == nil || headerResp.Data == nil {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	var readResp ConfigUIHeaderReadAPIModel
-	err = model.ToAPIModel(headerResp.Data, &readResp)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
-		return
+	// Extract values from response
+	// Note: With multivalue=true, Vault returns "values" (plural) as an array
+	if valuesRaw, ok := headerResp.Data["values"]; ok {
+		if valuesInterface, ok := valuesRaw.([]interface{}); ok {
+			values := make([]string, len(valuesInterface))
+			for i, val := range valuesInterface {
+				values[i] = val.(string)
+			}
+			valuesSet, diags := types.SetValueFrom(ctx, types.StringType, values)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			data.Values = valuesSet
+		}
 	}
-
-	// Convert values slice to types.List
-	valuesList, diags := types.ListValueFrom(ctx, types.StringType, readResp.Values)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	data.Values = valuesList
-
-	// write the name to state to support the import command
-	data.Name = types.StringValue(name)
-
-	// write the ID to state which is required for backwards compatibility
-	data.ID = types.StringValue(name)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -289,16 +251,13 @@ func (r *ConfigUIHeaderResource) Update(ctx context.Context, req resource.Update
 	}
 
 	// Check if Vault version supports UI headers (requires 1.16.0+)
-	if !r.Meta().IsAPISupported(provider.VaultVersion116) {
-		resp.Diagnostics.AddError(
-			"Feature Not Supported",
-			"Custom UI headers require Vault version 1.16.0 or later. "+
-				"Current Vault version: "+r.Meta().GetVaultVersion().String(),
-		)
+	readResp := &resource.ReadResponse{Diagnostics: resp.Diagnostics}
+	if !r.checkVaultVersion(readResp) {
+		resp.Diagnostics = readResp.Diagnostics
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), "")
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
@@ -315,7 +274,8 @@ func (r *ConfigUIHeaderResource) Update(ctx context.Context, req resource.Update
 		consts.FieldValues: values,
 	}
 
-	path := r.path(data.Name.ValueString())
+	name := data.Name.ValueString()
+	path := r.path(name)
 	// vault returns a nil response on success
 	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
 	if err != nil {
@@ -329,7 +289,7 @@ func (r *ConfigUIHeaderResource) Update(ctx context.Context, req resource.Update
 					"path \"sys/config/ui/headers/*\" {\n"+
 					"  capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\", \"sudo\"]\n"+
 					"}",
-					data.Name.ValueString(), err),
+					name, err),
 			)
 		} else {
 			resp.Diagnostics.AddError(
@@ -338,43 +298,6 @@ func (r *ConfigUIHeaderResource) Update(ctx context.Context, req resource.Update
 		}
 		return
 	}
-
-	// Read back the updated resource to populate state
-	readPath := r.path(data.Name.ValueString())
-	queryParams := map[string][]string{
-		"multivalue": {"true"},
-	}
-	headerResp, err := client.Logical().ReadWithDataWithContext(ctx, readPath, queryParams)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			errutil.VaultReadErr(err),
-		)
-		return
-	}
-	if headerResp == nil {
-		resp.Diagnostics.AddError(
-			errutil.VaultReadResponseNil(),
-		)
-		return
-	}
-
-	var readResp ConfigUIHeaderReadAPIModel
-	err = model.ToAPIModel(headerResp.Data, &readResp)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
-		return
-	}
-
-	// Convert values slice to types.List
-	valuesList, diags := types.ListValueFrom(ctx, types.StringType, readResp.Values)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	data.Values = valuesList
-
-	// write the ID to state which is required for backwards compatibility
-	data.ID = types.StringValue(data.Name.ValueString())
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -394,16 +317,13 @@ func (r *ConfigUIHeaderResource) Delete(ctx context.Context, req resource.Delete
 	}
 
 	// Check if Vault version supports UI headers (requires 1.16.0+)
-	if !r.Meta().IsAPISupported(provider.VaultVersion116) {
-		resp.Diagnostics.AddError(
-			"Feature Not Supported",
-			"Custom UI headers require Vault version 1.16.0 or later. "+
-				"Current Vault version: "+r.Meta().GetVaultVersion().String(),
-		)
+	readResp := &resource.ReadResponse{Diagnostics: resp.Diagnostics}
+	if !r.checkVaultVersion(readResp) {
+		resp.Diagnostics = readResp.Diagnostics
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	client, err := client.GetClient(ctx, r.Meta(), "")
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
@@ -435,6 +355,12 @@ func (r *ConfigUIHeaderResource) Delete(ctx context.Context, req resource.Delete
 
 	// If the logic reaches here, it implicitly succeeded and will remove
 	// the resource from state if there are no other errors.
+}
+
+// ImportState implements the import functionality for this resource
+func (r *ConfigUIHeaderResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Directly map the import ID to the "name" attribute in the schema
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), req.ID)...)
 }
 
 func (r *ConfigUIHeaderResource) path(name string) string {
