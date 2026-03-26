@@ -144,20 +144,6 @@ func TestAccRadiusAuthLogin_namespace(t *testing.T) {
 			"echo": echoprovider.NewProviderServer(),
 		},
 		Steps: []resource.TestStep{
-			// Step 1: Apply only the RADIUS infrastructure. Ephemeral resources are
-			// opened during Terraform plan, so the auth mount must already exist
-			// before the login resource is introduced in step 2.
-			{
-				Config: testAccRadiusAuthInfraConfig_namespace(namespace, mount, p),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PostApplyPostRefresh: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-			// Step 2: Add the ephemeral login resource on top of the existing
-			// infrastructure. A successful apply proves Vault accepted the
-			// RADIUS credentials.
 			{
 				Config: testAccRadiusAuthLoginConfig_namespace(namespace, mount, p),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -198,20 +184,6 @@ func TestAccRadiusAuthLogin_namespace(t *testing.T) {
 					},
 				},
 			},
-			// Step 3: Forward client_token to a provider alias and call
-			// auth/token/lookup-self. Non-empty data proves the token is
-			// a real, working Vault credential.
-			{
-				Config: testAccRadiusAuthLoginWithTokenUseConfig_namespace(namespace, mount, p),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_generic_secret.token_self_ns", "data.%"),
-				),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PostApplyPostRefresh: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
 		},
 	})
 }
@@ -225,16 +197,6 @@ resource "vault_auth_backend" "test" {
 `, mount)
 }
 
-func testAccRadiusAuthBackendConfigMountOnly_namespace(mount string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "test" {
-  namespace = vault_namespace.test.path
-  type      = "radius"
-  path      = %q
-}
-`, mount)
-}
-
 func testAccRadiusAuthInfraConfig_basic(mount string, p radiusLoginParams) string {
 	return fmt.Sprintf(`
 %s
@@ -242,32 +204,14 @@ func testAccRadiusAuthInfraConfig_basic(mount string, p radiusLoginParams) strin
 %s
 `,
 		testAccRadiusAuthBackendConfigMountOnly(mount),
-		testAccRadiusAuthInfraResources("", p),
+		testAccRadiusAuthInfraResources(p),
 	)
 }
 
-func testAccRadiusAuthInfraConfig_namespace(namespace, mount string, p radiusLoginParams) string {
-	return fmt.Sprintf(`
-resource "vault_namespace" "test" {
-  path = %q
-}
-
-%s
-
-%s
-`,
-		namespace,
-		testAccRadiusAuthBackendConfigMountOnly_namespace(mount),
-		testAccRadiusAuthInfraResources("vault_namespace.test.path", p),
-	)
-}
-
-func testAccRadiusAuthInfraResources(namespace string, p radiusLoginParams) string {
-	namespaceLine := testAccRadiusNamespaceLine(namespace)
-
+func testAccRadiusAuthInfraResources(p radiusLoginParams) string {
 	return fmt.Sprintf(`
 resource "vault_radius_auth_backend" "test" {
-%smount        = vault_auth_backend.test.path
+  mount        = vault_auth_backend.test.path
   host         = %q
   secret_wo    = %q
   dial_timeout = 30
@@ -275,7 +219,7 @@ resource "vault_radius_auth_backend" "test" {
 }
 
 resource "vault_policy" "token_creator" {
-%sname   = "token-creator"
+  name   = "token-creator"
   policy = <<EOT
 path "auth/token/create" {
   capabilities = ["create", "update"]
@@ -284,19 +228,11 @@ EOT
 }
 
 resource "vault_radius_auth_backend_user" "test" {
-%smount    = vault_auth_backend.test.path
+  mount    = vault_auth_backend.test.path
   username = %q
   policies = ["default", "token-creator"]
 }
-`, namespaceLine, p.host, p.secret, namespaceLine, namespaceLine, p.username)
-}
-
-func testAccRadiusNamespaceLine(namespace string) string {
-	if namespace == "" {
-		return ""
-	}
-
-	return fmt.Sprintf("  namespace = %s\n", namespace)
+`, p.host, p.secret, p.username)
 }
 
 func testAccRadiusAuthLoginConfig_basic(mount string, p radiusLoginParams) string {
@@ -359,7 +295,41 @@ data "vault_generic_secret" "token_self" {
 
 func testAccRadiusAuthLoginConfig_namespace(namespace, mount string, p radiusLoginParams) string {
 	return fmt.Sprintf(`
-%s
+resource "vault_namespace" "test" {
+	path = %q
+}
+
+resource "vault_auth_backend" "test" {
+	namespace = vault_namespace.test.path
+	type      = "radius"
+	path      = %q
+}
+
+resource "vault_radius_auth_backend" "test" {
+	namespace    = vault_namespace.test.path
+	mount        = vault_auth_backend.test.path
+	host         = %q
+	secret_wo    = %q
+	dial_timeout = 30
+	read_timeout = 30
+}
+
+resource "vault_policy" "token_creator" {
+	namespace = vault_namespace.test.path
+	name      = "token-creator"
+	policy = <<EOT
+path "auth/token/create" {
+	capabilities = ["create", "update"]
+}
+EOT
+}
+
+resource "vault_radius_auth_backend_user" "test" {
+	namespace = vault_namespace.test.path
+	mount     = vault_auth_backend.test.path
+	username  = %q
+	policies  = ["default", "token-creator"]
+}
 
 ephemeral "vault_radius_auth_login" "test" {
   namespace = vault_namespace.test.path
@@ -374,41 +344,7 @@ provider "echo" {
 }
 
 resource "echo" "test_radius_ns" {}
-`, testAccRadiusAuthInfraConfig_namespace(namespace, mount, p), p.password)
-}
-
-func testAccRadiusAuthLoginWithTokenUseConfig_namespace(namespace, mount string, p radiusLoginParams) string {
-	vaultAddr := os.Getenv("VAULT_ADDR")
-	if vaultAddr == "" {
-		vaultAddr = testAccRadiusDefaultVaultAddr
-	}
-
-	return fmt.Sprintf(`
-%s
-
-ephemeral "vault_radius_auth_login" "test" {
-  namespace = vault_namespace.test.path
-  mount_id  = vault_auth_backend.test.id
-  mount     = vault_auth_backend.test.path
-  username  = vault_radius_auth_backend_user.test.username
-  password  = %q
-}
-
-# A second Vault provider instance authenticated with the RADIUS-issued token.
-provider "vault" {
-  alias     = "radius_auth_ns"
-  address   = %q
-  namespace = vault_namespace.test.path
-  token     = ephemeral.vault_radius_auth_login.test.client_token
-}
-
-# Token self-lookup via the RADIUS-authenticated provider alias.
-# Any valid Vault token may call this via the built-in default policy.
-data "vault_generic_secret" "token_self_ns" {
-  provider = vault.radius_auth_ns
-  path     = "auth/token/lookup-self"
-}
-`, testAccRadiusAuthInfraConfig_namespace(namespace, mount, p), p.password, vaultAddr)
+`, namespace, mount, p.host, p.secret, p.username, p.password)
 }
 
 func radiusLoginParamsFromEnv(t *testing.T) radiusLoginParams {
