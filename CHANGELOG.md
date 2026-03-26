@@ -2,7 +2,7 @@
 
 FEATURES:
 
-* **New Resource**: `vault_config_ui_header` - Manages custom HTTP headers for the Vault UI. Supports security headers (CSP, HSTS, X-Frame-Options), CORS configuration, and custom organizational headers. Requires Vault 1.16.0+.
+* **New Resource**: `vault_config_ui_header` - Manages custom HTTP headers for the Vault UI. Supports security headers (CSP, HSTS, X-Frame-Options), CORS configuration, and custom organizational headers. Requires Vault 1.16.0+. ([#2842](https://github.com/hashicorp/terraform-provider-vault/pull/2842))
 
 IMPROVEMENTS:
 
