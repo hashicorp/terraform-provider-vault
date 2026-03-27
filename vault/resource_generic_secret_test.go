@@ -7,16 +7,18 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/hashicorp/vault/api"
-
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestResourceGenericSecret(t *testing.T) {
@@ -161,6 +163,130 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	})
 }
 
+func TestResourceGenericSecret_importMissingFallsBackToConfigState(t *testing.T) {
+	mount := acctest.RandomWithPrefix("secretsv1")
+	name := acctest.RandomWithPrefix("missing")
+	path := fmt.Sprintf("%s/%s", mount, name)
+	resourceName := "vault_generic_secret.test"
+	mountOnlyConfig := fmt.Sprintf(`
+resource "vault_mount" "v1" {
+	path = %q
+	type = "kv"
+	options = {
+		version = "1"
+	}
+}
+`, mount)
+	missingImportConfig := fmt.Sprintf(`
+resource "vault_mount" "v1" {
+	path = %q
+	type = "kv"
+	options = {
+		version = "1"
+	}
+}
+
+resource "vault_generic_secret" "test" {
+	depends_on = [vault_mount.v1]
+	path = %q
+	data_json = jsonencode({
+		zip = "zap"
+	})
+}
+`, mount, path)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: mountOnlyConfig,
+			},
+			{
+				Config:        missingImportConfig,
+				ImportState:   true,
+				ResourceName:  resourceName,
+				ImportStateId: path,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					if len(states) != 1 {
+						return fmt.Errorf("expected 1 imported state, got %d", len(states))
+					}
+
+					s := states[0]
+					if got, want := s.Attributes[consts.FieldPath], path; got != want {
+						return fmt.Errorf("unexpected imported path %q, want %q", got, want)
+					}
+
+					if got := s.Attributes["disable_read"]; got != "true" {
+						return fmt.Errorf("expected disable_read=true after fallback import, got %q", got)
+					}
+
+					return nil
+				},
+			},
+			{
+				Config: missingImportConfig,
+				Check:  testResourceGenericSecret_initialCheck(path),
+			},
+		},
+	})
+}
+
+// Exact repro for:
+// terraform import vault_generic_secret.example secret/test
+// with data source namespace=ns1, resource namespace=ns2,
+// and TERRAFORM_VAULT_NAMESPACE_IMPORT=ns2.
+func TestResourceGenericSecret_importExactUserRepro(t *testing.T) {
+	resourceName := "vault_generic_secret.example"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					seedExactUserReproState(t)
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
+				Config:             testResourceGenericSecret_exactUserReproConfig(),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, "ns2")
+				},
+				Config:        testResourceGenericSecret_exactUserReproConfig(),
+				ImportState:   true,
+				ResourceName:  resourceName,
+				ImportStateId: "secret/test",
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					if len(states) != 1 {
+						return fmt.Errorf("expected 1 imported state, got %d", len(states))
+					}
+
+					s := states[0]
+					if got := s.Attributes[consts.FieldNamespace]; got != "ns2" {
+						return fmt.Errorf("expected imported namespace %q, got %q", "ns2", got)
+					}
+					if got := s.Attributes["disable_read"]; got != "true" {
+						return fmt.Errorf("expected disable_read=true after fallback import, got %q", got)
+					}
+
+					return nil
+				},
+			},
+			{
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
+				Config: testResourceGenericSecret_exactUserReproConfig(),
+				Check:  testResourceGenericSecret_checkCrossNamespaceValue("ns2", "bar"),
+			},
+		},
+	})
+}
+
 func testResourceGenericSecret_initialConfig(mount, name string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "v1" {
@@ -172,13 +298,117 @@ resource "vault_mount" "v1" {
 }
 
 resource "vault_generic_secret" "test" {
-    path = "${vault_mount.v1.path}/%s"
-    data_json = <<EOT
+	path = "${vault_mount.v1.path}/%s"
+	data_json = <<EOT
 {
-    "zip": "zap"
+	"zip": "zap"
 }
 EOT
 }`, mount, name)
+}
+
+func testResourceGenericSecret_exactUserReproConfig() string {
+	return `
+provider "vault" {
+	token = "root"
+	address = "http://127.0.0.1:8200"
+}
+
+data "vault_generic_secret" "secret" {
+	path = "secret/test"
+	namespace = "ns1"
+}
+
+resource "vault_generic_secret" "example" {
+	path = "secret/test"
+	namespace = "ns2"
+	data_json = data.vault_generic_secret.secret.data_json
+}
+`
+}
+
+func seedExactUserReproState(t *testing.T) {
+	t.Helper()
+
+	pm := testProvider.Meta().(*provider.ProviderMeta)
+	rootClient := pm.MustGetClient()
+
+	ensureNamespaceExists(t, rootClient, "ns1")
+	ensureNamespaceExists(t, rootClient, "ns2")
+
+	ns1Client, err := pm.GetNSClient("ns1")
+	if err != nil {
+		t.Fatalf("unable to get ns1 client: %s", err)
+	}
+	ns2Client, err := pm.GetNSClient("ns2")
+	if err != nil {
+		t.Fatalf("unable to get ns2 client: %s", err)
+	}
+
+	ensureKVV2MountExists(t, ns1Client, "secret")
+	ensureKVV2MountExists(t, ns2Client, "secret")
+	ensureSecretAbsent(t, ns1Client, "secret/test")
+	ensureSecretAbsent(t, ns2Client, "secret/test")
+
+	if _, err := ns1Client.Logical().Write("secret/data/test", map[string]interface{}{
+		"data": map[string]interface{}{"foo": "bar"},
+	}); err != nil {
+		t.Fatalf("failed seeding ns1 secret/test: %s", err)
+	}
+}
+
+func ensureNamespaceExists(t *testing.T, client *api.Client, ns string) {
+	t.Helper()
+
+	_, err := client.Logical().Write(fmt.Sprintf("%s/%s", consts.SysNamespaceRoot, ns), nil)
+	if err == nil {
+		return
+	}
+
+	if strings.Contains(err.Error(), "path is already in use") || strings.Contains(err.Error(), "already exists") {
+		return
+	}
+
+	t.Fatalf("failed creating namespace %q: %s", ns, err)
+}
+
+func ensureKVV2MountExists(t *testing.T, client *api.Client, path string) {
+	t.Helper()
+
+	err := client.Sys().Mount(path, &api.MountInput{
+		Type: "kv",
+		Options: map[string]string{
+			"version": "2",
+		},
+	})
+	if err == nil {
+		return
+	}
+
+	if strings.Contains(err.Error(), "path is already in use") {
+		return
+	}
+
+	t.Fatalf("failed enabling kv-v2 at %q: %s", path, err)
+}
+
+func ensureSecretAbsent(t *testing.T, client *api.Client, path string) {
+	t.Helper()
+
+	mountPath, v2, err := isKVv2(path, client)
+	if err != nil {
+		t.Fatalf("failed determining secret engine version for %q: %s", path, err)
+	}
+
+	deletePath := path
+	if v2 {
+		deletePath = addPrefixToVKVPath(path, mountPath, consts.FieldMetadata)
+	}
+
+	_, err = client.Logical().Delete(deletePath)
+	if err != nil && !util.Is404(err) {
+		t.Fatalf("failed deleting pre-existing secret at %q: %s", deletePath, err)
+	}
 }
 
 func testResourceGenericSecret_updateConfig(mount, name string) string {
@@ -436,4 +666,32 @@ func testResourceGenericSecret_updateCheck(s *terraform.State) error {
 	}
 
 	return nil
+}
+
+func testResourceGenericSecret_checkCrossNamespaceValue(ns, want string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client, err := provider.GetClient(ns, testProvider.Meta())
+		if err != nil {
+			return err
+		}
+
+		secret, err := client.Logical().Read("secret/data/test")
+		if err != nil {
+			return fmt.Errorf("error reading back secret from ns2: %s", err)
+		}
+		if secret == nil {
+			return fmt.Errorf("no secret found at %q in namespace %q", "secret/data/test", ns)
+		}
+
+		data, ok := secret.Data["data"].(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected secret data format in ns2")
+		}
+
+		if got := data["foo"]; got != want {
+			return fmt.Errorf("unexpected ns2 secret value %v, want %q", got, want)
+		}
+
+		return nil
+	}
 }

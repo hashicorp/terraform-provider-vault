@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -17,6 +18,8 @@ import (
 
 const latestSecretVersion = -1
 
+const genericSecretImportFallbackNoDataJSON = "import_fallback_no_data_json"
+
 func genericSecretResource(name string) *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
@@ -26,7 +29,7 @@ func genericSecretResource(name string) *schema.Resource {
 		Delete: genericSecretResourceDelete,
 		Read:   provider.ReadWrapper(genericSecretResourceRead),
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: genericSecretResourceImport,
 		},
 		MigrateState: resourceGenericSecretMigrateState,
 
@@ -73,8 +76,68 @@ func genericSecretResource(name string) *schema.Resource {
 				Default:     false,
 				Description: "Only applicable for kv-v2 stores. If set, permanently deletes all versions for the specified key.",
 			},
+
+			// Internal state marker set during import fallback when config data_json
+			// is not available. This prevents accidental writes of placeholder data.
+			genericSecretImportFallbackNoDataJSON: {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
 		},
 	}
+}
+
+func genericSecretResourceImport(_ context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	path := d.Id()
+	if path == "" {
+		return nil, fmt.Errorf("no path set for import, id=%q", path)
+	}
+
+	if err := d.Set(consts.FieldPath, path); err != nil {
+		return nil, err
+	}
+
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return nil, err
+	}
+
+	secret, err := versionedSecret(latestSecretVersion, path, client)
+	if err != nil {
+		return nil, fmt.Errorf("error reading %q during import: %w", path, err)
+	}
+
+	if secret != nil {
+		return []*schema.ResourceData{d}, nil
+	}
+
+	dataJSONValue := "{}"
+	fallbackNoDataJSON := true
+	rawConfig := d.GetRawConfig()
+	if !rawConfig.IsNull() {
+		dataJSON := rawConfig.GetAttr(consts.FieldDataJSON)
+		if !dataJSON.IsNull() && dataJSON.IsKnown() && dataJSON.AsString() != "" {
+			dataJSONValue = dataJSON.AsString()
+			fallbackNoDataJSON = false
+		}
+	}
+
+	if err := d.Set(consts.FieldDataJSON, dataJSONValue); err != nil {
+		return nil, err
+	}
+
+	if err := d.Set(genericSecretImportFallbackNoDataJSON, fallbackNoDataJSON); err != nil {
+		return nil, err
+	}
+
+	if err := d.Set("disable_read", true); err != nil {
+		return nil, err
+	}
+
+	log.Printf("[WARN] Secret %q not found during import, continuing with config-backed state", path)
+
+	return []*schema.ResourceData{d}, nil
 }
 
 func ValidateDataJSONFunc(name string) func(c interface{}, k string) ([]string, []error) {
@@ -124,6 +187,22 @@ func normalizeDataJSON(data string) (string, error) {
 }
 
 func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error {
+	if fallback, ok := d.GetOk(genericSecretImportFallbackNoDataJSON); ok && fallback.(bool) {
+		rawConfig := d.GetRawConfig()
+		if rawConfig.IsNull() {
+			return fmt.Errorf("cannot write %q: import fallback used placeholder %q and config is not available yet", d.Get(consts.FieldPath), consts.FieldDataJSON)
+		}
+
+		rawValue := rawConfig.GetAttr(consts.FieldDataJSON)
+		if rawValue.IsNull() || !rawValue.IsKnown() || rawValue.AsString() == "" {
+			return fmt.Errorf("cannot write %q: import fallback used placeholder %q; wait until %q is known in config and re-apply", d.Get(consts.FieldPath), consts.FieldDataJSON, consts.FieldDataJSON)
+		}
+
+		if err := d.Set(genericSecretImportFallbackNoDataJSON, false); err != nil {
+			return err
+		}
+	}
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
