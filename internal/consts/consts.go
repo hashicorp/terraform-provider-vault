@@ -617,6 +617,8 @@ const (
 	FieldReplicaRegions                     = "replica_regions"
 	FieldMinEnabledVersion                  = "min_enabled_version"
 	FieldProvider                           = "provider"
+	FieldAllowedOrigins                     = "allowed_origins"
+	FieldAllowedHeaders                     = "allowed_headers"
 
 	FieldInput                    = "input"
 	FieldKeyVersion               = "key_version"

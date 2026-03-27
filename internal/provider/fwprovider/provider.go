@@ -242,6 +242,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		sys.NewPasswordPolicyResource,
 		sysconfig.NewQuotaConfigResource,
 		sys.NewPluginRuntimeResource,
+		sys.NewSysConfigCORSResource,
 		azure.NewAzureStaticRoleResource,
 		kmip.NewKMIPListenerResource,
 		kmip.NewKMIPCAGeneratedResource,
@@ -293,5 +294,6 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 	return []func() datasource.DataSource{
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
 		sys.NewPluginRuntimesDataSource,
+		sys.NewSysConfigCORSDataSource,
 	}
 }
