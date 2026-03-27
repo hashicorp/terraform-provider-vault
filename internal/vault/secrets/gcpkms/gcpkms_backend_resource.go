@@ -1,0 +1,359 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+package gcpkms
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+)
+
+// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
+var _ resource.ResourceWithConfigure = &GCPKMSSecretBackendResource{}
+
+// NewGCPKMSSecretBackendResource returns the implementation for this resource
+func NewGCPKMSSecretBackendResource() resource.Resource {
+	return &GCPKMSSecretBackendResource{}
+}
+
+// GCPKMSSecretBackendResource implements the methods that define this resource
+type GCPKMSSecretBackendResource struct {
+	base.ResourceWithConfigure
+}
+
+// GCPKMSSecretBackendModel describes the Terraform resource data model.
+//
+// This resource only manages the GCP KMS secrets engine configuration
+// (writes to <mount>/config). The mount itself is managed separately
+// by a vault_mount resource.
+type GCPKMSSecretBackendModel struct {
+	base.BaseModel
+
+	Mount                types.String `tfsdk:"mount"`
+	CredentialsWO        types.String `tfsdk:"credentials_wo"`
+	CredentialsWOVersion types.Int64  `tfsdk:"credentials_wo_version"`
+	Scopes               types.Set    `tfsdk:"scopes"`
+}
+
+func (r *GCPKMSSecretBackendResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_gcpkms_secret_backend"
+}
+
+func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Configures the GCP KMS secrets engine credentials and scopes. " +
+			"The mount itself must be created first using a `vault_mount` resource with `type = \"gcpkms\"`. " +
+			"Use `vault_mount.gcpkms.id` as `mount_id` on ephemeral resources to guarantee deferral.",
+		Attributes: map[string]schema.Attribute{
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Path of the GCP KMS secrets engine mount. Must match the `path` " +
+					"of a `vault_mount` resource with `type = \"gcpkms\"`. Use `vault_mount.gcpkms.path` here.",
+				Required: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			consts.FieldCredentialsWO: schema.StringAttribute{
+				MarkdownDescription: "JSON-encoded GCP service account credentials. Write-only — never " +
+					"stored in Terraform state. Requires Terraform 1.11+.",
+				Required:  true,
+				Sensitive: true,
+				WriteOnly: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
+				MarkdownDescription: "Version number for the write-only credentials. Increment this value to trigger a credential rotation. " +
+					"Changing this value will cause the credentials to be re-sent to Vault during the next apply.",
+				Required: true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
+			},
+			consts.FieldScopes: schema.SetAttribute{
+				ElementType:         types.StringType,
+				MarkdownDescription: "OAuth scopes to use for GCP API requests. Defaults to ['https://www.googleapis.com/auth/cloudkms'].",
+				Optional:            true,
+				Computed:            true,
+			},
+		},
+	}
+	base.MustAddBaseSchema(&resp.Schema)
+}
+
+func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data GCPKMSSecretBackendModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var configModel GCPKMSSecretBackendModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Copy the write-only credential value from Config into our data model.
+	// This is the only way to access write-only field values.
+	data.CredentialsWO = configModel.CredentialsWO
+
+	tflog.Debug(ctx, "Create: credentials_wo from Config", map[string]any{
+		"is_null":    data.CredentialsWO.IsNull(),
+		"is_unknown": data.CredentialsWO.IsUnknown(),
+		"length":     len(data.CredentialsWO.ValueString()),
+	})
+
+	// Validate that credentials are actually present
+	if data.CredentialsWO.IsNull() || data.CredentialsWO.IsUnknown() || data.CredentialsWO.ValueString() == "" {
+		resp.Diagnostics.AddError(
+			"Missing credentials",
+			"The credentials_wo field is required but was empty or null. "+
+				"Ensure you are providing valid GCP service account credentials.",
+		)
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	mountPath := data.Mount.ValueString()
+
+	// Configure the backend with credentials
+	configPath := fmt.Sprintf("%s/config", mountPath)
+
+	// Always include credentials during Create
+	configData, diags := buildBackendConfigFromModel(ctx, &data, true)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tflog.Debug(ctx, "Configuring GCP KMS backend", map[string]any{"path": configPath})
+	if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
+		resp.Diagnostics.AddError(
+			"Error configuring GCP KMS backend",
+			fmt.Sprintf("Error writing %q: %s", configPath, err))
+		return
+	}
+
+	// Read back the state from Vault to ensure all computed values are set
+	// Set the data in state first so Read can use it
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	readReq := resource.ReadRequest{State: resp.State}
+	readResp := resource.ReadResponse{State: resp.State}
+	r.Read(ctx, readReq, &readResp)
+	resp.State = readResp.State
+	resp.Diagnostics.Append(readResp.Diagnostics...)
+}
+
+func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data GCPKMSSecretBackendModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	mountPath := data.Mount.ValueString()
+	configPath := fmt.Sprintf("%s/config", mountPath)
+
+	tflog.Debug(ctx, "Reading GCP KMS backend config", map[string]any{"path": configPath})
+	secret, err := cli.Logical().ReadWithContext(ctx, configPath)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading GCP KMS backend config",
+			fmt.Sprintf("Error reading %q: %s", configPath, err))
+		return
+	}
+
+	if secret == nil {
+		tflog.Warn(ctx, "GCP KMS backend config not found, removing from state", map[string]any{"path": configPath})
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	// Only update scopes if they're in the response
+	if scopes, ok := secret.Data["scopes"].([]interface{}); ok && len(scopes) > 0 {
+		scopeList := make([]string, len(scopes))
+		for i, s := range scopes {
+			scopeList[i] = s.(string)
+		}
+		scopeTypes, diags := types.SetValueFrom(ctx, types.StringType, scopeList)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		data.Scopes = scopeTypes
+	} else {
+		// Set to null if not in response
+		data.Scopes = types.SetNull(types.StringType)
+	}
+
+	// Note: credentials are write-only and won't be returned by the API
+	// We keep the values from state
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state GCPKMSSecretBackendModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Only include credentials if the version changed
+	includeCredentials := !plan.CredentialsWOVersion.Equal(state.CredentialsWOVersion)
+
+	if includeCredentials {
+		var configModel GCPKMSSecretBackendModel
+		resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		// Copy the write-only credential value from Config into our plan model
+		plan.CredentialsWO = configModel.CredentialsWO
+
+		tflog.Debug(ctx, "Update: credentials version changed, including credentials", map[string]any{
+			"old_version": state.CredentialsWOVersion.ValueInt64(),
+			"new_version": plan.CredentialsWOVersion.ValueInt64(),
+			"length":      len(plan.CredentialsWO.ValueString()),
+		})
+
+		// Validate that credentials are actually present
+		if plan.CredentialsWO.IsNull() || plan.CredentialsWO.IsUnknown() || plan.CredentialsWO.ValueString() == "" {
+			resp.Diagnostics.AddError(
+				"Missing credentials",
+				"The credentials_wo field is required when credentials_wo_version changes, "+
+					"but was empty or null. Ensure you are providing valid GCP service account credentials.",
+			)
+			return
+		}
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	mountPath := plan.Mount.ValueString()
+	configPath := fmt.Sprintf("%s/config", mountPath)
+
+	configData, diags := buildBackendConfigFromModel(ctx, &plan, includeCredentials)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tflog.Debug(ctx, "Updating GCP KMS backend config", map[string]any{
+		"path":                 configPath,
+		"credentials_included": includeCredentials,
+	})
+	if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating GCP KMS backend config",
+			fmt.Sprintf("Error writing %q: %s", configPath, err))
+		return
+	}
+
+	// Set the current plan in state first so Read can use it
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Read back the state from Vault to ensure all computed values are set
+	readReq := resource.ReadRequest{State: resp.State}
+	readResp := resource.ReadResponse{State: resp.State}
+	r.Read(ctx, readReq, &readResp)
+	resp.State = readResp.State
+	resp.Diagnostics.Append(readResp.Diagnostics...)
+}
+
+func (r *GCPKMSSecretBackendResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data GCPKMSSecretBackendModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// This resource owns only the /config endpoint.
+	// The mount lifecycle (create/destroy) is managed by vault_mount.
+	tflog.Debug(ctx, "vault_gcpkms_secret_backend config deleted (mount managed by vault_mount)", map[string]any{"mount": data.Mount.ValueString()})
+}
+
+func (r *GCPKMSSecretBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Import ID is the mount path, e.g. "gcpkms"
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), req.ID)...)
+
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
+}
+
+// buildBackendConfigFromModel extracts the configuration data from the model
+// and returns a map suitable for writing to Vault's GCP KMS backend config endpoint.
+// This helper reduces code duplication between Create and Update methods.
+func buildBackendConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendModel, includeCredentials bool) (map[string]interface{}, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	configData := make(map[string]interface{})
+
+	// Only include credentials when explicitly requested
+	if includeCredentials {
+		creds := data.CredentialsWO.ValueString()
+		if creds == "" {
+			diags.AddError(
+				"Missing credentials",
+				"Credentials are required but the value was empty. "+
+					"This may indicate that the write-only field was not properly read from the configuration. "+
+					"Ensure you are providing valid GCP service account credentials via the credentials_wo field.",
+			)
+			return nil, diags
+		}
+		configData["credentials"] = creds
+	}
+
+	// Add scopes if provided
+	if !data.Scopes.IsNull() && !data.Scopes.IsUnknown() {
+		var scopes []string
+		diags.Append(data.Scopes.ElementsAs(ctx, &scopes, false)...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		configData["scopes"] = scopes
+	}
+
+	return configData, diags
+}
