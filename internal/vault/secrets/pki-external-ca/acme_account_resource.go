@@ -122,14 +122,12 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"eab_kid": schema.StringAttribute{
 				MarkdownDescription: "The external binding key ID to create the initial account.",
 				Optional:            true,
-				Sensitive:           true,
 				WriteOnly:           true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"eab_key": schema.StringAttribute{
-				MarkdownDescription: "A standard base64 encoded external binding token to create the initial account.",
+				MarkdownDescription: "An url base64 encoded external binding token to create the initial account.",
 				Optional:            true,
-				Sensitive:           true,
 				WriteOnly:           true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -152,7 +150,8 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 // https://developer.hashicorp.com/terraform/plugin/framework/resources/create
 func (r *PKIACMEAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data PKIACMEAccountModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Use req.Config to read in Write only fields instead of Plan which will not have them set.
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
