@@ -103,7 +103,7 @@ func (r *SysConfigCORSResource) Schema(ctx context.Context, req resource.SchemaR
 				Computed:            true,
 			},
 			consts.FieldEnabled: schema.BoolAttribute{
-				MarkdownDescription: "Enable or disable CORS. When set to false, CORS is disabled and allowed_origins/allowed_headers are cleared.",
+				MarkdownDescription: "(Computed) Whether CORS is currently enabled. Vault automatically sets this to true when allowed_origins is configured. To disable CORS, delete this resource.",
 				Computed:            true,
 			},
 			consts.FieldAllowedOrigins: schema.SetAttribute{
