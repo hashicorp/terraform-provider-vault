@@ -302,8 +302,7 @@ For more information on token settings, see the [Token Fields documentation](/do
   requests a different type at generation time.
 
 * `alias_metadata` - (Optional) A map of string to string that will be set as metadata on
-  the identity alias. **Note:** This field is only supported in Vault 1.21.0 and above.
-  If configured for vault version lesser than 1.21.0, this field will be ignored, even though the value is persisted in the state file.
+  the identity alias. **Note:** Supported in Vault-enterprise v1.21.0+
 
 ## Import
 
