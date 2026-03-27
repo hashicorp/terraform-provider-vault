@@ -17,6 +17,7 @@ import (
 	smithyendpoints "github.com/aws/smithy-go/endpoints"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/awsutil/v2"
@@ -146,6 +147,8 @@ var _ AuthLogin = (*AuthLoginAWS)(nil)
 // Requires configuration provided by SchemaLoginAWS.
 type AuthLoginAWS struct {
 	AuthLoginCommon
+	awsRoleARNExplicit   bool
+	awsRoleARNFromConfig string
 }
 
 func (l *AuthLoginAWS) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
@@ -160,8 +163,83 @@ func (l *AuthLoginAWS) Init(d *schema.ResourceData, authField string) (AuthLogin
 	); err != nil {
 		return nil, err
 	}
+	if roleARN, ok := l.getConfigStringField(d, consts.FieldAWSRoleARN); ok {
+		l.awsRoleARNExplicit = true
+		l.awsRoleARNFromConfig = roleARN
+	}
 
 	return l, nil
+}
+
+// getConfigStringField reads the raw provider configuration so we can tell
+// whether a value was explicitly set in Terraform rather than inherited from
+// environment-based defaults in l.params.
+func (l *AuthLoginAWS) getConfigStringField(d *schema.ResourceData, field string) (string, bool) {
+	v, diags := d.GetRawConfigAt(cty.Path{
+		cty.GetAttrStep{Name: l.authField},
+		cty.IndexStep{Key: cty.NumberIntVal(0)},
+		cty.GetAttrStep{Name: field},
+	})
+	if diags.HasError() || v.IsNull() || !v.IsKnown() {
+		return "", false
+	}
+
+	if v.Type() != cty.String {
+		return "", false
+	}
+
+	return v.AsString(), true
+}
+
+// configuredRoleARN returns only an explicitly configured, non-empty
+// aws_role_arn. This lets the login flow distinguish Terraform config from
+// env-derived defaults when deciding whether to do an extra STS AssumeRole.
+func (l *AuthLoginAWS) configuredRoleARN() (string, bool) {
+	// If the field was not explicitly configured, any value in l.params came from
+	// env/default processing and should not be treated as a Terraform-configured ARN.
+	if !l.awsRoleARNExplicit || l.awsRoleARNFromConfig == "" {
+		return "", false
+	}
+
+	// A non-empty explicit value is safe to treat as a user-requested role ARN.
+	return l.awsRoleARNFromConfig, true
+}
+
+// manualAssumeRoleARN decides whether the provider should perform an explicit
+// STS AssumeRole after the AWS SDK credential chain has been resolved.
+//
+// Any web identity flow skips the extra assume to avoid the IRSA/self-assume
+// regression where the SDK already resolved credentials via web identity.
+func (l *AuthLoginAWS) manualAssumeRoleARN() (string, bool) {
+	webIdentityTokenFile, _ := l.params[consts.FieldAWSWebIdentityTokenFile].(string)
+	// Web identity flows already rely on the SDK credential chain to assume the
+	// target role, so a second manual AssumeRole would create the IRSA regression.
+	if webIdentityTokenFile != "" {
+		return "", false
+	}
+
+	// An explicit non-empty Terraform value should still trigger manual
+	// AssumeRole for non-web-identity credential sources.
+	if roleARN, ok := l.configuredRoleARN(); ok {
+		return roleARN, true
+	}
+
+	// If Terraform explicitly configured aws_role_arn but left it empty,
+	// do not fall back to an env-derived ARN.
+	if l.awsRoleARNExplicit {
+		return "", false
+	}
+
+	roleARN, _ := l.params[consts.FieldAWSRoleARN].(string)
+	// With no explicit config, only use the effective env/default-derived role ARN
+	// when it is actually present.
+	if roleARN == "" {
+		return "", false
+	}
+
+	// Non-web-identity ambient credential sources can still use an env-derived
+	// role ARN for the manual AssumeRole path.
+	return roleARN, true
 }
 
 // MountPath for the aws authentication engine.
@@ -273,8 +351,11 @@ func (l *AuthLoginAWS) getLoginData(ctx context.Context, logger hclog.Logger) (m
 
 	// Check if we need to assume a role
 	var roleARN string
-	if v, ok := l.params[consts.FieldAWSRoleARN].(string); ok && v != "" {
-		roleARN = v
+	if manualAssumeRoleARN, ok := l.manualAssumeRoleARN(); ok {
+		// The credential chain can already resolve web identity and other ambient
+		// credentials. We only do a second, explicit AssumeRole when the helper
+		// above determines it is safe and intended.
+		roleARN = manualAssumeRoleARN
 
 		// Create STS client with base credentials and custom endpoint if configured
 		var stsOpts []func(*sts.Options)
@@ -285,6 +366,8 @@ func (l *AuthLoginAWS) getLoginData(ctx context.Context, logger hclog.Logger) (m
 
 		// Get role session name
 		roleSessionName := "vault-provider-session"
+		// Reuse the configured session name when present so the explicit manual
+		// AssumeRole path behaves consistently with the rest of the provider config.
 		if v, ok := l.params[consts.FieldAWSRoleSessionName].(string); ok && v != "" {
 			roleSessionName = v
 		}
