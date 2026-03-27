@@ -122,6 +122,7 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 				},
 			},
 			// Step 5: Clear token fields and bound IDs, revert to minimal.
+			// Token fields are computed, so they retain values from previous step except alias_metadata.
 			{
 				Config: testAccCFAuthBackendRoleMinimal(mount),
 				Check: resource.ComposeTestCheckFunc(
@@ -129,16 +130,21 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldName, "test-role"),
 					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldDisableIPMatching),
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldBoundApplicationIDs+".#", "0"),
-					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenTTL),
-					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenMaxTTL),
-					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenPolicies+".#"),
-					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenBoundCIDRs+".#"),
-					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenExplicitMaxTTL),
-					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenNoDefaultPolicy),
-					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenNumUses),
-					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldTokenPeriod),
-					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenType, "default"),
-					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldAliasMetadata+".%"),
+					// Token fields are computed, so they retain values from step 4
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenMaxTTL, "7200"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenPolicies+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldTokenPolicies+".*", "policy-a"),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldTokenPolicies+".*", "policy-b"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenBoundCIDRs+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceAddress, consts.FieldTokenBoundCIDRs+".*", "10.0.0.0/8"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenExplicitMaxTTL, "10800"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenNoDefaultPolicy, "true"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenNumUses, "5"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenPeriod, "600"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenType, "service"),
+					// alias_metadata is cleared by Vault when not provided in update
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".%", "0"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
