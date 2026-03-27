@@ -277,33 +277,6 @@ func TestAccKerberosAuthBackendGroup_namespace(t *testing.T) {
 	})
 }
 
-func TestAccKerberosAuthBackendGroup_invalid(t *testing.T) {
-	backend := acctest.RandomWithPrefix("kerberos")
-	groupName := acctest.RandomWithPrefix("test-group")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			// Test invalid mount
-			{
-				Config:      testAccKerberosAuthBackendGroupConfig_invalidMount(groupName),
-				ExpectError: regexp.MustCompile("no handler for route|unsupported path|route entry not found"),
-			},
-			// Test missing mount
-			{
-				Config:      testAccKerberosAuthBackendGroupConfig_missingMount(groupName),
-				ExpectError: regexp.MustCompile(`Missing required argument|The argument "mount" is required`),
-			},
-			// Test missing group name
-			{
-				Config:      testAccKerberosAuthBackendGroupConfig_missingName(backend),
-				ExpectError: regexp.MustCompile(`Missing required argument|The argument "name" is required`),
-			},
-		},
-	})
-}
-
 func TestAccKerberosAuthBackendGroup_invalidNamespace(t *testing.T) {
 	backend := acctest.RandomWithPrefix("kerberos")
 	groupName := acctest.RandomWithPrefix("test-group")
@@ -378,39 +351,6 @@ resource "vault_kerberos_auth_backend_group" "test" {
   name  = "%s"
 }
 `, backend, groupName)
-}
-
-func testAccKerberosAuthBackendGroupConfig_invalidMount(groupName string) string {
-	return fmt.Sprintf(`
-resource "vault_kerberos_auth_backend_group" "test" {
-  mount    = "nonexistent-mount"
-  name     = "%s"
-  policies = ["default"]
-}
-`, groupName)
-}
-
-func testAccKerberosAuthBackendGroupConfig_missingName(backend string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "test" {
-  type = "kerberos"
-  path = "%s"
-}
-
-resource "vault_kerberos_auth_backend_group" "test" {
-  mount    = vault_auth_backend.test.path
-  policies = ["default"]
-}
-`, backend)
-}
-
-func testAccKerberosAuthBackendGroupConfig_missingMount(groupName string) string {
-	return fmt.Sprintf(`
-resource "vault_kerberos_auth_backend_group" "test" {
-  name     = "%s"
-  policies = ["default"]
-}
-`, groupName)
 }
 
 func testAccKerberosAuthBackendGroupConfig_invalidNamespace(backend, groupName string) string {

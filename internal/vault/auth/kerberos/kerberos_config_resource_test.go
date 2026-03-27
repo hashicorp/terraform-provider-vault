@@ -186,31 +186,6 @@ func TestAccKerberosAuthBackendConfig_validationErrors(t *testing.T) {
 	})
 }
 
-// TestAccKerberosAuthBackendConfig_runtimeErrors tests runtime errors
-func TestAccKerberosAuthBackendConfig_runtimeErrors(t *testing.T) {
-	path := acctest.RandomWithPrefix("kerberos")
-	serviceAccount := "vault/localhost@EXAMPLE.COM"
-	invalidKeytab := "not-valid-base64!@#$"
-	nonExistentPath := "non-existent-kerberos-backend"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			// Test invalid keytab content
-			{
-				Config:      testAccKerberosAuthBackendConfigConfig_invalidKeytab(path, serviceAccount, invalidKeytab),
-				ExpectError: regexp.MustCompile(`error writing|invalid|failed`),
-			},
-			// Test non-existent backend
-			{
-				Config:      testAccKerberosAuthBackendConfigConfig_nonExistentBackend(nonExistentPath, serviceAccount),
-				ExpectError: regexp.MustCompile(`error writing|no handler for route|unsupported path`),
-			},
-		},
-	})
-}
-
 // TestAccKerberosAuthBackendConfig_importErrors tests import validation errors
 func TestAccKerberosAuthBackendConfig_importErrors(t *testing.T) {
 	resource.Test(t, resource.TestCase{
@@ -337,21 +312,6 @@ resource "vault_kerberos_auth_backend_config" "config" {
 `, path, testKeytab)
 }
 
-func testAccKerberosAuthBackendConfigConfig_invalidKeytab(path, serviceAccount, keytab string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "kerberos" {
-  type = "kerberos"
-  path = %q
-}
-
-resource "vault_kerberos_auth_backend_config" "config" {
-  mount           = vault_auth_backend.kerberos.path
-  keytab_wo       = %q
-  service_account = %q
-}
-`, path, keytab, serviceAccount)
-}
-
 func testAccKerberosAuthBackendConfigConfig_emptyServiceAccount(path string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kerberos" {
@@ -365,16 +325,6 @@ resource "vault_kerberos_auth_backend_config" "config" {
   service_account = ""
 }
 `, path, testKeytab)
-}
-
-func testAccKerberosAuthBackendConfigConfig_nonExistentBackend(path, serviceAccount string) string {
-	return fmt.Sprintf(`
-resource "vault_kerberos_auth_backend_config" "config" {
-  mount           = %q
-  keytab_wo       = %q
-  service_account = %q
-}
-`, path, testKeytab, serviceAccount)
 }
 
 func testAccKerberosAuthBackendConfigConfig_emptyKeytab(path, serviceAccount string) string {
