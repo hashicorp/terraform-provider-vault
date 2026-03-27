@@ -1,5 +1,10 @@
 ## Unreleased
 
+FEATURES:
+
+* **New Resource**: `vault_config_ui_default_auth` - Manages UI default authentication configuration for the Vault GUI login form. Controls which authentication methods are displayed by default and as backup options for specific namespaces. Supports inheritance control for child namespaces. Enterprise-only feature requiring Vault 1.20.0+. ([#2846](https://github.com/hashicorp/terraform-provider-vault/pull/2846))
+
+
 IMPROVEMENTS:
 
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
