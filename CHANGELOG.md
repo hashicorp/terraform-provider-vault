@@ -84,6 +84,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* Add support for `delta_crl_distribution_points` in `vault_pki_secret_backend_config_urls` and `vault_pki_secret_backend_issuer` to configure Delta CRL URLs. (Vault 1.20+) ([#2761](https://github.com/hashicorp/terraform-provider-vault/pull/2761))
 * `vault_kmip_secret_role`: Add support for additional KMIP operation fields (`operation_import`, `operation_query`, `operation_encrypt`, `operation_decrypt`, `operation_create_key_pair`, `operation_delete_attribute`, `operation_rng_retrieve`, `operation_mac`, `operation_signature_verify`, `operation_sign`, `operation_rng_seed`, `operation_modify_attribute`, `operation_mac_verify`, `operation_rekey_key_pair`) to grant granular permissions for KMIP operations. ([#2744](https://github.com/hashicorp/terraform-provider-vault/pull/2744))
 * `vault_saml_auth_backend`: Add support for `validate_assertion_signature` and `validate_response_signature` parameters to control SAML signature validation (Vault 1.19+)
 * `vault_approle_auth_backend_login`: Add write-only fields `secret_id_wo` and `secret_id_wo_version` to support ephemeral SecretID values without persisting them in state.([#2745](https://github.com/hashicorp/terraform-provider-vault/pull/2745))
