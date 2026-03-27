@@ -5,6 +5,7 @@ package sys_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -50,6 +51,35 @@ func TestAccQuotaConfig(t *testing.T) {
 				ImportStateId:                        "sys/quotas/config",
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldEnableRateLimitAuditLogging,
+			},
+		},
+	})
+}
+
+func TestAccQuotaConfigInvalidImport(t *testing.T) {
+	resourceName := "vault_quota_config.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// First create the resource
+				Config: testAccQuotaConfigDefaults(),
+				Check: resource.ComposeTestCheckFunc(
+					// When booleans are omitted, false is explicitly sent to Vault and stored in state
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEnableRateLimitAuditLogging, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEnableRateLimitResponseHeaders, "false"),
+				),
+			},
+			{
+				// Then test invalid import
+				ResourceName:  resourceName,
+				ImportState:   true,
+				ImportStateId: "invalid/path",
+				ExpectError:   regexp.MustCompile(`The import identifier .* is not valid`),
 			},
 		},
 	})
