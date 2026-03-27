@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package ephemeralauth_test
+package kerberos_test
 
 import (
 	"fmt"
