@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
@@ -92,9 +93,9 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 					},
 				},
 			},
-			// Step 4: Add all token fields.
+			// Step 4: Add all token fields (without alias_metadata for compatibility).
 			{
-				Config: testAccCFAuthBackendRoleWithTokenFields(mount, appIDs, spaceIDs, orgIDs, instanceIDs),
+				Config: testAccCFAuthBackendRoleWithTokenFieldsNoAliasMetadata(mount, appIDs, spaceIDs, orgIDs, instanceIDs),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldName, "test-role"),
@@ -111,9 +112,6 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenNumUses, "5"),
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenPeriod, "600"),
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenType, "service"),
-					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".%", "2"),
-					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".org_id", "my-org"),
-					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".space_id", "my-space"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -122,7 +120,7 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 				},
 			},
 			// Step 5: Clear token fields and bound IDs, revert to minimal.
-			// Token fields are computed, so they retain values from previous step except alias_metadata.
+			// Token fields are computed, so they retain values from previous step.
 			{
 				Config: testAccCFAuthBackendRoleMinimal(mount),
 				Check: resource.ComposeTestCheckFunc(
@@ -143,8 +141,6 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenNumUses, "5"),
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenPeriod, "600"),
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldTokenType, "service"),
-					// alias_metadata is cleared by Vault when not provided in update
-					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".%", "0"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -167,6 +163,60 @@ func TestAccCFAuthBackendRole(t *testing.T) {
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionDestroy),
+					},
+				},
+			},
+		},
+	})
+}
+
+// TestAccCFAuthBackendRoleAliasMetadata verifies that alias_metadata works correctly
+// on Vault Enterprise 1.21.0+.
+func TestAccCFAuthBackendRoleAliasMetadata(t *testing.T) {
+	mount := acctest.RandomWithPrefix("cf-mount")
+	resourceAddress := "vault_cf_auth_backend_role.test"
+
+	appIDs := []string{"2d3e834a-3a25-4591-974c-fa5626d5d0a1"}
+	spaceIDs := []string{"3d2eba6b-ef19-44d5-91dd-1975b0db5cc9"}
+	orgIDs := []string{"34a878d0-c2f9-4521-ba73-a9f664e82c7b"}
+	instanceIDs := []string{"1bf2e7f6-2d1d-41ec-501c-c70"}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create role with alias_metadata.
+			{
+				Config: testAccCFAuthBackendRoleWithTokenFields(mount, appIDs, spaceIDs, orgIDs, instanceIDs),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldName, "test-role"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".%", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".org_id", "my-org"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".space_id", "my-space"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 2: Clear alias_metadata by reverting to minimal config.
+			// Verify that alias_metadata is cleared by Vault when not provided in update.
+			{
+				Config: testAccCFAuthBackendRoleMinimal(mount),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldName, "test-role"),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldAliasMetadata+".%", "0"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
 					},
 				},
 			},
@@ -227,6 +277,33 @@ resource "vault_cf_auth_backend_role" "test" {
   bound_organization_ids = [%s]
   bound_instance_ids     = [%s]
   disable_ip_matching    = true
+}
+`, testAccCFAuthBackendConfigMountOnly(mount),
+		quoteList(appIDs), quoteList(spaceIDs), quoteList(orgIDs), quoteList(instanceIDs))
+}
+
+func testAccCFAuthBackendRoleWithTokenFieldsNoAliasMetadata(mount string, appIDs, spaceIDs, orgIDs, instanceIDs []string) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_cf_auth_backend_role" "test" {
+  mount                  = vault_auth_backend.cf.path
+  name                   = "test-role"
+  bound_application_ids  = [%s]
+  bound_space_ids        = [%s]
+  bound_organization_ids = [%s]
+  bound_instance_ids     = [%s]
+  disable_ip_matching    = true
+
+  token_ttl               = 3600
+  token_max_ttl           = 7200
+  token_policies          = ["policy-a", "policy-b"]
+  token_bound_cidrs       = ["10.0.0.0/8"]
+  token_explicit_max_ttl  = 10800
+  token_no_default_policy = true
+  token_num_uses          = 5
+  token_period            = 600
+  token_type              = "service"
 }
 `, testAccCFAuthBackendConfigMountOnly(mount),
 		quoteList(appIDs), quoteList(spaceIDs), quoteList(orgIDs), quoteList(instanceIDs))
