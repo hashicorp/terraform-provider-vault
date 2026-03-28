@@ -1,4 +1,5 @@
 ## Unreleased
+* **New Ephemeral Resource**: Add ephemeral resource for `vault_generic_endpoint` to write to generic Vault endpoints and extract response data, including Auth and WrapInfo support.([#2830](https://github.com/hashicorp/terraform-provider-vault/pull/2830))
 
 IMPROVEMENTS:
 
