@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -285,55 +284,61 @@ func (s *SpiffeAuthRoleResource) path(data *SpiffeAuthRoleModel) (string, error)
 }
 
 func (s *SpiffeAuthRoleResource) getApiModel(ctx context.Context, data *SpiffeAuthRoleModel) (map[string]any, diag.Diagnostics) {
-	apiModel := SpiffeRoleAPIModel{}
+	vaultRequest := make(map[string]any)
 
-	var workloadIdPatterns []string
-	if err := data.WorkloadIDPatterns.ElementsAs(ctx, &workloadIdPatterns, false); err != nil {
-		return nil, err
-	}
-	apiModel.WorkloadIDPatterns = workloadIdPatterns
-
-	apiModel.DisplayName = data.DisplayName.ValueString()
-
-	if diagErr := token.PopulateTokenAPIFromModel(ctx, &data.TokenModel, &apiModel.TokenAPIModel); diagErr.HasError() {
-		return nil, diagErr
-	}
-
-	var vaultRequest map[string]any
-	if err := mapstructure.Decode(apiModel, &vaultRequest); err != nil {
-		return nil, diag.Diagnostics{
-			diag.NewErrorDiagnostic("Failed to decode SPIFFE role API model to map", err.Error()),
+	if !data.WorkloadIDPatterns.IsNull() && !data.WorkloadIDPatterns.IsUnknown() {
+		var workloadIdPatterns []string
+		if err := data.WorkloadIDPatterns.ElementsAs(ctx, &workloadIdPatterns, false); err != nil {
+			return nil, err
 		}
+		vaultRequest["workload_id_patterns"] = workloadIdPatterns
+	}
+
+	if !data.DisplayName.IsNull() && !data.DisplayName.IsUnknown() {
+		vaultRequest["display_name"] = data.DisplayName.ValueString()
+	}
+
+	if diagErr := token.PopulateTokenDataMap(ctx, &data.TokenModel, vaultRequest); diagErr.HasError() {
+		return nil, diagErr
 	}
 
 	return vaultRequest, nil
 }
 
 func (s *SpiffeAuthRoleResource) populateDataModelFromApi(ctx context.Context, role *SpiffeAuthRoleModel, resp *api.Secret) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	if resp == nil || resp.Data == nil {
-		return diag.Diagnostics{
-			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
-		}
+		diags.AddError("Missing data in API response", "The API response or response data was nil.")
+		return diags
 	}
 
-	var readResp SpiffeRoleAPIModel
-	if err := model.ToAPIModel(resp.Data, &readResp); err != nil {
-		return diag.Diagnostics{
-			diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error()),
-		}
+	// Decode response into API model
+	var apiModel SpiffeRoleAPIModel
+	if err := model.ToAPIModel(resp.Data, &apiModel); err != nil {
+		diags.AddError("Unable to translate Vault response data", err.Error())
+		return diags
 	}
 
-	if len(readResp.WorkloadIDPatterns) > 0 {
-		wkldIdPatterns, listErr := types.ListValueFrom(ctx, types.StringType, readResp.WorkloadIDPatterns)
-		if listErr != nil {
-			return listErr
+	// Set workload_id_patterns
+	if len(apiModel.WorkloadIDPatterns) > 0 {
+		wkldIdPatterns, setErr := types.ListValueFrom(ctx, types.StringType, apiModel.WorkloadIDPatterns)
+		if setErr.HasError() {
+			diags.Append(setErr...)
+			return diags
 		}
 		role.WorkloadIDPatterns = wkldIdPatterns
+	} else {
+		role.WorkloadIDPatterns = types.ListNull(types.StringType)
 	}
 
-	role.DisplayName = types.StringValue(readResp.DisplayName)
+	// Set display_name
+	role.DisplayName = types.StringValue(apiModel.DisplayName)
 
-	return token.PopulateTokenModelFromAPI(ctx, &role.TokenModel, &readResp.TokenAPIModel)
+	// Populate token fields using the token package helper
+	diags.Append(token.PopulateTokenModelFromAPI(ctx, &role.TokenModel, &apiModel.TokenAPIModel)...)
+
+	return diags
 }
 
 func (s *SpiffeAuthRoleResource) extractSpiffeRoleIdentifiers(id string) (string, string, error) {

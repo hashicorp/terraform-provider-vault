@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -319,43 +318,37 @@ func (r *CFAuthBackendRoleResource) path(data *CFAuthBackendRoleModel) (string, 
 }
 
 func (r *CFAuthBackendRoleResource) getAPIModel(ctx context.Context, data *CFAuthBackendRoleModel) (map[string]any, diag.Diagnostics) {
-	apiModel := CFRoleAPIModel{
-		DisableIPMatching: data.DisableIPMatching.ValueBool(),
-	}
+	vaultRequest := make(map[string]any)
+
+	vaultRequest["disable_ip_matching"] = data.DisableIPMatching.ValueBool()
 
 	var boundAppIDs []string
 	if diagErr := data.BoundApplicationIDs.ElementsAs(ctx, &boundAppIDs, false); diagErr.HasError() {
 		return nil, diagErr
 	}
-	apiModel.BoundApplicationIDs = boundAppIDs
+	vaultRequest["bound_application_ids"] = boundAppIDs
 
 	var boundSpaceIDs []string
 	if diagErr := data.BoundSpaceIDs.ElementsAs(ctx, &boundSpaceIDs, false); diagErr.HasError() {
 		return nil, diagErr
 	}
-	apiModel.BoundSpaceIDs = boundSpaceIDs
+	vaultRequest["bound_space_ids"] = boundSpaceIDs
 
 	var boundOrgIDs []string
 	if diagErr := data.BoundOrganizationIDs.ElementsAs(ctx, &boundOrgIDs, false); diagErr.HasError() {
 		return nil, diagErr
 	}
-	apiModel.BoundOrganizationIDs = boundOrgIDs
+	vaultRequest["bound_organization_ids"] = boundOrgIDs
 
 	var boundInstanceIDs []string
 	if diagErr := data.BoundInstanceIDs.ElementsAs(ctx, &boundInstanceIDs, false); diagErr.HasError() {
 		return nil, diagErr
 	}
-	apiModel.BoundInstanceIDs = boundInstanceIDs
+	vaultRequest["bound_instance_ids"] = boundInstanceIDs
 
-	if diagErr := token.PopulateTokenAPIFromModel(ctx, &data.TokenModel, &apiModel.TokenAPIModel); diagErr.HasError() {
+	// Populate token fields using PopulateTokenDataMap
+	if diagErr := token.PopulateTokenDataMap(ctx, &data.TokenModel, vaultRequest); diagErr.HasError() {
 		return nil, diagErr
-	}
-
-	var vaultRequest map[string]any
-	if err := mapstructure.Decode(apiModel, &vaultRequest); err != nil {
-		return nil, diag.Diagnostics{
-			diag.NewErrorDiagnostic("Failed to decode CF role API model to map", err.Error()),
-		}
 	}
 
 	// alias_metadata was added to the CF auth plugin in Vault 1.21.
@@ -439,19 +432,9 @@ func (r *CFAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Context
 		data.BoundInstanceIDs = boundInstanceIDs
 	}
 
-	// Save the current alias_metadata value before PopulateTokenModelFromAPI
-	// overwrites it. On Vault versions prior to 1.21, the CF auth plugin does
-	// not support alias_metadata: it is silently dropped on write and absent
-	// on read. Restoring the value preserves plan/state consistency and avoids
-	// a "provider produced inconsistent result" error.
-	savedAliasMetadata := data.AliasMetadata
-
+	// Populate token fields using the token package helper
 	if diagErr := token.PopulateTokenModelFromAPI(ctx, &data.TokenModel, &readResp.TokenAPIModel); diagErr.HasError() {
 		return diagErr
-	}
-
-	if r.Meta() == nil || !r.Meta().IsAPISupported(provider.VaultVersion121) {
-		data.AliasMetadata = savedAliasMetadata
 	}
 
 	return diag.Diagnostics{}
