@@ -599,6 +599,8 @@ const (
 	FieldSerialNumberSource                 = "serial_number_source"
 	FieldCertMetadata                       = "cert_metadata"
 	FieldTokenType                          = "token_type"
+	FieldAllowedOrigins                     = "allowed_origins"
+	FieldAllowedHeaders                     = "allowed_headers"
 
 	FieldInput                    = "input"
 	FieldKeyVersion               = "key_version"
