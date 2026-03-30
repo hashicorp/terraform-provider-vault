@@ -421,6 +421,12 @@ func (l *AuthLoginAWS) getCredentialsConfig(logger hclog.Logger) (*awsutil.Crede
 	return config, nil
 }
 
+type stsSigningEndpoint struct {
+	requestURL    string
+	signingName   string
+	signingRegion string
+}
+
 // generateLoginData generates the necessary login data for Vault AWS authentication
 // by creating a SigV4-signed STS GetCallerIdentity request.
 func generateLoginData(ctx context.Context, awsConfig *aws.Config, headerValue string, stsEndpoint string) (map[string]interface{}, error) {
@@ -474,17 +480,33 @@ func generateLoginData(ctx context.Context, awsConfig *aws.Config, headerValue s
 	return loginData, nil
 }
 
-func resolveSTSSigningEndpoint(region string, endpointURL string) (aws.Endpoint, error) {
+func resolveSTSSigningEndpoint(region string, endpointURL string) (stsSigningEndpoint, error) {
 	if endpointURL != "" {
-		return sts.EndpointResolverFromURL(endpointURL).ResolveEndpoint(region, sts.EndpointResolverOptions{})
+		uri, err := url.Parse(endpointURL)
+		if err != nil {
+			return stsSigningEndpoint{}, fmt.Errorf("failed to parse custom STS endpoint URL: %w", err)
+		}
+		if uri.Scheme == "" || uri.Host == "" {
+			return stsSigningEndpoint{}, fmt.Errorf("invalid custom STS endpoint URL %q", endpointURL)
+		}
+
+		return stsSigningEndpoint{
+			requestURL:    uri.String(),
+			signingName:   stsSigningName,
+			signingRegion: region,
+		}, nil
 	}
 
-	return sts.NewDefaultEndpointResolver().ResolveEndpoint(region, sts.EndpointResolverOptions{})
+	return stsSigningEndpoint{
+		requestURL:    fmt.Sprintf("https://sts.%s.amazonaws.com", region),
+		signingName:   stsSigningName,
+		signingRegion: region,
+	}, nil
 }
 
-func buildSignedGetCallerIdentityRequest(ctx context.Context, credentials aws.Credentials, endpoint aws.Endpoint, region string, headerValue string) (*http.Request, string, error) {
+func buildSignedGetCallerIdentityRequest(ctx context.Context, credentials aws.Credentials, endpoint stsSigningEndpoint, region string, headerValue string) (*http.Request, string, error) {
 	body := stsGetCallerIdentityBody
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint.URL, strings.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint.requestURL, strings.NewReader(body))
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to build GetCallerIdentity request: %w", err)
 	}
@@ -495,7 +517,7 @@ func buildSignedGetCallerIdentityRequest(ctx context.Context, credentials aws.Cr
 	}
 
 	payloadHash := sha256.Sum256([]byte(body))
-	signingRegion := endpoint.SigningRegion
+	signingRegion := endpoint.signingRegion
 	if signingRegion == "" {
 		signingRegion = region
 	}
@@ -503,7 +525,7 @@ func buildSignedGetCallerIdentityRequest(ctx context.Context, credentials aws.Cr
 		signingRegion = awsutil.DefaultRegion
 	}
 
-	signingName := endpoint.SigningName
+	signingName := endpoint.signingName
 	if signingName == "" {
 		signingName = stsSigningName
 	}
@@ -593,7 +615,12 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 		headerValue = v
 	}
 
-	loginData, err := generateLoginData(ctx, awsConfig, headerValue, "")
+	var stsEndpoint string
+	if v, ok := parameters[consts.FieldAWSSTSEndpoint].(string); ok {
+		stsEndpoint = v
+	}
+
+	loginData, err := generateLoginData(ctx, awsConfig, headerValue, stsEndpoint)
 	if err != nil {
 		return fmt.Errorf("failed to generate AWS login data: %s", err)
 	}
