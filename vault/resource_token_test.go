@@ -13,9 +13,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func testResourceTokenCheckDestroy(s *terraform.State) error {
@@ -41,7 +41,7 @@ func TestResourceToken_basic(t *testing.T) {
 	resourceName := "vault_token.test"
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -62,7 +62,7 @@ func TestResourceToken_import(t *testing.T) {
 	resourceName := "vault_token.test"
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -105,7 +105,7 @@ func TestResourceToken_full(t *testing.T) {
 	resourceName := "vault_token.test"
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -159,7 +159,7 @@ resource "vault_token" "test" {
 func TestResourceToken_lookup(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -192,7 +192,7 @@ func TestResourceToken_expire(t *testing.T) {
 	t.Skip("skipping, because it's flaky in CI and there's a long time.Sleep call")
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -264,7 +264,7 @@ func TestResourceToken_renew(t *testing.T) {
 	}
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		CheckDestroy:             testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -470,4 +470,172 @@ func testResourceTokenWaitRenewMinLeaseTime(n string) resource.TestCheckFunc {
 
 		return nil
 	}
+}
+
+func TestResourceToken_withType(t *testing.T) {
+	resourceName := "vault_token.test"
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testResourceTokenCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceTokenConfig_withType("service"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "service"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientToken),
+				),
+			},
+		},
+	})
+}
+
+func TestResourceToken_withTypeBatch(t *testing.T) {
+	resourceName := "vault_token.test"
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testResourceTokenCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceTokenConfig_withType("batch"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "batch"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientToken),
+				),
+			},
+		},
+	})
+}
+
+func testResourceTokenConfig_withType(tokenType string) string {
+	return fmt.Sprintf(`
+resource "vault_policy" "test" {
+  name   = "test"
+  policy = <<EOT
+path "secret/*" { capabilities = [ "list" ] }
+EOT
+}
+
+resource "vault_token" "test" {
+  policies = [vault_policy.test.name]
+  type     = "%s"
+}
+`, tokenType)
+}
+
+func TestResourceToken_withEntityAlias(t *testing.T) {
+	resourceName := "vault_token.test"
+	roleName := "test-role"
+	entityName := "test-entity"
+	aliasName := "test-alias"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testResourceTokenCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceTokenConfig_withEntityAlias(roleName, entityName, aliasName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleName, roleName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEntityAlias, aliasName),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientToken),
+				),
+			},
+		},
+	})
+}
+
+func testResourceTokenConfig_withEntityAlias(roleName, entityName, aliasName string) string {
+	return fmt.Sprintf(`
+resource "vault_policy" "test" {
+  name   = "test"
+  policy = <<EOT
+path "secret/*" { capabilities = [ "list" ] }
+EOT
+}
+
+resource "vault_auth_backend" "test" {
+  type = "userpass"
+  path = "userpass-test"
+}
+
+resource "vault_identity_entity" "test" {
+  name = "%s"
+}
+
+resource "vault_identity_entity_alias" "test" {
+  name           = "%s"
+  mount_accessor = vault_auth_backend.test.accessor
+  canonical_id   = vault_identity_entity.test.id
+}
+
+resource "vault_token_auth_backend_role" "test" {
+  role_name              = "%s"
+  allowed_policies       = [vault_policy.test.name]
+  allowed_entity_aliases = [vault_identity_entity_alias.test.name]
+}
+
+resource "vault_token" "test" {
+  policies     = [vault_policy.test.name]
+  role_name    = vault_token_auth_backend_role.test.role_name
+  entity_alias = vault_identity_entity_alias.test.name
+}
+`, entityName, aliasName, roleName)
+}
+
+func TestResourceToken_batchTokenAutoDetectionViaRole(t *testing.T) {
+	resourceName := "vault_token.test"
+	roleName := "batch-vault-role"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testResourceTokenCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceTokenConfig_batchTokenAutoDetectionViaRole(roleName),
+				Check: resource.ComposeTestCheckFunc(
+					// Verify the token was actually created
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientToken),
+
+					// Even though Vault issued a batch token (hvb...), the provider
+					// didn't explicitly update the 'type' field in the state during Create.
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "batch"),
+				),
+			},
+			{
+				// Trigger a refresh to see if the provider tries to
+				// perform a LookupAccessor (which it shouldn't for batch)
+				Config:   testResourceTokenConfig_batchTokenAutoDetectionViaRole(roleName),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func testResourceTokenConfig_batchTokenAutoDetectionViaRole(roleName string) string {
+	return fmt.Sprintf(`
+resource "vault_policy" "test" {
+  name   = "test"
+  policy = "path \"secret/*\" { capabilities = [\"read\"] }"
+}
+
+resource "vault_token_auth_backend_role" "batch" {
+  role_name        = "%s"
+  token_type       = "batch"
+  orphan           = true   # Batch tokens must be orphans
+  renewable        = false  # Batch tokens cannot be renewable
+  allowed_policies = [vault_policy.test.name]
+}
+
+resource "vault_token" "test" {
+  role_name = vault_token_auth_backend_role.batch.role_name
+  # No 'type' specified here, forcing the provider to auto-detect it from the role
+}
+`, roleName)
 }
