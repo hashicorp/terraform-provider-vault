@@ -4,6 +4,8 @@ IMPROVEMENTS:
 
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
 
+* `vault_token`: Added support for `type` and `entity_alias` fields to enable batch/service token type specification and entity alias association with token roles. ([#2855](https://github.com/hashicorp/terraform-provider-vault/pull/2855))
+
 BUGS: 
 * `vault_consul_secret_backend`: Fixed validation logic to allow computed token values by correcting the condition that checks for token presence during plan phase. ([#2823](https://github.com/hashicorp/terraform-provider-vault/pull/2823))
 
