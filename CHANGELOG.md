@@ -6,6 +6,7 @@ IMPROVEMENTS:
 
 BUGS: 
 * `vault_consul_secret_backend`: Fixed validation logic to allow computed token values by correcting the condition that checks for token presence during plan phase. ([#2823](https://github.com/hashicorp/terraform-provider-vault/pull/2823))
+* `vault_pki_external_ca_secret_backend_acme_account`: Provide eab_kid and eab_key values through the ACME account creation request. ([#2851]https://github.com/hashicorp/terraform-provider-vault/pull/2852)
 
 ## 5.8.0 (March 12, 2026)
 
