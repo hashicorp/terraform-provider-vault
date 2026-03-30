@@ -125,6 +125,15 @@ func TestSyncAssociationFieldsFromID(t *testing.T) {
 			wantErr:    false,
 		},
 		{
+			name:       "secret name with single slash",
+			id:         "gcp-sm/dest/gcp-secret-manager/mount/kvv2-gcp3/path1/secret/api/key",
+			wantType:   "gcp-sm",
+			wantDest:   "gcp-secret-manager",
+			wantMount:  "kvv2-gcp3/path1",
+			wantSecret: "api/key",
+			wantErr:    false,
+		},
+		{
 			name:       "secret name with deep nesting",
 			id:         "aws-sm/dest/aws-dest-1/mount/kv-v2/secret/prod/app/database/credentials",
 			wantType:   "aws-sm",
