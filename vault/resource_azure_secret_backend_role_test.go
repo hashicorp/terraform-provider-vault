@@ -318,7 +318,7 @@ func TestAzureSecretBackendRole_Metadata(t *testing.T) {
 				),
 			},
 			{
-				// Step 5: Remove metadata block entirely
+				// Remove metadata block entirely
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion200) || !meta.IsEnterpriseSupported(), nil
