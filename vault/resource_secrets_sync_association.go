@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
-var syncAssociationFieldsFromIDRegex = regexp.MustCompile("^(.+?)/dest/(.+?)/mount/(.+?)/secret/(.+)$")
+var syncAssociationFieldsFromIDRegex = regexp.MustCompile("^(.+?)/dest/(.+?)/mount/(.+)/secret/(.+)$")
 
 const (
 	fieldSecretName = "secret_name"

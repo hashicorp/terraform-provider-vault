@@ -129,8 +129,8 @@ func TestSyncAssociationFieldsFromID(t *testing.T) {
 			id:         "gcp-sm/dest/gcp-secret-manager/mount/kvv2-gcp3/secret/gai/secret/aihub2",
 			wantType:   "gcp-sm",
 			wantDest:   "gcp-secret-manager",
-			wantMount:  "kvv2-gcp3",
-			wantSecret: "gai/secret/aihub2",
+			wantMount:  "kvv2-gcp3/secret/gai",
+			wantSecret: "aihub2",
 			wantErr:    false,
 		},
 		{
@@ -174,8 +174,8 @@ func TestSyncAssociationFieldsFromID(t *testing.T) {
 			id:         "gcp-sm/dest/my-dest/mount/kv/path/secret/prod/secret/credentials",
 			wantType:   "gcp-sm",
 			wantDest:   "my-dest",
-			wantMount:  "kv/path",
-			wantSecret: "prod/secret/credentials",
+			wantMount:  "kv/path/secret/prod",
+			wantSecret: "credentials",
 			wantErr:    false,
 		},
 		{
