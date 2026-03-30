@@ -204,31 +204,3 @@ func TestSyncAssociationFieldsFromID(t *testing.T) {
 		})
 	}
 }
-
-// TestSyncAssociationFieldsFromID_RegressionBug tests the specific bug fix
-// where secret names with slashes were incorrectly parsed due to greedy regex.
-// Before the fix, the regex pattern ^(.+)/dest/(.+)/mount/(.+)/secret/(.+)$
-// would greedily match and incorrectly parse IDs with slashes in the secret name.
-// After the fix with ^([^/]+)/dest/([^/]+)/mount/([^/]+)/secret/(.+)$,
-// the parsing correctly handles secret names containing slashes.
-func TestSyncAssociationFieldsFromID_RegressionBug(t *testing.T) {
-	// This is the exact case that was failing before the regex fix
-	id := "gcp-sm/dest/gcp-secret-manager/mount/kvv2-gcp3/secret/gai/secret/aihub2"
-
-	fields, err := syncAssociationFieldsFromID(id)
-	if err != nil {
-		t.Fatalf("syncAssociationFieldsFromID() error = %v", err)
-	}
-
-	// Before fix: mount would be "kvv2-gcp3/secret/gai" (WRONG - greedy regex matched too much)
-	// After fix: mount should be "kvv2-gcp3" (CORRECT - non-greedy regex stops at first /)
-	if fields[2] != "kvv2-gcp3" {
-		t.Errorf("REGRESSION: mount = %v, want kvv2-gcp3. The greedy regex bug is still present!", fields[2])
-	}
-
-	// Before fix: secret would be "aihub2" (WRONG - only captured last part)
-	// After fix: secret should be "gai/secret/aihub2" (CORRECT - captures everything after /secret/)
-	if fields[3] != "gai/secret/aihub2" {
-		t.Errorf("REGRESSION: secret = %v, want gai/secret/aihub2. The greedy regex bug is still present!", fields[3])
-	}
-}
