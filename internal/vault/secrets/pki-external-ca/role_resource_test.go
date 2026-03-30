@@ -20,7 +20,7 @@ func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")
-	resourceName := "vault_pki_secret_backend_external_ca_role.test"
+	resourceName := "vault_pki_external_ca_secret_backend_role.test"
 
 	ca, directoryUrl := setupVaultAndPebble(t)
 
@@ -75,7 +75,7 @@ func TestAccPKIExternalCARoleResource_update(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")
-	resourceName := "vault_pki_secret_backend_external_ca_role.test"
+	resourceName := "vault_pki_external_ca_secret_backend_role.test"
 
 	ca, directoryUrl := setupVaultAndPebble(t)
 
@@ -117,7 +117,7 @@ resource "vault_mount" "test" {
   description = "PKI External CA test"
 }
 
-resource "vault_pki_secret_backend_acme_account" "test" {
+resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
@@ -128,10 +128,10 @@ resource "vault_pki_secret_backend_acme_account" "test" {
 EOT
 }
 
-resource "vault_pki_secret_backend_external_ca_role" "test" {
+resource "vault_pki_external_ca_secret_backend_role" "test" {
   mount                       = vault_mount.test.path
   name                        = "%s"
-  acme_account_name           = vault_pki_secret_backend_acme_account.test.name
+  acme_account_name           = vault_pki_external_ca_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "test.com"]
   allowed_domain_options      = ["bare_domains", "subdomains"]
   allowed_challenge_types     = ["http-01", "dns-01", "tls-alpn-01"]
@@ -149,7 +149,7 @@ resource "vault_mount" "test" {
   description = "PKI External CA test"
 }
 
-resource "vault_pki_secret_backend_acme_account" "test" {
+resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
@@ -160,10 +160,10 @@ resource "vault_pki_secret_backend_acme_account" "test" {
 EOT
 }
 
-resource "vault_pki_secret_backend_external_ca_role" "test" {
+resource "vault_pki_external_ca_secret_backend_role" "test" {
   mount                       = vault_mount.test.path
   name                        = "%s"
-  acme_account_name           = vault_pki_secret_backend_acme_account.test.name
+  acme_account_name           = vault_pki_external_ca_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "test.com", "updated.com"]
   allowed_domain_options      = ["bare_domains", "subdomains", "wildcards"]
   allowed_challenge_types     = ["http-01", "dns-01"]
