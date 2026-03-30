@@ -5,18 +5,21 @@ package provider
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	smithyendpoints "github.com/aws/smithy-go/endpoints"
-	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/awsutil/v2"
@@ -37,6 +40,9 @@ const (
 	envVarAWSRoleSessionName       = "AWS_ROLE_SESSION_NAME"
 	envVarAWSRegion                = "AWS_REGION"
 	envVarAWSDefaultRegion         = "AWS_DEFAULT_REGION"
+	stsGetCallerIdentityBody       = "Action=GetCallerIdentity&Version=2011-06-15"
+	stsContentType                 = "application/x-www-form-urlencoded; charset=utf-8"
+	stsSigningName                 = "sts"
 )
 
 func init() {
@@ -321,7 +327,12 @@ func (l *AuthLoginAWS) getLoginData(ctx context.Context, logger hclog.Logger) (m
 		headerValue = v
 	}
 
-	return generateLoginData(ctx, awsConfig, headerValue, logger)
+	var stsEndpoint string
+	if v, ok := l.params[consts.FieldAWSSTSEndpoint].(string); ok {
+		stsEndpoint = v
+	}
+
+	return generateLoginData(ctx, awsConfig, headerValue, stsEndpoint)
 }
 
 // customSTSEndpointResolver creates an endpoint resolver for STS with a custom endpoint URL
@@ -411,51 +422,41 @@ func (l *AuthLoginAWS) getCredentialsConfig(logger hclog.Logger) (*awsutil.Crede
 }
 
 // generateLoginData generates the necessary login data for Vault AWS authentication
-// by creating a presigned STS GetCallerIdentity request.
-func generateLoginData(ctx context.Context, awsConfig *aws.Config, headerValue string, logger hclog.Logger) (map[string]interface{}, error) {
+// by creating a SigV4-signed STS GetCallerIdentity request.
+func generateLoginData(ctx context.Context, awsConfig *aws.Config, headerValue string, stsEndpoint string) (map[string]interface{}, error) {
 	const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"
 
 	loginData := make(map[string]interface{})
 
-	// Validate credentials are available before attempting presign
+	if awsConfig == nil || awsConfig.Credentials == nil {
+		return nil, fmt.Errorf("AWS credentials are not configured")
+	}
+
+	// Validate credentials are available before building the signed request.
 	// This catches configuration errors earlier with a clearer error message
-	if _, err := awsConfig.Credentials.Retrieve(ctx); err != nil {
+	credentials, err := awsConfig.Credentials.Retrieve(ctx)
+	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve AWS credentials: %w", err)
 	}
 
-	// If a header value is provided, we need to add it to the signed request
-	// We'll do this by adding middleware to the config
-	if headerValue != "" {
-		awsConfig.APIOptions = append(awsConfig.APIOptions, func(stack *middleware.Stack) error {
-			return stack.Build.Add(middleware.BuildMiddlewareFunc(
-				"AddVaultHeader",
-				func(ctx context.Context, in middleware.BuildInput, next middleware.BuildHandler) (middleware.BuildOutput, middleware.Metadata, error) {
-					req, ok := in.Request.(*smithyhttp.Request)
-					if ok {
-						req.Header.Add(iamServerIdHeader, headerValue)
-					}
-					return next.HandleBuild(ctx, in)
-				},
-			), middleware.After)
-		})
+	region := awsConfig.Region
+	if region == "" {
+		region = awsutil.DefaultRegion
 	}
 
-	// Create STS client with awsConfig (which already contains the correct credentials)
-	stsClient := sts.NewFromConfig(*awsConfig)
-
-	// Create presigner - credentials will be retrieved automatically during presigning
-	presignClient := sts.NewPresignClient(stsClient)
-
-	// Presign the GetCallerIdentity request
-	presignedReq, err := presignClient.PresignGetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
+	endpoint, err := resolveSTSSigningEndpoint(region, stsEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("failed to presign GetCallerIdentity request: %w", err)
+		return nil, err
 	}
 
-	// Convert the signed headers map to http.Header for proper marshaling
-	headers := make(http.Header)
-	for k, v := range presignedReq.SignedHeader {
-		headers[k] = v
+	req, body, err := buildSignedGetCallerIdentityRequest(ctx, credentials, endpoint, region, headerValue)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := req.Header.Clone()
+	if headers.Get("Host") == "" {
+		headers.Set("Host", req.URL.Host)
 	}
 
 	// Marshal headers to JSON
@@ -465,13 +466,55 @@ func generateLoginData(ctx context.Context, awsConfig *aws.Config, headerValue s
 	}
 
 	// Populate login data with base64-encoded values
-	// Note: GetCallerIdentity is a POST request with an empty body
-	loginData[consts.FieldIAMHttpRequestMethod] = presignedReq.Method
-	loginData[consts.FieldIAMRequestURL] = base64.StdEncoding.EncodeToString([]byte(presignedReq.URL))
+	loginData[consts.FieldIAMHttpRequestMethod] = req.Method
+	loginData[consts.FieldIAMRequestURL] = base64.StdEncoding.EncodeToString([]byte(req.URL.String()))
 	loginData[consts.FieldIAMRequestHeaders] = base64.StdEncoding.EncodeToString(headersJson)
-	loginData[consts.FieldIAMRequestBody] = base64.StdEncoding.EncodeToString([]byte(""))
+	loginData[consts.FieldIAMRequestBody] = base64.StdEncoding.EncodeToString([]byte(body))
 
 	return loginData, nil
+}
+
+func resolveSTSSigningEndpoint(region string, endpointURL string) (aws.Endpoint, error) {
+	if endpointURL != "" {
+		return sts.EndpointResolverFromURL(endpointURL).ResolveEndpoint(region, sts.EndpointResolverOptions{})
+	}
+
+	return sts.NewDefaultEndpointResolver().ResolveEndpoint(region, sts.EndpointResolverOptions{})
+}
+
+func buildSignedGetCallerIdentityRequest(ctx context.Context, credentials aws.Credentials, endpoint aws.Endpoint, region string, headerValue string) (*http.Request, string, error) {
+	body := stsGetCallerIdentityBody
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint.URL, strings.NewReader(body))
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to build GetCallerIdentity request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", stsContentType)
+	if headerValue != "" {
+		req.Header.Set("X-Vault-AWS-IAM-Server-ID", headerValue)
+	}
+
+	payloadHash := sha256.Sum256([]byte(body))
+	signingRegion := endpoint.SigningRegion
+	if signingRegion == "" {
+		signingRegion = region
+	}
+	if signingRegion == "" {
+		signingRegion = awsutil.DefaultRegion
+	}
+
+	signingName := endpoint.SigningName
+	if signingName == "" {
+		signingName = stsSigningName
+	}
+
+	signer := v4.NewSigner()
+
+	if err := signer.SignHTTP(ctx, credentials, req, hex.EncodeToString(payloadHash[:]), signingName, signingRegion, time.Now().UTC()); err != nil {
+		return nil, "", fmt.Errorf("failed to sign GetCallerIdentity request: %w", err)
+	}
+
+	return req, body, nil
 }
 
 // signAWSLogin is for use by the generic auth method
@@ -550,7 +593,7 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 		headerValue = v
 	}
 
-	loginData, err := generateLoginData(ctx, awsConfig, headerValue, logger)
+	loginData, err := generateLoginData(ctx, awsConfig, headerValue, "")
 	if err != nil {
 		return fmt.Errorf("failed to generate AWS login data: %s", err)
 	}

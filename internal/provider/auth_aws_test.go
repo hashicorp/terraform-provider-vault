@@ -4,13 +4,17 @@
 package provider
 
 import (
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -741,4 +745,136 @@ func stringContains(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+func TestGenerateLoginData_IncludesAuthorizationHeader(t *testing.T) {
+	awsConfig := &aws.Config{
+		Region: "us-east-1",
+		Credentials: aws.NewCredentialsCache(
+			aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+				return aws.Credentials{
+					AccessKeyID:     "test-access-key",
+					SecretAccessKey: "test-secret-key",
+					SessionToken:    "test-session-token",
+					Source:          "unit-test",
+				}, nil
+			}),
+		),
+	}
+
+	loginData, err := generateLoginData(context.Background(), awsConfig, "localhost", "")
+	if err != nil {
+		t.Fatalf("generateLoginData() error = %v", err)
+	}
+
+	if got := loginData[consts.FieldIAMHttpRequestMethod]; got != http.MethodPost {
+		t.Fatalf("generateLoginData() method = %v, want %v", got, http.MethodPost)
+	}
+
+	requestURL, ok := loginData[consts.FieldIAMRequestURL].(string)
+	if !ok {
+		t.Fatalf("generateLoginData() request URL has unexpected type %T", loginData[consts.FieldIAMRequestURL])
+	}
+	decodedURL, err := base64.StdEncoding.DecodeString(requestURL)
+	if err != nil {
+		t.Fatalf("DecodeString(requestURL) error = %v", err)
+	}
+	if !strings.Contains(string(decodedURL), "sts.us-east-1.amazonaws.com") {
+		t.Fatalf("generateLoginData() URL = %q, want regional STS endpoint", string(decodedURL))
+	}
+
+	body, ok := loginData[consts.FieldIAMRequestBody].(string)
+	if !ok {
+		t.Fatalf("generateLoginData() request body has unexpected type %T", loginData[consts.FieldIAMRequestBody])
+	}
+	decodedBody, err := base64.StdEncoding.DecodeString(body)
+	if err != nil {
+		t.Fatalf("DecodeString(requestBody) error = %v", err)
+	}
+	if string(decodedBody) != stsGetCallerIdentityBody {
+		t.Fatalf("generateLoginData() body = %q, want %q", string(decodedBody), stsGetCallerIdentityBody)
+	}
+
+	headers := decodeAWSLoginHeaders(t, loginData)
+	authorization := headers.Get("Authorization")
+	if authorization == "" {
+		t.Fatal("generateLoginData() did not include Authorization header")
+	}
+	if !strings.Contains(authorization, "/us-east-1/sts/aws4_request") {
+		t.Fatalf("Authorization header = %q, want credential scope containing region", authorization)
+	}
+	if got := headers.Get("X-Vault-AWS-IAM-Server-ID"); got != "localhost" {
+		t.Fatalf("X-Vault-AWS-IAM-Server-ID = %q, want %q", got, "localhost")
+	}
+	if got := headers.Get("X-Amz-Security-Token"); got != "test-session-token" {
+		t.Fatalf("X-Amz-Security-Token = %q, want %q", got, "test-session-token")
+	}
+	if got := headers.Get("Host"); got != "sts.us-east-1.amazonaws.com" {
+		t.Fatalf("Host header = %q, want %q", got, "sts.us-east-1.amazonaws.com")
+	}
+	if got := headers.Get("Content-Type"); got != stsContentType {
+		t.Fatalf("Content-Type = %q, want %q", got, stsContentType)
+	}
+}
+
+func TestGenerateLoginData_UsesCustomSTSEndpoint(t *testing.T) {
+	awsConfig := &aws.Config{
+		Region: "us-east-1",
+		Credentials: aws.NewCredentialsCache(
+			aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+				return aws.Credentials{
+					AccessKeyID:     "test-access-key",
+					SecretAccessKey: "test-secret-key",
+					Source:          "unit-test",
+				}, nil
+			}),
+		),
+	}
+
+	loginData, err := generateLoginData(context.Background(), awsConfig, "", "https://sts.custom.endpoint.example.com/custom")
+	if err != nil {
+		t.Fatalf("generateLoginData() error = %v", err)
+	}
+
+	requestURL, ok := loginData[consts.FieldIAMRequestURL].(string)
+	if !ok {
+		t.Fatalf("generateLoginData() request URL has unexpected type %T", loginData[consts.FieldIAMRequestURL])
+	}
+	decodedURL, err := base64.StdEncoding.DecodeString(requestURL)
+	if err != nil {
+		t.Fatalf("DecodeString(requestURL) error = %v", err)
+	}
+	if string(decodedURL) != "https://sts.custom.endpoint.example.com/custom" {
+		t.Fatalf("generateLoginData() URL = %q, want custom STS endpoint", string(decodedURL))
+	}
+
+	headers := decodeAWSLoginHeaders(t, loginData)
+	authorization := headers.Get("Authorization")
+	if !strings.Contains(authorization, "/us-east-1/sts/aws4_request") {
+		t.Fatalf("Authorization header = %q, want credential scope containing configured region", authorization)
+	}
+	if got := headers.Get("Host"); got != "sts.custom.endpoint.example.com" {
+		t.Fatalf("Host header = %q, want custom endpoint host", got)
+	}
+}
+
+func decodeAWSLoginHeaders(t *testing.T, loginData map[string]interface{}) http.Header {
+	t.Helper()
+
+	encodedHeaders, ok := loginData[consts.FieldIAMRequestHeaders].(string)
+	if !ok {
+		t.Fatalf("generateLoginData() request headers have unexpected type %T", loginData[consts.FieldIAMRequestHeaders])
+	}
+
+	decodedHeaders, err := base64.StdEncoding.DecodeString(encodedHeaders)
+	if err != nil {
+		t.Fatalf("DecodeString(requestHeaders) error = %v", err)
+	}
+
+	var headers http.Header
+	if err := json.Unmarshal(decodedHeaders, &headers); err != nil {
+		t.Fatalf("json.Unmarshal(requestHeaders) error = %v", err)
+	}
+
+	return headers
 }
