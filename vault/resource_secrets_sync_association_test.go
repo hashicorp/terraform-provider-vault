@@ -93,3 +93,142 @@ resource "vault_secrets_sync_association" "test" {
 
 	return ret
 }
+
+// TestSyncAssociationFieldsFromID tests the ID parsing logic for vault_secrets_sync_association
+// This is a unit test for the syncAssociationFieldsFromID function that parses resource IDs.
+func TestSyncAssociationFieldsFromID(t *testing.T) {
+	tests := []struct {
+		name       string
+		id         string
+		wantType   string
+		wantDest   string
+		wantMount  string
+		wantSecret string
+		wantErr    bool
+	}{
+		{
+			name:       "simple secret name without slashes",
+			id:         "gcp-sm/dest/gcp-secret-manager/mount/kvv2-gcp3/secret/token",
+			wantType:   "gcp-sm",
+			wantDest:   "gcp-secret-manager",
+			wantMount:  "kvv2-gcp3",
+			wantSecret: "token",
+			wantErr:    false,
+		},
+		{
+			name:       "secret name with single slash",
+			id:         "gcp-sm/dest/gcp-secret-manager/mount/kvv2-gcp3/secret/api/key",
+			wantType:   "gcp-sm",
+			wantDest:   "gcp-secret-manager",
+			wantMount:  "kvv2-gcp3",
+			wantSecret: "api/key",
+			wantErr:    false,
+		},
+		{
+			name:       "secret name with multiple slashes (nested path)",
+			id:         "gcp-sm/dest/gcp-secret-manager/mount/kvv2-gcp3/secret/gai/secret/aihub2",
+			wantType:   "gcp-sm",
+			wantDest:   "gcp-secret-manager",
+			wantMount:  "kvv2-gcp3",
+			wantSecret: "gai/secret/aihub2",
+			wantErr:    false,
+		},
+		{
+			name:       "secret name with deep nesting",
+			id:         "aws-sm/dest/aws-dest-1/mount/kv-v2/secret/prod/app/database/credentials",
+			wantType:   "aws-sm",
+			wantDest:   "aws-dest-1",
+			wantMount:  "kv-v2",
+			wantSecret: "prod/app/database/credentials",
+			wantErr:    false,
+		},
+		{
+			name:       "github destination type",
+			id:         "gh/dest/gh-dest-1/mount/kv/secret/token",
+			wantType:   "gh",
+			wantDest:   "gh-dest-1",
+			wantMount:  "kv",
+			wantSecret: "token",
+			wantErr:    false,
+		},
+		{
+			name:    "invalid format - missing parts",
+			id:      "gcp-sm/dest/gcp-secret-manager/mount/kvv2-gcp3",
+			wantErr: true,
+		},
+		{
+			name:    "invalid format - wrong structure",
+			id:      "gcp-sm-gcp-secret-manager-kvv2-gcp3-token",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fields, err := syncAssociationFieldsFromID(tt.id)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("syncAssociationFieldsFromID() expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("syncAssociationFieldsFromID() unexpected error = %v", err)
+				return
+			}
+
+			if len(fields) != 4 {
+				t.Errorf("syncAssociationFieldsFromID() returned %d fields, want 4", len(fields))
+				return
+			}
+
+			gotType := fields[0]
+			gotDest := fields[1]
+			gotMount := fields[2]
+			gotSecret := fields[3]
+
+			if gotType != tt.wantType {
+				t.Errorf("syncAssociationFieldsFromID() type = %v, want %v", gotType, tt.wantType)
+			}
+			if gotDest != tt.wantDest {
+				t.Errorf("syncAssociationFieldsFromID() dest = %v, want %v", gotDest, tt.wantDest)
+			}
+			if gotMount != tt.wantMount {
+				t.Errorf("syncAssociationFieldsFromID() mount = %v, want %v", gotMount, tt.wantMount)
+			}
+			if gotSecret != tt.wantSecret {
+				t.Errorf("syncAssociationFieldsFromID() secret = %v, want %v", gotSecret, tt.wantSecret)
+			}
+		})
+	}
+}
+
+// TestSyncAssociationFieldsFromID_RegressionBug tests the specific bug fix
+// where secret names with slashes were incorrectly parsed due to greedy regex.
+// Before the fix, the regex pattern ^(.+)/dest/(.+)/mount/(.+)/secret/(.+)$
+// would greedily match and incorrectly parse IDs with slashes in the secret name.
+// After the fix with ^([^/]+)/dest/([^/]+)/mount/([^/]+)/secret/(.+)$,
+// the parsing correctly handles secret names containing slashes.
+func TestSyncAssociationFieldsFromID_RegressionBug(t *testing.T) {
+	// This is the exact case that was failing before the regex fix
+	id := "gcp-sm/dest/gcp-secret-manager/mount/kvv2-gcp3/secret/gai/secret/aihub2"
+
+	fields, err := syncAssociationFieldsFromID(id)
+	if err != nil {
+		t.Fatalf("syncAssociationFieldsFromID() error = %v", err)
+	}
+
+	// Before fix: mount would be "kvv2-gcp3/secret/gai" (WRONG - greedy regex matched too much)
+	// After fix: mount should be "kvv2-gcp3" (CORRECT - non-greedy regex stops at first /)
+	if fields[2] != "kvv2-gcp3" {
+		t.Errorf("REGRESSION: mount = %v, want kvv2-gcp3. The greedy regex bug is still present!", fields[2])
+	}
+
+	// Before fix: secret would be "aihub2" (WRONG - only captured last part)
+	// After fix: secret should be "gai/secret/aihub2" (CORRECT - captures everything after /secret/)
+	if fields[3] != "gai/secret/aihub2" {
+		t.Errorf("REGRESSION: secret = %v, want gai/secret/aihub2. The greedy regex bug is still present!", fields[3])
+	}
+}
