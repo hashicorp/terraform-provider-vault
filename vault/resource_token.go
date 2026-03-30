@@ -229,11 +229,11 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if v, ok := d.GetOk(consts.FieldMetadata); ok {
-		metadata := make(map[string]string)
+		d := make(map[string]string)
 		for k, val := range v.(map[string]interface{}) {
-			metadata[k] = val.(string)
+			d[k] = val.(string)
 		}
-		createRequest.Metadata = metadata
+		createRequest.Metadata = d
 	}
 
 	if v, ok := d.GetOk(consts.FieldType); ok {
