@@ -602,7 +602,6 @@ const (
 	FieldKMSName                            = "kms_name"
 	FieldKeyCollection                      = "key_collection"
 	FieldServiceAccountFile                 = "service_account_file"
-	FieldProject                            = "project"
 	FieldLocation                           = "location"
 	FieldPurpose                            = "purpose"
 	FieldProtection                         = "protection"
