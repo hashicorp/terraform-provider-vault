@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	frameworkrotation "github.com/hashicorp/terraform-provider-vault/internal/framework/rotation"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -43,37 +44,31 @@ type OSSecretBackendAccountResource struct {
 type OSSecretBackendAccountModel struct {
 	base.BaseModel
 
-	Mount                    types.String `tfsdk:"mount"`
-	Host                     types.String `tfsdk:"host"`
-	Name                     types.String `tfsdk:"name"`
-	Username                 types.String `tfsdk:"username"`
-	PasswordWO               types.String `tfsdk:"password_wo"`
-	ParentAccountRef         types.String `tfsdk:"parent_account_ref"`
-	PasswordPolicy           types.String `tfsdk:"password_policy"`
-	RotationPeriod           types.String `tfsdk:"rotation_period"`
-	RotationSchedule         types.String `tfsdk:"rotation_schedule"`
-	RotationWindow           types.String `tfsdk:"rotation_window"`
-	DisableAutomatedRotation types.Bool   `tfsdk:"disable_automated_rotation"`
-	VerifyConnection         types.Bool   `tfsdk:"verify_connection"`
-	CustomMetadata           types.Map    `tfsdk:"custom_metadata"`
-	LastVaultRotation        types.String `tfsdk:"last_vault_rotation"`
-	NextVaultRotation        types.String `tfsdk:"next_vault_rotation"`
+	Mount            types.String `tfsdk:"mount"`
+	Host             types.String `tfsdk:"host"`
+	Name             types.String `tfsdk:"name"`
+	Username         types.String `tfsdk:"username"`
+	PasswordWO       types.String `tfsdk:"password_wo"`
+	ParentAccountRef types.String `tfsdk:"parent_account_ref"`
+	PasswordPolicy   types.String `tfsdk:"password_policy"`
+	frameworkrotation.AutomatedRotationModel
+	VerifyConnection  types.Bool   `tfsdk:"verify_connection"`
+	CustomMetadata    types.Map    `tfsdk:"custom_metadata"`
+	LastVaultRotation types.String `tfsdk:"last_vault_rotation"`
+	NextVaultRotation types.String `tfsdk:"next_vault_rotation"`
 }
 
 // OSSecretBackendAccountAPIModel describes the Vault API data model
 type OSSecretBackendAccountAPIModel struct {
-	Username                 string            `json:"username" mapstructure:"username"`
-	Password                 string            `json:"password,omitempty" mapstructure:"password"`
-	ParentAccountRef         string            `json:"parent_account_ref,omitempty" mapstructure:"parent_account_ref"`
-	PasswordPolicy           string            `json:"password_policy,omitempty" mapstructure:"password_policy"`
-	RotationPeriod           any               `json:"rotation_period,omitempty" mapstructure:"rotation_period"`
-	RotationSchedule         string            `json:"rotation_schedule,omitempty" mapstructure:"rotation_schedule"`
-	RotationWindow           any               `json:"rotation_window,omitempty" mapstructure:"rotation_window"`
-	DisableAutomatedRotation bool              `json:"disable_automated_rotation,omitempty" mapstructure:"disable_automated_rotation"`
-	VerifyConnection         bool              `json:"verify_connection,omitempty" mapstructure:"verify_connection"`
-	CustomMetadata           map[string]string `json:"custom_metadata,omitempty" mapstructure:"custom_metadata"`
-	LastVaultRotation        string            `json:"last_vault_rotation,omitempty" mapstructure:"last_vault_rotation"`
-	NextVaultRotation        string            `json:"next_vault_rotation,omitempty" mapstructure:"next_vault_rotation"`
+	Username         string `json:"username" mapstructure:"username"`
+	Password         string `json:"password,omitempty" mapstructure:"password"`
+	ParentAccountRef string `json:"parent_account_ref,omitempty" mapstructure:"parent_account_ref"`
+	PasswordPolicy   string `json:"password_policy,omitempty" mapstructure:"password_policy"`
+	frameworkrotation.AutomatedRotationAPIModel
+	VerifyConnection  bool              `json:"verify_connection,omitempty" mapstructure:"verify_connection"`
+	CustomMetadata    map[string]string `json:"custom_metadata,omitempty" mapstructure:"custom_metadata"`
+	LastVaultRotation string            `json:"last_vault_rotation,omitempty" mapstructure:"last_vault_rotation"`
+	NextVaultRotation string            `json:"next_vault_rotation,omitempty" mapstructure:"next_vault_rotation"`
 }
 
 func (r *OSSecretBackendAccountResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -122,22 +117,6 @@ func (r *OSSecretBackendAccountResource) Schema(_ context.Context, _ resource.Sc
 				MarkdownDescription: "Name of the password policy to use for password generation.",
 				Optional:            true,
 			},
-			consts.FieldRotationPeriod: schema.StringAttribute{
-				MarkdownDescription: "How often to rotate passwords (e.g., '24h'). Mutually exclusive with rotation_schedule.",
-				Optional:            true,
-			},
-			consts.FieldRotationSchedule: schema.StringAttribute{
-				MarkdownDescription: "Cron schedule for password rotation. Mutually exclusive with rotation_period.",
-				Optional:            true,
-			},
-			consts.FieldRotationWindow: schema.StringAttribute{
-				MarkdownDescription: "Window of time for password rotation.",
-				Optional:            true,
-			},
-			consts.FieldDisableAutomatedRotation: schema.BoolAttribute{
-				MarkdownDescription: "Disable automated password rotation.",
-				Optional:            true,
-			},
 			consts.FieldVerifyConnection: schema.BoolAttribute{
 				MarkdownDescription: "Verify the connection to the host with the provided credentials.",
 				Optional:            true,
@@ -167,6 +146,7 @@ func (r *OSSecretBackendAccountResource) Schema(_ context.Context, _ resource.Sc
 		MarkdownDescription: "Manages an account on a host in an OS Secrets Engine mount in Vault.",
 	}
 	base.MustAddBaseSchema(&resp.Schema)
+	frameworkrotation.MustAddAutomatedRotationSchemas(&resp.Schema)
 }
 
 // readAccountFromVault reads the account configuration from Vault and populates the model
@@ -210,28 +190,18 @@ func (r *OSSecretBackendAccountResource) readAccountFromVault(ctx context.Contex
 	} else {
 		data.PasswordPolicy = types.StringNull()
 	}
-	if rotationPeriod := normalizeOSRotationValue(apiModel.RotationPeriod); rotationPeriod != "" {
-		if data.RotationPeriod.IsNull() || data.RotationPeriod.IsUnknown() {
-			data.RotationPeriod = types.StringValue(rotationPeriod)
-		}
-	} else {
-		data.RotationPeriod = types.StringNull()
+	rotationModel := frameworkrotation.AutomatedRotationModel{
+		RotationPeriod:           data.RotationPeriod,
+		RotationSchedule:         data.RotationSchedule,
+		RotationWindow:           data.RotationWindow,
+		DisableAutomatedRotation: data.DisableAutomatedRotation,
 	}
-	if apiModel.RotationSchedule != "" {
-		data.RotationSchedule = types.StringValue(apiModel.RotationSchedule)
-	} else {
-		data.RotationSchedule = types.StringNull()
+	rotationAPIModel := frameworkrotation.AutomatedRotationAPIModel(apiModel.AutomatedRotationAPIModel)
+	diags.Append(frameworkrotation.PopulateAutomatedRotationModelFromAPI(&rotationModel, &rotationAPIModel)...)
+	if diags.HasError() {
+		return false
 	}
-	if rotationWindow := normalizeOSRotationValue(apiModel.RotationWindow); rotationWindow != "" {
-		if data.RotationWindow.IsNull() || data.RotationWindow.IsUnknown() {
-			data.RotationWindow = types.StringValue(rotationWindow)
-		}
-	} else {
-		data.RotationWindow = types.StringNull()
-	}
-	if apiModel.DisableAutomatedRotation || !data.DisableAutomatedRotation.IsNull() {
-		data.DisableAutomatedRotation = types.BoolValue(apiModel.DisableAutomatedRotation)
-	}
+	data.AutomatedRotationModel = rotationModel
 	if apiModel.VerifyConnection || data.VerifyConnection.IsNull() || data.VerifyConnection.IsUnknown() {
 		data.VerifyConnection = types.BoolValue(apiModel.VerifyConnection)
 	}
@@ -312,25 +282,9 @@ func (r *OSSecretBackendAccountResource) Create(ctx context.Context, req resourc
 	} else {
 		requestData[consts.FieldPasswordPolicy] = ""
 	}
-	if !data.RotationPeriod.IsNull() && !data.RotationPeriod.IsUnknown() {
-		requestData[consts.FieldRotationPeriod] = data.RotationPeriod.ValueString()
-	} else {
-		requestData[consts.FieldRotationPeriod] = ""
-	}
-	if !data.RotationSchedule.IsNull() && !data.RotationSchedule.IsUnknown() {
-		requestData[consts.FieldRotationSchedule] = data.RotationSchedule.ValueString()
-	} else {
-		requestData[consts.FieldRotationSchedule] = ""
-	}
-	if !data.RotationWindow.IsNull() && !data.RotationWindow.IsUnknown() {
-		requestData[consts.FieldRotationWindow] = data.RotationWindow.ValueString()
-	} else {
-		requestData[consts.FieldRotationWindow] = ""
-	}
-	if !data.DisableAutomatedRotation.IsNull() && !data.DisableAutomatedRotation.IsUnknown() {
-		requestData[consts.FieldDisableAutomatedRotation] = data.DisableAutomatedRotation.ValueBool()
-	} else {
-		requestData[consts.FieldDisableAutomatedRotation] = false
+	if diags := frameworkrotation.PopulateAutomatedRotationRequestData(&data.AutomatedRotationModel, requestData); diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
 	}
 	if !data.VerifyConnection.IsNull() && !data.VerifyConnection.IsUnknown() {
 		requestData[consts.FieldVerifyConnection] = data.VerifyConnection.ValueBool()
@@ -434,25 +388,9 @@ func (r *OSSecretBackendAccountResource) Update(ctx context.Context, req resourc
 	} else {
 		requestData[consts.FieldPasswordPolicy] = ""
 	}
-	if !data.RotationPeriod.IsNull() && !data.RotationPeriod.IsUnknown() {
-		requestData[consts.FieldRotationPeriod] = data.RotationPeriod.ValueString()
-	} else {
-		requestData[consts.FieldRotationPeriod] = ""
-	}
-	if !data.RotationSchedule.IsNull() && !data.RotationSchedule.IsUnknown() {
-		requestData[consts.FieldRotationSchedule] = data.RotationSchedule.ValueString()
-	} else {
-		requestData[consts.FieldRotationSchedule] = ""
-	}
-	if !data.RotationWindow.IsNull() && !data.RotationWindow.IsUnknown() {
-		requestData[consts.FieldRotationWindow] = data.RotationWindow.ValueString()
-	} else {
-		requestData[consts.FieldRotationWindow] = ""
-	}
-	if !data.DisableAutomatedRotation.IsNull() && !data.DisableAutomatedRotation.IsUnknown() {
-		requestData[consts.FieldDisableAutomatedRotation] = data.DisableAutomatedRotation.ValueBool()
-	} else {
-		requestData[consts.FieldDisableAutomatedRotation] = false
+	if diags := frameworkrotation.PopulateAutomatedRotationRequestData(&data.AutomatedRotationModel, requestData); diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
 	}
 	if !data.VerifyConnection.IsNull() && !data.VerifyConnection.IsUnknown() {
 		requestData[consts.FieldVerifyConnection] = data.VerifyConnection.ValueBool()

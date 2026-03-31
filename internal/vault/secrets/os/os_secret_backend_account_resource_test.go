@@ -42,7 +42,7 @@ func TestAccOSSecretBackendAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "24h"),
+					resource.TestCheckResourceAttr(resourceName, "rotation_period", "86400"),
 					resource.TestCheckNoResourceAttr(resourceName, "rotation_window"),
 					resource.TestCheckNoResourceAttr(resourceName, "rotation_schedule"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "false"),
@@ -70,7 +70,7 @@ func TestAccOSSecretBackendAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "48h"),
+					resource.TestCheckResourceAttr(resourceName, "rotation_period", "172800"),
 					resource.TestCheckNoResourceAttr(resourceName, "rotation_window"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "false"),
 				),
@@ -183,7 +183,7 @@ func TestAccOSSecretBackendAccount_optionalFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
 					resource.TestCheckNoResourceAttr(resourceName, "rotation_period"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_window", "3h"),
+					resource.TestCheckResourceAttr(resourceName, "rotation_window", "10800"),
 					resource.TestCheckResourceAttr(resourceName, "rotation_schedule", "0 3 * * *"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "false"),
 				),
@@ -325,7 +325,7 @@ resource "vault_os_secret_backend_account" "test" {
   name            = "%s"
 	username        = "%s"
 	password_wo     = "bar"
-	rotation_period = "24h"
+	rotation_period = 86400
 	verify_connection = %t
 }
 `, mount, hostName, accountName, username, verifyConnection)
@@ -354,7 +354,7 @@ resource "vault_os_secret_backend_account" "test" {
   name            = "%s"
 	username        = "%s"
 	password_wo     = "bar"
-	rotation_period = "48h"
+	rotation_period = 172800
 	verify_connection = %t
 }
 `, mount, hostName, accountName, username, verifyConnection)
@@ -411,7 +411,7 @@ resource "vault_os_secret_backend_account" "test" {
   name              = "%s"
 	username          = "%s"
 	password_wo       = "bar"
-	rotation_window   = "3h"
+	rotation_window   = 10800
   rotation_schedule = "0 3 * * *"
 	verify_connection = %t
 }

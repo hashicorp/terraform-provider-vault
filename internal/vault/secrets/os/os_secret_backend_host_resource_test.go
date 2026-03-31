@@ -17,8 +17,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
-// TestAccOSSecretBackendHost_basic covers CRUD and import for the host resource
-// using the beta-compatible rotation assertions required by the current plugin.
+// TestAccOSSecretBackendHost_basic covers CRUD and import for the host resource.
 func TestAccOSSecretBackendHost_basic(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-test-os")
 	name := acctest.RandomWithPrefix("test-host")
@@ -40,7 +39,7 @@ func TestAccOSSecretBackendHost_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "ssh"),
 					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "2222"),
-					testCheckHostRotationAttr(resourceName, "rotation_period", "24h", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "rotation_period", "86400"),
 					resource.TestCheckNoResourceAttr(resourceName, "rotation_window"),
 					resource.TestCheckNoResourceAttr(resourceName, "rotation_schedule"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.%", "2"),
@@ -56,8 +55,6 @@ func TestAccOSSecretBackendHost_basic(t *testing.T) {
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
 					consts.FieldType,
-					consts.FieldRotationPeriod,
-					consts.FieldRotationWindow,
 				},
 			},
 			{
@@ -68,7 +65,7 @@ func TestAccOSSecretBackendHost_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "ssh"),
 					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "2222"),
-					testCheckHostRotationAttr(resourceName, "rotation_period", "48h", "172800"),
+					resource.TestCheckResourceAttr(resourceName, "rotation_period", "172800"),
 					resource.TestCheckNoResourceAttr(resourceName, "rotation_window"),
 					resource.TestCheckNoResourceAttr(resourceName, "rotation_schedule"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.%", "3"),
@@ -153,7 +150,7 @@ func TestAccOSSecretBackendHost_optionalFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "2222"),
 					resource.TestCheckNoResourceAttr(resourceName, "rotation_period"),
-					testCheckHostRotationAttr(resourceName, "rotation_window", "3h", "10800"),
+					resource.TestCheckResourceAttr(resourceName, "rotation_window", "10800"),
 					resource.TestCheckResourceAttr(resourceName, "rotation_schedule", "0 2 * * *"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.%", "3"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.env", "staging"),
@@ -231,26 +228,6 @@ func testAccOSSecretBackendHostImportStateIdFunc(resourceName string) resource.I
 	}
 }
 
-// testCheckHostRotationAttr accepts either duration strings or canonicalized
-// second values because the beta plugin normalizes rotation fields on read.
-func testCheckHostRotationAttr(resourceName, attrName string, expected ...string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("not found: %s", resourceName)
-		}
-
-		actual := rs.Primary.Attributes[attrName]
-		for _, want := range expected {
-			if actual == want {
-				return nil
-			}
-		}
-
-		return fmt.Errorf("expected %s to be one of %v, got %q", attrName, expected, actual)
-	}
-}
-
 // testAccOSSecretBackendHostConfig_basic creates a host using the simplest
 // valid period-based rotation configuration.
 func testAccOSSecretBackendHostConfig_basic(mount, name string) string {
@@ -267,7 +244,7 @@ resource "vault_os_secret_backend_host" "test" {
 	type            = "ssh"
 	address         = "127.0.0.1"
 	port            = 2222
-	rotation_period = "24h"
+	rotation_period = 86400
 
   custom_metadata = {
     env  = "test"
@@ -291,7 +268,7 @@ resource "vault_os_secret_backend_host" "test" {
 	type            = "ssh"
 	address         = "127.0.0.1"
 	port            = 2222
-	rotation_period = "48h"
+	rotation_period = 172800
 
   custom_metadata = {
     env    = "production"
@@ -335,7 +312,7 @@ resource "vault_os_secret_backend_host" "test" {
 	address           = "127.0.0.1"
   port              = 2222
 	rotation_period   = null
-	rotation_window   = "3h"
+	rotation_window   = 10800
   rotation_schedule = "0 2 * * *"
 
   custom_metadata = {

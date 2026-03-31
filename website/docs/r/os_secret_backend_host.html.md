@@ -45,7 +45,7 @@ resource "vault_os_secret_backend_host" "production" {
   address           = "10.0.1.50"
   port              = 2222
   rotation_schedule = "0 2 * * *"
-  rotation_window   = "1h"
+  rotation_window   = 3600
 
   custom_metadata = {
     environment = "production"
@@ -93,9 +93,9 @@ The following arguments are supported:
 
 * `ssh_host_key` - (Optional, Computed) The SSH host key for the remote host. If not provided and `ssh_host_key_trust_on_first_use` is enabled on the backend, Vault can learn and persist the key on first connection.
 
-* `rotation_period` - (Optional) How often to rotate credentials, using a duration string such as `24h`. Mutually exclusive with `rotation_schedule`.
+* `rotation_period` - (Optional) How often to rotate credentials, in seconds. Mutually exclusive with `rotation_schedule`.
 
-* `rotation_window` - (Optional) The rotation window, using a duration string such as `1h`. This is typically used with `rotation_schedule`.
+* `rotation_window` - (Optional) The rotation window, in seconds. This is typically used with `rotation_schedule`.
 
 * `rotation_schedule` - (Optional) A cron-style schedule for credential rotation (for example, `"0 2 * * *"`). Mutually exclusive with `rotation_period`.
 
@@ -125,6 +125,5 @@ $ terraform import vault_os_secret_backend_host.example os/hosts/web-server-01
 * The host must be configured before accounts can be created on it.
 * When `ssh_host_key` is not provided, the backend's `ssh_host_key_trust_on_first_use` setting determines whether the host key will be automatically trusted on first connection.
 * Use either `rotation_period` or `rotation_schedule`.
-* In the current plugin behavior, rotation fields may be normalized on read, so equivalent duration values can appear in canonicalized form.
 * Custom metadata is stored alongside the host configuration and can be used for organizational purposes, but does not affect host behavior.
 * Changing `mount` or `name` will cause the resource to be recreated.

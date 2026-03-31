@@ -66,7 +66,7 @@ resource "vault_os_secret_backend_account" "dbadmin" {
   name            = "dbadmin"
   username        = "postgres"
   password_wo       = "initial-password-456"
-  rotation_period   = "24h"
+  rotation_period   = 86400
   verify_connection = false
 }
 ```
@@ -93,7 +93,7 @@ resource "vault_os_secret_backend_account" "service" {
   username          = "appuser"
   password_wo       = var.initial_password
   rotation_schedule = "0 3 * * 0"  # Rotate every Sunday at 3 AM
-  rotation_window   = "1h"
+  rotation_window   = 3600
 }
 ```
 
@@ -120,9 +120,9 @@ The following arguments are supported:
 
 * `password_policy` - (Optional) Password policy to use for generated passwords.
 
-* `rotation_period` - (Optional) The period between automatic password rotations, expressed as a duration string such as `24h`. Mutually exclusive with `rotation_schedule`.
+* `rotation_period` - (Optional) The period between automatic password rotations, in seconds. Mutually exclusive with `rotation_schedule`.
 
-* `rotation_window` - (Optional) The rotation window, expressed as a duration string such as `1h`.
+* `rotation_window` - (Optional) The rotation window, in seconds.
 
 * `rotation_schedule` - (Optional) A cron-style schedule for password rotation (for example, `"0 3 * * 0"`). Mutually exclusive with `rotation_period`.
 
