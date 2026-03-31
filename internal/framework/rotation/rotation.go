@@ -22,9 +22,9 @@ type AutomatedRotationModel struct {
 // AutomatedRotationAPIModel provides the common API representation for Vault
 // automated rotation fields.
 type AutomatedRotationAPIModel struct {
-	RotationPeriod           any    `json:"rotation_period,omitempty" mapstructure:"rotation_period"`
+	RotationPeriod           int64  `json:"rotation_period,omitempty" mapstructure:"rotation_period"`
 	RotationSchedule         string `json:"rotation_schedule,omitempty" mapstructure:"rotation_schedule"`
-	RotationWindow           any    `json:"rotation_window,omitempty" mapstructure:"rotation_window"`
+	RotationWindow           int64  `json:"rotation_window,omitempty" mapstructure:"rotation_window"`
 	DisableAutomatedRotation bool   `json:"disable_automated_rotation,omitempty" mapstructure:"disable_automated_rotation"`
 }
 
@@ -95,68 +95,24 @@ func PopulateAutomatedRotationModelFromAPI(model *AutomatedRotationModel, apiMod
 		}
 	}
 
-	switch v := apiModel.RotationPeriod.(type) {
-	case nil:
-		model.RotationPeriod = types.Int64Null()
-	case float64:
-		if v != 0 {
-			model.RotationPeriod = types.Int64Value(int64(v))
-		} else {
-			model.RotationPeriod = types.Int64Null()
-		}
-	case int:
-		if v != 0 {
-			model.RotationPeriod = types.Int64Value(int64(v))
-		} else {
-			model.RotationPeriod = types.Int64Null()
-		}
-	case int64:
-		if v != 0 {
-			model.RotationPeriod = types.Int64Value(v)
-		} else {
-			model.RotationPeriod = types.Int64Null()
-		}
-	default:
-		return diag.Diagnostics{
-			diag.NewErrorDiagnostic("unexpected rotation_period value", fmt.Sprintf("unsupported type %T for rotation_period", v)),
-		}
+	model.RotationPeriod = types.Int64Null()
+	if apiModel.RotationPeriod != 0 {
+		model.RotationPeriod = types.Int64Value(apiModel.RotationPeriod)
 	}
 
+	model.RotationSchedule = types.StringNull()
 	if apiModel.RotationSchedule != "" {
 		model.RotationSchedule = types.StringValue(apiModel.RotationSchedule)
-	} else {
-		model.RotationSchedule = types.StringNull()
 	}
 
-	switch v := apiModel.RotationWindow.(type) {
-	case nil:
-		model.RotationWindow = types.Int64Null()
-	case float64:
-		if v != 0 {
-			model.RotationWindow = types.Int64Value(int64(v))
-		} else {
-			model.RotationWindow = types.Int64Null()
-		}
-	case int:
-		if v != 0 {
-			model.RotationWindow = types.Int64Value(int64(v))
-		} else {
-			model.RotationWindow = types.Int64Null()
-		}
-	case int64:
-		if v != 0 {
-			model.RotationWindow = types.Int64Value(v)
-		} else {
-			model.RotationWindow = types.Int64Null()
-		}
-	default:
-		return diag.Diagnostics{
-			diag.NewErrorDiagnostic("unexpected rotation_window value", fmt.Sprintf("unsupported type %T for rotation_window", v)),
-		}
+	model.RotationWindow = types.Int64Null()
+	if apiModel.RotationWindow != 0 {
+		model.RotationWindow = types.Int64Value(apiModel.RotationWindow)
 	}
 
-	if apiModel.DisableAutomatedRotation || !model.DisableAutomatedRotation.IsNull() {
-		model.DisableAutomatedRotation = types.BoolValue(apiModel.DisableAutomatedRotation)
+	model.DisableAutomatedRotation = types.BoolNull()
+	if apiModel.DisableAutomatedRotation {
+		model.DisableAutomatedRotation = types.BoolValue(true)
 	}
 
 	return diag.Diagnostics{}
