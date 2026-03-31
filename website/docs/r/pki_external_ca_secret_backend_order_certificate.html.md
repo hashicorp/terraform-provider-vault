@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_pki_secret_backend_external_ca_order_certificate resource"
-sidebar_current: "docs-vault-resource-pki-secret-backend-external-ca-order-certificate"
+page_title: "Vault: vault_pki_external_ca_secret_backend_order_certificate resource"
+sidebar_current: "docs-vault-resource-pki-external-ca-secret-backend-order-certificate"
 description: |-
   Fetches the certificate from a completed ACME order.
 ---
 
-# vault\_pki\_secret\_backend\_external\_ca\_order\_certificate
+# vault\_pki\_external\_ca\_secret\_backend\_order\_certificate
 
 Polls the order status endpoint until the order is completed, then fetches the certificate. This resource waits for all ACME challenges to be validated and the certificate to be issued by the external CA.
 
@@ -17,18 +17,18 @@ artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
-~> **Note** This resource should be used after all challenges have been fulfilled using `vault_pki_secret_backend_external_ca_order_challenge_fulfilled`. It will poll the order status and wait for completion before fetching the certificate.
+~> **Note** This resource should be used after all challenges have been fulfilled using `vault_pki_external_ca_secret_backend_order_challenge_fulfilled`. It will poll the order status and wait for completion before fetching the certificate.
 
 ## Example Usage
 
 ```hcl
-resource "vault_mount" "pki" {
-  path = "pki"
-  type = "pki"
+resource "vault_mount" "pki-external-ca" {
+  path = "pki-external-ca"
+  type = "pki-external-ca"
 }
 
-resource "vault_pki_secret_backend_acme_account" "example" {
-  mount         = vault_mount.pki.path
+resource "vault_pki_external_ca_secret_backend_acme_account" "example" {
+  mount         = vault_mount.pki-external-ca.path
   name          = "my-acme-account"
   directory_url = "https://acme-v02.api.letsencrypt.org/directory"
   email_contacts = [
@@ -36,27 +36,27 @@ resource "vault_pki_secret_backend_acme_account" "example" {
   ]
 }
 
-resource "vault_pki_secret_backend_external_ca_role" "example" {
-  mount             = vault_mount.pki.path
+resource "vault_pki_external_ca_secret_backend_role" "example" {
+  mount             = vault_mount.pki-external-ca.path
   name              = "example-role"
-  acme_account_name = vault_pki_secret_backend_acme_account.example.name
+  acme_account_name = vault_pki_external_ca_secret_backend_acme_account.example.name
   
   allowed_domains = ["example.com"]
   allowed_domain_options = ["bare_domains", "subdomains"]
 }
 
-resource "vault_pki_secret_backend_external_ca_order" "example" {
-  mount     = vault_mount.pki.path
-  role_name = vault_pki_secret_backend_external_ca_role.example.name
+resource "vault_pki_external_ca_secret_backend_order" "example" {
+  mount     = vault_mount.pki-external-ca.path
+  role_name = vault_pki_external_ca_secret_backend_role.example.name
   
   identifiers = ["www.example.com"]
 }
 
 # Retrieve and fulfill challenges (simplified)
-data "vault_pki_secret_backend_external_ca_order_challenge" "example" {
-  mount          = vault_mount.pki.path
-  role_name      = vault_pki_secret_backend_external_ca_role.example.name
-  order_id       = vault_pki_secret_backend_external_ca_order.example.order_id
+data "vault_pki_external_ca_secret_backend_order_challenge" "example" {
+  mount          = vault_mount.pki-external-ca.path
+  role_name      = vault_pki_external_ca_secret_backend_role.example.name
+  order_id       = vault_pki_external_ca_secret_backend_order.example.order_id
   challenge_type = "http-01"
   identifier     = "www.example.com"
 }
@@ -67,15 +67,15 @@ data "vault_pki_secret_backend_external_ca_order_challenge" "example" {
 # port 80, of the real domain name for which the certificate is tied to.
 resource "null_resource" "acme_challenge_server" {
   triggers = {
-    token             = data.vault_pki_secret_backend_external_ca_order_challenge.example.token
-    key_authorization = data.vault_pki_secret_backend_external_ca_order_challenge.example.key_authorization
+    token             = data.vault_pki_external_ca_secret_backend_order_challenge.example.token
+    key_authorization = data.vault_pki_external_ca_secret_backend_order_challenge.example.key_authorization
   }
 
   provisioner "local-exec" {
     command = <<-EOT
 (
       mkdir -p /tmp/acme-challenge/.well-known/acme-challenge
-      /bin/echo -n '${data.vault_pki_secret_backend_external_ca_order_challenge.example.key_authorization}' > /tmp/acme-challenge/.well-known/acme-challenge/${data.vault_pki_secret_backend_external_ca_order_challenge.example.token}
+      /bin/echo -n '${data.vault_pki_external_ca_secret_backend_order_challenge.example.key_authorization}' > /tmp/acme-challenge/.well-known/acme-challenge/${data.vault_pki_external_ca_secret_backend_order_challenge.example.token}
       cd /tmp/acme-challenge 
       (nohup python3 -m http.server 5002 >/dev/null 2>&1) & 
       echo $! > /tmp/acme-challenge-server.pid
@@ -96,10 +96,10 @@ resource "null_resource" "acme_challenge_server" {
   }
 }
 
-resource "vault_pki_secret_backend_external_ca_order_challenge_fulfilled" "example" {
-  mount          = vault_mount.pki.path
-  role_name      = vault_pki_secret_backend_external_ca_role.example.name
-  order_id       = vault_pki_secret_backend_external_ca_order.example.order_id
+resource "vault_pki_external_ca_secret_backend_order_challenge_fulfilled" "example" {
+  mount          = vault_mount.pki-external-ca.path
+  role_name      = vault_pki_external_ca_secret_backend_role.example.name
+  order_id       = vault_pki_external_ca_secret_backend_order.example.order_id
   challenge_type = "http-01"
   identifier     = "www.example.com"
   
@@ -108,23 +108,23 @@ resource "vault_pki_secret_backend_external_ca_order_challenge_fulfilled" "examp
 }
 
 # Fetch the certificate after challenges are fulfilled
-resource "vault_pki_secret_backend_external_ca_order_certificate" "example" {
+resource "vault_pki_external_ca_secret_backend_order_certificate" "example" {
   depends_on = [
-    vault_pki_secret_backend_external_ca_order_challenge_fulfilled.example
+    vault_pki_external_ca_secret_backend_order_challenge_fulfilled.example
   ]
   
-  mount     = vault_mount.pki.path
-  role_name = vault_pki_secret_backend_external_ca_role.example.name
-  order_id  = vault_pki_secret_backend_external_ca_order.example.order_id
+  mount     = vault_mount.pki-external-ca.path
+  role_name = vault_pki_external_ca_secret_backend_role.example.name
+  order_id  = vault_pki_external_ca_secret_backend_order.example.order_id
 }
 
 # Use the certificate
 output "certificate" {
-  value     = vault_pki_secret_backend_external_ca_order_certificate.example.certificate
+  value     = vault_pki_external_ca_secret_backend_order_certificate.example.certificate
 }
 
 output "private_key" {
-  value     = vault_pki_secret_backend_external_ca_order_certificate.example.private_key
+  value     = vault_pki_external_ca_secret_backend_order_certificate.example.private_key
   sensitive = true
 }
 ```
@@ -163,7 +163,7 @@ In addition to the fields above, the following attributes are exported:
 PKI External CA order certificates can be imported using the format `<mount>/role/<role_name>/order/<order_id>/certificate`, e.g.
 
 ```
-$ terraform import vault_pki_secret_backend_external_ca_order_certificate.example pki/role/example-role/order/abc123/certificate
+$ terraform import vault_pki_external_ca_secret_backend_order_certificate.example pki-external-ca/role/example-role/order/abc123/certificate
 ```
 
 ~> **Note** This resource polls the order status with a timeout. If the order does not complete within the polling period, the resource creation will fail. Ensure all challenges are properly fulfilled before creating this resource.

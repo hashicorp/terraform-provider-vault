@@ -599,6 +599,16 @@ const (
 	FieldSerialNumberSource                 = "serial_number_source"
 	FieldCertMetadata                       = "cert_metadata"
 	FieldTokenType                          = "token_type"
+	FieldKMSName                            = "kms_name"
+	FieldKeyCollection                      = "key_collection"
+	FieldServiceAccountFile                 = "service_account_file"
+	FieldLocation                           = "location"
+	FieldPurpose                            = "purpose"
+	FieldProtection                         = "protection"
+	FieldVersions                           = "versions"
+	FieldReplicaRegions                     = "replica_regions"
+	FieldMinEnabledVersion                  = "min_enabled_version"
+	FieldProvider                           = "provider"
 
 	FieldInput                    = "input"
 	FieldKeyVersion               = "key_version"
@@ -876,6 +886,7 @@ const (
 	MountTypeSAML         = "saml"
 	MountTypeOkta         = "okta"
 	MountTypeTransit      = "transit"
+	MountTypeKeyMgmt      = "keymgmt"
 
 	/*
 		Vault version constants
@@ -896,6 +907,7 @@ const (
 	VaultVersion1194 = "1.19.4"
 	VaultVersion120  = "1.20.0"
 	VaultVersion121  = "1.21.0"
+	VaultVersion1215 = "1.21.5"
 	VaultVersion200  = "2.0.0"
 
 	/*
