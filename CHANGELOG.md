@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* **New Resources**: Add support for Vault Key Management secrets engine with resources for managing KMS providers (AWS KMS, Azure Key Vault, GCP Cloud KMS), cryptographic keys, key distribution, replication, and rotation (Vault Enterprise). ([#2802](https://github.com/hashicorp/terraform-provider-vault/pull/2802))
+
 IMPROVEMENTS:
 
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
