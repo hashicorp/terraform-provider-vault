@@ -4,10 +4,12 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -90,23 +92,29 @@ func transformTransformationResource() *schema.Resource {
 		consts.FieldConvergent: {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Description: `If true, multiple transformations of the same plaintext will produce the same ciphertext. Only used when type is "fpe".`,
+			ForceNew:    true,
+			Description: `If true, multiple transformations of the same plaintext will produce the same ciphertext. Only used when type is "tokenization". Cannot be changed after creation.`,
 		},
 	}
 	return &schema.Resource{
-		Create: createTransformTransformationResource,
-		Update: updateTransformTransformationResource,
-		Read:   provider.ReadWrapper(readTransformTransformationResource),
-		Exists: resourceTransformTransformationExists,
-		Delete: deleteTransformTransformationResource,
+		Create:        createTransformTransformationResource,
+		Update:        updateTransformTransformationResource,
+		Read:          provider.ReadWrapper(readTransformTransformationResource),
+		Exists:        resourceTransformTransformationExists,
+		Delete:        deleteTransformTransformationResource,
+		CustomizeDiff: validateTransformTransformationConfig,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: fields,
 	}
 }
 
 func createTransformTransformationResource(d *schema.ResourceData, meta interface{}) error {
+	if err := validateTransformTransformationTypeConstraints(d); err != nil {
+		return err
+	}
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -117,20 +125,20 @@ func createTransformTransformationResource(d *schema.ResourceData, meta interfac
 	log.Printf("[DEBUG] Creating %q", vaultPath)
 
 	data := map[string]interface{}{}
-	if v, ok := d.GetOkExists(consts.FieldAllowedRoles); ok {
+	if v, ok := getConfiguredValue(d, consts.FieldAllowedRoles); ok {
 		data[consts.FieldAllowedRoles] = v
 	}
-	if v, ok := d.GetOkExists(consts.FieldMaskingCharacter); ok {
+	if v, ok := getConfiguredValue(d, consts.FieldMaskingCharacter); ok {
 		data[consts.FieldMaskingCharacter] = v
 	}
 	data[consts.FieldName] = d.Get(consts.FieldName)
-	if v, ok := d.GetOkExists(consts.FieldTemplate); ok {
+	if v, ok := getConfiguredValue(d, consts.FieldTemplate); ok {
 		data[consts.FieldTemplate] = v
 	}
-	if v, ok := d.GetOkExists(consts.FieldTweakSource); ok {
+	if v, ok := getConfiguredValue(d, consts.FieldTweakSource); ok {
 		data[consts.FieldTweakSource] = v
 	}
-	if v, ok := d.GetOkExists(consts.FieldType); ok {
+	if v, ok := getConfiguredValue(d, consts.FieldType); ok {
 		data[consts.FieldType] = v
 	}
 
@@ -138,13 +146,13 @@ func createTransformTransformationResource(d *schema.ResourceData, meta interfac
 		data[consts.FieldDeletionAllowed] = d.Get(consts.FieldDeletionAllowed)
 	}
 
-	if v, ok := d.GetOkExists(consts.FieldMappingMode); ok {
+	if v, ok := getConfiguredValue(d, consts.FieldMappingMode); ok {
 		data[consts.FieldMappingMode] = v
 	}
-	if v, ok := d.GetOkExists(consts.FieldStores); ok {
+	if v, ok := getConfiguredValue(d, consts.FieldStores); ok {
 		data[consts.FieldStores] = v
 	}
-	if v, ok := d.GetOkExists(consts.FieldConvergent); ok {
+	if v, ok := getConfiguredValue(d, consts.FieldConvergent); ok {
 		data[consts.FieldConvergent] = v
 	}
 
@@ -239,6 +247,10 @@ func readTransformTransformationResource(d *schema.ResourceData, meta interface{
 }
 
 func updateTransformTransformationResource(d *schema.ResourceData, meta interface{}) error {
+	if err := validateTransformTransformationTypeConstraints(d); err != nil {
+		return err
+	}
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -274,8 +286,9 @@ func updateTransformTransformationResource(d *schema.ResourceData, meta interfac
 	if raw, ok := d.GetOk(consts.FieldStores); ok {
 		data[consts.FieldStores] = raw
 	}
-	if raw, ok := d.GetOk(consts.FieldConvergent); ok {
-		data[consts.FieldConvergent] = raw
+	if d.HasChange(consts.FieldConvergent) {
+		_, newVal := d.GetChange(consts.FieldConvergent)
+		data[consts.FieldConvergent] = newVal
 	}
 
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
@@ -319,4 +332,65 @@ func resourceTransformTransformationExists(d *schema.ResourceData, meta interfac
 	}
 	log.Printf("[DEBUG] Checked if %q exists", vaultPath)
 	return resp != nil, nil
+}
+
+func getConfiguredValue(d *schema.ResourceData, key string) (interface{}, bool) {
+	rawCfg := d.GetRawConfig()
+	if !rawCfg.IsNull() && rawCfg.Type().IsObjectType() {
+		attr := rawCfg.GetAttr(key)
+		if !attr.IsNull() && attr.IsKnown() {
+			return d.Get(key), true
+		}
+	}
+
+	// Fallback for update paths when only diff information is available.
+	if d.HasChange(key) {
+		_, newVal := d.GetChange(key)
+		return newVal, true
+	}
+
+	return nil, false
+}
+
+func validateTransformTransformationConfig(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
+	return validateTransformTransformationTypeConstraintsFromRawConfig(d.GetRawConfig())
+}
+
+type transformTransformationConfigReader interface {
+	GetRawConfig() cty.Value
+	Get(string) interface{}
+}
+
+func validateTransformTransformationTypeConstraints(r transformTransformationConfigReader) error {
+	return validateTransformTransformationTypeConstraintsFromRawConfig(r.GetRawConfig())
+}
+
+func validateTransformTransformationTypeConstraintsFromRawConfig(rawConfig cty.Value) error {
+	typeValue := strings.TrimSpace(rawConfigAttrString(rawConfig, consts.FieldType))
+	hasMappingMode := rawConfigHasAttr(rawConfig, consts.FieldMappingMode)
+	hasStores := rawConfigHasAttr(rawConfig, consts.FieldStores)
+	hasConvergent := rawConfigHasAttr(rawConfig, consts.FieldConvergent)
+
+	if (hasMappingMode || hasStores || hasConvergent) && typeValue != "tokenization" {
+		return fmt.Errorf("%q, %q, and %q can only be set when %q is %q", consts.FieldMappingMode, consts.FieldStores, consts.FieldConvergent, consts.FieldType, "tokenization")
+	}
+
+	return nil
+}
+
+func rawConfigHasAttr(rawConfig cty.Value, key string) bool {
+	if rawConfig.IsNull() || !rawConfig.Type().IsObjectType() {
+		return false
+	}
+
+	attr := rawConfig.GetAttr(key)
+	return attr.IsKnown() && !attr.IsNull()
+}
+
+func rawConfigAttrString(rawConfig cty.Value, key string) string {
+	if !rawConfigHasAttr(rawConfig, key) {
+		return ""
+	}
+
+	return strings.TrimSpace(fmt.Sprintf("%v", rawConfig.GetAttr(key).AsString()))
 }
