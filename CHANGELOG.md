@@ -3,17 +3,11 @@
 FEATURES:
 
 * **New Resources**: Add support for Vault Key Management secrets engine with resources for managing KMS providers (AWS KMS, Azure Key Vault, GCP Cloud KMS), cryptographic keys, key distribution, replication, and rotation (Vault Enterprise). ([#2802](https://github.com/hashicorp/terraform-provider-vault/pull/2802))
+* **New Resources**: `vault_alicloud_secret_backend`, `vault_alicloud_secret_backend_role`, and ephemeral resource `vault_alicloud_access_credentials` for managing AliCloud secrets engine. ([#2809](https://github.com/hashicorp/terraform-provider-vault/pull/2809), [#2824](https://github.com/hashicorp/terraform-provider-vault/pull/2824))
 
 IMPROVEMENTS:
 
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
-
-FEATURES:
-
-* **New Resource**: `vault_alicloud_secret_backend` - Manage AliCloud secrets engine configuration with write-only `secret_key_wo` field to prevent sensitive credentials from being stored in Terraform state. ([#2858]https://github.com/hashicorp/terraform-provider-vault/pull/2858)
-* **New Resource**: `vault_alicloud_secret_backend_role` - Manage AliCloud secrets engine roles with support for three credential types: `role_arn` (assume RAM role), `inline_policies` (custom inline policies), and `remote_policies` (reference existing RAM policies). ([#2858]https://github.com/hashicorp/terraform-provider-vault/pull/2858)
-* **New Ephemeral Resource**: `vault_alicloud_access_credentials` - Generate temporary AliCloud access credentials from configured AliCloud secret backend roles, including leased credentials and RAM AssumeRole credentials. Requires Terraform 1.10+.([#2858]https://github.com/hashicorp/terraform-provider-vault/pull/2858)
-
 
 BUGS: 
 * `vault_consul_secret_backend`: Fixed validation logic to allow computed token values by correcting the condition that checks for token presence during plan phase. ([#2823](https://github.com/hashicorp/terraform-provider-vault/pull/2823))
