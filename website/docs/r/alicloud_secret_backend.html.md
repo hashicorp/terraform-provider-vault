@@ -82,7 +82,7 @@ If you change `secret_key_wo` in your configuration, Terraform will send the new
 AliCloud secrets engines can be imported using the `mount` path, e.g.
 
 ```
-$ terraform import vault_alicloud_secret_backend.alicloud alicloud
+$ terraform import vault_alicloud_secret_backend.alicloud alicloud/config
 ```
 
 ~> **Note:** When importing, the `secret_key_wo` field will not be populated as it is 
