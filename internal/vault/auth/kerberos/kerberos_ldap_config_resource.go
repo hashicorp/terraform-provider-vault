@@ -149,21 +149,24 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 					"Default: ldap://127.0.0.1",
 			},
 			consts.FieldBindDN: schema.StringAttribute{
-				Optional:    true,
-				Description: "Distinguished name of object to bind for search (e.g., 'cn=vault,ou=Users,dc=example,dc=com').",
+				Optional: true,
+				Description: "Distinguished name of object to bind for search " +
+					"(e.g., 'cn=vault,ou=Users,dc=example,dc=com').",
 			},
 			consts.FieldBindPassWO: schema.StringAttribute{
-				Optional:    true,
-				WriteOnly:   true,
-				Sensitive:   true,
-				Description: "LDAP password for searching for the user DN (write-only). Must be used together with bindpass_wo_version.",
+				Optional:  true,
+				WriteOnly: true,
+				Sensitive: true,
+				Description: "LDAP password for searching for the user DN (write-only). " +
+					"Must be used together with bindpass_wo_version.",
 				Validators: []validator.String{
 					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldBindPassWOVersion)),
 				},
 			},
 			consts.FieldBindPassWOVersion: schema.Int64Attribute{
-				Optional:    true,
-				Description: "Version identifier for bindpass updates. Change to trigger password update. Must be used together with bindpass_wo.",
+				Optional: true,
+				Description: "Version identifier for bindpass updates. Change to trigger password update. " +
+					"Must be used together with bindpass_wo.",
 				Validators: []validator.Int64{
 					int64validator.AlsoRequires(path.MatchRoot(consts.FieldBindPassWO)),
 				},
@@ -189,10 +192,11 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 				Description: "LDAP search base to use for group membership search (e.g., ou=Groups,dc=example,dc=org).",
 			},
 			consts.FieldGroupFilter: schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString("(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))"),
-				Description: "Go template for querying group membership of user. Default: '(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))'",
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString("(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))"),
+				Description: "Go template for querying group membership of user. " +
+					"Default: '(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))'",
 			},
 			consts.FieldGroupAttr: schema.StringAttribute{
 				Optional:    true,
@@ -221,16 +225,18 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 				Description: "Skip TLS certificate verification. Not recommended for production. Default: false.",
 			},
 			consts.FieldTLSMinVersion: schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString("tls12"),
-				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Default: 'tls12'.",
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString("tls12"),
+				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. " +
+					"Default: 'tls12'.",
 			},
 			consts.FieldTLSMaxVersion: schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString("tls12"),
-				Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Default: 'tls12'.",
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString("tls12"),
+				Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. " +
+					"Default: 'tls12'.",
 			},
 			consts.FieldCertificate: schema.StringAttribute{
 				Optional:    true,
@@ -238,26 +244,29 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 				Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.",
 			},
 			consts.FieldClientTLSCertWO: schema.StringAttribute{
-				Optional:    true,
-				WriteOnly:   true,
-				Sensitive:   true,
-				Description: "Client certificate to provide to the LDAP server, must be x509 PEM encoded (write-only). Must be used together with client_tls_cert_wo_version.",
+				Optional:  true,
+				WriteOnly: true,
+				Sensitive: true,
+				Description: "Client certificate to provide to the LDAP server, must be x509 PEM encoded (write-only). " +
+					"Must be used together with client_tls_cert_wo_version.",
 				Validators: []validator.String{
 					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldClientTLSCertWOVersion)),
 				},
 			},
 			consts.FieldClientTLSCertWOVersion: schema.Int64Attribute{
-				Optional:    true,
-				Description: "Version identifier for client TLS certificate updates. Change to trigger certificate update. Must be used together with client_tls_cert_wo.",
+				Optional: true,
+				Description: "Version identifier for client TLS certificate updates. " +
+					"Change to trigger certificate update. Must be used together with client_tls_cert_wo.",
 				Validators: []validator.Int64{
 					int64validator.AlsoRequires(path.MatchRoot(consts.FieldClientTLSCertWO)),
 				},
 			},
 			consts.FieldClientTLSKeyWO: schema.StringAttribute{
-				Optional:    true,
-				WriteOnly:   true,
-				Sensitive:   true,
-				Description: "Client certificate key to provide to the LDAP server, must be x509 PEM encoded (write-only). Must be used together with client_tls_key_wo_version.",
+				Optional:  true,
+				WriteOnly: true,
+				Sensitive: true,
+				Description: "Client certificate key to provide to the LDAP server, must be x509 PEM encoded (write-only). " +
+					"Must be used together with client_tls_key_wo_version.",
 				Validators: []validator.String{
 					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldClientTLSKeyWOVersion)),
 				},
@@ -274,20 +283,22 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 				Description: "Use anonymous bind to discover bind DN of a user. Default: false.",
 			},
 			consts.FieldDenyNullBind: schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(true),
-				Description: "Denies an unauthenticated LDAP bind request if the user's password is empty. Default: true.",
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(true),
+				Description: "Denies an unauthenticated LDAP bind request if the user's password is empty. " +
+					"Default: true.",
 			},
 			consts.FieldUPNDomain: schema.StringAttribute{
 				Optional:    true,
 				Description: "Enables userPrincipalDomain login with [username]@UPNDomain.",
 			},
 			consts.FieldRequestTimeout: schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(90),
-				Description: "Timeout, in seconds, for the connection when making requests against the server. Default: 90.",
+				Optional: true,
+				Computed: true,
+				Default:  int64default.StaticInt64(90),
+				Description: "Timeout, in seconds, for the connection when making requests against the server. " +
+					"Default: 90.",
 			},
 			consts.FieldConnectionTimeout: schema.Int64Attribute{
 				Optional:    true,
@@ -300,18 +311,21 @@ func (r *kerberosAuthBackendLDAPConfigResource) Schema(_ context.Context, _ reso
 				Description: "Use username as alias name. Default: false.",
 			},
 			consts.FieldDereferenceAliases: schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString("never"),
-				Description: "When aliases should be dereferenced on search operations. Accepted values are 'never', 'finding', 'searching', 'always'. Default: 'never'",
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString("never"),
+				Description: "When aliases should be dereferenced on search operations. " +
+					"Accepted values are 'never', 'finding', 'searching', 'always'. Default: 'never'",
 			},
 			consts.FieldMaxPageSize: schema.Int64Attribute{
-				Optional:    true,
-				Description: "If set to a value greater than 0, the LDAP backend will use the LDAP server's paged search control. Default: 0.",
+				Optional: true,
+				Description: "If set to a value greater than 0, the LDAP backend will use the LDAP server's paged search control. " +
+					"Default: 0.",
 			},
 			consts.FieldEnableSamaccountnameLogin: schema.BoolAttribute{
-				Optional:    true,
-				Description: "If true, matching sAMAccountName attribute values will be allowed to login when upndomain is defined. Default: false. **Note:** This field is only supported in Vault 1.19.0 and above. Do not configure this attribute if your Vault version is below 1.19.0.",
+				Optional: true,
+				Description: "If true, matching sAMAccountName attribute values will be allowed to login when upndomain is defined. " +
+					"Default: false. **Note:** Requires Vault 1.19.0+",
 			},
 		},
 	}
