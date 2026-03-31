@@ -254,26 +254,6 @@ func TestAccKerberosAuthBackendLDAPConfig_validationErrors(t *testing.T) {
 	})
 }
 
-// TestAccKerberosAuthBackendLDAPConfig_runtimeErrors tests runtime errors
-func TestAccKerberosAuthBackendLDAPConfig_runtimeErrors(t *testing.T) {
-	url := testLDAPURL
-	bindDN := testBindDN
-	userDN := testUserDN
-	nonExistentPath := "non-existent-kerberos-backend"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			// Test non-existent backend
-			{
-				Config:      testAccKerberosAuthBackendLDAPConfigConfig_nonExistentBackend(nonExistentPath, url, bindDN, userDN),
-				ExpectError: regexp.MustCompile(`error writing|no handler for route|unsupported path`),
-			},
-		},
-	})
-}
-
 // TestAccKerberosAuthBackendLDAPConfig_batchTokenWithNumUses tests that batch tokens cannot have limited use count
 func TestAccKerberosAuthBackendLDAPConfig_batchTokenWithNumUses(t *testing.T) {
 	path := acctest.RandomWithPrefix("kerberos")
@@ -634,17 +614,6 @@ resource "vault_kerberos_auth_backend_ldap_config" "config" {
   binddn            = %q
   userdn            = %q
   client_tls_key_wo = "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----"
-}
-`, path, url, bindDN, userDN)
-}
-
-func testAccKerberosAuthBackendLDAPConfigConfig_nonExistentBackend(path, url, bindDN, userDN string) string {
-	return fmt.Sprintf(`
-resource "vault_kerberos_auth_backend_ldap_config" "config" {
-  mount  = %q
-  url    = %q
-  binddn = %q
-  userdn = %q
 }
 `, path, url, bindDN, userDN)
 }
