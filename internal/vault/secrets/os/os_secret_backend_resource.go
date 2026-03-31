@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
@@ -40,7 +40,7 @@ type OSSecretBackendResource struct {
 
 // OSSecretBackendModel describes the Terraform resource data model
 type OSSecretBackendModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Path                      types.String `tfsdk:"path"`
 	MaxVersions               types.Int64  `tfsdk:"max_versions"`
@@ -79,47 +79,19 @@ func (r *OSSecretBackendResource) Schema(_ context.Context, _ resource.SchemaReq
 			consts.FieldSSHHostKeyTrustOnFirstUse: schema.BoolAttribute{
 				MarkdownDescription: "Trust SSH host keys on first use.",
 				Optional:            true,
+				Computed:            true,
 			},
 			consts.FieldPasswordPolicy: schema.StringAttribute{
-				MarkdownDescription: "Name of the password policy to use for password generation.",
+				MarkdownDescription: "Name of the password policy to use for password generation. Note: This is a write-only field; Vault does not return this value on read.",
 				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 		MarkdownDescription: "Manages the configuration of an OS Secrets Engine mount in Vault.",
 	}
 	base.MustAddBaseSchema(&resp.Schema)
-}
-
-// readBackendFromVault reads the backend configuration from Vault and populates the model
-func (r *OSSecretBackendResource) readBackendFromVault(ctx context.Context, cli *api.Client, data *OSSecretBackendModel, diags *diag.Diagnostics) {
-	path := data.Path.ValueString()
-	configPath := fmt.Sprintf("%s/config", path)
-
-	readResp, err := cli.Logical().ReadWithContext(ctx, configPath)
-	if err != nil {
-		diags.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	if readResp == nil {
-		diags.AddError(errutil.VaultReadResponseNil())
-		return
-	}
-
-	var apiModel OSSecretBackendAPIModel
-	err = model.ToAPIModel(readResp.Data, &apiModel)
-	if err != nil {
-		diags.AddError("Unable to translate Vault response data", err.Error())
-		return
-	}
-
-	// Map values back to Terraform model
-	if apiModel.MaxVersions != 0 {
-		data.MaxVersions = types.Int64Value(apiModel.MaxVersions)
-	}
-	data.SSHHostKeyTrustOnFirstUse = types.BoolValue(apiModel.SSHHostKeyTrustOnFirstUse)
-	if apiModel.PasswordPolicy != "" {
-		data.PasswordPolicy = types.StringValue(apiModel.PasswordPolicy)
-	}
 }
 
 func (r *OSSecretBackendResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -146,18 +118,43 @@ func (r *OSSecretBackendResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	path := data.Path.ValueString()
+
+	// First, create the mount if it doesn't exist
+	mountInput := &api.MountInput{
+		Type: consts.MountTypeOS,
+	}
+
+	err = cli.Sys().MountWithContext(ctx, path, mountInput)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			fmt.Sprintf("Error creating OS secret backend mount at %q", path),
+			err.Error(),
+		)
+		return
+	}
+
 	configPath := fmt.Sprintf("%s/config", path)
 
 	// Build the request data
 	requestData := make(map[string]interface{})
+
+	// Always send optional fields - use zero/empty values to clear them
 	if !data.MaxVersions.IsNull() && !data.MaxVersions.IsUnknown() {
 		requestData[consts.FieldMaxVersions] = data.MaxVersions.ValueInt64()
+	} else {
+		requestData[consts.FieldMaxVersions] = 0
 	}
+
 	if !data.SSHHostKeyTrustOnFirstUse.IsNull() && !data.SSHHostKeyTrustOnFirstUse.IsUnknown() {
 		requestData[consts.FieldSSHHostKeyTrustOnFirstUse] = data.SSHHostKeyTrustOnFirstUse.ValueBool()
+	} else {
+		requestData[consts.FieldSSHHostKeyTrustOnFirstUse] = false
 	}
+
 	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
 		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
+	} else {
+		requestData[consts.FieldPasswordPolicy] = ""
 	}
 
 	_, err = cli.Logical().WriteWithContext(ctx, configPath, requestData)
@@ -169,14 +166,36 @@ func (r *OSSecretBackendResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	// Set the ID
-	data.ID = types.StringValue(makeBackendID(path))
-
 	// Read back the configuration
-	r.readBackendFromVault(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	readResp, err := cli.Logical().ReadWithContext(ctx, configPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
+	if readResp == nil {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+		return
+	}
+
+	var apiModel OSSecretBackendAPIModel
+	err = model.ToAPIModel(readResp.Data, &apiModel)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
+		return
+	}
+
+	// Map values back to Terraform model
+	if apiModel.MaxVersions != 0 {
+		data.MaxVersions = types.Int64Value(apiModel.MaxVersions)
+	} else {
+		data.MaxVersions = types.Int64Null()
+	}
+
+	data.SSHHostKeyTrustOnFirstUse = types.BoolValue(apiModel.SSHHostKeyTrustOnFirstUse)
+
+	// password_policy is write-only in Vault API - it's not returned on read
+	// Preserve the value from plan instead of trying to read it
+	// Note: data already contains the plan values from req.Plan.Get()
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -194,10 +213,40 @@ func (r *OSSecretBackendResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	r.readBackendFromVault(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	path := data.Path.ValueString()
+	configPath := fmt.Sprintf("%s/config", path)
+
+	readResp, err := cli.Logical().ReadWithContext(ctx, configPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
+	if readResp == nil {
+		// Resource was deleted outside Terraform - remove from state
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	var apiModel OSSecretBackendAPIModel
+	err = model.ToAPIModel(readResp.Data, &apiModel)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
+		return
+	}
+
+	// Map values back to Terraform model
+	// Always set fields to match Vault state, use null for empty values
+	if apiModel.MaxVersions != 0 {
+		data.MaxVersions = types.Int64Value(apiModel.MaxVersions)
+	} else {
+		data.MaxVersions = types.Int64Null()
+	}
+
+	data.SSHHostKeyTrustOnFirstUse = types.BoolValue(apiModel.SSHHostKeyTrustOnFirstUse)
+
+	// password_policy is write-only in Vault API - it's not returned on read
+	// Preserve the value from current state instead of trying to read it
+	// Note: data already contains the current state values from req.State.Get()
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -220,14 +269,24 @@ func (r *OSSecretBackendResource) Update(ctx context.Context, req resource.Updat
 
 	// Build the request data
 	requestData := make(map[string]interface{})
+
+	// Always send optional fields - use zero/empty values to clear them
 	if !data.MaxVersions.IsNull() && !data.MaxVersions.IsUnknown() {
 		requestData[consts.FieldMaxVersions] = data.MaxVersions.ValueInt64()
+	} else {
+		requestData[consts.FieldMaxVersions] = 0
 	}
+
 	if !data.SSHHostKeyTrustOnFirstUse.IsNull() && !data.SSHHostKeyTrustOnFirstUse.IsUnknown() {
 		requestData[consts.FieldSSHHostKeyTrustOnFirstUse] = data.SSHHostKeyTrustOnFirstUse.ValueBool()
+	} else {
+		requestData[consts.FieldSSHHostKeyTrustOnFirstUse] = false
 	}
+
 	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
 		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
+	} else {
+		requestData[consts.FieldPasswordPolicy] = ""
 	}
 
 	_, err = cli.Logical().WriteWithContext(ctx, configPath, requestData)
@@ -240,26 +299,45 @@ func (r *OSSecretBackendResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	// Read back the configuration
-	r.readBackendFromVault(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	readResp, err := cli.Logical().ReadWithContext(ctx, configPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
+	if readResp == nil {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+		return
+	}
+
+	var apiModel OSSecretBackendAPIModel
+	err = model.ToAPIModel(readResp.Data, &apiModel)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
+		return
+	}
+
+	// Map values back to Terraform model
+	if apiModel.MaxVersions != 0 {
+		data.MaxVersions = types.Int64Value(apiModel.MaxVersions)
+	} else {
+		data.MaxVersions = types.Int64Null()
+	}
+
+	data.SSHHostKeyTrustOnFirstUse = types.BoolValue(apiModel.SSHHostKeyTrustOnFirstUse)
+
+	// password_policy is write-only in Vault API - it's not returned on read
+	// Preserve the value from plan instead of trying to read it
+	// Note: data already contains the plan values from req.Plan.Get()
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *OSSecretBackendResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// No-op: config persists with mount
-	// The mount itself should be deleted separately using vault_mount resource
-}
-
-func (r *OSSecretBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// The ID is just the path
-	path := req.ID
-
 	var data OSSecretBackendModel
-	data.ID = types.StringValue(makeBackendID(path))
-	data.Path = types.StringValue(path)
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -267,12 +345,22 @@ func (r *OSSecretBackendResource) ImportState(ctx context.Context, req resource.
 		return
 	}
 
-	r.readBackendFromVault(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	path := data.Path.ValueString()
+
+	// Unmount the OS secrets engine
+	err = cli.Sys().UnmountWithContext(ctx, path)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			fmt.Sprintf("Error deleting OS secret backend mount at %q", path),
+			err.Error(),
+		)
 		return
 	}
+}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+func (r *OSSecretBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Use the built-in helper to set the path attribute from the import ID
+	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldPath), req, resp)
 }
 
 // Made with Bob

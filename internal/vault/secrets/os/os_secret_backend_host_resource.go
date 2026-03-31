@@ -6,6 +6,7 @@ package os
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -40,7 +41,7 @@ type OSSecretBackendHostResource struct {
 
 // OSSecretBackendHostModel describes the Terraform resource data model
 type OSSecretBackendHostModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Mount                    types.String `tfsdk:"mount"`
 	Name                     types.String `tfsdk:"name"`
@@ -63,9 +64,9 @@ type OSSecretBackendHostAPIModel struct {
 	Port                     int64             `json:"port,omitempty" mapstructure:"port"`
 	SSHHostKey               string            `json:"ssh_host_key,omitempty" mapstructure:"ssh_host_key"`
 	PasswordPolicy           string            `json:"password_policy,omitempty" mapstructure:"password_policy"`
-	RotationPeriod           string            `json:"rotation_period,omitempty" mapstructure:"rotation_period"`
+	RotationPeriod           any               `json:"rotation_period,omitempty" mapstructure:"rotation_period"`
 	RotationSchedule         string            `json:"rotation_schedule,omitempty" mapstructure:"rotation_schedule"`
-	RotationWindow           string            `json:"rotation_window,omitempty" mapstructure:"rotation_window"`
+	RotationWindow           any               `json:"rotation_window,omitempty" mapstructure:"rotation_window"`
 	DisableAutomatedRotation bool              `json:"disable_automated_rotation,omitempty" mapstructure:"disable_automated_rotation"`
 	CustomMetadata           map[string]string `json:"custom_metadata,omitempty" mapstructure:"custom_metadata"`
 }
@@ -108,6 +109,7 @@ func (r *OSSecretBackendHostResource) Schema(_ context.Context, _ resource.Schem
 			consts.FieldSSHHostKey: schema.StringAttribute{
 				MarkdownDescription: "SSH host key for the host.",
 				Optional:            true,
+				Computed:            true,
 			},
 			consts.FieldPasswordPolicy: schema.StringAttribute{
 				MarkdownDescription: "Name of the password policy to use for password generation.",
@@ -164,35 +166,57 @@ func (r *OSSecretBackendHostResource) readHostFromVault(ctx context.Context, cli
 	}
 
 	// Map values back to Terraform model
-	data.Type = types.StringValue(apiModel.Type)
+	if apiModel.Type != "" {
+		data.Type = types.StringValue(apiModel.Type)
+	}
 	data.Address = types.StringValue(apiModel.Address)
 	if apiModel.Port != 0 {
 		data.Port = types.Int64Value(apiModel.Port)
+	} else {
+		data.Port = types.Int64Null()
 	}
 	if apiModel.SSHHostKey != "" {
 		data.SSHHostKey = types.StringValue(apiModel.SSHHostKey)
+	} else {
+		data.SSHHostKey = types.StringNull()
 	}
 	if apiModel.PasswordPolicy != "" {
 		data.PasswordPolicy = types.StringValue(apiModel.PasswordPolicy)
+	} else {
+		data.PasswordPolicy = types.StringNull()
 	}
-	if apiModel.RotationPeriod != "" {
-		data.RotationPeriod = types.StringValue(apiModel.RotationPeriod)
+	if rotationPeriod := normalizeOSRotationValue(apiModel.RotationPeriod); rotationPeriod != "" {
+		if data.RotationPeriod.IsNull() || data.RotationPeriod.IsUnknown() {
+			data.RotationPeriod = types.StringValue(rotationPeriod)
+		}
+	} else {
+		data.RotationPeriod = types.StringNull()
 	}
 	if apiModel.RotationSchedule != "" {
 		data.RotationSchedule = types.StringValue(apiModel.RotationSchedule)
+	} else {
+		data.RotationSchedule = types.StringNull()
 	}
-	if apiModel.RotationWindow != "" {
-		data.RotationWindow = types.StringValue(apiModel.RotationWindow)
+	if rotationWindow := normalizeOSRotationValue(apiModel.RotationWindow); rotationWindow != "" {
+		if data.RotationWindow.IsNull() || data.RotationWindow.IsUnknown() {
+			data.RotationWindow = types.StringValue(rotationWindow)
+		}
+	} else {
+		data.RotationWindow = types.StringNull()
 	}
-	data.DisableAutomatedRotation = types.BoolValue(apiModel.DisableAutomatedRotation)
+	if apiModel.DisableAutomatedRotation || !data.DisableAutomatedRotation.IsNull() {
+		data.DisableAutomatedRotation = types.BoolValue(apiModel.DisableAutomatedRotation)
+	}
 
-	// Set custom_metadata if it has values or was set in config
-	if len(apiModel.CustomMetadata) > 0 || !data.CustomMetadata.IsNull() {
+	// Set custom_metadata - always set to prevent drift
+	if len(apiModel.CustomMetadata) > 0 {
 		customMetadataVal, customMetadataDiags := types.MapValueFrom(ctx, types.StringType, apiModel.CustomMetadata)
 		diags.Append(customMetadataDiags...)
 		if !diags.HasError() {
 			data.CustomMetadata = customMetadataVal
 		}
+	} else {
+		data.CustomMetadata = types.MapNull(types.StringType)
 	}
 }
 
@@ -230,24 +254,38 @@ func (r *OSSecretBackendHostResource) Create(ctx context.Context, req resource.C
 
 	if !data.Port.IsNull() && !data.Port.IsUnknown() {
 		requestData[consts.FieldPort] = data.Port.ValueInt64()
+	} else {
+		requestData[consts.FieldPort] = 0
 	}
 	if !data.SSHHostKey.IsNull() && !data.SSHHostKey.IsUnknown() {
 		requestData[consts.FieldSSHHostKey] = data.SSHHostKey.ValueString()
+	} else {
+		requestData[consts.FieldSSHHostKey] = ""
 	}
 	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
 		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
+	} else {
+		requestData[consts.FieldPasswordPolicy] = ""
 	}
 	if !data.RotationPeriod.IsNull() && !data.RotationPeriod.IsUnknown() {
 		requestData[consts.FieldRotationPeriod] = data.RotationPeriod.ValueString()
+	} else {
+		requestData[consts.FieldRotationPeriod] = ""
 	}
 	if !data.RotationSchedule.IsNull() && !data.RotationSchedule.IsUnknown() {
 		requestData[consts.FieldRotationSchedule] = data.RotationSchedule.ValueString()
+	} else {
+		requestData[consts.FieldRotationSchedule] = ""
 	}
 	if !data.RotationWindow.IsNull() && !data.RotationWindow.IsUnknown() {
 		requestData[consts.FieldRotationWindow] = data.RotationWindow.ValueString()
+	} else {
+		requestData[consts.FieldRotationWindow] = ""
 	}
 	if !data.DisableAutomatedRotation.IsNull() && !data.DisableAutomatedRotation.IsUnknown() {
 		requestData[consts.FieldDisableAutomatedRotation] = data.DisableAutomatedRotation.ValueBool()
+	} else {
+		requestData[consts.FieldDisableAutomatedRotation] = false
 	}
 	if !data.CustomMetadata.IsNull() && !data.CustomMetadata.IsUnknown() {
 		var customMetadata map[string]string
@@ -256,6 +294,8 @@ func (r *OSSecretBackendHostResource) Create(ctx context.Context, req resource.C
 			return
 		}
 		requestData[consts.FieldCustomMetadata] = customMetadata
+	} else {
+		requestData[consts.FieldCustomMetadata] = map[string]string{}
 	}
 
 	_, err = cli.Logical().WriteWithContext(ctx, path, requestData)
@@ -268,7 +308,6 @@ func (r *OSSecretBackendHostResource) Create(ctx context.Context, req resource.C
 	}
 
 	// Set the ID
-	data.ID = types.StringValue(makeHostID(mount, name))
 
 	// Read back the configuration
 	r.readHostFromVault(ctx, cli, &data, &resp.Diagnostics)
@@ -324,24 +363,38 @@ func (r *OSSecretBackendHostResource) Update(ctx context.Context, req resource.U
 
 	if !data.Port.IsNull() && !data.Port.IsUnknown() {
 		requestData[consts.FieldPort] = data.Port.ValueInt64()
+	} else {
+		requestData[consts.FieldPort] = 0
 	}
 	if !data.SSHHostKey.IsNull() && !data.SSHHostKey.IsUnknown() {
 		requestData[consts.FieldSSHHostKey] = data.SSHHostKey.ValueString()
+	} else {
+		requestData[consts.FieldSSHHostKey] = ""
 	}
 	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
 		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
+	} else {
+		requestData[consts.FieldPasswordPolicy] = ""
 	}
 	if !data.RotationPeriod.IsNull() && !data.RotationPeriod.IsUnknown() {
 		requestData[consts.FieldRotationPeriod] = data.RotationPeriod.ValueString()
+	} else {
+		requestData[consts.FieldRotationPeriod] = ""
 	}
 	if !data.RotationSchedule.IsNull() && !data.RotationSchedule.IsUnknown() {
 		requestData[consts.FieldRotationSchedule] = data.RotationSchedule.ValueString()
+	} else {
+		requestData[consts.FieldRotationSchedule] = ""
 	}
 	if !data.RotationWindow.IsNull() && !data.RotationWindow.IsUnknown() {
 		requestData[consts.FieldRotationWindow] = data.RotationWindow.ValueString()
+	} else {
+		requestData[consts.FieldRotationWindow] = ""
 	}
 	if !data.DisableAutomatedRotation.IsNull() && !data.DisableAutomatedRotation.IsUnknown() {
 		requestData[consts.FieldDisableAutomatedRotation] = data.DisableAutomatedRotation.ValueBool()
+	} else {
+		requestData[consts.FieldDisableAutomatedRotation] = false
 	}
 	if !data.CustomMetadata.IsNull() && !data.CustomMetadata.IsUnknown() {
 		var customMetadata map[string]string
@@ -350,6 +403,8 @@ func (r *OSSecretBackendHostResource) Update(ctx context.Context, req resource.U
 			return
 		}
 		requestData[consts.FieldCustomMetadata] = customMetadata
+	} else {
+		requestData[consts.FieldCustomMetadata] = map[string]string{}
 	}
 
 	_, err = cli.Logical().WriteWithContext(ctx, path, requestData)
@@ -368,6 +423,32 @@ func (r *OSSecretBackendHostResource) Update(ctx context.Context, req resource.U
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func normalizeOSRotationValue(value any) string {
+	switch v := value.(type) {
+	case nil:
+		return ""
+	case string:
+		return v
+	case float64:
+		if v == 0 {
+			return ""
+		}
+		return strconv.FormatInt(int64(v), 10)
+	case int:
+		if v == 0 {
+			return ""
+		}
+		return strconv.Itoa(v)
+	case int64:
+		if v == 0 {
+			return ""
+		}
+		return strconv.FormatInt(v, 10)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
 
 func (r *OSSecretBackendHostResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -405,7 +486,6 @@ func (r *OSSecretBackendHostResource) ImportState(ctx context.Context, req resou
 	}
 
 	var data OSSecretBackendHostModel
-	data.ID = types.StringValue(makeHostID(mount, name))
 	data.Mount = types.StringValue(mount)
 	data.Name = types.StringValue(name)
 

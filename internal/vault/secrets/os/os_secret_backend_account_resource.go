@@ -8,8 +8,10 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -39,13 +41,13 @@ type OSSecretBackendAccountResource struct {
 
 // OSSecretBackendAccountModel describes the Terraform resource data model
 type OSSecretBackendAccountModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
 	Mount                    types.String `tfsdk:"mount"`
 	Host                     types.String `tfsdk:"host"`
 	Name                     types.String `tfsdk:"name"`
 	Username                 types.String `tfsdk:"username"`
-	Password                 types.String `tfsdk:"password"`
+	PasswordWO               types.String `tfsdk:"password_wo"`
 	ParentAccountRef         types.String `tfsdk:"parent_account_ref"`
 	PasswordPolicy           types.String `tfsdk:"password_policy"`
 	RotationPeriod           types.String `tfsdk:"rotation_period"`
@@ -64,9 +66,9 @@ type OSSecretBackendAccountAPIModel struct {
 	Password                 string            `json:"password,omitempty" mapstructure:"password"`
 	ParentAccountRef         string            `json:"parent_account_ref,omitempty" mapstructure:"parent_account_ref"`
 	PasswordPolicy           string            `json:"password_policy,omitempty" mapstructure:"password_policy"`
-	RotationPeriod           string            `json:"rotation_period,omitempty" mapstructure:"rotation_period"`
+	RotationPeriod           any               `json:"rotation_period,omitempty" mapstructure:"rotation_period"`
 	RotationSchedule         string            `json:"rotation_schedule,omitempty" mapstructure:"rotation_schedule"`
-	RotationWindow           string            `json:"rotation_window,omitempty" mapstructure:"rotation_window"`
+	RotationWindow           any               `json:"rotation_window,omitempty" mapstructure:"rotation_window"`
 	DisableAutomatedRotation bool              `json:"disable_automated_rotation,omitempty" mapstructure:"disable_automated_rotation"`
 	VerifyConnection         bool              `json:"verify_connection,omitempty" mapstructure:"verify_connection"`
 	CustomMetadata           map[string]string `json:"custom_metadata,omitempty" mapstructure:"custom_metadata"`
@@ -106,7 +108,7 @@ func (r *OSSecretBackendAccountResource) Schema(_ context.Context, _ resource.Sc
 				MarkdownDescription: "Username for the account.",
 				Required:            true,
 			},
-			consts.FieldPassword: schema.StringAttribute{
+			consts.FieldPasswordWO: schema.StringAttribute{
 				MarkdownDescription: "Password for the account. This is write-only and will not be read back from Vault.",
 				Required:            true,
 				Sensitive:           true,
@@ -139,6 +141,8 @@ func (r *OSSecretBackendAccountResource) Schema(_ context.Context, _ resource.Sc
 			consts.FieldVerifyConnection: schema.BoolAttribute{
 				MarkdownDescription: "Verify the connection to the host with the provided credentials.",
 				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
 			},
 			consts.FieldCustomMetadata: schema.MapAttribute{
 				MarkdownDescription: "Custom metadata for the account.",
@@ -167,7 +171,8 @@ func (r *OSSecretBackendAccountResource) Schema(_ context.Context, _ resource.Sc
 
 // readAccountFromVault reads the account configuration from Vault and populates the model
 // Note: Password is write-only and will not be read back
-func (r *OSSecretBackendAccountResource) readAccountFromVault(ctx context.Context, cli *api.Client, data *OSSecretBackendAccountModel, diags *diag.Diagnostics) {
+// Returns true if the resource was found, false if it was not found (404)
+func (r *OSSecretBackendAccountResource) readAccountFromVault(ctx context.Context, cli *api.Client, data *OSSecretBackendAccountModel, diags *diag.Diagnostics) bool {
 	mount := data.Mount.ValueString()
 	host := data.Host.ValueString()
 	name := data.Name.ValueString()
@@ -176,58 +181,85 @@ func (r *OSSecretBackendAccountResource) readAccountFromVault(ctx context.Contex
 	readResp, err := cli.Logical().ReadWithContext(ctx, path)
 	if err != nil {
 		diags.AddError(errutil.VaultReadErr(err))
-		return
+		return false
 	}
 	if readResp == nil {
-		diags.AddError(errutil.VaultReadResponseNil())
-		return
+		// Resource not found (404)
+		return false
 	}
 
 	var apiModel OSSecretBackendAccountAPIModel
 	err = model.ToAPIModel(readResp.Data, &apiModel)
 	if err != nil {
 		diags.AddError("Unable to translate Vault response data", err.Error())
-		return
+		return false
 	}
 
 	// Map values back to Terraform model
 	data.Username = types.StringValue(apiModel.Username)
 	// Note: Password is write-only, do not read it back from Vault
 
+	// Set optional fields to null if empty to prevent drift
 	if apiModel.ParentAccountRef != "" {
 		data.ParentAccountRef = types.StringValue(apiModel.ParentAccountRef)
+	} else {
+		data.ParentAccountRef = types.StringNull()
 	}
 	if apiModel.PasswordPolicy != "" {
 		data.PasswordPolicy = types.StringValue(apiModel.PasswordPolicy)
+	} else {
+		data.PasswordPolicy = types.StringNull()
 	}
-	if apiModel.RotationPeriod != "" {
-		data.RotationPeriod = types.StringValue(apiModel.RotationPeriod)
+	if rotationPeriod := normalizeOSRotationValue(apiModel.RotationPeriod); rotationPeriod != "" {
+		if data.RotationPeriod.IsNull() || data.RotationPeriod.IsUnknown() {
+			data.RotationPeriod = types.StringValue(rotationPeriod)
+		}
+	} else {
+		data.RotationPeriod = types.StringNull()
 	}
 	if apiModel.RotationSchedule != "" {
 		data.RotationSchedule = types.StringValue(apiModel.RotationSchedule)
+	} else {
+		data.RotationSchedule = types.StringNull()
 	}
-	if apiModel.RotationWindow != "" {
-		data.RotationWindow = types.StringValue(apiModel.RotationWindow)
+	if rotationWindow := normalizeOSRotationValue(apiModel.RotationWindow); rotationWindow != "" {
+		if data.RotationWindow.IsNull() || data.RotationWindow.IsUnknown() {
+			data.RotationWindow = types.StringValue(rotationWindow)
+		}
+	} else {
+		data.RotationWindow = types.StringNull()
 	}
-	data.DisableAutomatedRotation = types.BoolValue(apiModel.DisableAutomatedRotation)
-	data.VerifyConnection = types.BoolValue(apiModel.VerifyConnection)
+	if apiModel.DisableAutomatedRotation || !data.DisableAutomatedRotation.IsNull() {
+		data.DisableAutomatedRotation = types.BoolValue(apiModel.DisableAutomatedRotation)
+	}
+	if apiModel.VerifyConnection || data.VerifyConnection.IsNull() || data.VerifyConnection.IsUnknown() {
+		data.VerifyConnection = types.BoolValue(apiModel.VerifyConnection)
+	}
 
 	// Set computed fields
-	if apiModel.LastVaultRotation != "" {
-		data.LastVaultRotation = types.StringValue(apiModel.LastVaultRotation)
+	if lastVaultRotation := normalizeOSRotationTimestamp(apiModel.LastVaultRotation); lastVaultRotation != "" {
+		data.LastVaultRotation = types.StringValue(lastVaultRotation)
+	} else {
+		data.LastVaultRotation = types.StringNull()
 	}
-	if apiModel.NextVaultRotation != "" {
-		data.NextVaultRotation = types.StringValue(apiModel.NextVaultRotation)
+	if nextVaultRotation := normalizeOSRotationTimestamp(apiModel.NextVaultRotation); nextVaultRotation != "" {
+		data.NextVaultRotation = types.StringValue(nextVaultRotation)
+	} else {
+		data.NextVaultRotation = types.StringNull()
 	}
 
-	// Set custom_metadata if it has values or was set in config
-	if len(apiModel.CustomMetadata) > 0 || !data.CustomMetadata.IsNull() {
+	// Set custom_metadata - always set to prevent drift
+	if len(apiModel.CustomMetadata) > 0 {
 		customMetadataVal, customMetadataDiags := types.MapValueFrom(ctx, types.StringType, apiModel.CustomMetadata)
 		diags.Append(customMetadataDiags...)
 		if !diags.HasError() {
 			data.CustomMetadata = customMetadataVal
 		}
+	} else {
+		data.CustomMetadata = types.MapNull(types.StringType)
 	}
+
+	return true
 }
 
 func (r *OSSecretBackendAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -247,6 +279,12 @@ func (r *OSSecretBackendAccountResource) Create(ctx context.Context, req resourc
 		return
 	}
 
+	var passwordWO types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldPasswordWO), &passwordWO)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
@@ -261,28 +299,43 @@ func (r *OSSecretBackendAccountResource) Create(ctx context.Context, req resourc
 	// Build the request data
 	requestData := make(map[string]interface{})
 	requestData[consts.FieldUsername] = data.Username.ValueString()
-	requestData[consts.FieldPassword] = data.Password.ValueString()
+	requestData[consts.FieldPassword] = passwordWO.ValueString()
 
+	// Always send optional fields to ensure they can be cleared when removed from config
 	if !data.ParentAccountRef.IsNull() && !data.ParentAccountRef.IsUnknown() {
 		requestData[consts.FieldParentAccountRef] = data.ParentAccountRef.ValueString()
+	} else {
+		requestData[consts.FieldParentAccountRef] = ""
 	}
 	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
 		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
+	} else {
+		requestData[consts.FieldPasswordPolicy] = ""
 	}
 	if !data.RotationPeriod.IsNull() && !data.RotationPeriod.IsUnknown() {
 		requestData[consts.FieldRotationPeriod] = data.RotationPeriod.ValueString()
+	} else {
+		requestData[consts.FieldRotationPeriod] = ""
 	}
 	if !data.RotationSchedule.IsNull() && !data.RotationSchedule.IsUnknown() {
 		requestData[consts.FieldRotationSchedule] = data.RotationSchedule.ValueString()
+	} else {
+		requestData[consts.FieldRotationSchedule] = ""
 	}
 	if !data.RotationWindow.IsNull() && !data.RotationWindow.IsUnknown() {
 		requestData[consts.FieldRotationWindow] = data.RotationWindow.ValueString()
+	} else {
+		requestData[consts.FieldRotationWindow] = ""
 	}
 	if !data.DisableAutomatedRotation.IsNull() && !data.DisableAutomatedRotation.IsUnknown() {
 		requestData[consts.FieldDisableAutomatedRotation] = data.DisableAutomatedRotation.ValueBool()
+	} else {
+		requestData[consts.FieldDisableAutomatedRotation] = false
 	}
 	if !data.VerifyConnection.IsNull() && !data.VerifyConnection.IsUnknown() {
 		requestData[consts.FieldVerifyConnection] = data.VerifyConnection.ValueBool()
+	} else {
+		requestData[consts.FieldVerifyConnection] = true
 	}
 	if !data.CustomMetadata.IsNull() && !data.CustomMetadata.IsUnknown() {
 		var customMetadata map[string]string
@@ -291,6 +344,8 @@ func (r *OSSecretBackendAccountResource) Create(ctx context.Context, req resourc
 			return
 		}
 		requestData[consts.FieldCustomMetadata] = customMetadata
+	} else {
+		requestData[consts.FieldCustomMetadata] = map[string]string{}
 	}
 
 	_, err = cli.Logical().WriteWithContext(ctx, path, requestData)
@@ -303,11 +358,17 @@ func (r *OSSecretBackendAccountResource) Create(ctx context.Context, req resourc
 	}
 
 	// Set the ID
-	data.ID = types.StringValue(makeAccountID(mount, host, name))
 
 	// Read back the configuration (password will not be read back)
-	r.readAccountFromVault(ctx, cli, &data, &resp.Diagnostics)
+	found := r.readAccountFromVault(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !found {
+		resp.Diagnostics.AddError(
+			"Resource not found after creation",
+			fmt.Sprintf("Account %q was not found at %q after creation", name, path),
+		)
 		return
 	}
 
@@ -327,8 +388,13 @@ func (r *OSSecretBackendAccountResource) Read(ctx context.Context, req resource.
 		return
 	}
 
-	r.readAccountFromVault(ctx, cli, &data, &resp.Diagnostics)
+	found := r.readAccountFromVault(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !found {
+		// Resource was deleted outside Terraform - remove from state
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -356,28 +422,42 @@ func (r *OSSecretBackendAccountResource) Update(ctx context.Context, req resourc
 	// Build the request data
 	requestData := make(map[string]interface{})
 	requestData[consts.FieldUsername] = data.Username.ValueString()
-	requestData[consts.FieldPassword] = data.Password.ValueString()
 
+	// Always send optional fields to ensure they can be cleared when removed from config
 	if !data.ParentAccountRef.IsNull() && !data.ParentAccountRef.IsUnknown() {
 		requestData[consts.FieldParentAccountRef] = data.ParentAccountRef.ValueString()
+	} else {
+		requestData[consts.FieldParentAccountRef] = ""
 	}
 	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
 		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
+	} else {
+		requestData[consts.FieldPasswordPolicy] = ""
 	}
 	if !data.RotationPeriod.IsNull() && !data.RotationPeriod.IsUnknown() {
 		requestData[consts.FieldRotationPeriod] = data.RotationPeriod.ValueString()
+	} else {
+		requestData[consts.FieldRotationPeriod] = ""
 	}
 	if !data.RotationSchedule.IsNull() && !data.RotationSchedule.IsUnknown() {
 		requestData[consts.FieldRotationSchedule] = data.RotationSchedule.ValueString()
+	} else {
+		requestData[consts.FieldRotationSchedule] = ""
 	}
 	if !data.RotationWindow.IsNull() && !data.RotationWindow.IsUnknown() {
 		requestData[consts.FieldRotationWindow] = data.RotationWindow.ValueString()
+	} else {
+		requestData[consts.FieldRotationWindow] = ""
 	}
 	if !data.DisableAutomatedRotation.IsNull() && !data.DisableAutomatedRotation.IsUnknown() {
 		requestData[consts.FieldDisableAutomatedRotation] = data.DisableAutomatedRotation.ValueBool()
+	} else {
+		requestData[consts.FieldDisableAutomatedRotation] = false
 	}
 	if !data.VerifyConnection.IsNull() && !data.VerifyConnection.IsUnknown() {
 		requestData[consts.FieldVerifyConnection] = data.VerifyConnection.ValueBool()
+	} else {
+		requestData[consts.FieldVerifyConnection] = true
 	}
 	if !data.CustomMetadata.IsNull() && !data.CustomMetadata.IsUnknown() {
 		var customMetadata map[string]string
@@ -386,6 +466,8 @@ func (r *OSSecretBackendAccountResource) Update(ctx context.Context, req resourc
 			return
 		}
 		requestData[consts.FieldCustomMetadata] = customMetadata
+	} else {
+		requestData[consts.FieldCustomMetadata] = map[string]string{}
 	}
 
 	_, err = cli.Logical().WriteWithContext(ctx, path, requestData)
@@ -398,8 +480,15 @@ func (r *OSSecretBackendAccountResource) Update(ctx context.Context, req resourc
 	}
 
 	// Read back the configuration (password will not be read back)
-	r.readAccountFromVault(ctx, cli, &data, &resp.Diagnostics)
+	found := r.readAccountFromVault(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !found {
+		resp.Diagnostics.AddError(
+			"Resource not found after update",
+			fmt.Sprintf("Account %q was not found at %q after update", name, path),
+		)
 		return
 	}
 
@@ -442,14 +531,13 @@ func (r *OSSecretBackendAccountResource) ImportState(ctx context.Context, req re
 	}
 
 	var data OSSecretBackendAccountModel
-	data.ID = types.StringValue(makeAccountID(mount, host, name))
 	data.Mount = types.StringValue(mount)
 	data.Host = types.StringValue(host)
 	data.Name = types.StringValue(name)
 
 	// Password must be set after import since it's write-only
 	// Set it to a placeholder that will force user to update
-	data.Password = types.StringValue("IMPORT_PLACEHOLDER_UPDATE_REQUIRED")
+	data.PasswordWO = types.StringValue("IMPORT_PLACEHOLDER_UPDATE_REQUIRED")
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -457,12 +545,27 @@ func (r *OSSecretBackendAccountResource) ImportState(ctx context.Context, req re
 		return
 	}
 
-	r.readAccountFromVault(ctx, cli, &data, &resp.Diagnostics)
+	found := r.readAccountFromVault(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !found {
+		resp.Diagnostics.AddError(
+			"Resource not found",
+			fmt.Sprintf("Account %q was not found at %q during import", name, fmt.Sprintf("%s/hosts/%s/accounts/%s", mount, host, name)),
+		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func normalizeOSRotationTimestamp(value string) string {
+	if value == "" || value == "n/a" || value == "1970-01-01T00:00:00Z" || value == "0001-01-01T00:00:00Z" {
+		return ""
+	}
+
+	return value
 }
 
 // Made with Bob

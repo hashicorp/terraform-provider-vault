@@ -3,12 +3,12 @@ layout: "vault"
 page_title: "Vault: vault_os_secret_backend resource"
 sidebar_current: "docs-vault-resource-os-secret-backend"
 description: |-
-  Manages OS Secrets Engine backends in Vault.
+  Manages OS Secrets Engine backend configuration in Vault.
 ---
 
 # vault\_os\_secret\_backend
 
-Manages OS Secrets Engine backends in a Vault server. The OS Secrets Engine manages credentials
+Manages OS Secrets Engine backend configuration in a Vault server. The OS Secrets Engine manages credentials
 for operating system accounts on remote hosts via SSH. This resource requires Vault 2.0.0 or later.
 
 See the [Vault documentation](https://www.vaultproject.io/docs/secrets/os) for more information.
@@ -19,8 +19,7 @@ See the [Vault documentation](https://www.vaultproject.io/docs/secrets/os) for m
 
 ```hcl
 resource "vault_os_secret_backend" "os" {
-  path        = "os"
-  description = "OS secrets engine for managing SSH credentials"
+  path = "os"
 }
 ```
 
@@ -47,13 +46,11 @@ The following arguments are supported:
 
 * `path` - (Required) The path where the OS secrets engine will be mounted. Must not begin or end with a `/`.
 
-* `description` - (Optional) A human-friendly description of the mount.
-
 * `max_versions` - (Optional) The maximum number of versions to keep for SSH host keys. Set to `0` for unlimited versions. Defaults to `0`.
 
-* `ssh_host_key_trust_on_first_use` - (Optional) If `true`, SSH host keys will be trusted on first use (TOFU). If `false`, host keys must be explicitly configured. Defaults to `false`.
+* `ssh_host_key_trust_on_first_use` - (Optional, Computed) If `true`, SSH host keys will be trusted on first use (TOFU). If `false`, host keys must be explicitly configured. Defaults to `false`.
 
-* `password_policy` - (Optional) The name of the password policy to use when generating passwords for managed accounts. If not specified, Vault will use its default password generation.
+* `password_policy` - (Optional) The name of the password policy to use when generating passwords for managed accounts. Vault does not return this value on read, so the provider preserves the configured value in state.
 
 * `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
   See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)

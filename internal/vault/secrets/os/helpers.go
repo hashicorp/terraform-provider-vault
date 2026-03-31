@@ -15,11 +15,6 @@ var (
 	accountIDRe = regexp.MustCompile(`^([^/]+)/hosts/([^/]+)/accounts/([^/]+)$`)
 )
 
-// makeBackendID creates ID for backend resource
-func makeBackendID(path string) string {
-	return path
-}
-
 // makeHostID creates ID for host resource
 func makeHostID(mount, name string) string {
 	return fmt.Sprintf("%s/hosts/%s", mount, name)

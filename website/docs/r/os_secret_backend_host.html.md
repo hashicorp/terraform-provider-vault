@@ -44,9 +44,8 @@ resource "vault_os_secret_backend_host" "production" {
   type              = "ssh"
   address           = "10.0.1.50"
   port              = 2222
-  rotation_period   = 86400  # 24 hours
-  rotation_window   = 3600   # 1 hour
-  rotation_schedule = "0 2 * * *"  # Daily at 2 AM
+  rotation_schedule = "0 2 * * *"
+  rotation_window   = "1h"
 
   custom_metadata = {
     environment = "production"
@@ -86,19 +85,23 @@ The following arguments are supported:
 
 * `name` - (Required) Unique name for the host within the mount.
 
-* `type` - (Required) The type of connection to use. Currently only `"ssh"` is supported.
+* `type` - (Required) The type of connection to use. The current implementation is exercised with `"ssh"`.
 
 * `address` - (Required) The address of the host (IP address or hostname).
 
-* `port` - (Optional) The port to connect to on the host. Defaults to `22` for SSH.
+* `port` - (Optional) The port to connect to on the host. Defaults to `22`.
 
-* `ssh_host_key` - (Optional) The SSH host key for the remote host. If not provided and `ssh_host_key_trust_on_first_use` is enabled on the backend, the key will be automatically captured on first connection.
+* `ssh_host_key` - (Optional, Computed) The SSH host key for the remote host. If not provided and `ssh_host_key_trust_on_first_use` is enabled on the backend, Vault can learn and persist the key on first connection.
 
-* `rotation_period` - (Optional) The period in seconds between automatic credential rotations. If not set, credentials will not be automatically rotated.
+* `rotation_period` - (Optional) How often to rotate credentials, using a duration string such as `24h`. Mutually exclusive with `rotation_schedule`.
 
-* `rotation_window` - (Optional) The window in seconds during which rotation can occur. Must be less than `rotation_period`. If not set, rotation can occur at any time during the period.
+* `rotation_window` - (Optional) The rotation window, using a duration string such as `1h`. This is typically used with `rotation_schedule`.
 
-* `rotation_schedule` - (Optional) A cron-style schedule for credential rotation (e.g., `"0 2 * * *"` for daily at 2 AM). If set, this takes precedence over `rotation_period`.
+* `rotation_schedule` - (Optional) A cron-style schedule for credential rotation (for example, `"0 2 * * *"`). Mutually exclusive with `rotation_period`.
+
+* `password_policy` - (Optional) The password policy inherited by accounts on this host unless overridden at the account level.
+
+* `disable_automated_rotation` - (Optional) Disables automated rotation for the host.
 
 * `custom_metadata` - (Optional) A map of string key-value pairs for storing custom metadata about the host.
 
@@ -106,14 +109,14 @@ The following arguments are supported:
 
 In addition to the arguments above, the following attributes are exported:
 
-* `id` - The ID of the host in the format `<mount>/host/<name>`.
+* `id` - The ID of the host in the format `<mount>/hosts/<name>`.
 
 ## Import
 
-OS Secret backend host can be imported using the format `<mount>/host/<name>`, e.g.
+OS Secret backend host can be imported using the format `<mount>/hosts/<name>`, e.g.
 
 ```
-$ terraform import vault_os_secret_backend_host.example os/host/web-server-01
+$ terraform import vault_os_secret_backend_host.example os/hosts/web-server-01
 ```
 
 ## Notes
@@ -121,7 +124,7 @@ $ terraform import vault_os_secret_backend_host.example os/host/web-server-01
 * This resource requires Vault 2.0.0 or later.
 * The host must be configured before accounts can be created on it.
 * When `ssh_host_key` is not provided, the backend's `ssh_host_key_trust_on_first_use` setting determines whether the host key will be automatically trusted on first connection.
-* The `rotation_schedule` uses standard cron syntax. If both `rotation_schedule` and `rotation_period` are set, `rotation_schedule` takes precedence.
-* The `rotation_window` defines a time window during which rotation can occur, helping to avoid rotating credentials during peak usage times.
+* Use either `rotation_period` or `rotation_schedule`.
+* In the current plugin behavior, rotation fields may be normalized on read, so equivalent duration values can appear in canonicalized form.
 * Custom metadata is stored alongside the host configuration and can be used for organizational purposes, but does not affect host behavior.
 * Changing `mount` or `name` will cause the resource to be recreated.

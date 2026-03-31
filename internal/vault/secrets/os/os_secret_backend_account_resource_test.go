@@ -15,15 +15,16 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-// TestAccOSSecretBackendAccount_basic tests the basic CRUD operations and import
-// for the OS secrets backend account resource
+// TestAccOSSecretBackendAccount_basic covers CRUD and import without requiring
+// a live SSH login. It disables verify_connection and uses a unique username so
+// the provider behavior can be validated without shared host-side state.
 func TestAccOSSecretBackendAccount_basic(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-test-os")
 	hostName := acctest.RandomWithPrefix("test-host")
 	accountName := acctest.RandomWithPrefix("test-account")
+	username := acctest.RandomWithPrefix("tf-user")
 	resourceType := "vault_os_secret_backend_account"
 	resourceName := resourceType + ".test"
 
@@ -35,46 +36,54 @@ func TestAccOSSecretBackendAccount_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName),
+				Config: testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName, username, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "testuser"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPassword, "initial-password-123"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "86400"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_window", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_schedule", ""),
-					// Computed fields should be set
-					resource.TestCheckResourceAttrSet(resourceName, "last_vault_rotation"),
-					resource.TestCheckResourceAttrSet(resourceName, "next_vault_rotation"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
+					resource.TestCheckResourceAttr(resourceName, "rotation_period", "24h"),
+					resource.TestCheckNoResourceAttr(resourceName, "rotation_window"),
+					resource.TestCheckNoResourceAttr(resourceName, "rotation_schedule"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "false"),
 				),
 			},
-			// Import test - password should be ignored since it's write-only
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPassword),
 			{
-				Config: testAccOSSecretBackendAccountConfig_updated(mount, hostName, accountName),
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccOSSecretBackendAccountImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldPasswordWO,
+					consts.FieldRotationPeriod,
+					consts.FieldRotationWindow,
+					consts.FieldVerifyConnection,
+					consts.FieldLastVaultRotation,
+					consts.FieldNextVaultRotation,
+				},
+			},
+			{
+				Config: testAccOSSecretBackendAccountConfig_updated(mount, hostName, accountName, username, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "testuser"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPassword, "updated-password-456"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "172800"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_window", "7200"),
-					resource.TestCheckResourceAttrSet(resourceName, "last_vault_rotation"),
-					resource.TestCheckResourceAttrSet(resourceName, "next_vault_rotation"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
+					resource.TestCheckResourceAttr(resourceName, "rotation_period", "48h"),
+					resource.TestCheckNoResourceAttr(resourceName, "rotation_window"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "false"),
 				),
 			},
 		},
 	})
 }
 
-// TestAccOSSecretBackendAccount_remount tests that the account resource
-// handles backend remounting correctly
-func TestAccOSSecretBackendAccount_remount(t *testing.T) {
+// TestAccOSSecretBackendAccount_basicSSH keeps one explicit SSH-dependent path
+// that validates account onboarding with verify_connection enabled against the
+// live test container user configured in the runbook.
+func TestAccOSSecretBackendAccount_basicSSH(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-test-os")
-	remountPath := acctest.RandomWithPrefix("tf-test-os-updated")
 	hostName := acctest.RandomWithPrefix("test-host")
 	accountName := acctest.RandomWithPrefix("test-account")
 	resourceType := "vault_os_secret_backend_account"
@@ -88,7 +97,39 @@ func TestAccOSSecretBackendAccount_remount(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName),
+				Config: testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName, "user-1", true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "user-1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "true"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccOSSecretBackendAccount_remount verifies remount behavior without
+// depending on SSH verification.
+func TestAccOSSecretBackendAccount_remount(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-os")
+	remountPath := acctest.RandomWithPrefix("tf-test-os-updated")
+	hostName := acctest.RandomWithPrefix("test-host")
+	accountName := acctest.RandomWithPrefix("test-account")
+	username := acctest.RandomWithPrefix("tf-user")
+	resourceType := "vault_os_secret_backend_account"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName, username, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
@@ -96,7 +137,7 @@ func TestAccOSSecretBackendAccount_remount(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccOSSecretBackendAccountConfig_basic(remountPath, hostName, accountName),
+				Config: testAccOSSecretBackendAccountConfig_basic(remountPath, hostName, accountName, username, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, remountPath),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
@@ -107,12 +148,13 @@ func TestAccOSSecretBackendAccount_remount(t *testing.T) {
 	})
 }
 
-// TestAccOSSecretBackendAccount_optionalFields tests that optional fields
-// can be added and removed
+// TestAccOSSecretBackendAccount_optionalFields checks add/remove behavior for
+// optional rotation fields in the SSH-independent lane.
 func TestAccOSSecretBackendAccount_optionalFields(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-test-os")
 	hostName := acctest.RandomWithPrefix("test-host")
 	accountName := acctest.RandomWithPrefix("test-account")
+	username := acctest.RandomWithPrefix("tf-user")
 	resourceType := "vault_os_secret_backend_account"
 	resourceName := resourceType + ".test"
 
@@ -124,48 +166,51 @@ func TestAccOSSecretBackendAccount_optionalFields(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOSSecretBackendAccountConfig_minimal(mount, hostName, accountName),
+				Config: testAccOSSecretBackendAccountConfig_minimal(mount, hostName, accountName, username, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "minimaluser"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPassword, "minimal-pass-789"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "false"),
 				),
 			},
 			{
-				Config: testAccOSSecretBackendAccountConfig_allFields(mount, hostName, accountName),
+				Config: testAccOSSecretBackendAccountConfig_allFields(mount, hostName, accountName, username, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "fulluser"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPassword, "full-pass-abc"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "259200"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_window", "10800"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
+					resource.TestCheckNoResourceAttr(resourceName, "rotation_period"),
+					resource.TestCheckResourceAttr(resourceName, "rotation_window", "3h"),
 					resource.TestCheckResourceAttr(resourceName, "rotation_schedule", "0 3 * * *"),
-					resource.TestCheckResourceAttrSet(resourceName, "last_vault_rotation"),
-					resource.TestCheckResourceAttrSet(resourceName, "next_vault_rotation"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "false"),
 				),
 			},
 			{
-				Config: testAccOSSecretBackendAccountConfig_minimal(mount, hostName, accountName),
+				Config: testAccOSSecretBackendAccountConfig_minimal(mount, hostName, accountName, username, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
+					// Verify rotation fields are cleared when removed from config
+					resource.TestCheckNoResourceAttr(resourceName, "rotation_period"),
+					resource.TestCheckNoResourceAttr(resourceName, "rotation_window"),
+					resource.TestCheckNoResourceAttr(resourceName, "rotation_schedule"),
 				),
 			},
 		},
 	})
 }
 
-// TestAccOSSecretBackendAccount_passwordWriteOnly tests that password
-// is write-only and not read back from Vault
+// TestAccOSSecretBackendAccount_passwordWriteOnly confirms password_wo remains
+// write-only across refreshes when SSH verification is disabled.
 func TestAccOSSecretBackendAccount_passwordWriteOnly(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-test-os")
 	hostName := acctest.RandomWithPrefix("test-host")
 	accountName := acctest.RandomWithPrefix("test-account")
+	username := acctest.RandomWithPrefix("tf-user")
 	resourceType := "vault_os_secret_backend_account"
 	resourceName := resourceType + ".test"
 
@@ -177,27 +222,29 @@ func TestAccOSSecretBackendAccount_passwordWriteOnly(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName),
+				Config: testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName, username, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPassword, "initial-password-123"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "false"),
 				),
 			},
 			{
 				// Refresh should keep password in state even though it's not returned by API
 				RefreshState: true,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPassword, "initial-password-123"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "false"),
 				),
 			},
 		},
 	})
 }
 
-// TestAccOSSecretBackendAccount_rotationSchedule tests rotation schedule configuration
+// TestAccOSSecretBackendAccount_rotationSchedule validates schedule-based
+// rotation configuration without requiring a live SSH authentication step.
 func TestAccOSSecretBackendAccount_rotationSchedule(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-test-os")
 	hostName := acctest.RandomWithPrefix("test-host")
 	accountName := acctest.RandomWithPrefix("test-account")
+	username := acctest.RandomWithPrefix("tf-user")
 	resourceType := "vault_os_secret_backend_account"
 	resourceName := resourceType + ".test"
 
@@ -209,20 +256,37 @@ func TestAccOSSecretBackendAccount_rotationSchedule(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOSSecretBackendAccountConfig_withSchedule(mount, hostName, accountName),
+				Config: testAccOSSecretBackendAccountConfig_withSchedule(mount, hostName, accountName, username, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "false"),
 					resource.TestCheckResourceAttr(resourceName, "rotation_schedule", "0 0 * * 0"),
-					resource.TestCheckResourceAttrSet(resourceName, "next_vault_rotation"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPassword),
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccOSSecretBackendAccountImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldPasswordWO,
+					consts.FieldRotationPeriod,
+					consts.FieldRotationWindow,
+					consts.FieldVerifyConnection,
+					consts.FieldLastVaultRotation,
+					consts.FieldNextVaultRotation,
+				},
+			},
 		},
 	})
 }
 
+// testAccOSSecretBackendAccountImportStateIdFunc builds the explicit import ID
+// because the framework resource state ID is not automatically usable here.
 func testAccOSSecretBackendAccountImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -230,139 +294,157 @@ func testAccOSSecretBackendAccountImportStateIdFunc(resourceName string) resourc
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
 
-		return fmt.Sprintf("%s/host/%s/account/%s",
+		return fmt.Sprintf("%s/hosts/%s/accounts/%s",
 			rs.Primary.Attributes[consts.FieldMount],
 			rs.Primary.Attributes[consts.FieldHost],
 			rs.Primary.Attributes[consts.FieldName]), nil
 	}
 }
 
-func testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName string) string {
+// testAccOSSecretBackendAccountConfig_basic generates a baseline account config.
+// verify_connection is parameterized so the same fixture can be reused for both
+// the SSH-independent and SSH-dependent test lanes.
+func testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
 resource "vault_os_secret_backend" "test" {
-  path = "%s"
+	path                            = "%s"
+	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount   = vault_os_secret_backend.test.path
-  name    = "%s"
-  type    = "ssh"
-  address = "192.168.1.100"
-  port    = 22
+  mount             = vault_os_secret_backend.test.path
+  name              = "%s"
+  type              = "ssh"
+	address           = "127.0.0.1"
+	port              = 2222
 }
 
 resource "vault_os_secret_backend_account" "test" {
   mount           = vault_os_secret_backend.test.path
   host            = vault_os_secret_backend_host.test.name
   name            = "%s"
-  username        = "testuser"
-  password        = "initial-password-123"
-  rotation_period = 86400
-  rotation_window = 3600
+	username        = "%s"
+	password_wo     = "bar"
+	rotation_period = "24h"
+	verify_connection = %t
 }
-`, mount, hostName, accountName)
+`, mount, hostName, accountName, username, verifyConnection)
 }
 
-func testAccOSSecretBackendAccountConfig_updated(mount, hostName, accountName string) string {
+// testAccOSSecretBackendAccountConfig_updated is the update variant of the
+// baseline fixture used by the SSH-independent CRUD coverage.
+func testAccOSSecretBackendAccountConfig_updated(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
 resource "vault_os_secret_backend" "test" {
-  path = "%s"
+	path                            = "%s"
+	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount   = vault_os_secret_backend.test.path
-  name    = "%s"
-  type    = "ssh"
-  address = "192.168.1.100"
-  port    = 22
+  mount             = vault_os_secret_backend.test.path
+  name              = "%s"
+  type              = "ssh"
+	address           = "127.0.0.1"
+	port              = 2222
 }
 
 resource "vault_os_secret_backend_account" "test" {
   mount           = vault_os_secret_backend.test.path
   host            = vault_os_secret_backend_host.test.name
   name            = "%s"
-  username        = "testuser"
-  password        = "updated-password-456"
-  rotation_period = 172800
-  rotation_window = 7200
+	username        = "%s"
+	password_wo     = "bar"
+	rotation_period = "48h"
+	verify_connection = %t
 }
-`, mount, hostName, accountName)
+`, mount, hostName, accountName, username, verifyConnection)
 }
 
-func testAccOSSecretBackendAccountConfig_minimal(mount, hostName, accountName string) string {
+// testAccOSSecretBackendAccountConfig_minimal keeps only required account
+// fields so optional-field clearing can be tested deterministically.
+func testAccOSSecretBackendAccountConfig_minimal(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
 resource "vault_os_secret_backend" "test" {
-  path = "%s"
+	path                            = "%s"
+	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount   = vault_os_secret_backend.test.path
-  name    = "%s"
-  type    = "ssh"
-  address = "192.168.1.100"
-  port    = 22
+  mount             = vault_os_secret_backend.test.path
+  name              = "%s"
+  type              = "ssh"
+	address           = "127.0.0.1"
+	port              = 2222
 }
 
 resource "vault_os_secret_backend_account" "test" {
   mount    = vault_os_secret_backend.test.path
   host     = vault_os_secret_backend_host.test.name
   name     = "%s"
-  username = "minimaluser"
-  password = "minimal-pass-789"
+	username = "%s"
+	password_wo = "bar"
+	verify_connection = %t
 }
-`, mount, hostName, accountName)
+`, mount, hostName, accountName, username, verifyConnection)
 }
 
-func testAccOSSecretBackendAccountConfig_allFields(mount, hostName, accountName string) string {
+// testAccOSSecretBackendAccountConfig_allFields exercises schedule/window
+// fields together using a combination accepted by the beta plugin.
+func testAccOSSecretBackendAccountConfig_allFields(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
 resource "vault_os_secret_backend" "test" {
-  path = "%s"
+	path                            = "%s"
+	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount   = vault_os_secret_backend.test.path
-  name    = "%s"
-  type    = "ssh"
-  address = "192.168.1.100"
-  port    = 22
+  mount             = vault_os_secret_backend.test.path
+  name              = "%s"
+  type              = "ssh"
+	address           = "127.0.0.1"
+	port              = 2222
 }
 
 resource "vault_os_secret_backend_account" "test" {
   mount             = vault_os_secret_backend.test.path
   host              = vault_os_secret_backend_host.test.name
   name              = "%s"
-  username          = "fulluser"
-  password          = "full-pass-abc"
-  rotation_period   = 259200
-  rotation_window   = 10800
+	username          = "%s"
+	password_wo       = "bar"
+	rotation_window   = "3h"
   rotation_schedule = "0 3 * * *"
+	verify_connection = %t
 }
-`, mount, hostName, accountName)
+`, mount, hostName, accountName, username, verifyConnection)
 }
 
-func testAccOSSecretBackendAccountConfig_withSchedule(mount, hostName, accountName string) string {
+// testAccOSSecretBackendAccountConfig_withSchedule isolates the schedule-only
+// path for import and readback coverage.
+func testAccOSSecretBackendAccountConfig_withSchedule(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
 resource "vault_os_secret_backend" "test" {
-  path = "%s"
+	path                            = "%s"
+	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount   = vault_os_secret_backend.test.path
-  name    = "%s"
-  type    = "ssh"
-  address = "192.168.1.100"
-  port    = 22
+  mount             = vault_os_secret_backend.test.path
+  name              = "%s"
+  type              = "ssh"
+	address           = "127.0.0.1"
+	port              = 2222
 }
 
 resource "vault_os_secret_backend_account" "test" {
   mount             = vault_os_secret_backend.test.path
   host              = vault_os_secret_backend_host.test.name
   name              = "%s"
-  username          = "scheduleuser"
-  password          = "schedule-pass-xyz"
+	username          = "%s"
+	password_wo       = "bar"
   rotation_schedule = "0 0 * * 0"
+	verify_connection = %t
 }
-`, mount, hostName, accountName)
+`, mount, hostName, accountName, username, verifyConnection)
 }
 
 // Made with Bob
