@@ -19,6 +19,8 @@ FEATURES:
 
 * **New Resources**: `vault_userpass_auth_backend_user` for user creation, deletion, password updates, and policy updates, and ephemeral resource `vault_userpass_auth_login` for authenticating with Userpass. ([#2859](https://github.com/hashicorp/terraform-provider-vault/pull/2859))
 
+* `vault_userpass_auth` : Added support for Vault Userpass Auth Method with resource for user creation, deletion along with password and policies update capabilities. Ephemeral resource for authenticating with Userpass.([#2859](https://github.com/hashicorp/terraform-provider-vault/pull/2859))
+
 IMPROVEMENTS:
 
 * `vault_cf_auth_backend_config`: Added `cf_password_wo_version` to trigger updates when only `cf_password_wo` changes.([#2878](https://github.com/hashicorp/terraform-provider-vault/pull/2878))
