@@ -136,10 +136,6 @@ func GetTestAWSRegion(t *testing.T) string {
 	return v[0]
 }
 
-func GetTestAWSSessionToken(t *testing.T) string {
-	return os.Getenv("AWS_SESSION_TOKEN")
-}
-
 type AzureTestConf struct {
 	SubscriptionID, TenantID, ClientID, ClientSecret, Scope, AppObjectID string
 }
@@ -195,12 +191,6 @@ func GetTestAzureConfExistingSP(t *testing.T) *AzureTestConf {
 		ClientSecret:   v[3],
 		AppObjectID:    v[4],
 	}
-}
-
-func GetTestAzureKMSCreds(t *testing.T) (tenantID, clientID, clientSecret, keyVaultName string) {
-	t.Helper()
-	v := SkipTestEnvUnset(t, "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_KEYVAULT_NAME")
-	return v[0], v[1], v[2], v[3]
 }
 
 func GetTestGCPCreds(t *testing.T) (string, string) {
@@ -286,16 +276,6 @@ func GetTestGCPKeyRing(t *testing.T) string {
 
 func GetTestGCPRegion(t *testing.T) string {
 	v := SkipTestEnvUnset(t, "GOOGLE_REGION")
-	return v[0]
-}
-
-func GetTestGCPCredsFile(t *testing.T) string {
-	v := SkipTestEnvUnset(t, "GOOGLE_CREDENTIALS_FILE")
-	return v[0]
-}
-
-func GetTestGCPProject(t *testing.T) string {
-	v := SkipTestEnvUnset(t, "GOOGLE_PROJECT")
 	return v[0]
 }
 
@@ -1076,4 +1056,24 @@ func (r *TestRetryHandler) Handler() http.HandlerFunc {
 			w.WriteHeader(r.RetryStatus)
 		}
 	}
+}
+
+func GetTestAWSSessionToken(t *testing.T) string {
+	return os.Getenv("AWS_SESSION_TOKEN")
+}
+
+func GetTestAzureKMSCreds(t *testing.T) (tenantID, clientID, clientSecret, keyVaultName string) {
+	t.Helper()
+	v := SkipTestEnvUnset(t, "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_KEYVAULT_NAME")
+	return v[0], v[1], v[2], v[3]
+}
+
+func GetTestGCPCredsFile(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_CREDENTIALS_FILE")
+	return v[0]
+}
+
+func GetTestGCPProject(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_PROJECT")
+	return v[0]
 }
